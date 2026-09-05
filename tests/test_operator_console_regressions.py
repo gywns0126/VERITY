@@ -35,6 +35,6 @@ def test_macro_uses_current_investor_portfolio_shape():
 
 def test_workspace_owns_the_single_selected_ticker():
     workspace = read("operator-web/app/components/Workspace.tsx")
-    panel = read("operator-web/app/components/TriSynthesisPanel.tsx")
-    assert '<TriSynthesisPanel ticker={ticker} />' in workspace
-    assert "TriSynthesisPanel({ ticker }" in panel
+    panel = read("operator-web/app/components/StockFactsPanel.tsx")
+    assert '<StockFactsPanel ticker={ticker} />' in workspace
+    assert "StockFactsPanel({ ticker }" in panel

@@ -5,7 +5,7 @@
 // v3.2 (PM 2026-08-03): 토스식 섹션 고정 — 넓은 화면 = 뷰포트 고정 + 각 컬럼 내부 스크롤
 //   (af-viewport/af-frame, 좁은 화면 = 문서 스크롤 폴백). 데이터 많은 패널(중용·제어판·검증) =
 //   /system 페이지 분할. 크립토 카드(TIDE 트랙, Binance 24/7) 추가.
-// v3.1: 7결함 반영 — 토스 로고·3종 LLM(#226)·sticky 제거·tick 실시간·주문 티켓·/login 분리·
+// v3.1: 7결함 반영 — 토스 로고·종목 사실 번들(#226)·sticky 제거·tick 실시간·주문 티켓·/login 분리·
 //   포트폴리오 최상단. 링크그룹 = 행 클릭 → 전 패널 동기(verity-ticker).
 import { useEffect, useState } from "react"
 import { useDark, palette, FONT } from "@/lib/theme"

@@ -1,12 +1,7 @@
 "use client"
-// MacroPanel — 거시(숲) 창 + 거시 경제 분석기 (PM 2026-08-03).
-// ① 분석기 = 거시 3종 LLM 시나리오 (macro_synthesis, 평일 장전 07:50 생성, authed)
-// ② 자기 산식 market_horizon (과열 판정·침체확률·CAPE·구간 분포 — 가설 라벨, RULE 7)
-// ③ daily_report (일일 분석·전략·리스크·내일 관점) ④ 레짐 톤·사이클·지정학·속보.
-// ②~④ = portfolio_full 기존 키 (추가 fetch 0) / ① 만 별도 authed fetch.
-import { useEffect, useState } from "react"
+// MacroPanel — 검증된 거시 사실·시장 지평·일일 리포트·이벤트 창.
+// 구형 3모델 시나리오 패널은 2026-09-05 종료했다.
 import { useDark, palette, cardStyle, FONT, NUM, RAIL_PAD, type Palette } from "@/lib/theme"
-import { fetchOperator } from "@/lib/api"
 import type { PortfolioFull } from "@/lib/types"
 
 function toneColor(c: Palette, tone?: string): { fg: string; bg: string } {
@@ -16,43 +11,9 @@ function toneColor(c: Palette, tone?: string): { fg: string; bg: string } {
     return { fg: c.sub, bg: c.hi }
 }
 
-// 구 캐시 마크다운 방어 정리 (tri 패널 정합)
-function plain(t?: string): string {
-    return String(t || "")
-        .replace(/\*\*/g, "")
-        .replace(/^#{1,4}\s*/gm, "")
-        .replace(/^\s*[*•]\s+/gm, "- ")
-}
-
-type SynSource = { content?: string; model?: string; citations?: string[] }
-type MacroSyn = {
-    generated_at?: string
-    sources?: { claude?: SynSource; perplexity?: SynSource; gemini?: SynSource }
-}
-
 export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
     const dark = useDark()
     const c = palette(dark)
-    const [syn, setSyn] = useState<MacroSyn | null>(null)
-    const [synStatus, setSynStatus] = useState<"loading" | "ok" | "none" | "error">("loading")
-
-    useEffect(() => {
-        let cancelled = false
-        fetchOperator<MacroSyn>("macro_synthesis").then((r) => {
-            if (cancelled) return
-            if (r.ok && r.data?.sources?.claude?.content) {
-                setSyn(r.data)
-                setSynStatus("ok")
-            } else if (r.ok) {
-                setSynStatus("none")
-            } else {
-                setSynStatus("error")
-            }
-        })
-        return () => {
-            cancelled = true
-        }
-    }, [])
 
     const briefing = data?.briefing
     const rot = data?.sector_rotation
@@ -92,32 +53,7 @@ export default function MacroPanel({ data }: { data: PortfolioFull | null }) {
                 </span>
             </div>
 
-            {/* ① 거시 분석기 — 3종 LLM 시나리오 (데스크 노트) */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, ...divider }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                    <span style={{ fontSize: 10.5, fontWeight: 800, color: c.vt }}>거시 분석기</span>
-                    <span style={{ fontSize: 9.5, color: c.faint }}>
-                        3종 LLM 시나리오 · 평일 장전 생성{syn?.generated_at ? ` · ${String(syn.generated_at).slice(5, 16).replace("T", " ")}` : ""}
-                    </span>
-                </div>
-                {synStatus === "loading" ? (
-                    <div style={{ fontSize: 11.5, color: c.faint }}>불러오는 중…</div>
-                ) : synStatus === "error" ? (
-                    <div style={{ fontSize: 11.5, color: c.down, lineHeight: 1.5, fontWeight: 700 }}>
-                        거시 분석기 조회 실패 — 인증·발행 상태를 확인하세요.
-                    </div>
-                ) : synStatus === "none" ? (
-                    <div style={{ fontSize: 11.5, color: c.sub, lineHeight: 1.5 }}>
-                        아직 미적재 — 평일 07:50 장전 배치 후 자동 표시됩니다.
-                    </div>
-                ) : (
-                    <div style={{ fontSize: 12, color: c.ink, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
-                        {plain(syn?.sources?.claude?.content)}
-                    </div>
-                )}
-            </div>
-
-            {/* ② 자기 산식 market_horizon — 가설 라벨 (RULE 7) */}
+            {/* 자기 산식 market_horizon — 가설 라벨 (RULE 7) */}
             {mh?.verdict ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, ...divider }}>
                     {secTitle("시장 지평", "자기 산식 · 가설")}

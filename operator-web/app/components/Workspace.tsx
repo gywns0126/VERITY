@@ -1,6 +1,6 @@
 "use client"
 // Workspace — 중앙 링크그룹 A (승인 목업 v3.1). 선택 종목 = 실시간 헤더 + 호가 10단 래더 +
-// 체결강도 + 최근 체결 테이프 + 주문 티켓 + 3종 LLM 종합. 행 클릭(보유/관심/추천/검색) 시 전환.
+// 체결강도 + 최근 체결 테이프 + 주문 티켓 + 종목 사실. 행 클릭(보유/관심/추천/검색) 시 전환.
 // 호가 = Railway 구독형: POST /subscribe(최대 10, idle TTL 300s) → /snapshot/{t} 2.5s 폴링.
 // 래더 가격 클릭 = 주문가 채움 (국내 HTS 스피드주문 문법).
 import { useEffect, useRef, useState } from "react"
@@ -12,7 +12,7 @@ import ProChart, { type Candle } from "./ProChart"
 import TVChart, { tvSupported } from "./TVChart"
 import type { Rec, Holding } from "@/lib/types"
 import OrderTicket from "./OrderTicket"
-import TriSynthesisPanel from "./TriSynthesisPanel"
+import StockFactsPanel from "./StockFactsPanel"
 
 type Level = { price?: number; volume?: number }
 type Trade = { time?: string; price?: number; volume?: number; side?: string }
@@ -312,9 +312,9 @@ export default function Workspace({
                 </div>
             ) : null}
 
-            {/* 3종 LLM 종합 — 동일 링크그룹 (자체 verity-ticker 수신) */}
+            {/* 종목 사실 — 동일 링크그룹 (자체 verity-ticker 수신) */}
             <div style={{ borderTop: `1px solid ${c.line}`, paddingTop: 12 }}>
-                <TriSynthesisPanel ticker={ticker} />
+                <StockFactsPanel ticker={ticker} />
             </div>
         </div>
     )

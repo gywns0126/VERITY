@@ -97,7 +97,7 @@ def test_read_failure_is_reported_not_swallowed(monkeypatch, journal):
 def test_module_absence_is_not_a_failure(monkeypatch, journal):
     """🚨 배포본(vercel-api)에는 decision_journal 이 복제되지 않는다.
 
-    sync_operator_ask.sh 는 ticker_facts.py·operator_ask.py 만 복제한다. 실험 노트는
+    sync_operator_ask.sh 는 ticker_facts.py·operator_ask.py·us_filing_probe.py 만 복제한다. 실험 노트는
     터미널 전용·비공개라 배포 대상이 아니다. 모듈 부재를 "실패" 로 보고하면 오퍼레이터
     사이트에서 매 조회마다 없는 결함이 뜬다.
     """

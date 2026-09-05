@@ -2,16 +2,15 @@
 GET /api/system/health — ESTATE/VERITY 공용 자원 헬스체크 (P2 진짜 wire — 2026-05-17)
 
 인프라 표준 v1.1 — endpoint 네임스페이스:
-    /api/system/*  = ESTATE/VERITY 공용 (Vercel/Supabase/Claude API)
+    /api/system/*  = ESTATE/VERITY 공용 (Vercel/Supabase)
     /api/estate/*  = 부동산 고유
     /api/verity/*  = 주식 고유
 
 2026-05-17 P2 wire (B1+B2+B3 통합):
-    - 옛 P1 mock (vercel_functions/supabase/claude_api hardcoded) 폐기.
+    - 옛 P1 mock 의 외부 AI 자원 항목은 런타임 종료와 함께 제거.
     - 진짜 source:
         * vercel_functions = 이 endpoint 가 응답 = self-ping healthy (Vercel function 살아있음 증거)
         * supabase         = SUPABASE_URL/ANON_KEY env 존재 + (선택) light ping
-        * claude_api       = ANTHROPIC_API_KEY env 존재 (실제 API call X — 비용/quota 회피)
     - scenario=mock 으로 옛 mock 응답 보존 (Framer 개발 toggle).
 
 Query parameters:
@@ -75,28 +74,11 @@ def _resource_supabase(now: datetime) -> dict:
     }
 
 
-def _resource_claude(now: datetime) -> dict:
-    """ANTHROPIC_API_KEY env 검증. 실제 API call 안 함 (비용/quota 회피)."""
-    key_set = _is_set("ANTHROPIC_API_KEY")
-    return {
-        "id": "claude_api",
-        "label_ko": "Claude API",
-        "status": "healthy" if key_set else "degraded",
-        "metric": {
-            "key_present": key_set,
-            "checked_at": now.isoformat(timespec="seconds"),
-            # 실제 quota/cost 메트릭은 별도 (data/metadata/llm_cost.jsonl ramp).
-        },
-        "note": None if key_set else "ANTHROPIC_API_KEY 미설정 — dual_consensus 영향",
-    }
-
-
 def _build_resources_live(now: datetime) -> list[dict]:
-    """진짜 wire — self-ping + env 검증 3종."""
+    """진짜 wire — self-ping + 저장소 env 검증 2종."""
     return [
         _resource_vercel(now),
         _resource_supabase(now),
-        _resource_claude(now),
     ]
 
 
@@ -118,13 +100,6 @@ def _build_resources_mock(now: datetime) -> list[dict]:
             "label_ko": "Supabase (mock)",
             "status": "healthy",
             "metric": {"rls_check": True, "conn_ok": True},
-            "note": None,
-        },
-        {
-            "id": "claude_api",
-            "label_ko": "Claude API (mock)",
-            "status": "healthy",
-            "metric": {"quota_usage_pct": 42.0},
             "note": None,
         },
     ]

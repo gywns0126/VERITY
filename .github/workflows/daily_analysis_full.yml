@@ -360,7 +360,6 @@ jobs:
           # cost 감축 (개발 manual 호출 시 LLM 자동 mock).
           VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_ALLOWED_CHAT_IDS: ${{ secrets.TELEGRAM_ALLOWED_CHAT_IDS }}
@@ -385,23 +384,9 @@ jobs:
           GEMINI_MODEL_CRITICAL: ${{ vars.GEMINI_MODEL_CRITICAL || 'gemini-2.5-pro' }}
           GEMINI_PRO_ENABLE: ${{ vars.GEMINI_PRO_ENABLE || '1' }}
           GEMINI_CRITICAL_TOP_N: ${{ vars.GEMINI_CRITICAL_TOP_N || '3' }}
-          CLAUDE_MODEL_LIGHT: ${{ vars.CLAUDE_MODEL_LIGHT || 'claude-haiku-4-5' }}
-          CLAUDE_MODEL_DEFAULT: ${{ vars.CLAUDE_MODEL_DEFAULT || 'claude-sonnet-4-6' }}
-          CLAUDE_MODEL_HEAVY: ${{ vars.CLAUDE_MODEL_HEAVY || 'claude-opus-4-7' }}
-          CLAUDE_OPUS_ENABLE: ${{ vars.CLAUDE_OPUS_ENABLE || '1' }}
-          CLAUDE_TOP_N: ${{ vars.CLAUDE_TOP_N || '2' }}
-          CLAUDE_MIN_BRAIN_SCORE: ${{ vars.CLAUDE_MIN_BRAIN_SCORE || '70' }}
-          CLAUDE_IN_QUICK: ${{ vars.CLAUDE_IN_QUICK || '0' }}
-          CLAUDE_IN_REALTIME: ${{ vars.CLAUDE_IN_REALTIME || '0' }}
-          CLAUDE_QUICK_TOP_N: ${{ vars.CLAUDE_QUICK_TOP_N || '1' }}
-          CLAUDE_EMERGENCY_THRESHOLD_PCT: ${{ vars.CLAUDE_EMERGENCY_THRESHOLD_PCT || '5.0' }}
-          CLAUDE_EMERGENCY_COOLDOWN_MIN: ${{ vars.CLAUDE_EMERGENCY_COOLDOWN_MIN || '120' }}
-          CLAUDE_TAIL_RISK_VERIFY: ${{ vars.CLAUDE_TAIL_RISK_VERIFY || '0' }}
-          CLAUDE_MORNING_STRATEGY: ${{ vars.CLAUDE_MORNING_STRATEGY || '0' }}
           DEADMAN_FAIL_THRESHOLD: ${{ vars.DEADMAN_FAIL_THRESHOLD || '3' }}
           REPORT_SEND_HOUR_KST: ${{ vars.REPORT_SEND_HOUR_KST || '16' }}
           REPORT_SEND_MINUTE_KST: ${{ vars.REPORT_SEND_MINUTE_KST || '30' }}
-          POSTMORTEM_ENABLED: ${{ vars.POSTMORTEM_ENABLED || '1' }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
           POLYGON_TIER: ${{ vars.POLYGON_TIER || 'free' }}

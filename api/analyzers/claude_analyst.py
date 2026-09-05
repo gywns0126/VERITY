@@ -14,7 +14,10 @@ import json
 import time
 from typing import Dict, Optional
 
-import anthropic
+try:
+    import anthropic
+except ImportError:  # 종료된 공급자 SDK는 더 이상 필수 의존성이 아니다.
+    anthropic = None  # type: ignore[assignment]
 
 from api.mocks import mockable
 from api.config import (
@@ -54,8 +57,8 @@ Gemini가 "회피"라고 하면, 혹시 시장이 과도하게 공포에 빠진 
 
 
 def init_claude() -> anthropic.Anthropic:
-    if not ANTHROPIC_API_KEY:
-        raise ValueError("ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.")
+    if not ANTHROPIC_API_KEY or anthropic is None:
+        raise ValueError("외부 분석 런타임은 종료되었습니다.")
     return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
@@ -463,7 +466,7 @@ def _call_claude(
     _trace_type: str = "claude_util",
 ) -> Optional[dict]:
     """공통 Claude 호출 + JSON 파싱. 실패 시 None."""
-    if not ANTHROPIC_API_KEY:
+    if not ANTHROPIC_API_KEY or anthropic is None:
         return None
     use_model = model or CLAUDE_MODEL_DEFAULT
     try:

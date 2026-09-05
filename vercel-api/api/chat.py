@@ -23,12 +23,11 @@ _logger = logging.getLogger(__name__)
 # (repo root api/chat_hybrid/ 가 SSOT — 수정 후 sync 필수, scripts/sync_chat_hybrid.sh)
 # Vercel Python 런타임이 함수 디렉토리(/var/task) 를 sys.path 에 두므로 별도 조작 불필요.
 
-# 값 매칭은 일반적인 truthy 문자열을 모두 허용 ("true"/"1"/"yes"/"on", 대소문자 무관).
-# 이전엔 == "true" 만 인정해서 "True "(trailing space) 등 흔한 오타에도 꺼졌음.
-CHAT_HYBRID_ENABLED = (
-    os.environ.get("CHAT_HYBRID_ENABLED", "false").strip().lower()
-    in ("true", "1", "yes", "on")
-)
+# 2026-09-05 PM 결정 — 외부 3모델 합성 경로는 종료했다.
+# 환경변수가 과거 값으로 남아 있어도 다시 활성화되지 않는다. 공개 채팅은 아래 Gemini
+# 단일 경로를 사용하고, 종목의 최종 판단은 원문 검증을 거친 Codex 세션에서 수행한다.
+CHAT_HYBRID_ENABLED = False
+CHAT_HYBRID_RETIRED = True
 
 # 지연 import — 비활성화 시 모듈 로드 비용 0, 활성화 실패시 legacy 폴백
 _hybrid_orchestrator = None
@@ -427,7 +426,7 @@ class handler(BaseHTTPRequestHandler):
         raw_watchlist = body.get("watchlist")
         user_watchlist = raw_watchlist if isinstance(raw_watchlist, list) else None
 
-        # Hybrid 경로 — enabled 이고 stream 모드일 때만 시도, 실패 시 legacy 폴백
+        # 과거 Hybrid 분기는 호환을 위해 남아 있지만 상수 가드로 도달 불가다.
         if CHAT_HYBRID_ENABLED and use_stream:
             orc = _load_hybrid()
             if orc is not None:

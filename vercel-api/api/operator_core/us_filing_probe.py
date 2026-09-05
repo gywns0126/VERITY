@@ -91,6 +91,53 @@ ITEM_LABELS = {
 # 자금조달 경보에 쓰는 8-K 항목 — 희석 방향 사건만.
 _DILUTIVE_ITEMS = {"1.01", "3.02", "2.03"}
 
+# ── 전방 파이프라인(수주·계약) 탐지 (2026-08-19 신설) ────────────────────────
+# 🚨 WHY: 8-K item 1.01(중요 계약 체결)을 지금까지 **희석 탐지에만** 썼다. 같은 항목이
+#   수주·공급계약·PPA 이기도 한데 그 축이 신고되지 않아, 초기 인프라 기업 분석에서
+#   전방 파이프라인이 통째로 보이지 않았다(XE 실측 2026-08-19).
+#   후행 재무(매출·손익)만 보면 상장 직후 기업은 항상 "적자 확대" 로만 읽힌다.
+# 🚨 희석과 수주는 **같은 1.01 에서 갈린다.** 본문 어휘로 가른다 — 등록신고서(S-1/S-3/424B)가
+#   14일 내 동반되면 자금조달로 이미 분류되므로(위 ④), 여기서는 그 조건을 뺀 건만 본다.
+_PIPELINE_ITEMS = {"1.01", "8.01"}
+_PIPELINE_WINDOW_DAYS = 400
+# ── 규제 마일스톤(인허가) 탐지 (2026-08-19 신설) ────────────────────────────
+# 🚨 NRC 자체 소스는 못 쓴다 — nrc.gov 는 Akamai 차단(HTTP 200 인데 본문이 Access Denied),
+#   ADAMS Public Search API 는 구독 필요. 벤더 한 곳 막힘 ≠ 축 불가
+#   ([[feedback_one_vendor_block_is_not_axis_impossible]]) — 같은 사실이 **우리가 이미 받는**
+#   8-K 첨부(보도자료)에 실린다. 실측 XE 3건: NRC 환경평가 FONSI · Part 70 연료 라이선스 ·
+#   DOE ARDP 예산기간 연장 · 영국 GDA 신청.
+# 🚨 위험문구(forward-looking statements)에도 같은 단어가 나온다. 그 구간을 먼저 잘라낸다 —
+#   안 자르면 전 종목이 상시 검출된다(실측 XE 2026-05-19 이 이 형태였다).
+# ── 정책자금·전력계약 (2026-08-19 신설) ──────────────────────────────────────
+# 🚨 항목코드를 1.01/8.01 로 좁히면 못 잡는다 — 실측 대부분이 **2.02(실적 발표)** 다.
+#   실적 보도자료(EX-99.1)에 분기 사업 마일스톤이 함께 실리기 때문이다.
+#   VST PPA 4건 중 3건이 2.02 · XE DOE 2건 전부 2.02 · XE 규제 6건도 2.02/7.01.
+# 🚨 PPA 는 원자로 **개발사**에서 안 나온다(XE·OKLO·SMR·LEU·CCJ·BWXT·UEC 전부 0건).
+#   PPA 를 맺는 쪽은 발전사업자다(VST 4건). 개발사의 0건은 결손이 아니라 사실이다 —
+#   축을 만들되 "0건 = 미공시" 로 읽어야지 "수집 실패" 로 읽으면 안 된다.
+_DOE_PAT = re.compile(
+    r"\b(ARDP|Advanced Reactor Demonstration Program|Department of Energy|"
+    r"cost[- ]share|budget period|loan guarantee|DOE award)\b")
+_PPA_PAT = re.compile(
+    r"\b(power purchase agreement|offtake agreement|electricity supply agreement|"
+    r"capacity agreement|energy supply agreement)\b", re.I)
+
+_REG_MILESTONE_PAT = re.compile(
+    r"\b(NRC|Nuclear Regulatory Commission|construction permit|combined license|"
+    r"early site permit|design certification|Finding of No Significant Impact|FONSI|"
+    r"Part 70|Generic Design Assessment|operating licen[cs]e)\b")
+_FLS_PAT = re.compile(
+    r"forward[- ]looking statements|risk factors|safe harbor", re.I)
+
+_PIPELINE_PAT = re.compile(
+    r"\b(purchase agreement|supply agreement|power purchase|offtake|"
+    r"master agreement|development agreement|award(?:ed)?|contract(?:ed)?|"
+    r"letter of intent|memorandum of understanding|joint development)\b", re.I)
+# 자금조달 어휘 — 위 패턴과 동시 출현하면 수주로 세지 않는다(오분류 차단).
+_FINANCING_PAT = re.compile(
+    r"\b(at[- ]the[- ]market|equity line|securities purchase agreement|"
+    r"registered direct|private placement|warrant)\b", re.I)
+
 
 # ── 저수준 ────────────────────────────────────────────────────────────────
 
@@ -186,7 +233,8 @@ def _doc_url(cik: str, accession: str, doc: str) -> str:
             f"{accession.replace('-', '')}/{doc}")
 
 
-def _doc_text(cik: str, accession: str, doc: str, limit: int = 1_500_000) -> Optional[str]:
+def _doc_text(cik: str, accession: str, doc: str, limit: int = 1_500_000,
+              meta: Optional[Dict[str, Any]] = None, purpose: str = "") -> Optional[str]:
     """공시 원문 텍스트. 대형 투서(50만자+)가 있어 상한을 둔다.
 
     🚨 **스트립을 먼저, 절단을 나중에** 한다. 이전 구현은 `_strip_html(raw[:limit*4])` 로
@@ -197,6 +245,16 @@ def _doc_text(cik: str, accession: str, doc: str, limit: int = 1_500_000) -> Opt
     12MB 스트립 실측 0.09초 — 순서를 뒤집는 비용이 없다.
     태그 비중은 문서마다 다르므로 **절단 여부는 스트립 후에만 판정할 수 있다**
     ([[feedback_api_row_limit_truncation_stale_value]] 계열: 상한이 조용히 값을 바꾼다).
+
+    🚨 **절단 사실을 호출자에게 돌려준다** (2026-08-24 신설, `meta` out-param).
+    종전엔 stderr 로그만 찍고 반환값은 그냥 문자열이라, **호출자가 잘린 줄 모른 채**
+    "전문 검색 확인(추정 아님)" 같은 **부재 단정**을 만들었다. 실측(XE 10-Q 2026-08-13):
+    본문 501,923자인데 표지 경로가 250,000자만 읽었고, NRC 51건 중 51건 · HALEU 44건 중
+    36건 · construction permit 3건 중 3건이 **전부 미독 구간**에 있었다.
+    이번엔 부문 주석 결론이 우연히 맞았지만, 맞은 것과 근거가 성립한 것은 다르다.
+    → `meta` 를 넘긴 호출자는 `truncated` / `full_chars` / `dropped_chars` 를 받아
+      부재 문구를 조건부로 만든다. `purpose` 는 로그에서 **의도된 제한 읽기**(표지·락업 등)와
+      **본문 전수 검색**을 구분하기 위한 라벨이다.
     """
     if not doc:
         return None
@@ -204,12 +262,33 @@ def _doc_text(cik: str, accession: str, doc: str, limit: int = 1_500_000) -> Opt
     if not isinstance(raw, str):
         return None
     txt = _strip_html(raw)
-    if len(txt) > limit:
+    full = len(txt)
+    truncated = full > limit
+    if meta is not None:
+        meta.update({"full_chars": full, "kept_chars": min(full, limit),
+                     "dropped_chars": max(0, full - limit), "truncated": truncated})
+    if truncated:
         # 조용히 자르지 않는다 — 무엇을 못 봤는지 로그로 신고한다.
-        print(f"[us_filing_probe] 본문 절단: {doc} {len(txt):,}자 → {limit:,}자 "
-              f"(뒤쪽 {len(txt) - limit:,}자 미확인)", file=_sys.stderr)
+        tag = f"[{purpose}] " if purpose else ""
+        print(f"[us_filing_probe] {tag}본문 절단: {doc} {full:,}자 → {limit:,}자 "
+              f"(뒤쪽 {full - limit:,}자 미확인)", file=_sys.stderr)
     return txt[:limit]
 
+
+
+def _absence_phrase(what: str, src: str, meta: Dict[str, Any]) -> str:
+    """부재 주장 문구 — **읽은 범위를 반드시 동봉한다**.
+
+    🚨 "없다" 는 "있다" 보다 비싸다(verity-stock 관문 1번). 전량을 읽었으면 그렇게 적고,
+    잘렸으면 **부재 단정을 하지 않는다**. 실측 계기 = XE 10-Q 501,923자 중 250,000자만
+    읽고도 하류가 "전문 검색 확인(추정 아님)" 을 그대로 인용할 수 있던 구조.
+    """
+    full = int(meta.get("full_chars") or 0)
+    if meta.get("truncated"):
+        return (f"{what} — 🚨 다만 {src} 본문 {full:,}자 중 "
+                f"{int(meta.get('kept_chars') or 0):,}자만 검색했다"
+                f"(뒤쪽 {int(meta.get('dropped_chars') or 0):,}자 미확인). **부재 단정 아님.**")
+    return f"{what} — {src} 전문 검색 확인(추정 아님 · {full:,}자 전량)"
 
 # ── 공시 이력 ─────────────────────────────────────────────────────────────
 
@@ -286,6 +365,25 @@ _CASH_TAGS = (
     "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsIncludingDisposalGroupAndDiscontinuedOperations",
 )
 
+# 🚨 2026-08-21 — 현금성자산만 보면 런웨이가 통째로 틀린다. MRNA 실측(2026-06-30):
+#   `현금` $1,723M 뿐인데 매도가능증권 유동 $3,415M + 비유동 $1,772M 을 더하면
+#   **$6,910M** 이다. 연 소진 ~$2.5B 기준 런웨이가 **8개월 ↔ 2.7년**으로 갈린다.
+#   바이오·성장주는 대부분의 유동성을 증권으로 들고 있어 이 결손이 판단을 뒤집는다.
+#   회사 자신도 "cash, cash equivalents and investments" 로 합산 보고한다.
+#   🚨 단 **기간말이 같을 때만 더한다** — 위 RCAT 사고와 같은 계열(기간 어긋난 합산이
+#   숫자가 그럴듯해서 더 위험). 태그 교체 대응은 _fresh_first 가 담당.
+_INVEST_CURRENT_TAGS = (
+    "AvailableForSaleSecuritiesDebtSecuritiesCurrent",
+    "MarketableSecuritiesCurrent",
+    "ShortTermInvestments",
+    "OtherShortTermInvestments",
+)
+_INVEST_NONCURRENT_TAGS = (
+    "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
+    "MarketableSecuritiesNoncurrent",
+    "LongTermInvestments",
+)
+
 
 def _anchor_end(facts: Dict[str, Any]) -> Optional[str]:
     """최신 보고 기간말 — 신선도 판정의 기준점. dei 표지일과 매출·손익 기간말 중 최신."""
@@ -352,7 +450,11 @@ def _cover_shares(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, An
         return None
     # 상한 여유 — SPCX 10-Q 실측에서 표지 문구가 44,123자 지점에 있었다(iXBRL 헤더가
     # 앞을 길게 먹는다). 60K 로 두면 서문이 조금만 길어도 표지를 놓친다.
-    txt = _doc_text(cik, latest["accessionNumber"], latest["primaryDocument"], limit=250_000)
+    # purpose 라벨 = 로그에서 **의도된 제한 읽기**와 본문 전수 검색을 구분한다.
+    #   이 경로는 표지 발행주식만 필요해 250K 로 끊는 것이 설계다 — 절단 로그가
+    #   "본문을 못 봤다" 로 오독되지 않게 한다(2026-08-24).
+    txt = _doc_text(cik, latest["accessionNumber"], latest["primaryDocument"], limit=250_000,
+                    purpose="표지 발행주식(제한 읽기)")
     if not txt:
         return None
     anchor = _COVER_ANCHOR_PAT.search(txt)
@@ -589,6 +691,7 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
     #   (ONDS 실측 2026-08-12: 2022-03-22 건이 올라왔다).
     atm_cut = (today - timedelta(days=_ATM_WINDOW_DAYS)).isoformat()
     reg = [r for r in rows if r["form"] in ("S-1", "S-3", "424B3", "424B5")]
+    _dilutive_dates: set = set()      # ④에서 자금조달로 분류된 8-K 일자 (⑤가 제외한다)
     for r in rows:
         if r["form"] != "8-K" or r["filingDate"] < atm_cut:
             continue
@@ -603,7 +706,8 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
                 if 0 <= (date.fromisoformat(x["filingDate"]) - d0).days <= 14]
         if not near:
             continue
-        txt = _doc_text(cik, r["accessionNumber"], r["primaryDocument"], limit=200_000)
+        txt = _doc_text(cik, r["accessionNumber"], r["primaryDocument"], limit=200_000,
+                        purpose="락업 조항(제한 읽기)")
         if not txt or not _EQUITY_LINE_PAT.search(txt):
             continue
         m = re.search(r"up to (?:the lesser of \(i\)\s*)?([\d,]{7,})\s*shares", txt, re.I)
@@ -612,18 +716,129 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
             detail += f" · 최대 {m.group(1)}주"
         detail += " · 등록 " + ", ".join(f"{x['form']}({x['filingDate']})" for x in near[:2])
         out.setdefault("자금조달 라인(ATM·유동성 라인)", []).append(detail)
+        _dilutive_dates.add(r["filingDate"])
+
+    # ── ⑤ 전방 파이프라인(수주·계약) ──
+    # 위 ④가 "1.01 + 등록신고서 14일 내 동반 = 자금조달" 을 이미 걷어냈다. 남은 1.01/8.01 중
+    # 본문에 계약 어휘가 있고 자금조달 어휘가 없는 건만 수주로 신고한다.
+    # 🚨 판정이 아니라 **사실 열거**다 — 계약 규모·수익성은 본문에 없을 때가 많아
+    #    "수주 N건" 을 성장 근거로 번역하지 않는다(RULE 7 = 사실만, 해석 0).
+    pipe_cut = (today - timedelta(days=_PIPELINE_WINDOW_DAYS)).isoformat()
+
+    def _exhibit_text(accn: str, primary: str) -> str:
+        """8-K 표지 + EX-99 첨부 본문.
+
+        🚨 표지만 읽으면 못 잡는다 — 실측(2026-08-19): SMR 2026-08-11 item 1.01 표지는
+        5,928자이고 등록정보(주소·전화·CIK)뿐이다. 계약 내용은 EX-99.1 보도자료에 있고,
+        표지에 남는 영문은 ATM 상용문구라 **자금조달로 오분류**된다.
+        OKLO 2026-05-13 도 동일. 즉 표지 기반 판정은 구조적으로 틀린다.
+        """
+        parts = []
+        t0 = _doc_text(cik, accn, primary, limit=200_000, purpose="ATM·셸프(제한 읽기)")
+        if t0:
+            parts.append(t0)
+        idx = _fetch(_doc_url(cik, accn, "index.json"), f"idx_{accn}.json", _TTL_DOC, as_json=True)
+        names = []
+        if isinstance(idx, dict):
+            for f in ((idx.get("directory") or {}).get("item") or []):
+                nm = str(f.get("name") or "")
+                # 🚨 파일명은 제출대리인마다 접두사가 붙는다 — `^ex99` 로 고정하면 못 잡는다.
+                #   실측: SMR 은 EX-99.1 보도자료, OKLO 는 `tm...._ex1-1.htm`(계약서 본문)이라
+                #   EX-99 자체가 없다. 접두사 무시 + 계약 계열 번호(1/2/10/99)까지 본다.
+                if (re.search(r"ex-?(?:99|10|1|2)[-_.]?\d*\.(?:htm|html|txt)$", nm, re.I)
+                        and not nm.lower().startswith("r")):     # R1.htm = XBRL 렌더
+                    names.append(nm)
+        for nm in names[:3]:
+            t = _doc_text(cik, accn, nm, limit=200_000, purpose="ATM·셸프 첨부(제한 읽기)")
+            if t:
+                parts.append(t)
+        return "\n".join(parts)
+
+    for r in rows:
+        if r["form"] != "8-K" or r["filingDate"] < pipe_cut:
+            continue
+        if r["filingDate"] in _dilutive_dates:
+            continue                      # 이미 자금조달로 분류된 건
+        codes = {c.strip() for c in str(r.get("items") or "").split(",")}
+        if not (codes & _PIPELINE_ITEMS):
+            continue
+        txt = _exhibit_text(r["accessionNumber"], r["primaryDocument"])
+        if not txt:
+            continue
+        m = _PIPELINE_PAT.search(txt)
+        if not m or _FINANCING_PAT.search(txt):
+            continue
+        label = ", ".join(ITEM_LABELS.get(c, c) for c in sorted(codes & _PIPELINE_ITEMS))
+        out.setdefault("전방 파이프라인(수주·계약 공시)", []).append(
+            f"{r['filingDate']} 8-K {label} · 본문 '{m.group(1)}'")
+    if "전방 파이프라인(수주·계약 공시)" in out:
+        out["전방 파이프라인(수주·계약 공시)"] = out["전방 파이프라인(수주·계약 공시)"][:8]
+
+    # ── ⑥ 규제 마일스톤(인허가) ──
+    # 🚨 위험문구(FLS) 구간을 먼저 잘라낸다. 안 자르면 "licensing" 이 리스크 열거에도
+    #    있어 전 종목이 상시 검출되고, 상시 검출은 신호가 아니다.
+    for r in rows:
+        if r["form"] != "8-K" or r["filingDate"] < pipe_cut:
+            continue
+        txt = _exhibit_text(r["accessionNumber"], r["primaryDocument"])
+        if not txt:
+            continue
+        fls = _FLS_PAT.search(txt)
+        body = txt[:fls.start()] if fls else txt
+        # 🚨 한 공시에 마일스톤이 여러 건이다 — search() 로 첫 건만 보면 나머지가 사라진다.
+        #   실측 XE 2026-06-04 은 GDA·NRC·FONSI·Part 70 등 6개 매치를 담고 있었다.
+        # 🚨 루프를 축마다 따로 두지 않는다 — 같은 문서를 4번 훑게 되고 한 문장이 여러 축에
+        #   중복 출현한다. **한 번 순회하며 분류**한다.
+        seen_frag: set = set()
+        _AXES = (("규제 마일스톤(인허가 공시)", _REG_MILESTONE_PAT),
+                 ("정책자금(DOE·보조금)", _DOE_PAT),
+                 ("전력계약(PPA·오프테이크)", _PPA_PAT))
+        for _axis, _pat in _AXES:
+          for m in _pat.finditer(body):
+            # 🚨 경계를 마침표로만 잡으면 틀린다 — 보도자료는 "•" 불릿 나열이라 앞 항목까지
+            #    끌려온다(실측 XE 06-04 이 IPO 문장에서 잘렸다). 불릿·줄바꿈도 경계로 본다.
+            _B = "•\n\r"
+            s0 = max([body.rfind(c, 0, m.start()) for c in _B]
+                     + [body.rfind(". ", 0, m.start())]) + 1
+            s1 = min([x for x in [body.find(c, m.end()) for c in _B]
+                      + [body.find(". ", m.end())] if x > 0] or [m.end() + 160])
+            frag = re.sub(r"\s+", " ", body[s0:s1].strip())[:170]
+            # 🚨 임원 이력·리스크 열거 오탐 차단 — 인물 경력에 "NRC 근무" 가 흔하다
+            #    (실측 OKLO 2026-07-28 이사 선임 공시). 마일스톤 동사가 없으면 버린다.
+            # 🚨 동사 목록을 규제 축 기준으로만 짜면 다른 축이 통째로 걸러진다.
+            #   실측: VST PPA 3건이 전부 "Announced a 20-year power purchase agreement"
+            #   인데 announced/signed/entered into 가 없어 0건이 됐다.
+            #   축을 늘릴 때 이 목록도 같이 넓혀야 한다 — 안 그러면 조용히 0건이다.
+            if not re.search(r"\b(received|submitted|approved|issued|granted|completed|"
+                             r"accepted|docketed|awarded|published|announced|signed|"
+                             r"executed|entered into|secured|obtained|selected)\b",
+                             frag, re.I):
+                continue
+            if frag[:60] in seen_frag:      # 같은 문장이 여러 키워드·여러 축에 중복 매치된다
+                continue
+            seen_frag.add(frag[:60])
+            out.setdefault(_axis, []).append(f"{r['filingDate']} · {frag}")
+    for _axis in ("규제 마일스톤(인허가 공시)", "정책자금(DOE·보조금)",
+                  "전력계약(PPA·오프테이크)"):
+        if _axis in out:
+            out[_axis] = out[_axis][:6]
 
     # ── going concern ──
     latest_fin = next((r for r in sorted(rows, key=lambda r: r["filingDate"], reverse=True)
                        if r["form"] in ("10-K", "10-Q")), None)
     if latest_fin:
+        _gm: Dict[str, Any] = {}
         txt = _doc_text(cik, latest_fin["accessionNumber"], latest_fin["primaryDocument"],
-                        limit=800_000)
+                        limit=800_000, meta=_gm, purpose="going-concern 전수")
         if txt:
             hit = _GOING_CONCERN_PAT.search(txt)
-            out["계속기업 의문(going concern)"] = (
-                f"있음 — {latest_fin['form']} ({latest_fin['filingDate']}) 본문 확인"
-                if hit else f"미검출 — {latest_fin['form']} ({latest_fin['filingDate']}) 본문 확인")
+            _sig = f"{latest_fin['form']} ({latest_fin['filingDate']})"
+            if hit:
+                # 있음 = 발견이라 절단과 무관하게 성립한다.
+                out["계속기업 의문(going concern)"] = f"있음 — {_sig} 본문 확인"
+            else:
+                # 🚨 없음은 있음보다 비싸다 — 어디까지 읽었는지 없이 부재를 단정하지 않는다.
+                out["계속기업 의문(going concern)"] = _absence_phrase("미검출", _sig, _gm)
 
     # ── 최근 분기 매출·손익 (조인에 10-Q 가 없던 결손 ①의 실질 보완) ──
     if facts:
@@ -650,19 +865,41 @@ def _alerts_block(cik: str, rows: List[Dict[str, Any]],
             fin["순손익"] = f"${ni['val']:,.0f} (기준 {ni['end']})"
         if cash:
             fin["현금"] = f"${cash['val']:,.0f} (기준 {cash['end']})"
-        # 런웨이는 현금과 영업현금흐름이 **같은 기간말**일 때만 낸다. 기간이 어긋난 조합은
+        # 🚨 현금 + 투자 = 실제 유동성. 기간말이 현금과 **정확히 일치하는 것만** 더한다.
+        inv_c = _fresh_first(facts, _INVEST_CURRENT_TAGS, "USD", anchor)
+        inv_nc = _fresh_first(facts, _INVEST_NONCURRENT_TAGS, "USD", anchor)
+        liq = None
+        if cash:
+            parts = [("현금성", float(cash["val"]))]
+            for label, rec in (("투자(유동)", inv_c), ("투자(비유동)", inv_nc)):
+                if rec and rec.get("end") == cash["end"]:
+                    parts.append((label, float(rec["val"])))
+            if len(parts) > 1:
+                liq = {"val": sum(v for _, v in parts), "end": cash["end"]}
+                fin["유동성(현금+투자)"] = (
+                    f"${liq['val']:,.0f} (기준 {liq['end']}) — "
+                    + " + ".join(f"{k} ${v:,.0f}" for k, v in parts)
+                )
+        # 런웨이는 **유동성과 영업현금흐름이 같은 기간말**일 때만 낸다. 기간이 어긋난 조합은
         # 숫자가 그럴듯해서 더 위험하다(위 RCAT 사고).
-        if (cash and ocf and float(ocf.get("val") or 0) < 0
-                and cash["end"] == ocf["end"]):
+        # 🚨 분모는 유동성이 있으면 유동성, 없으면 현금 — **어느 쪽을 썼는지 반드시 신고**한다
+        #    (RULE 12 산출물 자기신고). 기준이 안 보이면 소비자가 8개월/2.7년을 구분 못 한다.
+        _base = liq if liq else cash
+        _base_label = "현금+투자" if liq else "현금성자산만"
+        if (_base and ocf and float(ocf.get("val") or 0) < 0
+                and _base["end"] == ocf["end"]):
             try:
                 dur = (date.fromisoformat(ocf["end"]) - date.fromisoformat(ocf["start"])).days
             except (ValueError, TypeError):
                 dur = 0
             q = abs(float(ocf["val"]))
             if q > 0 and 80 <= dur <= 100:
-                fin["런웨이(단순)"] = f"약 {float(cash['val']) / q:.1f}분기 (분기 소진 기준)"
-        elif cash and ocf:
-            fin["런웨이"] = "미산출 — 현금·영업현금흐름 기간말 불일치 또는 소진 없음"
+                fin["런웨이(단순)"] = (
+                    f"약 {float(_base['val']) / q:.1f}분기 "
+                    f"(분기 소진 기준 · 분모={_base_label})"
+                )
+        elif _base and ocf:
+            fin["런웨이"] = "미산출 — 유동성·영업현금흐름 기간말 불일치 또는 소진 없음"
 
         # 🚨 아래는 전부 "내가 손으로 계산하지 않게" 하려고 넣는다. 2026-08-15 SPCX 실측:
         #    424B4 표지의 공모주식수 × 공모가로 "조달 $75B" 를 만들어 답했는데, 실제
@@ -743,7 +980,9 @@ def _segment_block(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, A
                    if r["form"] in ("10-Q", "10-K", "10-K/A", "10-Q/A")), None)
     if not latest:
         return None
-    txt = _doc_text(cik, latest["accessionNumber"], latest["primaryDocument"])
+    _sm: Dict[str, Any] = {}
+    txt = _doc_text(cik, latest["accessionNumber"], latest["primaryDocument"],
+                    meta=_sm, purpose="부문 주석 전수")
     if not txt:
         return None
     src = f"{latest['form']} {latest['filingDate']}"
@@ -770,7 +1009,8 @@ def _segment_block(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, A
 
     if not out:
         # 🚨 "안 찾아봄" 과 "찾아봤는데 없음" 의 구분. 이게 없으면 부재 주장을 못 한다.
-        return {"부문 주석": f"본문에 부문·매출분해 주석 없음 — {src} 전문 검색 확인(추정 아님)"}
+        #   그리고 "찾아봤는데 없음" 은 **어디까지 찾아봤는지**가 붙어야 성립한다(2026-08-24).
+        return {"부문 주석": _absence_phrase("본문에 부문·매출분해 주석 없음", src, _sm)}
     return out
 
 

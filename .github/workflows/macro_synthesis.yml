@@ -1,15 +1,15 @@
-name: Macro Synthesis (daily pre-market, operator-only)
+name: Macro Facts + US Demand Chain (daily pre-market)
 
-# 거시(숲) 3종 LLM 시나리오 (PM 2026-08-03 "거시 경제 분석기"). 평일 장전 1회.
-# 🚨 비용 한정: LLM 호출은 이 워크플로 한 곳만. 1세트/일 ≈ $0.08 → ~$2/월.
-# 🚨 오퍼레이터 전용: macro_synthesis.json = 공개 발행 절대 금지. private bucket 업로드만,
+# 출처가 있는 국내외 거시 사실 + 미국 수요 체인 관측. 평일 장전 1회.
+# 2026-09-05 PM 결정: 구형 3모델 시나리오·최종판단은 종료. 전망·추천·채점 재주입 0.
+# 🚨 오퍼레이터 전용: macro_synthesis.json 은 사실 번들이나 기존과 같이 private bucket 업로드만,
 #   gitignore 로 공개 repo 커밋 차단. authed /api/admin?type=macro_synthesis 서빙.
 #
 # 2026-08-07 추가: 미국 수요 체인 관측(LLM 0, 가격·Finnhub only). 국장 개장 전 슬롯을 공유한다.
 #
-# 7축 audit: env=3 LLM 키+SUPABASE(업로드)+FINNHUB(수요체인 EPS 보강, 없으면 가격만) ·
+# 7축 audit: env=PERPLEXITY+GEMINI+SUPABASE(업로드)+FINNHUB(수요체인 EPS 보강, 없으면 가격만) ·
 #   push trigger 없음(커밋 대상 = data/ 장부뿐 → vercel-api·operator-web 밖 = RULE 2 가드가 자동 skip) ·
-#   concurrency 전용 group · cron 일1(silent skip 저위험, tri 정합) · KIS 무관(RULE 1) ·
+#   concurrency 전용 group · cron 일1(silent skip 저위험) · KIS 무관(RULE 1) ·
 #   pip requirements(yfinance 기존 등재) · N=2=manual+다음 scheduled.
 
 on:
@@ -51,13 +51,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Build macro synthesis
+      - name: Build macro facts
         env:
           VERITY_MODE: prod   # 🚨 default dev = mock — 실호출 위해 명시
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           PERPLEXITY_MODEL: ${{ vars.PERPLEXITY_MODEL || 'sonar-pro' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           if [ "${{ github.event.inputs.force }}" = "true" ]; then
             python -m api.builders.macro_synthesis_builder --force
@@ -80,18 +79,18 @@ jobs:
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}   # EPS 서프라이즈 보강용, 없으면 가격 관측만
         run: python -m api.collectors.us_demand_chain
 
-      - name: Upload to private bucket (macro_synthesis 만)
+      - name: Upload private macro facts bundle
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/upload_operator_data_to_supabase.py --only macro_synthesis
 
-      - name: Commit ledgers (RULE 4 — 거시 산출물은 gitignore 로 봉인 유지)
+      - name: Commit ledgers (RULE 4 — 사실 번들은 gitignore 로 봉인 유지)
         if: always()
         run: |
-          # 🚨 이 워크플로의 거시 산출물(크라운주얼)은 .gitignore 로 커밋이 원천 차단되어 있다.
+          # 🚨 이 워크플로의 사실 번들은 .gitignore 로 커밋이 원천 차단되어 있다.
           #   여기서 커밋하는 것은 **장부뿐**:
-          #     · llm_cost.jsonl        가장 비싼 LLM 호출의 비용 관측(2026-08-06)
+          #     · llm_cost.jsonl        사실 수집 호출의 비용 관측
           #     · us_demand_chain.*     미국 수요 체인 관측 원장 + 최신 스냅샷(2026-08-07).
           #       스냅샷을 커밋해야 뒤에 도는 daily_analysis_full(KST 16:07)의 체크아웃이
           #       읽어 리포트 프롬프트에 주입할 수 있다. 미add 시 rebase 거부 사고도 예방.
@@ -99,7 +98,7 @@ jobs:
           git config user.email "gywns0126@gmail.com"
           git add data/metadata/llm_cost.jsonl data/observations/us_demand_chain.jsonl data/us_demand_chain.json 2>/dev/null || true
           git diff --staged --quiet && exit 0
-          git commit -m "💰 장부 — 거시 분석기 · 미국 수요 체인 관측"
+          git commit -m "💰 장부 — 거시 사실 · 미국 수요 체인 관측"
           for i in 1 2 3 4 5 6; do
             git rebase --abort 2>/dev/null || true
             if git pull --rebase --autostash -X theirs origin main && git push origin main; then exit 0; fi

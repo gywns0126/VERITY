@@ -27,11 +27,9 @@ UPLOADS = [
     ("data/system_health_snapshot.json", "_operator/system_health_snapshot.json", "application/json"),
     ("data/brain_kb_usage.json", "_operator/brain_kb_usage.json", "application/json"),
     ("data/admin_todos.json", "_operator/admin_todos.json", "application/json"),
-    # 2026-08-01 3종 LLM 종합(오퍼레이터 전용, Brain grounding) — 공개 blob 아님, private+authed 만.
-    ("data/tri_synthesis.json", "_operator/tri_synthesis.json", "application/json"),
     # 2026-08-04 후보 편입/이탈 diff(오퍼레이터 전용) — private+authed 만.
     ("data/candidates_diff.json", "_operator/candidates_diff.json", "application/json"),
-    # 2026-08-03 거시 3종 LLM 시나리오(오퍼레이터 전용) — private+authed 만.
+    # 거시 사실 번들(오퍼레이터 전용) — 전망·추천 없이 출처와 기준일만 제공.
     ("data/macro_synthesis.json", "_operator/macro_synthesis.json", "application/json"),
     ("data/verification_report.json", "_operator/verification_report.json", "application/json"),
     # 중용 목표비중 — 태생부터 봉인(gitignore, 공개 발행 금지). private bucket + authed 만.

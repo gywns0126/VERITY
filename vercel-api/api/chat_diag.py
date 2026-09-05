@@ -1,21 +1,19 @@
 """
-VERITY Chat Hybrid — 진단 엔드포인트
+VERITY Chat — 진단 엔드포인트
 
 GET /api/chat_diag
 
-내일 배포 후 hybrid 경로가 제대로 활성화됐는지 원격 확인용.
-silent fallback (import 실패 → legacy) 상태를 한 번의 요청으로 진단.
+구형 Hybrid가 다시 활성화되지 않았는지와 현재 환경·CORS 상태를 확인한다.
 
 반환:
   {
     "ok": true,
     "hybrid": {
-      "enabled_flag": true,              // CHAT_HYBRID_ENABLED env
-      "module_loaded": true,             // orchestrator import 성공?
-      "import_error": null,              // 실패시 에러
+      "retired": true,
+      "configured_flag": true,           // 과거 env 잔존 여부
+      "effective_enabled": false,
     },
     "env_keys_present": {                // boolean — 값은 노출하지 않음
-      "ANTHROPIC_API_KEY": true,
       "PERPLEXITY_API_KEY": true,
       ...
     },
@@ -24,9 +22,6 @@ silent fallback (import 실패 → legacy) 상태를 한 번의 요청으로 진
       "cwd": "...",
       "chat_hybrid_on_sys_path": true,
     },
-    "cache_stats": {...},                // hybrid 로드됐을 때만
-    "rate_limit_status": {...},
-    "cost_counters": {...}
   }
 
 보안:
@@ -51,7 +46,6 @@ if _PROJECT_ROOT not in sys.path:
 
 _TRACKED_ENV_KEYS = (
     "CHAT_HYBRID_ENABLED",
-    "ANTHROPIC_API_KEY",
     "PERPLEXITY_API_KEY",
     "GEMINI_API_KEY",
     # KIS_APP_KEY / KIS_APP_SECRET / KIS_ACCOUNT_NO 제거 (2026-05-13).
@@ -63,7 +57,6 @@ _TRACKED_ENV_KEYS = (
     "API_ALLOWED_ORIGINS",
     "CHAT_HYBRID_PER_MIN_CAP",
     "CHAT_HYBRID_DAILY_CAP",
-    "CHAT_HYBRID_SYNTH_MODEL",
     "CHAT_HYBRID_GROUNDING_MODEL",
     "CHAT_HYBRID_CLASSIFIER_MODEL",
     "SUPABASE_URL",
@@ -133,32 +126,16 @@ def _runtime_info() -> dict:
 
 
 def _try_hybrid_load() -> dict:
-    # chat.py 와 동일한 완화된 매칭 규칙
-    enabled = (
+    configured = (
         os.environ.get("CHAT_HYBRID_ENABLED", "").strip().lower()
         in ("true", "1", "yes", "on")
     )
-    result = {
-        "enabled_flag": enabled,
-        "module_loaded": False,
-        "import_error": None,
+    return {
+        "retired": True,
+        "configured_flag": configured,
+        "effective_enabled": False,
+        "note": "과거 설정값과 무관하게 외부 다중 모델 합성은 실행되지 않음",
     }
-    try:
-        from api.chat_hybrid import orchestrator, cache, rate_limit  # type: ignore
-        from api.chat_hybrid.search import perplexity_client, gemini_grounding  # type: ignore
-        from api.chat_hybrid.response_synthesizer import get_session_stats as synth_stats  # type: ignore
-
-        result["module_loaded"] = True
-        result["cache_stats"] = cache.stats()
-        result["rate_limit_global"] = rate_limit.get_status("__global__")
-        result["cost_counters"] = {
-            "perplexity": perplexity_client.get_session_stats(),
-            "grounding": gemini_grounding.get_session_stats(),
-            "claude_synth": synth_stats(),
-        }
-    except Exception as e:
-        result["import_error"] = f"{type(e).__name__}: {str(e)[:200]}"
-    return result
 
 
 class handler(BaseHTTPRequestHandler):

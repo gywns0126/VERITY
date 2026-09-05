@@ -1,11 +1,12 @@
-"""오퍼레이터 온디맨드 종합 엔드포인트 — 알파네스트 발행 사실 조인 + 3종 LLM.
+"""오퍼레이터 사실·신선도 번들 엔드포인트.
 
-소비자 = 오퍼레이터 사이트(https://alphanest-psi.vercel.app) 의 3종 LLM 패널.
-  기존 패널은 **추천 상위 종목만 주 1회 사전계산**이라 임의 종목 즉시 조회가 불가했다.
-  이 엔드포인트가 그 제약을 푼다.
+소비자 = 오퍼레이터 사이트와 Codex 종목 분석 스킬.
 
   GET /api/operator_ask?ticker=094970                 → 사실 조인만 (LLM 0 · 비용 0 · ~10s)
-  GET /api/operator_ask?ticker=094970&q=<질문>&llm=1   → 3종 LLM 종합 (~90s)
+  GET /api/operator_ask?ticker=094970&q=<질문>         → 사실 + 원문 확인 질문
+
+2026-09-05 PM 결정: 서버 생성형 종합은 종료했다. 과거 llm=1 인자는 호환용으로만
+받으며 모델을 호출하지 않는다. 최종 해석은 Codex 세션이 수행한다.
 
 🚨 인증 = admin.py 와 동일 규약(X-Admin-Token 또는 Bearer JWT + profiles.is_admin).
    공개 노출 절대 금지 — 종목 상담·분석·추천이 포함된다(PM 2026-08-03, 유사투자자문 회피).
@@ -107,7 +108,7 @@ class handler(BaseHTTPRequestHandler):
         qs = parse_qs(urlparse(self.path).query)
         query = (qs.get("ticker", [""])[0] or qs.get("q_ticker", [""])[0]).strip()
         question = (qs.get("q", [""])[0] or "").strip()
-        want_llm = (qs.get("llm", ["0"])[0] or "0") in ("1", "true", "yes")
+        legacy_llm_requested = (qs.get("llm", ["0"])[0] or "0") in ("1", "true", "yes")
         if not query:
             return _write(self, 400, {"error": "ticker 필요"})
 
@@ -118,7 +119,7 @@ class handler(BaseHTTPRequestHandler):
             return _write(self, 500, {"error": "core_import_failed"})
 
         try:
-            out = core.ask(query, question, facts_only=not want_llm)
+            out = core.ask(query, question, facts_only=not bool(question))
         except Exception as e:  # noqa: BLE001
             _logger.error("operator_ask 실패: %s\n%s", e, traceback.format_exc())
             return _write(self, 500, {"error": "ask_failed"})
@@ -131,18 +132,9 @@ class handler(BaseHTTPRequestHandler):
             "missing": facts.get("missing") or [],
             "collected_at": (facts.get("_meta") or {}).get("collected_at"),
             "facts_text": out.get("facts_text"),
+            "research_questions": out.get("research_questions") or [],
+            "contract": out.get("_meta") or {},
         }
-        if want_llm:
-            syn = out.get("synthesis") or {}
-            body["synthesis"] = {
-                "text": syn.get("text"),
-                "refused": bool(syn.get("refused")),
-                "category": syn.get("category"),
-                "usage": syn.get("usage"),
-            }
-            pplx = out.get("perplexity") or {}
-            body["external"] = {"text": pplx.get("text"), "citations": pplx.get("citations")}
-            body["budget"] = out.get("_budget")
-            body["budget_blocked"] = out.get("budget_blocked")
-            body["cached"] = bool(out.get("_cached"))
+        if legacy_llm_requested:
+            body["legacy_llm_retired"] = True
         _write(self, 200, body)

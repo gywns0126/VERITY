@@ -20,7 +20,10 @@ import sys
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-import anthropic
+try:
+    import anthropic
+except ImportError:  # 종료된 공급자 SDK는 더 이상 필수 의존성이 아니다.
+    anthropic = None  # type: ignore[assignment]
 
 from api.mocks import mockable
 from api.config import (
@@ -583,7 +586,7 @@ def propose_evolution(
     constitution: Dict[str, Any],
 ) -> Optional[Dict[str, Any]]:
     """Claude Sonnet에게 가중치 변경 제안을 받는다."""
-    if not ANTHROPIC_API_KEY:
+    if not ANTHROPIC_API_KEY or anthropic is None:
         return None
 
     prompt = _build_evolution_prompt(constitution, perf)
@@ -1276,8 +1279,8 @@ def run_evolution_cycle(
         "approval_mode": "manual_only",
     }
 
-    if not ANTHROPIC_API_KEY:
-        result["reason"] = "ANTHROPIC_API_KEY 미설정"
+    if not ANTHROPIC_API_KEY or anthropic is None:
+        result["reason"] = "외부 전략 제안 런타임 종료"
         return result
 
     if registry.get("pending_proposal"):

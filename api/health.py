@@ -2,7 +2,7 @@
 VERITY Health Monitor — 시스템 자가진단 모듈
 
 감시 항목:
-  1. API Heartbeat  : DART, FRED, Telegram, Gemini, Anthropic, KIPRIS, 공공데이터, KRX Open API
+  1. API Heartbeat  : DART, FRED, Telegram, Gemini, KIPRIS, 공공데이터, KRX Open API
   2. GitHub Worker   : 최신 GitHub Actions 실행 결과
   3. Data Recency    : portfolio.json / raw_data.json 최종 갱신 시각
   4. Version Sync    : 로컬 vs 원격 커밋 해시 비교
@@ -20,7 +20,6 @@ import requests
 
 from api.config import (
     GEMINI_API_KEY,
-    ANTHROPIC_API_KEY,
     DART_API_KEY,
     FRED_API_KEY,
     ECOS_API_KEY,
@@ -39,7 +38,7 @@ VERSION = "v8.2.0"
 GITHUB_REPO = "gywns0126/VERITY"
 # WARN-20: API 특성에 맞는 차등 timeout
 _TIMEOUT = 8          # 레거시/기본값 (기존 호출부 호환)
-_TIMEOUT_FAST = 5     # gemini / anthropic / polygon / telegram
+_TIMEOUT_FAST = 5     # gemini / polygon / telegram
 _TIMEOUT_DEFAULT = 8  # 일반
 _TIMEOUT_SLOW = 20    # dart / sec_edgar / krx_open_api (대용량/무역통계)
 
@@ -192,12 +191,6 @@ def _check_gemini() -> tuple:
     if r.status_code == 429:
         return False, "쿼터 초과(429)"
     return False, f"HTTP {r.status_code}"
-
-
-def _check_anthropic() -> tuple:
-    if not ANTHROPIC_API_KEY:
-        return False, "키 미설정"
-    return True, "키 존재 확인"
 
 
 def _check_kipris() -> tuple:
@@ -585,7 +578,6 @@ def check_api_health(
         ("fred", "FRED", _check_fred),
         ("telegram", "Telegram", _check_telegram),
         ("gemini", "Gemini", _check_gemini),
-        ("anthropic", "Anthropic", _check_anthropic),
         ("kipris", "KIPRIS", _check_kipris),
         ("public_data", "공공데이터", _check_public_data),
         ("reports_signed_url", "리포트 signed URL", _check_reports_signed_url),
@@ -876,7 +868,6 @@ def run_health_check(
         "fred": "FRED 매크로",
         "telegram": "Telegram 알림",
         "gemini": "Gemini AI",
-        "anthropic": "Claude AI",
         "kipris": "KIPRIS 특허",
         "public_data": "관세청 무역",
         "krx_open_api": "KRX Open API",
@@ -982,7 +973,6 @@ _DATA_SANITY_RULES = {
 # 임계: weighted_score >= 3.0 (또는 sanity anomaly >= 2)
 CRITICAL_APIS = frozenset({
     "gemini",        # AI 1차 판정
-    "anthropic",     # AI 2차 검증
     "dart",          # KR 재무
     "krx_open_api",  # KR 시장 데이터 (코드상 키 — 사용자 명세의 'pykrx' 와 동치)
     "fred",          # US 매크로

@@ -8,9 +8,6 @@ export type CostMonitor = {
     month_key?: string
     updated_at?: string
     monthly_usage?: {
-        claude_deep_calls?: number
-        claude_light_calls?: number
-        claude_tokens?: number
         gemini_stock_calls?: number
         gemini_report_calls?: number
         gemini_pro_calls?: number

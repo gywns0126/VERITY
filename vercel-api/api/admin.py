@@ -357,10 +357,9 @@ def _build_topology(obs: dict, portfolio: Optional[dict] = None) -> dict:
                       "ok", 0, "social",
                       description="X 종목 멘션 sentiment", related=["x_sentiment"]))
 
-    # AI (4)
+    # AI·알림 (3) — 종료된 외부 합성 공급자는 토폴로지에서 제거.
     for src, label, desc in [
         ("gemini", "Gemini", "Google Gemini Flash/Pro"),
-        ("anthropic", "Claude", "Anthropic Claude Haiku/Sonnet"),
         ("perplexity", "Perplexity", "sonar-pro 리스크 조사"),
         ("telegram", "Telegram", "알림 발송 채널")]:
         nodes.append(_node(f"src_{src}", "input", "ai", label,
@@ -1436,12 +1435,9 @@ ROUTES = {
     "system_health_snapshot": _make_operator_file_handler("system_health_snapshot.json"),
     "brain_kb_usage": _make_operator_file_handler("brain_kb_usage.json"),
     "admin_todos": _make_operator_file_handler("admin_todos.json"),
-    # 3종 LLM 종합 (2026-08-01) — 오퍼레이터 전용. private _operator/tri_synthesis.json.
-    # 공개 blob 미발행이라 fallback 없음(미존재 → 503) = 노출 0. Brain grounding 이라 authed 필수.
-    "tri_synthesis": _make_operator_file_handler("tri_synthesis.json"),
     # 후보 편입/이탈 diff (2026-08-04) — 오퍼레이터 전용, 공개 fallback 없음.
     "candidates_diff": _make_operator_file_handler("candidates_diff.json"),
-    # 거시 3종 LLM 시나리오 (2026-08-03) — 오퍼레이터 전용. 공개 fallback 없음(미존재 → 503).
+    # 거시 사실 번들 — 오퍼레이터 전용. 공개 fallback 없음(미존재 → 503).
     "macro_synthesis": _make_operator_file_handler("macro_synthesis.json"),
     # ④ 검증 층(오퍼레이터 authed) — IC/팩터건강/성과. authed=본인전용이라 공개 노출 아님(봉인 무관).
     "verification": _make_operator_file_handler("verification_report.json"),

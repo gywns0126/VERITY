@@ -1,8 +1,9 @@
 """
-VERITY Chat Hybrid — 최종 응답 합성기 (Claude Sonnet 스트리밍)
+VERITY Chat Hybrid — 종료된 외부 합성기의 호환 모듈
 
-Brain 컨텍스트 + Perplexity + Gemini Grounding 결과를 받아 Claude 에 전달,
-한국어 금융 답변을 스트리밍으로 생성한다.
+2026-09-05 PM 결정으로 외부 다중 모델 합성을 종료했다. 공개 채팅은 Gemini 단일 경로를
+사용하고, 종목의 최종 판단은 현재 Codex 세션이 원문 검증 뒤 수행한다. 기존 import 계약과
+컨텍스트 보안 테스트를 위해 함수 모양만 유지하며 외부 API는 호출하지 않는다.
 
 정책:
   1. 포트폴리오 최우선 — Brain 컨텍스트는 항상 system prompt 에 주입
@@ -11,27 +12,19 @@ Brain 컨텍스트 + Perplexity + Gemini Grounding 결과를 받아 Claude 에 �
   4. 답변 길이 제한 — 3-5문장 + 필요시 불릿. 장황함 금지.
   5. 사실 없으면 추측 금지 — "관련 정보 없음" 명시
 
-스트리밍:
-  anthropic.messages.stream() 사용. orchestrator 가 NDJSON 으로 전달.
-
-환경변수:
-  ANTHROPIC_API_KEY    — 필수
-  CHAT_HYBRID_SYNTH_MODEL — 기본 CLAUDE_MODEL_DEFAULT (sonnet)
-  CHAT_HYBRID_SYNTH_MAX_TOKENS — 기본 800
+현재 상태:
+  호환 함수 형태와 외부 본문 격리 도구만 유지한다.
+  stream_response 는 고정된 종료 이벤트만 반환하며 외부 API를 호출하지 않는다.
 """
 from __future__ import annotations
 
-import logging
-import os
 import threading
-import time
 from typing import Any, Dict, Iterator, List, Optional
 
 try:
     from api.utils.external_guard import (
         wrap_untrusted,
         neutralize_external,
-        EXTERNAL_GUARD_RULE,
     )
 except Exception:  # vercel 번들 등 패키지 부재 — 격리 비활성 안전 fallback
     def wrap_untrusted(text, source="external"):  # type: ignore
@@ -39,29 +32,6 @@ except Exception:  # vercel 번들 등 패키지 부재 — 격리 비활성 안
 
     def neutralize_external(text):  # type: ignore
         return str(text or "")
-
-    EXTERNAL_GUARD_RULE = ""
-
-logger = logging.getLogger(__name__)
-
-
-def _default_model() -> str:
-    # CLAUDE_MODEL_DEFAULT 를 api.config 에서 읽되, Vercel 번들에 없으면 하드코딩 기본값
-    # 2026-08-03 5족 이전 (PM 승인) — sonnet-5 동가($3/$15 · 인트로 $2/$10 ~8/31)
-    default = "claude-sonnet-5"
-    try:
-        from api.config import CLAUDE_MODEL_DEFAULT  # type: ignore
-        default = CLAUDE_MODEL_DEFAULT or default
-    except Exception:
-        pass
-    return os.environ.get("CHAT_HYBRID_SYNTH_MODEL", default).strip()
-
-
-_MAX_TOKENS = int(os.environ.get("CHAT_HYBRID_SYNTH_MAX_TOKENS", "800"))
-_TEMPERATURE = float(os.environ.get("CHAT_HYBRID_SYNTH_TEMPERATURE", "0.3"))
-# 호출당 근사 비용 (sonnet 4.6 기준 보수적 추정)
-_EST_COST_PER_CALL = 0.012
-
 
 _SYSTEM_PROMPT = """너는 VERITY — 한국 개인투자자를 위한 금융 분석 어시스턴트다.
 
@@ -100,7 +70,7 @@ def _build_context_message(
     recent_turns: Optional[List[Dict[str, str]]] = None,
     ungrounded_tickers: Optional[List[str]] = None,
 ) -> str:
-    """Claude 에 전달할 사용자 메시지 구성 — 컨텍스트 + 질문."""
+    """과거 회귀 테스트용 격리 컨텍스트 구성."""
     blocks: List[str] = []
 
     # Brain — 항상 포함 (빈 경우도 명시)
@@ -182,111 +152,17 @@ def stream_response(
     max_tokens: Optional[int] = None,
     ungrounded_tickers: Optional[List[str]] = None,
 ) -> Iterator[Dict[str, Any]]:
-    """Claude Sonnet 스트리밍 응답 generator.
+    """종료된 외부 합성기의 호환 이벤트 generator.
 
     Yields:
-      {"type": "delta", "text": "..."} — 토큰
-      {"type": "meta", ...} — 시작 시 모델/컨텍스트 정보
-      {"type": "end", "text": 전체, "usage": {...}, "cost_est": float} — 종료
-      {"type": "error", "error": "..."} — 실패
-
-    호출자는 이 이벤트 스트림을 NDJSON 으로 그대로 전달하면 된다.
+      {"type": "error", "error": "legacy_multi_model_synthesis_retired", ...}
     """
-    global _call_count, _total_cost
-
-    t0 = time.time()
-    query = (query or "").strip()
-    if not query:
-        yield {"type": "error", "error": "빈 쿼리"}
-        return
-
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        yield {"type": "error", "error": "ANTHROPIC_API_KEY 미설정"}
-        return
-
-    try:
-        import anthropic
-    except ImportError as e:
-        yield {"type": "error", "error": f"anthropic SDK 미설치: {e}"}
-        return
-
-    use_model = (model or _default_model()).strip()
-    use_max_tokens = max_tokens or _MAX_TOKENS
-
-    user_message = _build_context_message(
-        query=query,
-        brain_ctx=brain_ctx,
-        perplexity_result=perplexity_result,
-        grounding_result=grounding_result,
-        recent_turns=recent_turns,
-        ungrounded_tickers=ungrounded_tickers,
-    )
-
-    sources_used = []
-    if brain_ctx and brain_ctx.get("ok"):
-        sources_used.append("Brain")
-    if perplexity_result and perplexity_result.get("ok"):
-        sources_used.append(f"P({len(perplexity_result.get('citations', []))})")
-    if grounding_result and grounding_result.get("ok"):
-        sources_used.append(f"G({len(grounding_result.get('citations', []))})")
-
+    # 이중 안전장치: chat.py의 상수 가드를 우회해 이 함수를 직접 불러도 외부 호출은 0이다.
     yield {
-        "type": "meta",
-        "model": use_model,
-        "sources": sources_used,
-        "prompt_chars": len(user_message),
-    }
-
-    collected: List[str] = []
-    usage: Dict[str, Any] = {}
-
-    try:
-        client = anthropic.Anthropic(api_key=api_key)
-        # 5족(sonnet-5+) 가드 (2026-08-03): 비기본 temperature = 400 거부 → 5족엔 안 보낸다.
-        # 챗은 지연 민감이라 thinking disabled 명시 (기본 on 이면 첫 토큰 지연 + 비용 증가).
-        # 판정은 모델명 prefix — vercel 번들엔 api.config 가 없을 수 있어 로컬 판정.
-        _is5 = use_model.startswith(("claude-sonnet-5", "claude-opus-5", "claude-fable-5"))
-        _extra = ({"thinking": {"type": "disabled"}} if _is5
-                  else {"temperature": _TEMPERATURE})
-        with client.messages.stream(
-            model=use_model,
-            max_tokens=use_max_tokens,
-            system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
-            **_extra,
-        ) as stream:
-            for text_chunk in stream.text_stream:
-                if text_chunk:
-                    collected.append(text_chunk)
-                    yield {"type": "delta", "text": text_chunk}
-
-            final_msg = stream.get_final_message()
-            if final_msg and getattr(final_msg, "usage", None):
-                u = final_msg.usage
-                usage = {
-                    "input_tokens": getattr(u, "input_tokens", 0),
-                    "output_tokens": getattr(u, "output_tokens", 0),
-                }
-
-    except Exception as e:
-        err = f"{type(e).__name__}: {str(e)[:200]}"
-        logger.warning("synthesizer 스트리밍 실패: %s", err)
-        yield {"type": "error", "error": err, "partial": "".join(collected)}
-        return
-
-    with _lock:
-        _call_count += 1
-        _total_cost += _EST_COST_PER_CALL
-
-    yield {
-        "type": "end",
-        "text": "".join(collected),
-        "model": use_model,
-        "usage": usage,
-        "cost_est": _EST_COST_PER_CALL,
-        "latency_ms": int((time.time() - t0) * 1000),
-        "sources": sources_used,
+        "type": "error",
+        "error": "legacy_multi_model_synthesis_retired",
+        "retired": True,
+        "final_reasoner": "codex_session",
     }
 
 

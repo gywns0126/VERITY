@@ -1,7 +1,7 @@
 "use client"
 // StockSearch — 종목 검색 (오퍼레이터). 모든 흐름의 입구. 공개 알파네스트 디자인.
 // universe_search.json(공개 사실 목록) 클라 필터. 선택 시 verity-ticker 이벤트 발신 →
-//   TriSynthesisPanel/리포트가 수신. (기존 컨벤션 정합, RULE 11)
+//   StockFactsPanel/리포트가 수신. (기존 컨벤션 정합, RULE 11)
 import { useEffect, useState } from "react"
 import { useDark, palette, FONT, NUM } from "@/lib/theme"
 import { fetchPublic } from "@/lib/api"

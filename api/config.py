@@ -68,9 +68,13 @@ GEMINI_VERDICT_ENABLE = os.environ.get(
     "GEMINI_VERDICT_ENABLE", "0").strip().lower() in ("1", "true", "yes", "on")
 # 챗 엔진 전용 — 단순 Q&A 는 Flash-Lite (Flash 대비 약 50% 비용)
 GEMINI_MODEL_CHAT = (os.environ.get("GEMINI_MODEL_CHAT") or "gemini-2.5-flash-lite").strip()
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+# 2026-09-05 PM 결정 — Anthropic/Claude 런타임 전면 종료.
+# 기존 모듈과 과거 산출물 스키마가 이 상수를 import 하므로 이름은 호환용으로만 남긴다.
+# 환경변수가 남아 있어도 값을 읽지 않아 어떤 실행 경로도 재활성화할 수 없다.
+CLAUDE_RUNTIME_RETIRED = True
+ANTHROPIC_API_KEY = ""
 
-# ── Claude 하이브리드 라우팅: 경량=Haiku, 범용=Sonnet, 전략=Opus ──
+# ── Claude 과거 호환 식별자 — 실행 모델 선택에 사용 금지 ──
 # 2026-08-03 5족 이전 (PM 승인): sonnet-4-6→sonnet-5 (동가 $3/$15 · 인트로 $2/$10 ~8/31),
 # opus-4-7→opus-5 (완전 동가 $5/$25). 🚨 5족은 thinking 기본 on + 비기본 샘플링 파라미터
 # 400 거부 — 호출부는 is_claude_5_family() 가드로 thinking/temperature 를 분기한다.
@@ -87,7 +91,7 @@ def is_claude_5_family(model: str) -> bool:
     haiku-4-5 등 구세대에 disabled 를 보내는 것도 금지 (파라미터 미지원)."""
     m = (model or "").strip()
     return m.startswith(("claude-sonnet-5", "claude-opus-5", "claude-fable-5", "claude-mythos-5"))
-CLAUDE_OPUS_ENABLE = os.environ.get("CLAUDE_OPUS_ENABLE", "1").strip().lower() in ("1", "true", "yes", "on")
+CLAUDE_OPUS_ENABLE = False
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
@@ -515,25 +519,24 @@ US_PUT_CALL_BEARISH = _env_float("US_PUT_CALL_BEARISH", 1.5)
 # (정본 스케일서 명확한 매도, 실측 6/30=20% 발화). Finnhub 문서 canonical range -100~100 정합.
 US_INSIDER_MSPR_PENALTY = _env_float("US_INSIDER_MSPR_PENALTY", -40.0)
 
-# Claude 심층 분석: Brain STRONG_BUY/BUY 상위 N개만 Claude에게 전송
-CLAUDE_TOP_N = _env_int("CLAUDE_TOP_N", 3)
+# Claude 심층 분석은 종료됐다. 아래 이름은 main.py 과거 호환용이며 항상 비활성이다.
+CLAUDE_TOP_N = 0
 CLAUDE_MIN_BRAIN_SCORE = _env_int("CLAUDE_MIN_BRAIN_SCORE", 70)
-# V6: STRONG_BUY만 Claude 심층 분석 대상 (True → STRONG_BUY만, False → BUY도 포함)
-CLAUDE_STRONG_BUY_ONLY = os.environ.get("CLAUDE_STRONG_BUY_ONLY", "1").strip() in ("1", "true", "yes", "on")
+CLAUDE_STRONG_BUY_ONLY = True
 
 # V6: Gemini 배치 분석 후보 상한 (full 모드).
 # 2026-05-11: 60 candidate → 50 으로 사용자 결정 (cost 감축, 17% 절감).
 # 환경변수 override 시 default 50 적용. brain v5 score 기준 top N.
 GEMINI_BATCH_MAX_STOCKS = _env_int("GEMINI_BATCH_MAX_STOCKS", 50)
 
-# Claude 풀가동: quick/realtime 모드 확장 (기본 비활성 — Actions vars로 켜야 함)
-CLAUDE_IN_QUICK = os.environ.get("CLAUDE_IN_QUICK", "0").strip() in ("1", "true", "yes", "on")
-CLAUDE_IN_REALTIME = os.environ.get("CLAUDE_IN_REALTIME", "0").strip() in ("1", "true", "yes", "on")
-CLAUDE_QUICK_TOP_N = _env_int("CLAUDE_QUICK_TOP_N", 3)
+# Claude 풀가동 경로 종료 — 환경변수로 다시 켤 수 없다.
+CLAUDE_IN_QUICK = False
+CLAUDE_IN_REALTIME = False
+CLAUDE_QUICK_TOP_N = 0
 CLAUDE_EMERGENCY_THRESHOLD_PCT = _env_float("CLAUDE_EMERGENCY_THRESHOLD_PCT", 5.0)
 CLAUDE_EMERGENCY_COOLDOWN_MIN = _env_int("CLAUDE_EMERGENCY_COOLDOWN_MIN", 120)
-CLAUDE_TAIL_RISK_VERIFY = os.environ.get("CLAUDE_TAIL_RISK_VERIFY", "1").strip() in ("1", "true", "yes", "on")
-CLAUDE_MORNING_STRATEGY = os.environ.get("CLAUDE_MORNING_STRATEGY", "1").strip() in ("1", "true", "yes", "on")
+CLAUDE_TAIL_RISK_VERIFY = False
+CLAUDE_MORNING_STRATEGY = False
 
 # Deadman's Switch: 이 개수 이상 데이터 소스가 실패하면 분석 중단
 DEADMAN_FAIL_THRESHOLD = _env_int("DEADMAN_FAIL_THRESHOLD", 3)
@@ -546,11 +549,11 @@ REPORT_SEND_MINUTE_KST = _env_int("REPORT_SEND_MINUTE_KST", 30)
 MORNING_BRIEF_HOUR_KST = _env_int("MORNING_BRIEF_HOUR_KST", 8)
 MORNING_BRIEF_MINUTE_KST = _env_int("MORNING_BRIEF_MINUTE_KST", 0)
 
-# AI 오심 포스트모텀: full 모드 실행 시 자동 생성 (1=on, 0=off)
-POSTMORTEM_ENABLED = os.environ.get("POSTMORTEM_ENABLED", "1").strip() in ("1", "true", "yes", "on")
+# 생성형 AI 포스트모텀·전략 제안 경로도 Claude 종료와 함께 비활성화한다.
+POSTMORTEM_ENABLED = False
 
-# Brain V2 전략 진화: full 모드 후 Claude가 가중치/임계값 변경 제안 (1=on, 0=off)
-STRATEGY_EVOLUTION_ENABLED = os.environ.get("STRATEGY_EVOLUTION_ENABLED", "1").strip() in ("1", "true", "yes", "on")
+# 기존 전략 산출물과 승인·되돌리기 도구는 보존하되 신규 LLM 제안은 만들지 않는다.
+STRATEGY_EVOLUTION_ENABLED = False
 # 진화 제안 시 각 가중치 최대 변경폭
 STRATEGY_MAX_WEIGHT_DELTA = _env_float("STRATEGY_MAX_WEIGHT_DELTA", 0.05)
 # 누적 드리프트 상한 — 초기 baseline(versions[0].pre_change_snapshot) 대비 단일 가중치의

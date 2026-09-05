@@ -4,8 +4,8 @@
 Gemini 구글 그라운딩 프로브 실측(2026-08-03)에서 서술형 축의 갭 확인 — 출처 22건 중
 주류 73% / 저품질(tistory·무관 해외지) 27%. 이 모듈이 유일한 차단·tier 소스(이중 목록 금지).
 
-소비처 3곳: news_headlines(수집 차단) · macro_synthesis(Gemini 그라운딩 출처 필터 +
-Perplexity citations) · tri_llm_synthesis(Perplexity citations).
+소비처 2곳: news_headlines(수집 차단) · macro_synthesis(Gemini 그라운딩 출처 필터 +
+Perplexity citations).
 
 역할 분리: 기존 news_headlines.CREDIBLE_SOURCES = 가점(정렬용) 유지. 여기는 tier/차단만.
 원칙: 수치는 항상 우리 1차 API(KIS·DART·금융위·FRED·Binance) 우선 — 외부 서술은 맥락 전용.

@@ -115,14 +115,12 @@ jobs:
       - name: Run report generation
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
           GEMINI_MODEL_DEFAULT: ${{ vars.GEMINI_MODEL_DEFAULT || 'gemini-2.5-flash' }}
           GEMINI_MODEL_CRITICAL: ${{ vars.GEMINI_MODEL_CRITICAL || 'gemini-2.5-pro' }}
-          CLAUDE_MODEL_DEFAULT: ${{ vars.CLAUDE_MODEL_DEFAULT || 'claude-sonnet-4-6' }}
           VERITY_MODE: 'prod'
         run: |
           IFS=',' read -ra MODE_ARR <<< "${{ steps.detect.outputs.modes }}"

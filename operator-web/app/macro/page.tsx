@@ -1,7 +1,7 @@
 "use client"
 // /macro — 거시 전용 페이지 (PM 2026-08-03 "거시 패널이 작은데... 섹터·호재·월가·고래 모든 정보,
 // 페이지 하나 새로 파야할듯"). 우레일 거시 창 = 요약, 여기 = 전체.
-// 구성: 분석기 노트 + 신선사실 / 매크로 지표 8종 / 섹터 보드(86, 핫·부진) / 로테이션 /
+// 구성: 국내외 신선 사실 / 매크로 지표 8종 / 섹터 보드(86, 핫·부진) / 로테이션 /
 //   시장 지평(가설, 유사국면) / 이벤트 캘린더(D-day) / 월가·국내 헤드라인 / 고래 13F(공개 blob).
 // 소스 = portfolio_full(authed) + macro_synthesis(authed) + us_investor_portfolios.json(공개 사실).
 import { useEffect, useState } from "react"
@@ -26,7 +26,7 @@ const MACRO_LABELS: Record<string, string> = {
 type GmCite = { title?: string; uri?: string }
 type CitationRef = { n?: number; url?: string }
 type SynSource = { content?: string; model?: string; citations?: string[]; citation_refs?: CitationRef[]; gm_citations?: GmCite[] }
-type MacroSyn = { generated_at?: string; sources?: { claude?: SynSource; perplexity?: SynSource; gemini?: SynSource } }
+type MacroSyn = { generated_at?: string; contract?: string; sources?: { perplexity?: SynSource; gemini?: SynSource } }
 type Holding13F = { ticker?: string; weight_pct?: number; change_type?: string }
 type Investor = {
     institution?: string
@@ -125,7 +125,7 @@ export default function MacroPage() {
     const mh = pf?.market_horizon
     const events = (pf?.global_events || []).filter((e) => e && e.name)
     const macro = pf?.macro || {}
-    const cl = syn?.sources?.claude
+    const gm = syn?.sources?.gemini
     const px = syn?.sources?.perplexity
     const pxCitationView = citationView(px?.content, px?.citations, px?.citation_refs)
 
@@ -143,21 +143,32 @@ export default function MacroPage() {
             <TopBar active="macro" />
             <div style={{ maxWidth: 1560, margin: "0 auto", padding: "14px 18px 30px", display: "flex", flexDirection: "column", gap: 12 }}>
 
-                {/* 분석기 노트 + 신선 사실 */}
+                {/* 국내외 신선 사실 — 시나리오·전망·추천 없음 */}
                 <div className="af-hero2">{/* 모바일 ≤640px = 1열 (globals.css) */}
-                    <PanelBoundary name="분석기">
+                    <PanelBoundary name="국내사실">
                         <div style={{ ...cardStyle(c, MAIN_PAD) }}>
-                            {secTitle("거시 분석기 — 오늘의 데스크 노트", `3종 LLM · 평일 07:50${syn?.generated_at ? ` · 생성 ${String(syn.generated_at).slice(5, 16).replace("T", " ")}` : ""}`)}
-                            {cl?.content ? (
-                                <div style={{ fontSize: 13, color: c.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{plain(cl.content)}</div>
+                            {secTitle("국내 거시 사실", `Google 검색 근거 · 72h${syn?.generated_at ? ` · 생성 ${String(syn.generated_at).slice(5, 16).replace("T", " ")}` : ""}`)}
+                            {gm?.content ? (
+                                <>
+                                    <div style={{ fontSize: 13, color: c.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{plain(gm.content)}</div>
+                                    {gm.gm_citations?.length ? (
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                                            {gm.gm_citations.slice(0, 6).map((g, i) => (
+                                                <a key={i} href={g.uri || "#"} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.green, textDecoration: "none" }}>
+                                                    근거 · {g.title || i + 1}
+                                                </a>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                </>
                             ) : (
-                                <div style={{ fontSize: 12.5, color: c.sub }}>미적재 — 평일 장전 배치 후 자동 표시.</div>
+                                <div style={{ fontSize: 12.5, color: c.sub }}>미적재 — 평일 장전 사실 수집 후 자동 표시.</div>
                             )}
                         </div>
                     </PanelBoundary>
-                    <PanelBoundary name="신선사실">
+                    <PanelBoundary name="글로벌사실">
                         <div style={{ ...cardStyle(c, MAIN_PAD) }}>
-                            {secTitle("신선 사실", "Perplexity · 72h")}
+                            {secTitle("글로벌 거시 사실", "Perplexity · 72h")}
                             {px?.content ? (
                                 <>
                                     <div style={{ fontSize: 12, color: c.sub, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{plain(px.content)}</div>
@@ -169,16 +180,6 @@ export default function MacroPage() {
                                         </div>
                                     ) : null}
                                     {pxCitationView.note ? <div style={{ marginTop: 6, fontSize: 10, color: c.amber }}>{pxCitationView.note}</div> : null}
-                                    {/* 국내 근거 — Gemini 구글 그라운딩(T1/T2 필터 통과분만, source_tiers) */}
-                                    {(syn?.sources?.gemini as SynSource | undefined)?.gm_citations?.length ? (
-                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
-                                            {(syn!.sources!.gemini!.gm_citations || []).slice(0, 6).map((g, i) => (
-                                                <a key={i} href={g.uri || "#"} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.green, textDecoration: "none" }}>
-                                                    Gemini 근거 · {g.title || i + 1}
-                                                </a>
-                                            ))}
-                                        </div>
-                                    ) : null}
                                 </>
                             ) : (
                                 <div style={{ fontSize: 12.5, color: c.sub }}>미적재.</div>

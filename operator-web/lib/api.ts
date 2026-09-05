@@ -50,11 +50,8 @@ export async function fetchPublic<T = unknown>(file: string): Promise<FetchResul
     }
 }
 
-// ── 온디맨드 종합 (오퍼레이터 전용) ──────────────────────────────────────────
-// 🚨 배치(tri_synthesis, 추천 상위 × 주1회)의 제약을 푸는 경로 — 임의 종목 즉시 조회.
-//   llm=false → 알파네스트 발행 사실 조인만 (LLM 0 · 비용 0 · ~10s)
-//   llm=true  → Perplexity(신선 외부) + Gemini(구조화) + Claude opus-5(종합) ~90s
-//   백엔드 = vercel-api/api/operator_ask.py (authed, is_admin). 공개 노출 금지.
+// ── 온디맨드 사실 번들 (오퍼레이터 전용) ────────────────────────────────────
+// 생성형 종합은 종료. 백엔드는 자체 사실·출처·기준일·결손 질문만 반환한다.
 export type AskSection = { label: string; source: string; as_of?: string; data: unknown }
 export type AskResult = {
     ticker?: string
@@ -63,19 +60,16 @@ export type AskResult = {
     missing?: string[]
     collected_at?: string
     facts_text?: string
-    synthesis?: { text?: string; refused?: boolean; category?: string; usage?: { in?: number; out?: number } }
-    external?: { text?: string; citations?: unknown[] }
-    budget?: string
-    budget_blocked?: string
-    cached?: boolean
+    research_questions?: Array<{ key?: string; label?: string; query?: string; recency?: string }>
+    contract?: { contract?: string; llm_calls?: number; final_reasoner?: string; legacy_chain_retired?: boolean }
+    legacy_llm_retired?: boolean
 }
 
-export async function fetchAsk(ticker: string, question = "", llm = false): Promise<FetchResult<AskResult>> {
+export async function fetchAsk(ticker: string, question = ""): Promise<FetchResult<AskResult>> {
     const headers = authHeaders()
     if (!headers.Authorization) return { ok: false, status: 401, error: "auth" }
     const p = new URLSearchParams({ ticker })
     if (question) p.set("q", question)
-    if (llm) p.set("llm", "1")
     try {
         const r = await fetch(`${API_BASE}/api/operator_ask?${p.toString()}`, { headers, cache: "no-store" })
         if (r.status === 401 || r.status === 403) return { ok: false, status: r.status, error: "auth" }

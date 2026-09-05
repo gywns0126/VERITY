@@ -1,31 +1,8 @@
-"""
-VERITY Chat Hybrid — 오케스트레이터 (Phase 2.5)
+"""종료된 VERITY 외부 다중 모델 오케스트레이터의 호환 모듈.
 
-run_hybrid(query, session_id, recent_turns) 이 진입점.
-NDJSON 이벤트 스트림을 yield — 호출 서버(vercel-api/api/chat.py)가 그대로 전송.
-
-흐름:
-  1. rate_limit 체크 → 초과 시 429 이벤트
-  2. quick_intent (규칙) 또는 classifier → intent_type 결정
-  3. 분기:
-     - greeting / portfolio_only:
-         Brain 즉시 → Claude 스트리밍 (TTFB ≤2s 목표)
-     - external_only / hybrid:
-         ThreadPoolExecutor 로 Brain + Perplexity + Gemini 병렬 실행,
-         모두 완료 후 Claude 스트리밍 (TTFB 5-6s, 품질 우선 — Option C)
-  4. 캐시: classifier 결과, perplexity/grounding 응답은 3단 캐시 hit 우선
-
-환경변수:
-  CHAT_HYBRID_ENABLED — "false" 면 호출자가 우회 (체크는 호출자 담당)
-  CHAT_HYBRID_DEADLINE_SEC — 전체 deadline. 기본 12초 (= external 5s + claude 7s 여유)
-
-이벤트 타입:
-  {"type":"status","stage":"<이름>","latency_ms":int,...}
-  {"type":"meta","model":..., "sources":[...], ...}
-  {"type":"delta","text":"..."}
-  {"type":"end","text":전체,"sources":[...],"usage":{...},"total_ms":int,"cost_est":float}
-  {"type":"error","error":"...","stage":"..."}
-  {"type":"rate_limit","reason":"...","retry_after_sec":int}
+공개 채팅은 별도 Gemini 단일 경로를 사용한다. ``run_hybrid``는 관리자 직접 호출까지
+고정된 종료 이벤트를 반환하므로 아래 과거 구현은 실행되지 않는다. 보안 필터와 import
+계약은 기존 회귀 테스트 및 과거 진단 자료 조회를 위해 유지한다.
 """
 from __future__ import annotations
 
@@ -188,10 +165,21 @@ def run_hybrid(
     user_watchlist: Optional[List[Dict[str, Any]]] = None,
     internal: bool = False,
 ) -> Iterator[Dict[str, Any]]:
-    """메인 엔트리 — NDJSON 이벤트 generator.
+    """종료된 외부 합성 경로의 호환 엔트리.
 
-    호출자는 각 이벤트를 `json.dumps(ev) + "\\n"` 로 바로 내려보내면 됨.
+    공개 채팅은 별도 Gemini 경로를 사용한다. 이 함수는 관리자 직접 호출을 포함해
+    어떤 외부 공급자도 부르지 않고 종료 상태만 반환한다.
     """
+    del query, session_id, recent_turns, user_watchlist, internal
+    yield {
+        "type": "error",
+        "error": "legacy_multi_model_synthesis_retired",
+        "retired": True,
+        "final_reasoner": "codex_session",
+    }
+    return
+
+    # 아래 코드는 과거 이벤트 계약 참고용이며 위 종료 가드 때문에 실행되지 않는다.
     t0 = time.time()
     query = (query or "").strip()
 

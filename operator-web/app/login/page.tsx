@@ -45,7 +45,7 @@ export default function Login() {
                     </button>
 
                     <div style={{ fontSize: 11, color: c.faint, lineHeight: 1.55 }}>
-                        로그인하면 계좌 HUD·보유·추천·호가·주문·3종 LLM 종합이 열립니다. 세션은 이 브라우저에만 저장됩니다.
+                        로그인하면 계좌 HUD·보유·추천·호가·주문·종목 사실 번들이 열립니다. 세션은 이 브라우저에만 저장됩니다.
                     </div>
 
                 </div>

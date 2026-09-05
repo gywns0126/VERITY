@@ -7,7 +7,7 @@
   다른 걸 봐서 답이 달라진 것 — 배리티 챗(chat_hybrid)은 발행물 JSON 을 **0건** 조인하고
   Brain/Perplexity/Gemini 만 붙였다. 그래서 유니버스 밖 종목에서 LLM 기억으로 가격을
   지어내는 사고가 났다(2026-06-03 삼성전자 "65,000원 지지선", 실제 ~365,000원).
-  → 조인은 **여기 한 곳**에만 둔다. 소비자(오퍼레이터 CLI·배치 빌더·챗)는 이걸 호출한다.
+  → 조인은 **여기 한 곳**에만 둔다. 소비자(오퍼레이터 CLI·Codex 세션·챗)는 이걸 호출한다.
 
 수집 범위 = 공개 발행물(Blob) + 로컬 data/ 미발행 + 오퍼레이터 private bucket.
   · 공개 Blob = 큐레이트 목록 + **제네릭 스캔**(신규 발행물이 늘어도 코드 수정 없이 잡힘).
@@ -16,7 +16,7 @@
 🚨 출력 규율
   · 모든 값에 **출처 파일 + 기준일**을 붙인다. 없는 정밀도를 있는 척하지 않는다.
   · 없는 항목은 넣지 않는다(0 으로 위장 금지 — 2026-08-03 ROE 0% 사고 계열).
-  · 이 레이어는 **사실만** 모은다. 판단·전망·추천은 상위(오퍼레이터 종합)에서만.
+  · 이 레이어는 **사실만** 모은다. 판단·전망·추천은 원문 검증 뒤 Codex 세션에서만 한다.
   · 오퍼레이터 전용 — 공개 노출 금지(PM 2026-08-03 "종목 상담·분석·추천이 들어가니 공개용 절대 안됨").
 """
 
@@ -124,12 +124,15 @@ LOCAL_FILES = [
     #   숫자로 접고 종목별 행을 버렸다. 같은 바이트에서 종목 축만 사라지던 것이라 수집이 아니라
     #   폐기가 결손이었다. threshold/FTD 는 신규. 상세 = api/collectors/us_short_pressure.py
     ("data/us_short_pressure.json", "US 공매도 압력(FINRA·Reg SHO·FTD)", True),
+    # 🚨 2026-08-23 신설 — 사업보고서 「1. 사업의 개요」 원문 발췌(LLM 0, 정규식 슬라이스).
+    #   PM 지적 = "원문을 이미 받아놓고 개요를 안 뽑고 있다". 종전 조인에는 회사가
+    #   **무엇을 하는 회사인지** 말해 주는 축이 없었다 — 섹터 라벨(5자)이 전부였다.
+    ("data/dart_business_overview.json", "사업의 개요(DART 사업보고서 원문)", False),
 ]
 
 # 오퍼레이터 private bucket (Supabase). 인증 없으면 skip.
 PRIVATE_FILES = [
     ("_operator/portfolio_full.json", "포트폴리오(비공개)"),
-    ("_operator/tri_synthesis.json", "3종 LLM 배치 종합(비공개)"),
     ("_operator/verification_report.json", "검증 리포트(비공개)"),
     ("_operator/moderation_portfolio.json", "중용 목표비중(비공개)"),
     ("_operator/brain_kb_usage.json", "Brain KB 사용(비공개)"),
@@ -233,6 +236,19 @@ def resolve_ticker(q: str) -> Tuple[str, str]:
                 return str(r.get("ticker") or ""), str(r.get("name") or "")
         return "", ""
 
+    # 🚨 2026-08-23 순서 교정 — 종전엔 KR 이름 매칭(부분 포함)이 US 심볼 패스스루보다 **앞**이라
+    # 심볼 모양 질의가 조용히 엉뚱한 KR 종목으로 끌려갔다. 실측 US 심볼 10,373 중 **252건(2.43%)**:
+    # `AMG`→SAMG엔터 · `V`→NAVER · `KO`→KODEX 200 · `GE`→TIGER 200 · `CMG`→CMG제약.
+    # 조인이 그 종목 사실로 가득 차 돌아와 **틀린 걸 알아챌 신호가 0** 이었다.
+    # 교정 = KR **정확일치** → US 심볼(실재 확인) → KR 접두 → KR 부분 → US 이름.
+    # 정확일치를 앞에 두어 'CMG제약' 처럼 이름을 다 친 질의는 종전대로 KR 로 간다. 되돌리지 말 것.
+    exact_tk, exact_nm = _match_exact_only(rows, low)
+    if exact_tk:
+        return exact_tk, exact_nm
+    u_early = s.upper()
+    if re.fullmatch(r"[A-Z]{1,5}([.-][A-Z])?", u_early) and _is_known_us_symbol(u_early):
+        return u_early, _us_display_name(u_early) or u_early
+
     tk, nm = _match(rows)
     if tk:
         return tk, nm
@@ -247,6 +263,30 @@ def resolve_ticker(q: str) -> Tuple[str, str]:
     #   매칭으로 MUB 에 끌려간다. 심볼 모양이면 심볼로 확정하고, 아닐 때만 이름을 뒤진다.
     uni_all = _fetch_json(f"{BLOB}/universe_search.json", "universe_all") or {}
     return _match(uni_all.get("stocks") if isinstance(uni_all, dict) else None)
+
+
+
+def _match_exact_only(rowset: Any, low: str) -> Tuple[str, str]:
+    """이름 **정확일치** 만. resolve_ticker 의 순서 교정용(2026-08-23)."""
+    for r in rowset or []:
+        if not isinstance(r, dict):
+            continue
+        if str(r.get("name") or "").lower() == low:
+            return str(r.get("ticker") or ""), str(r.get("name") or "")
+    return "", ""
+
+
+def _is_known_us_symbol(u: str) -> bool:
+    """US 유니버스에 실재하는 심볼인가. 🚨 실재 확인 없이 심볼 모양만으로 US 로 보내면
+    오타·약칭이 전부 US 로 새어 KR 조회가 죽는다(반대 방향 사고)."""
+    uni = _fetch_json(f"{BLOB}/universe_search.json", "universe_all") or {}
+    rows = uni.get("stocks") if isinstance(uni, dict) else None
+    if not isinstance(rows, list):
+        return False
+    for r in rows:
+        if isinstance(r, dict) and str(r.get("ticker") or "").upper() == u:
+            return True
+    return False
 
 
 def _us_display_name(u: str) -> str:

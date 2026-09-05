@@ -22,7 +22,7 @@ const TABS: Array<[Tab, string]> = [
     ["model", "모델"],
     ["drift", "드리프트"],
     ["trust", "발행 신뢰도"],
-    ["postmortem", "사후분석"],
+    ["postmortem", "과거 사후분석"],
 ]
 const TYPE_OF: Partial<Record<Tab, string>> = {
     overview: "brain_health",
@@ -416,12 +416,15 @@ function TrustTab({ c, t }: { c: Palette; t: Trust }) {
 }
 
 function PostmortemTab({ c, p }: { c: Palette; p?: Postmortem }) {
-    if (!p) return <Empty c={c} msg="사후분석 없음 — portfolio 에 postmortem 키가 없다" />
+    if (!p) return <Empty c={c} msg="과거 사후분석 없음 — 생성 경로는 종료됨" />
     const failures = p.failures || []
     const ml = Object.entries(p.misleading_factors || {})
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            <Section c={c} title={`사후분석 ${p.period ? `· ${p.period}` : ""}`}>
+            <div style={{ fontSize: 10.5, color: c.amber, fontWeight: 800 }}>
+                과거 기록 · 갱신 종료 — 현재 판단 근거로 사용하지 않음
+            </div>
+            <Section c={c} title={`과거 사후분석 ${p.period ? `· ${p.period}` : ""}`}>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, color: c.faint }}>
                     <span>분석 <b style={{ color: c.ink, ...NUM }}>{p.analyzed_count ?? "—"}</b></span>
                     <span>커버리지 <b style={{ color: c.ink, ...NUM }}>{p.coverage_ratio != null ? `${num(Number(p.coverage_ratio) * 100, 0)}%` : "—"}</b></span>

@@ -14,7 +14,6 @@ import { useDark, palette, cardStyle, CARD_TITLE, RAIL_PAD, FONT, NUM } from "@/
 import type { BrainQuality, CostMonitor } from "@/lib/types"
 
 const CONSOLES: Array<{ name: string; url: string }> = [
-    { name: "Claude — Cost", url: "https://platform.claude.com/workspaces/default/cost" },
     { name: "Google AI Studio — Spend", url: "https://aistudio.google.com/app/spend" },
     { name: "Perplexity — Billing", url: "https://console.perplexity.ai/group/ac387575-4266-40d5-96cc-d1e31462525f/billing" },
 ]
@@ -23,7 +22,6 @@ export default function AiUsageCard({ cost, brainQuality, status = "ok" }: { cos
     const dark = useDark()
     const c = palette(dark)
     const m = cost?.monthly_usage || {}
-    const claude = (m.claude_deep_calls || 0) + (m.claude_light_calls || 0)
     const bq = brainQuality || {}
     const samples = bq.metrics?.total_samples || 0
 
@@ -55,8 +53,6 @@ export default function AiUsageCard({ cost, brainQuality, status = "ok" }: { cos
                 <span style={{ fontSize: 11.5, color: c.faint }}>사용량 로딩…</span>
             ) : (
                 <div style={{ background: c.hi, borderRadius: 12, padding: "9px 11px" }}>
-                    {row("Claude 호출", `${claude.toLocaleString()}회`)}
-                    {row("Claude 토큰", (m.claude_tokens || 0).toLocaleString())}
                     {row("Gemini (stock/report/Pro)", `${m.gemini_stock_calls || 0} / ${m.gemini_report_calls || 0} / ${m.gemini_pro_calls || 0}`)}
                     {/* 🚨 2026-08-26 — 이 값은 main run 내부 카운트다. 배치 워크플로(브리프·테마 등,
                         8월 실측 ~130회)는 빠진다. 전수는 llm_cost.jsonl 원장 — 라벨 없이 두면
