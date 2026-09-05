@@ -45,6 +45,8 @@ import {
  * ② 시장 브리핑 — daily_briefing.json (빌더 미착수 → 라이브 404 시 "준비 중" 한 줄, SAMPLE 은 캔버스 전용).
  *   1면 recap(지수 레벨+등락%, 금융위 공공데이터) + 섹션(아이템·mover 등락색·"+N건" 접힘).
  *   sessionStorage cache-fallback. 종목 클릭 → stockPath?q=.
+ *   상단 중요 소식 = urgent_alerts.json 중 최신 3건. 자동 순환 없이 한 번에 노출하고,
+ *   DART 원문 URL이 확인된 항목만 연결한다. 산출물이 72시간 넘게 갱신되지 않으면 섹션을 숨긴다.
  *
  * RULE 6 = LLM 0 (결정론 조립). RULE 7 = 사실만 (점수·추천·매매의견 0), 면책 푸터.
  * KR 등락색 관례 = 상승 빨강 / 하락 파랑. 테마 = body[data-framer-theme] 자가감지. 반응형 = ResizeObserver.
@@ -110,7 +112,11 @@ const PULSE_URL =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/price_pulse.json"
 const BRIEF_URL =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/daily_briefing.json"
+const IMPORTANT_URL =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/urgent_alerts.json"
 const PER_SECTION = 3 // 섹션당 기본 노출, 초과 = "+N건" 접힘
+const IMPORTANT_LIMIT = 3
+const IMPORTANT_MAX_AGE_MS = 72 * 60 * 60 * 1000
 const SITE_UPDATE_VERSION = "2026-09-01-home-pulse-v1"
 const SITE_UPDATE_READ_KEY = "alphanest_site_update_read"
 const SITE_UPDATES = [
@@ -126,6 +132,7 @@ interface Props {
     stockPath: string
     usStockPath: string
     briefUrl: string
+    importantUrl: string
     dark: boolean
 }
 
@@ -218,6 +225,20 @@ const SAMPLE_BRIEF = {
     disclaimer:
         "전부 공시·수집 사실과 자체계산 예상 창 · 점수·추천·매매의견 아님",
 }
+const SAMPLE_IMPORTANT = {
+    _meta: { generated_at: "", source: "DART 공시 원문" },
+    alerts: [
+        {
+            ticker: "005930",
+            name: "삼성전자",
+            type: "disclosure",
+            headline: "주요사항보고서 예시",
+            label: "주요사항보고",
+            date: "2026-09-05",
+            source_url: "https://dart.fss.or.kr/",
+        },
+    ],
+}
 
 function getToken(): string {
     if (typeof window === "undefined") return ""
@@ -290,6 +311,22 @@ function FlagIcon(props: { code: string; size?: number }) {
     )
 }
 
+function dartSourceUrl(value: any): string {
+    try {
+        const url = new URL(String(value || ""))
+        return url.protocol === "https:" && url.hostname === "dart.fss.or.kr"
+            ? url.href
+            : ""
+    } catch {
+        return ""
+    }
+}
+
+function shortDate(value: any): string {
+    const text = String(value || "")
+    return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text.slice(5).replace("-", ".") : text
+}
+
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -315,6 +352,7 @@ export default function PublicMorningBriefing(props: Props) {
         stockPath,
         usStockPath,
         briefUrl,
+        importantUrl,
         dark,
     } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -343,6 +381,9 @@ export default function PublicMorningBriefing(props: Props) {
 
     // ② 시장 브리핑 상태
     const [brief, setBrief] = useState<any>(onCanvas ? SAMPLE_BRIEF : null)
+    const [importantFeed, setImportantFeed] = useState<any>(
+        onCanvas ? SAMPLE_IMPORTANT : null
+    )
     const [briefFailed, setBriefFailed] = useState(false)
     const [openSec, setOpenSec] = useState<Record<string, boolean>>({})
     const [, setNowTick] = useState(0) // 경과 시간 표시 갱신용 60초 틱
@@ -583,6 +624,21 @@ export default function PublicMorningBriefing(props: Props) {
         }
     }, [onCanvas, briefUrl, reloadTick])
 
+    // 중요 소식 — 기존 공개 산출물 재사용. 자동 순환·문구 재해석 없이 DART 원문 사실만 노출한다.
+    useEffect(() => {
+        if (onCanvas) return
+        let alive = true
+        fetch(importantUrl || IMPORTANT_URL)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (alive && d && Array.isArray(d.alerts)) setImportantFeed(d)
+            })
+            .catch(() => {})
+        return () => {
+            alive = false
+        }
+    }, [onCanvas, importantUrl, reloadTick])
+
     // 🚨 2026-07-28 상시 갱신 — 옛 embargo(publish_at 07:30 전 숨김) 타이머 폐기.
     //   PM: "모닝 브리핑에서 모닝을 빼고 수시로 체크하는거지." 받는 즉시 노출한다.
     //   경과 시간 표시가 1분 단위로 늙어 보이게 60초 틱만 유지.
@@ -767,6 +823,25 @@ export default function PublicMorningBriefing(props: Props) {
               .join(" · ")
         : "수시 갱신"
 
+    // 생산자가 정한 순서를 그대로 사용한다. 원문 링크가 없거나 피드가 72시간 넘게 멈추면 미노출.
+    const importantNews: any[] = (() => {
+        if (!importantFeed || !Array.isArray(importantFeed.alerts)) return []
+        const generated = Date.parse(String(importantFeed?._meta?.generated_at || ""))
+        if (
+            !onCanvas &&
+            (!isFinite(generated) || Date.now() - generated > IMPORTANT_MAX_AGE_MS)
+        )
+            return []
+        return importantFeed.alerts
+            .filter(
+                (item: any) =>
+                    item &&
+                    String(item.headline || "").trim() &&
+                    dartSourceUrl(item.source_url)
+            )
+            .slice(0, IMPORTANT_LIMIT)
+    })()
+
     // 기존 브리핑 응답만 재사용한다. 별도 API·Blob 요청을 추가하지 않는다.
     const pulseItems = useMemo(() => {
         const items: Array<{ text: string; href?: string }> = []
@@ -813,11 +888,12 @@ export default function PublicMorningBriefing(props: Props) {
         display: "flex",
         flexDirection: "column",
         gap: 12,
+        padding: "8px clamp(14px, 2vw, 20px) 20px",
     }
     const card: CSSProperties = {
         background: C.card,
-        borderRadius: 18,
-        padding: narrow ? "16px 16px" : "20px 20px",
+        borderRadius: 16,
+        padding: narrow ? "14px 14px" : "18px 18px",
         boxSizing: "border-box",
     }
     const cta: CSSProperties = {
@@ -1209,6 +1285,116 @@ export default function PublicMorningBriefing(props: Props) {
                     </div>
                 ) : (
                     <div>
+                        {/* 중요 소식 — 정지형 목록. 움직임·자동 넘김 없이 최대 3건을 동시에 보여준다. */}
+                        {importantNews.length > 0 && (
+                            <section
+                                aria-label="중요 소식"
+                                style={{
+                                    marginBottom: 18,
+                                    paddingBottom: 16,
+                                    borderBottom: `1px solid ${C.line}`,
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "baseline",
+                                        justifyContent: "space-between",
+                                        gap: 8,
+                                        flexWrap: "wrap",
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            fontSize: 11.5,
+                                            fontWeight: 850,
+                                            color: C.warn,
+                                            letterSpacing: "0.5px",
+                                        }}
+                                    >
+                                        중요 소식
+                                    </span>
+                                    <span style={secNote}>
+                                        DART 원문 · {agoText(importantFeed?._meta?.generated_at)}
+                                    </span>
+                                </div>
+                                <div
+                                    style={{
+                                        marginTop: 9,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                    }}
+                                >
+                                    {importantNews.map((item: any, index: number) => {
+                                        const href = dartSourceUrl(item.source_url)
+                                        const sourceLabel =
+                                            item.type === "disclosure"
+                                                ? item.label || "공시"
+                                                : "임원·주요주주"
+                                        return (
+                                            <a
+                                                key={`${item.ticker || item.name}-${item.date}-${index}`}
+                                                href={href}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{
+                                                    display: "block",
+                                                    padding: index === 0 ? "0 0 10px" : "10px 0",
+                                                    borderTop:
+                                                        index === 0
+                                                            ? "none"
+                                                            : `1px solid ${C.line}`,
+                                                    color: "inherit",
+                                                    textDecoration: "none",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "baseline",
+                                                        gap: 7,
+                                                        minWidth: 0,
+                                                        lineHeight: 1.45,
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            flexShrink: 0,
+                                                            fontSize: 12.5,
+                                                            fontWeight: 800,
+                                                            color: C.ink,
+                                                        }}
+                                                    >
+                                                        {item.name || item.ticker}
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            minWidth: 0,
+                                                            fontSize: 12.5,
+                                                            fontWeight: 650,
+                                                            color: C.sub,
+                                                        }}
+                                                    >
+                                                        {item.headline}
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        marginTop: 3,
+                                                        fontSize: 10.5,
+                                                        fontWeight: 650,
+                                                        color: C.faint,
+                                                    }}
+                                                >
+                                                    {sourceLabel} · {shortDate(item.date)} · 원문 보기 ↗
+                                                </div>
+                                            </a>
+                                        )
+                                    })}
+                                </div>
+                            </section>
+                        )}
+
                         {/* 1면 배너 — 지수 레벨 + 큰 등락% + 흐름 한 줄. 구분선은 아래 섹션이 각자 소유 */}
                         {banner && (
                             <div>
@@ -1627,6 +1813,11 @@ addPropertyControls(PublicMorningBriefing, {
         type: ControlType.String,
         title: "Briefing JSON",
         defaultValue: BRIEF_URL,
+    },
+    importantUrl: {
+        type: ControlType.String,
+        title: "Important JSON",
+        defaultValue: IMPORTANT_URL,
     },
     dark: {
         type: ControlType.Boolean,
