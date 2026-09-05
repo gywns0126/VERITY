@@ -861,11 +861,11 @@ export default function PublicCommunityPage(props: Props) {
     }
 
     const wrap: CSSProperties = {
-        width: "100%", minHeight: "100%", background: C.bg, fontFamily: FONT, boxSizing: "border-box",
+        width: "100%", maxWidth: 1000, minWidth: 0, minHeight: "100%", margin: "0 auto", alignSelf: "stretch", background: C.bg, fontFamily: FONT, boxSizing: "border-box",
         color: C.ink, padding: "8px 16px 32px", display: "flex", justifyContent: "center",
         gap: wide ? 24 : 0, alignItems: "flex-start",
     }
-    const col: CSSProperties = { width: "100%", maxWidth: 600, minWidth: 0 }
+    const col: CSSProperties = { width: "100%", minWidth: 0, flex: "1 1 0" }
     const card: CSSProperties = { background: C.card, borderRadius: 16, padding: "15px 16px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginTop: 10 }
 
     const skBase = C.skBase
