@@ -187,7 +187,7 @@ export default function PublicCommodityReport(props: Props) {
                     <div style={{ textAlign: "right" }}>
                         <div style={{ fontSize: 25, fontWeight: 900 }}>{fmt(value, 3)}</div>
                         <div style={{ marginTop: 4, color: change !== null && change > 0 ? C.red : C.blue, fontSize: 13, fontWeight: 850 }}>{fmtPct(change)}</div>
-                        <div style={{ color: C.faint, fontSize: 10.5, marginTop: 5 }}>{source} · {fmtTimestamp(generatedAt)}</div>
+                        <div style={{ color: C.faint, fontSize: 10.5, marginTop: 5 }}>{source} · {fmtTimestamp(generatedAt)} · 지연 가능</div>
                     </div>
                 </div>
                 <div style={{ marginTop: 16, borderRadius: 16, background: C.blueS, padding: "13px 15px", color: C.sub, fontSize: 12.5, lineHeight: 1.65, fontWeight: 650 }}>
