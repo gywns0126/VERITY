@@ -21,36 +21,17 @@ const DARK = {
     line: "#252b34", field: "#1e242c", up: "#f04452", upS: "#2a1a1d",
     green: "#34e08a", greenS: "#0f241c", vt: "#a99bff", vtS: "#241f3a", onAccent: "#0f1318",
 }
+// CSS가 body[data-framer-theme]를 직접 따라간다. 테마 변경에 React 상태/Observer를 사용하지 않는다.
+const ADMIN_PALETTE =
+    "body{" + Object.keys(LIGHT).map((k) => "--an-admin-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
+    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-admin-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+const C: any = {}
+for (const k of Object.keys(LIGHT)) C[k] = "var(--an-admin-" + k + ")"
+
 const FONT = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const DEFAULT_API = "https://project-yw131.vercel.app"
 const SESSION_KEY = "verity_supabase_session"
 
-function readBodyDark(): boolean {
-    // 🚨 판독 순서 고정 — 되돌리지 말 것 (2026-07-23 공개 컴포넌트 fix, 2026-08-27 관리자 이관).
-    //   ① html[data-an-theme] = Custom Code 헤드 스크립트가 **페인트 전 동기** 세팅(레이스 제거)
-    //   ② body[data-framer-theme] = 토글
-    //   ③ localStorage
-    //   🚨 body-first 로 되돌리지 말 것 — Framer 네이티브가 새로고침 때 body 를 OS 로 리셋해
-    //     **부분 라이트 회귀**가 난다. 관리자 11개가 이 옛 방식으로 남아 있었다(2026-08-27 PM 신고
-    //     "다크모드 시에 그 부분만 라이트가 됨").
-    //   🚨 OS 설정(prefers-color-scheme)은 **보지 않는다** — 로드마다 뒤집힌다. 종전 관리자 변종이
-    //     마지막 폴백으로 matchMedia 를 써서, 사이트가 다크여도 OS 가 라이트면 라이트로 그렸다.
-    try {
-        if (typeof document !== "undefined") {
-            const h = document.documentElement ? document.documentElement.dataset.anTheme : null
-            if (h === "dark") return true
-            if (h === "light") return false
-            if (document.body) {
-                const a = document.body.dataset.framerTheme
-                if (a === "dark") return true
-                if (a === "light") return false
-            }
-        }
-        const s = (typeof localStorage !== "undefined") ? localStorage.getItem("verity_theme") : null
-        if (s === "dark") return true
-    } catch (e) {}
-    return false
-}
 function loadToken(): string {
     if (typeof window === "undefined") return ""
     try {
@@ -77,6 +58,10 @@ interface Notice {
 const SAMPLE: Notice[] = [
     { id: "n1", kind: "event", title: "첫 관점 남기기 이벤트", body: "이번 주 안에 관점을 남기면 커뮤니티 첫 기록으로 남아요.", pinned: true, is_active: true, created_at: "2026-07-26" },
     { id: "n2", kind: "notice", title: "커뮤니티 이용 안내", body: "모든 글은 이용자 개인 의견이며 투자 권유가 아닙니다.", pinned: false, is_active: true, created_at: "2026-07-20" },
+]
+const SAMPLE_SUPPORT = [
+    { id: "s1", kind: "question", author: "길동무", title: "관점 공개 기준", body: "비공개로 저장하면 다른 사람에게 안 보이나요?", publish_consent: true, status: "open", answer: "", hidden: false, created_at: "2026-09-04" },
+    { id: "s2", kind: "feedback", author: "회원", title: "모바일 간격", body: "작은 화면에서 카드 간격이 조금 넓어요.", publish_consent: false, status: "open", answer: "", hidden: false, created_at: "2026-09-03" },
 ]
 
 interface Props { apiBase: string; dark: boolean }
@@ -116,8 +101,6 @@ function AdmSkeletonRows(props: { C: any; rows?: number }) {
 export default function NoticeAdminCard(props: Props) {
     const apiBase = (props.apiBase || DEFAULT_API).replace(/\/+$/, "")
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
-    const [themeDark, setThemeDark] = useState<boolean>(() => (onCanvas ? !!props.dark : readBodyDark()))
-    const C = (onCanvas ? !!props.dark : themeDark) ? DARK : LIGHT
 
     const [items, setItems] = useState<Notice[]>(onCanvas ? SAMPLE : [])
     const [loading, setLoading] = useState(false)
@@ -125,6 +108,11 @@ export default function NoticeAdminCard(props: Props) {
     const [msg, setMsg] = useState("")
     const [busy, setBusy] = useState("")
     const [needMigration, setNeedMigration] = useState("")
+    const [adminTab, setAdminTab] = useState<"notices" | "support">("notices")
+    const [supportItems, setSupportItems] = useState<any[]>(onCanvas ? SAMPLE_SUPPORT : [])
+    const [supportLoading, setSupportLoading] = useState(false)
+    const [supportFilter, setSupportFilter] = useState<"all" | "open" | "answered" | "closed">("open")
+    const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({})
 
     // 작성 폼
     const [kind, setKind] = useState<"notice" | "event">("notice")
@@ -133,16 +121,6 @@ export default function NoticeAdminCard(props: Props) {
     const [link, setLink] = useState("")
     const [pinned, setPinned] = useState(false)
     const [endsAt, setEndsAt] = useState("") // 이벤트 종료(YYYY-MM-DD). 비우면 무기한
-
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => setThemeDark(readBodyDark())
-        read()
-        if (typeof MutationObserver === "undefined" || !document.body) return
-        const o = new MutationObserver(read)
-        o.observe(document.body, { attributes: true, attributeFilter: ["data-framer-theme"] })
-        return () => o.disconnect()
-    }, [onCanvas])
 
     const load = useCallback(() => {
         if (onCanvas) return
@@ -161,6 +139,26 @@ export default function NoticeAdminCard(props: Props) {
     }, [apiBase, onCanvas])
 
     useEffect(() => { load() }, [load])
+
+    const loadSupport = useCallback(() => {
+        if (onCanvas) return
+        const token = loadToken()
+        if (!token) { setErr("관리자 로그인이 필요해요"); return }
+        setSupportLoading(true); setErr("")
+        const suffix = supportFilter === "all" ? "" : "&status=" + supportFilter
+        fetch(`${apiBase}/api/support?admin=1${suffix}`, { headers: { Authorization: "Bearer " + token }, cache: "no-store" })
+            .then((r) => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+            .then((d) => {
+                setSupportItems(Array.isArray(d.items) ? d.items : [])
+                if (d.migration_required) setNeedMigration(String(d.migration_required))
+            })
+            .catch((e) => setErr("접수함 불러오기 실패: " + (e && e.message ? e.message : e)))
+            .finally(() => setSupportLoading(false))
+    }, [apiBase, onCanvas, supportFilter])
+
+    useEffect(() => {
+        if (adminTab === "support") loadSupport()
+    }, [adminTab, loadSupport])
 
     const call = async (key: string, method: string, payload: any, okMsg: string) => {
         if (onCanvas) return
@@ -192,6 +190,35 @@ export default function NoticeAdminCard(props: Props) {
         setTitle(""); setBody(""); setLink(""); setPinned(false); setEndsAt("")
     }
 
+    const supportCall = async (it: any, action: string) => {
+        if (onCanvas) return
+        const token = loadToken()
+        if (!token) { setErr("관리자 로그인이 필요해요"); return }
+        const key = action + it.id
+        const payload: any = { id: it.id, action }
+        if (action === "answer") {
+            payload.answer = String(answerDrafts[it.id] || it.answer || "").trim()
+            if (!payload.answer) { setErr("답변을 입력해 주세요"); return }
+        }
+        setBusy(key); setErr(""); setMsg("")
+        try {
+            const r = await fetch(`${apiBase}/api/support?admin=1`, {
+                method: "POST",
+                headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            })
+            const data = await r.json().catch(() => ({}))
+            if (!r.ok) throw new Error(data.error || ("HTTP " + r.status))
+            setMsg(action === "answer" ? "답변을 저장했어요" : "상태를 변경했어요")
+            setAnswerDrafts((drafts) => ({ ...drafts, [it.id]: "" }))
+            loadSupport()
+        } catch (e: any) {
+            setErr("실패: " + (e && e.message ? e.message : e))
+        } finally {
+            setBusy("")
+        }
+    }
+
     const wrap: CSSProperties = {
         background: C.card, borderRadius: 16, padding: "18px 18px 14px", fontFamily: FONT,
         color: C.ink, boxSizing: "border-box", width: "100%",
@@ -208,13 +235,27 @@ export default function NoticeAdminCard(props: Props) {
 
     return (
         <div style={wrap}>
+            <style>{ADMIN_PALETTE}</style>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <span style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: "-0.3px" }}>공지 · 이벤트</span>
-                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>커뮤니티 상단 배너에 노출</span>
-                <button onClick={load} disabled={loading} style={{ ...btn("transparent", C.vt), marginLeft: "auto", padding: "4px 8px" }}>
-                    {loading ? "불러오는 중" : "새로고침"}
+                <span style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: "-0.3px" }}>커뮤니티 운영</span>
+                <span style={{ fontSize: 11.5, color: C.faint, fontWeight: 600 }}>공지 발행 · 질문 답변 · 피드백 확인</span>
+                <button onClick={adminTab === "notices" ? load : loadSupport} disabled={loading || supportLoading} style={{ ...btn("transparent", C.vt), marginLeft: "auto", padding: "4px 8px" }}>
+                    {loading || supportLoading ? "불러오는 중" : "새로고침"}
                 </button>
             </div>
+
+            <div role="tablist" aria-label="커뮤니티 운영 메뉴" style={{ display: "flex", gap: 4, background: C.field, borderRadius: 12, padding: 4, marginTop: 13 }}>
+                {([[
+                    "notices", "공지·이벤트"
+                ], [
+                    "support", "Q&A·피드백"
+                ]] as const).map(([key, label]) => (
+                    <button key={key} role="tab" aria-selected={adminTab === key} onClick={() => setAdminTab(key)} style={{ flex: 1, border: "none", borderRadius: 9, background: adminTab === key ? C.card : "transparent", color: adminTab === key ? C.ink : C.faint, padding: "9px 8px", fontFamily: FONT, fontSize: 12.5, fontWeight: 850, cursor: "pointer", boxShadow: adminTab === key ? "0 1px 3px rgba(0,0,0,.06)" : "none" }}>{label}</button>
+                ))}
+            </div>
+
+            {adminTab === "notices" && (
+            <>
 
             {/* 작성 */}
             <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -310,6 +351,70 @@ export default function NoticeAdminCard(props: Props) {
                     ))
                 )}
             </div>
+            </>
+            )}
+
+            {adminTab === "support" && (
+                <div role="tabpanel" style={{ marginTop: 14 }}>
+                    <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
+                        {([[
+                            "open", "확인 전"
+                        ], [
+                            "answered", "답변 완료"
+                        ], [
+                            "closed", "종료"
+                        ], [
+                            "all", "전체"
+                        ]] as const).map(([key, label]) => (
+                            <button key={key} onClick={() => setSupportFilter(key)} style={{ ...btn(supportFilter === key ? C.vt : C.field, supportFilter === key ? C.onAccent : C.sub), padding: "7px 11px", flexShrink: 0 }}>{label}</button>
+                        ))}
+                    </div>
+
+                    {needMigration ? (
+                        <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: C.vt, background: C.vtS, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55 }}>
+                            Supabase SQL Editor에서 <b>{needMigration}.sql</b>을 실행하면 접수함을 사용할 수 있어요.
+                        </div>
+                    ) : null}
+                    {err ? <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: C.up, background: C.upS, borderRadius: 8, padding: "8px 10px" }}>{err}</div> : null}
+                    {msg ? <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: C.green, background: C.greenS, borderRadius: 8, padding: "8px 10px" }}>{msg}</div> : null}
+
+                    {supportLoading ? (
+                        <AdmSkeletonRows C={C} rows={3} />
+                    ) : supportItems.length === 0 ? (
+                        <div style={{ color: C.faint, fontSize: 12.5, fontWeight: 650, padding: "22px 2px 8px" }}>이 상태의 접수 내용이 없어요.</div>
+                    ) : supportItems.map((it) => {
+                        const answer = answerDrafts[it.id] !== undefined ? answerDrafts[it.id] : (it.answer || "")
+                        const statusLabel = it.status === "answered" ? "답변 완료" : it.status === "closed" ? "종료" : "확인 전"
+                        return (
+                            <section key={it.id} style={{ background: C.field, borderRadius: 14, padding: "14px", marginTop: 10 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                                    <span style={{ color: it.kind === "feedback" ? C.up : C.vt, background: it.kind === "feedback" ? C.upS : C.vtS, borderRadius: 7, padding: "3px 7px", fontSize: 10.5, fontWeight: 850 }}>{it.kind === "feedback" ? "피드백" : "질문"}</span>
+                                    <span style={{ color: C.ink, fontSize: 13.5, fontWeight: 850 }}>{it.title}</span>
+                                    <span style={{ color: C.faint, fontSize: 10.5, fontWeight: 650 }}>{it.author || "회원"} · {fmtDate(it.created_at)}</span>
+                                    <span style={{ marginLeft: "auto", color: it.status === "answered" ? C.green : C.faint, background: C.card, borderRadius: 7, padding: "3px 7px", fontSize: 10.5, fontWeight: 800 }}>{statusLabel}</span>
+                                </div>
+                                <div style={{ color: C.sub, fontSize: 12.5, fontWeight: 600, lineHeight: 1.6, marginTop: 9, whiteSpace: "pre-wrap" }}>{it.body}</div>
+                                <div style={{ color: C.faint, fontSize: 10.5, fontWeight: 650, marginTop: 7 }}>{it.kind === "question" && it.publish_consent ? "답변 완료 후 공개 Q&A 노출 동의" : "작성자와 운영자만 확인"}{it.hidden ? " · 공개 숨김" : ""}</div>
+
+                                <textarea
+                                    value={answer}
+                                    onChange={(e) => setAnswerDrafts((drafts) => ({ ...drafts, [it.id]: e.target.value.slice(0, 3000) }))}
+                                    maxLength={3000}
+                                    rows={3}
+                                    aria-label={`${it.title} 답변`}
+                                    placeholder={it.kind === "feedback" ? "피드백 처리 결과를 남겨주세요" : "초보자도 이해할 수 있게 답변해 주세요"}
+                                    style={{ ...input, resize: "vertical", lineHeight: 1.55, marginTop: 10, background: C.card }}
+                                />
+                                <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 8 }}>
+                                    <button onClick={() => supportCall(it, "answer")} disabled={busy === "answer" + it.id} style={{ ...btn(C.vt, C.onAccent), padding: "8px 11px" }}>{busy === "answer" + it.id ? "저장 중" : it.status === "answered" ? "답변 수정" : "답변 완료"}</button>
+                                    <button onClick={() => supportCall(it, it.status === "closed" ? "reopen" : "close")} disabled={busy === "close" + it.id || busy === "reopen" + it.id} style={{ ...btn(C.card, C.sub), padding: "8px 11px" }}>{it.status === "closed" ? "다시 열기" : "종료"}</button>
+                                    {it.kind === "question" && it.status === "answered" && it.publish_consent ? <button onClick={() => supportCall(it, it.hidden ? "unhide" : "hide")} disabled={busy === "hide" + it.id || busy === "unhide" + it.id} style={{ ...btn(it.hidden ? C.greenS : C.upS, it.hidden ? C.green : C.up), padding: "8px 11px" }}>{it.hidden ? "공개 복원" : "공개 숨김"}</button> : null}
+                                </div>
+                            </section>
+                        )
+                    })}
+                </div>
+            )}
         </div>
     )
 }

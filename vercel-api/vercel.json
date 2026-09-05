@@ -44,6 +44,9 @@
     "api/notices.py": {
       "maxDuration": 5
     },
+    "api/support.py": {
+      "maxDuration": 10
+    },
     "api/order.py": {
       "maxDuration": 10
     },
@@ -155,7 +158,7 @@
   ],
   "headers": [
     {
-      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!holdings(?:$|/))(?!trades(?:$|/))(?!thesis(?:$|/))(?!thesis_feed(?:$|/))(?!portfolio_experiments(?:$|/))(?!reports(?:$|/)).*)",
+      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!holdings(?:$|/))(?!trades(?:$|/))(?!thesis(?:$|/))(?!thesis_feed(?:$|/))(?!portfolio_experiments(?:$|/))(?!support(?:$|/))(?!reports(?:$|/)).*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
