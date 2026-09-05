@@ -19,32 +19,8 @@ from google import genai
 
 _logger = logging.getLogger(__name__)
 
-# chat_hybrid 는 vercel-api/api/chat_hybrid/ 에 복제되어 배포 번들에 포함됨.
-# (repo root api/chat_hybrid/ 가 SSOT — 수정 후 sync 필수, scripts/sync_chat_hybrid.sh)
-# Vercel Python 런타임이 함수 디렉토리(/var/task) 를 sys.path 에 두므로 별도 조작 불필요.
-
-# 2026-09-05 PM 결정 — 외부 3모델 합성 경로는 종료했다.
-# 환경변수가 과거 값으로 남아 있어도 다시 활성화되지 않는다. 공개 채팅은 아래 Gemini
-# 단일 경로를 사용하고, 종목의 최종 판단은 원문 검증을 거친 Codex 세션에서 수행한다.
-CHAT_HYBRID_ENABLED = False
-CHAT_HYBRID_RETIRED = True
-
-# 지연 import — 비활성화 시 모듈 로드 비용 0, 활성화 실패시 legacy 폴백
-_hybrid_orchestrator = None
-_hybrid_import_error: str = ""
-
-def _load_hybrid():
-    global _hybrid_orchestrator, _hybrid_import_error
-    if _hybrid_orchestrator is not None or _hybrid_import_error:
-        return _hybrid_orchestrator
-    try:
-        from api.chat_hybrid import orchestrator as _orc  # type: ignore
-        _hybrid_orchestrator = _orc
-        _logger.info("chat_hybrid orchestrator 로드 성공")
-    except Exception as e:
-        _hybrid_import_error = f"{type(e).__name__}: {str(e)[:150]}"
-        _logger.warning("chat_hybrid import 실패 → legacy 사용: %s", _hybrid_import_error)
-    return _hybrid_orchestrator
+# 2026-09-05 PM 결정 — 공개 채팅은 Gemini 단일 경로만 사용한다.
+# 종목의 최종 판단은 원문 검증을 거친 Codex 세션에서 수행한다.
 
 
 def _safe_err(exc, public_msg: str = "요청 처리 중 오류") -> str:
@@ -419,26 +395,10 @@ class handler(BaseHTTPRequestHandler):
             return
 
         use_stream = body.get("stream") is True
-        session_id = str(body.get("session_id") or ip)[:120]
-        recent_turns = body.get("recent_turns") if isinstance(body.get("recent_turns"), list) else None
         # 사용자 개인 관심종목 — Framer 측 localStorage["verity_watchlist"] 동봉.
         # 형식: [{ticker, name, market, addedAt}, ...]. 미설정 시 None.
         raw_watchlist = body.get("watchlist")
         user_watchlist = raw_watchlist if isinstance(raw_watchlist, list) else None
-
-        # 과거 Hybrid 분기는 호환을 위해 남아 있지만 상수 가드로 도달 불가다.
-        if CHAT_HYBRID_ENABLED and use_stream:
-            orc = _load_hybrid()
-            if orc is not None:
-                self._hybrid_stream_response(orc, question, session_id, recent_turns, user_watchlist)
-                return
-            # import 실패 → legacy 경로로 폴백. 실패 사유는 _hybrid_import_error 에 기록됨.
-            # 운영자가 감지할 수 있도록 warning 로그 남김 (이전엔 조용히 폴백됨).
-            _logger.warning(
-                "chat_hybrid import 실패 — legacy Gemini 경로 폴백 "
-                "(session=%s, error=%s). /api/chat_diag 로 확인",
-                session_id[:10], (_hybrid_import_error or "")[:200],
-            )
 
         try:
             data = _fetch_portfolio() or {}
@@ -454,50 +414,6 @@ class handler(BaseHTTPRequestHandler):
     def _write_ndjson_line(self, obj: dict):
         line = json.dumps(obj, ensure_ascii=False) + "\n"
         self.wfile.write(line.encode("utf-8"))
-
-    def _hybrid_stream_response(self, orc, question: str, session_id: str, recent_turns, user_watchlist=None):
-        """Chat Hybrid 오케스트레이터 경로 — NDJSON 이벤트 그대로 전달.
-
-        orchestrator.run_hybrid() 가 yield 하는 {status, meta, delta, end, error, rate_limit}
-        이벤트를 NDJSON 으로 flush. 기존 legacy 이벤트 형식 (delta/end/error) 과 호환되게
-        최종 답변만 쓰는 클라이언트는 그대로 동작, 새 UI 는 status/meta 로 UX 확장.
-        """
-        self.send_response(200)
-        self._cors()
-        self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
-        self.send_header("Cache-Control", "no-cache")
-        self.send_header("X-Accel-Buffering", "no")
-        self.end_headers()
-
-        try:
-            for ev in orc.run_hybrid(
-                query=question, session_id=session_id, recent_turns=recent_turns,
-                user_watchlist=user_watchlist,
-            ):
-                etype = ev.get("type")
-                # rate_limit 은 레거시 호환용으로 error 로도 번역
-                if etype == "rate_limit":
-                    self._write_ndjson_line({
-                        "type": "error",
-                        "message": ev.get("reason", "요청 한도 초과"),
-                        "retry_after_sec": ev.get("retry_after_sec"),
-                    })
-                else:
-                    self._write_ndjson_line(ev)
-                try:
-                    self.wfile.flush()
-                except Exception:
-                    pass
-        except Exception as e:
-            _logger.error("hybrid 스트리밍 실패: %s\n%s", e, traceback.format_exc())
-            self._write_ndjson_line({
-                "type": "error",
-                "message": "응답 생성 중 오류가 발생했습니다.",
-            })
-            try:
-                self.wfile.flush()
-            except Exception:
-                pass
 
     def _ndjson_stream_response(self, question: str, context: str):
         self.send_response(200)

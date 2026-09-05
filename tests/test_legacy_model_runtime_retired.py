@@ -91,6 +91,21 @@ def test_retired_provider_sdk_is_not_a_runtime_dependency():
     assert "anthropic" not in vercel_requirements
 
 
+def test_example_env_does_not_advertise_retired_runtime():
+    example = _read(".env.example")
+    retired_keys = (
+        "ANTHROPIC_API_KEY",
+        "CHAT_HYBRID_ENABLED",
+        "CHAT_HYBRID_SYNTH_MODEL",
+        "CHAT_HYBRID_SYNTH_MAX_TOKENS",
+        "CHAT_HYBRID_CLASSIFIER_MODEL",
+        "CHAT_HYBRID_GROUNDING_MODEL",
+        "CHAT_HYBRID_DAILY_CAP",
+        "CHAT_HYBRID_PER_MIN_CAP",
+    )
+    assert all(key not in example for key in retired_keys)
+
+
 def test_operator_surfaces_do_not_offer_legacy_synthesis():
     surface_paths = [
         "operator-web/app/login/page.tsx",
@@ -105,6 +120,13 @@ def test_operator_surfaces_do_not_offer_legacy_synthesis():
     assert "tri_synthesis" not in text
     assert "anthropic" not in text
     assert "claude" not in text
+
+
+def test_public_chat_has_no_legacy_runtime_branch():
+    public_chat = _read("vercel-api/api/chat.py")
+    assert "from api.chat_hybrid" not in public_chat
+    assert "CHAT_HYBRID_ENABLED" not in public_chat
+    assert "_hybrid_stream_response" not in public_chat
 
 
 def test_retired_artifact_is_not_uploaded_or_served():
