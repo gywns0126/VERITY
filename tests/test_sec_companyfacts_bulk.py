@@ -121,6 +121,66 @@ def test_collect_is_idempotent(tmp_path, monkeypatch):
     assert r["fetched_now"] == 0 and r["have"] == 1
 
 
+def test_submission_indexes_include_latest_inline_financial_filing(tmp_path):
+    recent = {
+        "form": ["8-K", "10-Q", "10-K"],
+        "filingDate": ["2026-08-02", "2026-07-29", "2025-11-06"],
+        "reportDate": ["", "2026-06-30", "2025-09-30"],
+        "accessionNumber": ["A", "Q", "K"],
+        "primaryDocument": ["a.htm", "q.htm", "k.htm"],
+        "isXBRL": [0, 1, 1],
+        "isInlineXBRL": [0, 1, 1],
+    }
+    zp = _zip_with(1403161, {
+        "sic": "6199",
+        "sicDescription": "Finance Services",
+        "filings": {"recent": recent},
+    }, tmp_path / "submissions.zip")
+    sic, filings = bulk.submission_indexes_from_zip(zp, {1403161})
+    assert sic[1403161] == (6199, "Finance Services")
+    assert filings[1403161] == {
+        "form": "10-Q",
+        "filing_date": "2026-07-29",
+        "report_date": "2026-06-30",
+        "accession": "Q",
+        "primary_document": "q.htm",
+        "is_xbrl": True,
+        "is_inline_xbrl": True,
+    }
+
+
+def test_collect_uses_inline_fallback_when_latest_accession_is_missing(tmp_path, monkeypatch):
+    zp = _zip_with(320193, {"cik": 320193, "facts": {"us-gaap": {}}}, tmp_path / "b.zip")
+    monkeypatch.setattr(bulk, "OUT_DIR", str(tmp_path / "out"))
+    monkeypatch.setattr(bulk, "META_PATH", str(tmp_path / "meta.json"))
+    monkeypatch.setattr(bulk, "load_universe", lambda: ["AAPL"])
+    monkeypatch.setattr(bulk, "load_ticker_cik", lambda: {"AAPL": 320193})
+    monkeypatch.setattr(bulk.time, "sleep", lambda _: None)
+    filing = {
+        "form": "10-Q", "filing_date": "2026-08-01", "report_date": "2026-06-30",
+        "accession": "NEW", "primary_document": "q.htm", "is_inline_xbrl": True,
+    }
+    overlay = {
+        "facts": {"us-gaap": {"Assets": {"units": {"USD": [{
+            "end": "2026-06-30", "val": 10, "accn": "NEW", "fy": 2026,
+            "fp": "Q2", "form": "10-Q",
+        }]}}}},
+        "_inline_meta": {"fact_count": 1, "source_url": "https://sec.test/q.htm"},
+    }
+    from api.collectors import sec_inline_xbrl as inline
+    monkeypatch.setattr(inline, "fetch_inline_xbrl", lambda cik, row: overlay)
+    seen = {}
+    def _build(ticker, cik, *, facts, sic_pair):
+        seen["facts"] = facts
+        return {"ticker": ticker, "meta": {}, "series_annual": {}, "series_quarterly": {}}
+    monkeypatch.setattr(usf, "build_ticker_snapshot", _build)
+    result = bulk.collect(zp, skip_sic=True, filing_index={320193: filing})
+    assert result["inline_fallback_ok"] == 1
+    assert inline.has_accession(seen["facts"], "NEW") is True
+    saved = json.loads((tmp_path / "out" / "AAPL.json").read_text(encoding="utf-8"))
+    assert saved["meta"]["latest_filing_sync"]["status"] == "inline_fallback"
+
+
 def test_universe_is_single_source():
     """유니버스 정의가 두 곳에 갈리면 축마다 커버리지가 어긋난다."""
     src = open(bulk.__file__, encoding="utf-8").read()
