@@ -324,6 +324,8 @@ def extract_metric_series(
                     "is_annual": period.is_annual,
                     "val": r.get("val"),
                     "accn": accn_new,
+                    "filed": r.get("filed"),
+                    "source_url": r.get("source_url"),
                     "tag": tag,
                 }
     return sorted(seen.values(), key=lambda x: x["end"])

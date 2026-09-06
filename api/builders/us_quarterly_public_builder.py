@@ -21,28 +21,132 @@ KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FIN_DIR = os.path.join(_ROOT, "data", "us_financials")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "us_quarterly_public.json")
-MIN_QUARTERS = 4   # 컴포넌트 게이트(series<4 = 미표시) 정합
+MIN_PUBLISH_QUARTERS = 1
+MIN_TREND_QUARTERS = 4
+_FLOW_KEYS = ("revenue", "net_income", "operating_income", "gross_profit")
+_INSTANT_KEYS = ("total_assets", "current_assets", "current_liabilities",
+                 "total_liabilities", "stockholders_equity")
+_RATIO_KEYS = ("debt_ratio", "roa", "current_ratio", "gross_margin",
+               "asset_turnover", "operating_margin", "net_margin", "roe")
 
 
 def _now_kst() -> datetime:
     return datetime.now(KST)
 
 
-def _by_end(series: Any) -> Dict[str, float]:
-    """series_quarterly[key] (list of {end, val, is_annual}) → {end: val} (분기만, is_annual=False)."""
-    out: Dict[str, float] = {}
+def _by_end(series: Any, annual: bool) -> Dict[str, Dict[str, Any]]:
+    """Metric rows → latest accession per end for annual or quarterly values."""
+    out: Dict[str, Dict[str, Any]] = {}
     if not isinstance(series, list):
         return out
     for e in series:
-        if not isinstance(e, dict) or e.get("is_annual") or e.get("val") is None:
+        if (not isinstance(e, dict) or bool(e.get("is_annual")) != annual
+                or e.get("val") is None):
             continue
         end = str(e.get("end") or "")
         if not end:
             continue
         try:
-            out[end] = float(e.get("val"))
+            row = dict(e)
+            row["val"] = float(e.get("val"))
         except (TypeError, ValueError):
             continue
+        old = out.get(end)
+        if old is None or (str(row.get("filed") or ""), str(row.get("accn") or "")) > (
+                str(old.get("filed") or ""), str(old.get("accn") or "")):
+            out[end] = row
+    return out
+
+
+def _value(rows: Dict[str, Dict[str, Any]], end: str) -> Optional[float]:
+    row = rows.get(end)
+    return float(row["val"]) if row and row.get("val") is not None else None
+
+
+def _source_url(cik: Any, accession: Any) -> Optional[str]:
+    try:
+        cik_num = int(cik)
+    except (TypeError, ValueError):
+        return None
+    # Company Facts does not expose primaryDocument and the accession prefix
+    # is not always the registrant CIK.  Use the stable SEC company page unless
+    # the direct inline fallback supplied an exact filing URL.
+    return (f"https://www.sec.gov/edgar/browse/?CIK={cik_num}"
+            "&owner=exclude&action=getcompany")
+
+
+def _evidence(row: Optional[Dict[str, Any]], cik: Any) -> Dict[str, Any]:
+    if not row:
+        return {}
+    out = {
+        "fiscal_year": row.get("fy"),
+        "fiscal_period": row.get("fp"),
+        "form": row.get("form"),
+        "filed": row.get("filed"),
+        "accession": row.get("accn"),
+    }
+    url = row.get("source_url") or _source_url(cik, row.get("accn"))
+    if url:
+        out["source_url"] = url
+    return {k: v for k, v in out.items() if v not in (None, "")}
+
+
+def _derive_fiscal_q4(
+    annual_rows: Dict[str, Dict[str, Any]],
+    quarterly_rows: Dict[str, Dict[str, Any]],
+    end: str,
+    previous_end: str,
+) -> Optional[float]:
+    """Standalone fiscal Q4 = FY − reported Q1 − Q2 − Q3."""
+    annual_value = _value(annual_rows, end)
+    if annual_value is None or not previous_end:
+        return None
+    parts = [row for q_end, row in quarterly_rows.items()
+             if previous_end < q_end < end and row.get("fp") in {"Q1", "Q2", "Q3"}]
+    by_fp = {str(row.get("fp")): row for row in parts}
+    if set(by_fp) != {"Q1", "Q2", "Q3"}:
+        return None
+    return annual_value - sum(float(by_fp[fp]["val"]) for fp in ("Q1", "Q2", "Q3"))
+
+
+def _previous_fiscal_year_end(ends: List[str], end: str) -> str:
+    try:
+        current = datetime.strptime(end, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return ""
+    for candidate in reversed([value for value in ends if value < end]):
+        try:
+            days = (current - datetime.strptime(candidate, "%Y-%m-%d").date()).days
+        except (TypeError, ValueError):
+            continue
+        if 300 <= days <= 430:
+            return candidate
+    return ""
+
+
+def _ratios(values: Dict[str, Optional[float]]) -> Dict[str, float]:
+    rev = values.get("revenue")
+    ni = values.get("net_income")
+    oi = values.get("operating_income")
+    ta = values.get("total_assets")
+    ca = values.get("current_assets")
+    cl = values.get("current_liabilities")
+    tl = values.get("total_liabilities")
+    eq = values.get("stockholders_equity")
+    gp = values.get("gross_profit")
+    out: Dict[str, float] = {}
+    for key, value in (
+        ("debt_ratio", _ratio(tl, eq, 100.0, 0, 100000)),
+        ("roa", _ratio(ni, ta, 100.0, -500, 500)),
+        ("current_ratio", _ratio(ca, cl, 100.0, 0, 100000)),
+        ("gross_margin", _ratio(gp, rev, 100.0, -1000, 100)),
+        ("asset_turnover", _ratio(rev, ta, 1.0, 0, 100)),
+        ("operating_margin", _ratio(oi, rev, 100.0, -1000, 100)),
+        ("net_margin", _ratio(ni, rev, 100.0, -1000, 100)),
+        ("roe", _ratio(ni, eq, 100.0, -500, 500)),
+    ):
+        if value is not None:
+            out[key] = value
     return out
 
 
@@ -61,39 +165,70 @@ def _ratio(num: Optional[float], den: Optional[float], scale: float = 100.0,
 
 def _quarters_for(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
     sq = doc.get("series_quarterly") or {}
-    rev = _by_end(sq.get("revenue"))
-    ni = _by_end(sq.get("net_income"))
-    oi = _by_end(sq.get("operating_income"))
-    ta = _by_end(sq.get("total_assets"))
-    ca = _by_end(sq.get("current_assets"))
-    cl = _by_end(sq.get("current_liabilities"))
-    tl = _by_end(sq.get("total_liabilities"))
-    eq = _by_end(sq.get("stockholders_equity"))
-    gp = _by_end(sq.get("gross_profit"))
-    ends = sorted(set(ta) | set(rev) | set(eq))
+    sa = doc.get("series_annual") or {}
+    q_maps = {key: _by_end(sq.get(key), annual=False)
+              for key in (*_FLOW_KEYS, *_INSTANT_KEYS)}
+    a_maps = {key: _by_end(sa.get(key), annual=True)
+              for key in (*_FLOW_KEYS, *_INSTANT_KEYS)}
+    ends = sorted(set().union(*(set(rows) for rows in q_maps.values())))
     quarters: List[Dict[str, Any]] = []
     for end in ends:
         q: Dict[str, Any] = {"q": end}
-        # 부채비율 = 총부채÷자기자본 ×100 / ROA = 순이익÷총자산 ×100 / 유동비율 = 유동자산÷유동부채 ×100
-        # 매출총이익률 = 매출총이익÷매출 ×100 / 자산회전율 = 매출÷총자산 (회)
-        # 영업이익률 = 영업이익÷매출 ×100 / 순이익률 = 순이익÷매출 ×100 / ROE = 순이익÷자기자본 ×100 (분기, 사실)
-        dr = _ratio(tl.get(end), eq.get(end), 100.0, 0, 100000)
-        roa = _ratio(ni.get(end), ta.get(end), 100.0, -500, 500)
-        cr = _ratio(ca.get(end), cl.get(end), 100.0, 0, 100000)
-        gm = _ratio(gp.get(end), rev.get(end), 100.0, -1000, 100)
-        at = _ratio(rev.get(end), ta.get(end), 1.0, 0, 100)
-        om = _ratio(oi.get(end), rev.get(end), 100.0, -1000, 100)
-        nm = _ratio(ni.get(end), rev.get(end), 100.0, -1000, 100)
-        roe = _ratio(ni.get(end), eq.get(end), 100.0, -500, 500)
-        for k, v in (("debt_ratio", dr), ("roa", roa), ("current_ratio", cr),
-                     ("gross_margin", gm), ("asset_turnover", at),
-                     ("operating_margin", om), ("net_margin", nm), ("roe", roe)):
-            if v is not None:
-                q[k] = v
+        values = {key: _value(rows, end) for key, rows in q_maps.items()}
+        q.update(_ratios(values))
+        sources = [rows[end] for rows in q_maps.values() if end in rows]
+        source = max(sources, key=lambda row: (str(row.get("filed") or ""),
+                                               str(row.get("accn") or "")), default=None)
+        q.update(_evidence(source, (doc.get("meta") or {}).get("cik")))
+        q["period_kind"] = "reported_quarter"
         # 적어도 1개 비율이 있어야 분기 수록
-        if len(q) > 1:
+        if any(key in q for key in _RATIO_KEYS):
             quarters.append(q)
+
+    # Fiscal year-end has no 10-Q.  Balance-sheet ratios are reported 10-K
+    # values; flow ratios use a standalone Q4 only when FY-Q1-Q2-Q3 is exact.
+    annual_ends = sorted(set().union(*(set(rows) for rows in a_maps.values())))
+    existing_ends = {row["q"] for row in quarters}
+    for end in annual_ends:
+        if end in existing_ends:
+            continue
+        previous_end = _previous_fiscal_year_end(annual_ends, end)
+        values: Dict[str, Optional[float]] = {
+            key: _value(a_maps[key], end) for key in _INSTANT_KEYS
+        }
+        derived_keys: List[str] = []
+        for key in _FLOW_KEYS:
+            value = _derive_fiscal_q4(a_maps[key], q_maps[key], end, previous_end)
+            values[key] = value
+            if value is not None:
+                derived_keys.append(key)
+        q = {"q": end, **_ratios(values)}
+        if not any(key in q for key in _RATIO_KEYS):
+            continue
+        annual_sources = [rows[end] for rows in a_maps.values() if end in rows]
+        source = max(annual_sources,
+                     key=lambda row: (str(row.get("filed") or ""),
+                                      str(row.get("accn") or "")), default=None)
+        q.update(_evidence(source, (doc.get("meta") or {}).get("cik")))
+        q["fiscal_period"] = "Q4"
+        q["period_kind"] = "derived_fiscal_q4" if derived_keys else "reported_year_end_balance"
+        if derived_keys:
+            q["derivation"] = "FY-Q1-Q2-Q3"
+            q["derived_metrics"] = derived_keys
+        quarters.append(q)
     return quarters
+
+
+def _merge_quarters(old: List[Dict[str, Any]], new: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    by_end = {str(row.get("q")): dict(row) for row in old if isinstance(row, dict) and row.get("q")}
+    for row in new:
+        end = str(row.get("q") or "")
+        if not end:
+            continue
+        merged = by_end.get(end, {})
+        merged.update({k: v for k, v in row.items() if v is not None})
+        by_end[end] = merged
+    return [by_end[end] for end in sorted(by_end)]
 
 
 def build() -> Dict[str, Any]:
@@ -109,13 +244,20 @@ def build() -> Dict[str, Any]:
         except (OSError, json.JSONDecodeError):
             continue
         qs = _quarters_for(doc)
-        if len(qs) >= MIN_QUARTERS:
-            stocks[ticker] = {"quarters": qs}
+        if len(qs) >= MIN_PUBLISH_QUARTERS:
+            stocks[ticker] = {
+                "quarters": qs,
+                "quarter_count": len(qs),
+                "trend_ready": len(qs) >= MIN_TREND_QUARTERS,
+                "latest_filing_sync": (doc.get("meta") or {}).get("latest_filing_sync"),
+            }
     return {
         "_meta": {
             "generated_at": _now_kst().isoformat(),
             "source": "SEC EDGAR XBRL (us_financials series_quarterly)",
             "count": len(stocks),
+            "publish_min_quarters": MIN_PUBLISH_QUARTERS,
+            "trend_min_quarters": MIN_TREND_QUARTERS,
             "note": "분기 재무 비율 사실(부채비율/ROA/유동비율/매출총이익률/자산회전율/영업이익률/순이익률/ROE) — 점수·등급 0 (RULE 7).",
         },
         "stocks": stocks,
@@ -143,7 +285,15 @@ def main() -> int:
                 prev = {}
             fresh = out["stocks"]
             kept = sum(1 for t in prev if t not in fresh)
-            out["stocks"] = {**prev, **fresh}
+            merged = dict(prev)
+            for ticker, record in fresh.items():
+                old_record = prev.get(ticker) if isinstance(prev.get(ticker), dict) else {}
+                quarters = _merge_quarters(old_record.get("quarters") or [],
+                                           record.get("quarters") or [])
+                merged[ticker] = {**old_record, **record, "quarters": quarters,
+                                  "quarter_count": len(quarters),
+                                  "trend_ready": len(quarters) >= MIN_TREND_QUARTERS}
+            out["stocks"] = merged
             out["_meta"]["count"] = len(out["stocks"])
             out["_meta"]["fresh_this_run"] = len(fresh)
             if kept:
