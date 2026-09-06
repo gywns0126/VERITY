@@ -1,13 +1,14 @@
 {
   "schema_version": "v0.1",
-  "generated_at": "2026-08-31T08:04:22+09:00",
-  "universe_size": 67,
+  "generated_at": "2026-09-07T07:36:47+09:00",
+  "universe_size": 81,
   "universe_tickers": [
     "A",
     "AA",
     "AAL",
     "AAON",
     "ABT",
+    "ACAD",
     "ACIW",
     "ACMR",
     "ACN",
@@ -24,6 +25,7 @@
     "AMG",
     "AMZN",
     "BAC",
+    "BNL",
     "BRK-B",
     "CAG",
     "CHRD",
@@ -34,11 +36,23 @@
     "DHI",
     "DIS",
     "DVN",
+    "ECG",
+    "ELAN",
     "EOG",
     "EPAM",
     "EQT",
+    "ESAB",
     "EXE",
+    "FIVE",
+    "FRPT",
     "FSLR",
+    "FTV",
+    "G",
+    "GD",
+    "GEHC",
+    "GGG",
+    "GHC",
+    "GME",
     "GOOGL",
     "HLNE",
     "INGR",
@@ -73,9 +87,75 @@
   ],
   "themes": [
     {
+      "theme": "인건비 인플레",
+      "ticker_count": 10,
+      "frequency": 0.123,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인건비 인플레"
+      ],
+      "evidences": [
+        {
+          "ticker": "ABT",
+          "evidence": "병원·검사기관 및 헬스케어 공급망 전반에서 인건비와 운영비 상승이 이어지면서 고객들의 비용 절감 압력이 커지고 있고, 이는 진단·의료기기 공급업체들에 대한 가격 협상 강화와 마진 압박 요소로 업계 전반에서 지적되고 있음[3]."
+        },
+        {
+          "ticker": "EPAM",
+          "evidence": "글로벌 소프트웨어 엔지니어 및 데이터·AI 인력에 대한 수요가 높아지며, 동유럽·인도 등 오프쇼어 지역에서도 인건비 인플레이션이 지속돼 IT 서비스 기업들의 마진 압력이 커지고 있음.[1]"
+        },
+        {
+          "ticker": "G",
+          "evidence": "Genpact는 글로벌 서비스 딜리버리 인력 확보 경쟁과 임금 인상 압력으로 인건비 부담이 존재하며, 이를 가격 인상 및 운영 효율화로 상쇄하려 하고 있다고 컨콜에서 언급했음[1]."
+        },
+        {
+          "ticker": "GD",
+          "evidence": "최근 방산·항공우주 산업 전반에서 숙련 인력 확보난과 인건비 상승이 지속되고 있으며, 이는 장기 고정가 방산 계약의 원가 구조를 압박해 마진 방어 난이도를 높이는 요인으로 컨콜 및 리포트에서 반복적으로 언급되고 있음[5]."
+        },
+        {
+          "ticker": "GGG",
+          "evidence": "미국 및 주요 선진국에서 제조·현장 인력 인건비 상승 압력이 지속되고 있어, 산업 장비 업체들이 가격 인상과 비용 효율화로 대응하고 있으나 마진 방어에 구조적 도전 요인으로 작용한다는 지적이 주요 실적 기사와 컨콜에서 확인됨.[13]"
+        }
+      ]
+    },
+    {
+      "theme": "소비 둔화",
+      "ticker_count": 9,
+      "frequency": 0.111,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "소비 둔화"
+      ],
+      "evidences": [
+        {
+          "ticker": "BNL",
+          "evidence": "삼중넷 리츠들이 보유한 리테일·서비스 테넌트에 대한 매크로 코멘터리에서는 경기 둔화와 소비 위축이 매출 압박으로 이어져 임차인의 재무 건전성과 임대료 지급 능력에 부담을 줄 수 있다는 점을 섹터 차원의 공통 리스크로 언급함[7][12]."
+        },
+        {
+          "ticker": "CAG",
+          "evidence": "최근 북미 패키지 식품 업계 컨퍼런스콜에서 여러 CPG 기업들이 저소득층 중심 식료품 소비 여력이 약화되고 있다고 언급하며, 트래픽과 카테고리 성장률 둔화를 공통적으로 지적함[3]."
+        },
+        {
+          "ticker": "FRPT",
+          "evidence": "미국 소비 환경 둔화 가능성이 펫 관련 비필수 지출에 영향을 줄 수 있다는 우려가 제기되고 있으며, 고가 프리미엄 펫푸드 카테고리가 경기 민감한 영역으로 인식될 소지가 있다는 점이 밸류에이션 리스크로 언급되고 있음.[1]"
+        },
+        {
+          "ticker": "GHC",
+          "evidence": "미국 및 글로벌 소비 환경 둔화가 교육 등록, 지역 광고, 일부 제조·서비스 수요에 부담을 줄 수 있다는 점이 최근 업계 전반의 가이던스와 리스크 섹션에서 공통적으로 언급되고 있음[1]."
+        },
+        {
+          "ticker": "GME",
+          "evidence": "GameStop은 2026년 2분기 순매출을 7.8~8.0억달러로 전년 9.72억달러 대비 감소할 것으로 예비 공시하며 매장 폐점과 프랑스 사업 매각을 이유로 들었으나, 비디오 게임 및 관련 상품에 대한 오프라인 소비 둔화와 구조적 수요 이동이 리테일 전반에 부정적 영향을 미치고 있음으로 해석됨[2][6]."
+        }
+      ]
+    },
+    {
       "theme": "ai 투자",
       "ticker_count": 8,
-      "frequency": 0.119,
+      "frequency": 0.099,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -106,42 +186,42 @@
       ]
     },
     {
-      "theme": "인건비 인플레",
+      "theme": "금리 환경",
       "ticker_count": 6,
-      "frequency": 0.09,
-      "sentiment": -1.0,
+      "frequency": 0.074,
+      "sentiment": -0.667,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "인건비 인플레"
+        "금리 환경"
       ],
       "evidences": [
         {
-          "ticker": "ABT",
-          "evidence": "병원·검사기관 및 헬스케어 공급망 전반에서 인건비와 운영비 상승이 이어지면서 고객들의 비용 절감 압력이 커지고 있고, 이는 진단·의료기기 공급업체들에 대한 가격 협상 강화와 마진 압박 요소로 업계 전반에서 지적되고 있음[3]."
+          "ticker": "ADC",
+          "evidence": "경영진은 Q2 컨콜에서 보수적인 레버리지(순부채/EBITDA 3.7배)와 낮은 코스트 오브 캐피탈을 강조하며 약 150bp 수준의 투자 스프레드를 유지하고 있다고 언급했으나, 리츠 섹터 전반이 금리 레벨에 따라 밸류에이션 및 자금조달 조건이 달라지는 구조적 특성을 재확인함[3]."
         },
         {
-          "ticker": "EPAM",
-          "evidence": "글로벌 소프트웨어 엔지니어 및 데이터·AI 인력에 대한 수요가 높아지며, 동유럽·인도 등 오프쇼어 지역에서도 인건비 인플레이션이 지속돼 IT 서비스 기업들의 마진 압력이 커지고 있음.[1]"
+          "ticker": "AME",
+          "evidence": "기업들이 상업어음 및 회사채 등 단기·장기 조달 수단을 활용해 성장 자본을 확보하는 가운데, 금리 수준과 신용 스프레드가 높은 구간에서는 인수·CAPEX 재무비용 부담과 차입 리스크가 커질 수 있다는 점이 산업 전반의 공통 리스크로 언급됨[7][9]."
         },
         {
-          "ticker": "INGR",
-          "evidence": "미국 및 유럽 제조·물류 부문에서 임금 상승 압력이 지속되고 있다는 코멘트가 나오며, 업계 전반적으로 생산성 향상과 자동화 투자를 통해 인건비 인플레를 상쇄하려는 움직임이 강조됐음[9]."
+          "ticker": "FSLR",
+          "evidence": "미국 금리가 높은 수준에서 유지될 경우 유틸리티급 태양광 프로젝트의 자본비용이 상승해 FID 지연과 수주 타이밍 변동성이 커질 수 있다는 점이 최근 컨콜과 리포트에서 업계 전반 리스크로 지적되고 있음."
         },
         {
-          "ticker": "MKC",
-          "evidence": "식품 및 외식 산업 전반에서 인건비와 운영비 상승이 지속되고 있다는 점이 언급되었으며, 이는 제조 및 공급망 전반의 비용 구조에 상방 압력을 주는 요인으로 지목됨[8][9]."
+          "ticker": "MKTX",
+          "evidence": "컨콜에서 금리 수준과 크레딧 스프레드 변화가 거래량과 스프레드에 영향을 주지만, 장기적으로는 다양한 금리 환경에서도 전자화 추세 자체는 지속될 것이라는 입장이 제시됨[12]."
         },
         {
-          "ticker": "MLI",
-          "evidence": "전반적인 제조업 인건비 상승과 숙련 인력 확보 부담이 존재한다고 언급하며 생산 효율화와 자동화를 통해 이를 상쇄하려는 노력이 필요하다고 설명함."
+          "ticker": "THO",
+          "evidence": "컨콜 및 가이던스에서 높은 금리가 RV 금융 비용을 증가시켜 수요에 부담을 주고 있다는 점이 반복적으로 강조되며, 금리 경로가 향후 수요의 핵심 변수로 지적됨.[1][2]"
         }
       ]
     },
     {
       "theme": "자본규율",
       "ticker_count": 6,
-      "frequency": 0.09,
+      "frequency": 0.074,
       "sentiment": 0.273,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -172,75 +252,38 @@
       ]
     },
     {
-      "theme": "소비 둔화",
-      "ticker_count": 5,
-      "frequency": 0.075,
+      "theme": "규제 리스크",
+      "ticker_count": 4,
+      "frequency": 0.049,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "소비 둔화"
+        "규제 리스크"
       ],
       "evidences": [
         {
-          "ticker": "CAG",
-          "evidence": "최근 북미 패키지 식품 업계 컨퍼런스콜에서 여러 CPG 기업들이 저소득층 중심 식료품 소비 여력이 약화되고 있다고 언급하며, 트래픽과 카테고리 성장률 둔화를 공통적으로 지적함[3]."
+          "ticker": "ACAD",
+          "evidence": "Nuplazid의 과거 안전성·라벨 이슈와 CNS 약물에 대한 규제·약가 압력 가능성이 컨콜 및 리스크 항목에서 재언급되며, 향후 규제 심사 강화가 CNS·정신질환 약물 섹터 전반에 부담 요인으로 지적됨[1]."
         },
         {
-          "ticker": "INGR",
-          "evidence": "북미·유럽 식품 및 음료 카테고리에서 볼륨 성장이 둔화되고 소비자들이 가격 민감도를 보이는 흐름이 나타나고 있다는 언급이 이어지며, 이는 전분·스위트너 및 인그리디언트 수요 성장률을 제한하는 요인으로 지적됐음[9]."
+          "ticker": "DIS",
+          "evidence": "FCC가 ABC 방송국 라이선스 조기 재검토에 나서고 법원이 Disney의 긴급 심리 요청을 기각한 사례에서 보듯, 방송·콘텐츠 기업에 대한 규제 기관의 감독 강화가 향후 라이선스 갱신·소유 규제 등의 부담 요인이 될 수 있음[10]."
         },
         {
-          "ticker": "MKC",
-          "evidence": "최근 컨콜에서 관리층은 일부 선진국 소매 채널에서 가격 민감도가 높아지고 프로모션 의존도가 커지고 있다고 언급하며, 전반적인 소비 환경이 여전히 완전히 정상화되지 않았다고 평가했음[9]."
+          "ticker": "QCOM",
+          "evidence": "통신·반도체 산업 전반에서 특허 라이선스, 데이터 사용, 국가 안보 관련 규제와 반독점 조사 가능성이 상존하며, 특히 대형 반도체·통신 IP 기업의 경우 과거 및 향후 소송·규제 이슈가 비즈니스 모델과 밸류에이션에 부담 요인으로 작용할 수 있다는 점이 금융매체와 공시에서 언급되고 있음[12][13]."
         },
         {
-          "ticker": "PG",
-          "evidence": "동종업체 및 Reuters 보도에 따르면 북미를 포함한 주요 시장에서 소비재 수요가 약화되고 있으며, P&G도 FY2027에 더 느린 매출 성장과 매우 어려운 경제 환경을 언급해 글로벌 소비 둔화가 업종 전반에 부담으로 작용하고 있음[10]."
-        },
-        {
-          "ticker": "THO",
-          "evidence": "최근 RV 업계 컨콜에서는 고금리와 경기 불확실성으로 소비자가 대형 내구재 구매를 늦추는 경향이 언급되며, 출하 및 주문이 보수적으로 유지된다고 설명함.[1][2]"
-        }
-      ]
-    },
-    {
-      "theme": "금리 환경",
-      "ticker_count": 5,
-      "frequency": 0.075,
-      "sentiment": -0.619,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "금리 환경"
-      ],
-      "evidences": [
-        {
-          "ticker": "ADC",
-          "evidence": "경영진은 Q2 컨콜에서 보수적인 레버리지(순부채/EBITDA 3.7배)와 낮은 코스트 오브 캐피탈을 강조하며 약 150bp 수준의 투자 스프레드를 유지하고 있다고 언급했으나, 리츠 섹터 전반이 금리 레벨에 따라 밸류에이션 및 자금조달 조건이 달라지는 구조적 특성을 재확인함[3]."
-        },
-        {
-          "ticker": "AME",
-          "evidence": "기업들이 상업어음 및 회사채 등 단기·장기 조달 수단을 활용해 성장 자본을 확보하는 가운데, 금리 수준과 신용 스프레드가 높은 구간에서는 인수·CAPEX 재무비용 부담과 차입 리스크가 커질 수 있다는 점이 산업 전반의 공통 리스크로 언급됨[7][9]."
-        },
-        {
-          "ticker": "MKTX",
-          "evidence": "컨콜에서 금리 수준과 크레딧 스프레드 변화가 거래량과 스프레드에 영향을 주지만, 장기적으로는 다양한 금리 환경에서도 전자화 추세 자체는 지속될 것이라는 입장이 제시됨[12]."
-        },
-        {
-          "ticker": "THO",
-          "evidence": "컨콜 및 가이던스에서 높은 금리가 RV 금융 비용을 증가시켜 수요에 부담을 주고 있다는 점이 반복적으로 강조되며, 금리 경로가 향후 수요의 핵심 변수로 지적됨.[1][2]"
-        },
-        {
-          "ticker": "VICI",
-          "evidence": "리츠 섹터 전반이 고금리 환경에 따른 밸류에이션 디스카운트와 자본비용 상승 압력을 받고 있으며, VICI 역시 배당수익률과 신규 투자 수익률로 이를 상쇄하려 하나 금리 레짐이 리레이팅을 제약하는 요인으로 작용한다고 평가됨[7]."
+          "ticker": "SMCI",
+          "evidence": "WSJ 및 관련 보도에 따르면 미국의 수출통제·국가안보 규제가 강화되는 가운데, 고성능 서버·GPU 공급망 업체들은 제재 대상 지역과의 거래에 대한 감독 강화와 잠재적 조사 리스크에 노출되어 있으며, SMCI의 과거 의혹 사례는 산업 전반 규제 리스크 상존을 보여줌[7][14]."
         }
       ]
     },
     {
       "theme": "소비둔화",
       "ticker_count": 4,
-      "frequency": 0.06,
+      "frequency": 0.049,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -269,7 +312,7 @@
     {
       "theme": "규제강화",
       "ticker_count": 4,
-      "frequency": 0.06,
+      "frequency": 0.049,
       "sentiment": -0.714,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -298,7 +341,7 @@
     {
       "theme": "지정학 리스크",
       "ticker_count": 4,
-      "frequency": 0.06,
+      "frequency": 0.049,
       "sentiment": -0.24,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -325,9 +368,38 @@
       ]
     },
     {
+      "theme": "환율 영향",
+      "ticker_count": 4,
+      "frequency": 0.049,
+      "sentiment": -0.2,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "환율 영향"
+      ],
+      "evidences": [
+        {
+          "ticker": "A",
+          "evidence": "Agilent 는 글로벌 매출 비중이 높아 달러 강세 및 신흥시장 통화 약세가 보고 매출과 이익에 부정적 영향을 줄 수 있으며, 특히 인도·중국 등 고성장 시장에서의 환율 변동이 장비 가격 경쟁력과 수요에 영향을 줄 수 있다는 점이 산업 전반에 해당하는 매크로 테마로 거론됨[1]."
+        },
+        {
+          "ticker": "ESAB",
+          "evidence": "ESAB 를 포함한 글로벌 용접 장비 업체들이 다지역에서 매출을 발생시키는 만큼 달러 강세·신흥국 통화 약세가 매출 환산과 마진에 혼합된 영향을 미치며, 최근 분기에는 환율이 전체 실적에 미치는 영향이 제한적이었다는 언급이 리포트에 있음[1]."
+        },
+        {
+          "ticker": "FTV",
+          "evidence": "글로벌 매출 비중이 높은 산업 기술 기업들은 최근 분기 실적 설명에서 달러 강세가 일부 지역 매출 성장률에 역풍을 주고 있다고 언급하면서도, 헤지 및 가격 정책으로 영향을 관리하고 있다고 설명함.[4]"
+        },
+        {
+          "ticker": "INGR",
+          "evidence": "라틴아메리카 및 기타 신흥국 비중이 높은 인그리디언트 업체 전반에 대해 경영진들이 환율 변동이 보고 매출과 마진에 혼합된 영향을 준다고 언급하며, 헤지와 가격 정책으로 중립적 효과를 지향하고 있다고 밝힘[9]."
+        }
+      ]
+    },
+    {
       "theme": "재고조정",
       "ticker_count": 4,
-      "frequency": 0.06,
+      "frequency": 0.049,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -356,7 +428,7 @@
     {
       "theme": "디지털전환",
       "ticker_count": 3,
-      "frequency": 0.045,
+      "frequency": 0.037,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -379,34 +451,126 @@
       ]
     },
     {
-      "theme": "규제 리스크",
+      "theme": "고금리 환경",
       "ticker_count": 3,
-      "frequency": 0.045,
+      "frequency": 0.037,
+      "sentiment": -0.333,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "고금리 환경"
+      ],
+      "evidences": [
+        {
+          "ticker": "BNL",
+          "evidence": "최근 순수 삼중넷 리츠 섹터에 대한 분석에서는 금리 수준이 자본조달 비용과 리츠 밸류에이션 멀티플을 동시에 압박하며, 인수·개발 투자에 필요한 스프레드를 축소시키는 주요 역풍으로 반복적으로 언급되고 있음[7][12]."
+        },
+        {
+          "ticker": "BRK-B",
+          "evidence": "미 연준의 긴축 기조 유지로 고금리 환경이 지속되면서 보험 Float와 현금성 자산의 이자수익은 증가하지만, 자본시장 변동성과 실물투자 둔화에 따른 부정적 영향이 병존함."
+        },
+        {
+          "ticker": "SOFI",
+          "evidence": "최근 컨퍼런스콜에서 경영진은 장기간의 고금리 환경이 대출 성장에는 제약을 주는 반면, 예금 기반이 탄탄한 디지털 은행에게는 NIM 방어와 수익성 관리 측면에서 기회 요인도 된다고 언급함."
+        }
+      ]
+    },
+    {
+      "theme": "디지털 전환",
+      "ticker_count": 3,
+      "frequency": 0.037,
+      "sentiment": 0.333,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "디지털 전환"
+      ],
+      "evidences": [
+        {
+          "ticker": "G",
+          "evidence": "Genpact 경영진은 최근 컨콜에서 고객사의 엔터프라이즈 디지털 전환·클라우드 마이그레이션·데이터 애널리틱스 프로젝트 수요가 견조하며 장기적인 성장 동력으로 작용하고 있다고 언급했음[1]."
+        },
+        {
+          "ticker": "GME",
+          "evidence": "비디오 게임 유통 구조가 디지털 다운로드·온라인 마켓플레이스·구독 서비스 중심으로 이동하면서 전통적인 패키지 게임·콘솔 판매 리테일의 매출 감소가 지속되고 있으며, GameStop의 매출 감소와 사업 재편은 오프라인 리테일 업계 전반이 디지털 전환에 따른 구조적 압력을 받고 있음을 보여줌[2][6][7]."
+        },
+        {
+          "ticker": "SOFI",
+          "evidence": "경영진은 금융 서비스의 디지털 채널 전환이 구조적 추세이며, 모바일 중심 고객 획득과 테크/플랫폼 사업 성장에 장기적으로 우호적인 환경이라고 강조함."
+        }
+      ]
+    },
+    {
+      "theme": "재고 조정",
+      "ticker_count": 3,
+      "frequency": 0.037,
+      "sentiment": -0.273,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "재고 조정"
+      ],
+      "evidences": [
+        {
+          "ticker": "ADI",
+          "evidence": "업계 전반적으로 일부 엔드마켓에서 재고가 정상화 국면에 접어들었다는 평가가 있으나, 회사는 여전히 지정학적 위험과 AI CapEx 둔화 가능성, 거시 불확실성 등으로 수요·재고의 변동성이 남아 있다고 언급하며 보수적인 톤을 유지함[3][4][8]."
+        },
+        {
+          "ticker": "GGG",
+          "evidence": "제조 및 산업 고객들이 상반기 동안 구축한 장비·부품 재고를 조정하는 과정에 있어 신규 주문 템포가 다소 느려졌다는 언급이 산업 장비 업종 전반의 실적 컨콜에서 공통적으로 확인됨.[13]"
+        },
+        {
+          "ticker": "THO",
+          "evidence": "딜러들은 팬데믹 기간 이후 과잉 재고를 축소해온 만큼 현재 재고 수준을 신중하게 관리하고 있으며, 업계 전반에서 재고 정상화와 출하 조정이 계속된다고 컨콜에서 언급됨.[1][2]"
+        }
+      ]
+    },
+    {
+      "theme": "환율",
+      "ticker_count": 2,
+      "frequency": 0.025,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "규제 리스크"
+        "환율"
       ],
       "evidences": [
         {
-          "ticker": "DIS",
-          "evidence": "FCC가 ABC 방송국 라이선스 조기 재검토에 나서고 법원이 Disney의 긴급 심리 요청을 기각한 사례에서 보듯, 방송·콘텐츠 기업에 대한 규제 기관의 감독 강화가 향후 라이선스 갱신·소유 규제 등의 부담 요인이 될 수 있음[10]."
+          "ticker": "ALV",
+          "evidence": "글로벌 제조업체 전반에서 환율 변동이 이익률을 흔드는 요인으로 언급되고 있으며, Autoliv도 지역 분산 매출 구조상 영향이 큼."
         },
         {
-          "ticker": "QCOM",
-          "evidence": "통신·반도체 산업 전반에서 특허 라이선스, 데이터 사용, 국가 안보 관련 규제와 반독점 조사 가능성이 상존하며, 특히 대형 반도체·통신 IP 기업의 경우 과거 및 향후 소송·규제 이슈가 비즈니스 모델과 밸류에이션에 부담 요인으로 작용할 수 있다는 점이 금융매체와 공시에서 언급되고 있음[12][13]."
+          "ticker": "GEHC",
+          "evidence": "글로벌 매출 비중이 큰 의료기기 업종 특성상 환율 변동이 실적에 영향을 줄 수 있음. [15]"
+        }
+      ]
+    },
+    {
+      "theme": "m&a 환경",
+      "ticker_count": 2,
+      "frequency": 0.025,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "M&A 환경"
+      ],
+      "evidences": [
+        {
+          "ticker": "AME",
+          "evidence": "산업 기술 및 계측 시장에서 기업들은 니치 고마진 사업을 확보하기 위한 M&A를 적극적으로 활용하고 있으며, AMETEK 역시 인수를 통한 포트폴리오 확대를 실적과 가이던스에서 강조하는 등, 양호한 밸류에이션과 자본시장 접근성에 기반한 인수·통합 환경이 우호적으로 유지되고 있다는 점이 공통적으로 언급됨[2][3][5][9]."
         },
         {
-          "ticker": "SMCI",
-          "evidence": "WSJ 및 관련 보도에 따르면 미국의 수출통제·국가안보 규제가 강화되는 가운데, 고성능 서버·GPU 공급망 업체들은 제재 대상 지역과의 거래에 대한 감독 강화와 잠재적 조사 리스크에 노출되어 있으며, SMCI의 과거 의혹 사례는 산업 전반 규제 리스크 상존을 보여줌[7][14]."
+          "ticker": "FTV",
+          "evidence": "금리 변동과 밸류에이션 조정에도 불구하고 산업·테크 영역에서 중소형 자산 매각이 지속되고 있어 전략적 인수 기회가 존재한다는 점을 여러 기업 경영진이 IR 자료와 컨콜에서 언급하고 있음.[4]"
         }
       ]
     },
     {
       "theme": "ai투자",
       "ticker_count": 2,
-      "frequency": 0.03,
+      "frequency": 0.025,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -427,7 +591,7 @@
     {
       "theme": "capex증가",
       "ticker_count": 2,
-      "frequency": 0.03,
+      "frequency": 0.025,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -448,7 +612,7 @@
     {
       "theme": "신용비용",
       "ticker_count": 2,
-      "frequency": 0.03,
+      "frequency": 0.025,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -469,7 +633,7 @@
     {
       "theme": "자본규제",
       "ticker_count": 2,
-      "frequency": 0.03,
+      "frequency": 0.025,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -490,7 +654,7 @@
     {
       "theme": "유가변동",
       "ticker_count": 2,
-      "frequency": 0.03,
+      "frequency": 0.025,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -511,7 +675,7 @@
     {
       "theme": "유가상승",
       "ticker_count": 2,
-      "frequency": 0.03,
+      "frequency": 0.025,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -530,9 +694,51 @@
       ]
     },
     {
+      "theme": "비용인플레",
+      "ticker_count": 2,
+      "frequency": 0.025,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "비용인플레"
+      ],
+      "evidences": [
+        {
+          "ticker": "FIVE",
+          "evidence": "최근 리테일 업계 전반의 논의에서 운송비, 임대료, 인건비 등 운영비 인플레이션이 지속되며 오프라인 리테일 기업들의 마진 구조에 부담을 주고 있다는 코멘트가 이어지고 있음[3][5][10]."
+        },
+        {
+          "ticker": "NEM",
+          "evidence": "광산 업계 전반에서 인건비, 디젤·전력, 장비·서비스 비용 상승이 지속되고 있고, 최근 Newmont 관련 분석에서도 H2 비용이 높아질 것이라는 코멘트가 나오는 등 비용 인플레이션이 마진을 제약하는 공통 이슈로 지적되고 있음[5]."
+        }
+      ]
+    },
+    {
+      "theme": "건설 둔화",
+      "ticker_count": 2,
+      "frequency": 0.025,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "건설 둔화"
+      ],
+      "evidences": [
+        {
+          "ticker": "GGG",
+          "evidence": "최근 실적 발표와 경영진 코멘트에서 북미 주택 및 비주택 건설 활동이 전년 대비 둔화되고 있으며, 이에 따라 Contractor 부문 스프레이 장비 수요가 압박을 받고 있다는 언급이 반복적으로 나타남.[13]"
+        },
+        {
+          "ticker": "MLI",
+          "evidence": "최근 컨콜에서 일부 지역의 주택 및 비주택 건설 활동이 둔화되고 있어 단기 수요 변동성이 커질 수 있다고 언급하며 보수적인 수요 전망을 제시함."
+        }
+      ]
+    },
+    {
       "theme": "자본배분",
       "ticker_count": 2,
-      "frequency": 0.03,
+      "frequency": 0.025,
       "sentiment": 0.625,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -551,30 +757,9 @@
       ]
     },
     {
-      "theme": "환율 영향",
-      "ticker_count": 2,
-      "frequency": 0.03,
-      "sentiment": -0.333,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "환율 영향"
-      ],
-      "evidences": [
-        {
-          "ticker": "A",
-          "evidence": "Agilent 는 글로벌 매출 비중이 높아 달러 강세 및 신흥시장 통화 약세가 보고 매출과 이익에 부정적 영향을 줄 수 있으며, 특히 인도·중국 등 고성장 시장에서의 환율 변동이 장비 가격 경쟁력과 수요에 영향을 줄 수 있다는 점이 산업 전반에 해당하는 매크로 테마로 거론됨[1]."
-        },
-        {
-          "ticker": "INGR",
-          "evidence": "라틴아메리카 및 기타 신흥국 비중이 높은 인그리디언트 업체 전반에 대해 경영진들이 환율 변동이 보고 매출과 마진에 혼합된 영향을 준다고 언급하며, 헤지와 가격 정책으로 중립적 효과를 지향하고 있다고 밝힘[9]."
-        }
-      ]
-    },
-    {
       "theme": "규제 환경",
       "ticker_count": 2,
-      "frequency": 0.03,
+      "frequency": 0.025,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -593,30 +778,9 @@
       ]
     },
     {
-      "theme": "재고 조정",
-      "ticker_count": 2,
-      "frequency": 0.03,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "재고 조정"
-      ],
-      "evidences": [
-        {
-          "ticker": "ADI",
-          "evidence": "업계 전반적으로 일부 엔드마켓에서 재고가 정상화 국면에 접어들었다는 평가가 있으나, 회사는 여전히 지정학적 위험과 AI CapEx 둔화 가능성, 거시 불확실성 등으로 수요·재고의 변동성이 남아 있다고 언급하며 보수적인 톤을 유지함[3][4][8]."
-        },
-        {
-          "ticker": "THO",
-          "evidence": "딜러들은 팬데믹 기간 이후 과잉 재고를 축소해온 만큼 현재 재고 수준을 신중하게 관리하고 있으며, 업계 전반에서 재고 정상화와 출하 조정이 계속된다고 컨콜에서 언급됨.[1][2]"
-        }
-      ]
-    },
-    {
       "theme": "현금흐름",
       "ticker_count": 2,
-      "frequency": 0.03,
+      "frequency": 0.025,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -635,30 +799,9 @@
       ]
     },
     {
-      "theme": "고금리 환경",
-      "ticker_count": 2,
-      "frequency": 0.03,
-      "sentiment": 0.0,
-      "direction_label": "neutral",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "고금리 환경"
-      ],
-      "evidences": [
-        {
-          "ticker": "BRK-B",
-          "evidence": "미 연준의 긴축 기조 유지로 고금리 환경이 지속되면서 보험 Float와 현금성 자산의 이자수익은 증가하지만, 자본시장 변동성과 실물투자 둔화에 따른 부정적 영향이 병존함."
-        },
-        {
-          "ticker": "SOFI",
-          "evidence": "최근 컨퍼런스콜에서 경영진은 장기간의 고금리 환경이 대출 성장에는 제약을 주는 반면, 예금 기반이 탄탄한 디지털 은행에게는 NIM 방어와 수익성 관리 측면에서 기회 요인도 된다고 언급함."
-        }
-      ]
-    },
-    {
       "theme": "규제 강화",
       "ticker_count": 2,
-      "frequency": 0.03,
+      "frequency": 0.025,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -679,7 +822,7 @@
     {
       "theme": "생명과학 투자",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -696,7 +839,7 @@
     {
       "theme": "인도 성장",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -713,7 +856,7 @@
     {
       "theme": "공급 타이트",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -730,7 +873,7 @@
     {
       "theme": "중국 공급",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -747,7 +890,7 @@
     {
       "theme": "경기 둔화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -764,7 +907,7 @@
     {
       "theme": "연료 변동",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -781,7 +924,7 @@
     {
       "theme": "프리미엄 수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -798,7 +941,7 @@
     {
       "theme": "수요 회복",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -815,7 +958,7 @@
     {
       "theme": "비용 인플레",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -832,7 +975,7 @@
     {
       "theme": "데이터센터 투자",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -849,7 +992,7 @@
     {
       "theme": "에너지효율 규제",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -866,7 +1009,7 @@
     {
       "theme": "인건비·공급망",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -883,7 +1026,7 @@
     {
       "theme": "ai 냉각수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -900,7 +1043,7 @@
     {
       "theme": "고령화 수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -917,7 +1060,7 @@
     {
       "theme": "정밀진단",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -934,7 +1077,7 @@
     {
       "theme": "헬스케어 규제",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -949,9 +1092,60 @@
       ]
     },
     {
+      "theme": "cns 신약",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "CNS 신약"
+      ],
+      "evidences": [
+        {
+          "ticker": "ACAD",
+          "evidence": "최근 컨콜과 실적 코멘트에서 CNS 및 정신질환 영역에서의 미충족 수요와 환자·의사 인식 개선이 강조되며, Nuplazid·Daybue와 유사한 CNS 타깃 약물에 대한 장기 수요가 견조하다고 언급됨[1]."
+        }
+      ]
+    },
+    {
+      "theme": "희귀질환",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "희귀질환"
+      ],
+      "evidences": [
+        {
+          "ticker": "ACAD",
+          "evidence": "Daybue의 Rett 증후군 론칭 관련 가이던스에서 희귀 소아 신경질환 분야에서 높은 약가 수용성과 상환 환경, 규제 당국의 우호적인 승인 트렌드가 언급되며 희귀질환 시장 성장 기조가 확인됨[1]."
+        }
+      ]
+    },
+    {
+      "theme": "r&d 비용부담",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "R&D 비용부담"
+      ],
+      "evidences": [
+        {
+          "ticker": "ACAD",
+          "evidence": "알츠하이머 등 고위험 CNS 적응증 개발과 다수 임상 파이프라인 유지로 인한 연구개발비 증가가 수익성 변동성을 키우는 요인으로 거론되며, 바이오텍 섹터 전반에서 R&D 효율성 요구가 강화되고 있음[1]."
+        }
+      ]
+    },
+    {
       "theme": "전자결제 성장",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -968,7 +1162,7 @@
     {
       "theme": "saas 전환",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -985,7 +1179,7 @@
     {
       "theme": "m&a·분할",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1002,7 +1196,7 @@
     {
       "theme": "규제·보안",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1019,7 +1213,7 @@
     {
       "theme": "매크로둔화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1036,7 +1230,7 @@
     {
       "theme": "인건비인플레",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1053,7 +1247,7 @@
     {
       "theme": "saas화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1070,7 +1264,7 @@
     {
       "theme": "ai 모네타이징",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1087,7 +1281,7 @@
     {
       "theme": "arr 둔화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1104,7 +1298,7 @@
     {
       "theme": "규제 불확실",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1121,7 +1315,7 @@
     {
       "theme": "리테일 수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1138,7 +1332,7 @@
     {
       "theme": "투자 캡레이트",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1155,7 +1349,7 @@
     {
       "theme": "배당 인컴",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1172,7 +1366,7 @@
     {
       "theme": "상업부동산 리스크",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1189,7 +1383,7 @@
     {
       "theme": "산업 자동화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1206,7 +1400,7 @@
     {
       "theme": "사이버 보안",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1223,7 +1417,7 @@
     {
       "theme": "바이오연료",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1240,7 +1434,7 @@
     {
       "theme": "마진개선",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1257,7 +1451,7 @@
     {
       "theme": "원자재변동",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1274,7 +1468,7 @@
     {
       "theme": "농기계 수요둔화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1291,7 +1485,7 @@
     {
       "theme": "관세 역풍",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1308,7 +1502,7 @@
     {
       "theme": "정밀농업 확산",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1325,7 +1519,7 @@
     {
       "theme": "서비스화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1342,7 +1536,7 @@
     {
       "theme": "투자지연",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1359,7 +1553,7 @@
     {
       "theme": "산업수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1376,7 +1570,7 @@
     {
       "theme": "마진확대",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1393,7 +1587,7 @@
     {
       "theme": "자동화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1410,7 +1604,7 @@
     {
       "theme": "경기민감",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1427,7 +1621,7 @@
     {
       "theme": "리튬가격",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1444,7 +1638,7 @@
     {
       "theme": "공급증설",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1461,7 +1655,7 @@
     {
       "theme": "ess수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1478,7 +1672,7 @@
     {
       "theme": "소비회복",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1495,7 +1689,7 @@
     {
       "theme": "운영개선",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1512,7 +1706,7 @@
     {
       "theme": "가치압박",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1527,26 +1721,9 @@
       ]
     },
     {
-      "theme": "환율",
-      "ticker_count": 1,
-      "frequency": 0.015,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "환율"
-      ],
-      "evidences": [
-        {
-          "ticker": "ALV",
-          "evidence": "글로벌 제조업체 전반에서 환율 변동이 이익률을 흔드는 요인으로 언급되고 있으며, Autoliv도 지역 분산 매출 구조상 영향이 큼."
-        }
-      ]
-    },
-    {
       "theme": "원가압박",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1563,7 +1740,7 @@
     {
       "theme": "capex 추세",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1578,26 +1755,9 @@
       ]
     },
     {
-      "theme": "m&a 환경",
-      "ticker_count": 1,
-      "frequency": 0.015,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "M&A 환경"
-      ],
-      "evidences": [
-        {
-          "ticker": "AME",
-          "evidence": "산업 기술 및 계측 시장에서 기업들은 니치 고마진 사업을 확보하기 위한 M&A를 적극적으로 활용하고 있으며, AMETEK 역시 인수를 통한 포트폴리오 확대를 실적과 가이던스에서 강조하는 등, 양호한 밸류에이션과 자본시장 접근성에 기반한 인수·통합 환경이 우호적으로 유지되고 있다는 점이 공통적으로 언급됨[2][3][5][9]."
-        }
-      ]
-    },
-    {
       "theme": "대체투자 확대",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1614,7 +1774,7 @@
     {
       "theme": "액티브 압박",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1631,7 +1791,7 @@
     {
       "theme": "기관 자금 재배분",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1648,7 +1808,7 @@
     {
       "theme": "규제·수수료 압력",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1665,7 +1825,7 @@
     {
       "theme": "클라우드수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1682,7 +1842,7 @@
     {
       "theme": "빅테크재평가",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1697,9 +1857,43 @@
       ]
     },
     {
+      "theme": "배당 안정성",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "배당 안정성"
+      ],
+      "evidences": [
+        {
+          "ticker": "BNL",
+          "evidence": "Broadstone Net Lease와 유사한 순수 삼중넷 리츠들에 대한 리서치 및 기사에서는 장기 고정 임대료와 테넌트가 운영비를 부담하는 구조 덕분에 예측 가능하고 방어적인 배당 현금흐름을 제공한다는 점을 섹터 공통 강점으로 강조함[7][12]."
+        }
+      ]
+    },
+    {
+      "theme": "희석 리스크",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "희석 리스크"
+      ],
+      "evidences": [
+        {
+          "ticker": "BNL",
+          "evidence": "SeekingAlpha 등 섹터 커버리지에서는 리츠들이 성장 자본을 확보하기 위해 빈번히 보통주를 발행하는 관행을 지적하며, 최근 Broadstone Net Lease 사례를 포함해 자산 인수 경제성 대비 주당 가치 희석이 더 크게 나타나는 것이 순수 넷리스 리츠 전반의 구조적 리스크로 논의되고 있음[7][12]."
+        }
+      ]
+    },
+    {
       "theme": "보험가격 사이클",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1716,7 +1910,7 @@
     {
       "theme": "규제·거버넌스 이슈",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1733,7 +1927,7 @@
     {
       "theme": "트레이드다운",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1750,7 +1944,7 @@
     {
       "theme": "원가 안정",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1767,7 +1961,7 @@
     {
       "theme": "프로모션 강화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1784,7 +1978,7 @@
     {
       "theme": "건강 지향",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1801,7 +1995,7 @@
     {
       "theme": "비트코인 사이클",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1818,7 +2012,7 @@
     {
       "theme": "온체인 경제",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1835,7 +2029,7 @@
     {
       "theme": "수익 다각화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1852,7 +2046,7 @@
     {
       "theme": "ai adoption",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1869,7 +2063,7 @@
     {
       "theme": "data platform consolidation",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1886,7 +2080,7 @@
     {
       "theme": "cloud optimization",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1903,7 +2097,7 @@
     {
       "theme": "digital transformation",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1920,7 +2114,7 @@
     {
       "theme": "ai 인프라",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1937,7 +2131,7 @@
     {
       "theme": "네트워크 슈퍼사이클",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1954,7 +2148,7 @@
     {
       "theme": "마진 압력",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -1971,7 +2165,7 @@
     {
       "theme": "보안·소프트웨어",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -1988,7 +2182,7 @@
     {
       "theme": "인력규제",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2005,7 +2199,7 @@
     {
       "theme": "주택공급 부족",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2022,7 +2216,7 @@
     {
       "theme": "인구이동",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2039,7 +2233,7 @@
     {
       "theme": "규제·인허가",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2056,7 +2250,7 @@
     {
       "theme": "스트리밍 수익화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2073,7 +2267,7 @@
     {
       "theme": "테마파크 수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2090,7 +2284,7 @@
     {
       "theme": "선형tv 구조적 하락",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2107,7 +2301,7 @@
     {
       "theme": "자산매각",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2124,7 +2318,7 @@
     {
       "theme": "현금환원",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2139,9 +2333,94 @@
       ]
     },
     {
+      "theme": "정보공백",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "정보공백"
+      ],
+      "evidences": [
+        {
+          "ticker": "ECG",
+          "evidence": "ECG 티커와 매칭되는 기업의 SEC 공시·IR·주요 금융매체 커버리지가 식별되지 않아, 동사가 속한 산업과 핵심 매크로 및 섹터 테마를 추적할 수 없는 정보 공백 상태가 지속되고 있음[1][5][6][11][12][13][14]."
+        }
+      ]
+    },
+    {
+      "theme": "유동성리스크",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "유동성리스크"
+      ],
+      "evidences": [
+        {
+          "ticker": "ECG",
+          "evidence": "주요 금융매체에서 ECG 관련 상세 시가총액·거래대금·애널리스트 커버리지가 확인되지 않아, 일반적으로 정보가 적고 커버리지가 낮은 종목 특유의 유동성 및 변동성 리스크 노출 가능성이 높은 것으로 판단됨[1]."
+        }
+      ]
+    },
+    {
+      "theme": "규제 승인",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제 승인"
+      ],
+      "evidences": [
+        {
+          "ticker": "ELAN",
+          "evidence": "FDA가 New World Screwworm 치료제에 대해 긴급 승인을 부여하는 등 질병 대응 관련 동물의약품에 대한 규제기관의 신속 승인 사례가 확인되고 있어, 혁신 치료제 중심의 동물헬스 산업에 규제 측면에서 우호적인 환경이 조성된 것으로 평가됨[5]."
+        }
+      ]
+    },
+    {
+      "theme": "가격 인상",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "가격 인상"
+      ],
+      "evidences": [
+        {
+          "ticker": "ELAN",
+          "evidence": "Q2 실적에서 미국 Pet Health 부문 가격 인상과 믹스 개선이 총마진 및 EBITDA 마진 확대로 직결되었다는 언급이 있었으며, 이는 동물의약품 산업 전반에서 브랜드·혁신 제품을 중심으로 합리적인 가격 인상이 수용되고 있음을 시사함[1][4]."
+        }
+      ]
+    },
+    {
+      "theme": "마진 개선",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "마진 개선"
+      ],
+      "evidences": [
+        {
+          "ticker": "ELAN",
+          "evidence": "최근 분기 실적과 애널리스트 리포트에서 혁신 제품 비중 확대와 생산성 향상, 비용 통제를 통해 동물헬스 업체들의 마진 개선 추세가 이어지고 있다고 평가하며, Elanco의 총마진 및 조정 EBITDA 마진 확장은 이러한 섹터 공통 트렌드의 일환으로 언급됨[1][4]."
+        }
+      ]
+    },
+    {
       "theme": "생산증가",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2158,7 +2437,7 @@
     {
       "theme": "변동성",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2175,7 +2454,7 @@
     {
       "theme": "it예산 압박",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2192,7 +2471,7 @@
     {
       "theme": "lng확대",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2209,7 +2488,7 @@
     {
       "theme": "전력수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2226,7 +2505,7 @@
     {
       "theme": "가스약세",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2243,7 +2522,7 @@
     {
       "theme": "생산상향",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2258,9 +2537,77 @@
       ]
     },
     {
+      "theme": "산업생산 둔화",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "산업생산 둔화"
+      ],
+      "evidences": [
+        {
+          "ticker": "ESAB",
+          "evidence": "용접·절단 장비 및 소모품 수요가 글로벌 제조업과 자본재 투자에 연동되어 있어 주요 지역의 산업생산 및 설비투자 둔화가 섹터 전반 수요에 압력으로 작용한다는 코멘트가 최근 리포트에서 언급됨[1]."
+        }
+      ]
+    },
+    {
+      "theme": "인프라 투자",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인프라 투자"
+      ],
+      "evidences": [
+        {
+          "ticker": "ESAB",
+          "evidence": "미국 및 일부 지역의 인프라·에너지 프로젝트 진행이 용접 및 절단 장비 수요를 지지하는 요인으로, 대형 프로젝트 관련 파이프라인이 ESAB 등 섹터 기업들의 중기 수요를 뒷받침한다는 점이 투자자 커뮤니케이션에서 강조됨[1]."
+        }
+      ]
+    },
+    {
+      "theme": "자동화 확산",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "자동화 확산"
+      ],
+      "evidences": [
+        {
+          "ticker": "ESAB",
+          "evidence": "용접 공정의 자동화·로봇 솔루션 채택이 확대되고 있으며, 이는 노동력 부족과 품질·효율 개선 요구에 대응하는 구조적 트렌드로서 용접 자동화 장비·소프트웨어에 대한 장기 성장 기회를 제공한다는 설명이 최근 분석 기사에서 제시됨[1]."
+        }
+      ]
+    },
+    {
+      "theme": "원가 인플레",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "원가 인플레"
+      ],
+      "evidences": [
+        {
+          "ticker": "ESAB",
+          "evidence": "특수 금속 및 합금, 물류비 등 원재료·공급망 비용이 변동성이 높게 유지되며, 섹터 전반이 가격 인상과 계약 구조 개선을 통해 일부를 상쇄하고 있으나 마진 변동성 리스크가 여전히 존재한다는 평가가 나옴[1]."
+        }
+      ]
+    },
+    {
       "theme": "가스가격",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2277,7 +2624,7 @@
     {
       "theme": "lng수출",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2294,7 +2641,7 @@
     {
       "theme": "ai전력수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2309,60 +2656,366 @@
       ]
     },
     {
-      "theme": "고금리 부담",
+      "theme": "저가소비",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "저가소비"
+      ],
+      "evidences": [
+        {
+          "ticker": "FIVE",
+          "evidence": "최근 컨콜 및 실적 기사에서 인플레이션·금리 환경 속에서 소비자들이 저가·가성비 상품을 선호하는 추세가 강화되었고, 이에 따라 할인 리테일 채널의 트래픽과 매출이 구조적으로 증가하고 있다는 점이 반복적으로 언급됨[3][5][10]."
+        }
+      ]
+    },
+    {
+      "theme": "오프라인확장",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "오프라인확장"
+      ],
+      "evidences": [
+        {
+          "ticker": "FIVE",
+          "evidence": "리테일 섹터 애널리스트 리포트에서 브랜드 인지도와 고객 경험을 기반으로 한 오프라인 점포 확장이 여전히 핵심 성장 드라이버로 평가되며, 신규 점포 오픈과 포맷 혁신이 매출 성장에 기여한다는 분석이 제시됨[1][3][7]."
+        }
+      ]
+    },
+    {
+      "theme": "이커머스압력",
+      "ticker_count": 1,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
       "raw_labels": [
-        "고금리 부담"
+        "이커머스압력"
       ],
       "evidences": [
         {
-          "ticker": "FSLR",
-          "evidence": "최근 실적 및 프리뷰에서 태양광 유틸리티 프로젝트의 파이낸싱 비용 증가와 고금리 환경이 수주·착공 시점에 부담을 주는 요인으로 반복 언급되며, 업계 전반의 성장 속도에 제약을 주는 리스크로 인식됨[7]."
+          "ticker": "FIVE",
+          "evidence": "대형 e-commerce 플랫폼의 가격 경쟁과 빠른 배송 서비스가 오프라인 리테일 업계 전반에 구조적 압력으로 작용하고 있다는 점이 거시적 섹터 코멘트에서 언급되나, 엔터테인먼트·체험 중심 포맷은 부분적으로 이를 상쇄할 수 있다는 시각도 병존함[3][5]."
         }
       ]
     },
     {
-      "theme": "정책 수혜",
+      "theme": "프리미엄화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "정책 수혜"
+        "프리미엄화"
       ],
       "evidences": [
         {
-          "ticker": "FSLR",
-          "evidence": "미국 IRA 및 국산 태양광 모듈 우대 정책이 재생에너지·에너지 안보 강화 수단으로 강조되며, 미국 내 제조 기반과 국산 모듈 공급능력을 가진 업체들이 장기적으로 규제·인센티브 수혜를 누릴 것이라는 업계 공감대가 형성됨[2][7][18]."
+          "ticker": "FRPT",
+          "evidence": "최근 펫푸드 시장에서 냉장·자연식·고급 원료를 강조하는 프리미엄 제품에 대한 수요가 꾸준히 증가하고 있으며, Freshpet의 투자 스토리도 이러한 프리미엄화 트렌드에 기반해 성장성을 평가받고 있음.[1]"
         }
       ]
     },
     {
-      "theme": "에너지 안보",
+      "theme": "인건비·물류비",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인건비·물류비"
+      ],
+      "evidences": [
+        {
+          "ticker": "FRPT",
+          "evidence": "식품 제조·유통 업계 전반에서 인건비와 물류비 상승이 지속되며 마진을 압박하고 있고, 냉장 보관·운송이 필수인 펫푸드 업체들의 경우 비용 인플레이션 영향이 상대적으로 크게 작용할 수 있다는 점이 강조되고 있음.[1]"
+        }
+      ]
+    },
+    {
+      "theme": "미국 관세",
+      "ticker_count": 1,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
       "raw_labels": [
-        "에너지 안보"
+        "미국 관세"
       ],
       "evidences": [
         {
           "ticker": "FSLR",
-          "evidence": "에너지 위기와 지정학적 리스크 심화 속에서 재생에너지·국내 제조 기반 확충이 국가 안보 차원에서 중요해졌다는 분석이 나오며, 유틸리티급 태양광 설비 투자가 중장기적으로 확대될 것이라는 업계 전망이 강화됨[2][7]."
+          "evidence": "최근 분석에 따르면 미국 태양광 관세(Section 232)는 수입 모듈에 부담을 주는 반면 First Solar와 같은 미국 제조업체에는 가격·마진 및 수주 측면에서 구조적 수혜를 제공하는 이벤트로 평가되고 있음.[9][1][2]"
+        }
+      ]
+    },
+    {
+      "theme": "ira 수혜",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "IRA 수혜"
+      ],
+      "evidences": [
+        {
+          "ticker": "FSLR",
+          "evidence": "IRA에 따른 세액공제와 제조 인센티브는 미국 내 태양광 설비 투자 경제성을 개선하고 국내 모듈 제조업체에 비용 우위를 제공해, 향후 수년간 유틸리티급 태양광 설치 증가를 지원하는 핵심 정책 요인으로 언급됨."
+        }
+      ]
+    },
+    {
+      "theme": "중국 경쟁",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "중국 경쟁"
+      ],
+      "evidences": [
+        {
+          "ticker": "FSLR",
+          "evidence": "중국 태양광 모듈 업체들이 공격적인 가격 전략과 생산능력 확대를 지속하고 있어 글로벌 모듈 가격에 하방 압력을 주고 있으며, 이는 미국을 포함한 비중국 업체들의 중장기 마진 축소 가능성을 높이는 산업 구조 리스크로 언급됨."
+        }
+      ]
+    },
+    {
+      "theme": "재생에너지 확대",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "재생에너지 확대"
+      ],
+      "evidences": [
+        {
+          "ticker": "FSLR",
+          "evidence": "미국 및 글로벌 전력사·기업들의 탄소중립 목표와 재생에너지 비중 확대 계획으로 유틸리티급 태양광 프로젝트 파이프라인이 지속 확대되고 있다는 점이 최근 업계 컨퍼런스와 실적 발표에서 반복적으로 강조되고 있음."
+        }
+      ]
+    },
+    {
+      "theme": "자동화 수요",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "자동화 수요"
+      ],
+      "evidences": [
+        {
+          "ticker": "FTV",
+          "evidence": "공장 자동화와 디지털 모니터링 솔루션에 대한 수요는 인건비 부담과 생산성 향상 니즈로 인해 구조적 성장세를 유지하고 있다는 점이 여러 산업 장비 업체들의 가이던스에서 공통적으로 강조되고 있음.[4]"
+        }
+      ]
+    },
+    {
+      "theme": "헬스케어 노출",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "헬스케어 노출"
+      ],
+      "evidences": [
+        {
+          "ticker": "FTV",
+          "evidence": "헬스케어 및 안전 관련 계측·소프트웨어는 경기 민감도가 상대적으로 낮아 포트폴리오 방어력을 제공하지만, 최근 컨콜에서는 거시 불확실성으로 병원·랩 투자 결정이 지연되는 사례도 일부 언급되고 있음.[4]"
+        }
+      ]
+    },
+    {
+      "theme": "ai·자동화",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "AI·자동화"
+      ],
+      "evidences": [
+        {
+          "ticker": "G",
+          "evidence": "동사는 AI 및 프로세스 자동화 솔루션을 기존 BPO 서비스와 결합해 생산성을 개선하고 고부가가치 서비스 비중을 확대하고 있다고 설명했으며, 관련 수요가 점진적으로 증가하고 있다고 밝힘[1]."
+        }
+      ]
+    },
+    {
+      "theme": "국방예산 증액",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "국방예산 증액"
+      ],
+      "evidences": [
+        {
+          "ticker": "GD",
+          "evidence": "미 국방부가 THAAD 및 PAC-3 MSE 요격미사일 핵심 부품 생산 확대를 위해 General Dynamics와 7년 장기 계약을 체결한 것은 미국의 미사일·방공체계 관련 국방예산이 구조적으로 증액되고 있음을 시사하며, 방산 업종 전반에 긍정적인 수요 환경을 제공함[1]."
+        }
+      ]
+    },
+    {
+      "theme": "미사일 수요",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "미사일 수요"
+      ],
+      "evidences": [
+        {
+          "ticker": "GD",
+          "evidence": "우크라이나 전쟁과 미사일 위협 증대에 대응하기 위해 미 국방부가 THAAD·PAC-3 MSE 요격체계의 생산량 증대와 납기 단축을 목표로 장기 공급 계약을 체결한 것은 고성능 미사일·요격체계에 대한 글로벌 수요가 강세 국면임을 보여주며, 관련 방산 체인 전반의 성장 모멘텀을 강화함[1][3]."
+        }
+      ]
+    },
+    {
+      "theme": "공급망 제약",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "공급망 제약"
+      ],
+      "evidences": [
+        {
+          "ticker": "GD",
+          "evidence": "대형 방산·항공 프로그램에서 부품·소재 공급 리드타임이 길어지고 일부 병목이 지속되면서, 미사일·함정·항공기 인도 일정과 매출 인식 타이밍에 변동성이 확대되고 있다는 점이 최근 실적·가이던스 코멘트에서 산업 전반 리스크로 지적되고 있음[5]."
+        }
+      ]
+    },
+    {
+      "theme": "규제",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제"
+      ],
+      "evidences": [
+        {
+          "ticker": "GEHC",
+          "evidence": "의료기기 산업은 인허가와 규제 대응 부담이 지속되는 환경임. [1]"
+        }
+      ]
+    },
+    {
+      "theme": "국제 수요",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "국제 수요"
+      ],
+      "evidences": [
+        {
+          "ticker": "GGG",
+          "evidence": "유럽 및 아시아를 포함한 국제 시장에서 산업용 코팅 및 공정 장비 투자 수요가 북미 대비 상대적으로 견조하다는 코멘트가 Graco 및 동종 업계 컨콜에서 반복적으로 언급되며, 지역 분산이 업계 성장을 일부 방어하는 요인으로 지목됨.[13]"
+        }
+      ]
+    },
+    {
+      "theme": "자동화 투자",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "자동화 투자"
+      ],
+      "evidences": [
+        {
+          "ticker": "GGG",
+          "evidence": "장기적으로 제조·건설 현장에서 자동화 및 정밀 도장·코팅 솔루션에 대한 투자 수요가 확대되고 있으며, 유체 처리 및 분사 장비에 대한 고부가가치 수요가 늘고 있다는 방향성이 동종 업계 리서치와 경영진 발언에서 언급되나, 단기 실적 가이드에는 제한적으로 반영되고 있음.[13]"
+        }
+      ]
+    },
+    {
+      "theme": "교육 규제",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "교육 규제"
+      ],
+      "evidences": [
+        {
+          "ticker": "GHC",
+          "evidence": "Kaplan을 포함한 교육 서비스 업계는 정부의 학자금 지원 정책, 인증·규제 변화에 따라 등록 수요와 수익성이 영향을 받는다는 점이 최근 실적 및 공시에서 반복적으로 언급되고 있음[1]."
+        }
+      ]
+    },
+    {
+      "theme": "점포 효율화",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "점포 효율화"
+      ],
+      "evidences": [
+        {
+          "ticker": "GME",
+          "evidence": "GameStop이 계획된 매장 폐점과 프랑스 사업 매각을 통해 저수익 점포와 비핵심 해외 사업을 정리하면서 영업이익을 전년 6,640만달러에서 1.5~1.7억달러로 개선할 것으로 예상하는 사례는, 리테일 업계 전반에서 점포 효율화와 구조조정이 수익성 개선의 핵심 전략으로 활용되고 있음을 보여줌[2][6]."
+        }
+      ]
+    },
+    {
+      "theme": "디지털 자산 변동성",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "디지털 자산 변동성"
+      ],
+      "evidences": [
+        {
+          "ticker": "GME",
+          "evidence": "GameStop이 2분기 실적에서 디지털 자산 및 관련 채권에서 약 7,500만달러 손실을 반영할 것이라고 밝힌 것은, 리테일 및 기타 비금융 기업들이 디지털 자산에 노출될 경우 가격 변동성과 규제·회계 불확실성으로 인해 손익 변동성이 크게 확대될 수 있음을 보여주는 예시임[2][6][9]."
         }
       ]
     },
     {
       "theme": "클라우드 성장",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2379,7 +3032,7 @@
     {
       "theme": "광고 회복",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2396,7 +3049,7 @@
     {
       "theme": "fcf 압박",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2413,7 +3066,7 @@
     {
       "theme": "프라빗마켓 성장",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2430,7 +3083,7 @@
     {
       "theme": "규제·투명성",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2447,7 +3100,7 @@
     {
       "theme": "배당투자",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2464,7 +3117,7 @@
     {
       "theme": "원가 변동",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2481,7 +3134,7 @@
     {
       "theme": "클린라벨",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2498,7 +3151,7 @@
     {
       "theme": "capex 증설",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2515,7 +3168,7 @@
     {
       "theme": "밸류 부담",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2532,7 +3185,7 @@
     {
       "theme": "자금유입",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2549,7 +3202,7 @@
     {
       "theme": "수수료압박",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2566,7 +3219,7 @@
     {
       "theme": "비용절감",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2583,7 +3236,7 @@
     {
       "theme": "고가 혁신약",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2600,7 +3253,7 @@
     {
       "theme": "수술로봇",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2617,7 +3270,7 @@
     {
       "theme": "중국제약",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2634,7 +3287,7 @@
     {
       "theme": "자본시장",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2651,7 +3304,7 @@
     {
       "theme": "가격전가",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2668,7 +3321,7 @@
     {
       "theme": "방어주선호",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2685,7 +3338,7 @@
     {
       "theme": "금리",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2702,7 +3355,7 @@
     {
       "theme": "구매력",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2719,7 +3372,7 @@
     {
       "theme": "비용",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2736,7 +3389,7 @@
     {
       "theme": "공급부족",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2753,7 +3406,7 @@
     {
       "theme": "대체부품",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2770,7 +3423,7 @@
     {
       "theme": "erp차질",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2787,7 +3440,7 @@
     {
       "theme": "광고회복",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2804,7 +3457,7 @@
     {
       "theme": "주주환원",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2821,7 +3474,7 @@
     {
       "theme": "m&a활발",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2838,7 +3491,7 @@
     {
       "theme": "환율 역풍",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2855,7 +3508,7 @@
     {
       "theme": "프라이빗라벨",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2872,7 +3525,7 @@
     {
       "theme": "채권 전자화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2889,7 +3542,7 @@
     {
       "theme": "기관 유동성 요구",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2906,7 +3559,7 @@
     {
       "theme": "플랫폼 경쟁",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -2921,26 +3574,9 @@
       ]
     },
     {
-      "theme": "건설 둔화",
-      "ticker_count": 1,
-      "frequency": 0.015,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "건설 둔화"
-      ],
-      "evidences": [
-        {
-          "ticker": "MLI",
-          "evidence": "최근 컨콜에서 일부 지역의 주택 및 비주택 건설 활동이 둔화되고 있어 단기 수요 변동성이 커질 수 있다고 언급하며 보수적인 수요 전망을 제시함."
-        }
-      ]
-    },
-    {
       "theme": "hvac/r 수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2957,7 +3593,7 @@
     {
       "theme": "클라우드성장",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2974,7 +3610,7 @@
     {
       "theme": "ai수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -2991,7 +3627,7 @@
     {
       "theme": "규제리스크",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3008,7 +3644,7 @@
     {
       "theme": "금가격",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3023,26 +3659,9 @@
       ]
     },
     {
-      "theme": "비용인플레",
-      "ticker_count": 1,
-      "frequency": 0.015,
-      "sentiment": -1.0,
-      "direction_label": "negative",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "비용인플레"
-      ],
-      "evidences": [
-        {
-          "ticker": "NEM",
-          "evidence": "광산 업계 전반에서 인건비, 디젤·전력, 장비·서비스 비용 상승이 지속되고 있고, 최근 Newmont 관련 분석에서도 H2 비용이 높아질 것이라는 코멘트가 나오는 등 비용 인플레이션이 마진을 제약하는 공통 이슈로 지적되고 있음[5]."
-        }
-      ]
-    },
-    {
       "theme": "안전자산수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3059,7 +3678,7 @@
     {
       "theme": "원가 압력",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3076,7 +3695,7 @@
     {
       "theme": "헬스케어 확장",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3093,7 +3712,7 @@
     {
       "theme": "ai 확산",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3110,7 +3729,7 @@
     {
       "theme": "스마트폰 둔화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3127,7 +3746,7 @@
     {
       "theme": "pc 전환",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3144,7 +3763,7 @@
     {
       "theme": "자동차 전장",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3161,7 +3780,7 @@
     {
       "theme": "가스가격 회복",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3178,7 +3797,7 @@
     {
       "theme": "lng 수출증설",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3195,7 +3814,7 @@
     {
       "theme": "환경규제 강화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3212,7 +3831,7 @@
     {
       "theme": "인프라 제약",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3229,7 +3848,7 @@
     {
       "theme": "데이터센터 증설",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3246,7 +3865,7 @@
     {
       "theme": "현금흐름 부담",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3263,7 +3882,7 @@
     {
       "theme": "소비 신용",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3280,7 +3899,7 @@
     {
       "theme": "핀테크 규제",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3295,26 +3914,9 @@
       ]
     },
     {
-      "theme": "디지털 전환",
-      "ticker_count": 1,
-      "frequency": 0.015,
-      "sentiment": 1.0,
-      "direction_label": "positive",
-      "verdict": "MENTION",
-      "raw_labels": [
-        "디지털 전환"
-      ],
-      "evidences": [
-        {
-          "ticker": "SOFI",
-          "evidence": "경영진은 금융 서비스의 디지털 채널 전환이 구조적 추세이며, 모바일 중심 고객 획득과 테크/플랫폼 사업 성장에 장기적으로 우호적인 환경이라고 강조함."
-        }
-      ]
-    },
-    {
       "theme": "예금 경쟁",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3331,7 +3933,7 @@
     {
       "theme": "비용압박",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3348,7 +3950,7 @@
     {
       "theme": "가격믹스",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3365,7 +3967,7 @@
     {
       "theme": "야외 레저",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3382,7 +3984,7 @@
     {
       "theme": "바이오파마 아웃소싱",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3399,7 +4001,7 @@
     {
       "theme": "중국 수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3416,7 +4018,7 @@
     {
       "theme": "장비 교체",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3433,7 +4035,7 @@
     {
       "theme": "저가상품",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3450,7 +4052,7 @@
     {
       "theme": "자금유출",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3467,7 +4069,7 @@
     {
       "theme": "etf확대",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3484,7 +4086,7 @@
     {
       "theme": "의료비",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3501,7 +4103,7 @@
     {
       "theme": "마진회복",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3518,7 +4120,7 @@
     {
       "theme": "정책리스크",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3535,7 +4137,7 @@
     {
       "theme": "비용관리",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3552,7 +4154,7 @@
     {
       "theme": "포트폴리오다각화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3569,7 +4171,7 @@
     {
       "theme": "방송압박",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3586,7 +4188,7 @@
     {
       "theme": "스포츠수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3603,7 +4205,7 @@
     {
       "theme": "자본환원",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3620,7 +4222,7 @@
     {
       "theme": "광고민감",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3637,7 +4239,7 @@
     {
       "theme": "관세영향",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3654,7 +4256,7 @@
     {
       "theme": "물가압력",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3671,7 +4273,7 @@
     {
       "theme": "전자상거래",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3688,7 +4290,7 @@
     {
       "theme": "광고수익",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3705,7 +4307,7 @@
     {
       "theme": "고유가",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3722,7 +4324,7 @@
     {
       "theme": "에너지전환",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": -1.0,
       "direction_label": "negative",
       "verdict": "MENTION",
@@ -3739,7 +4341,7 @@
     {
       "theme": "lng성장",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 1.0,
       "direction_label": "positive",
       "verdict": "MENTION",
@@ -3756,7 +4358,7 @@
     {
       "theme": "연구비 사이클",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3773,7 +4375,7 @@
     {
       "theme": "규제·관세",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3790,7 +4392,7 @@
     {
       "theme": "프리미엄 투자",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3807,7 +4409,7 @@
     {
       "theme": "건축·설비 투자",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3824,7 +4426,7 @@
     {
       "theme": "환율 변동",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3839,9 +4441,26 @@
       ]
     },
     {
+      "theme": "바이오텍 밸류에이션",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "바이오텍 밸류에이션"
+      ],
+      "evidences": [
+        {
+          "ticker": "ACAD",
+          "evidence": "중소형 바이오텍 섹터에서 금리와 리스크 선호도 변화에 따른 밸류에이션 리레이팅 가능성과 디스카운트 유지 가능성이 동시에 논의되며, 상업화된 제품 보유 기업과 순수 개발 단계 기업 간 밸류에이션 격차가 확대되는 흐름이 언급됨[1]."
+        }
+      ]
+    },
+    {
       "theme": "거시 변동성",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3858,7 +4477,7 @@
     {
       "theme": "밸류 디스카운트",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3875,7 +4494,7 @@
     {
       "theme": "ev수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3892,7 +4511,7 @@
     {
       "theme": "환율역풍",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3909,7 +4528,7 @@
     {
       "theme": "생산량",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3926,7 +4545,7 @@
     {
       "theme": "산업 수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3943,7 +4562,7 @@
     {
       "theme": "규제 변화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3960,7 +4579,7 @@
     {
       "theme": "성과보수 사이클",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3977,7 +4596,7 @@
     {
       "theme": "금리민감",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -3994,7 +4613,7 @@
     {
       "theme": "거래변동",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4009,9 +4628,26 @@
       ]
     },
     {
+      "theme": "섹터 재평가",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "섹터 재평가"
+      ],
+      "evidences": [
+        {
+          "ticker": "BNL",
+          "evidence": "일부 리츠 리서치에서는 금리 피크 아웃과 향후 완화 가능성이 현실화될 경우 방어적 현금흐름을 가진 순수 넷리스 리츠 섹터가 장기적으로 재평가될 수 있다는 시나리오를 제시하지만, 구체적 타이밍과 강도에 대해서는 의견이 엇갈리며 가시성이 낮다고 평가함[7][12]."
+        }
+      ]
+    },
+    {
       "theme": "에너지 전환",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4028,7 +4664,7 @@
     {
       "theme": "미국 소비·산업 사이클",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4045,7 +4681,7 @@
     {
       "theme": "공급조정",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4062,7 +4698,7 @@
     {
       "theme": "규제 명확성",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4079,7 +4715,7 @@
     {
       "theme": "거시·리스크 선호",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4096,7 +4732,7 @@
     {
       "theme": "enterprise it spending",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4113,7 +4749,7 @@
     {
       "theme": "it 지출",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4130,7 +4766,7 @@
     {
       "theme": "기술지출",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4147,7 +4783,7 @@
     {
       "theme": "금리 수준",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4164,7 +4800,7 @@
     {
       "theme": "건축비 인플레",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4181,7 +4817,7 @@
     {
       "theme": "스포츠 중계 경쟁",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4198,7 +4834,7 @@
     {
       "theme": "대형통합",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4213,9 +4849,60 @@
       ]
     },
     {
+      "theme": "규제불확실",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제불확실"
+      ],
+      "evidences": [
+        {
+          "ticker": "ECG",
+          "evidence": "산업 및 사업 모델이 명확히 파악되지 않아 어떤 규제체계(금융, 헬스케어, 에너지 등)에 속하는지 확인할 수 없고, 향후 규제 변화가 실적과 밸류에이션에 미칠 영향을 사전에 반영하기 어려운 상태임[1][5][6][11][12][13][14]."
+        }
+      ]
+    },
+    {
+      "theme": "반려동물 지출",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "반려동물 지출"
+      ],
+      "evidences": [
+        {
+          "ticker": "ELAN",
+          "evidence": "최근 실적 컨콜 및 미디어 분석에서 미국 Pet Health에서 믹스 및 가격 개선은 긍정적이나, 전반적인 소비 환경 둔화 우려로 반려동물 관련 비필수 지출 성장세가 과거 대비 완만해졌다는 언급이 이어지며 섹터 전반에 중립적인 수요 환경이 형성되고 있음[1][4]."
+        }
+      ]
+    },
+    {
+      "theme": "가축 사이클",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "가축 사이클"
+      ],
+      "evidences": [
+        {
+          "ticker": "ELAN",
+          "evidence": "Farm Animal 부문 실적 코멘트에서 축산 업황·사육두수 변동에 따른 수요 변화가 존재하나, 지역·종별로 상쇄 효과가 발생하며 글로벌 차원에서는 완만한 성장세를 보인다는 언급이 있어 가축 관련 동물헬스 수요는 뚜렷한 호·악재 없이 중립적 수준으로 평가됨[1]."
+        }
+      ]
+    },
+    {
       "theme": "밸류디스카운트",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4230,43 +4917,213 @@
       ]
     },
     {
-      "theme": "무역 정책",
+      "theme": "소비양극화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "무역 정책"
+        "소비양극화"
       ],
       "evidences": [
         {
-          "ticker": "FSLR",
-          "evidence": "CNBC 및 증권사 리포트에서 관세·수입 규제 등 태양광 관련 무역 정책 변화 가능성이 업계 구조에 중립 내지 선택적 호재로 작용할 수 있다는 분석이 제시되며, 구체적 방향성은 정책 결정에 따라 유동적이라는 점이 강조됨[18]."
+          "ticker": "FIVE",
+          "evidence": "주요 금융매체와 애널리스트 코멘트에서 고소득층과 저소득층 간 소비 양극화가 심화되며 저소득·청소년층의 가격 민감도가 높아져 디스카운트 채널 수혜와 동시에 경기 둔화 시 변동성이 커질 수 있다는 점이 지적됨[3][5][7]."
         }
       ]
     },
     {
-      "theme": "밸류에이션 조정",
+      "theme": "카테고리 경쟁",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
       "raw_labels": [
-        "밸류에이션 조정"
+        "카테고리 경쟁"
       ],
       "evidences": [
         {
-          "ticker": "FSLR",
-          "evidence": "태양광 섹터 전반에서 최근 주가 조정과 변동성이 확대되며 일부 종목의 P/E·P/FCF 멀티플이 역사적 평균 대비 하단에 위치했다는 평가가 나오고 있고, 성장·정책 리스크를 반영한 재평가 국면이라는 시각이 공존함[2][4]."
+          "ticker": "FRPT",
+          "evidence": "대형 식품·펫 기업들이 프리미엄 및 냉장 펫푸드 카테고리 진입을 확대하면서 카테고리 내 경쟁이 점차 심화되는 추세이며, 이는 시장 전체 성장을 촉진하는 동시에 개별 브랜드의 점유율 변동성을 높이는 요인으로 언급됨.[1]"
+        }
+      ]
+    },
+    {
+      "theme": "설비투자",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "설비투자"
+      ],
+      "evidences": [
+        {
+          "ticker": "FRPT",
+          "evidence": "펫푸드 업계에서 생산효율 개선·용량 확대를 위한 설비투자가 지속적으로 이루어지고 있으며, 대규모 CAPEX는 장기 성장의 필수 조건인 동시에 단기적으로 밸류에이션과 재무 레버리지에 부담을 줄 수 있는 요인으로 평가되고 있음.[1]"
+        }
+      ]
+    },
+    {
+      "theme": "제조 투자",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "제조 투자"
+      ],
+      "evidences": [
+        {
+          "ticker": "FTV",
+          "evidence": "산업 기술·계측 기업들의 최근 컨콜에서는 북미·유럽 제조 CAPEX가 구조적으로는 유지되나 단기적으로는 재고조정과 경기 둔화로 프로젝트 추진 속도가 다소 완만해졌다는 언급이 반복되고 있음.[4]"
+        }
+      ]
+    },
+    {
+      "theme": "클라이언트 예산",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "클라이언트 예산"
+      ],
+      "evidences": [
+        {
+          "ticker": "G",
+          "evidence": "최근 실적 발표에서 일부 산업 클라이언트의 IT·컨설팅 예산이 신중하게 집행되고 있다고 언급하며, 디지털 전환 관련 필수 프로젝트는 유지되지만 비핵심 영역에서는 예산 조정 가능성이 있다고 설명함[1]."
+        }
+      ]
+    },
+    {
+      "theme": "규제·데이터보호",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "규제·데이터보호"
+      ],
+      "evidences": [
+        {
+          "ticker": "G",
+          "evidence": "동사는 10-Q 및 리스크 공시에서 각국 데이터 보호·프라이버시 규제 강화가 운영 및 컴플라이언스 비용을 증가시킬 수 있는 요인이라고 밝히며, 이를 관리하기 위한 내부 통제와 프로세스를 강화하고 있다고 언급함[3]."
+        }
+      ]
+    },
+    {
+      "theme": "방산 멀티플",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "방산 멀티플"
+      ],
+      "evidences": [
+        {
+          "ticker": "GD",
+          "evidence": "SeekingAlpha 등 주요 리서치에서 General Dynamics를 포함한 방산 대형주에 대해 국방 사이클 호조를 반영해 일부 종목을 BUY로 상향하는 한편, 밸류에이션이 역사적 밴드 상단에 근접했다고 언급하는 등 방산 업종 멀티플에 대한 시장 평가가 중립~우호적 수준에서 재조정되는 흐름이 나타남[5]."
+        }
+      ]
+    },
+    {
+      "theme": "capex",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "CAPEX"
+      ],
+      "evidences": [
+        {
+          "ticker": "GEHC",
+          "evidence": "보건의료 장비 업황은 병원 자본지출 회복 여부에 좌우되는 흐름으로 해석됨. [1][15]"
+        }
+      ]
+    },
+    {
+      "theme": "인력변동",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "인력변동"
+      ],
+      "evidences": [
+        {
+          "ticker": "GEHC",
+          "evidence": "최근 CFO 교체가 있었고, 리더십 변화가 업종 전반의 투자심리에 영향을 줌. [15][16]"
+        }
+      ]
+    },
+    {
+      "theme": "광고 사이클",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "광고 사이클"
+      ],
+      "evidences": [
+        {
+          "ticker": "GHC",
+          "evidence": "지역 방송 업계는 경기·정치 이벤트에 따라 광고 지출이 순환하며, 선거 사이클과 지역 경기 회복에 따른 단기 업사이드와 디지털 전환에 따른 구조적 압력이 동시에 존재한다는 점이 최근 컨콜 코멘트에서 짚어지고 있음[1]."
+        }
+      ]
+    },
+    {
+      "theme": "m&a 리스크",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "M&A 리스크"
+      ],
+      "evidences": [
+        {
+          "ticker": "GHC",
+          "evidence": "헬스케어·제조 및 서비스 업계에서 인수·합병을 통한 성장 전략이 일반화되어 있으나, 인수 가격과 통합 리스크가 강조되며 보수적인 자본 배분과 사후 성과 관리의 중요성이 경영진 코멘트에서 반복되고 있음[1]."
+        }
+      ]
+    },
+    {
+      "theme": "투자 수익 의존",
+      "ticker_count": 1,
+      "frequency": 0.012,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "투자 수익 의존"
+      ],
+      "evidences": [
+        {
+          "ticker": "GME",
+          "evidence": "GameStop이 2분기 순이익 2.9~3.1억달러를 예고하면서 eBay 파생자산 및 지분 투자에서 약 2.38억달러 평가이익을 반영한다고 밝힌 것은, 일부 리테일 기업들이 본업 외 자본시장 투자·파생자산에서 수익을 추구하는 흐름이 존재하며 해당 수익의 변동성이 실적과 밸류에이션에 영향을 줄 수 있음을 시사함[2][6][9][12]."
         }
       ]
     },
     {
       "theme": "인재 경쟁",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4283,7 +5140,7 @@
     {
       "theme": "데이터경쟁",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4300,7 +5157,7 @@
     {
       "theme": "금리환경",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4317,7 +5174,7 @@
     {
       "theme": "파운드리 경쟁",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4334,7 +5191,7 @@
     {
       "theme": "시장변동",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4351,7 +5208,7 @@
     {
       "theme": "규제·소송",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4368,7 +5225,7 @@
     {
       "theme": "밸류에이션",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4385,7 +5242,7 @@
     {
       "theme": "금리정점",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4402,7 +5259,7 @@
     {
       "theme": "재고",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4419,7 +5276,7 @@
     {
       "theme": "원재료 변동성",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4436,7 +5293,7 @@
     {
       "theme": "원자재 변동성",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4453,7 +5310,7 @@
     {
       "theme": "마진압력",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4470,7 +5327,7 @@
     {
       "theme": "브랜드 집중",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4487,7 +5344,7 @@
     {
       "theme": "마진 정상화",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4504,7 +5361,7 @@
     {
       "theme": "배당방어",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4521,7 +5378,7 @@
     {
       "theme": "연구비 예산",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4538,7 +5395,7 @@
     {
       "theme": "금리·자본시장",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4555,7 +5412,7 @@
     {
       "theme": "비용통제",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4572,7 +5429,7 @@
     {
       "theme": "레저 수요",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
@@ -4589,7 +5446,7 @@
     {
       "theme": "게이밍규제",
       "ticker_count": 1,
-      "frequency": 0.015,
+      "frequency": 0.012,
       "sentiment": 0.0,
       "direction_label": "neutral",
       "verdict": "MENTION",
