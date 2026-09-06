@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-09-06T10:01:53.665761+09:00",
+  "generated_at": "2026-09-06T13:45:49.640237+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 317446,
-    "python_modules": 1032,
+    "code_lines_tsx_py": 317759,
+    "python_modules": 1034,
     "tsx_components": 140,
     "json_data_files": 2277,
     "json_total_tracked": 2298,
     "workflows": 78,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 8238
+    "git_tracked_files": 8240
   },
   "subsystems": {
     "ingest": {
@@ -392,7 +392,7 @@
         {
           "name": "kis_token_refresh",
           "crons": [
-            "45 14 * * *"
+            "47 */2 * * *"
           ],
           "scheduled": true
         },
@@ -742,7 +742,7 @@
   },
   "python_by_dir": {
     "api": 453,
-    "tests": 351,
+    "tests": 353,
     "scripts": 154,
     "vercel-api": 61,
     "server": 7,
@@ -771,7 +771,7 @@
       "warn": 0,
       "alert": 0
     },
-    "infra_as_of": "2026-09-05T10:45:26+09:00",
+    "infra_as_of": "2026-09-06T10:39:32+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,

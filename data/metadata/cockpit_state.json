@@ -1,8 +1,10 @@
 {
-  "collected_at": "2026-09-06T01:01:53.574261+00:00",
+  "collected_at": "2026-09-06T04:45:49.554486+00:00",
   "schema_version": 1,
-  "severity": "GREEN",
-  "severity_reasons": [],
+  "severity": "RED",
+  "severity_reasons": [
+    "data delivery RED: 배달 검증 실패 1건"
+  ],
   "n_verification_days": 25,
   "n_milestones": {
     "to_50": 25,
@@ -28,9 +30,9 @@
   },
   "open_p0_p1": [],
   "operator_deadman": {
-    "days_git": 0.01,
+    "days_git": 0.02,
     "days_telegram": null,
-    "days_uaq": 67.59,
+    "days_uaq": 68.6,
     "trigger": "ok",
     "maintenance": false,
     "warn_days": 7.0
@@ -48,6 +50,9 @@
     "fred_age_h": 0.48,
     "fred_24h_failure_rate": 0.0,
     "core_sources_ok": true,
+    "delivery_status": "red",
+    "publish_verify_ok": false,
+    "publish_verify_failed": 1,
     "runtime_mode": "full_us",
     "ramp_up_stage": 5000,
     "brain_anomaly_24h": 0,
