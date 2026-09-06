@@ -1,13 +1,12 @@
-name: KIS Token Refresh (00:00 KST)
+name: KIS Token Refresh (24h guard sweep)
 
 on:
-  # 2026-05-13 재활성화: 24h minimum interval 가드 (broker.authenticate) + 시각 기반 lock.
-  # 2026-05-29 23h → 24h 정정 (5/27+5/28 사고). 단점: 23:45 cron = 23h57m < 24h → 매일 skip.
-  # daily_realtime backup 으로 fallback. backup 사고 시 token 만료 위험 (사용자 동의 5/29).
-  # KST 23:45 발급 — 자정 트랜지션 15분 전 + dispatch_pulse 슬롯 (minute % 30 == 0)
-  # 회피 (minute=45 → daily_realtime 동시 발화 없음). 5/3 + 5/13 race 모두 차단.
+  # 2026-09-06: 하루 한 번 고정 시각 실행은 24h 가드와 GitHub 지연이 겹치면 한 회차를
+  # 건너뛰어 토큰 공백이 최대 하루 가까이 생겼다. 2시간마다 확인하되 발급 여부는 기존
+  # 24h lock 하나가 결정한다. 실행 횟수와 발급 횟수는 다르며, 하루 두 번 발급은 불가하다.
+  # minute=47 은 daily_realtime dispatch 슬롯(00/30)과 분리한다.
   schedule:
-    - cron: '45 14 * * *'  # UTC 14:45 = KST 23:45 (daily_realtime 슬롯 회피)
+    - cron: '47 */2 * * *'
   workflow_dispatch:
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)
@@ -89,8 +88,7 @@ jobs:
               # 5/27 00:08 preflight + 23:08 preflight = 23h 0m → 23h 가드 통과 → 2번째 발급.
               # 5/28 22:11 발급 = 다시 ~23h interval → 사용자 카톡 알림 1건 (RULE 1 P0).
               # 24h 가드 = preflight/refresh 어느 쪽이든 정책 (발급 간격 최소 24h) 정합.
-              # 단점: 23:45 cron 기준 23h57m < 24h → skip → daily_realtime backup 의존.
-              # PM 결정 5/29 옵션 A (가드만 fix). cron schedule 변경 보류.
+              # 2시간 확인 주기 중 24h 를 처음 넘긴 회차만 발급한다.
               # 🚨 계좌마다 락 파일이 분리되어 있어 이 가드도 계좌별로 독립 판정된다.
               if broker._is_recently_issued(hours=24):
                   print(f"[{slug}] lock — 24h 이내 이미 발급됨. KIS API 호출 skip (1일 1토큰 가드).")

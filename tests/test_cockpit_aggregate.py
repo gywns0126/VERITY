@@ -53,6 +53,18 @@ def mock_ledger_dir(tmp_path, monkeypatch):
         }) + "\n",
         encoding="utf-8",
     )
+    (metadata_dir / "data_health.json").write_text(
+        json.dumps({
+            "status": "green",
+            "reasons": [],
+            "publish_verify": {
+                "generated_at": "2026-05-27T12:05:00+09:00",
+                "ok": True,
+                "failed": 0,
+            },
+        }),
+        encoding="utf-8",
+    )
 
     # data_pipeline_health.json
     (metadata_dir / "data_pipeline_health.json").write_text(
@@ -185,6 +197,26 @@ def test_build_cockpit_state_with_full_ledgers(mock_ledger_dir):
     # _inputs_snapshot 박힘 (silent skip 차단)
     assert state["_inputs_snapshot"]["validation_sample"] == 30
     assert state["_inputs_snapshot"]["vams_days_since_reset"] is not None
+    assert state["_inputs_snapshot"]["delivery_status"] == "green"
+    assert state["_inputs_snapshot"]["publish_verify_ok"] is True
+
+
+def test_build_cockpit_state_surfaces_delivery_red(mock_ledger_dir):
+    _data_dir, metadata_dir = mock_ledger_dir
+    (metadata_dir / "data_health.json").write_text(
+        json.dumps({
+            "status": "red",
+            "reasons": ["배달 검증 실패 1건"],
+            "publish_verify": {"ok": False, "failed": 1},
+        }),
+        encoding="utf-8",
+    )
+
+    from scripts.cockpit_aggregate import build_cockpit_state
+    state = build_cockpit_state()
+    assert state["severity"] == "RED"
+    assert state["severity_reasons"] == ["data delivery RED: 배달 검증 실패 1건"]
+    assert state["_inputs_snapshot"]["publish_verify_failed"] == 1
 
 
 def test_build_cockpit_state_with_missing_ledgers(tmp_path, monkeypatch):

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -44,6 +45,8 @@ API = "https://api.stock.naver.com/stock/{}/basic"
 _UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
 # 실측 우선순위 — 맨 티커가 통하는 종목이 가장 많고(ETF 다수), 나머지는 대부분 나스닥(.O)
 SUFFIXES = ["", ".O", ".N", ".K"]
+_NAVER_TICKER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.\-]*$")
+_US_MARKETS = {"US", "ETF"}
 
 
 def _now() -> datetime:
@@ -101,17 +104,26 @@ def resolve(ticker: str) -> Optional[Dict[str, Any]]:
 
 
 def _us_tickers() -> List[str]:
-    """universe_search 의 미국 티커 — 6자리 숫자(국내) 제외."""
+    """universe_search 의 미국 주식·ETF 티커만 반환한다.
+
+    지수/원자재/채권의 합성 ticker 에는 공백·한글이 포함될 수 있다. 이를 네이버
+    URL 경로에 넣으면 InvalidURL 로 전체 drip 이 중단되므로 시장과 문법을 모두 확인한다.
+    """
     try:
         doc = json.load(open(UNIVERSE_PATH, encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return []
     arr = doc if isinstance(doc, list) else (doc.get("stocks") or [])
     out = []
+    seen = set()
     for e in arr:
-        t = str((e or {}).get("ticker") or "").strip()
-        if t and not t.isdigit():
+        item = e or {}
+        t = str(item.get("ticker") or "").strip().upper()
+        market = str(item.get("market") or "").strip().upper()
+        if (market in _US_MARKETS and t and not t.isdigit()
+                and _NAVER_TICKER_RE.fullmatch(t) and t not in seen):
             out.append(t)
+            seen.add(t)
     return out
 
 

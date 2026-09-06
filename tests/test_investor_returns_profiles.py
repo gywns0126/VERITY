@@ -49,7 +49,7 @@ def test_profile_accepts_investor(monkeypatch):
         })})())
     got = P._fetch_summary("en", "Cathie Wood")
     assert got and got["name"] == "Cathie Wood"
-    assert got["source"] == "위키백과" and got["source_url"]
+    assert "summary" not in got and "source" not in got and "source_url" not in got
 
 
 def test_profile_rejects_disambiguation(monkeypatch):
@@ -73,3 +73,20 @@ def test_every_active_manager_has_candidates():
     from api.builders.us_smart_money_13f_public_builder import ACTIVE_MANAGERS
     missing = [n for n in ACTIVE_MANAGERS.values() if not P.WIKI_CANDIDATES.get(n)]
     assert not missing, f"위키 후보 미등록: {missing}"
+
+
+def test_old_biography_cache_is_reduced_to_image_metadata():
+    got = P._image_only_profile({
+        "name": "Example",
+        "lang": "en",
+        "summary": "old biography",
+        "summary_ko": "old translation",
+        "source": "old source",
+        "source_url": "https://example.invalid/bio",
+        "image": {"url": "https://example.invalid/photo.jpg", "license": "CC BY"},
+    })
+    assert got == {
+        "name": "Example",
+        "lang": "en",
+        "image": {"url": "https://example.invalid/photo.jpg", "license": "CC BY"},
+    }

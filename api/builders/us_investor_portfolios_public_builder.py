@@ -40,6 +40,23 @@ OUTPUT_PATH = os.path.join(_ROOT, "data", "us_investor_portfolios.json")
 # 인물 카드에 노출할 종목 수 (평가액 상위). 전체는 파일 비대 — 공개 blob 크기 bound.
 TOP_SHOWN = 25
 
+
+def _public_profile(value: Any) -> Dict[str, Any] | None:
+    """공개 payload에는 자유 라이선스 사진 메타만 허용한다.
+
+    인물 경력·업적은 클라이언트의 공식 기관 출처 카드가 담당한다. 과거 캐시에
+    남은 요약문·출처 URL·번역문은 공개 산출물로 전달하지 않는다.
+    """
+    if not isinstance(value, dict) or not isinstance(value.get("image"), dict):
+        return None
+    image = value["image"]
+    allowed = {
+        key: image.get(key)
+        for key in ("url", "width", "height", "artist", "license", "license_url", "file_page")
+        if image.get(key) is not None
+    }
+    return {"image": allowed} if allowed.get("url") else None
+
 _CAVEAT = (
     "13F 공시 기반 — 분기말 기준 보유를 최대 45일 뒤 제출(조회 시점엔 수개월 전 스냅샷). "
     "롱 미국주식만 포함되며 숏·채권·현금·비미국·대부분 파생은 제도상 제외된다. "
@@ -192,7 +209,7 @@ def build() -> Dict[str, Any]:
                 "disclosed_style": _style,
                 # holdings_count 는 TOP_HOLDINGS_PER_FUND 상한에 걸린다. 상한이면 실제는 더 많다.
                 "holdings_capped": _capped,
-                "profile": profiles.get(name),
+                "profile": _public_profile(profiles.get(name)),
                 "quarterly_replication_returns": rets,
                 "trailing_4q_replication_pct": annualize_from_quarters(rets),
                 "unresolved_ticker_count": unresolved,
@@ -224,7 +241,7 @@ def build() -> Dict[str, Any]:
             "ranking_basis": "disclosed_value_usd (공시 총액) — 수익률 랭킹 아님",
             "caveat": _CAVEAT,
             "return_caveat": _RETURN_CAVEAT,
-            "profile_source": "위키백과 REST summary — 직업 키워드 검증 통과분만(동명이인 가드)",
+            "profile_payload": "자유 라이선스 사진·저작자 표시 메타만 포함; 전기적 사실은 공식 기관 원문 카드에서 제공",
             "errors": errors,
         },
         "investors": investors,
@@ -232,6 +249,29 @@ def build() -> Dict[str, Any]:
 
 
 def main() -> int:
+    if "--sanitize-existing" in sys.argv:
+        try:
+            with open(OUTPUT_PATH, encoding="utf-8") as f:
+                data = json.load(f)
+            for investor in data.get("investors") or []:
+                investor["profile"] = _public_profile(investor.get("profile"))
+            meta = data.get("_meta") or {}
+            meta.pop("profile_source", None)
+            meta["profile_payload"] = (
+                "자유 라이선스 사진·저작자 표시 메타만 포함; "
+                "전기적 사실은 공식 기관 원문 카드에서 제공"
+            )
+            meta["profile_sanitized_at"] = _now_kst().isoformat()
+            tmp = OUTPUT_PATH + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, OUTPUT_PATH)
+            sys.stderr.write("[investor_portfolios] 기존 공개 payload 전기 문장 제거 완료\n")
+            return 0
+        except (OSError, json.JSONDecodeError) as exc:
+            sys.stderr.write(f"[investor_portfolios] 기존 payload 정리 실패: {exc}\n")
+            return 1
+
     data = build()
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     tmp = OUTPUT_PATH + ".tmp"

@@ -211,6 +211,13 @@ def test_token_refresh_workflow_commits_all_lock_files():
     assert "hours=23" not in s
 
 
+def test_token_refresh_checks_often_but_keeps_single_24h_issuer_guard():
+    s = _src(".github/workflows/kis_token_refresh.yml")
+    assert "cron: '47 */2 * * *'" in s
+    assert "_is_recently_issued(hours=24)" in s
+    assert "force_refresh=True" in s
+
+
 def test_token_refresh_run_reports_unrecorded_lock():
     """🚨 발급했는데 락 커밋이 없으면 run 이 스스로 실패해야 한다.
 

@@ -74,6 +74,9 @@ def main() -> int:
         from api.trading.kis_broker import KISBroker
 
         broker = KISBroker(cache_only=True)  # 🚨 발급 금지, cache read 전용
+        # 공유 토큰이 없으면 종목마다 같은 실패를 반복하지 않고 한 번에 중단한다.
+        # authenticate(cache_only)는 file/shared read 만 수행하며 신규 발급 경로로 가지 않는다.
+        broker.authenticate(force_refresh=False)
         warnings: Dict[str, Any] = {}
         n_warn = 0
         n_checked = 0  # 조회 성공 수 — 0 = 토큰사(침묵 실패), >0 이고 경보 0 = clean 사실

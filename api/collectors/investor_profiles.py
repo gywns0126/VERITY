@@ -1,16 +1,15 @@
-"""investor_profiles — 거장 인물 프로필 (위키백과 출처, 검증 가드 포함).
+"""investor_profiles — 거장 인물 사진 라이선스 메타 수집.
 
 2026-07-30 신설 (PM 요청 — "인물 설명도. 뭘 창업했고 엑싯했고 등등").
 
-🚨 인물 서술을 내 기억으로 쓰지 않는다 ([[feedback_llm_facts_no_unverified_assert]] /
-   [[feedback_knowledge_cutoff_verify_first]]). 전기적 사실은 출처가 붙는 것만 싣고,
-   출처 링크를 함께 노출한다.
+전기적 사실은 공식 기관 원문만 쓰며 공개 컴포넌트의 PROFILE_PROOFS가 담당한다.
+이 모듈은 자유 라이선스가 확인된 사진과 저작자 표시 정보만 제공한다.
 
 🚨🚨 동명이인 가드 — 제목 매칭만으로는 틀린 사람이 붙는다.
    실측(2026-07-30): 한국어 위키 "캐서린 우드" 는 **1914년생 소설가 캐서린 마셜**을 반환한다.
    그대로 실었으면 ARK 캐시 우드 카드에 소설가 약력이 붙었다.
    → extract 에 투자/사업 관련 직업 키워드가 없으면 폐기하고 다음 후보로 넘어간다.
-   후보를 다 소진하면 프로필 없음(빈 값)으로 둔다 — 추측으로 채우지 않는다.
+   식별용 extract 는 저장하거나 공개하지 않는다.
 """
 from __future__ import annotations
 
@@ -39,7 +38,7 @@ _OCCUPATION_KEYWORDS = (
     "투자", "헤지", "기업인", "자산운용", "펀드", "실업가", "사업가",
 )
 
-# 기관 → 위키 후보 (한국어 우선, 영문 fallback). 영문 제목은 동명이인 회피 위해 명시적으로 지정.
+# 기관 → 사진 식별 후보 (한국어 우선, 영문 fallback). 공개 사실 출처로 사용하지 않는다.
 WIKI_CANDIDATES: Dict[str, List[tuple]] = {
     "Berkshire Hathaway":       [("ko", "워런 버핏"), ("en", "Warren Buffett")],
     "Bridgewater Associates":   [("ko", "레이 달리오"), ("en", "Ray Dalio")],
@@ -62,7 +61,7 @@ WIKI_CANDIDATES: Dict[str, List[tuple]] = {
 
 
 def _fetch_summary(lang: str, title: str) -> Optional[Dict[str, Any]]:
-    """위키백과 REST summary. 채택 조건 미달이면 None (조용히 틀린 사람 싣지 않음)."""
+    """인물 식별 후 자유 라이선스 사진 메타만 반환한다."""
     url = f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{quote(title)}"
     try:
         r = requests.get(url, headers=_UA, timeout=15)
@@ -87,9 +86,6 @@ def _fetch_summary(lang: str, title: str) -> Optional[Dict[str, Any]]:
         return None
     out = {
         "name": j.get("title"),
-        "summary": extract,
-        "source": "위키백과",
-        "source_url": (j.get("content_urls") or {}).get("desktop", {}).get("page"),
         "lang": lang,
     }
     img = _fetch_image(j)
@@ -203,52 +199,18 @@ def fetch_profile(institution: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _translate_ko(texts: List[str]) -> Dict[str, str]:
-    """영문 프로필 → 한국어. 기존 뉴스 번역과 동일 경로(Gemini flash-lite, 1 batch).
-
-    🚨 번역 = 사실 전달 유틸이지 narrative 생성이 아니다(RULE 6 경계 — news_translation 과 동일 판단).
-       원문(summary)은 지우지 않고 summary_ko 를 덧붙인다. 번역 실패 시 원문 그대로 노출되므로
-       화면이 비지 않는다. 프로필은 16건 고정 + 캐시라 호출은 사실상 최초 1회.
-    """
-    if not texts:
-        return {}
-    try:
-        from google import genai
-        from api.config import GEMINI_API_KEY, GEMINI_MODEL_CHAT
-
-        if not GEMINI_API_KEY:
-            return {}
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        numbered = "\n\n".join(f"{i}. {t}" for i, t in enumerate(texts))
-        prompt = (
-            "다음 영어 인물 소개문들을 자연스러운 한국어로 번역하라. "
-            "고유명사(인명·기업명·펀드명)는 통용 표기 유지, 숫자·연도·금액은 원문 그대로. "
-            "의역·요약·추가 서술 금지 — 원문에 없는 사실을 만들지 말 것. "
-            '반드시 JSON 객체로만 응답: {"0":"번역문","1":"번역문",...} (키=번호 문자열).\n\n'
-            + numbered
-        )
-        resp = client.models.generate_content(
-            model=GEMINI_MODEL_CHAT,
-            contents=prompt,
-            config={"response_mime_type": "application/json", "temperature": 0},
-        )
-        raw = (getattr(resp, "text", "") or "").strip()
-        m = re.search(r"\{.*\}", raw, re.DOTALL)
-        if not m:
-            return {}
-        obj = json.loads(m.group(0))
-        out: Dict[str, str] = {}
-        for k, v in obj.items():
-            try:
-                idx = int(k)
-            except (TypeError, ValueError):
-                continue
-            if 0 <= idx < len(texts) and isinstance(v, str) and v.strip():
-                out[texts[idx]] = v.strip()
-        return out
-    except Exception as e:                                     # noqa: BLE001
-        logger.warning("[profile] 번역 실패(원문 유지): %s", e)
-        return {}
+def _image_only_profile(value: Any) -> Optional[Dict[str, Any]]:
+    """옛 전기 캐시에서 사진 관련 필드만 남긴다."""
+    if not isinstance(value, dict):
+        return None
+    out: Dict[str, Any] = {}
+    if value.get("name"):
+        out["name"] = value["name"]
+    if value.get("lang"):
+        out["lang"] = value["lang"]
+    if "image" in value:
+        out["image"] = value.get("image")
+    return out or None
 
 
 def load_cache() -> Dict[str, Any]:
@@ -260,8 +222,12 @@ def load_cache() -> Dict[str, Any]:
 
 
 def collect_profiles(institutions: List[str], refresh: bool = False) -> Dict[str, Any]:
-    """기관 목록 → 프로필 dict. 기존 캐시는 보존(전기 사실은 거의 안 변함 + 위키 호출 절약)."""
-    cache = load_cache()
+    """기관 목록 → 자유 라이선스 사진 메타. 전기 문장은 저장하지 않는다."""
+    cache = {
+        inst: cleaned
+        for inst, value in load_cache().items()
+        if (cleaned := _image_only_profile(value)) is not None
+    }
     for inst in institutions:
         if not refresh and cache.get(inst):
             continue
@@ -274,18 +240,6 @@ def collect_profiles(institutions: List[str], refresh: bool = False) -> Dict[str
     n_img = backfill_images(cache)
     if n_img:
         logger.info("[profile] 사진 %d건 신규 확보", n_img)
-
-    # 영문 프로필만 한국어 병기 (한국어 위키에서 온 건 그대로).
-    need = [
-        v["summary"] for v in cache.values()
-        if isinstance(v, dict) and v.get("lang") != "ko"
-        and v.get("summary") and not v.get("summary_ko")
-    ]
-    if need:
-        ko = _translate_ko(need)
-        for v in cache.values():
-            if isinstance(v, dict) and ko.get(v.get("summary") or ""):
-                v["summary_ko"] = ko[v["summary"]]
 
     os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
     tmp = CACHE_PATH + ".tmp"
