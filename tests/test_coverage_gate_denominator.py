@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 
@@ -86,3 +87,42 @@ def test_empty_shell_excluded_from_publish():
     src = inspect.getsource(ub.main)
     assert "_core_axes" in src, "발행 최소선 필터가 사라지면 빈 껍데기 662종목이 다시 나간다"
     assert "핵심축 0" in src or "빈 껍데기" in src
+
+
+def test_partial_financial_cache_cannot_replace_richer_compact_history():
+    from api.builders import us_stock_report_public_builder as ub
+
+    cached = [{"year": y} for y in (2021, 2022, 2023, 2024, 2025)]
+    partial = [{"year": y} for y in (2024, 2025)]
+    cached_fin = {"period": "2025", "groups": [{"title": "annual"}]}
+
+    fs, fin = ub._prefer_richer_annual_pack(partial, None, cached, cached_fin)
+    assert fs == cached
+    assert fin == cached_fin
+
+
+def test_equal_or_longer_fresh_history_wins():
+    from api.builders import us_stock_report_public_builder as ub
+
+    cached = [{"year": 2023}, {"year": 2024}]
+    fresh = [{"year": 2023}, {"year": 2024}, {"year": 2025}]
+    fresh_fin = {"period": "2025"}
+
+    fs, fin = ub._prefer_richer_annual_pack(fresh, fresh_fin, cached, {"period": "2024"})
+    assert fs == fresh
+    assert fin == fresh_fin
+
+
+def test_existing_public_report_is_available_as_regeneration_floor(tmp_path):
+    from api.builders import us_stock_report_public_builder as ub
+
+    path = tmp_path / "us_stock_report_public.json"
+    path.write_text(json.dumps({"stocks": [{
+        "ticker": "AAPL",
+        "fin_series": [{"year": 2024}, {"year": 2025}],
+        "financials": {"period": "2025"},
+    }]}), encoding="utf-8")
+
+    got = ub._load_existing_public_annual_packs(str(path))
+    assert got["AAPL"]["fs"] == [{"year": 2024}, {"year": 2025}]
+    assert got["AAPL"]["fin"] == {"period": "2025"}
