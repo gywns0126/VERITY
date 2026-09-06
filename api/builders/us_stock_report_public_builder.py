@@ -553,6 +553,44 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
     return fin_series, financials
 
 
+def _prefer_richer_annual_pack(
+    fresh_fs: Any,
+    fresh_fin: Any,
+    cached_fs: Any,
+    cached_fin: Any,
+) -> Tuple[Any, Any]:
+    """부분 캐시가 압축본보다 빈약하면 직전 공개 재무를 보존한다.
+
+    로컬·CI per-ticker 캐시는 종목별로 완전성이 다르다. 단순 덮어쓰기는 새 값이라는
+    이유만으로 더 긴 연간 시계열을 지울 수 있으므로, 시계열은 관측 연도 수가 많은 쪽,
+    재무 요약은 새 값이 실제로 있을 때만 새 값을 선택한다.
+    """
+    fresh_n = len(fresh_fs) if isinstance(fresh_fs, list) else 0
+    cached_n = len(cached_fs) if isinstance(cached_fs, list) else 0
+    chosen_fs = fresh_fs if fresh_n >= cached_n and fresh_n > 0 else cached_fs
+    chosen_fin = fresh_fin if isinstance(fresh_fin, dict) and fresh_fin else cached_fin
+    return chosen_fs, chosen_fin
+
+
+def _load_existing_public_annual_packs(path: str) -> Dict[str, Dict[str, Any]]:
+    """직전 공개 리포트의 연간 재무를 무손실 재생성 기준으로 읽는다."""
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            stocks = (json.load(f) or {}).get("stocks") or []
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return {
+        str(s.get("ticker") or "").upper(): {
+            "fs": s.get("fin_series"),
+            "fin": s.get("financials"),
+        }
+        for s in stocks
+        if isinstance(s, dict) and s.get("ticker")
+    }
+
+
 def _usd_compact(v: Any) -> str | None:
     """USD 큰 수 → $X.XXT / $X.XB / $XXXM (US header)."""
     try:
@@ -861,18 +899,25 @@ def main() -> int:
                 _compact = (json.load(_f) or {}).get("stocks") or {}
         except (OSError, json.JSONDecodeError):
             _compact = {}
+        _existing_packs = _load_existing_public_annual_packs(output_path)
         n_fs = n_from_cache = 0
         for s in stocks:
             tk = str(s.get("ticker") or "")
-            fs, fin = _load_us_annual_pack(tk)
+            cached = _compact.get(tk) or {}
+            existing = _existing_packs.get(tk) or {}
+            base_fs, base_fin = _prefer_richer_annual_pack(
+                cached.get("fs"), cached.get("fin"), existing.get("fs"), existing.get("fin")
+            )
+            fresh_fs, fresh_fin = _load_us_annual_pack(tk)
+            fs, fin = _prefer_richer_annual_pack(
+                fresh_fs, fresh_fin, base_fs, base_fin
+            )
+            if fresh_fs or fresh_fin:
+                n_from_cache += 1
             if fs or fin:
                 _cache_p = os.path.join(_ROOT, "data", "us_financials", f"{tk}.json")
-                fl = _load_fin_latest(tk) if os.path.exists(_cache_p) else (_compact.get(tk) or {}).get("fl")
+                fl = _load_fin_latest(tk) if os.path.exists(_cache_p) else cached.get("fl")
                 _compact[tk] = {"fs": fs, "fin": fin, "fl": fl or None}  # fl = PER/PBR 입력(압축본 자가유지)
-                n_from_cache += 1
-            else:
-                c = _compact.get(tk) or {}
-                fs, fin = c.get("fs"), c.get("fin")
             if fs:
                 s["fin_series"] = fs
                 n_fs += 1
