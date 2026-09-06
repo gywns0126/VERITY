@@ -80,6 +80,38 @@ def test_wikipedia_biography_is_not_rendered_as_factual_evidence():
     assert "위키백과" not in render
 
 
+def test_public_profile_payload_is_image_only():
+    from api.builders.us_investor_portfolios_public_builder import _public_profile
+
+    got = _public_profile({
+        "summary": "legacy biography",
+        "source_url": "https://example.invalid/bio",
+        "image": {
+            "url": "https://example.invalid/photo.jpg",
+            "artist": "Artist",
+            "license": "CC BY",
+            "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        },
+    })
+    assert got == {"image": {
+        "url": "https://example.invalid/photo.jpg",
+        "artist": "Artist",
+        "license": "CC BY",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    }}
+    assert "summary" not in got and "source_url" not in got
+
+
+def test_committed_investor_payload_contains_no_biography_cache_fields():
+    payload = json.loads(DATA.read_text(encoding="utf-8"))
+    assert "profile_source" not in payload["_meta"]
+    assert "profile_payload" in payload["_meta"]
+    assert payload["_meta"].get("profile_sanitized_at")
+    for investor in payload["investors"]:
+        profile = investor.get("profile")
+        assert profile is None or set(profile) == {"image"}
+
+
 def test_style_map_explains_axes_directly_and_separates_the_caveat():
     source = COMPONENT.read_text(encoding="utf-8")
     assert "→ 오른쪽: 상위 10종목에 더 집중" in source

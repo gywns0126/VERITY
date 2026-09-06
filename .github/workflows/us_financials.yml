@@ -56,17 +56,18 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Build US universe cache + market caps (yfinance 1패스)
+      - name: Refresh S&P 1500 universe cache + preserve bulk market caps
         # 재무 빌더 앞에 실행. fast_info 1패스로 (a) us_market_caps.json(Lynch size) +
         # (b) data/cache/universe_us.json(market_cap+거래대금 → universe_scan US 소스, 국장 parity).
-        # sp1500 universe 일 때만. [[project_us_financials_sec_edgar]] (a)/(parity).
+        # bulk 리포트도 같은 시총 맵을 읽으므로 scheduled bulk 실행에서도 S&P 1500 값은
+        # 갱신하되, 스크립트가 기존 bulk 시총 분모를 보존한다. [[project_us_financials_sec_edgar]] (a)/(parity).
         continue-on-error: true
         run: |
-          UNIVERSE="${{ github.event.inputs.universe || 'sp1500' }}"
-          if [ "$UNIVERSE" = "sp1500" ] && [ -z "${{ github.event.inputs.ticker }}" ]; then
+          UNIVERSE="${{ github.event.inputs.universe || 'bulk' }}"
+          if { [ "$UNIVERSE" = "sp1500" ] || [ "$UNIVERSE" = "bulk" ]; } && [ -z "${{ github.event.inputs.ticker }}" ]; then
             python scripts/us/build_us_universe_cache.py
           else
-            echo "[us_universe] universe=$UNIVERSE / ticker 지정 — skip (portfolio market_cap 사용)"
+            echo "[us_universe] universe=$UNIVERSE / ticker 지정 — S&P 1500 refresh skip"
           fi
 
       - name: Build US financials snapshots

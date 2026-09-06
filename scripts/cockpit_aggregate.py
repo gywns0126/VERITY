@@ -3,7 +3,7 @@
 
 PM=approved 2026-05-23 (plan §Phase 0-b).
 WHY: 분산된 11종 ledger를 단일 운영자 시야로 reduce. 자체 측정 0, 모든 신호 = 기존 ledger read-only.
-DATA: cron_health.jsonl / data_health.jsonl / data_pipeline_health.json / fred_health.jsonl /
+DATA: cron_health.jsonl / data_health.jsonl / data_health.json / data_pipeline_health.json / fred_health.jsonl /
       runtime_load_log.jsonl / operator_deadman_log.jsonl / alert_state.json / brain_audit.jsonl /
       telegram_volume.jsonl / system_health_snapshot.json / vams.reset_meta (portfolio.json).
 EXPECTED: 5분 cron 실행 → data/metadata/cockpit_state.json 단일 SoT 작성 →
@@ -111,16 +111,29 @@ def _reduce_cron_health() -> Dict[str, Any]:
 
 
 def _reduce_data_health() -> Dict[str, Any]:
-    """data_health.jsonl reduce — core_sources_ok."""
+    """원천 상태 장부와 공개 전달 검증을 하나의 cockpit 입력으로 합친다."""
     entries = _read_jsonl_tail(METADATA_DIR / "data_health.jsonl", n=5)
-    if not entries:
-        return {}
-    last = entries[-1]
-    return {
+    last = entries[-1] if entries else {}
+    out = {
         "core_sources_ok": last.get("core_sources_ok"),
         "overall_status": last.get("overall_status"),
         "data_health_ts": last.get("timestamp") or last.get("date"),
     }
+
+    delivery = _read_json(METADATA_DIR / "data_health.json")
+    if isinstance(delivery, dict):
+        verify = delivery.get("publish_verify") or {}
+        out.update({
+            "delivery_status": str(delivery.get("status") or "").lower() or None,
+            "delivery_reasons": delivery.get("reasons") or [],
+            "delivery_generated_at": (
+                delivery.get("generated_at")
+                or verify.get("generated_at")
+            ),
+            "publish_verify_ok": verify.get("ok"),
+            "publish_verify_failed": verify.get("failed"),
+        })
+    return out
 
 
 def _reduce_data_pipeline() -> Dict[str, Any]:
@@ -476,6 +489,9 @@ def build_cockpit_state() -> Dict[str, Any]:
             "fred_age_h": inputs.get("fred_age_h"),
             "fred_24h_failure_rate": inputs.get("fred_24h_failure_rate"),
             "core_sources_ok": (inputs.get("data_health") or {}).get("core_sources_ok"),
+            "delivery_status": (inputs.get("data_health") or {}).get("delivery_status"),
+            "publish_verify_ok": (inputs.get("data_health") or {}).get("publish_verify_ok"),
+            "publish_verify_failed": (inputs.get("data_health") or {}).get("publish_verify_failed"),
             "runtime_mode": inputs.get("runtime_mode"),
             "ramp_up_stage": inputs.get("ramp_up_stage"),
             "brain_anomaly_24h": inputs.get("brain_anomaly_24h"),

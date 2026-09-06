@@ -80,6 +80,44 @@ def _load_existing_records() -> Dict[str, Dict[str, Any]]:
         return {}
 
 
+def _load_existing_market_caps() -> Dict[str, float]:
+    """직전 넓은 시총 맵을 보존한다.
+
+    universe_us.json 은 의도적으로 S&P 1500 중심이지만 us_market_caps.json 은
+    bulk 미국 리포트(5천여 종목)의 peer 계산에도 쓰인다. 두 분모를 같은 것으로
+    취급하면 월간 S&P 1500 갱신 때 넓은 시총 맵이 축소된다.
+    """
+    if not MCAP_PATH.exists():
+        return {}
+    try:
+        data = json.loads(MCAP_PATH.read_text(encoding="utf-8"))
+        market_caps = data.get("market_caps") or {}
+        out: Dict[str, float] = {}
+        for ticker, value in market_caps.items():
+            parsed = _f(value)
+            if parsed is not None:
+                out[str(ticker).strip().upper()] = parsed
+        return out
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _load_existing_market_cap_freshness() -> Dict[str, Optional[str]]:
+    """부분 갱신 시 세그먼트별 원천 기준시각을 이어받는다."""
+    if not MCAP_PATH.exists():
+        return {"sp1500_as_of": None, "non_sp1500_as_of": None}
+    try:
+        data = json.loads(MCAP_PATH.read_text(encoding="utf-8"))
+        freshness = ((data.get("_meta") or {}).get("freshness") or {})
+        fallback = data.get("generated_at")
+        return {
+            "sp1500_as_of": freshness.get("sp1500_as_of") or fallback,
+            "non_sp1500_as_of": freshness.get("non_sp1500_as_of") or fallback,
+        }
+    except Exception:  # noqa: BLE001
+        return {"sp1500_as_of": None, "non_sp1500_as_of": None}
+
+
 def fetch_record(ticker: str) -> Optional[Dict[str, float]]:
     """fast_info → {market_cap, adv}. 실패=None."""
     def _call():
@@ -124,9 +162,16 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--ticker")
+    parser.add_argument(
+        "--reuse-cache",
+        action="store_true",
+        help="외부 조회 없이 현재 universe_us 캐시를 넓은 기존 시총 맵에 병합",
+    )
     args = parser.parse_args()
 
-    if args.ticker:
+    if args.reuse_cache:
+        tickers = []
+    elif args.ticker:
         tickers = [args.ticker.upper()]
     else:
         tickers = load_sp1500_tickers()
@@ -135,7 +180,10 @@ def main() -> int:
         if args.limit > 0:
             tickers = tickers[:args.limit]
 
-    print(f"[us_universe] universe size={len(tickers)}", file=sys.stderr)
+    print(
+        f"[us_universe] universe size={len(tickers)} reuse_cache={args.reuse_cache}",
+        file=sys.stderr,
+    )
 
     # 멱등 merge 베이스 (실패 종목 기존값 보존)
     prev = _load_existing_records()
@@ -163,11 +211,26 @@ def main() -> int:
     except Exception:  # noqa: BLE001
         us_core = set()
 
-    # 산출 1 — us_market_caps.json (Lynch)
-    mcaps = {tk: r["market_cap"] for tk, r in records.items() if r.get("market_cap")}
+    # 산출 1 — us_market_caps.json (Lynch + bulk peer)
+    # 넓은 기존 맵을 base 로 두고 이번 S&P 1500 실측값만 덮어쓴다.
+    # universe_us.json 분모(아래 records)와 시총 맵 분모를 섞지 않는다.
+    prior_freshness = _load_existing_market_cap_freshness()
+    mcaps = _load_existing_market_caps()
+    mcaps.update({tk: r["market_cap"] for tk, r in records.items() if r.get("market_cap")})
+    built_at = _now_kst().isoformat(timespec="seconds")
+    sp1500_as_of = (
+        built_at if tickers else prior_freshness.get("sp1500_as_of")
+    )
     MCAP_PATH.write_text(json.dumps({
-        "schema_version": "v0", "generated_at": _now_kst().isoformat(timespec="seconds"),
+        "schema_version": "v0", "generated_at": built_at,
         "count": len(mcaps), "source": "yfinance.fast_info.market_cap",
+        "_meta": {"freshness": {
+            "sp1500_as_of": sp1500_as_of,
+            "non_sp1500_as_of": prior_freshness.get("non_sp1500_as_of"),
+            "sp1500_count": len(records),
+            "preserved_non_sp1500_count": max(0, len(mcaps) - len(records)),
+            "note": "S&P 1500은 이번 수집값, 나머지는 넓은 기존 맵 보존값",
+        }},
         "market_caps": dict(sorted(mcaps.items())),
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 

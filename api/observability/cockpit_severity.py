@@ -2,7 +2,7 @@
 
 PM=approved 2026-05-23 (plan `/Users/macbookpro/.claude/plans/1-tidy-breeze.md` §Phase 0-c).
 WHY: 11 ledger 분산 → 단일 operator 시야 통합. severity 산식 분산 → 단일 source.
-DATA: cron_health.severity / data_health.core_sources_ok / operator_deadman.trigger /
+DATA: cron_health.severity / data_health.core_sources_ok + delivery status / operator_deadman.trigger /
       kis_lock_commits_24h / fred staleness / dispatch_chain_summary 등 합성.
 EXPECTED: scripts/cockpit_aggregate.py 가 11 ledger 입력 dict 전달 → evaluate() 호출
           → severity(GREEN/YELLOW/RED) + severity_reasons[] 반환.
@@ -36,6 +36,15 @@ def _check_red(inputs: Dict[str, Any]) -> List[str]:
     data_health = inputs.get("data_health") or {}
     if data_health.get("core_sources_ok") is False:
         reasons.append("data_health.core_sources_ok=false")
+
+    # 공개 산출물 전달 검증 실패는 화면에서 GREEN 으로 숨기지 않는다.
+    delivery_status = str(data_health.get("delivery_status") or "").lower()
+    publish_failed = data_health.get("publish_verify_failed")
+    if (delivery_status == "red" or data_health.get("publish_verify_ok") is False
+            or (isinstance(publish_failed, (int, float)) and publish_failed > 0)):
+        details = data_health.get("delivery_reasons") or []
+        detail = str(details[0]) if isinstance(details, list) and details else "공개 산출물 전달 검증 실패"
+        reasons.append(f"data delivery RED: {detail}")
 
     # 신규 P0 postmortem 24h+ 미작성 (open_p0_p1 list 존재하지만 24h 지남)
     open_p0 = inputs.get("open_p0_aged_24h", []) or []

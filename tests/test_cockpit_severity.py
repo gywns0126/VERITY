@@ -50,6 +50,19 @@ def test_red_when_core_sources_not_ok():
     assert severity == "RED"
 
 
+def test_red_when_public_delivery_verification_fails():
+    inputs = {"data_health": {
+        "core_sources_ok": True,
+        "delivery_status": "red",
+        "delivery_reasons": ["배달 검증 실패 1건"],
+        "publish_verify_ok": False,
+        "publish_verify_failed": 1,
+    }}
+    severity, reasons = evaluate(inputs)
+    assert severity == "RED"
+    assert reasons == ["data delivery RED: 배달 검증 실패 1건"]
+
+
 def test_red_when_p0_aged_24h():
     """P0 postmortem 24h+ 미박힘 → RED."""
     inputs = {"open_p0_aged_24h": [{"id": "p0-foo"}]}
