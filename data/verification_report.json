@@ -2,32 +2,35 @@
   "performance": {
     "hit_rate_7d": null,
     "hit_rate_14d": 33.3,
-    "hit_rate_30d": null,
+    "hit_rate_30d": 50.0,
     "sample_7d": 0,
     "sample_14d": 3,
-    "sample_30d": 0,
+    "sample_30d": 2,
     "hits_7d": 0,
     "hits_14d": 1,
-    "hits_30d": 0,
+    "hits_30d": 1,
     "hit_rate_7d_ci95": null,
     "hit_rate_14d_ci95": [
       6.1,
       79.2
     ],
-    "hit_rate_30d_ci95": null,
+    "hit_rate_30d_ci95": [
+      9.5,
+      90.5
+    ],
     "avg_return_7d": null,
-    "avg_return_14d": -1.76,
-    "sharpe_14d": -0.29,
+    "avg_return_14d": 0.21,
+    "sharpe_14d": 0.07,
     "hit_rate_7d_net": null,
-    "hit_rate_14d_net": 10.0,
-    "hit_rate_30d_net": null,
+    "hit_rate_14d_net": 9.1,
+    "hit_rate_30d_net": 16.7,
     "avg_return_7d_net": null,
-    "avg_return_14d_net": -35.69,
-    "delisted_count_30d": 0
+    "avg_return_14d_net": -36.45,
+    "delisted_count_30d": 4
   },
   "_corrections_meta": {
     "version": "1.0",
-    "applied_at": "2026-09-05 07:28:20.805570+09:00",
+    "applied_at": "2026-09-06 15:18:38.111430+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": -50.0,
     "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
@@ -35,7 +38,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
-      "fixed_at": "2026-09-05 07:28:20.805573+09:00"
+      "fixed_at": "2026-09-06 15:18:38.111433+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -45,9 +48,7 @@
   },
   "factor_health": {
     "healthy": [
-      "mean_reversion",
-      "perplexity_risk",
-      "volatility"
+      "perplexity_risk"
     ],
     "weakening": [],
     "decaying": [
@@ -56,18 +57,6 @@
     "total_factors": 15
   },
   "ic_adjustments_active": [
-    {
-      "factor": "multi_factor",
-      "multiplier": 0.0,
-      "status": "DEAD",
-      "ic_recent": 0.0
-    },
-    {
-      "factor": "consensus",
-      "multiplier": 0.0,
-      "status": "DEAD",
-      "ic_recent": 0.0
-    },
     {
       "factor": "timing",
       "multiplier": 0.0,
@@ -79,8 +68,20 @@
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
+    },
+    {
+      "factor": "consensus",
+      "multiplier": 0.0,
+      "status": "DEAD",
+      "ic_recent": 0.0
+    },
+    {
+      "factor": "multi_factor",
+      "multiplier": 0.0,
+      "status": "DEAD",
+      "ic_recent": 0.0
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-09-05 07:28:20.827752+09:00"
+  "generated_at": "2026-09-06 15:18:38.138052+09:00"
 }
