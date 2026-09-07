@@ -1,23 +1,23 @@
 {
  "_meta": {
-  "generated_at": "2026-09-06T17:51:32+09:00",
+  "generated_at": "2026-09-07T18:23:54+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 32,
+  "sessions_scanned": 31,
   "sessions_missed": [],
   "counts": {
-   "filings": 877,
-   "companies": 267,
+   "filings": 851,
+   "companies": 259,
    "by_stage": {
-    "신청": 95,
-    "정정(심사중)": 122,
-    "가격확정": 15,
-    "거래소등록": 35
+    "신청": 93,
+    "정정(심사중)": 119,
+    "가격확정": 13,
+    "거래소등록": 34
    },
    "spac_likely": 37,
-   "has_ticker_now": 199,
+   "has_ticker_now": 191,
    "priced_secondary_excluded": 12,
-   "foreign_issuer": 73,
-   "priced_parse_ok": 6
+   "foreign_issuer": 71,
+   "priced_parse_ok": 5
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
@@ -27,15 +27,15 @@
    "cik": "2113605",
    "name": "Chilwa Minerals Ltd",
    "forms": {
-    "F-1/A": 4,
+    "F-1/A": 3,
     "8-A12B": 1
    },
-   "first_filed": "20260723",
+   "first_filed": "20260810",
    "last_filed": "20260904",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
-   "amend_count": 4,
+   "amend_count": 3,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -389,10 +389,9 @@
     "424B4": 1,
     "8-A12B": 1,
     "CERT": 1,
-    "S-1/A": 3,
-    "S-1": 1
+    "S-1/A": 3
    },
-   "first_filed": "20260723",
+   "first_filed": "20260803",
    "last_filed": "20260819",
    "lineage": true,
    "stage": 4,
@@ -1180,44 +1179,6 @@
    }
   },
   {
-   "cik": "1787117",
-   "name": "Reformation Inc.",
-   "forms": {
-    "424B4": 1,
-    "8-A12B": 1,
-    "CERT": 1,
-    "S-1/A": 1
-   },
-   "first_filed": "20260723",
-   "last_filed": "20260730",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1787117&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2330",
-    "sic_desc": "Women's, Misses':  and Juniors Outerwear",
-    "is_blank_check": false,
-    "ticker": "REF",
-    "region": "VERNON, CA",
-    "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": true,
-    "shares": 9478821,
-    "price_usd": 15.0,
-    "gross_usd": 142182315,
-    "source_url": "https://www.sec.gov/Archives/edgar/data/1787117/000110465926088733/tm2513004-17_424b4.htm",
-    "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
-   }
-  },
-  {
    "cik": "1671584",
    "name": "Aptevo Therapeutics Inc.",
    "forms": {
@@ -1370,9 +1331,9 @@
    "name": "Republic Power Group Ltd",
    "forms": {
     "424B4": 2,
-    "F-1": 2
+    "F-1": 1
    },
-   "first_filed": "20260723",
+   "first_filed": "20260804",
    "last_filed": "20260827",
    "lineage": true,
    "stage": 3,
@@ -1591,60 +1552,6 @@
     "state_of_inc": "E9"
    },
    "pre_existing_reporter": true
-  },
-  {
-   "cik": "1951067",
-   "name": "C3is Inc.",
-   "forms": {
-    "424B4": 1,
-    "F-1/A": 1
-   },
-   "first_filed": "20260723",
-   "last_filed": "20260728",
-   "lineage": true,
-   "stage": 3,
-   "stage_ko": "가격확정",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1951067&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "4412",
-    "sic_desc": "Deep Sea Foreign Transportation of  Freight",
-    "is_blank_check": false,
-    "ticker": "CISS",
-    "region": "ATHENS, J3",
-    "state_of_inc": "1T"
-   }
-  },
-  {
-   "cik": "1853921",
-   "name": "Scribe Therapeutics, Inc.",
-   "forms": {
-    "424B4": 1,
-    "S-1MEF": 1
-   },
-   "first_filed": "20260723",
-   "last_filed": "20260727",
-   "lineage": true,
-   "stage": 3,
-   "stage_ko": "가격확정",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1853921&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2836",
-    "sic_desc": "Biological Products, (No Diagnostic Substances)",
-    "is_blank_check": false,
-    "ticker": "SCTX",
-    "region": "ALAMEDA, CA",
-    "state_of_inc": "DE"
-   }
   },
   {
    "cik": "1934387",
@@ -1927,7 +1834,16 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2080577&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2080577&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3690",
+    "sic_desc": "Miscellaneous Electrical Machinery, Equipment & Supplies",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "SHENZHEN",
+    "state_of_inc": "F4"
+   }
   },
   {
    "cik": "2052443",
@@ -1944,7 +1860,16 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2052443&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2052443&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "8742",
+    "sic_desc": "Services-Management Consulting Services",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "KUALA LUMPUR",
+    "state_of_inc": "N8"
+   }
   },
   {
    "cik": "2000684",
@@ -1962,7 +1887,16 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2000684&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2000684&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2833",
+    "sic_desc": "Medicinal Chemicals & Botanical Products",
+    "is_blank_check": false,
+    "ticker": "DHGR",
+    "region": "MONTMAGNY, A8",
+    "state_of_inc": "Z4"
+   }
   },
   {
    "cik": "2050020",
@@ -3061,14 +2995,14 @@
    "cik": "1487718",
    "name": "AMERICAN BATTERY MATERIALS, INC.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20260723",
+   "first_filed": "20260811",
    "last_filed": "20260811",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -3546,14 +3480,14 @@
    "cik": "2133716",
    "name": "YPF Energia Electrica S.A.",
    "forms": {
-    "F-1/A": 2
+    "F-1/A": 1
    },
-   "first_filed": "20260723",
+   "first_filed": "20260727",
    "last_filed": "20260727",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -3677,57 +3611,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1585608&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1640043",
-   "name": "Pyxis Tankers Inc.",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260723",
-   "last_filed": "20260723",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1640043&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2138186",
-   "name": "Narragansett Bancorp, Inc.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260723",
-   "last_filed": "20260723",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2138186&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1534154",
-   "name": "authID Inc.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260723",
-   "last_filed": "20260723",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1534154&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "61004",
@@ -4485,9 +4368,9 @@
    "cik": "1956439",
    "name": "Enhanced Group Inc.",
    "forms": {
-    "S-1": 2
+    "S-1": 1
    },
-   "first_filed": "20260723",
+   "first_filed": "20260825",
    "last_filed": "20260825",
    "lineage": true,
    "stage": 1,
@@ -5432,40 +5315,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1838987&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1808377",
-   "name": "Innovative Eyewear Inc",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20260723",
-   "last_filed": "20260723",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1808377&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1866816",
-   "name": "SYNTEC OPTICS HOLDINGS, INC.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20260723",
-   "last_filed": "20260723",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1866816&type=S-1&dateb=&owner=include&count=20"
   }
  ]
 }
