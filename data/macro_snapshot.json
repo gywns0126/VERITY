@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-07T16:52:49+09:00",
+  "collected_at": "2026-09-07T19:02:10+09:00",
   "macro": {
     "usd_krw": {
       "value": 1344.18,
@@ -13875,7 +13875,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-09-07T16:53:01+09:00",
+    "updated_at": "2026-09-07T19:03:10+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.81,
       "us_ig_risk": "LOW",
@@ -13885,7 +13885,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260907",
-      "collected_at": "2026-09-07T16:53:01+09:00",
+      "collected_at": "2026-09-07T19:03:10+09:00",
       "grades": {
         "AA-": {
           "yield": 4.575,
@@ -14097,12 +14097,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 24.94
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 76.66
   },
   "schema_version": "v0"
 }
