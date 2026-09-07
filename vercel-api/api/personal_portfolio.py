@@ -28,6 +28,8 @@ def load_personal_portfolio(token):
             headers={"apikey": key, "Authorization": "Bearer " + key}, timeout=8)
         if response.status_code == 404:
             return 404, {"error": "personal_review_not_published"}
+        if response.status_code == 400 and response.json().get("code") == "NoSuchKey":
+            return 404, {"error": "personal_review_not_published"}
         if response.status_code != 200:
             return 502, {"error": "private_storage_read_failed"}
         if len(response.content) > 200_000:

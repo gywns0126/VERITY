@@ -41,6 +41,12 @@ class PersonalApiTests(unittest.TestCase):
     def test_cross_account_payload_rejected(self):
         self.assertEqual(self.query('22222222-2222-2222-2222-222222222222')[0], 502)
 
+    def test_storage_missing_object_is_empty_state(self):
+        response = Mock(status_code=400)
+        response.json.return_value = {'statusCode': '404', 'code': 'NoSuchKey'}
+        with patch.dict(os.environ, {'SUPABASE_URL': 'https://example.invalid', 'SUPABASE_SERVICE_ROLE_KEY': 'test-key'}), patch.object(api.sb, 'verify_jwt', return_value=UID), patch.object(api.requests, 'get', return_value=response):
+            self.assertEqual(api.load_personal_portfolio('test-jwt')[0], 404)
+
 
 if __name__ == '__main__':
     unittest.main()
