@@ -3,6 +3,7 @@ from http.server import BaseHTTPRequestHandler
 import json
 import os
 import re
+import time
 import requests
 
 try:
@@ -25,7 +26,8 @@ def load_personal_portfolio(token):
     path = f"_operator/personal/{uid}/latest.json"
     try:
         response = requests.get(f"{base}/storage/v1/object/{bucket}/{path}",
-            headers={"apikey": key, "Authorization": "Bearer " + key}, timeout=8)
+            headers={"apikey": key, "Authorization": "Bearer " + key},
+            params={"cacheNonce": str(time.time_ns())}, timeout=8)
         if response.status_code == 404:
             return 404, {"error": "personal_review_not_published"}
         if response.status_code == 400 and response.json().get("code") == "NoSuchKey":

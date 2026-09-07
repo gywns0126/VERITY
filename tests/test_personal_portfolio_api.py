@@ -33,6 +33,7 @@ class PersonalApiTests(unittest.TestCase):
         with patch.dict(os.environ, {'SUPABASE_URL': 'https://example.invalid', 'SUPABASE_SERVICE_ROLE_KEY': 'test-key'}), patch.object(api.sb, 'verify_jwt', return_value=UID), patch.object(api.requests, 'get', return_value=response) as get:
             result = api.load_personal_portfolio('test-jwt')
             self.assertTrue(get.call_args.args[0].endswith('/personal/' + UID + '/latest.json'))
+            self.assertTrue(get.call_args.kwargs['params']['cacheNonce'])
             return result
 
     def test_storage_path_uses_verified_identity(self):
