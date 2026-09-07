@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-07T18:37:51+09:00",
+ "as_of": "2026-09-08T00:20:41+09:00",
  "version": "measurement_audit_v4",
  "status": "KNOWN",
  "failing": [],
@@ -62,7 +62,7 @@
    "thin_keys": [
     {
      "key": "analyst_report_summary",
-     "coverage": "1/83"
+     "coverage": "2/83"
     }
    ],
    "fallback_covered": [
@@ -188,11 +188,11 @@
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
-     "rule": "외인·기관 순매도 상위 (KIS)",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
@@ -243,13 +243,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 17,
+     "n_present": 30,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 17,
+     "n_present": 30,
      "constant_value": 0.0,
      "severity": "high"
     }
