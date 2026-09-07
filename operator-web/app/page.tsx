@@ -29,6 +29,7 @@ import PanelBoundary from "./components/PanelBoundary"
 import BalanceCard from "./components/BalanceCard"
 import CandidatesDiff from "./components/CandidatesDiff"
 import MultibaggerPanel from "./components/MultibaggerPanel"
+import PersonalPortfolio from "./components/PersonalPortfolio"
 
 export default function Home() {
     const dark = useDark()
@@ -149,6 +150,9 @@ export default function Home() {
                     </aside>
 
                     <section className="af-center">
+                        <PanelBoundary name="개인 운용안">
+                            <PersonalPortfolio />
+                        </PanelBoundary>
                         <PanelBoundary name="워크스페이스">
                             <Workspace defaultTicker={holdT.find((t) => /^\d{6}$/.test(t)) || "005930"} names={names} recs={recs} holdings={holdings} />
                         </PanelBoundary>
