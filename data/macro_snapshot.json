@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-08T22:32:24+09:00",
+  "collected_at": "2026-09-09T00:02:10+09:00",
   "macro": {
     "usd_krw": {
       "value": 1341.18,
@@ -13932,7 +13932,7 @@
       "country": "유럽",
       "source": "ECB",
       "date": "2026-09-10",
-      "d_day": 2
+      "d_day": 1
     },
     {
       "name": "미국 PPI 발표",
@@ -13947,7 +13947,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 46,
-      "d_day": 2
+      "d_day": 1
     },
     {
       "name": "미국 기존주택판매",
@@ -13962,7 +13962,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 291,
-      "d_day": 2
+      "d_day": 1
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -13977,7 +13977,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 2
+      "d_day": 1
     },
     {
       "name": "옵션만기일 (한국)",
@@ -13991,7 +13991,7 @@
       "impact": "프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
       "action": "만기일 장중 단기 매매 자제",
       "source": "KRX",
-      "d_day": 2
+      "d_day": 1
     },
     {
       "name": "Michigan 소비자심리 예비치",
@@ -14005,7 +14005,7 @@
       "impact": "미국 소비자 기대 인플레이션 포함. Fed도 주시하는 지표",
       "action": "소비재·리테일 섹터 감정 판단",
       "source": "UMich",
-      "d_day": 3
+      "d_day": 2
     },
     {
       "name": "미국 CPI 발표",
@@ -14021,7 +14021,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 10,
-      "d_day": 3
+      "d_day": 2
     },
     {
       "name": "미국 FOMC 금리결정",
@@ -14036,7 +14036,7 @@
       "country": "미국",
       "source": "Fed",
       "date": "2026-09-16",
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 소매판매",
@@ -14051,7 +14051,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 9,
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -14066,7 +14066,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 9
+      "d_day": 8
     },
     {
       "name": "미국 주택착공",
@@ -14081,7 +14081,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 27,
-      "d_day": 9
+      "d_day": 8
     },
     {
       "name": "BOJ 금융정책결정회합",
@@ -14097,7 +14097,7 @@
       "country": "일본",
       "source": "BOJ",
       "date": "2026-09-18",
-      "d_day": 10
+      "d_day": 9
     },
     {
       "name": "삼중마녀의 날 (Quad Witching)",
@@ -14111,7 +14111,7 @@
       "country": "미국",
       "source": "CBOE",
       "date": "2026-09-18",
-      "d_day": 10
+      "d_day": 9
     },
     {
       "name": "미국 PCE 물가지수",
@@ -14126,16 +14126,22 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 21,
-      "d_day": 14
+      "d_day": 13
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 32.36
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 147.06
   },
   "schema_version": "v0"
 }
