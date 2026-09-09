@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-09T22:32:24+09:00",
+  "collected_at": "2026-09-09T23:02:22+09:00",
   "macro": {
     "usd_krw": {
       "value": 1336.88,
@@ -14024,22 +14024,6 @@
       "d_day": 2
     },
     {
-      "name": "미국 CPI 발표",
-      "severity": "high",
-      "impact_area": [
-        "물가",
-        "금리기대",
-        "성장주"
-      ],
-      "impact": "예상 상회 시 금리 인상 우려로 시장 하락, 하회 시 반등",
-      "action": "발표 전 변동성 대비, 인플레 수혜주 vs 피해주 구분",
-      "date": "2026-09-11",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 10,
-      "d_day": 2
-    },
-    {
       "name": "미국 FOMC 금리결정",
       "severity": "high",
       "impact_area": [
@@ -14082,21 +14066,6 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 8
-    },
-    {
-      "name": "미국 주택착공",
-      "severity": "low",
-      "impact_area": [
-        "부동산",
-        "금리민감"
-      ],
-      "impact": "금리 민감 섹터. 건설주/가전주/목재주에 영향",
-      "action": "주택 관련 섹터 비중 점검",
-      "date": "2026-09-17",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 27,
       "d_day": 8
     },
     {
@@ -14146,12 +14115,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 78.99
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 162.37
   },
   "schema_version": "v0"
 }
