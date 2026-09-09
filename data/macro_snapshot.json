@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-09T23:32:11+09:00",
+  "collected_at": "2026-09-10T00:03:10+09:00",
   "macro": {
     "usd_krw": {
       "value": 1337.01,
@@ -13909,7 +13909,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-09-09T23:32:56+09:00",
+    "updated_at": "2026-09-10T00:04:10+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.81,
       "us_ig_risk": "LOW",
@@ -13919,7 +13919,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260909",
-      "collected_at": "2026-09-09T23:32:56+09:00",
+      "collected_at": "2026-09-10T00:04:10+09:00",
       "grades": {
         "AA-": {
           "yield": 4.581,
@@ -13948,7 +13948,7 @@
       "country": "유럽",
       "source": "ECB",
       "date": "2026-09-10",
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "미국 PPI 발표",
@@ -13963,22 +13963,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 46,
-      "d_day": 1
-    },
-    {
-      "name": "미국 기존주택판매",
-      "severity": "low",
-      "impact_area": [
-        "부동산",
-        "소비"
-      ],
-      "impact": "미국 주택시장 수요 온도계. 모기지 금리 민감",
-      "action": "금리 사이클 전환기 주목",
-      "date": "2026-09-10",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 291,
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -13993,7 +13978,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "옵션만기일 (한국)",
@@ -14007,7 +13992,7 @@
       "impact": "프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
       "action": "만기일 장중 단기 매매 자제",
       "source": "KRX",
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "Michigan 소비자심리 예비치",
@@ -14021,7 +14006,7 @@
       "impact": "미국 소비자 기대 인플레이션 포함. Fed도 주시하는 지표",
       "action": "소비재·리테일 섹터 감정 판단",
       "source": "UMich",
-      "d_day": 2
+      "d_day": 1
     },
     {
       "name": "미국 CPI 발표",
@@ -14037,7 +14022,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 10,
-      "d_day": 2
+      "d_day": 1
     },
     {
       "name": "미국 FOMC 금리결정",
@@ -14052,7 +14037,7 @@
       "country": "미국",
       "source": "Fed",
       "date": "2026-09-16",
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "미국 소매판매",
@@ -14067,7 +14052,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 9,
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -14082,7 +14067,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 주택착공",
@@ -14097,7 +14082,7 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 27,
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "BOJ 금융정책결정회합",
@@ -14113,7 +14098,7 @@
       "country": "일본",
       "source": "BOJ",
       "date": "2026-09-18",
-      "d_day": 9
+      "d_day": 8
     },
     {
       "name": "삼중마녀의 날 (Quad Witching)",
@@ -14127,7 +14112,7 @@
       "country": "미국",
       "source": "CBOE",
       "date": "2026-09-18",
-      "d_day": 9
+      "d_day": 8
     },
     {
       "name": "미국 PCE 물가지수",
@@ -14142,16 +14127,35 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 21,
-      "d_day": 13
+      "d_day": 12
+    },
+    {
+      "name": "미국 주간 실업수당 청구",
+      "severity": "medium",
+      "impact_area": [
+        "경기",
+        "고용"
+      ],
+      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
+      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
+      "date": "2026-09-24",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 180,
+      "d_day": 14
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 78.91
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 112.3
   },
   "schema_version": "v0"
 }
