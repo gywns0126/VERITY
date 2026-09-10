@@ -24,13 +24,22 @@ type Perf = {
 }
 type FactorHealth = { healthy?: string[]; weakening?: string[]; decaying?: string[]; total_factors?: number }
 type IcAdj = { factor?: string; ic_recent?: number; multiplier?: number; status?: string }
+type Coverage = {
+    evaluation_status?: string
+    cohort_size?: number
+    evaluated_count?: number
+    unresolved_count?: number
+    evaluation_date?: string
+    unresolved?: { ticker?: string; name?: string; reason?: string }[]
+}
 type Report = {
     generated_at?: string
     feedback_loop_status?: string
     performance?: Perf
     factor_health?: FactorHealth
     ic_adjustments_active?: IcAdj[]
-    _corrections_meta?: { tx_cost_pct_round_trip?: number; slippage_model?: string; delisted_return_pct?: number }
+    evaluation_coverage?: Record<string, Coverage>
+    _corrections_meta?: { tx_cost_pct_round_trip?: number; slippage_model?: string; delisted_return_pct?: number | null }
 }
 
 function hasPerf(p?: Perf): boolean {
@@ -81,6 +90,8 @@ export default function VerificationPanel() {
     const fh = rep.factor_health || {}
     const ic = (rep.ic_adjustments_active || []).slice(0, 6)
     const perfLive = hasPerf(rep.performance)
+    const coverage = Object.entries(rep.evaluation_coverage || {})
+    const frozen = rep.feedback_loop_status === "frozen"
     const unclassified = Math.max(0, (fh.total_factors || 0) - (fh.healthy || []).length - (fh.weakening || []).length - (fh.decaying || []).length)
     const genAt = String(rep.generated_at || "").slice(0, 16).replace("T", " ").replace(/\.\d+/, "")
 
@@ -91,7 +102,7 @@ export default function VerificationPanel() {
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: c.ink }}>학습 루프</span>
                     <span style={{ fontSize: 11, fontWeight: 700, color: rep.feedback_loop_status === "closed" ? c.green : c.amber, background: rep.feedback_loop_status === "closed" ? c.greenS : c.amberS, borderRadius: 8, padding: "3px 9px" }}>
-                        {rep.feedback_loop_status === "closed" ? "닫힘(가동)" : rep.feedback_loop_status || "—"}
+                        {frozen ? "동결" : rep.feedback_loop_status === "closed" ? "닫힘(가동)" : rep.feedback_loop_status || "—"}
                     </span>
                 </div>
                 <span style={{ fontSize: 11, color: c.faint, ...NUM }}>{genAt}</span>
@@ -100,8 +111,30 @@ export default function VerificationPanel() {
             {/* 성과 — RULE 7 정직 표기 */}
             <div style={{ ...cardStyle(c), display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: c.ink }}>성과 검증</div>
+                {coverage.map(([period, row]) => (
+                    <div key={period} style={{ fontSize: 12, color: c.sub, lineHeight: 1.6 }}>
+                        <b style={{ color: c.ink }}>{period}</b>
+                        {typeof row.cohort_size === "number" ? (
+                            <> · 가격 확인 {row.evaluated_count ?? 0}/{row.cohort_size}개 · 미확인 {row.unresolved_count ?? 0}개</>
+                        ) : <> · 평가 자료 없음</>}
+                        {row.evaluation_date ? <> · 기준 {row.evaluation_date}</> : null}
+                        {row.evaluation_status === "partial" ? <b style={{ color: c.amber }}> · 전체 성과 판정 보류</b> : null}
+                        {row.evaluation_status === "no_recommendations" ? <> · 해당 기간 매수 추천 없음</> : null}
+                        {row.unresolved?.length ? (
+                            <details><summary>미확인 종목</summary>
+                                {row.unresolved.map((item, i) => <div key={`${item.ticker}-${i}`}>
+                                    {item.name || item.ticker} ({item.ticker || "코드 없음"}) · {item.reason === "missing_entry_price" ? "진입 가격 미확인" : item.reason === "missing_evaluation_price" ? "평가 가격 미확인" : "추천 당시 가격·코드 미확인"}
+                                </div>)}
+                            </details>
+                        ) : null}
+                    </div>
+                ))}
                 {perfLive ? (
                     <PerfLive c={c} p={rep.performance!} />
+                ) : coverage.length ? (
+                    <div style={{ fontSize: 12.5, color: c.sub, lineHeight: 1.55 }}>
+                        전체 성과를 판단할 수 없습니다. 가격 미확인은 0% 수익이나 상장폐지 손실로 계산하지 않습니다.
+                    </div>
                 ) : (
                     <div style={{ fontSize: 12.5, color: c.sub, lineHeight: 1.55 }}>
                         <b style={{ color: c.ink }}>검증 데이터 축적 중</b> — 통계적으로 무의미한 구간입니다.
@@ -136,7 +169,7 @@ export default function VerificationPanel() {
             {/* IC 조정 활성 */}
             {ic.length ? (
                 <div style={{ ...cardStyle(c), display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: c.ink }}>IC 기반 가중 조정 <span style={{ fontSize: 11, fontWeight: 500, color: c.faint }}>(피드백 루프 실작동)</span></div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: c.ink }}>현재 IC 설정 <span style={{ fontSize: 11, fontWeight: 600, color: c.faint }}>{frozen ? "(자동 갱신 중단)" : "(설정값)"}</span></div>
                     {ic.map((a, i) => {
                         const m = typeof a.multiplier === "number" ? a.multiplier : null
                         const mCol = m == null ? c.sub : m > 1 ? c.up : m < 1 ? c.down : c.sub
@@ -155,7 +188,7 @@ export default function VerificationPanel() {
 
             <div style={{ fontSize: 10.5, color: c.faint, lineHeight: 1.5 }}>
                 {rep._corrections_meta ? (
-                    <>비용 반영: 왕복 {((rep._corrections_meta.tx_cost_pct_round_trip ?? 0) * 100).toFixed(2)}% · {rep._corrections_meta.slippage_model || "슬리피지 모델"} · 상폐 {(rep._corrections_meta.delisted_return_pct ?? 0)}% · </>
+                    <>비용 반영: 왕복 {typeof rep._corrections_meta.tx_cost_pct_round_trip === "number" ? `${rep._corrections_meta.tx_cost_pct_round_trip.toFixed(2)}%` : "미확인"} · {rep._corrections_meta.slippage_model || "슬리피지 모델"} · {typeof rep._corrections_meta.delisted_return_pct === "number" ? `과거 상폐 가정 ${rep._corrections_meta.delisted_return_pct}%` : "상장폐지 수익률 추정 없음"} · </>
                 ) : null}
                 자기 검증 trail(가설)
             </div>

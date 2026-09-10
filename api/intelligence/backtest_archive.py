@@ -3,8 +3,8 @@
 history/ 스냅샷의 recommendations[]를 비교하여 적중률·수익률을 산출.
 
 Sprint 11 (2026-04-30) 보정 추가 — 베테랑 due diligence 결함 1 대응:
-  - Survivorship bias: today_snap 에 없는 ticker (상장폐지/거래정지) 를 자동 제외하지
-    않고 별도 집계 + 보수적 -50% 처리. 종전 hit_rate 부풀림 차단.
+  - 가격 결측은 미평가로 기록한다. 후보 이탈을 상장폐지로 추정하거나 수익률을 대입하지 않는다.
+    전체 추천 집합의 평가가 끝나지 않으면 대표 성과는 null, 확인된 부분집합은 observed로 분리한다.
   - Slippage: 시총 tier 기반 왕복 슬리피지 모델 (10조+ 0.1% / 1-10조 0.3% / <1조 0.7%).
     KOSPI 대형주 vs KOSDAQ 소형주 차등.
   - Transaction cost: VAMS 와 일치하는 0.03% 왕복 (수수료 0.015% × 2).
@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 from datetime import timedelta
 from typing import Any, Dict, List, Optional
@@ -29,7 +30,22 @@ BACKTEST_PATH = os.path.join(DATA_DIR, "backtest_stats.json")
 
 # Sprint 11 보정 상수 (베테랑 결함 1 대응)
 TX_COST_PCT = 0.03           # VAMS 수수료 0.015% × 2 왕복
-DELISTED_RETURN_PCT = -50.0  # 상장폐지/거래정지 종목 보수 처리 (distress midpoint)
+DELISTED_RETURN_PCT = -50.0  # 과거 출력/외부 import 호환만 유지. 평가 계산에는 사용하지 않는다.
+
+
+def _positive_price(record: dict) -> Optional[float]:
+    """가격 결측/비유한 값은 수익률이 아니다. 유효한 native 가격만 반환한다."""
+    for key in ("price", "current_price"):
+        value = record.get(key)
+        if isinstance(value, bool):
+            continue
+        try:
+            price = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(price) and price > 0:
+            return price
+    return None
 
 
 def _slippage_pct(market_cap_krw: Optional[float]) -> float:
@@ -67,12 +83,9 @@ def _get_price_map_from_snapshot(snap: dict) -> Dict[str, float]:
     prices: Dict[str, float] = {}
     for r in snap.get("recommendations", []):
         ticker = r.get("ticker", "")
-        price = r.get("price") or r.get("current_price")
-        if ticker and price:
-            try:
-                prices[ticker] = float(price)
-            except (TypeError, ValueError):
-                pass
+        price = _positive_price(r)
+        if ticker and price is not None:
+            prices[ticker] = price
     for h in (snap.get("vams") or {}).get("holdings") or []:
         ticker = h.get("ticker", "")
         # 2026-07-20 감사 P0: recommendations(native 통화)가 이미 있으면 우선.
@@ -84,12 +97,9 @@ def _get_price_map_from_snapshot(snap: dict) -> Dict[str, float]:
         # 미장(비숫자)은 통화 오표기라 채점 제외(가격 미상 → 오염보다 미채점이 안전).
         if not str(ticker).isdigit():
             continue
-        price = h.get("current_price") or h.get("price")
-        if price:
-            try:
-                prices[ticker] = float(price)
-            except (TypeError, ValueError):
-                pass
+        price = _positive_price({"price": h.get("current_price"), "current_price": h.get("price")})
+        if price is not None:
+            prices[ticker] = price
     return prices
 
 
@@ -160,13 +170,16 @@ def evaluate_past_recommendations(
         return {"periods": {}, "recommendations": [], "updated_at": str(now_kst())}
 
     current_prices = _get_price_map_from_snapshot(today_snap)
+    # 마지막 보존본으로 폴백한 경우에도 실제 평가일을 지평의 기준으로 삼는다.
+    from datetime import datetime
+    evaluation_date = datetime.strptime(today_str, "%Y-%m-%d").date()
 
     period_stats: Dict[str, Dict[str, Any]] = {}
     all_recs: List[Dict[str, Any]] = []
 
     for days in lookback_days:
-        target_date = (today - timedelta(days=days)).strftime("%Y-%m-%d")
-        past_snap = _find_nearest_snapshot(target_date, dates)
+        target_date = (evaluation_date - timedelta(days=days)).strftime("%Y-%m-%d")
+        past_snap = _find_nearest_snapshot(target_date, dates, backward_only=True)
         if not past_snap:
             period_stats[f"{days}d"] = {"hit_rate": None, "avg_return": None, "total_recs": 0}
             continue
@@ -193,24 +206,20 @@ def evaluate_past_recommendations(
         t_plus_1_prices = _t_plus_1_price_map(past_snap, dates)
 
         # Sprint 11 dual-track: gross (raw forward tracking) + net (slippage+TX 보정).
-        # delisted: today_snap 에 없는 ticker — 보수적 -50% 별도 집계 (survivorship 차단).
+        # 결측을 숨긴 관측 부분집합을 전체 추천 성과로 보고하지 않는다.
         hits_gross = 0
         hits_net = 0
         returns_gross: List[float] = []
         returns_net: List[float] = []
-        delisted_count = 0
         skipped_no_t1 = 0
-        details: List[Dict[str, Any]] = []
+        unresolved: List[Dict[str, Any]] = []
 
         for rec in buy_recs:
             ticker = rec.get("ticker", "")
             name = rec.get("name", "?")
-            rec_price_t = rec.get("price") or rec.get("current_price")
-            if not rec_price_t or not ticker:
-                continue
-            try:
-                rec_price_t = float(rec_price_t)
-            except (TypeError, ValueError):
+            rec_price_t = _positive_price(rec)
+            if rec_price_t is None or not ticker:
+                unresolved.append({"ticker": ticker, "name": name, "reason": "invalid_recommendation_price_or_ticker"})
                 continue
 
             # T+1 시가 보정 — 사용자 매수 가능 가격
@@ -219,19 +228,16 @@ def evaluate_past_recommendations(
                 # T+1 snapshot 에 ticker 없음 = 다음날 분석에서 제외됨 또는 너무 최신
                 # 보수적으로 skip (alpha 부풀림 방지). Look-ahead bias 차단.
                 skipped_no_t1 += 1
+                unresolved.append({"ticker": ticker, "name": name, "reason": "missing_entry_price"})
                 continue
-            rec_price = rec_price_t1  # 진입 가격 = T+1 시가
+            rec_price = rec_price_t1  # 다음 스냅샷 가격. 거래소 시가와 동일하다고 단정하지 않는다.
 
             cur_price = current_prices.get(ticker)
             market_cap = rec.get("market_cap")
             slip = _slippage_pct(market_cap)
 
             if cur_price is None or cur_price <= 0:
-                # SURVIVORSHIP: 상장폐지/거래정지 — 자동 제외 대신 보수 처리.
-                # gross 는 측정 불가라 skip, net 만 -50% 로 카운트해서 부풀림 차단.
-                delisted_count += 1
-                returns_net.append(DELISTED_RETURN_PCT)
-                # hit_net 은 false (음수)
+                unresolved.append({"ticker": ticker, "name": name, "reason": "missing_evaluation_price"})
                 continue
 
             gross_ret = round((cur_price - rec_price) / rec_price * 100, 2)
@@ -264,17 +270,16 @@ def evaluate_past_recommendations(
                 "return_pct": gross_ret,
                 "hit": gross_ret > 0,
             }
-            details.append(detail)
             all_recs.append(detail)
 
         total_gross = len(returns_gross)
-        total_net = len(returns_net)  # delisted 포함
+        total_net = len(returns_net)
         hit_rate_gross = round(hits_gross / total_gross * 100, 1) if total_gross > 0 else None
         hit_rate_net = round(hits_net / total_net * 100, 1) if total_net > 0 else None
         avg_gross = round(sum(returns_gross) / total_gross, 2) if total_gross > 0 else None
         avg_net = round(sum(returns_net) / total_net, 2) if total_net > 0 else None
         max_ret = round(max(returns_gross), 2) if returns_gross else None
-        min_ret = round(min(returns_net), 2) if returns_net else None  # delisted 포함 최저
+        min_ret = round(min(returns_net), 2) if returns_net else None
 
         sharpe_gross = None
         if total_gross >= 3:
@@ -284,27 +289,45 @@ def evaluate_past_recommendations(
             if std_r > 0:
                 sharpe_gross = round(mean_r / std_r, 2)
 
+        observed = {
+            "hit_rate_gross": hit_rate_gross, "hit_rate_net": hit_rate_net,
+            "avg_return_gross": avg_gross, "avg_return_net": avg_net,
+            "max_return": max_ret, "min_return": min_ret, "sharpe": sharpe_gross,
+            "sample": total_gross, "hits_gross": hits_gross, "hits_net": hits_net,
+        }
+        complete = bool(buy_recs) and not unresolved
         period_stats[f"{days}d"] = {
+            "evaluation_status": "complete" if complete else "partial" if buy_recs else "no_recommendations",
+            "cohort_size": len(buy_recs),
+            "evaluated_count": total_gross,
+            "unresolved_count": len(unresolved),
+            "coverage_pct": round(total_gross / len(buy_recs) * 100, 1) if buy_recs else None,
+            "unresolved": unresolved,
+            "observed": observed,
+            "evaluation_date": today_str,
             # Net (보정 후 — 실거래 근사. 베테랑 결함 1 대응 후 실제 신뢰값)
-            "hit_rate_net": hit_rate_net,
-            "avg_return_net": avg_net,
+            "hit_rate_net": hit_rate_net if complete else None,
+            "avg_return_net": avg_net if complete else None,
             # Gross (기존 방식 — 비교/추세 보존용)
-            "hit_rate_gross": hit_rate_gross,
-            "avg_return_gross": avg_gross,
+            "hit_rate_gross": hit_rate_gross if complete else None,
+            "avg_return_gross": avg_gross if complete else None,
             # Look-ahead bias 보정 흔적
             "skipped_no_t_plus_1": skipped_no_t1,
-            "rec_price_basis": "T_plus_1_open_snapshot",
+            "rec_price_basis": "next_available_snapshot_price",
             # 호환성 — 구버전 필드 (gross 기준)
-            "hit_rate": hit_rate_gross,
-            "avg_return": avg_gross,
+            "hit_rate": hit_rate_gross if complete else None,
+            "avg_return": avg_gross if complete else None,
             # 분포
-            "max_return": max_ret,
-            "min_return": min_ret,
-            "sharpe": sharpe_gross,
+            "max_return": max_ret if complete else None,
+            "min_return": min_ret if complete else None,
+            "sharpe": sharpe_gross if complete else None,
             "total_recs": total_gross,
             "total_recs_with_delisted": total_net,
             "hits": hits_gross,
-            "delisted_count": delisted_count,
+            "hits_net": hits_net,
+            # 상장 상태 확인원이 없는 평가기이므로 0건 확인으로도 표시하지 않는다.
+            "delisted_count": None,
+            "listing_status_checked": False,
             "snapshot_date": past_snap,
         }
 
@@ -316,21 +339,24 @@ def evaluate_past_recommendations(
         "updated_at": str(now_kst()),
         # Sprint 11 메타 — 베테랑 due diligence 결함 1 대응 (감사 흔적)
         "_corrections_meta": {
-            "version": "1.0",
+            "version": "2.0-missing-price-unresolved",
             "applied_at": str(now_kst()),
             "tx_cost_pct_round_trip": TX_COST_PCT,
-            "delisted_return_pct": DELISTED_RETURN_PCT,
+            "delisted_return_pct": None,
+            "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
+            "legacy_total_recs_with_delisted": "alias of observed net sample; no inferred delistings",
             "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
             "look_ahead_bias_correction": {
                 "applied": True,
                 "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
-                "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
+                "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
                 "fixed_at": str(now_kst()),
             },
             "limitations": [
                 "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
                 "시장충격 비용은 평균 추정 — 대량 주문(>일거래대금 1%) 시 실제는 더 큼",
-                "delisted -50% 는 distress midpoint — 실제는 -30 ~ -100% 분포",
+                "가격 결측 원인은 미확인. 상장폐지·거래정지 여부와 최종 회수금은 별도 원문 확인 필요",
+                "observed는 확인된 부분집합이며 생존 편향이 남을 수 있어 전체 성과로 사용 금지",
             ],
         },
     }
@@ -386,7 +412,8 @@ def generate_verification_report() -> Dict[str, Any]:
         row = periods.get(period) or {}
         n = row.get("total_recs")
         hits = row.get("hits")
-        return {"sample": n, "hits": hits, "ci95": _wilson_ci_pct(hits, n)}
+        return {"sample": n, "hits": hits,
+                "ci95": _wilson_ci_pct(hits, n) if row.get("hit_rate") is not None else None}
 
     meta_7d = _period_meta("7d")
     meta_14d = _period_meta("14d")
@@ -432,6 +459,12 @@ def generate_verification_report() -> Dict[str, Any]:
             "delisted_count_30d": (periods.get("30d") or {}).get("delisted_count"),
         },
         "_corrections_meta": bt.get("_corrections_meta"),
+        "evaluation_coverage": {
+            period: {key: row.get(key) for key in (
+                "evaluation_status", "cohort_size", "evaluated_count", "unresolved_count",
+                "coverage_pct", "unresolved", "evaluation_date", "snapshot_date",
+            )} for period, row in periods.items()
+        },
         "factor_health": {
             "healthy": healthy,
             "weakening": weakening,
@@ -439,7 +472,12 @@ def generate_verification_report() -> Dict[str, Any]:
             "total_factors": len(ic_data.get("factors", {})),
         },
         "ic_adjustments_active": adj_applied,
-        "feedback_loop_status": "closed" if adj_applied else "open",
+        # Frozen disable entries are configuration, not evidence of active learning.
+        "feedback_loop_status": (
+            "frozen" if str(ic_adj.get("status", "")).startswith("frozen")
+            else "error" if ic_adj.get("status") == "error"
+            else "closed" if adj_applied else "open"
+        ),
         "generated_at": str(now_kst()),
     }
 

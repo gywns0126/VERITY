@@ -14,6 +14,7 @@ from typing import Any
 from api.workflows.archiver import load_snapshots_range
 from api.config import now_kst
 from api.intelligence.tail_risk_digest import load_black_swan_ledger
+from api.intelligence.backtest_archive import _get_price_map_from_snapshot, _positive_price
 
 
 PERIOD_DAYS = {
@@ -77,30 +78,30 @@ def _analyze_sector_trends(snapshots: list[dict]) -> dict:
 def _measure_recommendation_performance(snapshots: list[dict]) -> dict:
     """기간 초 BUY 추천 종목들의 현재 가격 대비 수익률 추적."""
     if len(snapshots) < 2:
-        return {"total_buy_recs": 0, "hit_rate_pct": 0, "avg_return_pct": 0, "stocks": []}
+        return {"total_buy_recs": 0, "hit_rate_pct": None, "avg_return_pct": None,
+                "stocks": [], "evaluation_status": "insufficient_snapshots"}
 
     first_snap = snapshots[0]
     last_snap = snapshots[-1]
 
     first_recs = {r["ticker"]: r for r in first_snap.get("recommendations", [])
-                  if r.get("recommendation") == "BUY"}
-    last_recs = {r["ticker"]: r for r in last_snap.get("recommendations", [])}
+                  if ((r.get("verity_brain") or {}).get("grade") or r.get("recommendation"))
+                  in ("BUY", "STRONG_BUY", "매수", "강력 매수")}
+    last_prices = _get_price_map_from_snapshot(last_snap)
 
     results = []
+    unresolved = []
     for ticker, orig in first_recs.items():
-        current = last_recs.get(ticker)
-        orig_price = orig.get("price", 0)
-        if not orig_price:
+        orig_price = _positive_price(orig)
+        cur_price = last_prices.get(ticker)
+        if orig_price is None or cur_price is None:
+            unresolved.append({"ticker": ticker, "name": orig.get("name", "?"),
+                               "reason": "missing_start_price" if orig_price is None else "missing_evaluation_price"})
             continue
 
-        if current and current.get("price"):
-            cur_price = current["price"]
-        else:
-            cur_price = orig_price
-
-        ret_pct = round((cur_price - orig_price) / orig_price * 100, 2) if orig_price else 0
-        orig_score = orig.get("multi_factor", {}).get("multi_score", 0)
-        brain_score = orig.get("verity_brain", {}).get("brain_score", 0)
+        ret_pct = round((cur_price - orig_price) / orig_price * 100, 2)
+        orig_score = (orig.get("multi_factor") or {}).get("multi_score", 0)
+        brain_score = (orig.get("verity_brain") or {}).get("brain_score", 0)
 
         results.append({
             "ticker": ticker,
@@ -117,19 +118,26 @@ def _measure_recommendation_performance(snapshots: list[dict]) -> dict:
 
     total = len(results)
     hits = sum(1 for r in results if r["hit"])
-    hit_rate = round(hits / total * 100, 1) if total else 0
-    avg_ret = _safe_avg([r["return_pct"] for r in results])
+    hit_rate = round(hits / total * 100, 1) if total else None
+    avg_ret = _safe_avg([r["return_pct"] for r in results]) if total else None
 
     high_score_stocks = [r for r in results if r["orig_multi_score"] >= 70]
     high_score_hit = sum(1 for r in high_score_stocks if r["hit"])
     high_score_total = len(high_score_stocks)
-    high_score_hit_rate = round(high_score_hit / high_score_total * 100, 1) if high_score_total else 0
+    high_score_hit_rate = round(high_score_hit / high_score_total * 100, 1) if high_score_total else None
+    complete = bool(first_recs) and not unresolved
 
     return {
         "total_buy_recs": total,
-        "hit_rate_pct": hit_rate,
-        "avg_return_pct": avg_ret,
-        "high_score_hit_rate_pct": high_score_hit_rate,
+        "cohort_size": len(first_recs),
+        "evaluated_count": total,
+        "unresolved_count": len(unresolved),
+        "unresolved": unresolved,
+        "evaluation_status": "complete" if complete else "partial" if first_recs else "no_recommendations",
+        "hit_rate_pct": hit_rate if complete else None,
+        "avg_return_pct": avg_ret if complete else None,
+        "high_score_hit_rate_pct": high_score_hit_rate if complete else None,
+        "observed": {"hit_rate_pct": hit_rate, "avg_return_pct": avg_ret, "sample": total},
         "high_score_count": high_score_total,
         "best_picks": results[:5],
         "worst_picks": results[-3:] if total >= 3 else [],
@@ -231,24 +239,30 @@ def _analyze_brain_accuracy(snapshots: list[dict]) -> dict:
     grade_returns: dict[str, list] = defaultdict(list)
 
     if len(snapshots) < 2:
-        return {"grades": {}, "insight": "데이터 부족"}
+        return {"grades": {}, "insight": "비교할 스냅샷 부족 — 판정 불가",
+                "evaluation_status": "insufficient_snapshots"}
 
     first_snap = snapshots[0]
     last_snap = snapshots[-1]
 
     first_recs = {r["ticker"]: r for r in first_snap.get("recommendations", [])}
-    last_recs = {r["ticker"]: r for r in last_snap.get("recommendations", [])}
+    last_prices = _get_price_map_from_snapshot(last_snap)
+    unresolved = []
+    cohort_by_grade = Counter()
 
     for ticker, orig in first_recs.items():
-        brain = orig.get("verity_brain", {})
+        brain = orig.get("verity_brain") or {}
         grade = brain.get("grade", "WATCH")
-        orig_price = orig.get("price", 0)
-        cur = last_recs.get(ticker)
-        cur_price = cur.get("price", orig_price) if cur else orig_price
+        cohort_by_grade[grade] += 1
+        orig_price = _positive_price(orig)
+        cur_price = last_prices.get(ticker)
 
-        if orig_price:
-            ret = round((cur_price - orig_price) / orig_price * 100, 2)
-            grade_returns[grade].append(ret)
+        if orig_price is None or cur_price is None:
+            unresolved.append({"ticker": ticker, "grade": grade,
+                               "reason": "missing_start_price" if orig_price is None else "missing_evaluation_price"})
+            continue
+        ret = round((cur_price - orig_price) / orig_price * 100, 2)
+        grade_returns[grade].append(ret)
 
     grade_stats = {}
     for grade, rets in grade_returns.items():
@@ -258,16 +272,31 @@ def _analyze_brain_accuracy(snapshots: list[dict]) -> dict:
             "hit_rate": round(sum(1 for r in rets if r > 0) / len(rets) * 100, 1) if rets else 0,
         }
 
-    sb = grade_stats.get("STRONG_BUY", {}).get("avg_return", 0)
-    avoid = grade_stats.get("AVOID", {}).get("avg_return", 0)
-    if sb > 0 and avoid < 0:
-        insight = f"브레인 등급 정확: 강력매수 평균 +{sb}%, 회피 평균 {avoid}%"
-    elif sb <= 0:
-        insight = f"브레인 강력매수 평균 {sb}% — 팩트 가중치 조정 검토 필요"
+    sb_group = grade_stats.get("STRONG_BUY") or {}
+    avoid_group = grade_stats.get("AVOID") or {}
+    if unresolved:
+        insight = f"가격 미확인 {len(unresolved)}/{len(first_recs)}건 — 등급 성과 판정 보류"
+        status = "partial"
+    elif not sb_group or not avoid_group:
+        absent = [g for g in ("STRONG_BUY", "AVOID") if not grade_stats.get(g)]
+        insight = f"비교 표본 없음({', '.join(absent)}) — 등급 간 판정 불가"
+        status = "insufficient_groups"
     else:
-        insight = "등급별 수익률 차이 미미 — 판별력 개선 필요"
+        insight = (f"관측 평균: 강력매수 {sb_group['avg_return']}%(N={sb_group['count']}), "
+                   f"회피 {avoid_group['avg_return']}%(N={avoid_group['count']}) — "
+                   "표본 평균만으로 산식 변경을 권고하지 않음")
+        status = "observed"
 
-    return {"grades": grade_stats, "insight": insight}
+    return {
+        # 기존 품질 점수 소비자가 미평가 표본을 완결된 성과로 받아들이지 않게 한다.
+        "grades": grade_stats if not unresolved else {},
+        "observed_grades": grade_stats,
+        "cohort_size": len(first_recs), "cohort_by_grade": dict(cohort_by_grade),
+        "evaluated_count": sum(len(v) for v in grade_returns.values()),
+        "unresolved_count": len(unresolved), "unresolved": unresolved,
+        "evaluation_status": status, "insight": insight,
+        "window": {"start": first_snap.get("_date"), "end": last_snap.get("_date")},
+    }
 
 
 # ── 보조 입력 신호 단독 적중률 (Brain 결정 input 검증용) ──────────
