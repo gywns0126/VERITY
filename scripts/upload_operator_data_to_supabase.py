@@ -46,6 +46,60 @@ UPLOADS = [
 ]
 
 
+def _guard_legacy_verification(report: dict) -> dict:
+    """An old persisted report must not republish synthetic missing-price losses."""
+    if (report.get("_corrections_meta") or {}).get("version") == "2.0-missing-price-unresolved":
+        return report
+    return {
+        **report,
+        "performance": {key: None for key in (report.get("performance") or {})},
+        "evaluation_coverage": {},
+        "feedback_loop_status": "unverified",
+        "_corrections_meta": {
+            **(report.get("_corrections_meta") or {}),
+            "version": "legacy-invalidated",
+            "delisted_return_pct": None,
+            "evaluation_status": "legacy_requires_recalculation",
+        },
+    }
+
+
+def guard_legacy_performance(doc: dict, dest: str) -> dict:
+    """Fail closed on cached pre-fix metrics until their normal producer reruns.
+
+    Public Git can retain an older portfolio between producer runs. Publication
+    must not restore invalid performance after a private measurement repair.
+    Holdings, recommendations, weights, and execution fields are never changed.
+    """
+    if dest == "_operator/verification_report.json":
+        return _guard_legacy_verification(doc)
+    if dest != "_operator/portfolio_full.json":
+        return doc
+    result = dict(doc)
+    bt = doc.get("backtest_stats")
+    if isinstance(bt, dict) and (bt.get("_corrections_meta") or {}).get("version") != "2.0-missing-price-unresolved":
+        result["backtest_stats"] = {
+            "periods": {}, "recommendations": [],
+            "evaluation_status": "legacy_requires_recalculation",
+            "_corrections_meta": {"version": "legacy-invalidated"},
+        }
+    report = doc.get("verification_report")
+    if isinstance(report, dict):
+        result["verification_report"] = _guard_legacy_verification(report)
+    accuracy = doc.get("brain_accuracy")
+    if isinstance(accuracy, dict) and not accuracy.get("evaluation_status"):
+        result["brain_accuracy"] = {
+            "grades": {}, "evaluation_status": "legacy_requires_recalculation",
+            "insight": "이전 평가의 가격 결측 처리 오류 — 재계산 전 등급 성과 판정 보류",
+        }
+        result["brain_quality"] = {
+            "score": None, "status": "no_data", "components": {},
+            "period": (doc.get("brain_quality") or {}).get("period"),
+            "reason": "legacy_accuracy_requires_recalculation",
+        }
+    return result
+
+
 def main() -> int:
     supabase_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -71,7 +125,12 @@ def main() -> int:
         # JSON parse 검증 — 깨진 파일 업로드 차단(오퍼레이터 콘솔 파손 방지)
         if ctype == "application/json":
             try:
-                json.loads(body)
+                parsed = json.loads(body)
+                if isinstance(parsed, dict):
+                    guarded = guard_legacy_performance(parsed, dest)
+                    if guarded != parsed:
+                        body = json.dumps(guarded, ensure_ascii=False, indent=2).encode("utf-8")
+                        print(f"  cached performance invalidated before publishing: {dest}")
             except ValueError as e:
                 print(f"ERROR: {src} JSON parse 실패 — skip: {e}", file=sys.stderr)
                 continue
