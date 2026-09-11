@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-12T06:02:47+09:00",
+  "collected_at": "2026-09-12T06:32:59+09:00",
   "overall_status": "error",
   "summary": {
     "fresh": 10,
@@ -16,7 +16,7 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "mtime",
-      "last_update_kst": "2026-09-12T06:00:54.668707+09:00",
+      "last_update_kst": "2026-09-12T06:30:56.461769+09:00",
       "age_hours": 0.03,
       "status": "fresh",
       "line_count": 541,
@@ -36,7 +36,7 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "mtime",
-      "last_update_kst": "2026-09-12T06:00:54.308708+09:00",
+      "last_update_kst": "2026-09-12T06:30:56.179768+09:00",
       "age_hours": 0.03,
       "status": "fresh",
       "line_count": 187142,
@@ -53,7 +53,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-07T00:56:48+09:00",
-      "age_hours": 125.1,
+      "age_hours": 125.6,
       "status": "fresh",
       "diagnostics": {
         "ok": true,
@@ -75,11 +75,11 @@
       "max_fresh_hours": 6.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-09-12T06:02:14+09:00",
+      "last_update_kst": "2026-09-12T06:32:31+09:00",
       "age_hours": 0.01,
       "status": "fresh",
       "diagnostics": {
-        "elapsed_s": 32.14,
+        "elapsed_s": 27.53,
         "used_prev_snapshot": []
       }
     },
@@ -92,7 +92,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-07T21:59:10+09:00",
-      "age_hours": 104.06,
+      "age_hours": 104.56,
       "status": "missing",
       "diagnostics": {
         "ok": true,
@@ -111,7 +111,7 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "mtime",
-      "last_update_kst": "2026-09-12T06:00:53.728710+09:00",
+      "last_update_kst": "2026-09-12T06:30:55.710765+09:00",
       "age_hours": 0.03,
       "status": "fresh",
       "line_count": 1193,
@@ -132,7 +132,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-08T22:04:57.696536+09:00",
-      "age_hours": 79.96,
+      "age_hours": 80.47,
       "status": "stale"
     },
     {
@@ -144,7 +144,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-11T17:58:09.884070+09:00",
-      "age_hours": 12.08,
+      "age_hours": 12.58,
       "status": "fresh"
     },
     {
@@ -156,7 +156,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-08T22:02:33.779650+09:00",
-      "age_hours": 80.0,
+      "age_hours": 80.51,
       "status": "stale"
     },
     {
@@ -168,7 +168,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-11T23:36:02.720876+09:00",
-      "age_hours": 6.45,
+      "age_hours": 6.95,
       "status": "fresh"
     },
     {
@@ -180,7 +180,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-08T22:10:33.206623+09:00",
-      "age_hours": 79.87,
+      "age_hours": 80.37,
       "status": "stale"
     },
     {
@@ -192,7 +192,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-08T22:02:47.625506+09:00",
-      "age_hours": 80.0,
+      "age_hours": 80.5,
       "status": "stale"
     },
     {
@@ -204,7 +204,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-11T18:33:09.747775+09:00",
-      "age_hours": 11.49,
+      "age_hours": 12.0,
       "status": "fresh"
     },
     {
@@ -216,7 +216,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-01T15:19:18.107016+09:00",
-      "age_hours": 254.72,
+      "age_hours": 255.23,
       "status": "fresh"
     },
     {
@@ -228,15 +228,22 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-09-08T22:03:12.140424+09:00",
-      "age_hours": 79.99,
+      "age_hours": 80.5,
       "status": "fresh"
     }
   ],
   "persist_frozen": [
     {
+      "key": "wide_scan",
+      "label": "Phase 2-B Coarse Filter",
+      "committed_age_hours": 104.1,
+      "limit_hours": 104.0,
+      "working_status": "fresh"
+    },
+    {
       "key": "universe_candidates",
       "label": "Universe 후보 (top N)",
-      "committed_age_hours": 104.1,
+      "committed_age_hours": 104.6,
       "limit_hours": 104.0,
       "working_status": "missing"
     }
