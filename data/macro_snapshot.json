@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-11T08:32:14+09:00",
+  "collected_at": "2026-09-11T09:02:21+09:00",
   "macro": {
     "usd_krw": {
       "value": 1348.88,
@@ -13901,66 +13901,6 @@
   },
   "global_events": [
     {
-      "name": "ECB 통화정책회의",
-      "severity": "high",
-      "impact_area": [
-        "금리",
-        "유로/달러",
-        "유럽주식"
-      ],
-      "impact": "유로존 금리결정. 유로/달러 환율 → 한국 수출주·신흥국 자금흐름 파급",
-      "action": "발표 후 유로/달러 방향 확인, 수출주 환율 민감도 점검",
-      "country": "유럽",
-      "source": "ECB",
-      "date": "2026-09-10",
-      "d_day": -1
-    },
-    {
-      "name": "미국 PPI 발표",
-      "severity": "medium",
-      "impact_area": [
-        "물가",
-        "기업마진"
-      ],
-      "impact": "생산자 물가. CPI 선행지표. 기업 마진 압박 신호",
-      "action": "CPI 발표 전 힌트로 활용",
-      "date": "2026-09-10",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 46,
-      "d_day": -1
-    },
-    {
-      "name": "미국 기존주택판매",
-      "severity": "low",
-      "impact_area": [
-        "부동산",
-        "소비"
-      ],
-      "impact": "미국 주택시장 수요 온도계. 모기지 금리 민감",
-      "action": "금리 사이클 전환기 주목",
-      "date": "2026-09-10",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 291,
-      "d_day": -1
-    },
-    {
-      "name": "미국 주간 실업수당 청구",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "고용"
-      ],
-      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
-      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
-      "date": "2026-09-10",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 180,
-      "d_day": -1
-    },
-    {
       "name": "옵션만기일 (한국)",
       "date": "2026-09-10",
       "country": "한국",
@@ -14126,12 +14066,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 23.92
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 142.71
   },
   "schema_version": "v0"
 }
