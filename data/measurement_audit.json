@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-08T22:16:35+09:00",
+ "as_of": "2026-09-12T13:52:02+09:00",
  "version": "measurement_audit_v4",
  "status": "KNOWN",
  "failing": [],
@@ -78,6 +78,21 @@
      ]
     },
     {
+     "key": "dart_financials",
+     "coverage": "30/98",
+     "via": [
+      "dart_report_date",
+      "dart_source"
+     ],
+     "modules": [
+      "fact.py",
+      "moat.py",
+      "quality.py",
+      "red_flags.py",
+      "value_guards.py"
+     ]
+    },
+    {
      "key": "operating_income",
      "coverage": "64/98",
      "via": [
@@ -96,6 +111,16 @@
      ],
      "modules": [
       "quality.py"
+     ]
+    },
+    {
+     "key": "quant_factors",
+     "coverage": "98/98",
+     "via": [
+      "multi_factor.quant_factors"
+     ],
+     "modules": [
+      "fact.py"
      ]
     },
     {
@@ -188,19 +213,19 @@
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
-     "fired": 0
-    },
-    {
      "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
      "rule": "SEC 8-K 리스크 공시:",
+     "fired": 0
+    },
+    {
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
