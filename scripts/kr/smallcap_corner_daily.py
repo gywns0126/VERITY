@@ -61,28 +61,40 @@ def _mark_run() -> None:
 
 def _corner_stocks():
     path = os.path.join(DATA_DIR, "smallcap_corner.json")
-    with open(path, encoding="utf-8") as f:
-        return json.load(f).get("stocks") or []
+    try:
+        with open(path, encoding="utf-8") as f:
+            payload = json.load(f)
+    except FileNotFoundError:
+        # Sparse worktrees can omit tracked data. Read the fetched canonical
+        # snapshot without checking files out over another session's edits.
+        body = subprocess.check_output(
+            ["git", "-C", str(REPO), "show", "origin/main:data/smallcap_corner.json"],
+            text=True, timeout=30,
+        )
+        payload = json.loads(body)
+        _log("코너 입력: origin/main blob 사용 (로컬 sparse checkout 누락)")
+    stocks = payload.get("stocks")
+    if not isinstance(stocks, list) or not stocks:
+        raise ValueError("smallcap corner input is empty or invalid")
+    return stocks
 
 
 def update_lake_incremental(stocks, sleep: float = 0.35) -> int:
     """코너 ticker 별 last_date+1 ~ today OHLCV 추가 (graceful). 추가 row 수 반환."""
     if not os.path.exists(LAKE_PATH):
-        _log(f"레이크 부재 {LAKE_PATH} — 증분 skip")
-        return 0
+        raise FileNotFoundError(LAKE_PATH)
     try:
         import duckdb
         from pykrx import stock as pk
     except Exception as e:  # noqa: BLE001
-        _log(f"duckdb/pykrx 부재 — 증분 skip ({type(e).__name__})")
-        return 0
+        raise RuntimeError("duckdb/pykrx unavailable") from e
 
     con = duckdb.connect(LAKE_PATH, read_only=False)
     today = now_kst().date()
     today_s = today.strftime("%Y%m%d")
     # ticker → 레이크 최신 date
     last_map = {r[0]: r[1] for r in con.execute("SELECT ticker, MAX(date) FROM ohlcv GROUP BY ticker").fetchall()}
-    added = 0
+    added = attempted = fetched = failed = empty = 0
     for s in stocks:
         tic = str(s.get("ticker") or "")
         if not tic:
@@ -91,14 +103,18 @@ def update_lake_incremental(stocks, sleep: float = 0.35) -> int:
         if last is not None and last >= today:
             continue  # 이미 최신
         start = (last.strftime("%Y%m%d") if last is not None else "20100101")
+        attempted += 1
         try:
             df = pk.get_market_ohlcv_by_date(start, today_s, tic)
         except Exception:  # noqa: BLE001 — 종목 실패 = skip
+            failed += 1
             time.sleep(sleep)
             continue
         if df is None or df.empty:
+            empty += 1
             time.sleep(sleep)
             continue
+        fetched += 1
         name = s.get("name") or ""
         market = _MARKET_MAP.get(str(s.get("market", "")).upper(), "KOSDAQ")
         rows = []
@@ -118,8 +134,12 @@ def update_lake_incremental(stocks, sleep: float = 0.35) -> int:
             con.execute("COMMIT")
             added += len(rows)
         time.sleep(sleep)
+        if attempted % 100 == 0:
+            _log(f"레이크 진행 {attempted}/{len(stocks)} · 응답 {fetched} · 실패 {failed} · 빈값 {empty} · +{added} rows")
     con.close()
-    _log(f"레이크 증분 +{added} rows")
+    _log(f"레이크 증분 +{added} rows · 조회 {attempted}/{len(stocks)} · 응답 {fetched} · 실패 {failed} · 빈값 {empty}")
+    if failed or (attempted and not fetched):
+        raise RuntimeError(f"lake collection incomplete: fetched={fetched}, failed={failed}, empty={empty}")
     return added
 
 
@@ -205,7 +225,8 @@ def main() -> int:
         if not args.no_lake_update:
             update_lake_incremental(_corner_stocks())
     except Exception as e:  # noqa: BLE001 — 단계 실패 = 다음 단계 진행
-        _log(f"레이크 증분 실패 (graceful): {type(e).__name__}: {e}")
+        _log(f"레이크 증분 실패: {type(e).__name__}: {e} — stale 입력 trail 생성 중단")
+        return 1
     try:
         if generate_trail() > 0:
             ran_ok = True

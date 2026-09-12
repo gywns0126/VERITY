@@ -58,6 +58,7 @@ DEFAULT_LOOKBACK_DAYS = 7
 NAVER_COMPANY_LIST = "https://finance.naver.com/research/company_list.naver"
 NAVER_INDUSTRY_LIST = "https://finance.naver.com/research/industry_list.naver"
 NAVER_BASE = "https://finance.naver.com/research/"
+NAVER_RESEARCH_API = "https://stock.naver.com/api/stockSecurity/researches/v2"
 
 HANKYUNG_LIST = "http://consensus.hankyung.com/apps.analysis/analysis.list"
 
@@ -156,6 +157,88 @@ def _absolutize(url: str, base: str = NAVER_BASE) -> str:
 # ─── 네이버 기업 리포트 ──────────────────────────────────
 
 
+def _fetch_naver_research_api(
+    kind: str, bgn_date: str, end_date: str, max_pages: int,
+) -> List[Dict[str, Any]]:
+    """Npay's public research API, used after the legacy pages redirect.
+
+    The list's writeDate is the publication date. PDF URLs live in the detail
+    response's attachUrl; an attachment landing page must not be called a PDF.
+    """
+    out: List[Dict[str, Any]] = []
+    seen = set()
+    for index in range(max_pages):
+        try:
+            response = _SESSION.get(
+                f"{NAVER_RESEARCH_API}/{kind}",
+                params={"index": index, "size": 30,
+                        "startDate": bgn_date, "endDate": end_date},
+                headers=HEADERS, timeout=TIMEOUT,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            items = payload["items"]
+            if not isinstance(items, list):
+                raise ValueError("research items is not a list")
+        except (requests.RequestException, ValueError, KeyError, TypeError) as exc:
+            logger.warning("[Naver %s API] page %d failed: %s", kind, index, exc)
+            break
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            nid = str(item.get("nid") or "")
+            published = _parse_date(str(item.get("writeDate") or ""))
+            if not nid.isdigit() or nid in seen or not published:
+                continue
+            if not bgn_date <= published <= end_date:
+                continue
+            seen.add(nid)
+            detail = {}
+            try:
+                response = _SESSION.get(
+                    f"{NAVER_RESEARCH_API}/{kind}/{nid}",
+                    headers=HEADERS, timeout=TIMEOUT,
+                )
+                response.raise_for_status()
+                detail = response.json()
+                if not isinstance(detail, dict) or str(detail.get("nid")) != nid:
+                    raise ValueError("research detail identity mismatch")
+            except (requests.RequestException, ValueError, TypeError) as exc:
+                logger.warning("[Naver %s API] detail %s failed: %s", kind, nid, exc)
+                detail = {}
+            attachment = detail.get("attachUrl")
+            parsed = urlparse(attachment) if isinstance(attachment, str) else None
+            pdf_url = (attachment if parsed and parsed.scheme in ("http", "https")
+                       and parsed.netloc and parsed.path.lower().endswith(".pdf") else None)
+            entry = {
+                "source": "naver", "source_record_id": nid,
+                "title": item.get("title") or "", "firm": item.get("brokerName") or "",
+                "date": published, "pdf_url": pdf_url,
+                "read_url": f"https://stock.naver.com/research/{kind}/{nid}",
+                "view_count": _parse_int(str(item.get("readCount") or "")),
+            }
+            if kind == "company":
+                ticker = str(item.get("itemCode") or "").strip()
+                ticker = ticker if re.fullmatch(r"[0-9A-Z]{6}", ticker) else None
+                entry.update({
+                    "ticker": ticker,
+                    "ticker_yf": _resolve_ticker_to_yf(ticker) if ticker else None,
+                    "company_name": item.get("itemName") or "",
+                    "author": detail.get("analystName") or item.get("analystName"),
+                    "target_price": _parse_int(str(item.get("goalPrice") or "")),
+                    "opinion": item.get("opinionText"),
+                })
+            else:
+                entry["sector"] = item.get("industryKoreanName") or item.get("industry") or ""
+            out.append(entry)
+            time.sleep(API_DELAY)
+        if not payload.get("hasNext") or not items:
+            break
+        time.sleep(API_DELAY)
+    return out
+
+
 def fetch_naver_company_reports(
     bgn_date: str, end_date: str, max_pages: int = MAX_PAGES,
 ) -> List[Dict[str, Any]]:
@@ -176,6 +259,8 @@ def fetch_naver_company_reports(
             r = _SESSION.get(NAVER_COMPANY_LIST, params={"page": page},
                              headers=HEADERS, timeout=TIMEOUT)
             r.raise_for_status()
+            if urlparse(r.url).hostname == "stock.naver.com":
+                return _fetch_naver_research_api("company", bgn_date, end_date, max_pages)
             r.encoding = "euc-kr"
         except Exception as e:
             logger.warning("[Naver Company] page %d fetch 실패: %s", page, e)
@@ -263,6 +348,8 @@ def fetch_naver_industry_reports(
             r = _SESSION.get(NAVER_INDUSTRY_LIST, params={"page": page},
                              headers=HEADERS, timeout=TIMEOUT)
             r.raise_for_status()
+            if urlparse(r.url).hostname == "stock.naver.com":
+                return _fetch_naver_research_api("industry", bgn_date, end_date, max_pages)
             r.encoding = "euc-kr"
         except Exception as e:
             logger.warning("[Naver Industry] page %d 실패: %s", page, e)
@@ -563,7 +650,8 @@ def scout_reports(
 
     company_naver = fetch_naver_company_reports(bgn_date, end_date, max_pages)
     industry_naver = fetch_naver_industry_reports(bgn_date, end_date, max_pages)
-    company_hk = fetch_hankyung_reports(bgn_date, end_date, max_pages)
+    # Deprecated source: do not keep polling its retired/robots-disallowed URL.
+    company_hk = []
     # KIRS (2026-05-18 신설) — outsourcing (NICE/서울평가) + insourcing (KIRS 자체)
     # docs/Q2_LIVE_FETCH_VERIFICATION_20260518.md 정합.
     company_kirs_out = fetch_kirs_reports("outsourcing", bgn_date, end_date, max_pages)
@@ -588,6 +676,12 @@ def scout_reports(
             "with_pdf": sum(1 for r in company_reports if r.get("pdf_url")),
         },
     }
+
+    # Keep the last collected input intact on an outage. The runner must fail
+    # this attempt, rather than treating a preserved old snapshot as new input.
+    if not company_reports:
+        payload["collection_status"] = "failed_no_company_reports"
+        return payload
 
     tmp = OUTPUT_PATH + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
