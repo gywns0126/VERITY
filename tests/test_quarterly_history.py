@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import api.utils.quarterly_history as quarterly_history
 from api.utils.quarterly_history import (
     append_universe_snapshot,
     _quarter_filename,
@@ -109,3 +110,40 @@ def test_multiple_appends_accumulate(tmp_path):
     assert len(x1_entries) == 2
     assert x1_entries[0]["per"] == 10
     assert x1_entries[1]["per"] == 11
+
+
+def test_full_quarter_file_rotates_before_github_limit(tmp_path, monkeypatch):
+    """상한에 도달한 기본 파일은 보존하고 새 기본 파일에 다음 스냅샷을 기록한다."""
+    monkeypatch.setattr(quarterly_history, "_MAX_SHARD_BYTES", 64)
+    primary = tmp_path / "2026-Q3.jsonl"
+    original = b"x" * 64
+    primary.write_bytes(original)
+
+    result = quarterly_history.append_universe_snapshot(
+        [{"ticker": "005930", "price": 70000}],
+        run_at_iso="2026-09-12T02:00:00+09:00",
+        output_root=tmp_path,
+    )
+
+    archived = tmp_path / "2026-Q3.part-01.jsonl"
+    assert result["logged"] is True
+    assert result["rotated_to"] == str(archived)
+    assert archived.read_bytes() == original
+    rows = [json.loads(line) for line in primary.read_text(encoding="utf-8").splitlines()]
+    assert rows == [{"ts": "2026-09-12T02:00:00+09:00", "ticker": "005930", "price": 70000}]
+
+
+def test_rotation_uses_next_available_archive_name(tmp_path, monkeypatch):
+    monkeypatch.setattr(quarterly_history, "_MAX_SHARD_BYTES", 8)
+    primary = tmp_path / "2026-Q3.jsonl"
+    primary.write_bytes(b"12345678")
+    (tmp_path / "2026-Q3.part-01.jsonl").write_bytes(b"older")
+
+    result = quarterly_history.append_universe_snapshot(
+        [{"ticker": "AAPL"}],
+        run_at_iso="2026-09-12T02:30:00+09:00",
+        output_root=tmp_path,
+    )
+
+    assert result["rotated_to"] == str(tmp_path / "2026-Q3.part-02.jsonl")
+    assert (tmp_path / "2026-Q3.part-02.jsonl").read_bytes() == b"12345678"

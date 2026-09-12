@@ -292,4 +292,5 @@ jobs:
             echo "Push attempt $i failed, retrying in $((i * 10))s..."
             sleep $((i * 10))
           done
-          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
+          echo "::error::push 5회 실패 — universe_candidates 영속화 실패"
+          exit 1

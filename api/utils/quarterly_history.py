@@ -9,7 +9,8 @@
   - Buffett owner earnings (FCF margin trend)
   - ROIC 가속 (Greenblatt 표준)
 
-저장 위치: data/stock_history/YYYY-Qn.jsonl (분기별 1 파일)
+저장 위치: data/stock_history/YYYY-Qn.jsonl
+용량 상한에 가까워지면 기존 파일을 YYYY-Qn.part-NN.jsonl 로 보존하고 기본 파일에 이어 적재.
 스키마: ts / ticker / market / 펀더멘털 핵심 14개 필드 (가벼운 snapshot)
         sparkline / trends 같은 무거운 필드는 제외 (storage 비용 통제)
 
@@ -25,6 +26,10 @@ from pathlib import Path
 from typing import List, Optional
 
 KST = timezone(timedelta(hours=9))
+
+# GitHub hard limit(100 MiB)에 닿기 전에 파일을 나눈다. 한 번의 스캔이 수 MiB를
+# 추가해도 여유가 남도록 90 MiB에서 전환한다.
+_MAX_SHARD_BYTES = 90 * 1024 * 1024
 
 # 분기 history 적재 핵심 필드 — sparkline/trends 같은 큰 필드 제외 (storage 통제)
 _SNAPSHOT_FIELDS = (
@@ -50,6 +55,26 @@ def _output_path(dt: datetime, root: Optional[Path] = None) -> Path:
     return base / f"{_quarter_filename(dt)}.jsonl"
 
 
+def _next_archive_path(path: Path) -> Path:
+    """기본 분기 파일의 다음 보존 경로를 고른다."""
+    stem = path.name[:-len(path.suffix)]
+    index = 1
+    while True:
+        candidate = path.with_name(f"{stem}.part-{index:02d}{path.suffix}")
+        if not candidate.exists():
+            return candidate
+        index += 1
+
+
+def _rotate_if_needed(path: Path) -> Optional[Path]:
+    """기본 파일이 안전 상한에 도달하면 내용 그대로 보존 경로로 이동한다."""
+    if not path.exists() or path.stat().st_size < _MAX_SHARD_BYTES:
+        return None
+    archive = _next_archive_path(path)
+    os.replace(path, archive)
+    return archive
+
+
 def append_universe_snapshot(
     stocks: List[dict],
     *,
@@ -68,7 +93,8 @@ def append_universe_snapshot(
           "logged": bool,            # 적재 성공 여부
           "appended_n": int,         # append 한 라인 수
           "skipped_n": int,          # ticker 결손으로 skip 한 라인 수
-          "path": str,               # 적재된 파일 경로
+          "path": str,               # 새 적재가 기록된 기본 파일 경로
+          "rotated_to": str | None,  # 상한 도달로 보존한 직전 파일 경로
         }
 
     silent 실패 절대 금지 (memory feedback_data_collection_verification_mandatory):
@@ -89,8 +115,16 @@ def append_universe_snapshot(
 
     appended = 0
     skipped = 0
+    rotated_to: Optional[Path] = None
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
+        rotated_to = _rotate_if_needed(path)
+        if rotated_to is not None:
+            print(
+                f"[quarterly_history] rotate {path.name} → {rotated_to.name} "
+                f"(limit={_MAX_SHARD_BYTES} bytes)",
+                file=sys.stderr, flush=True,
+            )
         with open(path, "a", encoding="utf-8") as f:
             for s in stocks:
                 ticker = s.get("ticker")
@@ -108,10 +142,22 @@ def append_universe_snapshot(
             f"[quarterly_history] appended n={appended} skipped={skipped} → {path.name}",
             file=sys.stderr, flush=True,
         )
-        return {"logged": True, "appended_n": appended, "skipped_n": skipped, "path": str(path)}
+        return {
+            "logged": True,
+            "appended_n": appended,
+            "skipped_n": skipped,
+            "path": str(path),
+            "rotated_to": str(rotated_to) if rotated_to is not None else None,
+        }
     except Exception as e:
         print(
             f"[quarterly_history] FAIL — {type(e).__name__}: {e}",
             file=sys.stderr, flush=True,
         )
-        return {"logged": False, "appended_n": appended, "skipped_n": skipped, "path": str(path)}
+        return {
+            "logged": False,
+            "appended_n": appended,
+            "skipped_n": skipped,
+            "path": str(path),
+            "rotated_to": str(rotated_to) if rotated_to is not None else None,
+        }

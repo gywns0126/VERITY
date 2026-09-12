@@ -218,6 +218,17 @@ def test_universe_scan_budget_untouched():
     assert d["concurrency"]["cancel-in-progress"] is False
 
 
+def test_universe_scan_push_exhaustion_is_failure():
+    """후보 산출물을 못 올린 실행을 성공으로 표시하면 하류가 오래된 입력을 계속 읽는다."""
+    src = _uni_src()
+    tail = src.split("for i in 1 2 3 4 5; do", 1)[1]
+    assert 'echo "::error::push 5회 실패 — universe_candidates 영속화 실패"' in tail
+    assert re.search(
+        r'echo "::error::push 5회 실패 — universe_candidates 영속화 실패"\s+exit 1',
+        tail,
+    ), "재시도 소진 뒤 exit 1이 없어 성공으로 오인될 수 있다"
+
+
 def test_each_workflow_queries_its_own_runs():
     """가드가 남의 워크플로 run 을 보고 판단하면 엉뚱하게 생략된다."""
     assert "daily_analysis_full.yml/runs" in _wf_src()
