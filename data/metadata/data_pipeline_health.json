@@ -2,9 +2,9 @@
   "collected_at": "2026-09-12T10:33:07+09:00",
   "overall_status": "error",
   "summary": {
-    "fresh": 10,
+    "fresh": 11,
     "stale": 4,
-    "missing": 1,
+    "missing": 0,
     "total": 15
   },
   "items": [
@@ -19,9 +19,9 @@
       "last_update_kst": "2026-09-12T10:30:51.536898+09:00",
       "age_hours": 0.04,
       "status": "fresh",
-      "line_count": 541,
+      "line_count": 545,
       "last_entry": {
-        "ts": "2026-09-07T22:24:41.348837+09:00",
+        "ts": "2026-09-12T10:08:34.373939+09:00",
         "step": "f_sector_diversified",
         "mode": "SHADOW",
         "input_n": 100,
@@ -39,9 +39,9 @@
       "last_update_kst": "2026-09-12T10:30:51.212894+09:00",
       "age_hours": 0.04,
       "status": "fresh",
-      "line_count": 187142,
+      "line_count": 2662,
       "last_entry": {
-        "ts": "2026-09-07T22:49:06.833882+09:00"
+        "ts": "2026-09-12T10:40:26.730056+09:00"
       }
     },
     {
@@ -99,7 +99,7 @@
         "candidates_count": 45,
         "kr_count": 30,
         "us_count": 15,
-        "elapsed_s": 2996.74,
+        "elapsed_s": 3431.2,
         "used_prev_snapshot": false
       }
     },
@@ -114,13 +114,13 @@
       "last_update_kst": "2026-09-12T10:30:50.717889+09:00",
       "age_hours": 0.04,
       "status": "fresh",
-      "line_count": 1193,
+      "line_count": 1194,
       "last_entry": {
-        "mode": "quick",
-        "ramp_up_stage": 0,
-        "execution_time_seconds": 0.0,
+        "mode": "universe_scan",
+        "ramp_up_stage": 5000,
+        "execution_time_seconds": 3431.2,
         "fail_triggers": [],
-        "yfinance_failure_rate": 0.0
+        "yfinance_failure_rate": 0.0017
       }
     },
     {
@@ -252,7 +252,7 @@
       "label": "Universe 후보 (top N)",
       "committed_age_hours": 108.6,
       "limit_hours": 104.0,
-      "working_status": "missing"
+      "working_status": "fresh"
     }
   ],
   "schema_version": "v0"
