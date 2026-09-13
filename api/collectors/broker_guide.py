@@ -382,7 +382,11 @@ def _sanitize_sources(brokers: list) -> list[str]:
             "fx_source",
             "event_source",
         ):
-            clean_url = _official_source_url(name, broker.get(field))
+            clean_url = (
+                _verified_official_source_url(name, broker.get(field))
+                if field == "event_source"
+                else _official_source_url(name, broker.get(field))
+            )
             broker[field] = clean_url
             if clean_url and clean_url not in citations:
                 citations.append(clean_url)
