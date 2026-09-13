@@ -12,7 +12,8 @@
 import json
 import os
 import re
-from typing import Any, Dict, List
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PORTFOLIO_PATH = os.path.join(_ROOT, "data", "portfolio.json")
@@ -22,6 +23,15 @@ FUND_OVERVIEW_PATH = os.path.join(_ROOT, "data", "nps_fund_overview.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "nps_holdings.json")
 
 NPS_NAME = "국민연금"
+
+_SOURCE_PRIORITY = {
+    "data.go.kr #15106890": 10,
+    "data.go.kr #15106890 (분기 확정 CSV)": 20,
+    "DART majorstock": 30,
+    "DART elestock": 30,
+    "DART majorstock live": 40,
+    "DART elestock live": 40,
+}
 
 
 def _load_json(path: str, default):
@@ -40,6 +50,33 @@ def _strip_corp(s: str) -> str:
     """법인 접미사 제거 정규화 — '코스맥스(주)'/'(주)케이씨씨' → '코스맥스'/'케이씨씨'."""
     s = re.sub(r"\(주\)|㈜|\(유\)|\(재\)|\(사\)|주식회사|\(주식회사\)", "", str(s or ""))
     return _norm(s)
+
+
+def _date_key(value: Any) -> str:
+    """날짜 비교용 YYYYMMDD. 형식이 불완전하면 빈 문자열."""
+    digits = re.sub(r"\D", "", str(value or ""))[:8]
+    return digits if len(digits) == 8 else ""
+
+
+def _iso_date(value: Any) -> str:
+    key = _date_key(value)
+    return f"{key[:4]}-{key[4:6]}-{key[6:8]}" if key else ""
+
+
+def _merge_latest(target: Dict[str, Dict[str, Any]], key: str, row: Dict[str, Any]) -> None:
+    """종목별 최신 원문을 유지하고 같은 날이면 DART 원문을 우선한다."""
+    if not key or not isinstance(row, dict):
+        return
+    prev = target.get(key)
+    if prev is None:
+        target[key] = row
+        return
+    prev_date = _date_key(prev.get("date"))
+    new_date = _date_key(row.get("date"))
+    prev_rank = _SOURCE_PRIORITY.get(str(prev.get("src") or ""), 0)
+    new_rank = _SOURCE_PRIORITY.get(str(row.get("src") or ""), 0)
+    if new_date > prev_date or (new_date == prev_date and new_rank >= prev_rank):
+        target[key] = row
 
 
 # 영문 이니셜 ↔ 한글 음차 (data.go.kr=한글표기 vs kr_stock_names=영문약칭 불일치 해소)
@@ -75,7 +112,7 @@ def _lookup_ticker(name2tk: Dict[str, str], nm: str) -> str:
 
 
 def _from_dart_existing(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
-    """portfolio.json institutional_holders + dart_catalyst 의 국민연금 reporter 집계.
+    """portfolio.json institutional_holders의 국민연금 reporter 집계.
 
     신규 secret 0 — 이미 적재된 DART 공시 부산물. 운영풀 한정 커버리지.
     """
@@ -103,7 +140,12 @@ def _from_dart_existing(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
                     "date": ih.get("date"),
                     "src": "DART majorstock",
                 }
-    # dart_catalyst jsonl (국민연금 지분공시)
+    return out
+
+
+def _nps_catalyst_events() -> Dict[str, Dict[str, str]]:
+    """국민연금 DART 공시 이벤트를 종목별 최신 접수일로 축약한다."""
+    out: Dict[str, Dict[str, str]] = {}
     try:
         with open(CATALYST_PATH, "r", encoding="utf-8") as f:
             for line in f:
@@ -116,27 +158,159 @@ def _from_dart_existing(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
                     continue
                 if NPS_NAME not in str(o.get("flr_nm") or ""):
                     continue
-                tk = str(o.get("ticker") or "")
+                tk = re.sub(r"\D", "", str(o.get("ticker") or ""))[:6]
                 nm = o.get("corp_name") or o.get("name") or ""
-                if not tk and nm:
-                    tk = _lookup_ticker(name2tk, nm)
-                if tk and tk not in out:
-                    out[tk] = {
-                        "ticker": tk,
-                        "name": nm or tk,
-                        "pct": o.get("stkrt") or o.get("pct"),
-                        "qty_change": None,
-                        "date": o.get("rcept_dt") or o.get("date"),
-                        "src": "DART 지분공시",
-                    }
+                dt = _date_key(o.get("rcept_dt") or o.get("date"))
+                if len(tk) != 6 or not dt:
+                    continue
+                prev = out.get(tk)
+                if prev is None or dt > prev.get("event_date", ""):
+                    out[tk] = {"ticker": tk, "name": str(nm or tk), "event_date": dt}
     except Exception:  # noqa: BLE001
         pass
     return out
 
 
-# data.go.kr #15106890 국민연금 대량보유 — odcloud OAS(분기별 uddi). 최신=20251231(차기 20260331 등록 2026-06-30).
+def _from_previous_live() -> Dict[str, Dict[str, Any]]:
+    """이전 공개 산출물의 DART 실조회값을 증분 캐시로 재사용한다."""
+    doc = _load_json(OUTPUT_PATH, {}) or {}
+    out: Dict[str, Dict[str, Any]] = {}
+    for row in doc.get("holdings") or []:
+        if not isinstance(row, dict) or not str(row.get("src") or "").endswith(" live"):
+            continue
+        tk = re.sub(r"\D", "", str(row.get("ticker") or ""))[:6]
+        if len(tk) == 6 and row.get("pct") is not None:
+            _merge_latest(out, tk, dict(row))
+    return out
+
+
+def _float_or_none(value: Any) -> Optional[float]:
+    try:
+        return float(str(value).replace(",", "").replace("%", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _latest_nps_from_payloads(
+    major_rows: List[Dict[str, Any]], officer_rows: List[Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    """majorstock·elestock 응답에서 국민연금의 가장 최근 신고값을 고른다."""
+    candidates: List[Dict[str, Any]] = []
+    for row in major_rows or []:
+        if NPS_NAME not in str(row.get("repror") or ""):
+            continue
+        candidates.append({
+            "pct": _float_or_none(row.get("stkrt")),
+            "qty_change": _float_or_none(row.get("stkqy_irds")),
+            "date": _iso_date(row.get("rcept_dt")),
+            "src": "DART majorstock live",
+        })
+    for row in officer_rows or []:
+        if NPS_NAME not in str(row.get("repror") or ""):
+            continue
+        candidates.append({
+            "pct": _float_or_none(row.get("sp_stock_lmp_rate")),
+            "qty_change": _float_or_none(row.get("sp_stock_lmp_irds_cnt")),
+            "date": _iso_date(row.get("rcept_dt")),
+            "src": "DART elestock live",
+        })
+    candidates = [r for r in candidates if r.get("date") and r.get("pct") is not None]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda r: (_date_key(r.get("date")), _SOURCE_PRIORITY.get(r.get("src"), 0)))
+
+
+def _dart_api_key() -> str:
+    """설정 모듈과 환경변수 양쪽에서 DART 키를 읽는다."""
+    imported = ""
+    try:
+        from api.config import DART_API_KEY
+        imported = str(DART_API_KEY or "").strip()
+    except Exception:  # noqa: BLE001
+        pass
+    return imported or os.environ.get("DART_API_KEY", "").strip()
+
+
+def _from_dart_live(
+    name2tk: Dict[str, str], baseline: Dict[str, Dict[str, Any]]
+) -> Tuple[Dict[str, Dict[str, Any]], set, Dict[str, int]]:
+    """분기 자료 이후 국민연금 공시가 생긴 종목만 DART 원문으로 증분 갱신한다."""
+    dart_api_key = _dart_api_key()
+    events = _nps_catalyst_events()
+    candidates = {
+        tk: event for tk, event in events.items()
+        if event.get("event_date", "") > _date_key((baseline.get(tk) or {}).get("date"))
+    }
+    audit = {
+        "event_tickers": len(events),
+        "candidate_tickers": len(candidates),
+        "updated_tickers": 0,
+        "retired_tickers": 0,
+        "unresolved_tickers": 0,
+        "api_calls": 0,
+    }
+    if not dart_api_key or not candidates:
+        audit["unresolved_tickers"] = len(candidates) if not dart_api_key else 0
+        return {}, set(), audit
+
+    import requests
+    from api.collectors.dart_corp_code import get_corp_code
+
+    session = requests.Session()
+    out: Dict[str, Dict[str, Any]] = {}
+    retired = set()
+    for tk, event in sorted(candidates.items()):
+        corp_code = get_corp_code(tk)
+        if not corp_code:
+            audit["unresolved_tickers"] += 1
+            continue
+        payloads: Dict[str, List[Dict[str, Any]]] = {"major": [], "officer": []}
+        failed = False
+        for kind, url in (
+            ("major", "https://opendart.fss.or.kr/api/majorstock.json"),
+            ("officer", "https://opendart.fss.or.kr/api/elestock.json"),
+        ):
+            try:
+                response = session.get(
+                    url,
+                    params={"crtfc_key": dart_api_key, "corp_code": corp_code},
+                    timeout=15,
+                )
+                audit["api_calls"] += 1
+                time.sleep(0.08)
+                body = response.json()
+                status = str(body.get("status") or "")
+                if status == "000":
+                    payloads[kind] = body.get("list") or []
+                elif status not in ("013",):
+                    failed = True
+            except Exception:  # noqa: BLE001
+                failed = True
+        if failed:
+            audit["unresolved_tickers"] += 1
+            continue
+        latest = _latest_nps_from_payloads(payloads["major"], payloads["officer"])
+        if latest is None or _date_key(latest.get("date")) < event.get("event_date", ""):
+            audit["unresolved_tickers"] += 1
+            continue
+        if (latest.get("pct") or 0) <= 0:
+            retired.add(tk)
+            audit["retired_tickers"] += 1
+            continue
+        latest.update({
+            "ticker": tk,
+            "name": str((baseline.get(tk) or {}).get("name") or event.get("name") or tk),
+        })
+        out[tk] = latest
+        audit["updated_tickers"] += 1
+        time.sleep(0.05)
+    return out, retired, audit
+
+
+# data.go.kr #15106890 국민연금 대량보유 — odcloud OAS(분기별 uddi).
+# 2026-09-13 공식 OAS 확인 최신=20260331. OAS 조회 실패 시에도 같은 분기로 강등한다.
 ODCLOUD_BASE = "https://api.odcloud.kr/api/15106890/v1/"
-ODCLOUD_DEFAULT_UDDI = "uddi:1f30a355-f5be-4b09-81c1-a09ba1f4e234"  # 20251231 보고기준일
+ODCLOUD_DEFAULT_UDDI = "uddi:5536983c-fa78-46c7-bef1-b602ec951fcf"  # 20260331 보고기준일
 ODCLOUD_OAS = "https://infuser.odcloud.kr/oas/docs?namespace=15106890/v1"
 
 
@@ -209,6 +383,10 @@ def _from_data_go_kr(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
             if not nm:
                 continue
             tk = _lookup_ticker(name2tk, nm)
+            # 공개 보유 목록은 종목 리포트로 연결되므로 식별 가능한 상장 코드만 포함한다.
+            # 원천 이름을 억지로 부분매칭하면 동명사 오염이 생기므로 미매칭은 제외한다.
+            if not tk:
+                continue
             try:
                 pctf = float(str(pct).replace("%", "").replace(",", "")) if pct is not None else None
             except Exception:  # noqa: BLE001
@@ -219,7 +397,7 @@ def _from_data_go_kr(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
             if pctf is not None and pctf < 1.0:
                 continue
             rec = {"ticker": tk, "name": nm, "pct": pctf, "qty_change": None, "date": asof, "src": "data.go.kr #15106890"}
-            out[tk or ("name:" + _norm(nm))] = rec
+            _merge_latest(out, tk, rec)
     except Exception:  # noqa: BLE001
         return {}
     return out
@@ -445,8 +623,12 @@ def _from_major_csv(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
                     continue
                 tk = _lookup_ticker(name2tk, nm)
                 if tk:
-                    out[tk] = {"ticker": tk, "name": _strip_corp(nm), "pct": pct, "qty_change": None,
-                               "date": dt, "src": "data.go.kr #15106890 (분기 확정 CSV)"}
+                    _merge_latest(
+                        out,
+                        tk,
+                        {"ticker": tk, "name": _strip_corp(nm), "pct": pct, "qty_change": None,
+                         "date": dt, "src": "data.go.kr #15106890 (분기 확정 CSV)"},
+                    )
     except Exception:  # noqa: BLE001
         return {}
     return out
@@ -496,14 +678,23 @@ def build_nps_holdings() -> Dict[str, Any]:
     names = _load_json(NAMES_PATH, {}) or {}
     name2tk = _name_to_ticker(names)
 
+    # 분기 원천을 바탕으로 두되, 같은 종목은 출처 순서가 아니라 기준일로 병합한다.
+    # 이전 구현은 3월 분기 CSV가 7~9월 DART 값을 무조건 덮어 최신 공시가 사라졌다.
     merged: Dict[str, Dict[str, Any]] = {}
-    merged.update(_from_dart_existing(name2tk))
-    # data.go.kr 가 더 권위(전체 5%+) — 같은 ticker 면 덮어씀
-    for k, v in _from_data_go_kr(name2tk).items():
-        merged[v.get("ticker") or k] = v
-    # 분기 확정 CSV 시드가 최종 권위 (있을 때)
-    for k, v in _from_major_csv(name2tk).items():
-        merged[k] = v
+    for source_rows in (
+        _from_data_go_kr(name2tk),
+        _from_major_csv(name2tk),
+        _from_previous_live(),
+        _from_dart_existing(name2tk),
+    ):
+        for k, v in source_rows.items():
+            _merge_latest(merged, v.get("ticker") or k, v)
+
+    live_rows, retired, dart_refresh = _from_dart_live(name2tk, merged)
+    for tk in retired:
+        merged.pop(tk, None)
+    for tk, row in live_rows.items():
+        _merge_latest(merged, tk, row)
 
     holdings = [h for h in merged.values() if h.get("pct") is not None]
     holdings.sort(key=lambda h: (-(h.get("pct") or 0), h.get("ticker") or ""))
@@ -513,6 +704,11 @@ def build_nps_holdings() -> Dict[str, Any]:
     full_rows = _from_full_list(name2tk)
     full_us_rows = _from_full_overseas()
     has_full = any(h.get("src", "").startswith("data.go.kr") for h in holdings)
+    as_of_latest = max((_iso_date(h.get("date")) for h in holdings), default="")
+    source_counts: Dict[str, int] = {}
+    for h in holdings:
+        src = str(h.get("src") or "unknown")
+        source_counts[src] = source_counts.get(src, 0) + 1
     return {
         "generated_at": datetime.now(kst).isoformat(),
         "source": "DART 5% 대량보유 공시" + (" + data.go.kr 국민연금 대량보유" if has_full else ""),
@@ -525,13 +721,29 @@ def build_nps_holdings() -> Dict[str, Any]:
         "full_us_n": len(full_us_rows),
         "asset_mix": _asset_mix(),  # 자산군 비중 (기금 포트폴리오 현황 CSV, 분기)
         "fund": fund,  # 운용수익률/AUM (data/nps_fund_overview.json, 수기·분기 갱신). 없으면 null
-        "note": "국민연금 5% 이상 대량보유 공시 기준 — 전체 보유종목(약 1,200) 아님 · 분기 지연 · 지분율은 법적 강제공시 사실, 점수·추천 아님.",
+        "as_of_latest": as_of_latest,
+        "source_counts": source_counts,
+        "dart_refresh": dart_refresh,
+        "note": "국민연금 5% 대량보유 공시 이력의 종목별 최신 신고 기준 — 5% 아래로 내려간 최종 신고 포함 · 전체 보유종목(약 1,200) 아님 · 지분율은 법적 공시 사실, 점수·추천 아님.",
     }
+
+
+def _semantic_document(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """수집 시각만 제외한 공개 산출물의 의미 단위를 반환한다."""
+    return {key: value for key, value in doc.items() if key != "generated_at"}
 
 
 def main() -> int:
     try:
+        previous = _load_json(OUTPUT_PATH, {}) or {}
         out = build_nps_holdings()
+        current_audit = out.get("dart_refresh") or {}
+        if current_audit.get("candidate_tickers") == 0 and previous.get("dart_refresh"):
+            # 새 대상이 없는 반복 실행은 마지막 실조회 감사값을 지우지 않는다.
+            out["dart_refresh"] = previous["dart_refresh"]
+        if previous and _semantic_document(previous) == _semantic_document(out):
+            print(f"[nps_holdings] unchanged ({out['count']}종목, {out.get('as_of_latest') or 'n/a'})")
+            return 0
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=1)
         print(f"[nps_holdings] {out['count']}종목 ({out['coverage']}) → {OUTPUT_PATH}")
