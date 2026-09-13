@@ -24,6 +24,7 @@ from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
 import api.supabase_client as sb
+from api.nest_validation import read_body, number, asset, select_all
 
 _rate_limit: dict = defaultdict(list)
 _RATE_WINDOW = 60
@@ -81,20 +82,14 @@ def _cors_headers(h):
 def _json_response(h, data, status=200):
     h.send_response(status)
     h.send_header("Content-Type", "application/json; charset=utf-8")
+    h.send_header("Cache-Control", "private, no-store")
     _cors_headers(h)
     h.end_headers()
     h.wfile.write(json.dumps(data, ensure_ascii=False).encode())
 
 
 def _read_body(h) -> dict:
-    length = int(h.headers.get("Content-Length", 0) or 0)
-    if length == 0:
-        return {}
-    raw = h.rfile.read(length)
-    try:
-        return json.loads(raw.decode("utf-8"))
-    except Exception:
-        return {}
+    return read_body(h)
 
 
 def _extract_jwt(h) -> Optional[str]:
@@ -117,24 +112,7 @@ def _authenticate(h) -> Optional[tuple]:
 
 
 def _num(v, default=None):
-    """숫자 파싱. 🚨 2026-08-22 — 쉼표/단위가 붙은 문자열을 정규화한다.
-
-    사고: 프론트에서 "2,000,000" 이 오면 float() 이 ValueError -> default 0 이 되어
-    **조용히 0 으로 저장**됐다(DB 실측 = 삼성전자·하이닉스 둘 다 avg_cost 0.0).
-    avg_cost=0 이면 화면이 현재가로 대체 표시해 "값이 바뀐 것처럼" 보인다
-    (PublicHoldingsTab 의 cur 폴백). 프론트에서도 막지만 서버가 최종 방어선이다.
-    """
-    if isinstance(v, str):
-        for ch in (",", " ", "\u20a9", "$", "\uc6d0"):
-            v = v.replace(ch, "")
-        v = v.strip()
-    try:
-        x = float(v)
-        if x != x or x in (float("inf"), float("-inf")):
-            return default
-        return x
-    except (TypeError, ValueError):
-        return default
+    return number(v, default)
 
 
 class handler(BaseHTTPRequestHandler):
@@ -149,17 +127,17 @@ class handler(BaseHTTPRequestHandler):
         if not _check_rate(_client_ip(self)):
             return _json_response(self, {"error": "요청이 너무 많습니다"}, 429)
         if not sb.is_configured():
-            return _json_response(self, [])
+            return _json_response(self, {"error": "Supabase 미설정"}, 503)
 
         auth = _authenticate(self)
         if not auth:
             return
         user_id, jwt = auth
         try:
-            rows = sb.select("user_holdings", {
+            rows = select_all(sb.select, "user_holdings", {
                 "user_id": f"eq.{user_id}",
-                "order": "created_at.asc",
-            }, user_jwt=jwt)
+                }, jwt)
+            rows.sort(key=lambda r: (r.get("created_at") or "", r["id"]))
             _json_response(self, rows or [])
         except Exception as e:
             _json_response(self, {"error": _safe_err(e, "DB 조회 실패")}, 500)
@@ -178,9 +156,10 @@ class handler(BaseHTTPRequestHandler):
         user_id, jwt = auth
 
         body = _read_body(self)
-        ticker = str(body.get("ticker", "")).strip()
-        if not ticker:
-            return _json_response(self, {"error": "ticker 필요"}, 400)
+        resolved = asset(body)
+        if not resolved:
+            return _json_response(self, {"error": "국내·미국 주식/ETF 종목코드를 확인해 주세요. 직접 원자재는 지원하지 않습니다."}, 400)
+        ticker, market = resolved
         shares = _num(body.get("shares"))
         avg_cost = _num(body.get("avg_cost"))
         # 🚨 0 을 정상값으로 받지 않는다. 종전엔 default 0 + `>= 0` 이라 파싱 실패가
@@ -195,7 +174,7 @@ class handler(BaseHTTPRequestHandler):
         payload = {
             "ticker": ticker,
             "name": str(body.get("name", "")),
-            "market": str(body.get("market", "kr")),
+            "market": market,
             "shares": shares,
             "avg_cost": avg_cost,
             "memo": str(body.get("memo", "")),
@@ -241,13 +220,13 @@ class handler(BaseHTTPRequestHandler):
             updates["memo"] = str(body["memo"])
         if "shares" in body:
             v = _num(body["shares"])
-            if v is None or v < 0:
-                return _json_response(self, {"error": "shares 는 0 이상 숫자"}, 400)
+            if v is None or v <= 0:
+                return _json_response(self, {"error": "shares 는 0 초과 숫자"}, 400)
             updates["shares"] = v
         if "avg_cost" in body:
             v = _num(body["avg_cost"])
-            if v is None or v < 0:
-                return _json_response(self, {"error": "avg_cost 는 0 이상 숫자"}, 400)
+            if v is None or v <= 0:
+                return _json_response(self, {"error": "avg_cost 는 0 초과 숫자"}, 400)
             updates["avg_cost"] = v
         if not updates:
             return _json_response(self, {"error": "변경할 필드 없음"}, 400)

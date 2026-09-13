@@ -28,7 +28,9 @@ TSX = ROOT / "framer-components" / "public-probe" / "PublicHoldingsTab.tsx"
 def _load_num():
     src = API.read_text(encoding="utf-8")
     i, j = src.find("def _num("), src.find("\nclass handler")
+    # _num delegates to the shared holdings/trades parser; execute that real parser too.
     ns: dict = {}
+    exec((ROOT / "vercel-api/api/nest_validation.py").read_text(encoding="utf-8"), ns)
     exec(src[i:j], ns)
     return ns["_num"]
 

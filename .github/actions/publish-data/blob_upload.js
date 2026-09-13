@@ -104,6 +104,7 @@ const RETIRED_BLOBS = [
 // 지연 트레이드오프: 발행 후 최대 10분(기본군)~1h(일1군) — 모닝브리핑 T+1 정책 대비 수용 범위.
 // 준실시간은 price_pulse 만 (60s 유지).
 const MAX_AGE_RULES = [
+    [/^portfolio_exposure_map\.json$/, 7200],
     [/^price_pulse\.json$/, 60],
     [/^(macro_snapshot|urgent_alerts)\.json$/, 300],
     [/^(universe_search|kr_stock_names|kr_close_latest|us_investor_portfolios|us_smart_money[^/]*|sectors[^/]*)\.json$/, 3600],

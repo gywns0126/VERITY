@@ -1,0 +1,30 @@
+name: Publish Nest exposure only (manual)
+
+# Existing public object only. No scheduler, KIS, private sync, migrations or broad publisher.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: verity-public-nest-exposure-only
+  cancel-in-progress: false
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate isolated public classification
+        run: node --test tests/nest_exposure_publish.test.cjs
+      - name: Install existing Blob SDK version
+        run: npm install --no-save --no-audit --no-fund @vercel/blob@2.4.1
+      - name: Publish and read back one public object
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: node scripts/publish_nest_exposure.cjs

@@ -26,6 +26,7 @@ from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
 import api.supabase_client as sb
+from api.nest_validation import read_body, number, asset, select_all
 
 _rate_limit: dict = defaultdict(list)
 _RATE_WINDOW = 60
@@ -83,20 +84,14 @@ def _cors_headers(h):
 def _json_response(h, data, status=200):
     h.send_response(status)
     h.send_header("Content-Type", "application/json; charset=utf-8")
+    h.send_header("Cache-Control", "private, no-store")
     _cors_headers(h)
     h.end_headers()
     h.wfile.write(json.dumps(data, ensure_ascii=False).encode())
 
 
 def _read_body(h) -> dict:
-    length = int(h.headers.get("Content-Length", 0) or 0)
-    if length == 0:
-        return {}
-    raw = h.rfile.read(length)
-    try:
-        return json.loads(raw.decode("utf-8"))
-    except Exception:
-        return {}
+    return read_body(h)
 
 
 def _extract_jwt(h) -> Optional[str]:
@@ -119,19 +114,15 @@ def _authenticate(h) -> Optional[tuple]:
 
 
 def _num(v, default=None):
-    try:
-        x = float(v)
-        if x != x or x in (float("inf"), float("-inf")):
-            return default
-        return x
-    except (TypeError, ValueError):
-        return default
+    return number(v, default)
 
 
 def _valid_date(s: str) -> bool:
     """YYYY-MM-DD 형식 + 실제 날짜 검증. Postgres DATE 파싱 500 사전 차단."""
     try:
         import datetime as _dt
+        if len(str(s)) != 10 or str(s)[4] != "-" or str(s)[7] != "-":
+            return False
         _dt.date.fromisoformat(str(s))
         return True
     except (ValueError, TypeError):
@@ -154,6 +145,7 @@ def _compute_summary(trades: list) -> dict:
 
     rows = []
     total_realized = 0.0
+    unmatched_sell = 0.0
     for ticker, ts in by_ticker.items():
         ts_sorted = sorted(ts, key=_key)
         qty = 0.0          # 보유 잔량
@@ -172,6 +164,7 @@ def _compute_summary(trades: list) -> dict:
                 qty += shares
                 cost += shares * price
             else:  # sell
+                unmatched_sell += max(0.0, shares - qty)
                 if qty <= 0:
                     continue  # 보유 없이 매도 = 평단 미상, 실현 미반영
                 avg = cost / qty if qty else 0.0
@@ -191,7 +184,11 @@ def _compute_summary(trades: list) -> dict:
         total_realized += realized
 
     rows.sort(key=lambda r: r["realized_pnl"], reverse=True)
-    return {"by_ticker": rows, "total_realized_pnl": round(total_realized, 2)}
+    totals = {currency: round(sum(r["realized_pnl"] for r in rows if ("USD" if r["market"] == "us" else "KRW") == currency), 2)
+              for currency in ("KRW", "USD")}
+    mixed = len({r["market"] for r in rows}) > 1
+    return {"by_ticker": rows, "total_realized_pnl": None if mixed else round(total_realized, 2),
+            "realized_by_currency": totals, "unmatched_sell_shares": round(unmatched_sell, 6)}
 
 
 class handler(BaseHTTPRequestHandler):
@@ -206,17 +203,17 @@ class handler(BaseHTTPRequestHandler):
         if not _check_rate(_client_ip(self)):
             return _json_response(self, {"error": "요청이 너무 많습니다"}, 429)
         if not sb.is_configured():
-            return _json_response(self, {"trades": [], "summary": {"by_ticker": [], "total_realized_pnl": 0}})
+            return _json_response(self, {"error": "Supabase 미설정"}, 503)
 
         auth = _authenticate(self)
         if not auth:
             return
         user_id, jwt = auth
         try:
-            rows = sb.select("user_trades", {
+            rows = select_all(sb.select, "user_trades", {
                 "user_id": f"eq.{user_id}",
-                "order": "traded_at.asc,created_at.asc",
-            }, user_jwt=jwt) or []
+                }, jwt)
+            rows.sort(key=lambda r: (r.get("traded_at") or "", r.get("created_at") or "", r["id"]))
             _json_response(self, {"trades": rows, "summary": _compute_summary(rows)})
         except Exception as e:
             _json_response(self, {"error": _safe_err(e, "DB 조회 실패")}, 500)
@@ -235,9 +232,10 @@ class handler(BaseHTTPRequestHandler):
         user_id, jwt = auth
 
         body = _read_body(self)
-        ticker = str(body.get("ticker", "")).strip()
-        if not ticker:
-            return _json_response(self, {"error": "ticker 필요"}, 400)
+        resolved = asset(body)
+        if not resolved:
+            return _json_response(self, {"error": "국내·미국 주식/ETF 종목코드를 확인해 주세요. 직접 원자재는 지원하지 않습니다."}, 400)
+        ticker, market = resolved
         side = str(body.get("side", "")).strip().lower()
         if side not in ("buy", "sell"):
             return _json_response(self, {"error": "side 는 buy 또는 sell"}, 400)
@@ -245,13 +243,13 @@ class handler(BaseHTTPRequestHandler):
         price = _num(body.get("price"))
         if shares is None or shares <= 0:
             return _json_response(self, {"error": "shares 는 0 초과 숫자"}, 400)
-        if price is None or price < 0:
-            return _json_response(self, {"error": "price 는 0 이상 숫자"}, 400)
+        if price is None or price <= 0:
+            return _json_response(self, {"error": "price 는 0 초과 숫자"}, 400)
 
         payload = {
             "ticker": ticker,
             "name": str(body.get("name", "")),
-            "market": str(body.get("market", "kr")),
+            "market": market,
             "side": side,
             "shares": shares,
             "price": price,
@@ -263,10 +261,26 @@ class handler(BaseHTTPRequestHandler):
                 return _json_response(self, {"error": "traded_at 는 YYYY-MM-DD"}, 400)
             payload["traded_at"] = traded_at
         payload["user_id"] = user_id  # 서버 검증 user_id 만 (body user_id 무시 — IDOR 차단)
+        request_id = body.get("request_id")
+        if request_id:
+            try:
+                from uuid import UUID
+                payload["id"] = str(UUID(str(request_id)))
+            except (ValueError, TypeError):
+                return _json_response(self, {"error": "request_id 형식 오류"}, 400)
         try:
+            # The existing UUID primary key deduplicates retries without a migration.
+            if request_id:
+                previous = sb.select("user_trades", {"id": "eq." + payload["id"], "user_id": "eq." + user_id, "limit": "1"}, user_jwt=jwt)
+                if previous:
+                    if all(previous[0].get(k) == v for k, v in payload.items()):
+                        return _json_response(self, previous[0])
+                    return _json_response(self, {"error": "이미 저장된 요청입니다. 목록을 확인하고 수정해 주세요."}, 409)
             row = sb.insert("user_trades", payload, user_jwt=jwt)
             _json_response(self, row, 200)
         except Exception as e:
+            if request_id and getattr(getattr(e, "response", None), "status_code", None) == 409:
+                return _json_response(self, {"error": "같은 요청이 처리 중이거나 이미 저장됐어요. 목록을 확인해 주세요."}, 409)
             _json_response(self, {"error": _safe_err(e, "DB 쓰기 실패")}, 500)
 
     def do_PATCH(self):
@@ -304,8 +318,8 @@ class handler(BaseHTTPRequestHandler):
             updates["shares"] = v
         if "price" in body:
             v = _num(body["price"])
-            if v is None or v < 0:
-                return _json_response(self, {"error": "price 는 0 이상 숫자"}, 400)
+            if v is None or v <= 0:
+                return _json_response(self, {"error": "price 는 0 초과 숫자"}, 400)
             updates["price"] = v
         if "traded_at" in body:
             ta = str(body["traded_at"]).strip()
