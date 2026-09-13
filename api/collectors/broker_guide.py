@@ -17,6 +17,7 @@ import json
 import os
 import re
 from datetime import datetime
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from api.clients.perplexity_client import call_perplexity
@@ -73,6 +74,7 @@ _SCHEMA_HINT = """{
       "community": "있음" or "없음",
       "realtime_news": "실시간시세·속보 제공" or "제한",
       "event": "현재 진행 중인 공식 이벤트/할인 1건 (반드시 기간 포함, 예: '미국주식 수수료 무료 (~2026-07-31)'). 진행 중 확인 안 되면 빈 문자열 — 만료/불확실 이벤트 금지",
+      "event_source": "현재 진행 중인 이벤트의 증권사 공식 안내 URL. 없으면 빈 문자열",
       "source_url": "대표 출처 URL"
     }
   ],
@@ -105,6 +107,7 @@ _RESPONSE_FORMAT = {
                             "community": {"type": "string"},
                             "realtime_news": {"type": "string"},
                             "event": {"type": "string"},
+                            "event_source": {"type": "string"},
                             "source_url": {"type": "string"},
                         },
                         "required": ["name"],
@@ -136,7 +139,8 @@ def _build_query() -> str:
         f"대상 증권사: {', '.join(BROKERS)}\n"
         f"거래 유형(by_trade_type): {', '.join(TRADE_TYPES)}\n\n"
         "각 수수료·평점·기능은 출처가 확인되는 사실만. 주관적 추천/별점 금지.\n"
-        "event 는 오늘 기준 진행 중인 공식 이벤트/할인만 1건, 반드시 기간을 포함하고 확인 안 되면 빈 문자열(만료·불확실 이벤트는 절대 넣지 말 것).\n"
+        "event 는 오늘 기준 진행 중인 공식 이벤트/할인만 1건, 반드시 기간을 포함하고 확인 안 되면 빈 문자열(만료·불확실 이벤트는 절대 넣지 말 것). "
+        "event_source 에는 해당 증권사 공식 안내 URL만 넣고, 공식 URL이 없으면 event 와 event_source 를 모두 비워둘 것.\n"
         "by_trade_type 의 reason 은 정성 근거만 — 수수료 %·수치 인용 금지, '최저/최고' 단정 대신 '낮은 편·유리' 완곡 표현, 지원 여부·상품·기능 중심(수수료 진짜값은 공식 고지에서 확인이라 숫자 assert 안 함).\n\n"
         f"JSON 스키마:\n{_SCHEMA_HINT}"
     )
@@ -237,12 +241,152 @@ BROKER_OFFICIAL = {
     "NH": "nhqv.com", "농협": "nhqv.com",
 }
 
+BROKER_OFFICIAL_ALIASES = {
+    "truefriend.com": ("truefriend.com", "koreainvestment.com"),
+    "tossinvest.com": ("tossinvest.com",),
+    "kiwoom.com": ("kiwoom.com",),
+    "miraeasset.com": ("miraeasset.com",),
+    "samsungpop.com": ("samsungpop.com",),
+    "nhqv.com": ("nhqv.com",),
+}
+BROKER_OFFICIAL_HOMES = {
+    "truefriend.com": "https://www.truefriend.com",
+    "tossinvest.com": "https://tossinvest.com",
+    "kiwoom.com": "https://www.kiwoom.com",
+    "miraeasset.com": "https://securities.miraeasset.com",
+    "samsungpop.com": "https://www.samsungpop.com",
+    "nhqv.com": "https://www.nhqv.com",
+}
+
 
 def _official_domain(broker: str) -> str:
     for k in BROKER_OFFICIAL:
         if k in (broker or ""):
             return BROKER_OFFICIAL[k]
     return ""
+
+
+def _extract_http_url(value: object) -> str:
+    """산문이 섞인 응답에서도 첫 http(s) URL만 정규화한다."""
+    match = re.search(r"https?://[^\s<>\"']+", str(value or ""), flags=re.I)
+    return match.group(0).rstrip("),.;]") if match else ""
+
+
+def _verified_official_source_url(broker: str, value: object) -> str:
+    """입력에 해당 증권사 공식 URL이 실제로 있을 때만 반환한다."""
+    primary = _official_domain(broker)
+    candidate = _extract_http_url(value)
+    if not candidate or not primary:
+        return ""
+    try:
+        host = (urlparse(candidate).hostname or "").lower().removeprefix("www.")
+    except ValueError:
+        return ""
+    allowed = BROKER_OFFICIAL_ALIASES.get(primary, (primary,))
+    if any(host == domain or host.endswith("." + domain) for domain in allowed):
+        return candidate
+    return ""
+
+
+def _official_source_url(broker: str, value: object) -> str:
+    """해당 증권사 공식 도메인만 허용하고 나머지는 공식 홈페이지로 낮춘다."""
+    primary = _official_domain(broker)
+    home = BROKER_OFFICIAL_HOMES.get(primary, "")
+    return _verified_official_source_url(broker, value) or home
+
+
+_EVENT_UNCERTAIN_RE = re.compile(
+    r"추정|미공개|미표기|확인\s*(?:안|어려)|불확실|보도\s*기준|공지상|진행\s*중\s*안내",
+    re.I,
+)
+_EVENT_PERIOD_RE = re.compile(
+    r"(?:20\d{2}[-./년]\s*\d{1,2}[-./월]\s*\d{1,2}(?:일)?|"
+    r"20\d{2}[-./]\d{1,2}|신청일로부터\s*\d+\s*(?:개월|일)|상시)",
+    re.I,
+)
+
+
+def _sanitize_events(brokers: list) -> list[str]:
+    """공식 안내 URL과 명시된 기간이 함께 있는 현재 이벤트만 남긴다."""
+    flags: list[str] = []
+    for broker in brokers:
+        if not isinstance(broker, dict):
+            continue
+        name = str(broker.get("name", ""))
+        event = re.sub(r"\[\d+\]", "", str(broker.get("event", "") or ""))
+        event = re.sub(r"\s+", " ", event).strip()
+        source = _verified_official_source_url(name, broker.get("event_source"))
+        period_match = _EVENT_PERIOD_RE.search(event)
+        valid = bool(event and source and period_match)
+        if _EVENT_UNCERTAIN_RE.search(event):
+            valid = False
+        if valid and "상시" not in event and "신청일로부터" not in event:
+            dates = []
+            for year, month, day in re.findall(
+                r"(20\d{2})[-./년]\s*(\d{1,2})[-./월]\s*(\d{1,2})(?:일)?",
+                event,
+            ):
+                try:
+                    dates.append(datetime(int(year), int(month), int(day)).date())
+                except ValueError:
+                    valid = False
+            if not dates or max(dates) < datetime.now(KST).date():
+                valid = False
+        if valid:
+            broker["event"] = event
+            broker["event_source"] = source
+        else:
+            if event:
+                flags.append(f"이벤트 숨김: {name}")
+            broker["event"] = ""
+            broker["event_source"] = ""
+    return flags
+
+
+def _sanitize_numeric_claims(brokers: list) -> list[str]:
+    """공식 상세 URL이 없는 수수료·환전 숫자와 설명을 발행 전에 제거한다."""
+    flags: list[str] = []
+    claim_fields = (
+        ("domestic_fee", "domestic_source", "fee_basis"),
+        ("overseas_fee", "overseas_source", "overseas_basis"),
+        ("fx_fee", "fx_source", "fx_basis"),
+    )
+    for broker in brokers:
+        if not isinstance(broker, dict):
+            continue
+        name = str(broker.get("name", ""))
+        for value_field, source_field, basis_field in claim_fields:
+            value = str(broker.get(value_field, "") or "").strip()
+            verified = _verified_official_source_url(name, broker.get(source_field))
+            if value and not verified:
+                flags.append(f"공식 출처 없는 숫자 숨김: {name}/{value_field}")
+                broker[value_field] = ""
+                broker[basis_field] = ""
+            broker[source_field] = verified or BROKER_OFFICIAL_HOMES.get(
+                _official_domain(name), ""
+            )
+    return flags
+
+
+def _sanitize_sources(brokers: list) -> list[str]:
+    """발행 직전 링크를 공식 도메인으로 제한하고 URL-only citations를 만든다."""
+    citations: list[str] = []
+    for broker in brokers:
+        if not isinstance(broker, dict):
+            continue
+        name = str(broker.get("name", ""))
+        for field in (
+            "source_url",
+            "domestic_source",
+            "overseas_source",
+            "fx_source",
+            "event_source",
+        ):
+            clean_url = _official_source_url(name, broker.get(field))
+            broker[field] = clean_url
+            if clean_url and clean_url not in citations:
+                citations.append(clean_url)
+    return citations
 
 
 _FEE_SYS = (
@@ -286,12 +430,9 @@ def _fee_query(broker: str) -> str:
 
 
 def _fetch_fee(broker: str) -> dict:
-    """focused 단일 종목 수수료 추출. 공식 도메인 1차 → 일반 fallback. 유효 % 만 반환."""
+    """focused 단일 종목 수수료 추출. 공식 도메인과 공식 URL이 확인된 값만 반환."""
     dom = _official_domain(broker)
-    attempts: list = []
-    if dom:
-        attempts.append([dom, "kofia.or.kr"])
-    attempts.append(None)  # 무제한 fallback
+    attempts: list = [[dom]] if dom else []
     for domains in attempts:
         res = call_perplexity(
             _fee_query(broker),
@@ -310,10 +451,11 @@ def _fetch_fee(broker: str) -> dict:
         fee = str(d.get("fee", "")).strip()
         val = _fee_pct(fee)
         # 유효 % + 온라인 타당 범위(영업점 요율 오인 거부)
-        if _FEE_RE.search(fee) and 0 < val <= FEE_MAX_PCT:
+        source = _verified_official_source_url(broker, d.get("source"))
+        if source and _FEE_RE.search(fee) and 0 < val <= FEE_MAX_PCT:
             return {
                 "fee": fee,
-                "source": str(d.get("source", "")).strip(),
+                "source": source,
                 "basis": str(d.get("basis", "")).strip(),
                 "official": domains is not None,
             }
@@ -336,12 +478,9 @@ def _overseas_query(broker: str) -> str:
 
 
 def _fetch_overseas_fee(broker: str) -> dict:
-    """focused 미국주식 수수료 추출. 공식 도메인 1차 → 일반 fallback. 타당 % 만 반환(국내 _fetch_fee 의 美 짝)."""
+    """focused 미국주식 수수료 추출. 공식 도메인과 공식 URL이 확인된 값만 반환."""
     dom = _official_domain(broker)
-    attempts: list = []
-    if dom:
-        attempts.append([dom, "kofia.or.kr"])
-    attempts.append(None)  # 무제한 fallback
+    attempts: list = [[dom]] if dom else []
     for domains in attempts:
         res = call_perplexity(
             _overseas_query(broker),
@@ -359,11 +498,12 @@ def _fetch_overseas_fee(broker: str) -> dict:
             continue
         fee = str(d.get("fee", "")).strip()
         val = _fee_pct(fee)
-        if _FEE_RE.search(fee) and 0 < val <= OVERSEAS_FEE_MAX_PCT:
+        source = _verified_official_source_url(broker, d.get("source"))
+        if source and _FEE_RE.search(fee) and 0 < val <= OVERSEAS_FEE_MAX_PCT:
             m = re.search(r"\d+(?:\.\d+)?\s*%", fee)  # % 토큰만(부가설명 제거)
             return {
                 "fee": m.group(0) if m else fee,
-                "source": str(d.get("source", "")).strip(),
+                "source": source,
                 "basis": str(d.get("basis", "")).strip(),
                 "official": domains is not None,
             }
@@ -387,10 +527,7 @@ def _fx_query(broker: str) -> str:
 def _fetch_fx_fee(broker: str) -> dict:
     """focused 환전우대율 추출. 공식 도메인 1차 → 일반 fallback. 0~100% 타당값만 반환."""
     dom = _official_domain(broker)
-    attempts: list = []
-    if dom:
-        attempts.append([dom, "kofia.or.kr"])
-    attempts.append(None)  # 무제한 fallback
+    attempts: list = [[dom]] if dom else []
     for domains in attempts:
         res = call_perplexity(
             _fx_query(broker),
@@ -408,11 +545,12 @@ def _fetch_fx_fee(broker: str) -> dict:
             continue
         fee = str(d.get("fee", "")).strip()
         val = _fee_pct(fee)
-        if _FEE_RE.search(fee) and 0 < val <= 100:  # 우대율(스프레드 아님) 0~100%
+        source = _verified_official_source_url(broker, d.get("source"))
+        if source and _FEE_RE.search(fee) and 0 < val <= 100:  # 우대율(스프레드 아님) 0~100%
             m = re.search(r"\d+(?:\.\d+)?\s*%", fee)
             return {
                 "fee": m.group(0) if m else fee,
-                "source": str(d.get("source", "")).strip(),
+                "source": source,
                 "basis": str(d.get("basis", "")).strip(),
                 "official": domains is not None,
             }
@@ -424,10 +562,15 @@ def _stale(v) -> bool:
     return not s or s in ("없음", "미제공", "정보없음", "정보 없음", "N/A", "n/a", "해당없음", "불명")
 
 
-# sticky 병합 대상 (event 제외 — 만료 이벤트가 남으면 안 되므로 매 run 갱신)
-_STICKY_BROKER = ("app", "domestic_fee", "overseas_fee", "fx_fee", "isa", "credit_short",
-                  "community", "realtime_news", "source_url", "fee_basis", "overseas_basis",
-                  "fx_basis", "overseas_source", "fx_source", "app_rating")
+# sticky 병합 대상. 시효성·금액성 값은 매 실행에서 공식 출처를 다시 확인하므로 이어 쓰지 않는다.
+_STICKY_BROKER = (
+    "app",
+    "isa",
+    "credit_short",
+    "community",
+    "realtime_news",
+    "app_rating",
+)
 
 
 def _sticky_merge(brokers: list, btt: list, prev) -> None:
@@ -496,20 +639,15 @@ def collect(force: bool = False) -> dict:
                 b["fee_basis"] = info["basis"]
             if info.get("source"):
                 b["source_url"] = info["source"]
+                b["domestic_source"] = info["source"]
                 if info["source"] not in fee_sources:
                     fee_sources.append(info["source"])
             fee_ok += 1
         else:
-            # focused 실패 → 메인 호출값도 크기 가드 통과 못 하면 공란(틀린/영업점 값 노출 차단).
-            mainfee = str(b.get("domestic_fee", ""))
-            mv = _fee_pct(mainfee)
-            if _FEE_RE.search(mainfee) and 0 < mv <= FEE_MAX_PCT:
-                m = re.search(r"\d+(?:\.\d+)?\s*%", mainfee)  # 부가설명 제거, % 토큰만
-                b["domestic_fee"] = m.group(0) if m else mainfee
-                fee_ok += 1
-            else:
-                b["domestic_fee"] = ""
-            print(f"[broker_guide] ⚠ 수수료 추출 실패(메인값 {'채택' if b['domestic_fee'] else '공란'}): {b.get('name','?')}")
+            b["domestic_fee"] = ""
+            b["fee_basis"] = ""
+            b["domestic_source"] = ""
+            print(f"[broker_guide] ⚠ 수수료 공식 검증 실패(공란): {b.get('name','?')}")
 
     # 🎯 focused 미국주식 수수료 추출 (정밀 + 공식 출처) → overseas_fee/basis override
     ov_ok = 0
@@ -527,14 +665,10 @@ def collect(force: bool = False) -> dict:
                     fee_sources.append(info["source"])
             ov_ok += 1
         else:
-            # focused 실패 → 메인 호출값이 타당 % 면 채택, 아니면 공란(틀린 값 노출 차단)
-            mainov = str(b.get("overseas_fee", ""))
-            mv = _fee_pct(mainov)
-            if _FEE_RE.search(mainov) and 0 < mv <= OVERSEAS_FEE_MAX_PCT:
-                ov_ok += 1
-            else:
-                b["overseas_fee"] = ""
-            print(f"[broker_guide] ⚠ 해외수수료 추출 실패(메인값 {'채택' if b['overseas_fee'] else '공란'}): {b.get('name','?')}")
+            b["overseas_fee"] = ""
+            b["overseas_basis"] = ""
+            b["overseas_source"] = ""
+            print(f"[broker_guide] ⚠ 해외수수료 공식 검증 실패(공란): {b.get('name','?')}")
     print(f"[broker_guide] 해외수수료 채움 {ov_ok}/{len(brokers)}")
 
     # 🎯 focused 환전(FX)우대율 추출 → fx_fee/fx_basis/fx_source (미국주식 실비용 핵심, 별도 tile)
@@ -553,18 +687,30 @@ def collect(force: bool = False) -> dict:
                     fee_sources.append(info["source"])
             fx_ok += 1
         else:
-            b["fx_fee"] = ""  # 실패 = 공란(UI tile 숨김, 틀린 값 노출 차단). sticky 로 이전값 carry.
-            print(f"[broker_guide] ⚠ 환전우대 추출 실패(공란): {b.get('name','?')}")
+            b["fx_fee"] = ""
+            b["fx_basis"] = ""
+            b["fx_source"] = ""
+            print(f"[broker_guide] ⚠ 환전우대 공식 검증 실패(공란): {b.get('name','?')}")
     print(f"[broker_guide] 환전우대 채움 {fx_ok}/{len(brokers)}")
 
     # 수동 큐레이션 override (있으면 자동값보다 우선)
     _apply_curated(brokers)
+    for b in brokers:
+        if isinstance(b, dict) and b.get("source_url") and not b.get("domestic_source"):
+            b["domestic_source"] = b["source_url"]
 
     # 이전 발행값 sticky 병합 (새 run 빈칸/churn → 이전 값 유지, event 제외) — LLM 불안정 완화
     btt = parsed.get("by_trade_type", [])
     _sticky_merge(brokers, btt, prev)
 
+    safety_flags = _sanitize_events(brokers)
+    safety_flags.extend(_sanitize_numeric_claims(brokers))
+
+    # 산문 포함·제3자 링크를 발행 전에 제거한다. UI는 이 URL-only 목록만 소비한다.
+    fee_sources = _sanitize_sources(brokers)
+
     ok, flags = _validate(parsed)
+    flags.extend(safety_flags)
     if not ok:
         print(f"[broker_guide] 검증 실패 — 직전 유지: {flags}")
         return {"status": "validate_fail", "kept_prev": prev is not None, "flags": flags}
@@ -575,8 +721,8 @@ def collect(force: bool = False) -> dict:
         "disclaimer": DISCLAIMER,
         "brokers": brokers,
         "by_trade_type": btt,
-        # 출처 = focused 수수료 호출의 공식 출처 우선, 없으면 메인 citations
-        "citations": fee_sources or res.get("citations", []),
+        # 출처 = 증권사별 공식 도메인으로 정규화한 URL-only 목록
+        "citations": fee_sources,
         "flags": flags,
     }
     os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
