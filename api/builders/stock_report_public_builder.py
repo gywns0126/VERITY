@@ -9,10 +9,13 @@
 
 🚨 RULE 7 — **allowlist** (점수/등급/추천/trade_plan/prediction 등 전부 비노출).
 순수 변환 — 외부호출/KIS 0. publish: data/stock_report_public.json (action.yml 목록 등재됨).
+되돌리지 말 것 (2026-09-13): 표시 시총·header는 valuation 입력과 일치시킨다.
+PER 근거는 선택된 연간/TTM 순이익과 원천 기간을 보존하고, 생성시각을 기준일로 쓰지 않는다.
 """
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import sys
@@ -716,6 +719,69 @@ def _median(vals: List[float]) -> Optional[float]:
     return xs[mid] if n % 2 else (xs[mid - 1] + xs[mid]) / 2.0
 
 
+def _evidence_date(value: Any) -> Optional[str]:
+    """원천이 준 YYYYMMDD/ISO 날짜만 정규화. 생성일·오늘 날짜로 대체하지 않는다."""
+    raw = str(value or "")
+    if not re.fullmatch(r"\d{8}|\d{4}-\d{2}-\d{2}", raw):
+        return None
+    try:
+        return datetime.strptime(raw.replace("-", ""), "%Y%m%d").date().isoformat()
+    except ValueError:
+        return None
+
+
+def _per_period(pin: Dict[str, Any]) -> str:
+    if pin.get("basis") == "ttm":
+        end = _evidence_date(pin.get("quarter_end"))
+        return "최근 12개월(TTM) · " + (f"{end} 종료" if end else "종료일 미확인")
+    year = str(pin.get("fiscal_year") or "")
+    prefix = f"{year}년 " if re.fullmatch(r"\d{4}", year) else "결산연도 미확인 · "
+    if pin.get("basis") == "annual":
+        return prefix + "연간"
+    # fundamentals의 report_date는 연도이고 reprt_code가 보고기간이다.
+    # 연도만으로 연간이라고 단정하지 않는다(반기/분기 공시 입력 가능).
+    period = {"11011": "연간", "11013": "1분기 공시", "11012": "반기 공시",
+              "11014": "3분기 공시"}.get(str(pin.get("reprt_code") or ""))
+    return prefix + (period or "공시기간 미확인")
+
+
+def _apply_cap_per_facts(stock: Dict[str, Any], val: Dict[str, Any], cap_as_of: Any = None) -> None:
+    """계산정책은 유지하고 표시 시총·PER 설명을 실제 valuation 입력에 연결한다."""
+    facts = stock.setdefault("facts", {})
+    notes = stock.setdefault("facts_note", {})
+    calculations = stock.setdefault("facts_calc", {})
+    try:
+        cap = float(val.get("mktcap"))
+    except (TypeError, ValueError, OverflowError):
+        cap = 0.0
+    cap_date = _evidence_date(cap_as_of)
+    cap_basis = f"시총 {cap_date} 기준" if cap_date else "시총 기준일 미확인"
+    if math.isfinite(cap) and cap > 0:
+        facts["시가총액"] = _fmt_cap(cap)
+        notes["시가총액"] = "KRX · " + cap_basis
+        if isinstance(stock.get("header"), dict) and "market_cap" in stock["header"]:
+            stock["header"]["market_cap"] = facts["시가총액"]
+    if val.get("PER") is None:
+        return
+    facts["PER"] = _num(val["PER"], "", 1)
+    # 정확한 문자열에 반응하는 기존 Framer 직접계산 배지를 보존한다.
+    notes["PER"] = "자체계산"
+    pin = val.get("_per_in") or {}
+    key = "net_income_ttm" if pin.get("basis") == "ttm" else "net_income"
+    try:
+        numerator, income = float(pin.get("mktcap")), float(pin.get(key))
+    except (TypeError, ValueError, OverflowError):
+        numerator = income = 0.0
+    if not (math.isfinite(numerator) and math.isfinite(income) and numerator > 0 and income > 0
+            and numerator == cap):
+        # 결손을 0·None으로 공개하거나 표시된 PER에서 분모를 역산하지 않는다.
+        calculations.pop("PER", None)
+        notes["PER"] = "자체계산 · 계산 근거 미확인"
+        return
+    calculations["PER"] = (f"시가총액 {_fmt_cap(numerator)} ÷ 순이익 {_fmt_won_signed(income)} "
+                           f"({_per_period(pin)} · {cap_basis})")
+
+
 def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
                    fin_series: Optional[Dict[str, List[Dict[str, Any]]]] = None,
                    panel_facts: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Dict[str, float]]:
@@ -744,7 +810,8 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
             ni = float(f.get("net_income")) if f.get("net_income") is not None else None
             if ni and ni > 0:
                 v["PER"] = round(mktcap / ni, 2)
-                v["_per_in"] = {"mktcap": mktcap, "net_income": ni}
+                v["_per_in"] = {"mktcap": mktcap, "net_income": ni, "basis": "reported",
+                                "fiscal_year": f.get("report_date"), "reprt_code": f.get("reprt_code")}
         except (TypeError, ValueError):
             pass
         # PSR = 시가총액 ÷ 매출. build_rich 와 **같은 산식·같은 sanity 가드**(0<psr<=100).
@@ -838,7 +905,8 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
             ni = None
         if ni and ni > 0:
             v["PER"] = round(mktcap / ni, 2)
-            v["_per_in"] = {"mktcap": mktcap, "net_income": ni, "fiscal_year": latest.get("year")}
+            v["_per_in"] = {"mktcap": mktcap, "net_income": ni, "fiscal_year": latest.get("year"),
+                            "basis": "annual"}
         try:
             rv = float(latest.get("revenue")) if latest.get("revenue") is not None else None
         except (TypeError, ValueError):
@@ -1318,15 +1386,7 @@ def main() -> int:
             if val:
                 fn = s.setdefault("facts_note", {})
                 fc = s.setdefault("facts_calc", {})
-                mc = val.get("mktcap")
-                if mc and mc > 0:
-                    s["facts"].setdefault("시가총액", _fmt_cap(mc))  # 전 종목 시총 (KRX 공식) — 정렬·필터 언락
-                if val.get("PER") is not None:
-                    s["facts"]["PER"] = _num(val["PER"], "", 1)
-                    fn["PER"] = "자체계산"
-                    pin = val.get("_per_in") or {}
-                    if pin:
-                        fc["PER"] = f"시가총액 {_fmt_won_signed(pin.get('mktcap'))} ÷ 순이익 {_fmt_won_signed(pin.get('net_income'))}"
+                _apply_cap_per_facts(s, val, (krx_doc.get("_meta") or {}).get("bas_dd"))
                 if val.get("PBR") is not None:
                     s["facts"]["PBR"] = _num(val["PBR"], "", 1)
                     fn["PBR"] = "자체계산"
