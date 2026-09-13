@@ -1,6 +1,10 @@
 import json
+from pathlib import Path
 
 from api.collectors import nps_holdings as nps
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _row(date, pct, src, ticker="005930", name="삼성전자"):
@@ -92,6 +96,17 @@ def test_data_go_fallback_uses_latest_verified_quarter(monkeypatch):
     assert nps._resolve_latest_url().endswith("uddi:5536983c-fa78-46c7-bef1-b602ec951fcf")
 
 
+def test_catalyst_input_missing_is_not_treated_as_empty_success(monkeypatch, tmp_path):
+    monkeypatch.setattr(nps, "CATALYST_PATH", str(tmp_path / "missing.jsonl"))
+
+    events, audit = nps._nps_catalyst_events()
+
+    assert events == {}
+    assert audit["event_source_ok"] is False
+    assert audit["event_source_rows"] == 0
+    assert audit["event_source_error"] == "FileNotFoundError"
+
+
 def test_build_uses_latest_date_instead_of_source_order(monkeypatch):
     monkeypatch.setattr(
         nps,
@@ -145,11 +160,25 @@ def test_build_uses_latest_date_instead_of_source_order(monkeypatch):
 
 def test_main_does_not_rewrite_timestamp_only_change(monkeypatch, tmp_path):
     output = tmp_path / "nps_holdings.json"
+    heartbeat = tmp_path / "nps_holdings_heartbeat.json"
+    current_audit = {
+        "event_source_ok": True,
+        "event_source_rows": 1200,
+        "event_source_invalid_rows": 0,
+        "event_source_latest": "20260913",
+        "event_tickers": 161,
+        "candidate_tickers": 0,
+        "updated_tickers": 0,
+        "retired_tickers": 0,
+        "unresolved_tickers": 0,
+        "api_calls": 0,
+    }
     previous = {
         "generated_at": "2026-09-13T10:00:00+09:00",
         "count": 1,
         "as_of_latest": "2026-09-08",
         "holdings": [_row("2026-09-08", 8.02, "DART majorstock live")],
+        "dart_check": current_audit,
         "dart_refresh": {
             "event_tickers": 161,
             "candidate_tickers": 152,
@@ -163,18 +192,57 @@ def test_main_does_not_rewrite_timestamp_only_change(monkeypatch, tmp_path):
     current = {
         **previous,
         "generated_at": "2026-09-13T11:00:00+09:00",
-        "dart_refresh": {
-            "event_tickers": 161,
-            "candidate_tickers": 0,
-            "updated_tickers": 0,
-            "retired_tickers": 0,
-            "unresolved_tickers": 0,
-            "api_calls": 0,
-        },
+        "dart_refresh": current_audit,
     }
     before = output.read_text(encoding="utf-8")
     monkeypatch.setattr(nps, "OUTPUT_PATH", str(output))
+    monkeypatch.setattr(nps, "HEARTBEAT_PATH", str(heartbeat))
     monkeypatch.setattr(nps, "build_nps_holdings", lambda: current)
 
     assert nps.main() == 0
     assert output.read_text(encoding="utf-8") == before
+    assert json.loads(heartbeat.read_text(encoding="utf-8"))["status"] == "ok"
+
+
+def test_main_fail_closed_preserves_previous_output(monkeypatch, tmp_path):
+    output = tmp_path / "nps_holdings.json"
+    heartbeat = tmp_path / "nps_holdings_heartbeat.json"
+    previous = {"generated_at": "2026-09-13T10:00:00+09:00", "count": 232}
+    output.write_text(json.dumps(previous, ensure_ascii=False), encoding="utf-8")
+    audit = {
+        "event_source_ok": True,
+        "event_source_rows": 1200,
+        "event_source_invalid_rows": 0,
+        "event_tickers": 161,
+        "candidate_tickers": 1,
+        "unresolved_tickers": 1,
+    }
+    notices = []
+    monkeypatch.setattr(nps, "OUTPUT_PATH", str(output))
+    monkeypatch.setattr(nps, "HEARTBEAT_PATH", str(heartbeat))
+    monkeypatch.setattr(nps, "build_nps_holdings", lambda: {"count": 231, "dart_refresh": audit})
+    monkeypatch.setattr(nps, "_notify_failure", lambda reason, details: notices.append((reason, details)) or True)
+
+    assert nps.main() == 2
+    assert json.loads(output.read_text(encoding="utf-8")) == previous
+    assert not heartbeat.exists()
+    assert len(notices) == 1
+
+
+def test_workflow_escalates_nps_failure_after_safe_publish():
+    workflow = (ROOT / ".github/workflows/daily_analysis_full.yml").read_text(encoding="utf-8")
+
+    assert "id: nps_holdings" in workflow
+    assert "TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}" in workflow
+    assert "TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}" in workflow
+    assert "steps.nps_holdings.outcome == 'failure'" in workflow
+    assert workflow.index("Publish hot data to VERITY-data") < workflow.index("국민연금 보유 신선도 실패 확정")
+
+
+def test_sla_tracks_success_heartbeat_as_p0():
+    manifest = json.loads((ROOT / "data/freshness_sla.json").read_text(encoding="utf-8"))
+    stream = next(item for item in manifest["streams"] if item["id"] == "nps_holdings")
+
+    assert stream["file"] == "metadata/nps_holdings_heartbeat.json"
+    assert stream["ts_field"] == "last_run_at"
+    assert stream["criticality"] == "P0"

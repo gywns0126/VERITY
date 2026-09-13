@@ -453,12 +453,14 @@
   },
   {
    "id": "nps_holdings",
-   "file": "nps_holdings.json",
+   "file": "metadata/nps_holdings_heartbeat.json",
    "max_age_minutes": 4320,
    "owner": "ci",
    "schedule": "weekday",
-   "cadence": "평일 1회 daily_analysis_full.yml",
-   "criticality": "P2"
+   "cadence": "평일 1회 daily_analysis_full.yml (성공 하트비트)",
+   "criticality": "P0",
+   "ts_field": "last_run_at",
+   "note": "미해결·입력 무결성 실패 시 하트비트 동결 + 워크플로 실패 + 즉시 알림. 보유 내용 무변화와 수집 중단을 분리한다."
   },
   {
    "id": "securities_lending",

@@ -21,6 +21,7 @@ NAMES_PATH = os.path.join(_ROOT, "data", "kr_stock_names.json")
 CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
 FUND_OVERVIEW_PATH = os.path.join(_ROOT, "data", "nps_fund_overview.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "nps_holdings.json")
+HEARTBEAT_PATH = os.path.join(_ROOT, "data", "metadata", "nps_holdings_heartbeat.json")
 
 NPS_NAME = "국민연금"
 
@@ -143,32 +144,52 @@ def _from_dart_existing(name2tk: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
     return out
 
 
-def _nps_catalyst_events() -> Dict[str, Dict[str, str]]:
-    """국민연금 DART 공시 이벤트를 종목별 최신 접수일로 축약한다."""
+def _nps_catalyst_events() -> Tuple[Dict[str, Dict[str, str]], Dict[str, Any]]:
+    """국민연금 DART 공시 이벤트와 입력 무결성 감사를 함께 반환한다."""
     out: Dict[str, Dict[str, str]] = {}
+    audit: Dict[str, Any] = {
+        "event_source_ok": False,
+        "event_source_rows": 0,
+        "event_source_invalid_rows": 0,
+        "event_source_latest": "",
+    }
     try:
         with open(CATALYST_PATH, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
-                if not line or NPS_NAME not in line:
+                if not line:
                     continue
                 try:
                     o = json.loads(line)
                 except Exception:  # noqa: BLE001
+                    audit["event_source_invalid_rows"] += 1
                     continue
+                if not isinstance(o, dict):
+                    audit["event_source_invalid_rows"] += 1
+                    continue
+                audit["event_source_rows"] += 1
+                row_date = _date_key(o.get("rcept_dt") or o.get("date"))
+                if row_date > audit["event_source_latest"]:
+                    audit["event_source_latest"] = row_date
                 if NPS_NAME not in str(o.get("flr_nm") or ""):
                     continue
                 tk = re.sub(r"\D", "", str(o.get("ticker") or ""))[:6]
                 nm = o.get("corp_name") or o.get("name") or ""
-                dt = _date_key(o.get("rcept_dt") or o.get("date"))
+                dt = row_date
                 if len(tk) != 6 or not dt:
+                    audit["event_source_invalid_rows"] += 1
                     continue
                 prev = out.get(tk)
                 if prev is None or dt > prev.get("event_date", ""):
                     out[tk] = {"ticker": tk, "name": str(nm or tk), "event_date": dt}
-    except Exception:  # noqa: BLE001
-        pass
-    return out
+    except Exception as exc:  # noqa: BLE001
+        audit["event_source_error"] = type(exc).__name__
+        return out, audit
+    audit["event_source_ok"] = (
+        audit["event_source_rows"] > 0
+        and audit["event_source_invalid_rows"] == 0
+    )
+    return out, audit
 
 
 def _from_previous_live() -> Dict[str, Dict[str, Any]]:
@@ -233,15 +254,16 @@ def _dart_api_key() -> str:
 
 def _from_dart_live(
     name2tk: Dict[str, str], baseline: Dict[str, Dict[str, Any]]
-) -> Tuple[Dict[str, Dict[str, Any]], set, Dict[str, int]]:
+) -> Tuple[Dict[str, Dict[str, Any]], set, Dict[str, Any]]:
     """분기 자료 이후 국민연금 공시가 생긴 종목만 DART 원문으로 증분 갱신한다."""
     dart_api_key = _dart_api_key()
-    events = _nps_catalyst_events()
+    events, source_audit = _nps_catalyst_events()
     candidates = {
         tk: event for tk, event in events.items()
         if event.get("event_date", "") > _date_key((baseline.get(tk) or {}).get("date"))
     }
-    audit = {
+    audit: Dict[str, Any] = {
+        **source_audit,
         "event_tickers": len(events),
         "candidate_tickers": len(candidates),
         "updated_tickers": 0,
@@ -733,23 +755,96 @@ def _semantic_document(doc: Dict[str, Any]) -> Dict[str, Any]:
     return {key: value for key, value in doc.items() if key != "generated_at"}
 
 
+def _write_json(path: str, doc: Dict[str, Any]) -> None:
+    """중간 파일을 거쳐 JSON을 교체해 부분 기록을 남기지 않는다."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp_path = f"{path}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, indent=1)
+    os.replace(tmp_path, path)
+
+
+def _write_success_heartbeat(out: Dict[str, Any], audit: Dict[str, Any]) -> None:
+    from datetime import datetime, timedelta, timezone
+
+    kst = timezone(timedelta(hours=9))
+    heartbeat = {
+        "last_run_at": datetime.now(kst).isoformat(),
+        "status": "ok",
+        "count": int(out.get("count") or 0),
+        "as_of_latest": str(out.get("as_of_latest") or ""),
+        "event_source_latest": _iso_date(audit.get("event_source_latest")),
+        "event_tickers": int(audit.get("event_tickers") or 0),
+        "candidate_tickers": int(audit.get("candidate_tickers") or 0),
+        "unresolved_tickers": int(audit.get("unresolved_tickers") or 0),
+    }
+    _write_json(HEARTBEAT_PATH, heartbeat)
+
+
+def _notify_failure(reason: str, audit: Dict[str, Any]) -> bool:
+    """국민연금 수집 실패를 야간 묵음과 무관하게 즉시 알린다."""
+    try:
+        from api.notifications.telegram import send_message
+
+        return send_message(
+            "\n".join([
+                "🔴 국민연금 보유 수집 중단",
+                reason,
+                (
+                    f"이벤트 {int(audit.get('event_tickers') or 0)}개 · "
+                    f"신규 대상 {int(audit.get('candidate_tickers') or 0)}개 · "
+                    f"미해결 {int(audit.get('unresolved_tickers') or 0)}개"
+                ),
+                "기존 정상 공개본은 유지했습니다.",
+            ]),
+            dedupe=True,
+            bypass_quiet=True,
+            source="nps_holdings",
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"[nps_holdings] alert FAIL: {type(exc).__name__}")
+        return False
+
+
 def main() -> int:
+    current_audit: Dict[str, Any] = {}
     try:
         previous = _load_json(OUTPUT_PATH, {}) or {}
         out = build_nps_holdings()
         current_audit = out.get("dart_refresh") or {}
+        failures = []
+        if current_audit.get("event_source_ok", True) is False:
+            failures.append(
+                "DART 이벤트 입력 무결성 실패"
+                f"(유효 {int(current_audit.get('event_source_rows') or 0)}행, "
+                f"오류 {int(current_audit.get('event_source_invalid_rows') or 0)}행)"
+            )
+        if int(current_audit.get("unresolved_tickers") or 0) > 0:
+            failures.append(
+                f"신규 공시 {int(current_audit.get('unresolved_tickers') or 0)}종목 미해결"
+            )
+        if failures:
+            reason = " · ".join(failures)
+            print(f"[nps_holdings] FAIL-CLOSED: {reason}")
+            _notify_failure(reason, current_audit)
+            return 2
+
+        # 이번 실행의 무결성 감사와 마지막 대량 실조회 감사는 목적이 다르므로 둘 다 보존한다.
+        out["dart_check"] = current_audit
         if current_audit.get("candidate_tickers") == 0 and previous.get("dart_refresh"):
             # 새 대상이 없는 반복 실행은 마지막 실조회 감사값을 지우지 않는다.
             out["dart_refresh"] = previous["dart_refresh"]
         if previous and _semantic_document(previous) == _semantic_document(out):
+            _write_success_heartbeat(out, current_audit)
             print(f"[nps_holdings] unchanged ({out['count']}종목, {out.get('as_of_latest') or 'n/a'})")
             return 0
-        with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-            json.dump(out, f, ensure_ascii=False, indent=1)
+        _write_json(OUTPUT_PATH, out)
+        _write_success_heartbeat(out, current_audit)
         print(f"[nps_holdings] {out['count']}종목 ({out['coverage']}) → {OUTPUT_PATH}")
         return 0
     except Exception as e:  # noqa: BLE001
         print(f"[nps_holdings] FAIL: {e}")
+        _notify_failure(f"실행 예외: {type(e).__name__}", current_audit)
         return 1
 
 

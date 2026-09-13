@@ -504,13 +504,16 @@ jobs:
       # 공개 가격 스냅샷·랭킹 보드 빌드 step = 2026-07-03 시세 재배포 컴플라이언스 Phase 2 로 은퇴 (KRX raw 발행 중단, 네이버 link-out/TV 위젯 대체)
 
       - name: 국민연금 보유종목 집계 (NPS 공개 패널)
+        id: nps_holdings
         # data.go.kr #15106890 분기 확정값을 바탕으로, 이후 DART 국민연금 지분공시 종목만 증분 조회한다.
-        # 키가 없으면 기존 DART 실조회 캐시+portfolio institutional_holders로 graceful. → data/nps_holdings.json.
+        # 신규 공시 미해결·입력 무결성 실패 시 기존 정상본 보존 + 즉시 알림 + 마지막 step 에서 workflow 실패 확정.
         # 외부 사실 조회(KIS 0). RULE 7 = 대량보유 공시 사실(지분율)만, 점수·추천 0. 다음 step git add data/ (broad) 자동 = RULE 4. publish allowlist 등재 완료.
         continue-on-error: true
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python -m api.collectors.nps_holdings
 
       - name: 증권 대차잔고 집계 (공매도 압력 proxy, 금융위 공개패널)
@@ -887,3 +890,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           personal_token: ${{ secrets.VERITY_DATA_PAT }}
           blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
+
+      - name: 국민연금 보유 신선도 실패 확정
+        if: always() && steps.nps_holdings.outcome == 'failure'
+        run: |
+          echo "::error::국민연금 보유 수집 실패 — 기존 정상본 유지, 즉시 알림 전송"
+          exit 1
