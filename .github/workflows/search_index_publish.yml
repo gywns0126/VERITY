@@ -1,0 +1,37 @@
+name: Publish search index only (manual)
+
+# No cron, analysis, KIS, portfolio sync, data regeneration, or broad publish action.
+# Writes precisely one existing public Blob, with additive + ETag race guards.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verity-public-search-only
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install existing Blob SDK version
+        run: npm install --no-save --no-audit --no-fund @vercel/blob@2.4.1
+      - name: Search contract tests
+        run: |
+          node --test tests/search_index_publish.test.cjs
+          node tests/holdings_adr_search.test.cjs
+      - name: Publish and read back universe_search.json only
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: node scripts/publish_search_index.cjs
