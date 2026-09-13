@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-09-14T03:08:30.961299+09:00",
+  "generated_at": "2026-09-14T05:51:11.208533+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 322465,
-    "python_modules": 1052,
+    "code_lines_tsx_py": 322674,
+    "python_modules": 1054,
     "tsx_components": 141,
     "json_data_files": 2299,
     "json_total_tracked": 2320,
-    "workflows": 79,
+    "workflows": 80,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 8215
+    "git_tracked_files": 8223
   },
   "subsystems": {
     "ingest": {
@@ -179,7 +179,7 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 79,
+      "count": 80,
       "scheduled": 62,
       "workflows": [
         {
@@ -457,6 +457,11 @@
             "30 0 * * *"
           ],
           "scheduled": true
+        },
+        {
+          "name": "nest_exposure_publish",
+          "crons": [],
+          "scheduled": false
         },
         {
           "name": "new_listings",
@@ -748,9 +753,9 @@
   },
   "python_by_dir": {
     "api": 456,
-    "tests": 365,
+    "tests": 366,
     "scripts": 156,
-    "vercel-api": 62,
+    "vercel-api": 63,
     "server": 7,
     ".github": 6
   },
