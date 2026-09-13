@@ -35,17 +35,20 @@ async function main() {
     const body = fs.readFileSync("data/" + NAME);
     const next = JSON.parse(body);
     const catalog = JSON.parse(fs.readFileSync("data/us_depositary_search.json", "utf8"));
+    const { put, head } = require("@vercel/blob");
+    // CDN GET can return a weak W/ ETag. Conditional writes need the storage ETag.
+    const metadata = await head(URL);
     const response = await fetch(URL + "?verify=" + Date.now(), {signal: AbortSignal.timeout(30000)});
     assert(response.ok, "current public read failed: " + response.status);
-    const etag = response.headers.get("etag");
+    const etag = metadata.etag;
     assert(etag, "missing ETag; conditional overwrite required");
+    assert.equal(response.headers.get("etag")?.replace(/^W\//, ""), etag.replace(/^W\//, ""), "CDN and storage differ");
     const current = await response.json();
     const coverage = validate(current, next, catalog);
     // A concurrent main update invalidates this checkout; never publish a stale target.
     cp.execFileSync("git", ["fetch", "origin", "main", "--quiet"]);
     const latest = cp.execFileSync("git", ["show", "origin/main:data/" + NAME], {maxBuffer: 12000000});
     assert(body.equals(latest), "main changed; re-run with fresh checkout");
-    const { put } = require("@vercel/blob");
     const result = await put(NAME, body, {
         access: "public", addRandomSuffix: false, allowOverwrite: true,
         contentType: "application/json", cacheControlMaxAge: 3600,
@@ -63,6 +66,8 @@ async function main() {
 module.exports = {validate};
 if (require.main === module) main().catch(e => {
     // Never print SDK request URLs/credentials.
-    console.error("search-only publish failed: " + (e.code || e.name));
+    const safe = String(e.message || "").split(process.env.BLOB_READ_WRITE_TOKEN || "__NO_TOKEN__").join("[redacted]")
+        .replace(/https?:\/\/\S+/g, "[url]").replace(/vercel_blob_rw_[A-Za-z0-9_]+/g, "[redacted]");
+    console.error("search-only publish failed: " + (e.code || e.constructor.name) + " " + safe);
     process.exitCode = 1;
 });
