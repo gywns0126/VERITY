@@ -94,10 +94,12 @@ def test_published_citations_are_url_only_and_broker_official() -> None:
             "domestic_source": "",
             "overseas_source": "https://m.nhqv.com/fee",
             "fx_source": "https://card.example/offer",
+            "event_source": "",
         }
     ]
 
     citations = _sanitize_sources(brokers)
 
     assert citations == ["https://www.nhqv.com", "https://m.nhqv.com/fee"]
+    assert brokers[0]["event_source"] == ""
     assert all(url.startswith("https://") for url in citations)
