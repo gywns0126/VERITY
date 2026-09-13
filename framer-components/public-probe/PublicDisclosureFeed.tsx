@@ -457,10 +457,19 @@ export default function PublicDisclosureFeed(props: Props) {
     useEffect(() => {
         const el = rootRef.current
         if (!el || typeof ResizeObserver === "undefined") return
+        // Keep responsive width independent from padding changes at the 520px breakpoint.
         const ro = new ResizeObserver((entries) => {
-            for (const e of entries) setW(e.contentRect.width)
+            for (const e of entries) {
+                const width = e.borderBoxSize?.[0]?.inlineSize ?? el.offsetWidth
+                if (Number.isFinite(width) && width > 0)
+                    setW((prev) => (prev === width ? prev : width))
+            }
         })
-        ro.observe(el)
+        try {
+            ro.observe(el, { box: "border-box" })
+        } catch {
+            ro.observe(el)
+        }
         return () => ro.disconnect()
     }, [])
 
