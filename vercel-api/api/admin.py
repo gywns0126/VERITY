@@ -1063,7 +1063,7 @@ def handle_audit_log(handler, method: str, body: dict) -> dict:
 
 
 _NOTICE_KINDS = ("notice", "event")
-_NOTICE_FIELDS = ("kind", "title", "body", "link", "pinned", "starts_at", "ends_at", "is_active")
+_NOTICE_FIELDS = ("kind", "title", "body", "link", "pinned", "site_wide", "starts_at", "ends_at", "is_active")
 
 
 def _notice_payload(body: dict) -> dict:
@@ -1077,8 +1077,21 @@ def _notice_payload(body: dict) -> dict:
             v = str(v or "notice").strip()
             if v not in _NOTICE_KINDS:
                 v = "notice"
-        elif k in ("title", "body", "link"):
+        elif k == "link":
+            v = str(v or "").strip()
+            if len(v) > 500 or any(ord(c) < 32 for c in v) or "\\" in v:
+                raise ValueError("invalid_notice_link")
+            if v:
+                parsed = urlparse(v)
+                internal = v.startswith("/") and not v.startswith("//")
+                external = parsed.scheme == "https" and bool(parsed.hostname) and not parsed.username and not parsed.password
+                if not (internal or external):
+                    raise ValueError("invalid_notice_link")
+        elif k in ("title", "body"):
             v = str(v or "").strip()[: (120 if k == "title" else 2000)]
+        elif k == "site_wide":
+            if not isinstance(v, bool):
+                raise ValueError("site_wide_must_be_boolean")
         elif k in ("pinned", "is_active"):
             v = bool(v)
         elif k in ("starts_at", "ends_at"):
@@ -1097,19 +1110,29 @@ def handle_notices(handler, method: str, body: dict) -> dict:
         # 관리자 목록 = 비활성·기간 지난 것 포함 전량
         params = parse_qs(urlparse(handler.path).query)
         limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
-        r = requests.get(f"{SUPABASE_URL}/rest/v1/notices", headers=_svc_headers(),
-                         params={"select": "id,kind,title,body,link,pinned,starts_at,ends_at,is_active,created_at,updated_at",
-                                 "order": "pinned.desc,created_at.desc", "limit": str(limit)}, timeout=_t(10))
+        fields = "id,kind,title,body,link,pinned,starts_at,ends_at,is_active,created_at,updated_at"
+        query = {"select": fields + ",site_wide", "order": "pinned.desc,created_at.desc", "limit": str(limit)}
+        r = requests.get(f"{SUPABASE_URL}/rest/v1/notices", headers=_svc_headers(), params=query, timeout=_t(10))
+        site_wide_ready = True
+        if r.status_code == 400 and "site_wide" in (r.text or "") and any(code in r.text for code in ("42703", "PGRST204")):
+            # Deploy before migration must not break the existing notice manager.
+            site_wide_ready = False
+            query["select"] = fields
+            r = requests.get(f"{SUPABASE_URL}/rest/v1/notices", headers=_svc_headers(), params=query, timeout=_t(10))
         if r.status_code == 404 or "PGRST205" in (r.text or ""):
             # 🚨 027 미적용 = 흔한 상태. 502 로 뭉개면 화면에 "HTTP 502" 만 떠 원인을 못 봄(2026-07-27 실사고).
             return {"_status": 200, "_body": {"items": [], "migration_required": "027_notices"}}
         if r.status_code != 200:
             return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
-        return {"_status": 200, "_body": {"items": r.json()}}
+        return {"_status": 200, "_body": {"items": r.json(), "site_wide_ready": site_wide_ready,
+                                        "site_wide_migration": "" if site_wide_ready else "038_notice_sitewide"}}
 
     if method == "POST":
         nid = str(body.get("id", "")).strip()
-        payload = _notice_payload(body)
+        try:
+            payload = _notice_payload(body)
+        except ValueError as exc:
+            return {"_status": 400, "_body": {"error": str(exc)}}
         if nid:  # 수정
             if not payload:
                 return {"_status": 400, "_body": {"error": "no_fields"}}

@@ -3,6 +3,8 @@
 
 GET /api/notices            → 활성 + 노출 기간 내 공지/이벤트 (pinned 우선 → 최신), 최대 20
 GET /api/notices?kind=event → 이벤트만
+GET /api/notices?placement=site → 전체 페이지 알림을 명시한 공지만 (038)
+GET /api/notices?id=<uuid> → 공지 본문 연결 (같은 anon RLS 적용)
 
 발행/수정/삭제 = `/api/admin?type=notices` (관리자 인증 + 서비스 role + 감사 로그). 여기는 읽기 전용.
 
@@ -16,6 +18,7 @@ GET /api/notices?kind=event → 이벤트만
 from http.server import BaseHTTPRequestHandler
 import json
 import logging
+import re
 import os
 import time
 import traceback
@@ -31,8 +34,8 @@ _RATE_MAX = 120
 _logger = logging.getLogger(__name__)
 _LIMIT = 20
 _KINDS = ("notice", "event")
-# 공지는 자주 바뀌지 않음 — CDN 60초 캐시로 반복 조회 부담 제거(운영 반영 지연 상한도 60초).
-_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=300"
+# CDN 30초 + 배너 30초 조회. 오류 응답은 캐시하지 않고 종료 시각은 클라이언트도 검사.
+_CACHE = "public, max-age=30, s-maxage=30, must-revalidate"
 
 
 def _safe_err(exc, public_msg: str = "Internal error") -> str:
@@ -77,20 +80,33 @@ class handler(BaseHTTPRequestHandler):
 
         qs = parse_qs(urlparse(self.path).query)
         kind = (qs.get("kind", [""])[0] or "").strip()
+        notice_id = (qs.get("id", [""])[0] or "").strip()
+        if notice_id and not re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", notice_id):
+            return _json_response(self, {"error": "invalid_notice_id"}, 400, "no-store")
 
         params = {
-            "select": "id,kind,title,body,link,pinned,starts_at,ends_at,created_at",
+            "select": "*",  # Output below is explicitly whitelisted; compatible with pre-038 schema.
             "order": "pinned.desc,created_at.desc",
             "limit": str(_LIMIT),
         }
+        if qs.get("placement", [""])[0] == "site":
+            params["site_wide"] = "eq.true"  # Filter BEFORE limit; never infer from pinned.
         if kind in _KINDS:
             params["kind"] = f"eq.{kind}"
+        if notice_id:
+            params["id"] = f"eq.{notice_id}"  # Same anon RLS, including expiry/active checks.
 
         try:
             rows = sb.select("notices", params)
-        except Exception:
-            # 027 미적용 DB(테이블 부재) — 배너 없이 정상 렌더
-            return _json_response(self, {"items": []}, 200, "no-store")
+        except Exception as exc:
+            response = getattr(exc, "response", None)
+            detail = getattr(response, "text", "") or ""
+            missing = any(code in detail for code in ("PGRST205", "42P01"))
+            migration = "site_wide" in detail and any(code in detail for code in ("42703", "PGRST204"))
+            if missing or migration:
+                return _json_response(self, {"items": [], "migration_required": "038_notice_sitewide" if migration else "027_notices"}, 200, "no-store")
+            _safe_err(exc)
+            return _json_response(self, {"items": [], "error": "notices_unavailable"}, 503, "no-store")
 
         items = [{
             "id": r.get("id"),
@@ -99,6 +115,7 @@ class handler(BaseHTTPRequestHandler):
             "body": r.get("body") or "",
             "link": r.get("link") or "",
             "pinned": bool(r.get("pinned")),
+            "site_wide": r.get("site_wide") is True,
             "starts_at": r.get("starts_at") or "",
             "ends_at": r.get("ends_at") or "",
             "created_at": r.get("created_at") or "",
