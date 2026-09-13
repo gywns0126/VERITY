@@ -30,6 +30,15 @@ function validate(current, next, catalog) {
     return { total: next.stocks.length, catalog: catalog.stocks.length, preserved: current.stocks.length };
 }
 
+async function verifyReadback(body, read = fetch, pause = ms => new Promise(resolve => setTimeout(resolve, ms)), attempts = 12) {
+    for (let i = 0; i < attempts; i++) {
+        if (i) await pause(10000);
+        const check = await read(URL + "?verify=" + Date.now(), {signal: AbortSignal.timeout(30000)});
+        if (check.ok && body.equals(Buffer.from(await check.arrayBuffer()))) return;
+    }
+    throw new Error("public bytes differ after CDN propagation window");
+}
+
 async function main() {
     assert(process.env.BLOB_READ_WRITE_TOKEN, "existing Blob secret required");
     const body = fs.readFileSync("data/" + NAME);
@@ -43,27 +52,29 @@ async function main() {
     const etag = metadata.etag;
     assert(etag, "missing ETag; conditional overwrite required");
     assert.equal(response.headers.get("etag")?.replace(/^W\//, ""), etag.replace(/^W\//, ""), "CDN and storage differ");
-    const current = await response.json();
+    const currentBody = Buffer.from(await response.arrayBuffer());
+    const current = JSON.parse(currentBody);
     const coverage = validate(current, next, catalog);
     // A concurrent main update invalidates this checkout; never publish a stale target.
     cp.execFileSync("git", ["fetch", "origin", "main", "--quiet"]);
     const latest = cp.execFileSync("git", ["show", "origin/main:data/" + NAME], {maxBuffer: 12000000});
     assert(body.equals(latest), "main changed; re-run with fresh checkout");
-    const result = await put(NAME, body, {
-        access: "public", addRandomSuffix: false, allowOverwrite: true,
-        contentType: "application/json", cacheControlMaxAge: 3600,
-        ifMatch: etag,
-    });
-    assert.equal(result.url, URL, "unexpected store/target");
-    const check = await fetch(URL + "?verify=" + Date.now(), {signal: AbortSignal.timeout(30000)});
-    assert(check.ok, "public readback failed");
-    const readback = Buffer.from(await check.arrayBuffer());
-    assert(body.equals(readback), "public bytes differ after upload");
+    const unchanged = currentBody.equals(body);
+    if (!unchanged) {
+        const result = await put(NAME, body, {
+            access: "public", addRandomSuffix: false, allowOverwrite: true,
+            contentType: "application/json", cacheControlMaxAge: 3600,
+            ifMatch: etag,
+        });
+        assert.equal(result.url, URL, "unexpected store/target");
+    }
+    // An accepted PUT can precede CDN propagation. Retry reads only, never writes.
+    await verifyReadback(body);
     console.log(JSON.stringify({file: NAME, ...coverage, generated_at: next._meta.generated_at,
-        sha256: crypto.createHash("sha256").update(body).digest("hex"), published: "1/1"}));
+        sha256: crypto.createHash("sha256").update(body).digest("hex"), published: "1/1", unchanged}));
 }
 
-module.exports = {validate};
+module.exports = {validate, verifyReadback};
 if (require.main === module) main().catch(e => {
     // Never print SDK request URLs/credentials.
     const safe = String(e.message || "").split(process.env.BLOB_READ_WRITE_TOKEN || "__NO_TOKEN__").join("[redacted]")
