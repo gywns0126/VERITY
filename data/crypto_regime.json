@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-09-13T21:02:32+09:00",
+  "collected_at": "2026-09-13T21:32:13+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
-    "call": "risk_off",
-    "net_score": -2,
+    "call": "neutral",
+    "net_score": 0,
     "active_dims": 4,
     "rule": "net≥+2 risk_on / ≤−2 risk_off / else neutral (투명 tally, 가중치 없음)"
   },
@@ -16,7 +16,7 @@
       "active": true,
       "drivers": {
         "fng": 61.0,
-        "search_trend_pct": -21.4
+        "search_trend_pct": -21.7
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -28,18 +28,19 @@
       "drivers": {
         "funding_signal": "neutral",
         "put_call_oi": 0.557,
-        "long_short_ratio": 1.68
+        "long_short_ratio": 1.69
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
     {
       "name": "자금흐름",
-      "vote": -1,
-      "read": "off",
+      "vote": 1,
+      "read": "on",
       "active": true,
       "drivers": {
         "btc_net_inflow_usd": -13289298.11,
-        "combined_net_inflow_usd": -13289298.11
+        "eth_net_inflow_usd": 216413007.36000016,
+        "combined_net_inflow_usd": 203123709.25000018
       },
       "rule": "ETF(BTC+ETH) 일일 순유입 on / 순유출 off"
     },
@@ -60,7 +61,7 @@
       "active": false,
       "drivers": {
         "ssr": 5.98,
-        "stablecoin_supply_usd": 257754246259.72394
+        "stablecoin_supply_usd": 257753218957.46387
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -69,11 +70,17 @@
       "vote": 0,
       "read": "브릿지 대기",
       "active": false,
-      "drivers": {},
+      "drivers": {
+        "top_protocol_fees_24h": {
+          "name": "Ociswap Basic",
+          "fees_24h": 23964080271.0
+        },
+        "protocol_count": 25
+      },
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 76747.0,
+  "btc_price_at_call": 76817.0,
   "trail": [
     {
       "date": "2026-06-24",
@@ -644,9 +651,9 @@
     },
     {
       "date": "2026-09-13",
-      "call": "risk_off",
-      "net_score": -2,
-      "btc_price": 76747.0,
+      "call": "neutral",
+      "net_score": 0,
+      "btc_price": 76817.0,
       "active_dims": 4
     }
   ],
@@ -663,7 +670,7 @@
         "horizon_days": 30,
         "n": 24,
         "hit_rate": 0.375,
-        "mean_realized_return": 0.171815,
+        "mean_realized_return": 0.171954,
         "label": "통계 무의미 (N<30)"
       }
     ],
