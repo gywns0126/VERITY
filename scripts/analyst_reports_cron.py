@@ -136,6 +136,9 @@ def main() -> int:
 
     # ── ① 리포트 메타 수집 (네이버·KIRS 공개) ──
     meta, st, company_total = _collect_with_retry()
+    if company_total == 0 and VERITY_MODE not in ("dev", "staging"):
+        print("❌ 기업 리포트 수집 0건 — 기존 입력·요약 보존, 이번 실행 실패 (exit 1)")
+        return 1
 
     # ── ② 요약 + 종목별 집계 ──
     pri = _priority_tickers()

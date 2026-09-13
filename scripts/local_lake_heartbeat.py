@@ -153,8 +153,8 @@ def main() -> int:
     bad = [a["name"] for a in health["artifacts"] if a["status"] != "fresh"]
     print(f"[heartbeat] {OUT} — {len(health['artifacts'])} 아티팩트, "
           f"stale/missing={bad or '없음'}")
-    if "--publish" in sys.argv:
-        _publish_to_main()
+    if "--publish" in sys.argv and not _publish_to_main():
+        return 1
     return 0
 
 
