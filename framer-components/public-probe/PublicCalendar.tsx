@@ -161,8 +161,19 @@ export default function PublicCalendar(props: { dataUrl?: string; stockPath?: st
     useEffect(() => {
         const el = rootRef.current
         if (!el || typeof ResizeObserver === "undefined") return
-        const ro = new ResizeObserver((e) => { for (const x of e) setW(x.contentRect.width) })
-        ro.observe(el)
+        // Keep the 560px layout decision independent from responsive padding.
+        const ro = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const width = entry.borderBoxSize?.[0]?.inlineSize ?? el.offsetWidth
+                if (Number.isFinite(width) && width > 0)
+                    setW((prev) => (prev === width ? prev : width))
+            }
+        })
+        try {
+            ro.observe(el, { box: "border-box" })
+        } catch {
+            ro.observe(el)
+        }
         return () => ro.disconnect()
     }, [])
 
