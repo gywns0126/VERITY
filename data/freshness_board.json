@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-09-13T14:35:55.170775+09:00",
+  "generated_at": "2026-09-13T19:56:59.513371+09:00",
   "count": 64,
   "source": "freshness_sla 매니페스트 매시 능동검사 (실측 나이 vs SLA 임계)",
   "note": "상태 = 마지막 갱신 시각 실측 비교 사실만. 주말·장 마감 무생산 구간은 유효 나이에서 제외하며 closed(휴장, 정상)로 표시. 수집 중단은 discontinued. 점수·예측 아님."
@@ -47,9 +47,9 @@
    "criticality": "P0",
    "schedule": "always",
    "cadence": "30분 목표",
-   "age_eff_min": 3.6,
+   "age_eff_min": 24.9,
    "max_age_min": 90,
-   "last_ts": "2026-09-13T14:32:21+09:00",
+   "last_ts": "2026-09-13T19:32:05+09:00",
    "status": "fresh"
   },
   {
@@ -69,9 +69,9 @@
    "criticality": "P0",
    "schedule": "always",
    "cadence": "1~2시간 주기",
-   "age_eff_min": 33.9,
+   "age_eff_min": 25.0,
    "max_age_min": 360,
-   "last_ts": "2026-09-13T14:02:04+09:00",
+   "last_ts": "2026-09-13T19:32:01+09:00",
    "status": "fresh"
   },
   {
@@ -91,7 +91,7 @@
    "criticality": "P0",
    "schedule": "weekday",
    "cadence": "매일 1회",
-   "age_eff_min": -0.0,
+   "age_eff_min": 0.0,
    "max_age_min": 4320,
    "last_ts": "2026-09-12T13:30:44.591119+09:00",
    "status": "closed"
@@ -113,7 +113,7 @@
    "criticality": "P1",
    "schedule": "always",
    "cadence": "매일 1회",
-   "age_eff_min": 84.0,
+   "age_eff_min": 405.1,
    "max_age_min": 2160,
    "last_ts": "2026-09-13T13:11:55+09:00",
    "status": "fresh"
@@ -124,7 +124,7 @@
    "criticality": "P1",
    "schedule": "weekly",
    "cadence": "주 1회",
-   "age_eff_min": 9459.1,
+   "age_eff_min": 9780.2,
    "max_age_min": 11520,
    "last_ts": "2026-09-07T00:56:48+09:00",
    "status": "fresh"
@@ -135,7 +135,7 @@
    "criticality": "P1",
    "schedule": "weekly",
    "cadence": "주 1회",
-   "age_eff_min": 9436.4,
+   "age_eff_min": 9757.4,
    "max_age_min": 11520,
    "last_ts": "2026-09-07T01:19:34+09:00",
    "status": "fresh"
@@ -146,7 +146,7 @@
    "criticality": "P1",
    "schedule": "weekday",
    "cadence": "평일 1회",
-   "age_eff_min": -0.0,
+   "age_eff_min": 0.0,
    "max_age_min": 4320,
    "last_ts": "2026-09-12T13:33:16.853964+09:00",
    "status": "closed"
@@ -157,7 +157,7 @@
    "criticality": "P1",
    "schedule": "always",
    "cadence": "매일 1회",
-   "age_eff_min": 336.3,
+   "age_eff_min": 657.4,
    "max_age_min": 2160,
    "last_ts": "2026-09-13T08:59:35+09:00",
    "status": "fresh"
@@ -233,7 +233,7 @@
    "criticality": "P1",
    "schedule": "weekday",
    "cadence": "평일 1회",
-   "age_eff_min": 0.0,
+   "age_eff_min": -0.0,
    "max_age_min": 4320,
    "last_ts": "2026-09-12T13:30:27.697552+09:00",
    "status": "closed"
@@ -244,7 +244,7 @@
    "criticality": "P1",
    "schedule": "always",
    "cadence": "매일 1회",
-   "age_eff_min": 382.8,
+   "age_eff_min": 703.9,
    "max_age_min": 2160,
    "last_ts": "2026-09-13T08:13:07+09:00",
    "status": "fresh"
@@ -255,7 +255,7 @@
    "criticality": "P1",
    "schedule": "weekday",
    "cadence": "평일 1회",
-   "age_eff_min": 0.0,
+   "age_eff_min": -0.0,
    "max_age_min": 4320,
    "last_ts": "2026-09-12T13:41:18.145343+09:00",
    "status": "closed"
@@ -285,7 +285,7 @@
    "criticality": "P1",
    "schedule": "monthly",
    "cadence": "월 1회",
-   "age_eff_min": 8014.0,
+   "age_eff_min": 8335.0,
    "max_age_min": 50400,
    "last_ts": "2026-09-08T01:01:57+09:00",
    "status": "fresh"
@@ -296,9 +296,9 @@
    "criticality": "P1",
    "schedule": "always",
    "cadence": "매일 1회",
-   "age_eff_min": 1239.3,
+   "age_eff_min": 106.1,
    "max_age_min": 2160,
-   "last_ts": "2026-09-12T17:56:34.242962+09:00",
+   "last_ts": "2026-09-13T18:10:51.935701+09:00",
    "status": "fresh"
   },
   {
@@ -307,7 +307,7 @@
    "criticality": "P1",
    "schedule": "monthly",
    "cadence": "월 1회",
-   "age_eff_min": 2339.9,
+   "age_eff_min": 2660.9,
    "max_age_min": 50400,
    "last_ts": "2026-09-11T23:36:02.720876+09:00",
    "status": "fresh"
@@ -329,7 +329,7 @@
    "criticality": "P2",
    "schedule": "monthly",
    "cadence": "월 1회",
-   "age_eff_min": 17236.6,
+   "age_eff_min": 17557.7,
    "max_age_min": 50400,
    "last_ts": "2026-09-01T15:19:18.107016+09:00",
    "status": "fresh"
@@ -351,7 +351,7 @@
    "criticality": "P2",
    "schedule": "weekday",
    "cadence": "평일 1회",
-   "age_eff_min": -0.0,
+   "age_eff_min": 0.0,
    "max_age_min": 4320,
    "last_ts": "2026-09-12T13:33:17.633112+09:00",
    "status": "closed"
@@ -373,7 +373,7 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "월 1회",
-   "age_eff_min": 2339.9,
+   "age_eff_min": 2661.0,
    "max_age_min": 50400,
    "last_ts": "2026-09-11T23:36:01.603733+09:00",
    "status": "fresh"
@@ -384,7 +384,7 @@
    "criticality": "P2",
    "schedule": "weekly",
    "cadence": "주 1회",
-   "age_eff_min": 9436.3,
+   "age_eff_min": 9757.3,
    "max_age_min": 11520,
    "last_ts": "2026-09-07T01:19:39.700749+09:00",
    "status": "fresh"
@@ -416,7 +416,7 @@
    "criticality": "P2",
    "schedule": "weekly",
    "cadence": "주 1회",
-   "age_eff_min": 9059.1,
+   "age_eff_min": 9380.2,
    "max_age_min": 12960,
    "last_ts": "2026-09-07T07:36:47+09:00",
    "status": "fresh"
@@ -438,7 +438,7 @@
    "criticality": "P2",
    "schedule": "weekly",
    "cadence": "주 1회",
-   "age_eff_min": 8900.3,
+   "age_eff_min": 9221.4,
    "max_age_min": 12960,
    "last_ts": "2026-09-07T10:15:37.650292+09:00",
    "status": "fresh"
@@ -459,7 +459,7 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "비정기",
-   "age_eff_min": 93187.5,
+   "age_eff_min": 93508.6,
    "max_age_min": 129600,
    "last_ts": "2026-07-10T21:28:23.192812+09:00",
    "status": "fresh"
@@ -470,7 +470,7 @@
    "criticality": "P2",
    "schedule": "weekly",
    "cadence": "주 1회",
-   "age_eff_min": 8961.3,
+   "age_eff_min": 9282.4,
    "max_age_min": 12960,
    "last_ts": "2026-09-07T09:14:36+09:00",
    "status": "fresh"
@@ -492,7 +492,7 @@
    "criticality": "P2",
    "schedule": "weekly",
    "cadence": "주 1회",
-   "age_eff_min": 8920.1,
+   "age_eff_min": 9241.2,
    "max_age_min": 12960,
    "last_ts": "2026-09-07T09:55:49+09:00",
    "status": "fresh"
@@ -503,13 +503,13 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "월 1회",
-   "age_eff_min": 23940.2,
+   "age_eff_min": 24261.3,
    "max_age_min": 50400,
    "last_ts": "2026-08-27T23:35:42+09:00",
    "status": "fresh",
    "content_status": "fresh",
    "content_ts": "2026-07-31T23:59:00+09:00",
-   "content_age_min": 62796.9,
+   "content_age_min": 63118.0,
    "max_content_age_min": 86400
   },
   {
@@ -537,7 +537,7 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "매일 1회",
-   "age_eff_min": 381.9,
+   "age_eff_min": 703.0,
    "max_age_min": 2160,
    "last_ts": "2026-09-13T08:14:01+09:00",
    "status": "fresh"
@@ -559,7 +559,7 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "주 1회",
-   "age_eff_min": 1983.7,
+   "age_eff_min": 2304.7,
    "max_age_min": 12960,
    "last_ts": "2026-09-12T05:32:15+09:00",
    "status": "fresh"
@@ -592,7 +592,7 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "주 1회",
-   "age_eff_min": 9640.9,
+   "age_eff_min": 9961.9,
    "max_age_min": 12960,
    "last_ts": "2026-09-06T21:55:04.160626+09:00",
    "status": "fresh"
@@ -636,9 +636,9 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "매일 1회",
-   "age_eff_min": 1210.4,
+   "age_eff_min": 32.6,
    "max_age_min": 2160,
-   "last_ts": "2026-09-12T18:25:32.926108+09:00",
+   "last_ts": "2026-09-13T19:24:26.439102+09:00",
    "status": "fresh"
   },
   {
@@ -647,9 +647,9 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "월 1회",
-   "age_eff_min": 1210.4,
+   "age_eff_min": 32.5,
    "max_age_min": 50400,
-   "last_ts": "2026-09-12T18:25:33.289514+09:00",
+   "last_ts": "2026-09-13T19:24:26.675889+09:00",
    "status": "fresh"
   },
   {
@@ -658,9 +658,9 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "매일 1회",
-   "age_eff_min": 1238.2,
+   "age_eff_min": 105.1,
    "max_age_min": 2160,
-   "last_ts": "2026-09-12T17:57:46.005188+09:00",
+   "last_ts": "2026-09-13T18:11:54.326851+09:00",
    "status": "fresh"
   },
   {
@@ -669,7 +669,7 @@
    "criticality": "P2",
    "schedule": "weekly",
    "cadence": "주 3회",
-   "age_eff_min": 2622.0,
+   "age_eff_min": 2943.1,
    "max_age_min": 5760,
    "last_ts": "2026-09-11T18:53:54.113734+09:00",
    "status": "fresh"
@@ -680,7 +680,7 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "월 1회",
-   "age_eff_min": 8013.9,
+   "age_eff_min": 8335.0,
    "max_age_min": 50400,
    "last_ts": "2026-09-08T01:02:00.563181+09:00",
    "status": "fresh"
@@ -691,9 +691,9 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "매일 1회",
-   "age_eff_min": 1239.3,
+   "age_eff_min": 106.1,
    "max_age_min": 2160,
-   "last_ts": "2026-09-12T17:56:34.418506+09:00",
+   "last_ts": "2026-09-13T18:10:52.142484+09:00",
    "status": "fresh"
   },
   {
@@ -702,7 +702,7 @@
    "criticality": "P2",
    "schedule": "always",
    "cadence": "월 1회",
-   "age_eff_min": 9884.8,
+   "age_eff_min": 10205.9,
    "max_age_min": 50400,
    "last_ts": "2026-09-06T17:51:07.526103+09:00",
    "status": "fresh"
@@ -713,7 +713,7 @@
    "criticality": "P2",
    "schedule": "monthly",
    "cadence": "월 1회",
-   "age_eff_min": 9896.0,
+   "age_eff_min": 10217.1,
    "max_age_min": 50400,
    "last_ts": "2026-09-06T17:39:55.520109+09:00",
    "status": "fresh"
@@ -724,7 +724,7 @@
    "criticality": "P2",
    "schedule": "monthly",
    "cadence": "월 1회",
-   "age_eff_min": 16930.8,
+   "age_eff_min": 17251.9,
    "max_age_min": 50400,
    "last_ts": "2026-09-01T20:25:07.494965+09:00",
    "status": "fresh"
