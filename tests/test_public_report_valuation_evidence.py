@@ -22,9 +22,11 @@ class PublicValuationEvidenceTests(unittest.TestCase):
             "recommendations.json": [{"ticker": "000660", "name": "Rich fixture", "market": "KOSPI",
                 "market_cap": 1272.8e12, "per": 99, "eps": 123, "company_tagline": "Preserve business"}],
             "dart_fundamentals_kr.json": {"fundamentals": {"000660": {
-                "net_income": 42.9e12, "report_date": "2025", "reprt_code": "11011", "fs_div": "CFS"}}},
+                "net_income": 42.9e12, "revenue": 97.1e12, "total_assets": 180e12,
+                "debt_ratio": 50, "report_date": "2025", "reprt_code": "11011",
+                "fs_div": "CFS", "source": "DART+yfinance"}}},
             "krx_mktcap.json": {"_meta": {"bas_dd": "20260911", "generated_at": "2099-01-01"}, "map": {
-                "000660": {"mktcap": 1323.7e12}, "466410": {"mktcap": 428e8},
+                "000660": {"mktcap": 1323.7e12, "shares": 730_000_000}, "466410": {"mktcap": 428e8},
                 "000010": {"mktcap": 100e8}}},
         }
         modules = {
@@ -46,7 +48,7 @@ class PublicValuationEvidenceTests(unittest.TestCase):
             stack.enter_context(patch.object(builder, "_load_catalyst_by_ticker", return_value={}))
             stack.enter_context(patch.object(builder, "_load_real_estate_history", return_value={}))
             stack.enter_context(patch.object(builder, "_load_fin_series", return_value={"000010": [
-                {"year": 2024, "net": 10e8}, {"year": 2025, "net": 20e8}]}))
+                {"year": 2024, "net": 10e8}, {"year": 2025, "net": 20e8, "revenue": 50e8}]}))
             stack.enter_context(patch.object(builder, "_load_panel_facts", return_value={"466410": {
                 "net_income_ttm": 59.4e8, "quarter_end": "2026-06-30", "equity": 700e8}}))
             stack.enter_context(patch.object(builder, "_save_person_link_cache"))
@@ -95,6 +97,43 @@ class PublicValuationEvidenceTests(unittest.TestCase):
         self.assertEqual(row["facts_note"]["PER"], "자체계산")
         self.assertEqual(row["facts"]["PER"], "5")
         self.assertNotIn("header", row)
+
+    def test_main_multiples_keep_period_source_and_exact_badges(self):
+        row = self.build_fixture()["000660"]
+        for key in ["PBR", "PSR", "BPS"]:
+            with self.subTest(key=key):
+                text = row["facts_calc"][key]
+                self.assertIn("2025년 연간", text)
+                self.assertIn("연결", text)
+                self.assertIn("원천 레코드 DART+yfinance", text)
+                self.assertIn("2026-09-11", text)
+                self.assertNotIn("2099", text)
+                self.assertEqual(row["facts_note"][key], "자체계산")
+        self.assertEqual(row["facts"]["PBR"], "11")
+        self.assertEqual(row["facts"]["PSR"], "13.63배")
+        self.assertEqual(row["facts"]["BPS"], "164,384원")
+
+    def test_main_equity_method_and_share_date_are_distinct(self):
+        row = self.build_fixture()["000660"]
+        for key in ["PBR", "BPS"]:
+            self.assertIn("자기자본은 총자산 ÷ (1 + 부채비율 / 100)로 산출", row["facts_calc"][key])
+        self.assertIn("주식수 KRX 2026-09-11 기준", row["facts_calc"]["BPS"])
+        self.assertNotIn("시총", row["facts_calc"]["BPS"])
+
+    def test_main_panel_pbr_is_point_in_time_not_ttm(self):
+        row = self.build_fixture()["466410"]
+        self.assertIn("자기자본 2026-06-30 기준", row["facts_calc"]["PBR"])
+        self.assertIn("DART 분기 패널", row["facts_calc"]["PBR"])
+        self.assertNotIn("TTM", row["facts_calc"]["PBR"])
+        self.assertNotIn("부채비율", row["facts_calc"]["PBR"])
+        self.assertNotIn("BPS", row["facts"])
+
+    def test_main_annual_fallback_psr_carries_its_own_period(self):
+        row = self.build_fixture()["000010"]
+        self.assertEqual(row["facts"]["PSR"], "2.00배")
+        self.assertIn("2025년 연간", row["facts_calc"]["PSR"])
+        self.assertIn("DART 연간 재무", row["facts_calc"]["PSR"])
+        self.assertNotIn("PBR", row["facts"])
 
 
 class ValuationEvidenceEdgeTests(unittest.TestCase):
@@ -189,6 +228,78 @@ class ValuationEvidenceEdgeTests(unittest.TestCase):
         self.assertEqual(row["facts"]["PER"], "20")
         self.assertIsNone(row["header"])
         self.assertNotIn("PER", row["facts_calc"])
+
+
+class MultipleEvidenceEdgeTests(unittest.TestCase):
+    def apply(self, metadata=None, date="20260911"):
+        value = {"mktcap": 100e8, "PBR": 2, "PSR": 2, "BPS": 5000,
+                 "_pbr_in": {"mktcap": 100e8, "equity": 50e8},
+                 "_psr_in": {"mktcap": 100e8, "revenue": 50e8},
+                 "_bps_in": {"equity": 50e8, "shares": 1e6}}
+        if metadata:
+            for key, data in metadata.items():
+                value[key].update(data)
+        before = copy.deepcopy(value)
+        row = {"facts": {"PBR": "2", "PSR": "2.00배", "BPS": "5,000원", "EPS": "123원"},
+               "facts_note": {"EPS": "keep"},
+               "facts_calc": {"PBR": "old", "PSR": "old", "BPS": "old", "PER": "keep"}}
+        builder._apply_multiple_evidence(row, value, date)
+        self.assertEqual(value, before)
+        self.assertEqual(row["facts"], {"PBR": "2", "PSR": "2.00배", "BPS": "5,000원", "EPS": "123원"})
+        self.assertEqual(row["facts_calc"]["PER"], "keep")
+        return row
+
+    def test_unknown_dates_periods_and_sources_remain_unknown(self):
+        row = self.apply(date="2026-02-30")
+        for key in ["PBR", "PSR", "BPS"]:
+            self.assertIn("기준일 미확인", row["facts_calc"][key])
+            self.assertIn("공시기간 미확인", row["facts_calc"][key])
+            self.assertIn("원천 레코드 미확인", row["facts_calc"][key])
+            self.assertNotIn("연간", row["facts_calc"][key])
+
+    def test_invalid_denominators_remove_old_explanation_not_numeric_values(self):
+        for name, key, denominator in [("PBR", "_pbr_in", "equity"), ("PSR", "_psr_in", "revenue"),
+                                        ("BPS", "_bps_in", "shares")]:
+            for value in [None, "", "bad", 0, -1, float("nan"), float("inf")]:
+                with self.subTest(name=name, value=value):
+                    row = self.apply({key: {denominator: value}})
+                    self.assertNotIn(name, row["facts_calc"])
+                    self.assertEqual(row["facts_note"][name], "자체계산 · 계산 근거 미확인")
+
+    def test_invalid_numerators_and_cap_mismatch_do_not_publish(self):
+        for key, name, field in [("_pbr_in", "PBR", "mktcap"), ("_psr_in", "PSR", "mktcap"),
+                                  ("_bps_in", "BPS", "equity")]:
+            for value in [None, 0, float("inf")]:
+                with self.subTest(key=key, value=value):
+                    self.assertNotIn(name, self.apply({key: {field: value}})["facts_calc"])
+        for name in ["PBR", "PSR"]:
+            self.assertNotIn(name, self.apply({f"_{name.lower()}_in": {"mktcap": 101e8}})["facts_calc"])
+
+    def test_stock_period_and_interim_flow_labels_are_not_invented(self):
+        row = self.apply({"_pbr_in": {"basis": "point_in_time", "quarter_end": "bad"},
+                          "_psr_in": {"basis": "reported", "fiscal_year": 2026, "reprt_code": "11012"}})
+        self.assertIn("자기자본 기준일 미확인", row["facts_calc"]["PBR"])
+        self.assertNotIn("TTM", row["facts_calc"]["PBR"])
+        self.assertIn("2026년 반기 공시", row["facts_calc"]["PSR"])
+        self.assertNotIn("연간", row["facts_calc"]["PSR"])
+
+    def test_missing_multiple_preserves_existing_explanation(self):
+        row = {"facts_calc": {"PBR": "existing"}, "facts_note": {"PBR": "existing"}}
+        builder._apply_multiple_evidence(row, {}, None)
+        self.assertEqual(row, {"facts_calc": {"PBR": "existing"}, "facts_note": {"PBR": "existing"}})
+
+    def test_fractional_shares_are_not_silently_truncated(self):
+        row = self.apply({"_bps_in": {"shares": 1000000.5}})
+        self.assertNotIn("BPS", row["facts_calc"])
+        self.assertIn("미확인", row["facts_note"]["BPS"])
+
+    def test_separate_and_consolidated_statements_remain_distinct(self):
+        for division, label in [("CFS", "연결"), ("OFS", "별도")]:
+            with self.subTest(division=division):
+                row = self.apply({"_psr_in": {"fs_div": division, "source": "unknown-provider"}})
+                self.assertIn(label, row["facts_calc"]["PSR"])
+                self.assertIn("원천 레코드 미확인", row["facts_calc"]["PSR"])
+                self.assertNotIn("unknown-provider", row["facts_calc"]["PSR"])
 
 
 if __name__ == "__main__":

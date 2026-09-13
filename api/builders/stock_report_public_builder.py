@@ -11,6 +11,8 @@
 순수 변환 — 외부호출/KIS 0. publish: data/stock_report_public.json (action.yml 목록 등재됨).
 되돌리지 말 것 (2026-09-13): 표시 시총·header는 valuation 입력과 일치시킨다.
 PER 근거는 선택된 연간/TTM 순이익과 원천 기간을 보존하고, 생성시각을 기준일로 쓰지 않는다.
+PBR·PSR·BPS 근거는 해당 입력의 기간·원천 레코드와 KRX 기준일을 보존한다.
+분기 자기자본은 시점 값이며 TTM이 아니다. 자산·부채비율로 산출한 자본은 방법을 밝힌다.
 """
 from __future__ import annotations
 
@@ -782,9 +784,66 @@ def _apply_cap_per_facts(stock: Dict[str, Any], val: Dict[str, Any], cap_as_of: 
                            f"({_per_period(pin)} · {cap_basis})")
 
 
+def _apply_multiple_evidence(stock: Dict[str, Any], val: Dict[str, Any], market_as_of: Any = None) -> None:
+    """기존 PBR·PSR·BPS 값은 건드리지 않고 해당 입력의 설명만 부착한다."""
+    notes = stock.setdefault("facts_note", {})
+    calculations = stock.setdefault("facts_calc", {})
+    market_date = _evidence_date(market_as_of)
+    for metric, input_key, numerator_key, denominator_key in (
+        ("PBR", "_pbr_in", "mktcap", "equity"),
+        ("PSR", "_psr_in", "mktcap", "revenue"),
+        ("BPS", "_bps_in", "equity", "shares"),
+    ):
+        if val.get(metric) is None:
+            continue
+        inputs = val.get(input_key) or {}
+        try:
+            numerator = float(inputs.get(numerator_key))
+            denominator = float(inputs.get(denominator_key))
+            valid = (math.isfinite(numerator) and math.isfinite(denominator)
+                     and numerator > 0 and denominator > 0)
+            if metric != "BPS":
+                valid = valid and numerator == float(val.get("mktcap"))
+            else:
+                valid = valid and denominator.is_integer()
+        except (TypeError, ValueError, OverflowError):
+            valid = False
+        if not valid:
+            calculations.pop(metric, None)
+            notes[metric] = "자체계산 · 계산 근거 미확인"
+            continue
+
+        # 레코드의 혼합 소스 라벨을 DART 단독으로 축약하지 않는다.
+        source = inputs.get("source")
+        if source not in {"DART", "DART+yfinance", "DART 분기 패널", "DART 연간 재무"}:
+            source = "미확인"
+        if inputs.get("basis") == "point_in_time":
+            end = _evidence_date(inputs.get("quarter_end"))
+            period = f"자기자본 {end} 기준" if end else "자기자본 기준일 미확인"
+        else:
+            period = _per_period(inputs)
+        division = {"CFS": "연결", "OFS": "별도"}.get(inputs.get("fs_div"))
+        basis = [period]
+        if division:
+            basis.append(division)
+        basis.append(f"원천 레코드 {source}")
+        market_label = "주식수" if metric == "BPS" else "시총"
+        basis.append(f"{market_label} KRX {market_date} 기준" if market_date
+                     else f"{market_label} 기준일 미확인")
+        if metric == "BPS":
+            formula = f"자기자본 {_fmt_won_signed(numerator)} ÷ 발행주식수 {int(denominator):,}주"
+        else:
+            label = "자기자본" if metric == "PBR" else "매출"
+            formula = f"시가총액 {_fmt_cap(numerator)} ÷ {label} {_fmt_won_signed(denominator)}"
+        calculations[metric] = formula + " (" + " · ".join(basis) + ")"
+        if metric in {"PBR", "BPS"} and inputs.get("equity_basis") == "assets_debt_ratio":
+            calculations[metric] += " · 자기자본은 총자산 ÷ (1 + 부채비율 / 100)로 산출"
+        notes[metric] = "자체계산"  # 기존 Framer 직접계산 배지의 정확 일치 계약
+
+
 def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
                    fin_series: Optional[Dict[str, List[Dict[str, Any]]]] = None,
-                   panel_facts: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Dict[str, float]]:
+                   panel_facts: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Dict[str, Any]]:
     """PER/PBR/BPS 자체계산: KRX 공식 시총·발행주식수 ÷ DART 순이익·자기자본.
     (자기자본 = 자산/(1+부채비율/100), BPS = 자기자본/발행주식수).
 
@@ -794,7 +853,7 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
     🚨 없는 값을 역산해 채우지 않는다 — 2026-08-03 rich 14종목 전수 오염이 역산 경로에서
     나왔다. 계산 가능한 것만 계산하고 나머지는 결측으로 남기는 편이 맞다.
     """
-    out: Dict[str, Dict[str, float]] = {}
+    out: Dict[str, Dict[str, Any]] = {}
     for tk, f in fundamentals.items():
         km = krx_map.get(tk)
         if not km:
@@ -806,6 +865,9 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
         if mktcap <= 0:
             continue
         v: Dict[str, Any] = {"mktcap": mktcap}  # 시총 항상 보유 (PER/PBR 결측이어도 정렬·필터용)
+        reported = {"basis": "reported", "fiscal_year": f.get("report_date"),
+                    "reprt_code": f.get("reprt_code"), "fs_div": f.get("fs_div"),
+                    "source": f.get("source")}
         try:
             ni = float(f.get("net_income")) if f.get("net_income") is not None else None
             if ni and ni > 0:
@@ -823,7 +885,7 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
                 _psr = mktcap / rv
                 if 0 < _psr <= 100:
                     v["PSR"] = round(_psr, 2)
-                    v["_psr_in"] = {"mktcap": mktcap, "revenue": rv}
+                    v["_psr_in"] = {"mktcap": mktcap, "revenue": rv, **reported}
         except (TypeError, ValueError):
             pass
         try:
@@ -837,13 +899,15 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
                 equity = ta / (1.0 + dr / 100.0)
                 if equity > 0:
                     v["PBR"] = round(mktcap / equity, 2)
-                    v["_pbr_in"] = {"mktcap": mktcap, "equity": equity}
+                    v["_pbr_in"] = {"mktcap": mktcap, "equity": equity,
+                                    "equity_basis": "assets_debt_ratio", **reported}
                     # BPS = 자기자본 ÷ 발행주식수 (KRX 공식 주식수 · DART 자본).
                     # 🚨 주가÷PBR 역산 금지 — rec["pbr"] 은 placeholder 1.0 로 정규화되는 경우가 있어
                     #    BPS 가 주가 그대로 나온다 (2026-08-03 rich 14종목 전수 오염 확인).
                     if shares > 0:
                         v["BPS"] = equity / shares
-                        v["_bps_in"] = {"equity": equity, "shares": shares}
+                        v["_bps_in"] = {"equity": equity, "shares": shares,
+                                        "equity_basis": "assets_debt_ratio", **reported}
         except (TypeError, ValueError):
             pass
         if v:
@@ -877,7 +941,8 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
             if eq > 0:
                 v["PBR"] = round(mktcap / eq, 2)
                 v["_pbr_in"] = {"mktcap": mktcap, "equity": eq,
-                                "quarter_end": pf.get("quarter_end")}
+                                "quarter_end": pf.get("quarter_end"), "basis": "point_in_time",
+                                "source": "DART 분기 패널"}
         except (TypeError, ValueError):
             pass
         out[tk] = v
@@ -915,7 +980,8 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
             _psr = mktcap / rv
             if 0 < _psr <= 100:
                 v["PSR"] = round(_psr, 2)
-                v["_psr_in"] = {"mktcap": mktcap, "revenue": rv, "fiscal_year": latest.get("year")}
+                v["_psr_in"] = {"mktcap": mktcap, "revenue": rv, "fiscal_year": latest.get("year"),
+                                "basis": "annual", "source": "DART 연간 재무"}
         out[tk] = v
     return out
 
@@ -1385,21 +1451,13 @@ def main() -> int:
             val = valuation.get(tk)
             if val:
                 fn = s.setdefault("facts_note", {})
-                fc = s.setdefault("facts_calc", {})
                 _apply_cap_per_facts(s, val, (krx_doc.get("_meta") or {}).get("bas_dd"))
                 if val.get("PBR") is not None:
                     s["facts"]["PBR"] = _num(val["PBR"], "", 1)
                     fn["PBR"] = "자체계산"
-                    qin = val.get("_pbr_in") or {}
-                    if qin:
-                        fc["PBR"] = f"시가총액 {_fmt_won_signed(qin.get('mktcap'))} ÷ 자기자본 {_fmt_won_signed(qin.get('equity'))}"
                 if val.get("PSR") is not None:
                     s["facts"]["PSR"] = f"{float(val['PSR']):,.2f}배"
                     fn["PSR"] = "자체계산"
-                    sin = val.get("_psr_in") or {}
-                    if sin:
-                        fc["PSR"] = (f"시가총액 {_fmt_won_signed(sin.get('mktcap'))} "
-                                     f"÷ 매출 {_fmt_won_signed(sin.get('revenue'))}")
                 if val.get("BPS") is not None:
                     # 🚨 2026-08-23 — 종전 `and tk in rich_by_ticker` 제한을 **풀었다**.
                     #   근거: BPS 는 이미 공개 중인 필드이고(운영풀 18종목), 값은
@@ -1409,10 +1467,7 @@ def main() -> int:
                     #   RULE 7 = 자기 산식·점수 비노출인데 BPS 는 DART 공시값 나눗셈이라 해당 없음.
                     s["facts"]["BPS"] = f"{float(val['BPS']):,.0f}원"
                     fn["BPS"] = "자체계산"
-                    bin_ = val.get("_bps_in") or {}
-                    if bin_:
-                        fc["BPS"] = (f"자기자본 {_fmt_won_signed(bin_.get('equity'))} "
-                                     f"÷ 발행주식수 {int(bin_.get('shares') or 0):,}주")
+                _apply_multiple_evidence(s, val, (krx_doc.get("_meta") or {}).get("bas_dd"))
             peer = _peer(tk, fundamentals, sector_map, sector_medians, valuation) if sector_map else None
             if peer:
                 s["peer"] = peer
