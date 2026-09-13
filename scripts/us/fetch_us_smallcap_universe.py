@@ -114,6 +114,14 @@ def main() -> int:
     OUT_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[us_universe] {len(tickers)} tickers (CS={len(cs)}, pages={pages}) "
           f"-> {OUT_PATH.relative_to(_ROOT)} (per {per})")
+    # Separate search-only catalog: never add depositary shares to CS scan/trading inputs.
+    try:
+        from api.collectors.us_depositary_search import refresh_catalog
+        depositary = refresh_catalog(key)
+        print(f"[us_universe] search-only depositary catalog {depositary['_meta']['count']}")
+    except Exception as exc:
+        sys.stderr.write(f"[us_universe] depositary refresh failed ({type(exc).__name__}); prior catalog preserved\n")
+        return 1
     return 0
 
 

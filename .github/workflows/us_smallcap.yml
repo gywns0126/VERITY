@@ -96,6 +96,7 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
+          git add data/us_depositary_search.json  # search-only ADR reference; must survive checkout
           git add data/
           if git diff --staged --quiet; then
             echo "[us_smallcap] no changes"

@@ -155,6 +155,17 @@ def _build_unified_universe(kr_uni):
         except Exception:  # noqa: BLE001
             pass
         us_n += us_comb_n
+        # Search is not the CS-only trading universe. ADRC/NYRS must remain discoverable
+        # even without an existing financial report (TSM/BABA/NVO omission, 2026-09-14).
+        depositary_n = 0
+        depositary_meta = {}
+        try:
+            from api.collectors.us_depositary_search import append_catalog
+            depositary_n, depositary_meta = append_catalog(uni)
+            us_n += depositary_n
+        except Exception as exc:
+            # Do not publish a smaller index that silently drops depositary shares again.
+            raise RuntimeError(f"depositary catalog unavailable ({type(exc).__name__}); preserve existing search") from None
         # 채권·금리 리포트 진입 항목 (2026-07-08) — 검색으로 PublicBondRegime 도달(통합 리포트).
         #   type=rates → PublicStockReport 는 렌더 생략(가드), PublicBondRegime(searchMode)이 표시.
         #   kw = 검색 키워드(비표시 필드, 두 검색창이 kw 도 매칭). ticker RATES_* = 가상 id(실 종목 아님).
@@ -225,8 +236,10 @@ def _build_unified_universe(kr_uni):
             "_meta": {"generated_at": datetime.now(KST).isoformat(),
                       "count": len(uni), "kr": len(kr_uni) + kr_rep_n, "us": us_n,
                       "commodity": commodity_n, "kr_report_union": kr_rep_n,
+                      "depositary_added": depositary_n,
+                      "depositary_reference_at": depositary_meta.get("generated_at"),
                       "source": "KRX universe(KR/ETF/ETN/KONEX) + KR/US report(보유 종목 union) + "
-                                "직접 원자재 식별자 12종 slim 병합 — 검색 공통 소스. 가격·점수·추천 0."},
+                                "US ADRC/NYRS 검색 참조 + 직접 원자재 식별자 12종 slim 병합 — 검색 공통 소스. 가격·점수·추천 0."},
             "stocks": uni,
         }
         with open(UNIVERSE_SEARCH_ALL_PATH, "w", encoding="utf-8") as f:
