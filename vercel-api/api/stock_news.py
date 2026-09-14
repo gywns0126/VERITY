@@ -325,16 +325,31 @@ def _fetch_google_news(query, limit=20):
         return []
 
 
+_NAME_PARTICLE = r"(?:으로부터|으로는|에서는|에게는|에게|에서|에는|에도|에선|에겐|와는|과는|와의|과의|까지|부터|보다|처럼|마저|조차|이라며|이라는|이란|라고|이며|으로|로는|은|는|이|가|을|를|와|과|의|도|만|에|로)"
+_PUBLISHER_SUFFIX = re.compile(r"\s+[-–—|:：]\s*(?:네이버\s*(?:프리미엄\s*콘텐츠|블로그)|naver\s*(?:premium\s*contents?|blog))\s*$", re.I)
+# Explicit issuer aliases only; never derive group aliases by truncation.
+_ISSUER_ALIASES = {
+    "035420": ("NAVER", "네이버"),
+    # Company/legal and brand forms: https://company.millie.co.kr/ (checked 2026-09-14).
+    "418470": ("KT밀리의서재", "KT 밀리의서재", "밀리의서재", "밀리의 서재"),
+}
+
+
+def _company_headline(title, source=""):
+    """매체 접미사는 종목 근거에서만 제외한다. 표시 제목과 출처는 보존한다."""
+    text = title if isinstance(title, str) else ""
+    if isinstance(source, str) and source.strip():
+        text = re.sub(r"\s+[-–—|:：]\s*" + re.escape(source.strip()) + r"\s*$", "", text, flags=re.I)
+    return _PUBLISHER_SUFFIX.sub("", text).strip()
+
+
 def _name_in_title(name, title):
-    """종목명이 제목에 '단어 경계'로 등장하는지 — 앞 글자가 한글/영숫자면 다른 단어의 꼬리.
-    예: '하이닉스' 제목에 '이닉스' 검색 = 하[이닉스] 부분매칭 → 오매칭(2026-07-10 사용자 보고).
-    한국어는 조사(가/는/도)가 이름 뒤에 바로 붙으므로 뒤 경계는 검사하지 않음."""
+    """회사명 양쪽 경계·한국어 조사·붙여 쓴 등락률만 허용한다."""
     if not name or not title:
         return False
-    try:
-        return re.search(r"(?<![가-힣A-Za-z0-9])" + re.escape(name), title) is not None
-    except re.error:
-        return name in title
+    # SK하이닉스5%↓는 유지하되 삼성전자2우B·삼성전자서비스는 연결하지 않는다.
+    pattern = r"(?<!\w)" + re.escape(name) + r"(?=$|[^\w]|[0-9]+(?:\.[0-9]+)?[%％]|" + _NAME_PARTICLE + r"(?:$|[^\w]))"
+    return re.search(pattern, title, flags=re.I) is not None
 
 
 def _commodity_title_matches(title, terms):
@@ -409,24 +424,26 @@ def fetch_commodity_news(code, max_items=15):
 def fetch_stock_news(code, name="", max_items=15, pages=2):
     now = datetime.utcnow()  # dt_s(UTC naive)와 정합 (Vercel/로컬 TZ 무관)
     nm = (name or "").strip()
-    # 종목명 핵심 토큰 (접미사 제거) — "JYP Ent."→"JYP", 한국 뉴스 제목 매칭률↑
-    core = re.sub(r"\s*(Ent\.?|Corp\.?|Inc\.?|Co\.?,?\s*Ltd\.?|Ltd\.?|Holdings|홀딩스|그룹|㈜)\s*$",
-                  "", nm, flags=re.IGNORECASE).strip()
-    if " " in core:
-        core = core.split()[0]
+    # 되돌리지 말 것: 그룹명/첫 단어로 축약하거나 무관 기사를 수량 보충하지 않는다.
+    # 기사 본문은 수집하지 않으므로 회사명 언급이 없는 검색 결과는 연결 근거가 부족하다.
+    if not nm:
+        return []
+    aliases = _ISSUER_ALIASES.get(str(code), ())
+    names = aliases if nm.casefold() in {alias.casefold() for alias in aliases} else (nm,)
     # 온디맨드 2소스 병렬 (네이버 검색 API + Google News RSS) — 10초 예산 내, 커버리지·화제성↑
     raw = []
     try:
         with ThreadPoolExecutor(max_workers=2) as ex:
             f_naver = ex.submit(_fetch_search_api, nm, 30)
-            f_google = ex.submit(_fetch_google_news, core or nm)
+            f_google = ex.submit(_fetch_google_news, nm)
             raw = (f_naver.result() or []) + (f_google.result() or [])
     except Exception as e:  # noqa: BLE001
         _logger.warning("news 병렬 fetch 실패: %s", e)
         raw = _fetch_search_api(nm, 30)
     clusters = {}
     for it in raw:
-        if not it["title"]:
+        title = _company_headline(it.get("title"), it.get("source"))
+        if not any(_name_in_title(alias, title) for alias in names):
             continue
         key = _norm_title(it["title"])
         if not key:
@@ -442,7 +459,7 @@ def fetch_stock_news(code, name="", max_items=15, pages=2):
                 c["item"], c["cred"], c["dt"] = it, cred, dt
 
     disc = _disclosures_for(code)  # 짬뽕 — 종목 공시 인덱스
-    kept, spill = [], []
+    kept = []
     for c in clusters.values():
         it, dt = c["item"], c["dt"]
         cat = _category(it["title"])
@@ -454,17 +471,10 @@ def fetch_stock_news(code, name="", max_items=15, pages=2):
             "related_disclosure": related,
             "_sort": dt.timestamp() if dt else 0,
         }
-        # 노이즈 판정 (2026-07-10 경계매칭 강화 — 이닉스 페이지에 하이닉스 기사 유입 fix):
-        #  · 제목에 핵심토큰이 '부분매칭으로만' 존재(하[이닉스]) = 다른 종목 기사 강신호 → 카테고리 무관 spill
-        #  · '시장' 카테고리 + 경계매칭 없음 → spill (기존 룰의 경계 강화)
-        #  · 제목에 토큰 자체가 없는 비'시장' 기사 = 검색 질의 연관성 신뢰(기존 동작 유지)
-        _embedded_only = bool(core) and (core in it["title"]) and not _name_in_title(core, it["title"])
-        _market_nomatch = cat == "시장" and bool(core) and not _name_in_title(core, it["title"])
-        (spill if (_embedded_only or _market_nomatch) else kept).append(rec)
+        kept.append(rec)
 
     kept.sort(key=lambda x: x["_sort"], reverse=True)
-    spill.sort(key=lambda x: x["_sort"], reverse=True)
-    out = kept if len(kept) >= 6 else kept + spill   # soft filter — 과필터로 빈약해지면 노이즈도 보충
+    out = kept
     # 30일 표시 창(PM 2026-07-12) — 종목 뉴스는 드물어 최근 30일 우선. now/_sort 모두 UTC-naive .timestamp()라 상대비교 정합.
     #   soft — 30일 내가 6건 미만이면 오래된 것도 유지(빈약 방지). 시장 플래시(7일)보다 김: 한 종목 뉴스 발생 저빈도.
     cutoff = now.timestamp() - 30 * 86400
@@ -487,7 +497,6 @@ class handler(BaseHTTPRequestHandler):
         try:
             qs = parse_qs(urlparse(self.path).query)
             code = (qs.get("code", [""])[0] or qs.get("q", [""])[0] or "").strip()
-            name = (qs.get("name", [""])[0] or "").strip() or _resolve_name(code)
             commodity = COMMODITY_TOPICS.get(code.upper())
             if commodity:
                 items = fetch_commodity_news(code)
@@ -504,10 +513,20 @@ class handler(BaseHTTPRequestHandler):
                 body = json.dumps({"error": "code=6자리 종목코드 또는 CMD_* 필요", "items": []}, ensure_ascii=False)
                 cache = "no-store"
             else:
-                items = fetch_stock_news(code, name)
-                body = json.dumps({"code": code, "count": len(items), "items": items,
-                                   "note": "네이버 금융 종목뉴스 · 사실만(점수·추천 아님)"}, ensure_ascii=False)
-                cache = "public, max-age=300, s-maxage=300"  # 5분 — Naver 부하·차단 완화
+                # 되돌리지 말 것: 쿼리 name은 종목 코드의 회사명을 덮어쓸 수 없다.
+                # 번들에 없는 신규 종목도 임의 이름으로 조회하지 않고 미확인을 알린다.
+                resolved = _resolve_name(code)
+                name = resolved.strip() if isinstance(resolved, str) else ""
+                if not name:
+                    body = json.dumps({"code": code, "items": [],
+                                       "error": "종목 코드에 해당하는 회사명을 확인하지 못했어요."}, ensure_ascii=False)
+                    cache = "no-store"
+                else:
+                    items = fetch_stock_news(code, name)
+                    body = json.dumps({"code": code, "name": name, "count": len(items), "items": items,
+                                       "filter_version": "issuer-title-v1",
+                                       "note": "네이버 검색 API · Google News RSS · 제목 회사명 일치 기준"}, ensure_ascii=False)
+                    cache = "public, max-age=300, s-maxage=300"  # 5분 — Naver 부하·차단 완화
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Access-Control-Allow-Origin", "*")
