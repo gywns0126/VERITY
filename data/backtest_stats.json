@@ -19,7 +19,7 @@
         "hits_gross": 0,
         "hits_net": 0
       },
-      "evaluation_date": "2026-09-14",
+      "evaluation_date": "2026-09-15",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
@@ -37,7 +37,7 @@
       "hits_net": 0,
       "delisted_count": null,
       "listing_status_checked": false,
-      "snapshot_date": "2026-09-07"
+      "snapshot_date": "2026-09-08"
     },
     "14d": {
       "evaluation_status": "no_recommendations",
@@ -58,7 +58,7 @@
         "hits_gross": 0,
         "hits_net": 0
       },
-      "evaluation_date": "2026-09-14",
+      "evaluation_date": "2026-09-15",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
@@ -76,7 +76,7 @@
       "hits_net": 0,
       "delisted_count": null,
       "listing_status_checked": false,
-      "snapshot_date": "2026-08-31"
+      "snapshot_date": "2026-09-01"
     },
     "30d": {
       "evaluation_status": "partial",
@@ -99,16 +99,16 @@
       "observed": {
         "hit_rate_gross": 50.0,
         "hit_rate_net": 50.0,
-        "avg_return_gross": 3.13,
-        "avg_return_net": 2.6,
-        "max_return": 8.18,
+        "avg_return_gross": 4.13,
+        "avg_return_net": 3.6,
+        "max_return": 10.18,
         "min_return": -2.24,
         "sharpe": null,
         "sample": 2,
         "hits_gross": 1,
         "hits_net": 1
       },
-      "evaluation_date": "2026-09-14",
+      "evaluation_date": "2026-09-15",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
@@ -135,9 +135,9 @@
       "name": "DVN",
       "rec_date": "2026-08-15",
       "rec_price": 46.43000030517578,
-      "current_price": 50.22999954223633,
-      "return_pct_gross": 8.18,
-      "return_pct_net": 7.45,
+      "current_price": 51.154998779296875,
+      "return_pct_gross": 10.18,
+      "return_pct_net": 9.45,
       "slippage_pct": 0.7,
       "hit_gross": true,
       "hit_net": true,
@@ -145,7 +145,7 @@
       "recommendation": "WATCH",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": 8.18,
+      "return_pct": 10.18,
       "hit": true
     },
     {
@@ -167,10 +167,10 @@
       "hit": false
     }
   ],
-  "updated_at": "2026-09-14 17:52:28.467727+09:00",
+  "updated_at": "2026-09-15 00:20:16.889936+09:00",
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-09-14 17:52:28.467742+09:00",
+    "applied_at": "2026-09-15 00:20:16.889950+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -180,7 +180,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-09-14 17:52:28.467746+09:00"
+      "fixed_at": "2026-09-15 00:20:16.889954+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
