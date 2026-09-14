@@ -1,92 +1,94 @@
 {
   "schema_version": "v0.1",
-  "generated_at": "2026-09-07T09:14:45+09:00",
-  "macro_themes_count": 8,
+  "generated_at": "2026-09-14T09:22:49+09:00",
+  "macro_themes_count": 10,
   "sectors": [
     {
-      "sector": "Financials",
-      "score": 0.132,
-      "raw_score": 0.66,
-      "contribution_count": 5,
-      "tier": "NEUTRAL"
-    },
-    {
       "sector": "Consumer Staples",
-      "score": 0.127,
-      "raw_score": 0.38,
-      "contribution_count": 3,
-      "tier": "NEUTRAL"
+      "score": 0.224,
+      "raw_score": 1.12,
+      "contribution_count": 5,
+      "tier": "TILT"
     },
     {
       "sector": "Healthcare",
-      "score": 0.1,
-      "raw_score": 0.2,
-      "contribution_count": 2,
-      "tier": "NEUTRAL"
-    },
-    {
-      "sector": "Information Technology",
-      "score": -0.008,
-      "raw_score": -0.04,
-      "contribution_count": 5,
-      "tier": "NEUTRAL"
-    },
-    {
-      "sector": "Communication Services",
-      "score": -0.012,
-      "raw_score": -0.06,
-      "contribution_count": 5,
+      "score": 0.19,
+      "raw_score": 0.76,
+      "contribution_count": 4,
       "tier": "NEUTRAL"
     },
     {
       "sector": "Utilities",
-      "score": -0.044,
-      "raw_score": -0.22,
-      "contribution_count": 5,
+      "score": 0.074,
+      "raw_score": 0.52,
+      "contribution_count": 7,
+      "tier": "NEUTRAL"
+    },
+    {
+      "sector": "Financials",
+      "score": 0.026,
+      "raw_score": 0.18,
+      "contribution_count": 7,
+      "tier": "NEUTRAL"
+    },
+    {
+      "sector": "Communication Services",
+      "score": -0.02,
+      "raw_score": -0.12,
+      "contribution_count": 6,
+      "tier": "NEUTRAL"
+    },
+    {
+      "sector": "Information Technology",
+      "score": -0.08,
+      "raw_score": -0.56,
+      "contribution_count": 7,
       "tier": "NEUTRAL"
     },
     {
       "sector": "Consumer Discretionary",
-      "score": -0.064,
-      "raw_score": -0.32,
-      "contribution_count": 5,
-      "tier": "NEUTRAL"
-    },
-    {
-      "sector": "Industrials",
-      "score": -0.173,
-      "raw_score": -0.52,
-      "contribution_count": 3,
+      "score": -0.143,
+      "raw_score": -1.0,
+      "contribution_count": 7,
       "tier": "NEUTRAL"
     },
     {
       "sector": "Energy",
-      "score": -0.196,
-      "raw_score": -0.98,
-      "contribution_count": 5,
+      "score": -0.169,
+      "raw_score": -1.18,
+      "contribution_count": 7,
       "tier": "NEUTRAL"
     },
     {
       "sector": "Real Estate",
-      "score": -0.336,
-      "raw_score": -1.68,
+      "score": -0.2,
+      "raw_score": -1.2,
+      "contribution_count": 6,
+      "tier": "NEUTRAL"
+    },
+    {
+      "sector": "Industrials",
+      "score": -0.22,
+      "raw_score": -1.1,
       "contribution_count": 5,
       "tier": "TILT"
     },
     {
       "sector": "Materials",
-      "score": -0.367,
-      "raw_score": -1.1,
-      "contribution_count": 3,
+      "score": -0.296,
+      "raw_score": -1.48,
+      "contribution_count": 5,
       "tier": "TILT"
     }
   ],
-  "favored": [],
+  "favored": [
+    "Consumer Staples"
+  ],
   "disfavored": [
-    "Real Estate",
+    "Industrials",
     "Materials"
   ],
-  "favored_count": 0,
+  "favored_count": 1,
   "disfavored_count": 2,
   "thresholds": {
     "strong_tilt": 0.5,
