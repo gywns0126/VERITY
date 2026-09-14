@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-15T06:32:06+09:00",
+  "collected_at": "2026-09-15T07:02:14+09:00",
   "macro": {
     "usd_krw": {
       "value": 1345.97,
@@ -13804,7 +13804,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-09-15T06:32:20+09:00",
+    "updated_at": "2026-09-15T07:03:14+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.8,
       "us_ig_risk": "LOW",
@@ -13814,7 +13814,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260914",
-      "collected_at": "2026-09-15T06:32:20+09:00",
+      "collected_at": "2026-09-15T07:03:14+09:00",
       "grades": {
         "AA-": {
           "yield": 4.69,
@@ -13873,21 +13873,6 @@
       "country": "미국",
       "source": "FRED",
       "release_id": 180,
-      "d_day": 2
-    },
-    {
-      "name": "미국 주택착공",
-      "severity": "low",
-      "impact_area": [
-        "부동산",
-        "금리민감"
-      ],
-      "impact": "금리 민감 섹터. 건설주/가전주/목재주에 영향",
-      "action": "주택 관련 섹터 비중 점검",
-      "date": "2026-09-17",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 27,
       "d_day": 2
     },
     {
@@ -13966,12 +13951,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 28.42
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 125.47
   },
   "schema_version": "v0"
 }
