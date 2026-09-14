@@ -36,6 +36,20 @@ function Help({ children }: { children: any }) {
     return <div style={{ color: C.sub, fontSize: 12, lineHeight: 1.55, fontWeight: 600, marginTop: 7 }}>{children}</div>
 }
 
+function SelectControl({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: any }) {
+    return <div style={{ position: "relative", marginTop: 8 }}>
+        <select
+            aria-label={label}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            style={{ ...field, appearance: "none", WebkitAppearance: "none", paddingLeft: 15, paddingRight: 42, textAlign: "left", textAlignLast: "left" }}
+        >
+            {children}
+        </select>
+        <CaretDown aria-hidden="true" size={16} weight="bold" color={C.sub} style={{ position: "absolute", right: 15, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+    </div>
+}
+
 function StockMark({ item, size = 34 }: { item: UniverseRow; size?: number }) {
     const [failed, setFailed] = useState(false)
     const ticker = String(item.ticker || "").trim().toUpperCase()
@@ -184,10 +198,10 @@ export default function PublicPortfolioLab(props: Props) {
                                 <span style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}><StockMark item={item} /><span style={{ minWidth: 0 }}><b style={{ fontSize: 13.5 }}>{item.name_ko || item.name}</b>{item.name_ko && item.name !== item.name_ko && <span style={{ display: "block", color: C.faint, fontSize: 11, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>}</span></span>
                                 <span style={{ color: C.faint, fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap" }}>{item.ticker} · {item.market || "시장 확인"}</span>
                             </button>)}
-                            {!loading && matches.length === 0 && <div style={{ padding: 14, color: C.sub, fontSize: 12, fontWeight: 650 }}>검색 결과가 없어요. 이름이나 티커를 다시 확인해주세요.</div>}
+                            {!loading && matches.length === 0 && <div style={{ padding: 14, color: C.sub, fontSize: 12, fontWeight: 700 }}>검색 결과가 없어요. 이름이나 티커를 다시 확인해주세요.</div>}
                         </div>}
                     </div>
-                    {assets.some((item) => item.type === "commodity") && <div style={{ marginTop: 12, borderRadius: 15, background: C.blueS, color: C.sub, padding: "12px 14px", fontSize: 11.5, lineHeight: 1.6, fontWeight: 650 }}>원자재는 기업 주식이 아니라 선물 연속물 기준입니다. 실제 상품 수익률은 환율·롤오버·보수 때문에 달라질 수 있어요.</div>}
+                    {assets.some((item) => item.type === "commodity") && <div style={{ marginTop: 12, borderRadius: 15, background: C.blueS, color: C.sub, padding: "12px 14px", fontSize: 11.5, lineHeight: 1.6, fontWeight: 700 }}>원자재는 기업 주식이 아니라 선물 연속물 기준입니다. 실제 상품 수익률은 환율·롤오버·보수 때문에 달라질 수 있어요.</div>}
                     <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
                         {assets.map((item) => <div key={item.ticker} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 16, background: C.field, padding: "11px 12px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}><StockMark item={item} /><div style={{ minWidth: 0 }}><b style={{ fontSize: 13.5 }}>{item.name_ko || item.name}</b><div style={{ color: C.faint, fontSize: 11, fontWeight: 700, marginTop: 3 }}>{item.ticker} · {item.market || (/^\d{6}$/.test(item.ticker) ? "KR" : "US")} · 비중 {item.weight.toFixed(2).replace(".00", "")}%</div></div></div>
@@ -217,7 +231,7 @@ export default function PublicPortfolioLab(props: Props) {
                 </section>
 
                 <section style={{ ...card, marginTop: 16, background: C.blueS }}>
-                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}><Sparkle size={22} color={C.blue} weight="fill" /><div><div style={{ fontSize: 16, fontWeight: 800 }}>알파네스트가 먼저 이렇게 계산할게요</div><div style={{ color: C.sub, fontSize: 12.5, lineHeight: 1.65, fontWeight: 650, marginTop: 6 }}>매달 같은 날 투자하고, 받은 배당은 다시 투자하며, 세금과 거래비용은 별도로 보여주는 방식입니다. 각 개념은 결과 화면에서 쉬운 말로 풀이합니다.</div></div></div>
+                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}><Sparkle size={22} color={C.blue} weight="fill" /><div><div style={{ fontSize: 16, fontWeight: 800 }}>알파네스트가 먼저 이렇게 계산할게요</div><div style={{ color: C.sub, fontSize: 12.5, lineHeight: 1.65, fontWeight: 700, marginTop: 6 }}>매달 같은 날 투자하고, 받은 배당은 다시 투자하며, 세금과 거래비용은 별도로 보여주는 방식입니다. 각 개념은 결과 화면에서 쉬운 말로 풀이합니다.</div></div></div>
                 </section>
 
                 <button onClick={() => setAdvanced((v) => !v)} style={{ width: "100%", marginTop: 14, border: "none", borderRadius: 14, padding: "15px 17px", background: C.card, color: C.sub, fontFamily: FONT, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}><span>상세 설정 · 익숙한 분만 열어보세요</span><CaretDown size={18} style={{ transform: advanced ? "rotate(180deg)" : "none", transition: "transform .2s" }} /></button>
@@ -232,10 +246,10 @@ export default function PublicPortfolioLab(props: Props) {
                         <button onClick={() => setAssets((rows) => equalize(rows))} style={{ marginTop: 10, border: "none", borderRadius: 12, background: C.card, color: C.vg, padding: "10px 12px", fontFamily: FONT, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>똑같이 나누기</button>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px,1fr))", gap: 12, marginTop: 15 }}>
-                        <div><b style={{ fontSize: 12 }}>투자 주기</b><select value={frequency} onChange={(e) => setFrequency(e.target.value)} style={{ ...field, marginTop: 8 }}><option value="monthly">매월</option><option value="quarterly">매분기</option><option value="once">한 번만</option></select><Help>얼마나 자주 같은 금액을 투자할지 정해요.</Help></div>
-                        <div><b style={{ fontSize: 12 }}>비중 조정</b><select value={rebalance} onChange={(e) => setRebalance(e.target.value)} style={{ ...field, marginTop: 8 }}><option value="yearly">매년 원래 비중으로</option><option value="quarterly">매분기 원래 비중으로</option><option value="none">조정하지 않음</option></select><Help>리밸런싱은 달라진 자산 비중을 처음 계획대로 되돌리는 일이에요.</Help></div>
+                        <div><b style={{ fontSize: 12 }}>투자 주기</b><SelectControl label="투자 주기" value={frequency} onChange={setFrequency}><option value="monthly">매월</option><option value="quarterly">매분기</option><option value="once">한 번만</option></SelectControl><Help>얼마나 자주 같은 금액을 투자할지 정해요.</Help></div>
+                        <div><b style={{ fontSize: 12 }}>비중 조정</b><SelectControl label="비중 조정" value={rebalance} onChange={setRebalance}><option value="yearly">매년 원래 비중으로</option><option value="quarterly">매분기 원래 비중으로</option><option value="none">조정하지 않음</option></SelectControl><Help>리밸런싱은 달라진 자산 비중을 처음 계획대로 되돌리는 일이에요.</Help></div>
                         <div><b style={{ fontSize: 12 }}>배당금</b><button onClick={() => setDividend((v) => !v)} style={{ ...field, marginTop: 8, cursor: "pointer", textAlign: "left" }}>{dividend ? "다시 투자" : "현금으로 보유"}</button><Help>재투자는 받은 배당금으로 같은 자산을 더 사는 방식이에요.</Help></div>
-                        <div><b style={{ fontSize: 12 }}>공개 범위</b><select value={privacy} onChange={(e) => setPrivacy(e.target.value)} style={{ ...field, marginTop: 8 }}><option value="private">나만 보기</option><option value="summary">성과만 공유</option><option value="masked">종목을 숨기고 공유</option><option value="full">전체 공개</option></select><Help><LockKey size={12} /> 기본값은 나만 보기예요.</Help></div>
+                        <div><b style={{ fontSize: 12 }}>공개 범위</b><SelectControl label="공개 범위" value={privacy} onChange={setPrivacy}><option value="private">나만 보기</option><option value="summary">성과만 공유</option><option value="masked">종목을 숨기고 공유</option><option value="full">전체 공개</option></SelectControl><Help><LockKey size={12} /> 기본값은 나만 보기예요.</Help></div>
                     </div>
                 </section>}
 
