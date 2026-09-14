@@ -1,31 +1,29 @@
 {
  "_meta": {
-  "generated_at": "2026-09-14T14:40:39.649855+09:00",
+  "generated_at": "2026-09-14T20:30:30.523000+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "amber",
- "reasons": [
-  "비P0 stale 1건"
- ],
+ "status": "green",
+ "reasons": [],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-09-14T14:40:39.574400+09:00",
+  "generated_at": "2026-09-14T20:30:30.465758+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 137235,
+  "max_cdn_age_s": 158226,
   "files": [
    {
     "file": "stock_report_public.json",
     "ok": true,
     "pct": {
      "PER": 61.7,
-     "PBR": 94.9
+     "PBR": 95.3
     },
-    "total": 2508,
-    "cdn_age_s": 48796,
+    "total": 2511,
+    "cdn_age_s": 6113,
     "error": null
    },
    {
@@ -36,7 +34,7 @@
      "PBR": 73.5
     },
     "total": 5078,
-    "cdn_age_s": 137235,
+    "cdn_age_s": 158226,
     "error": null
    },
    {
@@ -47,7 +45,7 @@
      "PBR": 75.3
     },
     "total": 3851,
-    "cdn_age_s": 137011,
+    "cdn_age_s": 158002,
     "error": null
    },
    {
@@ -61,11 +59,11 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-09-13T22:36:47.559056+09:00",
-  "kr_total": 2508,
+  "generated_at": "2026-09-14T18:10:03.301955+09:00",
+  "kr_total": 2511,
   "us_total": 5078,
   "core_fill_pct": {
-   "fields.facts.PBR": 94.9,
+   "fields.facts.PBR": 95.3,
    "fields.facts.PER": 61.7,
    "us_fields.facts.PBR": 73.5,
    "us_fields.facts.PER": 44.9
@@ -75,21 +73,21 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-09-14T14:40:36.371269+09:00",
+  "generated_at": "2026-09-14T20:30:26.395340+09:00",
   "summary": {
-   "fresh": 61,
-   "stale": 1,
-   "closed": 0,
+   "fresh": 60,
+   "stale": 0,
+   "closed": 2,
    "discontinued": 2,
    "p0": {
     "total": 7,
-    "fresh": 7,
-    "closed": 0,
-    "active": 7
+    "fresh": 5,
+    "closed": 2,
+    "active": 5
    },
    "p1": {
     "total": 21,
-    "fresh": 19,
+    "fresh": 20,
     "closed": 0,
     "active": 20
    },
@@ -101,8 +99,6 @@
    }
   },
   "stale_p0": [],
-  "stale_other": [
-   "factor_ic_history"
-  ]
+  "stale_other": []
  }
 }
