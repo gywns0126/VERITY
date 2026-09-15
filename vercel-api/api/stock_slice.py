@@ -38,6 +38,10 @@ KR_SOURCES = {
     "supply": "supply_demand.json",
     "employment": "nps_employment.json",
 }
+# Keep business excerpts separate: only a KR report requesting overview=1 loads this.
+# Never add this file to default KR_SOURCES (listing/terminal transfer budget).
+KR_OPTIONAL_SOURCES = {"business_overview": "kr_business_overview_public.json"}
+
 # 美 = 리포트 슬라이스만 (내부자·13F·컨센서스는 /api/verity/us-forensics 가 이미 per-ticker).
 US_SOURCES = {
     "report": "us_stock_report_public.json",
@@ -58,6 +62,7 @@ _CACHE = {}  # fname -> (epoch, doc)
 _TTL_BY_SOURCE = {
     "report": 7200, "report_smallcap": 21600, "forensics": 7200,
     "insider": 7200, "lending": 7200, "employment": 7200,
+    "business_overview": 7200,
     "flow": 1800, "supply": 1800, "warn": 1800,
 }
 _FNAME_TTL = None
@@ -67,7 +72,7 @@ def _ttl_for(fname):
     global _FNAME_TTL
     if _FNAME_TTL is None:
         _FNAME_TTL = {}
-        for m in (KR_SOURCES, US_SOURCES):
+        for m in (KR_SOURCES, US_SOURCES, KR_OPTIONAL_SOURCES):
             for k, f in m.items():
                 _FNAME_TTL[f] = _TTL_BY_SOURCE.get(k, TTL)
     return _FNAME_TTL.get(fname, TTL)
@@ -135,9 +140,18 @@ def _slice(doc, ticker):
     return None
 
 
+def _business_overview(doc, ticker):
+    """Select only the requested issuer from the separately published rows map."""
+    rows = doc.get("rows") if isinstance(doc, dict) else None
+    row = rows.get(ticker) if isinstance(rows, dict) else None
+    if not isinstance(row, dict) or not isinstance(row.get("text"), str) or not row["text"].strip():
+        return None
+    return row
+
+
 def _meta_field(doc, key):
     meta = (doc or {}).get("_meta") if isinstance(doc, dict) else None
-    return (meta or {}).get(key)
+    return meta.get(key) if isinstance(meta, dict) else None
 
 
 class handler(BaseHTTPRequestHandler):
@@ -170,8 +184,9 @@ class handler(BaseHTTPRequestHandler):
         ticker = raw.upper()
         is_kr = bool(re.match(r"^[0-9]{6}$", ticker))
 
+        include_overview = is_kr and params.get("overview", [""])[0] == "1"
         if is_kr:
-            srcs = KR_SOURCES
+            srcs = {**KR_SOURCES, **KR_OPTIONAL_SOURCES} if include_overview else KR_SOURCES
         else:
             srcs = US_SOURCES
         docs = {}
@@ -193,6 +208,9 @@ class handler(BaseHTTPRequestHandler):
             out["lend_as_of"] = _meta_field(docs.get("lending"), "as_of")
             out["supply"] = _slice(docs.get("supply"), ticker)
             out["employment"] = _employment_gate(_slice(docs.get("employment"), ticker))
+            if include_overview:
+                out["business_overview"] = _business_overview(docs.get("business_overview"), ticker)
+                out["business_overview_as_of"] = _meta_field(docs.get("business_overview"), "generated_at")
         else:
             report = _slice(docs.get("report"), ticker) or _slice(docs.get("report_smallcap"), ticker)
             out["report"] = report

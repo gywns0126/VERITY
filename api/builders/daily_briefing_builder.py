@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
@@ -101,32 +102,54 @@ def _sec_disclosures() -> Dict[str, Any]:
         with open(CATALYST_PATH, encoding="utf-8") as f:
             for line in f:
                 try:
-                    rows.append(json.loads(line))
+                    row = json.loads(line)
+                    if isinstance(row, dict):
+                        rows.append(row)
                 except json.JSONDecodeError:
                     continue
     except OSError:
         pass
-    if not rows:
+    # Preserve the source title and receipt identity. A DART category is not an event title.
+    valid = []
+    for row in rows:
+        if not re.fullmatch(r"\d{6}", str(row.get("ticker") or "")):
+            continue
+        if not re.fullmatch(r"\d{14}", str(row.get("rcept_no") or "")):
+            continue
+        day = str(row.get("rcept_dt") or "")
+        try:
+            parsed = datetime.strptime(day, "%Y%m%d")
+            if parsed.strftime("%Y%m%d") != day:
+                continue
+        except ValueError:
+            continue
+        valid.append(row)
+    if not valid:
         return {"title": "최근 주요 공시", "items": [], "note": "DART 접수 기준"}
-    last_dt = max(str(r.get("rcept_dt") or "") for r in rows)
-    day = [r for r in rows if str(r.get("rcept_dt") or "") == last_dt]
+    last_dt = max(str(r["rcept_dt"]) for r in valid)
+    day = sorted((r for r in valid if str(r["rcept_dt"]) == last_dt),
+                 key=lambda r: str(r["rcept_no"]), reverse=True)
     items = []
     seen = set()
     for r in day:
-        key = (str(r.get("ticker") or ""), str(r.get("pblntf_label") or r.get("report_nm") or ""))
+        key = str(r["rcept_no"])
         if key in seen:
             continue
         seen.add(key)
         items.append({
-            "ticker": key[0],
+            "ticker": str(r["ticker"]),
             "name": str(r.get("name") or ""),
-            "text": key[1],
-            "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=" + str(r.get("rcept_no") or ""),
+            "text": str(r.get("report_nm") or "").strip() or "공시 제목 미제공",
+            "title": str(r.get("report_nm") or "").strip(),
+            "label": str(r.get("pblntf_label") or ""),
+            "date": f"{last_dt[:4]}-{last_dt[4:6]}-{last_dt[6:]}",
+            "is_correction": bool(r.get("is_correction")),
+            "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=" + key,
         })
         if len(items) >= 8:
             break
     d = f"{last_dt[:4]}.{last_dt[4:6]}.{last_dt[6:]}" if len(last_dt) == 8 else last_dt
-    return {"title": "최근 주요 공시", "items": items, "note": f"DART 접수 {d} 기준 · 카탈리스트 유형 필터"}
+    return {"title": "최근 주요 공시", "items": items, "note": f"DART 접수 {d} 기준 · 수집 공시 중 최근 접수일 · 영향 판단 아님"}
 
 
 def _sec_insider(names: Dict[str, str], today: datetime) -> Dict[str, Any]:
