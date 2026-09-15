@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-15T18:07:46+09:00",
+ "as_of": "2026-09-15T23:05:24+09:00",
  "version": "measurement_audit_v4",
  "status": "KNOWN",
  "failing": [],
@@ -7,7 +7,8 @@
   "ledger_integrity",
   "key_coverage",
   "rule_discrimination",
-  "flag_coverage"
+  "flag_coverage",
+  "input_constancy"
  ],
  "skipped": [],
  "checks": {
@@ -61,13 +62,13 @@
    "thin_keys": [
     {
      "key": "analyst_report_summary",
-     "coverage": "4/140"
+     "coverage": "4/154"
     }
    ],
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "140/140",
+     "coverage": "154/154",
      "via": [
       "current_price",
       "price"
@@ -78,7 +79,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "90/140",
+     "coverage": "100/154",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -89,7 +90,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "140/140",
+     "coverage": "154/154",
      "via": [
       "fscore_deltas"
      ],
@@ -99,7 +100,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "136/140",
+     "coverage": "151/154",
      "via": [
       "industry"
      ],
@@ -109,7 +110,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "89/140",
+     "coverage": "98/154",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -180,7 +181,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 13,
-   "stock_days": 6267,
+   "stock_days": 6281,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -195,11 +196,11 @@
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
@@ -236,12 +237,29 @@
    "status": "KNOWN"
   },
   "input_constancy": {
-   "ok": true,
+   "ok": false,
    "inputs_checked": 9,
-   "varying": 2,
-   "constant_inputs": [],
-   "detail": "입력 값 분산 정상",
-   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다."
+   "varying": 5,
+   "constant_inputs": [
+    {
+     "input": "kis_credit_balance.credit_rate",
+     "n_present": 20,
+     "constant_value": 0.0,
+     "severity": "high"
+    },
+    {
+     "input": "kis_financial_ratio.current_ratio",
+     "n_present": 20,
+     "constant_value": 0.0,
+     "severity": "high"
+    }
+   ],
+   "detail": "전 종목 동일값 입력 2종 — kis_credit_balance.credit_rate=0.0, kis_financial_ratio.current_ratio=0.0. 측정이 아니라 상위 공백 의심(규칙이 영원히 발동 못 한다).",
+   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다.",
+   "baseline": {
+    "constant_inputs": 2
+   },
+   "status": "KNOWN"
   },
   "guard_inputs": {
    "ok": true,
@@ -264,8 +282,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 98,
-    "scored": 98,
+    "with_pct": 113,
+    "scored": 113,
     "ok": true
    },
    "dead_guards": [],
