@@ -8,7 +8,7 @@
     "sample_30d": 2,
     "hits_7d": 0,
     "hits_14d": 0,
-    "hits_30d": 1,
+    "hits_30d": 2,
     "hit_rate_7d_ci95": null,
     "hit_rate_14d_ci95": null,
     "hit_rate_30d_ci95": null,
@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-09-15 00:20:16.889950+09:00",
+    "applied_at": "2026-09-15 17:52:04.080134+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-09-15 00:20:16.889954+09:00"
+      "fixed_at": "2026-09-15 17:52:04.080138+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -88,8 +88,8 @@
   },
   "factor_health": {
     "healthy": [
-      "consensus",
       "perplexity_risk",
+      "consensus",
       "brain_score"
     ],
     "weakening": [],
@@ -100,19 +100,13 @@
   },
   "ic_adjustments_active": [
     {
-      "factor": "timing",
-      "multiplier": 0.0,
-      "status": "DEAD",
-      "ic_recent": 0.0
-    },
-    {
-      "factor": "multi_factor",
-      "multiplier": 0.0,
-      "status": "DEAD",
-      "ic_recent": 0.0
-    },
-    {
       "factor": "prediction",
+      "multiplier": 0.0,
+      "status": "DEAD",
+      "ic_recent": 0.0
+    },
+    {
+      "factor": "timing",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
@@ -122,8 +116,14 @@
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
+    },
+    {
+      "factor": "multi_factor",
+      "multiplier": 0.0,
+      "status": "DEAD",
+      "ic_recent": 0.0
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-09-15 00:20:16.919309+09:00"
+  "generated_at": "2026-09-15 17:52:04.108894+09:00"
 }

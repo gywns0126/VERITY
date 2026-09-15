@@ -1,12 +1,11 @@
 {
- "as_of": "2026-09-15T00:43:23+09:00",
+ "as_of": "2026-09-15T18:07:46+09:00",
  "version": "measurement_audit_v4",
- "status": "FAIL",
- "failing": [
-  "key_coverage"
- ],
+ "status": "KNOWN",
+ "failing": [],
  "known_unresolved": [
   "ledger_integrity",
+  "key_coverage",
   "rule_discrimination",
   "flag_coverage"
  ],
@@ -14,7 +13,7 @@
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 34,
+   "episodes": 35,
    "phantom_sells": 59,
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
@@ -41,30 +40,9 @@
      ]
     },
     {
-     "key": "kis_credit_balance",
-     "modules": [
-      "red_flags.py"
-     ]
-    },
-    {
-     "key": "kis_financial_ratio",
-     "modules": [
-      "fact.py",
-      "graham.py",
-      "moat.py",
-      "red_flags.py"
-     ]
-    },
-    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
-     ]
-    },
-    {
-     "key": "kis_short_sale",
-     "modules": [
-      "red_flags.py"
      ]
     },
     {
@@ -83,13 +61,13 @@
    "thin_keys": [
     {
      "key": "analyst_report_summary",
-     "coverage": "1/104"
+     "coverage": "4/140"
     }
    ],
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "104/104",
+     "coverage": "140/140",
      "via": [
       "current_price",
       "price"
@@ -100,7 +78,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "63/104",
+     "coverage": "90/140",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -111,7 +89,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "104/104",
+     "coverage": "140/140",
      "via": [
       "fscore_deltas"
      ],
@@ -121,7 +99,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "103/104",
+     "coverage": "136/140",
      "via": [
       "industry"
      ],
@@ -131,7 +109,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "62/104",
+     "coverage": "89/140",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -145,19 +123,29 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 17,
+     "events_scanned": 20,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
      ]
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 8종 — 해당 채점 축이 조용히 죽어 있다",
-   "status": "REGRESSION"
+   "detail": "레코드에 한 번도 없는 키 5종 — 해당 채점 축이 조용히 죽어 있다",
+   "baseline": {
+    "dead_keys": 5,
+    "known_dead_keys": [
+     "alpha_combined",
+     "equity_research_brief",
+     "kis_program_trade",
+     "options_flow",
+     "shares_change_pct"
+    ]
+   },
+   "status": "KNOWN"
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 4,
+   "holdings_checked": 3,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -192,14 +180,10 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 13,
-   "stock_days": 6231,
+   "stock_days": 6267,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
-     "fired": 0
-    },
-    {
-     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
@@ -207,11 +191,15 @@
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
      "rule": "SEC 8-K 리스크 공시:",
+     "fired": 0
+    },
+    {
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
@@ -257,27 +245,27 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 4,
+   "holdings_checked": 3,
    "coverage": {
     "sector": {
-     "filled": 4,
-     "total": 4,
+     "filled": 3,
+     "total": 3,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 4,
-     "total": 4,
+     "filled": 3,
+     "total": 3,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 4,
-     "total": 4,
+     "filled": 3,
+     "total": 3,
      "guard": "팩터 쏠림 차단"
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 85,
-    "scored": 85,
+    "with_pct": 98,
+    "scored": 98,
     "ok": true
    },
    "dead_guards": [],
@@ -285,7 +273,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 4,
+   "holdings_checked": 3,
    "no_profit_exit": [],
    "ladder_broken": [
     {
