@@ -19,7 +19,7 @@
         "hits_gross": 0,
         "hits_net": 0
       },
-      "evaluation_date": "2026-09-15",
+      "evaluation_date": "2026-09-16",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
@@ -58,7 +58,7 @@
         "hits_gross": 0,
         "hits_net": 0
       },
-      "evaluation_date": "2026-09-15",
+      "evaluation_date": "2026-09-16",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
@@ -76,39 +76,28 @@
       "hits_net": 0,
       "delisted_count": null,
       "listing_status_checked": false,
-      "snapshot_date": "2026-09-01"
+      "snapshot_date": "2026-09-02"
     },
     "30d": {
-      "evaluation_status": "partial",
-      "cohort_size": 4,
-      "evaluated_count": 2,
-      "unresolved_count": 2,
-      "coverage_pct": 50.0,
-      "unresolved": [
-        {
-          "ticker": "009540",
-          "name": "HD한국조선해양",
-          "reason": "missing_evaluation_price"
-        },
-        {
-          "ticker": "EOG",
-          "name": "EOG",
-          "reason": "missing_evaluation_price"
-        }
-      ],
+      "evaluation_status": "no_recommendations",
+      "cohort_size": 0,
+      "evaluated_count": 0,
+      "unresolved_count": 0,
+      "coverage_pct": null,
+      "unresolved": [],
       "observed": {
-        "hit_rate_gross": 100.0,
-        "hit_rate_net": 100.0,
-        "avg_return_gross": 4.17,
-        "avg_return_net": 3.65,
-        "max_return": 7.11,
-        "min_return": 0.91,
+        "hit_rate_gross": null,
+        "hit_rate_net": null,
+        "avg_return_gross": null,
+        "avg_return_net": null,
+        "max_return": null,
+        "min_return": null,
         "sharpe": null,
-        "sample": 2,
-        "hits_gross": 2,
-        "hits_net": 2
+        "sample": 0,
+        "hits_gross": 0,
+        "hits_net": 0
       },
-      "evaluation_date": "2026-09-15",
+      "evaluation_date": "2026-09-16",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
@@ -120,57 +109,20 @@
       "max_return": null,
       "min_return": null,
       "sharpe": null,
-      "total_recs": 2,
-      "total_recs_with_delisted": 2,
-      "hits": 2,
-      "hits_net": 2,
+      "total_recs": 0,
+      "total_recs_with_delisted": 0,
+      "hits": 0,
+      "hits_net": 0,
       "delisted_count": null,
       "listing_status_checked": false,
-      "snapshot_date": "2026-08-15"
+      "snapshot_date": "2026-08-17"
     }
   },
-  "recommendations": [
-    {
-      "ticker": "DVN",
-      "name": "DVN",
-      "rec_date": "2026-08-15",
-      "rec_price": 46.43000030517578,
-      "current_price": 49.72999954223633,
-      "return_pct_gross": 7.11,
-      "return_pct_net": 6.38,
-      "slippage_pct": 0.7,
-      "hit_gross": true,
-      "hit_net": true,
-      "period": "30d",
-      "recommendation": "WATCH",
-      "brain_score": null,
-      "source": "gemini",
-      "return_pct": 7.11,
-      "hit": true
-    },
-    {
-      "ticker": "GOOGL",
-      "name": "Alphabet",
-      "rec_date": "2026-08-15",
-      "rec_price": 345.1000061035156,
-      "current_price": 349.3900146484375,
-      "return_pct_gross": 1.24,
-      "return_pct_net": 0.91,
-      "slippage_pct": 0.3,
-      "hit_gross": true,
-      "hit_net": true,
-      "period": "30d",
-      "recommendation": "WATCH",
-      "brain_score": null,
-      "source": "gemini",
-      "return_pct": 1.24,
-      "hit": true
-    }
-  ],
-  "updated_at": "2026-09-15 22:50:50.070444+09:00",
+  "recommendations": [],
+  "updated_at": "2026-09-16 07:14:54.841442+09:00",
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-09-15 22:50:50.070457+09:00",
+    "applied_at": "2026-09-16 07:14:54.841465+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -180,7 +132,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-09-15 22:50:50.070461+09:00"
+      "fixed_at": "2026-09-16 07:14:54.841467+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",

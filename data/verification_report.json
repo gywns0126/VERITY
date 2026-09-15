@@ -5,10 +5,10 @@
     "hit_rate_30d": null,
     "sample_7d": 0,
     "sample_14d": 0,
-    "sample_30d": 2,
+    "sample_30d": 0,
     "hits_7d": 0,
     "hits_14d": 0,
-    "hits_30d": 2,
+    "hits_30d": 0,
     "hit_rate_7d_ci95": null,
     "hit_rate_14d_ci95": null,
     "hit_rate_30d_ci95": null,
@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-09-15 22:50:50.070457+09:00",
+    "applied_at": "2026-09-16 07:14:54.841465+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-09-15 22:50:50.070461+09:00"
+      "fixed_at": "2026-09-16 07:14:54.841467+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -51,7 +51,7 @@
       "unresolved_count": 0,
       "coverage_pct": null,
       "unresolved": [],
-      "evaluation_date": "2026-09-15",
+      "evaluation_date": "2026-09-16",
       "snapshot_date": "2026-09-08"
     },
     "14d": {
@@ -61,36 +61,25 @@
       "unresolved_count": 0,
       "coverage_pct": null,
       "unresolved": [],
-      "evaluation_date": "2026-09-15",
-      "snapshot_date": "2026-09-01"
+      "evaluation_date": "2026-09-16",
+      "snapshot_date": "2026-09-02"
     },
     "30d": {
-      "evaluation_status": "partial",
-      "cohort_size": 4,
-      "evaluated_count": 2,
-      "unresolved_count": 2,
-      "coverage_pct": 50.0,
-      "unresolved": [
-        {
-          "ticker": "009540",
-          "name": "HD한국조선해양",
-          "reason": "missing_evaluation_price"
-        },
-        {
-          "ticker": "EOG",
-          "name": "EOG",
-          "reason": "missing_evaluation_price"
-        }
-      ],
-      "evaluation_date": "2026-09-15",
-      "snapshot_date": "2026-08-15"
+      "evaluation_status": "no_recommendations",
+      "cohort_size": 0,
+      "evaluated_count": 0,
+      "unresolved_count": 0,
+      "coverage_pct": null,
+      "unresolved": [],
+      "evaluation_date": "2026-09-16",
+      "snapshot_date": "2026-08-17"
     }
   },
   "factor_health": {
     "healthy": [
+      "brain_score",
       "consensus",
-      "perplexity_risk",
-      "brain_score"
+      "perplexity_risk"
     ],
     "weakening": [],
     "decaying": [
@@ -112,18 +101,18 @@
       "ic_recent": 0.0
     },
     {
-      "factor": "consensus",
+      "factor": "multi_factor",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     },
     {
-      "factor": "multi_factor",
+      "factor": "consensus",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-09-15 22:50:50.096752+09:00"
+  "generated_at": "2026-09-16 07:14:54.865343+09:00"
 }

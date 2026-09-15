@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-15T23:05:24+09:00",
+ "as_of": "2026-09-16T07:35:17+09:00",
  "version": "measurement_audit_v4",
  "status": "KNOWN",
  "failing": [],
@@ -7,8 +7,7 @@
   "ledger_integrity",
   "key_coverage",
   "rule_discrimination",
-  "flag_coverage",
-  "input_constancy"
+  "flag_coverage"
  ],
  "skipped": [],
  "checks": {
@@ -59,16 +58,11 @@
      ]
     }
    ],
-   "thin_keys": [
-    {
-     "key": "analyst_report_summary",
-     "coverage": "4/154"
-    }
-   ],
+   "thin_keys": [],
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "154/154",
+     "coverage": "75/75",
      "via": [
       "current_price",
       "price"
@@ -79,7 +73,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "100/154",
+     "coverage": "64/75",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -90,7 +84,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "154/154",
+     "coverage": "75/75",
      "via": [
       "fscore_deltas"
      ],
@@ -100,7 +94,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "151/154",
+     "coverage": "69/75",
      "via": [
       "industry"
      ],
@@ -110,7 +104,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "98/154",
+     "coverage": "61/75",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -124,7 +118,7 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 20,
+     "events_scanned": 24,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
@@ -152,7 +146,7 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 120,
+   "snapshots": 121,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
@@ -169,8 +163,8 @@
     "watch_pct": 85.0
    },
    "days_without_any_cap": 12,
-   "days_without_any_cap_pct": 10.0,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(0.8%). cap 없는 날 12/120일",
+   "days_without_any_cap_pct": 9.9,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(0.8%). cap 없는 날 12/121일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -181,7 +175,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 13,
-   "stock_days": 6281,
+   "stock_days": 6435,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -237,29 +231,12 @@
    "status": "KNOWN"
   },
   "input_constancy": {
-   "ok": false,
+   "ok": true,
    "inputs_checked": 9,
-   "varying": 5,
-   "constant_inputs": [
-    {
-     "input": "kis_credit_balance.credit_rate",
-     "n_present": 20,
-     "constant_value": 0.0,
-     "severity": "high"
-    },
-    {
-     "input": "kis_financial_ratio.current_ratio",
-     "n_present": 20,
-     "constant_value": 0.0,
-     "severity": "high"
-    }
-   ],
-   "detail": "전 종목 동일값 입력 2종 — kis_credit_balance.credit_rate=0.0, kis_financial_ratio.current_ratio=0.0. 측정이 아니라 상위 공백 의심(규칙이 영원히 발동 못 한다).",
-   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다.",
-   "baseline": {
-    "constant_inputs": 2
-   },
-   "status": "KNOWN"
+   "varying": 2,
+   "constant_inputs": [],
+   "detail": "입력 값 분산 정상",
+   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다."
   },
   "guard_inputs": {
    "ok": true,
@@ -282,8 +259,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 113,
-    "scored": 113,
+    "with_pct": 34,
+    "scored": 34,
     "ok": true
    },
    "dead_guards": [],
