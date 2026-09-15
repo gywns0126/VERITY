@@ -63,6 +63,8 @@ _DISCOVER_TIMEOUT = 12   # 적재일 탐색 — 1행짜리 프로브라 길 이�
 _DISCOVER_LOOKBACK = 14  # 최신 적재일 역순 탐색 창(일)
 _DISCOVER_ATTEMPTS = 3   # 연결 장애 시 같은 날짜를 재시도한 뒤 과거 날짜 탐색을 중단
 _DISCOVER_BACKOFF_SEC = (1, 3)
+_PAGE_ATTEMPTS = 3
+_PAGE_BACKOFF_SEC = (2, 5)
 # 수집 전체 예산 — 넘으면 다음 스케줄에 맡긴다(job 이 잘려 로그도 안 남는 것보다 낫다).
 _BUDGET_SEC = int(os.environ.get("KSD_BUDGET_SEC", "540") or "540")   # 9분 < timeout-minutes
 # 티커 6자 충돌 기록(정규화 1회분) — _meta 자기신고용
@@ -100,7 +102,8 @@ def _call(bas_dt: str, page: int, rows: int,
         print(f"[dividend_ksd] {bas_dt} p{page} 호출 실패: {type(e).__name__}")
         return None, []
     if r.status_code != 200:
-        _LAST_CALL_STATE = "http_error"
+        _LAST_CALL_STATE = ("transient_http_error" if r.status_code == 429
+                            or r.status_code >= 500 else "http_error")
         print(f"[dividend_ksd] {bas_dt} p{page} HTTP {r.status_code}: {r.text[:160]}")
         return None, []
     try:
@@ -199,7 +202,23 @@ def fetch_all(bas_dt: str) -> List[dict]:
             raise RuntimeError(
                 f"KSD 페이징 예산 초과 (basDt={bas_dt}, {page-1}페이지 수집, "
                 f"{_BUDGET_SEC}s) — 부분 원장을 남기지 않는다")
-        total, items = _call(bas_dt, page=page, rows=_PAGE_SIZE)
+        total, items = None, []
+        for attempt in range(1, _PAGE_ATTEMPTS + 1):
+            remaining = _BUDGET_SEC - (time.monotonic() - t0)
+            if remaining <= 0:
+                break
+            total, items = _call(bas_dt, page=page, rows=_PAGE_SIZE,
+                                 tmo=min(_TIMEOUT, remaining))
+            if total is not None:
+                break
+            if (_LAST_CALL_STATE not in ("transport_error", "transient_http_error")
+                    or attempt == _PAGE_ATTEMPTS):
+                break
+            wait = _PAGE_BACKOFF_SEC[attempt - 1]
+            if time.monotonic() - t0 + wait >= _BUDGET_SEC:
+                break
+            print(f"[dividend_ksd] {bas_dt} p{page} 재시도 {attempt}/{_PAGE_ATTEMPTS}")
+            time.sleep(wait)
         if total is None:
             # 중간 실패 = 부분 원장을 만들지 않는다. 통째로 포기.
             raise RuntimeError(f"KSD 페이징 중단 (basDt={bas_dt}, page={page})")

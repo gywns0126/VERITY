@@ -353,12 +353,14 @@ def run_report_summarizer(
 
     # 신규 후보 — 캐시 미존재 + PDF URL 보유 + lookback 내
     candidates = []
+    usable_reports = 0
     for r in company_reports:
         if r.get("date", "") < cutoff:
             continue
         url = r.get("pdf_url")
         if not url:
             continue
+        usable_reports += 1
         h = _hash_url(url)
         if h in processed_hashes:
             continue
@@ -456,6 +458,15 @@ def run_report_summarizer(
             "total_processed_lifetime": len(processed_hashes),
         },
     }
+
+    # An outage must not renew the successful snapshot's timestamp or cache
+    # transient failures as permanently processed. Cached-only healthy runs
+    # still succeed; no new model requests are needed for those inputs.
+    if (not usable_reports or not aggregated
+            or (to_process and new_summaries == 0)):
+        payload["status"] = "failed_no_usable_summaries"
+        logger.error("[Summarizer] no usable result this run; preserving prior snapshot")
+        return payload
 
     tmp = SUMMARIES_PATH + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:

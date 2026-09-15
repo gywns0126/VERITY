@@ -319,9 +319,20 @@
    "max_age_minutes": 2160,
    "owner": "ci",
    "schedule": "weekday",
-   "cadence": "daily_analysis_full(VERITY_MODE=prod) full 모드 scout_reports 재생성. gitignore(저작권)·비발행 입력 — 다운스트림 stock_report_public 으로 노출.",
+   "cadence": "analyst_reports.yml 의 scout_reports 입력. gitignore 중간 파일이므로 직접 검사하지 않고 report_summaries 스트림을 검사한다.",
    "criticality": "P2",
-   "resolved_note": "2026-06-26 FALSE ALARM 해소: 로컬 5/20 동결은 dev-mode(mock) 아티팩트일 뿐, 프로덕션 prod-mode 는 매일 신선(report_summaries 내부 5/21~6/25, stock_report_public 6/25). 모니터는 이 입력 mtime 아닌 다운스트림 stock_report_public 신선도로 판정."
+   "resolved_note": "2026-09-16: 전용 workflow 분리 이후 stock_report_public 갱신만으로 요약 신선도를 보증할 수 없다. 추적 파일 report_summaries.json을 별도 능동 감시한다."
+  },
+  {
+   "id": "report_summaries",
+   "file": "report_summaries.json",
+   "ts_field": "updated_at",
+   "max_age_minutes": 2880,
+   "owner": "ci",
+   "schedule": "weekday",
+   "cadence": "평일 1회 analyst_reports.yml (네이버·KIRS 수집 → PDF 요약 → 종목별 집계)",
+   "criticality": "P1",
+   "note": "갱신 성공 시각을 직접 검사한다. 주말 제외 48시간 한도이며 다른 리포트 파일의 갱신으로 대체하지 않는다. 수집·요약 전량 실패 시 기존 파일과 갱신 시각 보존."
   },
   {
    "id": "market_warnings",

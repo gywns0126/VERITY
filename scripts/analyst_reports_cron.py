@@ -136,6 +136,9 @@ def main() -> int:
 
     # ── ① 리포트 메타 수집 (네이버·KIRS 공개) ──
     meta, st, company_total = _collect_with_retry()
+    if company_total == 0 and VERITY_MODE not in ("dev", "staging"):
+        print("❌ 기업 리포트 수집 0건 — 기존 입력·요약 보존, 이번 실행 실패 (exit 1)")
+        return 1
 
     # ── ② 요약 + 종목별 집계 ──
     pri = _priority_tickers()
@@ -167,6 +170,9 @@ def main() -> int:
     #   신: config.VERITY_MODE 단일 해석 — 미설정=dev 로 양쪽이 일치한다.
     if VERITY_MODE in ("dev", "staging"):
         print(f"  (VERITY_MODE={VERITY_MODE} — mock 구간, 전량실패 가드 미적용)")
+    elif status == "failed_no_usable_summaries":
+        print("❌ 사용 가능한 요약 갱신 실패 — 기존 파일·시각 보존 (exit 1)")
+        return 1
     elif status in ("no_reports", "empty_input") and aggregated == 0:
         print(f"❌ 산출물 0 (status={status}) — 전량 실패로 신고 (exit 1)")
         return 1
