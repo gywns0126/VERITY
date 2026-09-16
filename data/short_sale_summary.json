@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-16T18:04:52+09:00",
+ "as_of": "2026-09-16T23:15:31+09:00",
  "version": "short_sale_trail_v0",
  "n_observations": 6464,
  "window_start": null,
@@ -10,14 +10,14 @@
  },
  "KR": {
   "auto_avoid": {
-   "n_observations": 148,
-   "n_tickers": 42,
+   "n_observations": 150,
+   "n_tickers": 43,
    "fwd_20d": {
     "n_tickers": 14,
-    "n_observations": 78,
-    "mean": -2.61,
+    "n_observations": 81,
+    "mean": -2.96,
     "median": -3.85,
-    "mean_by_observation": -2.86,
+    "mean_by_observation": -2.83,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    },
    "fwd_60d": {
@@ -30,14 +30,14 @@
    }
   },
   "downgrade": {
-   "n_observations": 398,
-   "n_tickers": 74,
+   "n_observations": 399,
+   "n_tickers": 75,
    "fwd_20d": {
-    "n_tickers": 25,
-    "n_observations": 250,
-    "mean": 2.59,
-    "median": 1.17,
-    "mean_by_observation": 2.02,
+    "n_tickers": 28,
+    "n_observations": 263,
+    "mean": 2.04,
+    "median": 0.39,
+    "mean_by_observation": 1.78,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    },
    "fwd_60d": {
@@ -50,14 +50,14 @@
    }
   },
   "clean": {
-   "n_observations": 600,
-   "n_tickers": 98,
+   "n_observations": 608,
+   "n_tickers": 106,
    "fwd_20d": {
-    "n_tickers": 34,
-    "n_observations": 289,
-    "mean": 0.39,
+    "n_tickers": 40,
+    "n_observations": 324,
+    "mean": 0.33,
     "median": -2.49,
-    "mean_by_observation": 0.51,
+    "mean_by_observation": 0.12,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    },
    "fwd_60d": {
@@ -70,22 +70,22 @@
    }
   },
   "missing": {
-   "n_observations": 1467,
-   "n_tickers": 167,
+   "n_observations": 1456,
+   "n_tickers": 157,
    "fwd_20d": {
     "n_tickers": 97,
-    "n_observations": 1210,
-    "mean": 1.54,
+    "n_observations": 1219,
+    "mean": 1.55,
     "median": -2.42,
-    "mean_by_observation": 7.95,
+    "mean_by_observation": 7.9,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    },
    "fwd_60d": {
-    "n_tickers": 78,
-    "n_observations": 1108,
-    "mean": -5.02,
-    "median": -6.84,
-    "mean_by_observation": -1.74,
+    "n_tickers": 79,
+    "n_observations": 1118,
+    "mean": -4.9,
+    "median": -6.12,
+    "mean_by_observation": -1.79,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    }
   }
@@ -173,9 +173,9 @@
   }
  },
  "labels": [
-  "통계 무의미 — auto_avoid 고유 종목 N=14 < 20 (관측 78건이지만 같은 종목 반복. 등록 §6 게이트)",
+  "통계 무의미 — auto_avoid 고유 종목 N=14 < 20 (관측 81건이지만 같은 종목 반복. 등록 §6 게이트)",
   "US 지표 결측 1580건 — clean 과 분리 집계됨(무혐의 통과 아님)",
-  "KR 지표 결측 1467건 — 수집 이전 기간 포함. clean 과 분리 집계"
+  "KR 지표 결측 1456건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
  "note": "공매도 규칙 사후 수익률 관측 — 임계·강도 재판단의 판정 근거. 점수·집행 입력 0. KR=거래량 비중(흐름) / US=숏인터레스트(포지션) 로 측정 대상이 다르므로 시장 간 수치를 비교하지 말 것. 수익률은 KR 전용(US 일봉 레이크 미도달)."
