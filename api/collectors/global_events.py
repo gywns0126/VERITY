@@ -24,6 +24,20 @@ _FRED_BASE = "https://api.stlouisfed.org/fred"
 _KST = timezone(timedelta(hours=9))
 _TIMEOUT = 10
 
+# 공식 일정·상품 설명 원문. 날짜를 자체 규칙으로 계산한 이벤트도 계산 근거를
+# 확인할 수 있는 기관의 일정/상품 페이지로만 연결한다.
+_OFFICIAL_SOURCE_URLS: Dict[str, str] = {
+    "Fed": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+    "ECB": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+    "BOJ": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+    "BOK": "https://www.bok.or.kr/portal/main/contents.do?menuNo=200755",
+    "CBOE": "https://cdn.cboe.com/resources/options/Cboe2026OPTIONSCalendar.pdf",
+    "ISM": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
+    "UMich": "https://data.sca.isr.umich.edu/survey-info.php",
+    "Conference Board": "https://www.conference-board.org/topics/consumer-confidence/",
+    "KRX": "https://global.krx.co.kr/contents/GLB/02/0201/0201040202/GLB0201040202.jsp",
+}
+
 # ──────────────────────────────────────────────────────────────
 # FRED Release ID → 이벤트 템플릿
 # 검증: https://fred.stlouisfed.org/releases
@@ -123,8 +137,8 @@ _BOJ_SCHEDULE: List[str] = [
 
 # 한국은행 금통위 (BOK)
 _BOK_SCHEDULE: List[str] = [
-    "2026-01-15", "2026-02-26", "2026-04-09", "2026-05-28",
-    "2026-07-09", "2026-08-27", "2026-10-22", "2026-11-26",
+    "2026-01-15", "2026-02-26", "2026-04-10", "2026-05-28",
+    "2026-07-16", "2026-08-27", "2026-10-22", "2026-11-26",
 ]
 
 # 미국 삼중마녀의 날 (Quad Witching) — 분기 셋째 금요일
@@ -181,6 +195,8 @@ def _monthly_calendar_events() -> List[Dict[str, Any]]:
             "impact": "50선 기준. 상회 시 경기 확장, 하회 시 수축. 주식시장 방향성 선행",
             "action": "50선 돌파/이탈 시 경기민감주 비중 조절",
             "source": "ISM",
+            "source_url": _OFFICIAL_SOURCE_URLS["ISM"],
+            "source_kind": "schedule",
         })
 
         ism_svc = _next_business_day(ism_mfg + timedelta(days=1))
@@ -194,6 +210,8 @@ def _monthly_calendar_events() -> List[Dict[str, Any]]:
             "impact": "미국 GDP 70%인 서비스업 체감경기. 제조업 PMI와 교차 확인",
             "action": "서비스 견조 시 소프트랜딩 시나리오 우호",
             "source": "ISM",
+            "source_url": _OFFICIAL_SOURCE_URLS["ISM"],
+            "source_kind": "schedule",
         })
 
         fridays = [d for d in (_nth_weekday(y, m, 4, n) for n in range(1, 6))
@@ -208,6 +226,8 @@ def _monthly_calendar_events() -> List[Dict[str, Any]]:
                 "impact": "미국 소비자 기대 인플레이션 포함. Fed도 주시하는 지표",
                 "action": "소비재·리테일 섹터 감정 판단",
                 "source": "UMich",
+                "source_url": _OFFICIAL_SOURCE_URLS["UMich"],
+                "source_kind": "schedule",
             })
 
         cb_date = _last_weekday(y, m, 1)  # 마지막 화요일
@@ -220,6 +240,8 @@ def _monthly_calendar_events() -> List[Dict[str, Any]]:
             "impact": "Michigan과 교차 검증되는 소비심리. 고용 기대 하위지표 중요",
             "action": "Michigan과 방향 일치 시 신뢰도 상승",
             "source": "Conference Board",
+            "source_url": _OFFICIAL_SOURCE_URLS["Conference Board"],
+            "source_kind": "release",
         })
 
         thursdays = [d for d in (_nth_weekday(y, m, 3, n) for n in range(1, 6))
@@ -234,6 +256,8 @@ def _monthly_calendar_events() -> List[Dict[str, Any]]:
                 "impact": "프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
                 "action": "만기일 장중 단기 매매 자제",
                 "source": "KRX",
+                "source_url": _OFFICIAL_SOURCE_URLS["KRX"],
+                "source_kind": "product_rule",
             })
 
     return out
@@ -333,6 +357,8 @@ def collect_global_events() -> List[Dict[str, Any]]:
         "action": "FOMC 전후 2일간 신규 매수 자제, 발표 후 방향 확인",
         "country": "미국",
         "source": "Fed",
+        "source_url": _OFFICIAL_SOURCE_URLS["Fed"],
+        "source_kind": "schedule",
     }))
 
     events.extend(_fixed_schedule_events(_ECB_SCHEDULE, {
@@ -343,6 +369,8 @@ def collect_global_events() -> List[Dict[str, Any]]:
         "action": "발표 후 유로/달러 방향 확인, 수출주 환율 민감도 점검",
         "country": "유럽",
         "source": "ECB",
+        "source_url": _OFFICIAL_SOURCE_URLS["ECB"],
+        "source_kind": "schedule",
     }))
 
     events.extend(_fixed_schedule_events(_BOJ_SCHEDULE, {
@@ -353,6 +381,8 @@ def collect_global_events() -> List[Dict[str, Any]]:
         "action": "엔/달러 150선 근처면 청산 리스크 경계, 자동차·반도체 수출주 점검",
         "country": "일본",
         "source": "BOJ",
+        "source_url": _OFFICIAL_SOURCE_URLS["BOJ"],
+        "source_kind": "schedule",
     }))
 
     events.extend(_fixed_schedule_events(_BOK_SCHEDULE, {
@@ -363,6 +393,8 @@ def collect_global_events() -> List[Dict[str, Any]]:
         "action": "금리 민감 섹터 비중 조절",
         "country": "한국",
         "source": "BOK",
+        "source_url": _OFFICIAL_SOURCE_URLS["BOK"],
+        "source_kind": "schedule",
     }))
 
     events.extend(_fixed_schedule_events(_QUAD_WITCHING, {
@@ -373,6 +405,8 @@ def collect_global_events() -> List[Dict[str, Any]]:
         "action": "장 마감 전후 30분 변동성 급등 주의",
         "country": "미국",
         "source": "CBOE",
+        "source_url": _OFFICIAL_SOURCE_URLS["CBOE"],
+        "source_kind": "expiration_calendar",
     }))
 
     events.extend(_monthly_calendar_events())
