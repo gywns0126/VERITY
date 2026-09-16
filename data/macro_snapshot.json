@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-16T23:58:47+09:00",
+  "collected_at": "2026-09-17T00:02:34+09:00",
   "macro": {
     "usd_krw": {
       "value": 1366.33,
@@ -13869,7 +13869,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-09-16T23:59:00+09:00",
+    "updated_at": "2026-09-17T00:03:34+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.8,
       "us_ig_risk": "LOW",
@@ -13879,7 +13879,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260916",
-      "collected_at": "2026-09-16T23:59:00+09:00",
+      "collected_at": "2026-09-17T00:03:34+09:00",
       "grades": {
         "AA-": {
           "yield": 4.716,
@@ -13908,7 +13908,7 @@
       "country": "미국",
       "source": "Fed",
       "date": "2026-09-16",
-      "d_day": 0
+      "d_day": -1
     },
     {
       "name": "미국 소매판매",
@@ -13925,7 +13925,7 @@
       "release_id": 9,
       "source_url": "https://fred.stlouisfed.org/release?rid=9",
       "source_kind": "release",
-      "d_day": 0
+      "d_day": -1
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -13942,7 +13942,7 @@
       "release_id": 180,
       "source_url": "https://fred.stlouisfed.org/release?rid=180",
       "source_kind": "release",
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "미국 주택착공",
@@ -13959,7 +13959,7 @@
       "release_id": 27,
       "source_url": "https://fred.stlouisfed.org/release?rid=27",
       "source_kind": "release",
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "BOJ 금융정책결정회합",
@@ -13975,7 +13975,7 @@
       "country": "일본",
       "source": "BOJ",
       "date": "2026-09-18",
-      "d_day": 2
+      "d_day": 1
     },
     {
       "name": "삼중마녀의 날 (Quad Witching)",
@@ -13989,7 +13989,7 @@
       "country": "미국",
       "source": "CBOE",
       "date": "2026-09-18",
-      "d_day": 2
+      "d_day": 1
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -14006,7 +14006,7 @@
       "release_id": 180,
       "source_url": "https://fred.stlouisfed.org/release?rid=180",
       "source_kind": "release",
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "Conference Board 소비자신뢰",
@@ -14020,7 +14020,7 @@
       "impact": "Michigan과 교차 검증되는 소비심리. 고용 기대 하위지표 중요",
       "action": "Michigan과 방향 일치 시 신뢰도 상승",
       "source": "Conference Board",
-      "d_day": 13
+      "d_day": 12
     },
     {
       "name": "미국 GDP 발표",
@@ -14037,7 +14037,7 @@
       "release_id": 53,
       "source_url": "https://fred.stlouisfed.org/release?rid=53",
       "source_kind": "release",
-      "d_day": 14
+      "d_day": 13
     },
     {
       "name": "미국 PCE 물가지수",
@@ -14054,16 +14054,51 @@
       "release_id": 54,
       "source_url": "https://fred.stlouisfed.org/release?rid=54",
       "source_kind": "release",
+      "d_day": 13
+    },
+    {
+      "name": "ISM 제조업 PMI",
+      "date": "2026-10-01",
+      "country": "미국",
+      "severity": "medium",
+      "impact_area": [
+        "경기",
+        "제조업"
+      ],
+      "impact": "50선 기준. 상회 시 경기 확장, 하회 시 수축. 주식시장 방향성 선행",
+      "action": "50선 돌파/이탈 시 경기민감주 비중 조절",
+      "source": "ISM",
+      "d_day": 14
+    },
+    {
+      "name": "미국 주간 실업수당 청구",
+      "severity": "medium",
+      "impact_area": [
+        "경기",
+        "고용"
+      ],
+      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
+      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
+      "date": "2026-10-01",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 180,
+      "source_url": "https://fred.stlouisfed.org/release?rid=180",
+      "source_kind": "release",
       "d_day": 14
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 24.29
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 134.34
   },
   "schema_version": "v0"
 }
