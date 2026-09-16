@@ -26,6 +26,7 @@ _rate_limit = defaultdict(list)
 _RATE_WINDOW = 60
 _RATE_MAX = 60
 _PRIVACY = {"private", "summary", "masked", "full"}
+_PUBLIC_PRIVACY = {"summary", "masked", "full"}
 _FREQUENCY = {"monthly", "quarterly", "once"}
 _REBALANCE = {"yearly", "quarterly", "none"}
 
@@ -105,7 +106,9 @@ def _clean_assets(value):
 
 
 def _public_item(row, profiles):
-    privacy = str(row.get("privacy") or "summary")
+    privacy = str(row.get("privacy") or "")
+    if privacy not in _PUBLIC_PRIVACY:
+        return None
     assets = row.get("assets") if isinstance(row.get("assets"), list) else []
     if privacy == "summary":
         visible_assets = []
@@ -119,7 +122,8 @@ def _public_item(row, profiles):
         "kind": "portfolio_experiment",
         "nickname": profile.get("nickname") or "익명",
         "avatar": profile.get("avatar") or "",
-        "title": row.get("title") or "포트폴리오 실험",
+        # Keep legacy asset-derived titles private, too; no row rewrite is needed.
+        "title": (row.get("title") or "포트폴리오 실험") if privacy == "full" else "포트폴리오 조건 공유",
         "assets": visible_assets,
         "asset_count": len(assets),
         "start_date": row.get("start_date"),
@@ -162,7 +166,7 @@ class handler(BaseHTTPRequestHandler):
         if mine:
             filters["user_id"] = f"eq.{user_id}"
         else:
-            filters.update({"status": "eq.published", "hidden": "eq.false", "privacy": "neq.private"})
+            filters.update({"status": "eq.published", "hidden": "eq.false", "privacy": "in.(summary,masked,full)"})
         try:
             rows = sb.select("portfolio_experiments", filters, user_jwt=token or None)
             if mine:
@@ -172,7 +176,8 @@ class handler(BaseHTTPRequestHandler):
             if uids:
                 for profile in sb.select("public_profiles", {"id": f"in.({uids})", "select": "id,nickname,avatar"}):
                     profiles[profile["id"]] = profile
-            return _json(self, {"items": [_public_item(row, profiles) for row in rows or []]})
+            items = [_public_item(row, profiles) for row in rows or []]
+            return _json(self, {"items": [item for item in items if item is not None]})
         except Exception as exc:
             _logger.error("portfolio experiments GET: %s\n%s", exc, traceback.format_exc())
             return _json(self, {"items": []})
@@ -200,6 +205,9 @@ class handler(BaseHTTPRequestHandler):
         if contribution <= 0:
             return _json(self, {"error": "투자 금액을 확인해주세요"}, 400)
         published = privacy != "private" and bool(data.get("publish"))
+        # UI guards alone are insufficient; retain until deployed RLS is verified.
+        if published and privacy in {"summary", "masked"}:
+            return _json(self, {"error": "종목 숨김 보호 점검 중입니다. 비공개 초안을 이용해주세요"}, 503)
         payload = {
             "user_id": user_id,
             "title": str(data.get("title") or "나의 포트폴리오 실험").strip()[:80],
