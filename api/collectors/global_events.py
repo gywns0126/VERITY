@@ -43,7 +43,9 @@ FRED_RELEASES: Dict[int, Dict[str, Any]] = {
         "impact": "고용 강세→금리 인상 우려, 약세→경기침체 우려. 양면 리스크",
         "action": "발표일 장 초반 관망, 시장 반응 확인 후 대응",
     },
-    21: {
+    # Personal Income and Outlays includes PCE prices; 21 is H.6 money stock.
+    # Verified against https://fred.stlouisfed.org/release?rid=54 (2026-09-16).
+    54: {
         "name": "미국 PCE 물가지수",
         "severity": "high",
         "impact_area": ["물가", "금리기대"],
@@ -283,6 +285,10 @@ def _fetch_fred_releases(window_days: int = 30) -> List[Dict[str, Any]]:
             ev["country"] = "미국"
             ev["source"] = "FRED"
             ev["release_id"] = rid
+            # Public release page, not the API URL (which contains an API key).
+            # This identifies the release family, not a dated press-release article.
+            ev["source_url"] = f"https://fred.stlouisfed.org/release?rid={rid}"
+            ev["source_kind"] = "release"
             out.append(ev)
             taken += 1
             if not is_weekly or taken >= 3:
