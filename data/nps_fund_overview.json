@@ -1,18 +1,29 @@
 {
- "as_of": "2026-03-31",
- "source": "국민연금기금운용본부 운용현황 공시 (fund.nps.or.kr)",
- "update": "전용 API 없음 — 분기 수기 갱신 (보도자료·운용현황 파싱)",
- "aum_krw_trillion": 1526.1,
- "return_total_pct": 18.82,
- "return_total_note": "2025년 전체 수익률(잠정)",
- "return_cumulative_annualized_pct": 8.04,
- "return_cumulative_note": "1988년 이래 누적 연환산",
- "asset_returns_pct": {
-  "국내주식": 8.24,
-  "해외주식": 19.74,
-  "국내채권": 0.84,
-  "해외채권": 3.77,
-  "대체투자": 8.03
+ "as_of": "2026-06-30",
+ "source": "국민연금기금운용본부 · 수익률은 2026년 1~6월 잠정, 누적 연환산은 1988~2025년",
+ "source_urls": {
+  "aum_and_asset_mix": "https://fund.nps.or.kr/oprtprcn/ivsmprcn/getOHED0016M0.do",
+  "returns": "https://fund.nps.or.kr/oprtprcn/oprtotcm/getOHED0011M0.do",
+  "performance_cross_check": "https://fund.nps.or.kr/oprtprcn/oprtotcm/getOHED0010M0.do"
  },
+ "checked_at": "2026-09-16T14:55:48+09:00",
+ "update": "공식 월말 운용현황 수동 확인 · 보유종목 DART 수집과 별도 갱신",
+ "aum_krw_trillion": 1865.6,
+ "return_total_pct": 27.22,
+ "return_total_note": "2026년 1~6월 수익률(잠정)",
+ "return_period_start": "2026-01-01",
+ "return_period_end": "2026-06-30",
+ "return_cumulative_annualized_pct": 8.04,
+ "return_cumulative_note": "1988~2025년 말 누적 연환산",
+ "return_cumulative_period_end": "2025-12-31",
+ "asset_returns_pct": {
+  "국내주식": 107.37,
+  "해외주식": 17.81,
+  "국내채권": -3.00,
+  "해외채권": 9.22,
+  "대체투자": 9.60
+ },
+ "asset_mix_note": "공식 포트폴리오 개요 표의 조원 단위 소수 첫째 자리 공시값을 십억원으로 단위 변환. 복지·기타는 합산 공시만 사용하며 미공개 개별 금액은 추정하지 않음. 자산군 합계와 전체자산의 원문 차이는 임의 보정하지 않음.",
+ "asset_mix_amount_precision_bil": 100,
  "disclaimer": "공시 시점 기준 사실 · 미래 수익 보장 아님 · 점수·추천 아님"
 }
