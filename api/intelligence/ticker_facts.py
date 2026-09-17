@@ -90,7 +90,6 @@ LOCAL_FILES = [
     ("data/recommendations.json", "운영풀", False),
     ("data/krx_mktcap.json", "시총", True),
     ("data/kr_sector_map.json", "섹터맵", False),
-    ("data/report_summaries.json", "리포트 요약", False),
     ("data/dividends_kr.json", "배당", True),
     ("data/chain_snippets.json", "공급망 스니펫", False),
     ("data/group_structure.json", "그룹 지배구조", False),

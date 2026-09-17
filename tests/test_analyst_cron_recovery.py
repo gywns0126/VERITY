@@ -10,8 +10,6 @@ import requests
 
 from api.collectors import ReportScout as scout
 from api.collectors import dividend_ksd as ksd
-from api.analyzers import report_summarizer as summaries
-from scripts import analyst_reports_cron as runner
 from scripts import freshness_shadow_monitor as freshness
 from scripts import cron_health_monitor as health
 
@@ -96,89 +94,7 @@ def test_empty_collection_keeps_prior_input(tmp_path, monkeypatch):
     forbidden.assert_not_called()
 
 
-def test_runner_stops_before_model_on_empty_input(monkeypatch):
-    monkeypatch.setattr(runner, "VERITY_MODE", "prod")
-    monkeypatch.setattr(runner, "_collect_with_retry", lambda: ({}, {}, 0))
-    summarize = Mock()
-    monkeypatch.setattr(runner, "run_report_summarizer", summarize)
-    assert runner.main() == 1
-    summarize.assert_not_called()
-
-
-def setup_summary(tmp_path, monkeypatch, reports, cached=True):
-    inp, out = tmp_path / "reports.json", tmp_path / "summaries.json"
-    inp.write_text(json.dumps({"company_reports": reports}))
-    old = {"updated_at": "2026-09-10T18:10:51+09:00", "summaries": {},
-           "_processed_hashes": {}}
-    if cached:
-        old["_processed_hashes"][summaries._hash_url("https://example.com/old.pdf")] = {
-            "status": "summarized", "date": "2026-09-15", "ticker": "005930",
-            "summary_data": {"date": "2026-09-15", "sentiment": 50, "opinion": "중립"}}
-    out.write_text(json.dumps(old))
-    monkeypatch.setattr(summaries, "REPORTS_JSON", str(inp))
-    monkeypatch.setattr(summaries, "SUMMARIES_PATH", str(out))
-    monkeypatch.setattr(summaries, "now_kst", lambda: NOW)
-    return out, out.read_bytes()
-
-
-@pytest.mark.parametrize("failure", [None, {"_skip_reason": "ai_fail"},
-                                     {"_skip_reason": "image_pdf_or_short"}])
-def test_failed_new_summaries_do_not_refresh_old_cache(failure, tmp_path, monkeypatch):
-    out, before = setup_summary(tmp_path, monkeypatch, [
-        {"date": "2026-09-15", "ticker": "005930", "pdf_url": "https://example.com/new.pdf"}])
-    monkeypatch.setattr(summaries, "summarize_report", lambda r: failure)
-    result = summaries.run_report_summarizer.__wrapped__()
-    assert result["status"] == "failed_no_usable_summaries"
-    assert out.read_bytes() == before
-
-
-def test_no_pdf_does_not_refresh_prior_summary(tmp_path, monkeypatch):
-    out, before = setup_summary(tmp_path, monkeypatch, [{"date": "2026-09-15", "pdf_url": None}])
-    assert summaries.run_report_summarizer.__wrapped__()["status"] == "failed_no_usable_summaries"
-    assert out.read_bytes() == before
-
-
-def test_cached_only_success_does_not_call_model(tmp_path, monkeypatch):
-    out, _ = setup_summary(tmp_path, monkeypatch, [
-        {"date": "2026-09-15", "ticker": "005930", "pdf_url": "https://example.com/old.pdf"}])
-    model = Mock(side_effect=AssertionError("unnecessary model cost"))
-    monkeypatch.setattr(summaries, "summarize_report", model)
-    result = summaries.run_report_summarizer.__wrapped__()
-    assert result["stats"]["tickers_aggregated"] == 1
-    assert json.loads(out.read_text())["updated_at"] == NOW.isoformat()
-    model.assert_not_called()
-
-
-def test_runner_reports_summary_failure_even_with_old_aggregates(monkeypatch):
-    monkeypatch.setattr(runner, "VERITY_MODE", "prod")
-    monkeypatch.setattr(runner, "_collect_with_retry", lambda: ({}, {}, 30))
-    monkeypatch.setattr(runner, "_priority_tickers", lambda: [])
-    monkeypatch.setattr(runner, "run_report_summarizer", lambda **kw: {
-        "status": "failed_no_usable_summaries", "stats": {"tickers_aggregated": 85}})
-    assert runner.main() == 1
-
-
-def test_new_summary_success_is_saved(tmp_path, monkeypatch):
-    out, _ = setup_summary(tmp_path, monkeypatch, [
-        {"date": "2026-09-15", "ticker": "005930", "pdf_url": "https://example.com/new.pdf"}],
-        cached=False)
-    monkeypatch.setattr(summaries, "summarize_report", lambda r: {
-        "date": r["date"], "ticker": r["ticker"], "sentiment": 50, "opinion": "중립"})
-    result = summaries.run_report_summarizer.__wrapped__()
-    assert result["stats"]["new_summaries_this_run"] == 1
-    assert json.loads(out.read_text())["stats"]["tickers_aggregated"] == 1
-
-
-def test_empty_aggregate_never_overwrites_snapshot(tmp_path, monkeypatch):
-    out, before = setup_summary(tmp_path, monkeypatch, [
-        {"date": "2026-09-15", "ticker": None, "pdf_url": "https://example.com/new.pdf"}],
-        cached=False)
-    monkeypatch.setattr(summaries, "summarize_report", lambda r: {"date": r["date"], "sentiment": 50})
-    assert summaries.run_report_summarizer.__wrapped__()["status"] == "failed_no_usable_summaries"
-    assert out.read_bytes() == before
-
-
-def test_actual_summary_stream_is_monitored(tmp_path, monkeypatch):
+def test_retired_summary_stream_is_not_monitored(tmp_path, monkeypatch):
     manifest = ROOT / "data" / "freshness_sla.json"
     monkeypatch.setattr(freshness, "MANIFEST", str(manifest))
     monkeypatch.setattr(freshness, "DATA_DIR", str(tmp_path))
@@ -187,10 +103,9 @@ def test_actual_summary_stream_is_monitored(tmp_path, monkeypatch):
         "updated_at": "2026-09-10T18:10:51+09:00"}))
     obs = freshness.build_observations()
     row = next(r for r in obs["rows"] if r["id"] == "report_summaries")
-    assert row["status"] == "checked" and row["would_alarm"]
-    assert row["criticality"] == "P1"
+    assert row["status"] == "skip_inactive"
     monkeypatch.setattr(health, "_SLA_PATH", str(manifest))
-    assert "report_summaries" in health._workflow_stream_map()["analyst_reports.yml"]
+    assert "analyst_reports.yml" not in health._workflow_stream_map()
 
 
 @pytest.mark.parametrize("state", ["transport_error", "transient_http_error"])

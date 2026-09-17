@@ -319,20 +319,21 @@
    "max_age_minutes": 2160,
    "owner": "ci",
    "schedule": "weekday",
-   "cadence": "analyst_reports.yml 의 scout_reports 입력. gitignore 중간 파일이므로 직접 검사하지 않고 report_summaries 스트림을 검사한다.",
+   "cadence": "2026-09-17 비용 차단으로 전용 수집·AI 요약 workflow 종료",
    "criticality": "P2",
-   "resolved_note": "2026-09-16: 전용 workflow 분리 이후 stock_report_public 갱신만으로 요약 신선도를 보증할 수 없다. 추적 파일 report_summaries.json을 별도 능동 감시한다."
+   "resolved_note": "2026-09-17: Gemini 유료 요약을 제거했다. 이 스트림은 더 이상 운영 입력이 아니다."
   },
   {
    "id": "report_summaries",
+   "active_check": false,
    "file": "report_summaries.json",
    "ts_field": "updated_at",
    "max_age_minutes": 2880,
    "owner": "ci",
    "schedule": "weekday",
-   "cadence": "평일 1회 analyst_reports.yml (네이버·KIRS 수집 → PDF 요약 → 종목별 집계)",
+   "cadence": "2026-09-17 Gemini 유료 요약 종료",
    "criticality": "P1",
-   "note": "갱신 성공 시각을 직접 검사한다. 주말 제외 48시간 한도이며 다른 리포트 파일의 갱신으로 대체하지 않는다. 수집·요약 전량 실패 시 기존 파일과 갱신 시각 보존."
+   "resolved_note": "예약 workflow와 기존 AI 요약 산출물을 함께 제거했다. 재활성화 전 비용 승인과 실제 청구 추적이 필요하다."
   },
   {
    "id": "market_warnings",
