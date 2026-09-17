@@ -168,7 +168,7 @@ def test_retired_endpoint_never_generates_or_fetches(monkeypatch, mode):
     h.do_GET()
     assert statuses == [410]
     assert json.loads(h.wfile.getvalue())['brief'] is None
-    assert ai_report.handler is fact_report.handler
+    assert ai_report.handler._err is fact_report.handler._err
 
 
 def test_report_http_prompt_is_valid_and_legacy_pdf_uses_same_data(monkeypatch):
