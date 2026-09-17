@@ -1,149 +1,110 @@
-// AlphaNest 팩트 리포트 — Typst 조판 템플릿 (fact_report.py 가 sys_inputs.data 로 JSON 주입).
-// 설계: 파이썬 = 데이터 조립·포맷(단위·콤마), Typst = 조판만. 섹션 = 제네릭 테이블 스키마
-//   { title, note, headers[], aligns[]("l"|"r"|"c"), widths[](fr 배수), rows[][] }
-// RULE 7 — 전부 공시·수집 사실. 점수·추천 문구는 파이썬 쪽에서 원천 배제.
-
+// Evidence report: PDF and plain-text export share one deterministic dossier.
 #let D = json(bytes(sys.inputs.data))
-
 #let ink = rgb("#191f28")
 #let sub = rgb("#4e5968")
-#let faint = rgb("#8b95a1")
-#let hair = rgb("#e5e8eb")
 #let accent = rgb("#6c5ce7")
-#let up = rgb("#f04452")
-#let down = rgb("#3182f6")
+#let hair = rgb("#e5e8eb")
 #let fill = rgb("#f5f6f8")
-
-// 방향 셀 색 (KR 관례: 높음=빨강 / 낮음=파랑 / 비슷=회색 · 사실 방향 표시 · 판단 아님)
-#let cfill(c) = if c == "높음" { up } else if c == "낮음" { down } else if c == "비슷" { faint } else { ink }
-#let cwt(c) = if c == "높음" or c == "낮음" { 800 } else { 400 }
-
-#set page(
-  paper: "a4",
-  margin: (top: 16mm, bottom: 18mm, x: 15mm),
+#set page(paper: "a4", margin: (top: 15mm, bottom: 17mm, x: 15mm),
   footer: context [
     #line(length: 100%, stroke: 0.5pt + hair)
-    #v(1.5mm)
-    #set text(size: 7pt, fill: faint)
-    #grid(columns: (1fr, auto), column-gutter: 6mm,
-      [#D.disclaimer],
-      [#counter(page).display() / #counter(page).final().first()],
-    )
-  ],
-)
-#set text(font: "Pretendard", size: 9pt, lang: "ko", fill: ink)
+    #v(1mm)
+    #grid(columns: (1fr, auto), gutter: 5mm,
+      text(size: 7pt, fill: sub)[#D.disclaimer],
+      text(size: 7pt, fill: sub)[#counter(page).display() / #counter(page).final().first()])
+  ])
+#set text(font: "Pretendard", size: 9pt, weight: 600, lang: "ko", fill: ink)
 #set par(leading: 0.55em)
-
-// ─── 헤더 ───
-#grid(columns: (1fr, auto), column-gutter: 6mm,
-  [
-    #text(size: 17pt, weight: 800)[#D.name]
-    #h(2.5mm)
-    #text(size: 9.5pt, fill: sub, weight: 600)[#D.ticker · #D.market]
-    #v(0.5mm)
-    #text(size: 8pt, fill: faint)[#D.business]
-  ],
-  align(right)[
-    #text(size: 9.5pt, weight: 800, fill: accent)[ALPHANEST]
-    #linebreak()
-    #text(size: 7.5pt, fill: faint)[#D.at("report_label", default: "팩트 리포트") · #D.generated]
-  ],
-)
-#v(1mm)
+#set heading(numbering: none)
+#show heading.where(level: 1): set text(size: 15pt, weight: 800)
+#show heading.where(level: 2): set text(size: 11pt, weight: 800)
+#let cell(c) = if type(c) == dictionary {
+  link(c.url, text(fill: accent, weight: 700)[#c.text])
+} else { text(c) }
+#grid(columns: (1fr, auto), gutter: 5mm,
+  [#text(size: 19pt, weight: 800)[#D.name]
+   #h(2mm)#text(size: 10pt, fill: sub)[#D.ticker · #D.market]
+   #linebreak()#text(size: 8pt, fill: sub)[#D.business]],
+  align(right)[#text(size: 10pt, weight: 800, fill: accent)[ALPHANEST]
+    #linebreak()#text(size: 8pt, fill: sub)[#D.report_label]
+    #linebreak()#text(size: 7pt, fill: sub)[#D.generated]])
+#v(2mm)
 #line(length: 100%, stroke: 1pt + ink)
-
-// ─── 개요 (kv) ───
-#if D.kv.len() > 0 {
-  v(2.5mm)
-  grid(
-    columns: (auto, 1fr, auto, 1fr),
-    column-gutter: 4mm, row-gutter: 2.2mm,
-    ..D.kv.map(p => (
-      text(size: 8pt, fill: faint, weight: 600)[#p.at(0)],
-      text(size: 8.6pt, weight: 600)[#p.at(1)],
-    )).flatten()
-  )
-}
-
-// ─── AI 해석 (선택적 서술 장 — ai_report.py 만 D.ai 주입 · 팩트 리포트엔 없음) ───
-#if ("ai" in D) and (D.ai != none) {
-  v(4mm)
-  block[
-    #text(size: 10.5pt, weight: 800)[AI 해석]
-    #h(2mm) #text(size: 7.2pt, fill: faint)[아래 팩트 데이터 기반 자동 생성 서술 · 점수·추천 아님]
-  ]
-  v(1.6mm)
-  block(fill: fill, radius: 6pt, inset: (x: 4mm, y: 3.6mm), width: 100%, stroke: 0.5pt + hair)[
-    #for sec in D.ai.sections [
-      #text(size: 9pt, weight: 800, fill: accent)[#sec.h]
-      #v(0.9mm)
-      #text(size: 8.7pt, fill: ink)[#sec.body]
-      #v(2.6mm)
-    ]
-    #if D.ai.sources.len() > 0 [
-      #line(length: 100%, stroke: 0.4pt + hair)
-      #v(1.2mm)
-      #text(size: 7pt, fill: faint)[근거 데이터: #D.ai.sources.join(" · ")]
-    ]
+#v(2mm)
+#grid(columns: (1fr, 1fr), gutter: 3mm,
+  ..D.kv.map(p => block(fill: fill, radius: 5pt, inset: 3mm, width: 100%)[
+    #text(size: 8pt, fill: sub)[#p.at(0)] #h(2mm)#text(weight: 800)[#p.at(1)]
+  ]))
+#v(3mm)
+#text(size: 14pt, weight: 800)[먼저 확인할 질문]
+#v(1mm)
+#text(size: 8pt, fill: sub)[자료에서 확인되는 변화와 추가 조사할 쟁점을 연결했습니다. 원문을 읽지 않은 해석은 결론으로 제시하지 않습니다.]
+#for (i, q) in D.issues.enumerate() {
+  v(3mm)
+  block(breakable: false, width: 100%, inset: (left: 3mm), stroke: (left: 2pt + accent))[
+    #text(size: 10pt, weight: 800)[#(i+1). #q.title]
+    #v(1.2mm)
+    #text(size: 8.6pt)[#q.observation]
+    #v(1mm)
+    #text(size: 8.3pt, fill: sub)[확인할 것 · #q.question]
+    #v(0.6mm)
+    #text(size: 7.2pt, fill: accent)[자료 #q.refs]
   ]
 }
-
-// ─── 한눈에 (glance): 4 카드 + 요약 밴드 ───
-#if ("glance" in D) and (D.glance != none) {
-  v(4mm)
-  block[
-    #text(size: 10.5pt, weight: 800)[한눈에]
-    #h(2mm) #text(size: 7.2pt, fill: faint)[사실만 · 판단은 직접]
+#v(4mm)
+#block(fill: fill, radius: 5pt, inset: 3mm, width: 100%)[
+  #text(weight: 800)[내 AI로 더 분석하려면]
+  #v(1mm)
+  #text(size: 8.3pt)[이 PDF를 첨부하거나, 아래 분석 요청문을 내려받아 사용하는 AI에 붙여넣으세요. 같은 자료와 출처, 누락 사항, 분석 지침이 함께 들어 있습니다.]
+  #v(1mm)
+  #if "prompt_url" in D { link(D.prompt_url, text(fill: accent, weight: 700)[분석 요청문과 자료 받기 ↗]) }
+]
+#pagebreak()
+= 해석 전에 확인할 빈칸
+#text(size: 8.5pt, fill: sub)[수신된 자료의 한계입니다. 없는 정보를 추정으로 채우지 않습니다.]
+#v(3mm)
+#for g in D.gaps [
+  #block(breakable: false, inset: (bottom: 2.3mm))[
+    #text(fill: accent)[·] #g
   ]
-  v(1.6mm)
-  grid(
-    columns: D.glance.cards.map(c => 1fr),
-    rows: 18mm,
-    column-gutter: 2.2mm,
-    ..D.glance.cards.map(c => block(
-      fill: fill, radius: 5pt, inset: (x: 3mm, y: 2.8mm), width: 100%, height: 100%,
-    )[
-      #text(size: 8pt, weight: 700, fill: sub)[#c.q]
-      #v(1.2mm)
-      #text(size: 11pt, weight: 800)[#c.a]
-      #v(0.7mm)
-      #text(size: 7pt, fill: faint)[#c.s]
-    ])
-  )
-  v(2.2mm)
-  block(fill: accent, radius: 5pt, inset: (x: 4mm, y: 3mm), width: 100%)[
-    #text(size: 8.7pt, weight: 800, fill: white)[#D.glance.summary]
+]
+#v(3mm)
+== 자료 점검표
+#text(size: 8pt, fill: sub)[수신 여부는 이 종목의 자료가 있는지를 뜻합니다. 아래 갱신 시각은 파일 생성 시각이며, 재무·보유·거래 기준일은 각 표에서 확인하세요.]
+#v(2mm)
+#table(columns: (0.35fr, 1fr, 1.25fr, 1.5fr), inset: 4pt,
+  stroke: (left: none, right: none, top: none, bottom: 0.4pt + hair),
+  table.header(..("ID", "자료", "조회 결과", "파일 갱신").map(h => text(size: 8pt, weight: 700)[#h])),
+  ..D.coverage.map(c => (c.id, c.label, c.status, c.published)).flatten().map(c => text(size: 8pt)[#c]))
+#v(3mm)
+#for c in D.coverage [
+  #block(breakable: false, inset: (bottom: 2mm))[
+    #text(size: 7.8pt, weight: 700)[#c.id · #c.label]
+    #text(size: 7pt, fill: sub)[ — #c.source]
     #linebreak()
-    #text(size: 7.4pt, fill: white.transparentize(24%))[#D.glance.note]
+    #text(size: 7pt, fill: accent)[#link("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/" + c.file)[발행 자료 · #c.file]]
+    #if c.reason != "" [#linebreak()#text(size: 7pt, fill: sub)[#c.reason]]
   ]
-}
-
-// ─── 섹션 (제네릭 테이블) ───
-#let alignof(a) = if a == "r" { right } else if a == "c" { center } else { left }
-
+]
+#pagebreak()
+= 근거를 따라 읽는 자료
+#text(size: 8pt, fill: sub)[표 제목 옆 ID는 앞의 질문과 연결됩니다. 원문 열기는 수신된 문서 URL, 출처 목록은 문서 검색 페이지입니다.]
 #for s in D.sections {
   v(4mm)
-  block(breakable: false)[
-    #text(size: 10.5pt, weight: 800)[#s.title]
-    #if s.note != "" [ #h(2mm) #text(size: 7.2pt, fill: faint)[#s.note] ]
-    #v(1.2mm)
-    #line(length: 100%, stroke: 0.5pt + hair)
+  block(breakable: s.rows.len() > 12)[
+    #block(breakable: false, sticky: true)[
+      #text(size: 11pt, weight: 800)[#s.title]
+      #h(2mm)#text(size: 7.4pt, fill: accent)[#s.id · 표시 #(s.shown)/#(s.total)행]
+      #v(1mm)
+      #text(size: 7.8pt, fill: sub)[#s.note]
+    ]
+    #v(1mm)
+    #table(columns: s.widths.map(w => w * 1fr),
+      inset: (x: 2pt, y: 4pt), stroke: (left: none, right: none, top: none, bottom: 0.4pt + hair),
+      table.header(..s.headers.map(h => text(size: 8pt, weight: 700, fill: sub)[#h])),
+      ..s.rows.flatten().map(c => text(size: 8.3pt)[#cell(c)]))
   ]
-  v(0.8mm)
-  table(
-    columns: s.widths.map(w => w * 1fr),
-    align: (col, row) => alignof(s.aligns.at(col)) + horizon,
-    stroke: (x, y) => if y == 0 { (bottom: 0.5pt + hair) } else { (bottom: 0.3pt + rgb("#f1f3f5")) },
-    inset: (x: 1.5pt, y: 3pt),
-    ..s.headers.map(h => text(size: 7.6pt, weight: 700, fill: faint)[#h]),
-    ..s.rows.flatten().map(c => text(size: 8.4pt, fill: cfill(c), weight: cwt(c))[#c]),
-  )
 }
-
-// ─── 출처 ───
-#v(5mm)
-#block(breakable: false)[
-  #text(size: 8pt, weight: 700, fill: sub)[출처]
-  #v(1mm)
-  #text(size: 7.5pt, fill: faint)[#D.source_line]
-]
+#v(4mm)
+#line(length: 100%, stroke: 0.5pt + hair)
+#text(size: 8pt, fill: sub)[#D.source_line]
