@@ -188,19 +188,6 @@ FIXTURES: dict = {
             "with_pdf": 0,
         },
     },
-    "gemini.report_summarizer": {
-        "updated_at": "2026-01-01T00:00:00+09:00",
-        "lookback_days": 7,
-        "summaries": {},
-        "_processed_hashes": {},
-        "stats": {
-            "total_reports_in_input": 0,
-            "new_summaries_this_run": 0,
-            "skipped_this_run": 0,
-            "tickers_aggregated": 0,
-            "total_processed_lifetime": 0,
-        },
-    },
     "gemini.dart_business_analysis": {
         "results": {},
         "stats": {

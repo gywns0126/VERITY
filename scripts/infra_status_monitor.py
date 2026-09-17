@@ -341,6 +341,10 @@ def check_llm_budget() -> Dict[str, Any]:
     month_prefix = now_kst_dt.strftime("%Y-%m")
     monthly_cost = 0.0
     by_provider: Dict[str, float] = {}
+    google_recent_calls = 0
+    google_recent_cost = 0.0
+    google_recent_types: Dict[str, int] = {}
+    recent_cutoff = (now_kst_dt.date() - timedelta(days=1)).isoformat()
 
     try:
         with path.open("r", encoding="utf-8") as f:
@@ -359,11 +363,21 @@ def check_llm_budget() -> Dict[str, Any]:
                 monthly_cost += cost
                 provider = entry.get("provider", "unknown")
                 by_provider[provider] = by_provider.get(provider, 0.0) + cost
+                provider_key = str(provider).strip().lower()
+                if provider_key in {"google", "gemini"} and date_str >= recent_cutoff:
+                    google_recent_calls += 1
+                    google_recent_cost += cost
+                    call_type = str(entry.get("call_type") or "unknown")
+                    google_recent_types[call_type] = google_recent_types.get(call_type, 0) + 1
     except OSError as e:
         return {"provider": "LLM Budget", "status": "WARN", "detail": f"read fail: {str(e)[:60]}", "as_of": _now_kst()}
 
-    # 임계: $20 한도 (메모 project_claude_budget_guard)
-    if monthly_cost >= 20.0:
+    # Google 유료 AI는 현재 기대 호출 0건이다. 최근 이틀 안에 한 건이라도 기록되면
+    # 월 비용 합계가 작아도 즉시 원인 확인 대상으로 올린다. 일별 감시는 KST 09:00에
+    # 실행되므로 전날 오후 배치까지 놓치지 않게 날짜 두 칸을 본다.
+    if google_recent_calls > 0:
+        status = "ALERT"
+    elif monthly_cost >= 20.0:
         status = "ALERT"
     elif monthly_cost >= 15.0:
         status = "WARN"
@@ -371,10 +385,22 @@ def check_llm_budget() -> Dict[str, Any]:
         status = "OK"
 
     provider_breakdown = ", ".join(f"{p}=${c:.2f}" for p, c in sorted(by_provider.items(), key=lambda x: -x[1])[:3])
+    google_breakdown = ", ".join(
+        f"{name}:{count}" for name, count in sorted(
+            google_recent_types.items(), key=lambda item: (-item[1], item[0])
+        )[:3]
+    )
+    if google_recent_calls:
+        detail = (
+            f"Google AI 최근 호출 {google_recent_calls}건/${google_recent_cost:.4f} "
+            f"({google_breakdown}) · {month_prefix} 전체 ${monthly_cost:.2f}"
+        )
+    else:
+        detail = f"{month_prefix} ${monthly_cost:.2f}/20.00 ({provider_breakdown})"
     return {
         "provider": "LLM Budget",
         "status": status,
-        "detail": f"{month_prefix} ${monthly_cost:.2f}/20.00 ({provider_breakdown})"[:200],
+        "detail": detail[:200],
         "as_of": _now_kst(),
     }
 
