@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-17T08:32:19+09:00",
+  "collected_at": "2026-09-17T09:32:19+09:00",
   "macro": {
     "usd_krw": {
       "value": 1377.2,
@@ -13811,38 +13811,6 @@
   },
   "global_events": [
     {
-      "name": "미국 FOMC 금리결정",
-      "severity": "high",
-      "impact_area": [
-        "금리",
-        "성장주",
-        "환율"
-      ],
-      "impact": "금리 인상 시 성장주↓ 가치주↑, 동결 시 안도 반등 가능",
-      "action": "FOMC 전후 2일간 신규 매수 자제, 발표 후 방향 확인",
-      "country": "미국",
-      "source": "Fed",
-      "date": "2026-09-16",
-      "d_day": -1
-    },
-    {
-      "name": "미국 소매판매",
-      "severity": "medium",
-      "impact_area": [
-        "소비",
-        "경기"
-      ],
-      "impact": "미국 소비 강도 지표. 전체 GDP 70%가 소비",
-      "action": "소비재 섹터 판단 자료",
-      "date": "2026-09-16",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 9,
-      "source_url": "https://fred.stlouisfed.org/release?rid=9",
-      "source_kind": "release",
-      "d_day": -1
-    },
-    {
       "name": "미국 주간 실업수당 청구",
       "severity": "medium",
       "impact_area": [
@@ -13856,6 +13824,23 @@
       "source": "FRED",
       "release_id": 180,
       "source_url": "https://fred.stlouisfed.org/release?rid=180",
+      "source_kind": "release",
+      "d_day": 0
+    },
+    {
+      "name": "미국 주택착공",
+      "severity": "low",
+      "impact_area": [
+        "부동산",
+        "금리민감"
+      ],
+      "impact": "금리 민감 섹터. 건설주/가전주/목재주에 영향",
+      "action": "주택 관련 섹터 비중 점검",
+      "date": "2026-09-17",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 27,
+      "source_url": "https://fred.stlouisfed.org/release?rid=27",
       "source_kind": "release",
       "d_day": 0
     },
@@ -13938,6 +13923,23 @@
       "d_day": 13
     },
     {
+      "name": "미국 PCE 물가지수",
+      "severity": "high",
+      "impact_area": [
+        "물가",
+        "금리기대"
+      ],
+      "impact": "Fed 선호 인플레 지표. CPI와 유사하나 실질 정책 영향 큼",
+      "action": "CPI와 교차 확인, 인플레 추세 판단",
+      "date": "2026-09-30",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 54,
+      "source_url": "https://fred.stlouisfed.org/release?rid=54",
+      "source_kind": "release",
+      "d_day": 13
+    },
+    {
       "name": "ISM 제조업 PMI",
       "date": "2026-10-01",
       "country": "미국",
@@ -13970,16 +13972,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": false,
     "events_ok": true,
     "errors": [
+      "macro: timeout_60s",
       "bonds: timeout_60s"
     ],
     "used_prev_snapshot": [
+      "macro",
       "bonds"
     ],
-    "elapsed_s": 150.94
+    "elapsed_s": 143.45
   },
   "schema_version": "v0"
 }
