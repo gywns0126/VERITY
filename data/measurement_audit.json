@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-17T07:40:45+09:00",
+ "as_of": "2026-09-17T10:02:47+09:00",
  "version": "measurement_audit_v4",
  "status": "KNOWN",
  "failing": [],
@@ -119,7 +119,7 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 23,
+     "events_scanned": 20,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
@@ -189,19 +189,19 @@
      "fired": 0
     },
     {
-     "rule": "외인·기관 순매도 상위 (KIS)",
-     "fired": 0
-    },
-    {
      "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
      "rule": "SEC 8-K 리스크 공시:",
+     "fired": 0
+    },
+    {
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
@@ -244,13 +244,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 30,
+     "n_present": 11,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 30,
+     "n_present": 11,
      "constant_value": 0.0,
      "severity": "high"
     }
