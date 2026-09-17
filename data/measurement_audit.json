@@ -1,11 +1,12 @@
 {
- "as_of": "2026-09-17T18:11:04+09:00",
+ "as_of": "2026-09-17T23:08:06+09:00",
  "version": "measurement_audit_v4",
- "status": "KNOWN",
- "failing": [],
+ "status": "FAIL",
+ "failing": [
+  "key_coverage"
+ ],
  "known_unresolved": [
   "ledger_integrity",
-  "key_coverage",
   "rule_discrimination",
   "flag_coverage",
   "input_constancy"
@@ -30,6 +31,12 @@
    "dead_keys": [
     {
      "key": "alpha_combined",
+     "modules": [
+      "fact.py"
+     ]
+    },
+    {
+     "key": "analyst_report_summary",
      "modules": [
       "fact.py"
      ]
@@ -119,25 +126,15 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 20,
+     "events_scanned": 21,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
      ]
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 5종 — 해당 채점 축이 조용히 죽어 있다",
-   "baseline": {
-    "dead_keys": 5,
-    "known_dead_keys": [
-     "alpha_combined",
-     "equity_research_brief",
-     "kis_program_trade",
-     "options_flow",
-     "shares_change_pct"
-    ]
-   },
-   "status": "KNOWN"
+   "detail": "레코드에 한 번도 없는 키 6종 — 해당 채점 축이 조용히 죽어 있다",
+   "status": "REGRESSION"
   },
   "price_scale": {
    "ok": true,
@@ -183,11 +180,11 @@
      "fired": 0
     },
     {
-     "rule": "계속기업 불확실성 (감사인 명시)",
+     "rule": "외인·기관 순매도 상위 (KIS)",
      "fired": 0
     },
     {
-     "rule": "외인·기관 순매도 상위 (KIS)",
+     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
@@ -238,13 +235,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 17,
+     "n_present": 30,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 17,
+     "n_present": 30,
      "constant_value": 0.0,
      "severity": "high"
     }
