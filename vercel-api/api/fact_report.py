@@ -41,7 +41,10 @@ def _fetch(name: str) -> Any:
 
 
 def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
-    from report_evidence import build_report
+    if __package__:
+        from .report_evidence import build_report
+    else:
+        from report_evidence import build_report
     return build_report(ticker, _fetch)
 
 
@@ -84,7 +87,10 @@ class handler(BaseHTTPRequestHandler):
             data = _build_data(ticker)
             if not data:
                 return self._err(404, "unknown_ticker")
-            from report_evidence import analysis_prompt
+            if __package__:
+                from .report_evidence import analysis_prompt
+            else:
+                from report_evidence import analysis_prompt
             output_format = qs.get("format", ["pdf"])[0]
             if output_format not in ("pdf", "prompt"):
                 return self._err(400, "invalid_format")

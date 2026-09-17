@@ -186,3 +186,14 @@ def test_report_http_prompt_is_valid_and_legacy_pdf_uses_same_data(monkeypatch):
         h.do_GET()
         assert statuses == [200]
         assert h.wfile.getvalue().startswith(expected)
+
+
+def test_vercel_package_entrypoints_resolve_sibling_modules():
+    import subprocess
+    code = """
+from api import fact_report, ai_report
+fact_report._fetch = lambda name: {'stocks': {'CAT': {'ticker': 'CAT'}}}
+assert fact_report._build_data('CAT')['ticker'] == 'CAT'
+assert ai_report.handler._err is fact_report.handler._err
+"""
+    subprocess.run([sys.executable, '-c', code], cwd=API.parent, check=True, capture_output=True)

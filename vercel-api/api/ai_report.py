@@ -4,7 +4,10 @@ PM 2026-09-17: retain old bookmarks; never restore paid narrative generation.
 The explicit HTTP subclass is required by Vercel's Python entrypoint detector.
 """
 from http.server import BaseHTTPRequestHandler
-from fact_report import handler as ReportHandler
+if __package__:
+    from .fact_report import handler as ReportHandler
+else:
+    from fact_report import handler as ReportHandler
 
 
 class handler(BaseHTTPRequestHandler):
