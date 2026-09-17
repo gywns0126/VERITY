@@ -139,7 +139,7 @@ def build_report(ticker, fetch, now=None):
         stamp = meta.get("generated_at") or doc.get("generated_at") or "미수신"
         status = "수신" if rec else "조회 실패" if error else "해당 종목 자료 미수신"
         return ident, rec or {}, doc, {"id": ident, "label": label, "file": filename,
-            "status": status, "published": text(stamp), "source": text(meta.get("source") or doc.get("source")),
+            "status": status, "published": text(stamp), "artifact_url": "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/" + filename, "source": text(meta.get("source") or doc.get("source")),
             "reason": error or ("빈 목록은 사건 부재를 보장하지 않음" if not rec else "")}
 
     with ThreadPoolExecutor(max_workers=4) as pool:
@@ -303,9 +303,15 @@ def build_report(ticker, fetch, now=None):
     patterns = sorted(records["E"] or [], key=lambda p: day(p.get("filed")), reverse=True)
     table("E1", "실적 보고서 제출 이력", ["제출일", "서식", "원문"], [[day(p.get("filed")), text(p.get("form")), source_cell(p)] for p in patterns], "제출일과 실적 발표일은 다를 수 있습니다.", limit=6)
     calendar = s.get("calendar") or []
-    table("C1", "다음 일정과 확인 근거", ["일정", "일자", "근거"],
-          [[text(c.get("event")), text(c.get("date")), text(c.get("basis") or "확정 여부 미확인")] for c in calendar],
-          "과거 제출 패턴으로 계산된 예상 창은 확정 실적 발표일이 아닙니다.", widths=[1.3, 0.7, 2])
+    calendar_rows = []
+    for c in calendar:
+        label, basis = text(c.get("event")), text(c.get("basis") or "확정 여부 미확인")
+        date = day(c.get("date"))
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) and date < now.strftime("%Y-%m-%d"):
+            label += " · 지난 일정 / 새 공시 확인"
+        calendar_rows.append([label, text(c.get("date")), basis])
+    table("C1", "실적 일정과 확인 근거", ["일정", "일자", "근거"], calendar_rows,
+          "과거 제출 패턴으로 계산된 예상 창은 확정 실적 발표일이 아닙니다. 이미 지난 날짜를 다음 일정으로 사용하지 않습니다.", widths=[1.3, 0.7, 2])
     con = s.get("consensus") or {}
     table("C2", "증권사 컨센서스", ["항목", "값"], [[k, text(v)] for k, v in con.items() if k in ("target_price", "opinion", "date", "as_of", "count")], "증권사 집계 수치. 집계 기준일·통화·참여 수가 없으면 확인이 필요합니다.")
 

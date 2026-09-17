@@ -197,3 +197,11 @@ assert fact_report._build_data('CAT')['ticker'] == 'CAT'
 assert ai_report.handler._err is fact_report.handler._err
 """
     subprocess.run([sys.executable, '-c', code], cwd=API.parent, check=True, capture_output=True)
+
+
+def test_past_estimated_calendar_is_not_an_upcoming_event():
+    ticker, docs, s = fixture()
+    s['calendar'] = [{'event': '예상 실적 창', 'date': '2026-09-13', 'basis': '제출 패턴'}]
+    d = build(docs, ticker)
+    assert '지난 일정' in section(d, 'C1')['rows'][0][0]
+    assert d['coverage'][0]['artifact_url'].startswith('https://rte5guenhonw9fzn.public.blob.vercel-storage.com/')
