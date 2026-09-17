@@ -1,7 +1,7 @@
 {
- "as_of": "2026-09-17T23:07:58+09:00",
+ "as_of": "2026-09-18T08:06:57+09:00",
  "version": "short_sale_trail_v0",
- "n_observations": 6544,
+ "n_observations": 6638,
  "window_start": null,
  "thresholds_observed": {
   "kr_auto_avoid": 15.0,
@@ -10,7 +10,7 @@
  },
  "KR": {
   "auto_avoid": {
-   "n_observations": 151,
+   "n_observations": 152,
    "n_tickers": 43,
    "fwd_20d": {
     "n_tickers": 14,
@@ -30,7 +30,7 @@
    }
   },
   "downgrade": {
-   "n_observations": 404,
+   "n_observations": 408,
    "n_tickers": 76,
    "fwd_20d": {
     "n_tickers": 28,
@@ -50,7 +50,7 @@
    }
   },
   "clean": {
-   "n_observations": 632,
+   "n_observations": 647,
    "n_tickers": 118,
    "fwd_20d": {
     "n_tickers": 40,
@@ -70,8 +70,8 @@
    }
   },
   "missing": {
-   "n_observations": 1464,
-   "n_tickers": 157,
+   "n_observations": 1481,
+   "n_tickers": 166,
    "fwd_20d": {
     "n_tickers": 98,
     "n_observations": 1225,
@@ -112,7 +112,7 @@
    }
   },
   "downgrade": {
-   "n_observations": 9,
+   "n_observations": 11,
    "n_tickers": 7,
    "fwd_20d": {
     "n_tickers": 0,
@@ -132,7 +132,7 @@
    }
   },
   "clean": {
-   "n_observations": 2287,
+   "n_observations": 2310,
    "n_tickers": 239,
    "fwd_20d": {
     "n_tickers": 0,
@@ -152,8 +152,8 @@
    }
   },
   "missing": {
-   "n_observations": 1597,
-   "n_tickers": 199,
+   "n_observations": 1629,
+   "n_tickers": 214,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -174,8 +174,8 @@
  },
  "labels": [
   "통계 무의미 — auto_avoid 고유 종목 N=14 < 20 (관측 83건이지만 같은 종목 반복. 등록 §6 게이트)",
-  "US 지표 결측 1597건 — clean 과 분리 집계됨(무혐의 통과 아님)",
-  "KR 지표 결측 1464건 — 수집 이전 기간 포함. clean 과 분리 집계"
+  "US 지표 결측 1629건 — clean 과 분리 집계됨(무혐의 통과 아님)",
+  "KR 지표 결측 1481건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
  "note": "공매도 규칙 사후 수익률 관측 — 임계·강도 재판단의 판정 근거. 점수·집행 입력 0. KR=거래량 비중(흐름) / US=숏인터레스트(포지션) 로 측정 대상이 다르므로 시장 간 수치를 비교하지 말 것. 수익률은 KR 전용(US 일봉 레이크 미도달)."

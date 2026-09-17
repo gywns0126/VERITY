@@ -1,7 +1,7 @@
 {
  "_meta": {
-  "generated_at": "2026-09-04T08:16:41.313920+09:00",
-  "for_date": "2026-09-04",
+  "generated_at": "2026-09-18T07:57:35.525229+09:00",
+  "for_date": "2026-09-18",
   "trail": "kr_cross_section_observations.jsonl",
   "note": "관측 only · 점수·방향·조합식 0(RULE 7). 이 파일은 trail 의 읽는 법이다."
  },
@@ -84,16 +84,16 @@
  "🚨 판정 가능성 자기신고 (§7-3 (7)·(8))": {
   "_설명": "k = 독립관측(§7-3 (7)) = span // 지평. k<3 = 이 칸은 설계상 판정 불가.",
   "_출력_의미": "'더 모아라' 가 아니라 '지금 무엇이 판정 가능한가' 다(§7-1 폐기 사유 정합).",
-  "observed_dates": 11,
-  "span_days": 75,
+  "observed_dates": 12,
+  "span_days": 89,
   "flow.fwd5d": {
    "horizon_days": 5,
-   "k": 11,
+   "k": 12,
    "evidence_class": "confirmatory"
   },
   "flow.fwd20d": {
    "horizon_days": 20,
-   "k": 3,
+   "k": 4,
    "evidence_class": "exploratory"
   },
   "insider.fwd1m": {
@@ -117,8 +117,8 @@
  },
  "last_run": {
   "due_groups": [
-   "dilution",
-   "flow"
+   "flow",
+   "insider"
   ],
   "stale_inputs": []
  }
