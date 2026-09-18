@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-18T23:32:24+09:00",
+  "collected_at": "2026-09-19T00:02:39+09:00",
   "macro": {
     "usd_krw": {
       "value": 1389.72,
@@ -13895,7 +13895,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-09-18T23:32:38+09:00",
+    "updated_at": "2026-09-19T00:03:39+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.78,
       "us_ig_risk": "LOW",
@@ -13905,7 +13905,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260918",
-      "collected_at": "2026-09-18T23:32:38+09:00",
+      "collected_at": "2026-09-19T00:03:39+09:00",
       "grades": {
         "AA-": {
           "yield": 4.706,
@@ -13937,7 +13937,7 @@
       "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
       "source_kind": "schedule",
       "date": "2026-09-18",
-      "d_day": 0
+      "d_day": -1
     },
     {
       "name": "삼중마녀의 날 (Quad Witching)",
@@ -13953,7 +13953,7 @@
       "source_url": "https://cdn.cboe.com/resources/options/Cboe2026OPTIONSCalendar.pdf",
       "source_kind": "expiration_calendar",
       "date": "2026-09-18",
-      "d_day": 0
+      "d_day": -1
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -13970,7 +13970,7 @@
       "release_id": 180,
       "source_url": "https://fred.stlouisfed.org/release?rid=180",
       "source_kind": "release",
-      "d_day": 6
+      "d_day": 5
     },
     {
       "name": "미국 주택착공",
@@ -13987,7 +13987,7 @@
       "release_id": 27,
       "source_url": "https://fred.stlouisfed.org/release?rid=27",
       "source_kind": "release",
-      "d_day": 6
+      "d_day": 5
     },
     {
       "name": "Conference Board 소비자신뢰",
@@ -14003,7 +14003,7 @@
       "source": "Conference Board",
       "source_url": "https://www.conference-board.org/topics/consumer-confidence/",
       "source_kind": "release",
-      "d_day": 11
+      "d_day": 10
     },
     {
       "name": "미국 GDP 발표",
@@ -14020,7 +14020,7 @@
       "release_id": 53,
       "source_url": "https://fred.stlouisfed.org/release?rid=53",
       "source_kind": "release",
-      "d_day": 12
+      "d_day": 11
     },
     {
       "name": "미국 PCE 물가지수",
@@ -14037,7 +14037,7 @@
       "release_id": 54,
       "source_url": "https://fred.stlouisfed.org/release?rid=54",
       "source_kind": "release",
-      "d_day": 12
+      "d_day": 11
     },
     {
       "name": "ISM 제조업 PMI",
@@ -14053,7 +14053,7 @@
       "source": "ISM",
       "source_url": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
       "source_kind": "schedule",
-      "d_day": 13
+      "d_day": 12
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -14070,7 +14070,7 @@
       "release_id": 180,
       "source_url": "https://fred.stlouisfed.org/release?rid=180",
       "source_kind": "release",
-      "d_day": 13
+      "d_day": 12
     },
     {
       "name": "미국 고용지표 (NFP)",
@@ -14088,16 +14088,20 @@
       "release_id": 50,
       "source_url": "https://fred.stlouisfed.org/release?rid=50",
       "source_kind": "release",
-      "d_day": 14
+      "d_day": 13
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 27.42
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 88.4
   },
   "schema_version": "v0"
 }
