@@ -1,101 +1,95 @@
 {
- "as_of": "2026-09-12T13:53:13+09:00",
+ "as_of": "2026-09-19T07:42:31+09:00",
  "version": "v0 (PREREG_POOL_ROTATION_2026_08_04 — 보고서만, 집행 없음)",
- "evidence_days": 34,
- "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 34일. 미달 임계는 발동하지 않음",
+ "evidence_days": 40,
+ "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 40일. 미달 임계는 발동하지 않음",
  "pool": {
-  "size": 98,
-  "kr": 39,
+  "size": 74,
+  "kr": 47,
   "kr_floor": 20,
   "kr_deficit": 0,
-  "size_note": "정원 초과 98 > 70",
-  "sector_over_cap": {}
+  "size_note": "정원 초과 74 > 70",
+  "sector_over_cap": {
+   "Technology": 27.0
+  }
  },
  "r1_held": [
-  "000270",
   "003550",
   "028050",
-  "035420",
-  "AMG"
+  "035420"
  ],
  "r1_held_out_of_pool": [],
  "exits": [
   {
+   "ticker": "V",
+   "reason": "R2a 배지 AVOID 21일 연속",
+   "avoid_streak": 21,
+   "pollution_streak": 0,
+   "lowliq_streak": 0,
+   "evidence_days": 21
+  },
+  {
+   "ticker": "CME",
+   "reason": "R2a 배지 AVOID 21일 연속",
+   "avoid_streak": 21,
+   "pollution_streak": 0,
+   "lowliq_streak": 0,
+   "evidence_days": 21
+  },
+  {
    "ticker": "094970",
-   "reason": "R2c 거래대금 10억 미만 21일",
+   "reason": "R2c 거래대금 10억 미만 28일",
    "avoid_streak": 0,
    "pollution_streak": 0,
-   "lowliq_streak": 21,
-   "evidence_days": 34
+   "lowliq_streak": 28,
+   "evidence_days": 40
   },
   {
    "ticker": "418470",
-   "reason": "R2c 거래대금 10억 미만 20일",
+   "reason": "R2c 거래대금 10억 미만 27일",
    "avoid_streak": 0,
    "pollution_streak": 0,
-   "lowliq_streak": 20,
-   "evidence_days": 34
+   "lowliq_streak": 27,
+   "evidence_days": 40
   }
  ],
  "entries": [
   {
-   "ticker": "000440",
-   "name": "중앙에너비스",
-   "source": "funnel",
-   "trading_value": 3723192000
+   "ticker": "007110",
+   "name": "일신석재",
+   "source": "smallcap",
+   "trading_value": 2143739526
   },
   {
-   "ticker": "002780",
-   "name": "진흥기업",
-   "source": "funnel",
-   "trading_value": 1453377600
+   "ticker": "011390",
+   "name": "부산산업",
+   "source": "smallcap",
+   "trading_value": 1594517362
   },
   {
-   "ticker": "004990",
-   "name": "롯데지주",
-   "source": "funnel",
-   "trading_value": 2083558800
+   "ticker": "463020",
+   "name": "뉴엔AI",
+   "source": "smallcap",
+   "trading_value": 1164571404
   },
   {
-   "ticker": "005860",
-   "name": "한일사료",
-   "source": "funnel",
-   "trading_value": 6948653400
+   "ticker": "228340",
+   "name": "동양파일",
+   "source": "smallcap",
+   "trading_value": 9955506658
   },
   {
-   "ticker": "006880",
-   "name": "신송홀딩스",
-   "source": "funnel",
-   "trading_value": 1005445700
+   "ticker": "248170",
+   "name": "샘표식품",
+   "source": "smallcap",
+   "trading_value": 2756852612
   }
  ],
- "watch_streaks": [
-  {
-   "ticker": "V",
-   "avoid_streak": 14,
-   "pollution_streak": 0,
-   "lowliq_streak": 0,
-   "evidence_days": 14
-  },
-  {
-   "ticker": "CME",
-   "avoid_streak": 14,
-   "pollution_streak": 0,
-   "lowliq_streak": 0,
-   "evidence_days": 14
-  },
-  {
-   "ticker": "036830",
-   "avoid_streak": 5,
-   "pollution_streak": 0,
-   "lowliq_streak": 0,
-   "evidence_days": 5
-  }
- ],
+ "watch_streaks": [],
  "candidate_supply": {
-  "funnel_total": 45,
-  "funnel_kr_out_of_pool": 13,
-  "smallcap_total": 1638,
+  "funnel_total": 44,
+  "funnel_kr_out_of_pool": 0,
+  "smallcap_total": 1639,
   "smallcap_liquidity_field_missing": false
  },
  "swap_cap": 5,

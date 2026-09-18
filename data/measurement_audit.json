@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-18T23:00:38+09:00",
+ "as_of": "2026-09-19T07:41:31+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -70,7 +70,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "80/80",
+     "coverage": "74/74",
      "via": [
       "current_price",
       "price"
@@ -81,7 +81,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "48/80",
+     "coverage": "61/74",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -92,7 +92,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "80/80",
+     "coverage": "74/74",
      "via": [
       "fscore_deltas"
      ],
@@ -102,7 +102,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "78/80",
+     "coverage": "72/74",
      "via": [
       "industry"
      ],
@@ -112,7 +112,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "51/80",
+     "coverage": "63/74",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -144,7 +144,7 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 123,
+   "snapshots": 124,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
@@ -160,9 +160,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 12,
-   "days_without_any_cap_pct": 9.8,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(0.8%). cap 없는 날 12/123일",
+   "days_without_any_cap": 13,
+   "days_without_any_cap_pct": 10.5,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(0.8%). cap 없는 날 13/124일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -173,7 +173,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 13,
-   "stock_days": 6521,
+   "stock_days": 6615,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -235,13 +235,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 30,
+     "n_present": 19,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 30,
+     "n_present": 19,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -274,8 +274,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 40,
-    "scored": 40,
+    "with_pct": 35,
+    "scored": 35,
     "ok": true
    },
    "dead_guards": [],
