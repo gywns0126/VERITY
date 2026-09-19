@@ -46,6 +46,7 @@ SECTOR_MAP_PATH = os.path.join(_ROOT, "data", "kr_sector_map.json")
 KRXMKTCAP_PATH = os.path.join(_ROOT, "data", "krx_mktcap.json")
 DART_KR_BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_kr_backfill_result.json")
 DART_KR_FIN_HISTORY_PATH = os.path.join(_ROOT, "data", "dart_kr_fin_history.json")  # 광범위 연간재무 백필(재무추이 부활)
+DART_KR_CACHE_PATH = os.path.join(_ROOT, "data", "dart_kr_cache")
 # 사업보고서 「II. 사업의 내용 › 1. 사업의 개요」 원문 발췌 (2026-08-23 신설)
 BIZ_OVERVIEW_PATH = os.path.join(_ROOT, "data", "dart_business_overview.json")
 # 🚨 2026-08-25 — 개요는 **별 blob 으로 분리**한다. 메인 리포트에 실으면 목록·검색 화면까지
@@ -1281,6 +1282,13 @@ def _load_real_estate_history() -> Dict[str, Dict[str, Any]]:
 def main() -> int:
     ok = False
     try:
+        from api.builders.report_kr_evidence import (
+            EVIDENCE_SCHEMA_VERSION,
+            load_financial_evidence,
+            load_previous_financial_evidence,
+            reconcile_financial_evidence,
+        )
+        _previous_financial_evidence = load_previous_financial_evidence(OUTPUT_PATH)
         recs = _load_json(REC_PATH, [])
         if not isinstance(recs, list):
             recs = []
@@ -1378,6 +1386,26 @@ def main() -> int:
                 # fundamentals 결측 종목이 "검색은 되는데 리포트는 빈" 상태가 된다.
                 if light["facts"] or light["disclosures"] or fin_series.get(tk) or panel_facts.get(tk):
                     stocks.append(light)
+
+        # 검증 가능한 원문 재무 근거. 로컬 DART 캐시만 읽고, 부재 시 네트워크 없이 생략한다.
+        # 기간·통화·연결/별도·접수번호가 모두 같은 행만 묶으며, 기존 formatted 재무에는
+        # 메타데이터를 추정해 덧붙이지 않는다.
+        _financial_evidence, _financial_evidence_stats = load_financial_evidence(
+            DART_KR_CACHE_PATH, {s["ticker"] for s in stocks}
+        )
+        _selected_financial_evidence, _n_financial_preserved = reconcile_financial_evidence(
+            (s["ticker"] for s in stocks), _financial_evidence, _previous_financial_evidence
+        )
+        for s in stocks:
+            ticker = s["ticker"]
+            evidence = _selected_financial_evidence.get(ticker)
+            if evidence:
+                s["financial_evidence"] = evidence
+        _n_financial_evidence = len(_selected_financial_evidence)
+        print(f"  [재무 근거] {_n_financial_evidence}/{len(stocks)}종 "
+              f"(현 캐시 {_financial_evidence_stats['attached']} · 이전본 보존 {_n_financial_preserved}) · "
+              f"캐시 {_financial_evidence_stats['nonempty_files']}/"
+              f"{_financial_evidence_stats['cache_files']}파일")
 
         # PER/PBR 자체계산 (KRX 공식 시총 ÷ DART) + 동종업계 비교 준비
         krx_doc = _load_json(KRXMKTCAP_PATH, {})
@@ -1709,6 +1737,10 @@ def main() -> int:
                 #   숫자만 남겨 하류가 "없다" 와 "다른 파일에 있다" 를 구분하게 한다.
                 "business_overview_count": _n_bo,
                 "business_overview_file": "kr_business_overview_public.json",
+                "financial_evidence_count": _n_financial_evidence,
+                "financial_evidence_schema_version": EVIDENCE_SCHEMA_VERSION,
+                "financial_evidence_cache_count": _financial_evidence_stats["attached"],
+                "financial_evidence_preserved_count": _n_financial_preserved,
                 "dividends_count": _n_div,
                 "note": "공개 사실만 (RULE 7 allowlist) — 점수·등급·추천 비노출. 컨센서스=증권사 집계(자체 의견 아님). 가격은 클라이언트 라이브 조회.",
             },

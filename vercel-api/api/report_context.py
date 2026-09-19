@@ -39,7 +39,7 @@ def annual_context(row, financials, kr):
     explicit = row.get("currency") or financials.get("currency")
     currency = str(explicit or ("KRW" if kr else "USD")).upper()
     raw_scope = str(row.get("fs_div") or row.get("scope") or "").strip()
-    scope = {"CFS": "연결", "OFS": "별도", "consolidated": "연결", "standalone": "별도"}.get(raw_scope, raw_scope)
+    scope = {"CFS": "연결", "OFS": "별도", "ENTITY": "보고기업 전체(SEC)", "consolidated": "연결", "standalone": "별도"}.get(raw_scope, raw_scope)
     kind = str(row.get("period_kind") or "annual_feed")
     start, end = str(row.get("start") or ""), str(row.get("end") or "")
     return {
@@ -66,12 +66,14 @@ def compare_annual(annual, financials, kr):
         return {**base, "reason": "연간 실적에 누락 연도가 있어 전년 대비 증감률을 만들지 않았습니다."}
     if ca["currency"] != cb["currency"] or not re.fullmatch(r"[A-Z]{3}", ca["currency"]):
         return {**base, "reason": "보고 통화가 다르거나 불명확하여 연도 간 비교를 보류했습니다."}
-    if ca["scope"] != cb["scope"]:
+    if ca["scope"] != cb["scope"] or ca["scope"] not in ("연결", "별도", "보고기업 전체(SEC)"):
         return {**base, "reason": "연결·별도 기준이 다르거나 한쪽 기준이 누락되어 비교를 보류했습니다."}
     annual_kinds = {"annual_feed", "annual", "reported_year", "FY"}
     if ca["kind"] not in annual_kinds or cb["kind"] not in annual_kinds:
         return {**base, "reason": "연간 표에 다른 기간의 값이 섞여 있어 비교를 보류했습니다."}
-    if any(c["start"] or c["end"] for c in (ca, cb)):
+    if not all(c["start"] and c["end"] and c["source_url"] and c["currency_basis"] == "보고 통화 필드" for c in (ca, cb)):
+        return {**base, "reason": "기간·통화·원문 근거가 누락되어 비교를 보류했습니다."}
+    if all(c["start"] and c["end"] for c in (ca, cb)):
         try:
             spans = [(date.fromisoformat(c["start"]), date.fromisoformat(c["end"])) for c in (ca, cb)]
             lengths = [(end - start).days for start, end in spans]
@@ -99,7 +101,7 @@ def compare_annual(annual, financials, kr):
                   "operands": {"prior_revenue": r0, "current_revenue": r1, "prior_op": o0, "current_op": o1}}
     return {"usable": True, "reason": "", "period": f"{ca['year']} → {cb['year']}", "currency": currency,
             "changes": changes, "bridge": bridge, "scope": cb["scope"],
-            "qualification": "발행자료상 연간 비교 · 연결/별도 및 원문 수치 대조 필요" if cb["scope"] == "미수신" else f"{cb['scope']} 연간 비교 · 원문 수치 대조 필요"}
+            "qualification": f"{cb['scope']} 연간 비교 · 보고 통화 {currency} · 증감률 자체계산"}
 
 
 def business_profile(record, stock, source_cell):
@@ -110,8 +112,9 @@ def business_profile(record, stock, source_cell):
         product_paragraph = next((p for p in paragraphs if re.search(r"사업별|주요 제품|주요 서비스|제품을|제품과|생산[ㆍ·, ]*판매하며", p)), None)
         selected = product_paragraph or next((p for p in paragraphs if any(w in p for w in ("생산", "판매", "제공", "운영", "manufactur", "services"))), paragraphs[0])
         # Contiguous excerpt only; never stitch separate clauses into a new claim.
-        short = selected[:220]
-        if len(selected) > 220:
+        limit = 400 if not re.search(r"[가-힣]", selected) else 220
+        short = selected[:limit]
+        if len(selected) > limit:
             ends = [m.end() for m in re.finditer(r"[.!?](?:\s|$)|다\.", short)]
             if ends and ends[-1] >= 80:
                 short = short[:ends[-1]].rstrip()
