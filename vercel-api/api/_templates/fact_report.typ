@@ -24,7 +24,7 @@
 #grid(columns: (1fr, auto), gutter: 5mm,
   [#text(size: 19pt, weight: 800)[#D.name]
    #h(2mm)#text(size: 10pt, fill: sub)[#D.ticker · #D.market]
-   #linebreak()#text(size: 8pt, fill: sub)[#D.business]],
+   #if D.business != "—" [#linebreak()#text(size: 8pt, fill: sub)[#D.business]]],
   align(right)[#text(size: 10pt, weight: 800, fill: accent)[ALPHANEST]
     #linebreak()#text(size: 8pt, fill: sub)[#D.report_label]
     #linebreak()#text(size: 7pt, fill: sub)[#D.generated]])
@@ -36,26 +36,35 @@
     #text(size: 8pt, fill: sub)[#p.at(0)] #h(2mm)#text(weight: 800)[#p.at(1)]
   ]))
 #v(3mm)
-#text(size: 14pt, weight: 800)[먼저 확인할 질문]
+#text(size: 14pt, weight: 800)[한눈에 읽는 기업과 변화]
 #v(1mm)
-#text(size: 8pt, fill: sub)[자료에서 확인되는 변화와 추가 조사할 쟁점을 연결했습니다. 원문을 읽지 않은 해석은 결론으로 제시하지 않습니다.]
-#for (i, q) in D.issues.enumerate() {
+#text(size: 8pt, fill: sub)[사업 설명 → 최근 실적 변화 → 다음 확인 조건. 원문 발췌·발행 자료·자체계산을 구분했습니다.]
+#for (i, q) in D.summary.enumerate() {
   v(3mm)
   block(breakable: false, width: 100%, inset: (left: 3mm), stroke: (left: 2pt + accent))[
     #text(size: 10pt, weight: 800)[#(i+1). #q.title]
     #v(1.2mm)
     #text(size: 8.6pt)[#q.observation]
     #v(1mm)
-    #text(size: 8.3pt, fill: sub)[확인할 것 · #q.question]
+    #text(size: 8.3pt, fill: sub)[#q.question]
     #v(0.6mm)
     #text(size: 7.2pt, fill: accent)[자료 #q.refs]
+    #if q.source != none [#h(2mm)#cell(q.source)]
+  ]
+}
+#if D.comparison.bridge != none {
+  v(3mm)
+  block(fill: fill, radius: 5pt, inset: 3mm, width: 100%)[
+    #text(size: 9pt, weight: 800)[실적 변화의 이유를 더 확인하려면]
+    #v(1mm)
+    #text(size: 8pt)[매출 규모와 영업이익률 변화가 영업이익 증감에 각각 얼마를 차지하는지 부록 R5에 나눴습니다. 가격·판매량·비용 같은 실제 원인은 회사 설명과 대조해야 합니다.]
   ]
 }
 #v(4mm)
 #block(fill: fill, radius: 5pt, inset: 3mm, width: 100%)[
   #text(weight: 800)[내 AI로 더 분석하려면]
   #v(1mm)
-  #text(size: 8.3pt)[이 PDF를 첨부하거나, 아래 분석 요청문을 내려받아 사용하는 AI에 붙여넣으세요. 같은 자료와 출처, 누락 사항, 분석 지침이 함께 들어 있습니다.]
+  #text(size: 8.3pt)[이 PDF를 첨부하거나, 아래 분석 요청문을 사용하는 AI에 붙여넣으세요. 보고 통화·비교 기준·계산식·출처·누락 사항이 함께 들어 있습니다.]
   #v(1mm)
   #if "prompt_url" in D { link(D.prompt_url, text(fill: accent, weight: 700)[분석 요청문과 자료 받기 ↗]) }
 ]
@@ -91,7 +100,7 @@
 #text(size: 8pt, fill: sub)[표 제목 옆 ID는 앞의 질문과 연결됩니다. 원문 열기는 수신된 문서 URL, 출처 목록은 문서 검색 페이지입니다.]
 #for s in D.sections {
   v(4mm)
-  block(breakable: s.rows.len() > 12)[
+  block(breakable: s.rows.len() > 8 or s.id == "R3")[
     #block(breakable: false, sticky: true)[
       #text(size: 11pt, weight: 800)[#s.title]
       #h(2mm)#text(size: 7.4pt, fill: accent)[#s.id · 표시 #(s.shown)/#(s.total)행]
