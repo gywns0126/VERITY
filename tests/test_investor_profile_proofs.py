@@ -2,8 +2,11 @@
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,14 +105,77 @@ def test_public_profile_payload_is_image_only():
     assert "summary" not in got and "source_url" not in got
 
 
-def test_committed_investor_payload_contains_no_biography_cache_fields():
-    payload = json.loads(DATA.read_text(encoding="utf-8"))
+def _assert_public_profile_contract(payload):
     assert "profile_source" not in payload["_meta"]
     assert "profile_payload" in payload["_meta"]
-    assert payload["_meta"].get("profile_sanitized_at")
+    assert datetime.fromisoformat(payload["_meta"]["generated_at"]).utcoffset() is not None
+    # profile_sanitized_at records only --sanitize-existing, not normal builds.
+    # Check the actual payload instead of requiring that one-off migration stamp.
     for investor in payload["investors"]:
         profile = investor.get("profile")
         assert profile is None or set(profile) == {"image"}
+        if profile is not None:
+            image = profile["image"]
+            assert image.get("url")
+            assert set(image) <= {
+                "url", "width", "height", "artist", "license", "license_url", "file_page",
+            }
+
+
+def test_committed_investor_payload_contains_no_biography_cache_fields():
+    _assert_public_profile_contract(json.loads(DATA.read_text(encoding="utf-8")))
+
+
+@pytest.mark.parametrize("legacy_profile", [
+    None,
+    {"summary": "legacy biography", "source_url": "https://example.invalid/bio"},
+    {"summary": "legacy biography", "image": {
+        "url": "https://example.invalid/photo.jpg", "license": "CC BY",
+        "summary": "nested legacy biography",
+    }},
+])
+def test_normal_build_satisfies_profile_contract_without_migration_stamp(monkeypatch, legacy_profile):
+    from api.builders import us_investor_portfolios_public_builder as builder
+
+    monkeypatch.setattr(builder, "ACTIVE_MANAGERS", {"1": "Example Fund"})
+    monkeypatch.setattr(builder, "collect_profiles", lambda names: {"Example Fund": legacy_profile})
+    monkeypatch.setattr(builder, "get_recent_13f_filings", lambda cik, n: [
+        {"accession_no": "test", "report_date": "2026-06-30", "filed_at": "2026-08-14"},
+    ])
+    monkeypatch.setattr(builder, "parse_13f_holdings", lambda accession, cik: [
+        {"cusip": "TEST", "shares": 1, "value_usd": 100},
+    ])
+    monkeypatch.setattr(builder, "resolve_cusips", lambda cusips: {"TEST": "TEST"})
+    monkeypatch.setattr(builder, "compute_replication_returns", lambda cik, quarters: [])
+
+    payload = builder.build()
+    assert payload["_meta"]["errors"] == []
+    assert payload["_meta"]["investor_count"] == len(payload["investors"]) == 1
+    assert "profile_sanitized_at" not in payload["_meta"]
+    _assert_public_profile_contract(payload)
+    expected = ({"image": {"url": "https://example.invalid/photo.jpg", "license": "CC BY"}}
+                if legacy_profile and "image" in legacy_profile else None)
+    assert payload["investors"][0]["profile"] == expected
+
+
+def test_sanitize_existing_records_cleanup_without_refreshing_data_date(monkeypatch, tmp_path):
+    from api.builders import us_investor_portfolios_public_builder as builder
+
+    generated_at = "2026-08-01T12:00:00+09:00"
+    path = tmp_path / "investors.json"
+    path.write_text(json.dumps({
+        "_meta": {"generated_at": generated_at, "profile_source": "legacy"},
+        "investors": [{"profile": {"summary": "legacy biography", "image": {
+            "url": "https://example.invalid/photo.jpg", "license": "CC BY",
+        }}}],
+    }), encoding="utf-8")
+    monkeypatch.setattr(builder, "OUTPUT_PATH", str(path))
+    monkeypatch.setattr(builder.sys, "argv", ["builder", "--sanitize-existing"])
+    assert builder.main() == 0
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["_meta"]["generated_at"] == generated_at
+    assert datetime.fromisoformat(payload["_meta"]["profile_sanitized_at"]).utcoffset() is not None
+    _assert_public_profile_contract(payload)
 
 
 def test_style_map_explains_axes_directly_and_separates_the_caveat():
