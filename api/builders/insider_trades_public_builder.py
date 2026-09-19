@@ -11,8 +11,10 @@ DART elestock.json(임원·주요주주 특정증권등소유상황보고서) = 
   · **반일 rotation**: rec 우선풀 항상 + 나머지를 오전/오후 배치 단위로 회전 → 며칠 내 전 종목 커버.
   · **carry-forward 병합**: 오늘 수집 안 한 종목은 이전 snapshot 유지(내부자 공시=느린 이벤트, staleness 허용).
   · **wall-clock budget**(INSIDER_MAX_SECONDS, 기본 600s) + MAX_CALLS(기본 300) — 예산 초과 시 안전 정지·보존.
-  · **rate-limit 가드**: DART status 020(일일 제한)→정지·보존, 021(분당)→백오프 1회 재시도. 013=데이터없음(정상 공백).
+  · **rate-limit 가드**: DART status 020(요청 제한)→정지·보존. 013=조회 데이터 없음.
+    021은 회사 개수 초과이며 분당 제한이 아니다(공식 개발가이드 2026-09-20 확인); 재시도하지 않는다.
 - per-entry collected_at 로 신선도 투명 표기. 출력 = data/insider_trades.json (action.yml 등재).
+- coverage.by_ticker = 마지막 시도/성공 근거, 이번 실행의 시도 여부·누락 사유. 과거 부재는 0으로 변환하지 않는다.
 
 🚨 2026-08-20 실측 — elestock 는 bgn_de/end_de 를 **무시하고 자체 약 2년 롤링 창을 반환한다**.
    ① 파라미터 무시: 000660 로 3회 대조(파라미터 없음 / 20260701~20260820 / 20260819 단일일자)
@@ -34,7 +36,10 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 import time
+from collections import Counter
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
@@ -204,19 +209,65 @@ def _ordered_universe() -> List[Dict[str, str]]:
     return priority + rest
 
 
-def _load_prev() -> Dict[str, Dict[str, Any]]:
-    """이전 snapshot → {ticker: entry} (carry-forward 병합 베이스)."""
+def _load_prev():
+    """거래와 조회 근거를 함께 읽는다. 손상된 기존 파일은 빈 자료로 덮지 않는다."""
     try:
         with open(OUTPUT_PATH, "r", encoding="utf-8") as f:
             doc = json.load(f)
-        out = {}
-        for s in (doc.get("stocks") or []):
-            tk = str(s.get("ticker") or "")
-            if tk:
-                out[tk] = s
-        return out
-    except (OSError, json.JSONDecodeError):
-        return {}
+    except FileNotFoundError:
+        return {}, {}
+    if not isinstance(doc, dict) or not isinstance(doc.get("stocks"), list):
+        raise ValueError("invalid previous insider snapshot")
+    out = {}
+    for s in doc["stocks"]:
+        if not isinstance(s, dict) or not s.get("ticker"):
+            raise ValueError("invalid previous insider row")
+        tk = str(s["ticker"])
+        if tk in out and out[tk] != s:
+            raise ValueError("conflicting previous insider rows")
+        out[tk] = s
+    coverage = doc.get("coverage", {})
+    if not isinstance(coverage, dict):
+        raise ValueError("invalid previous insider coverage")
+    if coverage and (
+        type(coverage.get("schema_version")) is not int or coverage["schema_version"] != 1
+        or not isinstance(coverage.get("by_ticker"), dict)
+        or any(not isinstance(v, dict) or v.get("state") not in (
+            "ok", "empty", "failed", "not_collected", "legacy_unverified",
+        ) for v in coverage["by_ticker"].values())
+    ):
+        raise ValueError("unsupported previous insider coverage")
+    return out, coverage.get("by_ticker", {})
+
+
+def _coverage_base(previous, merged, order):
+    """과거 조회 시각은 보존한다. 옛 거래 행의 존재를 새 수집 성공으로 승격하지 않는다."""
+    current = {u["ticker"] for u in order}
+    entries = deepcopy(previous)
+    for tk in sorted(current | set(merged) | set(entries)):
+        entry = entries.setdefault(tk, {
+            "state": "legacy_unverified" if tk in merged else "not_collected",
+        })
+        entry.update(attempted_this_run=False, in_universe=tk in current)
+        entry.pop("skip_reason", None)
+        if tk not in current:
+            entry["skip_reason"] = "outside_universe"
+    return entries
+
+
+def _write_snapshot(out):
+    """같은 디렉터리의 임시 파일을 완성한 뒤 교체해 중간 쓰기 손실을 막는다."""
+    parent = os.path.dirname(os.path.abspath(OUTPUT_PATH))
+    fd, temporary = tempfile.mkstemp(prefix=".insider-", suffix=".tmp", dir=parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, allow_nan=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary, OUTPUT_PATH)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 def main() -> int:
@@ -238,51 +289,89 @@ def main() -> int:
         today = end_dt.strftime("%Y-%m-%d")
         cutoff_365 = (end_dt - timedelta(days=WINDOW_DAYS)).strftime("%Y-%m-%d")
 
-        merged = _load_prev()            # carry-forward 베이스
+        merged, previous_coverage = _load_prev()
         order = _ordered_universe()
+        if not order:
+            print("[insider] universe 없음 — 기존 snapshot 보존", file=sys.stderr)
+            return 1
+        coverage = _coverage_base(previous_coverage, merged, order)
         sess = requests.Session()
         t0 = time.monotonic()
         calls = collected = rate_stop = 0
+        stop_reason = ""
 
         for u in order:
             if time.monotonic() - t0 > MAX_SECONDS or calls >= MAX_CALLS:
                 print(f"[insider] budget 도달 (calls={calls}, {int(time.monotonic()-t0)}s) — 나머지 carry-forward", file=sys.stderr)
+                stop_reason = "budget_exhausted"
                 break
             tk, name = u["ticker"], u["name"]
-            cc = get_corp_code(tk)
-            if not cc:
+            entry = coverage[tk]
+            try:
+                cc = get_corp_code(tk)
+            except Exception:  # 매핑 실패도 0건 근거가 아니다.
+                entry["skip_reason"] = "corp_code_lookup_failed"
                 continue
-            status = ""
+            if not cc:
+                entry["skip_reason"] = "corp_code_unavailable"
+                continue
+            if time.monotonic() - t0 > MAX_SECONDS or calls >= MAX_CALLS:
+                stop_reason = "budget_exhausted"
+                break  # 매핑 조회 중 예산 소진: 아직 시도하지 않은 요청.
+            entry.update(attempted_this_run=True, last_attempt_at=_now_kst().isoformat())
+            calls += 1  # 전송/JSON 실패도 실제 시도 횟수에서 빠지지 않는다.
+            status, failure = "", ""
             rows: List[Any] = []
-            for attempt in range(2):  # 021(분당 제한) 1회 백오프 재시도
-                try:
-                    r = sess.get(ELESTOCK, params={"crtfc_key": DART_API_KEY, "corp_code": cc,
-                                                    "bgn_de": bgn_de, "end_de": end_de}, timeout=15)
-                    d = r.json()
-                    calls += 1
-                except Exception as e:  # noqa: BLE001
-                    print(f"[insider] {tk} elestock 실패: {e!r}", file=sys.stderr)
-                    status = "ERR"
-                    break
+            d = None
+            try:
+                r = sess.get(ELESTOCK, params={"crtfc_key": DART_API_KEY, "corp_code": cc,
+                                                "bgn_de": bgn_de, "end_de": end_de}, timeout=15)
+                r.raise_for_status()
+                d = r.json()
+            except Exception as e:  # noqa: BLE001
+                # requests 예외 문자열에는 키가 포함된 URL이 있을 수 있다.
+                print(f"[insider] {tk} elestock 실패: {type(e).__name__}", file=sys.stderr)
+                failure = "request_failed"
+            if not failure and not isinstance(d, dict):
+                failure = "invalid_response"
+            if not failure:
                 status = str(d.get("status") or "")
-                if status == "021" and attempt == 0:   # 분당 요청 제한 → 백오프
-                    time.sleep(60)
-                    continue
-                rows = d.get("list") or [] if status == "000" else []
-                break
-
+                if status == "000":
+                    rows = d.get("list")
+                    if not isinstance(rows, list) or any(
+                        not isinstance(row, dict) or not row.get("rcept_no") or not row.get("rcept_dt")
+                        for row in rows
+                    ):
+                        failure = "invalid_rows"
+                elif status == "013":
+                    if d.get("list") not in (None, []):
+                        failure = "conflicting_empty_response"
+                else:
+                    failure = "dart_status"
+            entry.pop("dart_status", None)
+            if status.isdigit() and len(status) == 3:
+                entry["dart_status"] = status
             if status == "020":  # 일일 요청 제한 초과 — 정지(이후 전부 carry-forward)
                 rate_stop = 1
+                stop_reason = "rate_limit"
                 print(f"[insider] DART 020 일일 제한 — 정지 (collected={collected})", file=sys.stderr)
-                break
-            if status not in ("000", "013"):
-                # 🚨 비권위적 응답(ERR·800 점검·021 재발·미상) — 일시 오류이므로 이전 데이터 보존(pop 금지).
-                # 권위적 공백(000 빈 list / 013 데이터없음)만 아래서 aged-out 처리.
+            if not failure:
+                try:
+                    trades, agg = _aggregate(rows, cutoff_365)
+                except (TypeError, ValueError, OverflowError):
+                    failure = "invalid_rows"
+            if failure:
+                entry.update(state="failed", failure_reason=failure)
+                if stop_reason:
+                    break
                 time.sleep(DELAY)
                 continue
 
             collected += 1
-            trades, agg = _aggregate(rows, cutoff_365)
+            state = "ok" if trades else "empty"
+            entry.update(state=state, last_success_at=entry["last_attempt_at"],
+                         last_success_state=state, last_success_row_count=len(rows))
+            entry.pop("failure_reason", None)
             if trades:
                 merged[tk] = {
                     "ticker": tk, "name": name, **agg,
@@ -292,12 +381,11 @@ def main() -> int:
                 merged.pop(tk, None)   # 공시 0 — 이전 데이터 제거(aged out)
             time.sleep(DELAY)
 
+        for entry in coverage.values():
+            if entry["in_universe"] and not entry["attempted_this_run"]:
+                entry.setdefault("skip_reason", stop_reason or "not_attempted")
+        current_coverage = [e for e in coverage.values() if e["in_universe"]]
         stocks = sorted(merged.values(), key=lambda s: -abs(_int(s.get("net_change"))))
-
-        if not stocks and os.path.isfile(OUTPUT_PATH):
-            print("[insider] 0 종목 — 기존 snapshot 보존", file=sys.stderr)
-            ok = True
-            return 0
 
         out = {
             "_meta": {
@@ -324,9 +412,20 @@ def main() -> int:
                 "note": "공시 사실만 — 보고자·직위·증감(매수+/매도−)·날짜·원문. 자체 점수·매매신호 아님 (RULE 7). 美 Form4 KR판. 전 종목 회전 수집(per-stock collected_at).",
             },
             "stocks": stocks,
+            # 되돌리지 말 것: 빈 응답과 미조회는 다르다. empty는 이 조회 시점의 API
+            # 반환 창에 한정되며, 영구 0건/현재 거래 없음/완전한 종목 커버리지 뜻이 아니다.
+            # last_success_*는 실패·미조회 때 과거 시각 그대로 보존한다. 소비자는 명시적으로
+            # 이 근거를 해석해야 하며 기존 stocks 목록에 가상의 0값 행을 만들지 않는다.
+            "coverage": {
+                "schema_version": 1,
+                "universe_count": len(current_coverage),
+                "attempted_this_run": sum(e["attempted_this_run"] for e in current_coverage),
+                "request_count": calls,
+                "counts": dict(Counter(e["state"] for e in current_coverage)),
+                "by_ticker": coverage,
+            },
         }
-        with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-            json.dump(out, f, ensure_ascii=False)
+        _write_snapshot(out)
         print(f"[insider] logged=True · {len(stocks)} 종목(누적) · 오늘수집 {collected}/{len(order)} -> {os.path.relpath(OUTPUT_PATH, _ROOT)}", file=sys.stderr)
         ok = True
         return 0
