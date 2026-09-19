@@ -92,11 +92,18 @@ def _build_data(ticker: str) -> Optional[Dict[str, Any]]:
 
 def _render(data: Dict[str, Any]) -> bytes:
     import typst
+    if __package__:
+        from .report_visuals import chart_svg
+    else:
+        from report_visuals import chart_svg
+    # Vector markup is only a render asset, not research material in the prompt.
+    charts = data.get("reader", {}).get("visuals", {}).get("charts", {})
+    rendered = {**data, "chart_images": {key: chart_svg(chart) for key, chart in charts.items()}}
     return typst.compile(
         TEMPLATE,
         font_paths=[FONT_DIR],
         ignore_system_fonts=True,
-        sys_inputs={"data": json.dumps(data, ensure_ascii=False)},
+        sys_inputs={"data": json.dumps(rendered, ensure_ascii=False)},
     )
 
 
