@@ -41,6 +41,39 @@
   #h(2mm)#link(row.source_url, text(size: 7.5pt, fill: accent)[공시 원문 ↗])
 ]
 #let R = D.reader
+#let V = R.visuals
+#let chart-icon(key) = {
+  let paths = if key == "annual" {
+    "<path d='M3 3v18h18M6 15l5-5 4 3 6-7'/>"
+  } else if key == "cash" {
+    "<rect x='3' y='5' width='18' height='15' rx='3'/><path d='M16 10h5v5h-5zM6 5V3h12'/><circle cx='18' cy='12.5' r='.6'/>"
+  } else {
+    "<path d='M6 18L18 6'/><circle cx='7' cy='7' r='3'/><circle cx='17' cy='17' r='3'/>"
+  }
+  image(bytes("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><g fill='none' stroke='#6c5ce7' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>" + paths + "</g></svg>"), format: "svg", width: 4mm)
+}
+#let reading(key) = if key in V.insights {
+  let insight = V.insights.at(key)
+  block(fill: fill, radius: 6pt, inset: 4mm, width: 100%, breakable: false)[
+    #text(size: 10pt, weight: 800)[#insight.title]
+    #v(1.5mm)#text(size: 8.5pt)[#insight.meaning]
+    #v(1.5mm)#text(size: 8pt, fill: sub)[#insight.evidence]
+    #v(1.5mm)#text(size: 8pt, fill: sub)[#insight.limit]
+    #v(2mm)#text(size: 8pt, weight: 700, fill: accent)[다음 확인] #text(size: 8pt)[#insight.next]
+  ]
+}
+#let chart(key) = if key in D.chart_images {
+  let c = V.charts.at(key)
+  block(breakable: false, width: 100%)[
+    #grid(columns: (4mm, 1fr), gutter: 2mm, align: horizon,
+      chart-icon(key), text(size: 9pt, weight: 800)[#c.title])
+    #v(1mm)
+    #image(bytes(D.chart_images.at(key)), format: "svg", width: 100%)
+    #v(1mm)#text(size: 7pt, fill: sub)[#c.note]
+    #v(1mm)
+    #for row in c.sources [#source-row(row)#linebreak()]
+  ]
+}
 #v(3mm)
 == 어떤 사업을 하는 기업인가
 #v(1mm)
@@ -61,8 +94,20 @@
   #if R.prior != none [#v(1mm)#text(size: 7pt, fill: sub)[전년 동기: ]#source-row(R.prior)]
 ] else [#text(size: 8.5pt, fill: sub)[본문에 사용할 재무 근거가 충분하지 않습니다. 확인 전 수치와 누락 범위는 부록에 구분했습니다.]]
 #for note in R.observations [#v(2mm)#text(size: 8.5pt)[#note]]
-#v(5mm)
-== 연간 흐름도 함께 보기
+#v(3mm)
+#chart("margin")
+#v(3mm)
+#reading("income")
+#if "annual" in D.chart_images [
+  #pagebreak()
+  = 실적의 흐름을 함께 읽기
+  #v(5mm)
+  #chart("annual")
+  #v(3mm)
+  #reading("annual")
+]
+#v(4mm)
+== 연간 수치 확인
 #if D.annual_core.len() > 0 [
   #report-table(("실제 기간", "매출", "영업이익", "순이익"), D.annual_core, (1.65, 1, 1, 1))
   #v(1mm)#text(size: 7pt, fill: sub)[연간 수치입니다. 위의 단일 분기·누적 실적과 금액 크기를 직접 비교하지 마세요. 원문과 기준은 부록 R0·R1.]
@@ -73,9 +118,11 @@
 #if R.cash != none [
   #source-row(R.cash)
   #v(2mm)
-  #report-table(("항목", "금액"), R.cash_rows, (2, 1))
+  #if "cash" in D.chart_images [#chart("cash")] else [#report-table(("항목", "금액"), R.cash_rows, (2, 1))]
 ]
 #for note in R.cash_notes [#v(2mm)#text(size: 8.5pt)[#note]]
+#v(3mm)
+#reading("cash")
 #v(5mm)
 == 최근 공시와 연결하기
 #if D.recent_events.len() > 0 [
@@ -83,7 +130,7 @@
   #v(1mm)#text(size: 7.5pt, fill: sub)[수신된 최근 3건 이내입니다. 제목만으로 실적 영향이나 호재·악재를 판단하지 않습니다.]
 ] else [#text(size: 8.5pt, fill: sub)[최근 공시 자료를 받지 못했습니다. 사건이나 위험이 없다는 뜻은 아닙니다.]]
 #v(5mm)
-== 숫자를 읽을 때 남겨둘 질문
+== 원문에서 더 확인할 내용
 #block(fill: fill, radius: 6pt, inset: 4mm, width: 100%)[
   #text(size: 9pt, weight: 800)[매출과 이익이 달라진 이유]
   #v(1mm)#text(size: 8.5pt)[사업부·제품별 실적과 가격·판매량·비용 설명을 공시에서 함께 읽으세요. 이익률 변화만으로 원인을 단정할 수 없습니다.]

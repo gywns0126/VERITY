@@ -85,6 +85,12 @@ def reader_financials(periods, is_financial=False):
             cash_notes.insert(0, f"현금흐름의 마지막 확인 기간은 {cash['end']}로, 위 손익보다 이전 자료입니다.")
     else:
         cash_notes.append("기간과 원문이 연결된 영업현금흐름이 없어 순이익과 비교하지 않았습니다.")
-    return {"current": current, "prior": prior, "rows": rows, "observations": observations,
+    result = {"current": current, "prior": prior, "rows": rows, "observations": observations,
             "cash": cash, "cash_rows": cash_rows, "cash_notes": cash_notes,
             "periods": usable, "accepted": len(usable), "received": len(periods)}
+    if __package__:
+        from .report_visuals import build_visuals
+    else:
+        from report_visuals import build_visuals
+    result["visuals"] = build_visuals(result, is_financial, comparable)
+    return result
