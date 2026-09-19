@@ -13,8 +13,10 @@ from report_evidence import build_report, analysis_prompt
 
 
 def annual():
-    return [{'year': 2024, 'revenue': 100, 'op': 30, 'net': 20},
-            {'year': 2025, 'revenue': 120, 'op': 20, 'net': 15}]
+    return [dict(year=y, revenue=r, op=o, net=n, currency='USD', fs_div='CFS',
+                 start=f'{y}-01-01', end=f'{y}-12-31', period_kind='annual',
+                 source_url=f'https://www.sec.gov/Archives/example-{y}.htm')
+            for y, r, o, n in [(2024, 100, 30, 20), (2025, 120, 20, 15)]]
 
 
 def dossier(rows=None, kr=False, extra=None, stock_extra=None):
@@ -75,9 +77,9 @@ def test_bridge_reconciles_and_is_not_claimed_as_price_or_volume_cause():
     d = dossier()
     text = analysis_prompt(d)
     assert '인과관계를 증명하지' in text
-    assert '연결/별도 및 원문 수치 대조 필요' in text
-    assert d['annual_basis'][0]['scope'] == '미수신'
-    assert d['annual_basis'][0]['source_url'] == ''
+    assert '연결 연간 비교' in text
+    assert d['annual_basis'][0]['scope'] == '연결'
+    assert d['annual_basis'][0]['source_url'].startswith('https://www.sec.gov/')
 
 
 def test_zero_or_negative_revenue_does_not_create_margin_bridge():

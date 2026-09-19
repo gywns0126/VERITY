@@ -25,6 +25,9 @@ def fixture(kr=False):
               'fin_series': [{'year': 2024, 'revenue': 100, 'op': 30, 'net': 20}, {'year': 2025, 'revenue': 120, 'op': 20, 'net': 15}],
               'calendar': [{'event': '예상 발표 창', 'date': '2026-11-04'}],
               'disclosures': [{'date': '2026-09-01', 'title': '8-K', 'source_url': 'https://www.sec.gov/Archives/edgar/data/1/doc.htm'}]}
+    for row in report['fin_series']:
+        y = row['year']
+        row.update(start=f'{y}-01-01', end=f'{y}-12-31', currency='KRW' if kr else 'USD', fs_div='CFS', period_kind='annual', source_url=f'https://www.sec.gov/Archives/example-{y}.htm')
     data = {'stock_report_public.json' if kr else 'us_stock_report_public.json': {'_meta': {'generated_at': '2026-09-17'}, 'stocks': {ticker: report}}}
     data['dart_quarterly_public.json' if kr else 'us_quarterly_public.json'] = {'stocks': {ticker: {'quarters': [{'q': '2025-09-30', 'roe': 11.3, 'current_ratio': 2.58 if kr else 145.59}]}}}
     return ticker, data, report
@@ -123,7 +126,7 @@ def test_partial_source_failure_survives_and_is_not_no_risk():
     report = build_report(ticker, fetch, NOW)
     c = next(c for c in report['coverage'] if c['id'] == 'I')
     assert c['status'] == '조회 실패' and c['reason'] == 'TimeoutError'
-    assert len(report['coverage']) == 7
+    assert len(report['coverage']) == 10
     assert 'secret_should_not_leak' not in analysis_prompt(report)
     assert '확정 여부 미확인' in section(report, 'C1')['rows'][0][2]
 
@@ -205,3 +208,59 @@ def test_past_estimated_calendar_is_not_an_upcoming_event():
     d = build(docs, ticker)
     assert '지난 일정' in section(d, 'C1')['rows'][0][0]
     assert d['coverage'][0]['artifact_url'].startswith('https://rte5guenhonw9fzn.public.blob.vercel-storage.com/')
+
+
+@pytest.mark.parametrize('raw', [{}, {'ticker': 'CAT', 'meta': {'cik': 'invalid'}},
+                                 {'ticker': 'CAT', 'meta': {'cik': '18230'}}])
+def test_us_source_denominator_keeps_missing_sec_sources(raw):
+    ticker, docs, _ = fixture()
+    docs['us_financials/CAT.json'] = raw
+    d = build(docs, ticker)
+    assert len(d['coverage']) == 10
+    assert {c['id'] for c in d['coverage']} == set('RQIDEHGXSB')
+    assert next(c for c in d['coverage'] if c['id'] == 'B')['status'] != '수신'
+    if raw.get('meta', {}).get('cik') != '18230':
+        assert next(c for c in d['coverage'] if c['id'] == 'X')['status'] != '수신'
+
+
+@pytest.mark.parametrize('failed', [True, False])
+def test_sec_unavailable_or_empty_keeps_existing_verified_periods(failed):
+    ticker, docs, s = fixture()
+    row = dict(s['fin_series'][-1], fs_div='ENTITY')
+    s['financial_evidence'] = {'periods': [row]}
+    docs['us_financials/CAT.json'] = {'ticker': ticker, 'meta': {'cik': '18230'}}
+    def fetch(name):
+        if name.startswith('sec-companyfacts/') and failed:
+            raise TimeoutError('private provider message')
+        return docs.get(name, {})
+    d = build_report(ticker, fetch, NOW)
+    assert d['reader']['current'] == row
+    assert next(c for c in d['coverage'] if c['id'] == 'S')['status'] != '수신'
+    assert 'private provider message' not in analysis_prompt(d)
+
+
+def test_sec_fetch_caches_failures_and_rejects_untrusted_paths(monkeypatch):
+    monkeypatch.setattr(fact_report, '_SEC_CACHE', {})
+    calls = []
+    def unavailable(*args, **kwargs):
+        calls.append(args[0].full_url)
+        raise TimeoutError('private provider message')
+    monkeypatch.setattr(fact_report.urllib.request, 'urlopen', unavailable)
+    for _ in range(2):
+        with pytest.raises(RuntimeError, match='^sec_temporarily_unavailable$'):
+            fact_report._fetch_sec('sec-companyfacts/0000018230.json')
+    assert calls == ['https://data.sec.gov/api/xbrl/companyfacts/CIK0000018230.json']
+    for name in ('sec-companyfacts/../../secret', 'sec-filing/1/0000000001-26-000001/../../secret.htm'):
+        with pytest.raises(ValueError, match='invalid_sec_path'):
+            fact_report._fetch_sec(name)
+    assert len(calls) == 1
+
+
+def test_sec_fetch_does_not_hold_global_cache_lock_during_io(monkeypatch):
+    monkeypatch.setattr(fact_report, '_SEC_CACHE', {})
+    def response(*args, **kwargs):
+        assert fact_report._SEC_LOCK.acquire(blocking=False)
+        fact_report._SEC_LOCK.release()
+        return io.BytesIO(b'{"cik":18230}')
+    monkeypatch.setattr(fact_report.urllib.request, 'urlopen', response)
+    assert fact_report._fetch_sec('sec-companyfacts/0000018230.json') == {'cik': 18230}

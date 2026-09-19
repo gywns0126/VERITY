@@ -9,6 +9,7 @@ import json
 import os
 import re
 import time
+import threading
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -27,9 +28,50 @@ _TICKER_US = re.compile(r"^[A-Z][A-Z0-9.\-]{0,9}$")
 # 발행 피드 인스턴스 캐시 (Vercel warm instance 재사용, TTL 10분)
 _CACHE: Dict[str, Any] = {}
 _TTL = 600.0
+_SEC_CACHE = {}
+_SEC_LOCK = threading.Lock()
+
+
+def _fetch_sec(name):
+    """Only fixed SEC paths; bounded cache, response size and timeout; no API key."""
+    facts = re.fullmatch(r"sec-companyfacts/(\d{10})\.json", name)
+    filing = re.fullmatch(r"sec-filing/(\d{1,10})/(\d{10}-\d{2}-\d{6})/([\w.-]+\.html?)", name)
+    if facts:
+        url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{facts[1]}.json"
+    elif filing:
+        url = f"https://www.sec.gov/Archives/edgar/data/{int(filing[1])}/{filing[2].replace('-', '')}/{filing[3]}"
+    else:
+        raise ValueError("invalid_sec_path")
+    with _SEC_LOCK:
+        ent = _SEC_CACHE.get(name)
+        if ent and time.time() - ent[0] < (3600 if ent[2] is None else 300):
+            if ent[2]:
+                raise RuntimeError("sec_temporarily_unavailable")
+            return ent[1]
+    # A slow filing must not hold up unrelated CIKs on the warm instance.
+    result, failed = None, False
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": os.environ.get("SEC_USER_AGENT") or os.environ.get("SEC_API_USER_AGENT") or "AlphaNest public research contact@verity.local"})
+        with urllib.request.urlopen(req, timeout=8) as response:
+            raw = response.read(12 * 1024 * 1024 + 1)
+        if len(raw) > 12 * 1024 * 1024:
+            raise ValueError("sec_document_size_limit")
+        body = raw.decode("utf-8", "replace")
+        result = json.loads(body) if facts else body
+    except Exception:
+        failed = True
+    with _SEC_LOCK:
+        _SEC_CACHE[name] = (time.time(), result, failed or None)
+        while len(_SEC_CACHE) > 16:
+            del _SEC_CACHE[min(_SEC_CACHE, key=lambda k: _SEC_CACHE[k][0])]
+    if failed:
+        raise RuntimeError("sec_temporarily_unavailable") from None
+    return result
 
 
 def _fetch(name: str) -> Any:
+    if name.startswith("sec-"):
+        return _fetch_sec(name)
     ent = _CACHE.get(name)
     if ent and time.time() - ent[0] < _TTL:
         return ent[1]

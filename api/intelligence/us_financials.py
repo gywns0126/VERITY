@@ -274,12 +274,16 @@ def extract_metric_series(
         matched_tags.append(tag)
         units = us_gaap[tag].get("units") or {}
         if currency in units:                     # 보고 통화 우선 (USD 또는 감지된 CAD 등)
+            unit = currency
             unit_rows = units[currency]
         elif "USD" in units:
+            unit = "USD"
             unit_rows = units["USD"]
         elif "USD/shares" in units:
+            unit = "USD/shares"
             unit_rows = units["USD/shares"]
         elif "shares" in units:
+            unit = "shares"
             unit_rows = units["shares"]  # v0.4 — diluted_shares (F-Score F7 신주 발행)
         else:
             continue
@@ -317,6 +321,7 @@ def extract_metric_series(
                 pick = False
             if pick:
                 seen[key] = {
+                    "start": start,
                     "end": period.end_date,
                     "fy": int(period.fiscal_year),
                     "fp": period.fiscal_period,
@@ -327,6 +332,7 @@ def extract_metric_series(
                     "filed": r.get("filed"),
                     "source_url": r.get("source_url"),
                     "tag": tag,
+                    "unit": unit,
                 }
     return sorted(seen.values(), key=lambda x: x["end"])
 

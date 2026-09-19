@@ -31,45 +31,69 @@
 #v(2mm)
 #line(length: 100%, stroke: 1pt + ink)
 #v(2mm)
-#grid(columns: (1fr, 1fr), gutter: 3mm,
-  ..D.kv.map(p => block(fill: fill, radius: 5pt, inset: 3mm, width: 100%)[
-    #text(size: 8pt, fill: sub)[#p.at(0)] #h(2mm)#text(weight: 800)[#p.at(1)]
-  ]))
-#v(3mm)
-#text(size: 14pt, weight: 800)[한눈에 읽는 기업과 변화]
-#v(1mm)
-#text(size: 8pt, fill: sub)[사업 설명 → 최근 실적 변화 → 다음 확인 조건. 원문 발췌·발행 자료·자체계산을 구분했습니다.]
-#for (i, q) in D.summary.enumerate() {
-  v(3mm)
-  block(breakable: false, width: 100%, inset: (left: 3mm), stroke: (left: 2pt + accent))[
-    #text(size: 10pt, weight: 800)[#(i+1). #q.title]
-    #v(1.2mm)
-    #text(size: 8.6pt)[#q.observation]
-    #v(1mm)
-    #text(size: 8.3pt, fill: sub)[#q.question]
-    #v(0.6mm)
-    #text(size: 7.2pt, fill: accent)[자료 #q.refs]
-    #if q.source != none [#h(2mm)#cell(q.source)]
-  ]
-}
-#if D.comparison.bridge != none {
-  v(3mm)
-  block(fill: fill, radius: 5pt, inset: 3mm, width: 100%)[
-    #text(size: 9pt, weight: 800)[실적 변화의 이유를 더 확인하려면]
-    #v(1mm)
-    #text(size: 8pt)[매출 규모와 영업이익률 변화가 영업이익 증감에 각각 얼마를 차지하는지 부록 R5에 나눴습니다. 가격·판매량·비용 같은 실제 원인은 회사 설명과 대조해야 합니다.]
-  ]
-}
-#v(4mm)
-#block(fill: fill, radius: 5pt, inset: 3mm, width: 100%)[
-  #text(weight: 800)[내 AI로 더 분석하려면]
-  #v(1mm)
-  #text(size: 8.3pt)[이 PDF를 첨부하거나, 아래 분석 요청문을 사용하는 AI에 붙여넣으세요. 보고 통화·비교 기준·계산식·출처·누락 사항이 함께 들어 있습니다.]
-  #v(1mm)
-  #if "prompt_url" in D { link(D.prompt_url, text(fill: accent, weight: 700)[분석 요청문과 자료 받기 ↗]) }
+#let report-table(headers, rows, widths) = table(
+  columns: widths.map(w => w * 1fr), inset: (x: 3pt, y: 5pt),
+  stroke: (left: none, right: none, top: none, bottom: 0.4pt + hair),
+  table.header(..headers.map(h => text(size: 8pt, weight: 700, fill: sub)[#h])),
+  ..rows.flatten().map(c => text(size: 8.5pt)[#cell(c)]))
+#let source-row(row) = if row != none [
+  #text(size: 7.5pt, fill: sub)[#row.start - #row.end · #row.currency · #(if row.fs_div == "CFS" {"연결"} else if row.fs_div == "ENTITY" {"보고기업 전체(SEC)"} else {"별도"})]
+  #h(2mm)#link(row.source_url, text(size: 7.5pt, fill: accent)[공시 원문 ↗])
 ]
+#let R = D.reader
+#v(3mm)
+== 어떤 사업을 하는 기업인가
+#v(1mm)
+#block(fill: fill, radius: 6pt, inset: 4mm, width: 100%)[
+  #text(size: 9pt)[#D.business_profile.summary]
+  #v(2mm)
+  #text(size: 7.5pt, fill: sub)[#D.business_profile.label]
+  #if D.business_profile.source != none [#h(2mm)#cell(D.business_profile.source)]
+]
+#v(5mm)
+== 최근 실적에서 달라진 점
+#if R.current != none [
+  #source-row(R.current)
+  #v(1mm)
+  #text(size: 8pt, fill: sub)[기간 구분: #(if R.current.period_kind == "quarter" {"단일 분기"} else if R.current.period_kind == "ytd" {"누적"} else {"연간"}). #(if R.prior != none {"전년 동기는 같은 기간 길이·통화·보고 범위로 맞췄습니다."} else {"같은 기준의 전년 동기를 확보하지 못해 증감률을 계산하지 않았습니다."})]
+  #v(2mm)
+  #report-table(("항목", "전년 동기", "이번 기간", "증감률"), R.rows, (1, 1.3, 1.3, 0.8))
+  #if R.prior != none [#v(1mm)#text(size: 7pt, fill: sub)[전년 동기: ]#source-row(R.prior)]
+] else [#text(size: 8.5pt, fill: sub)[본문에 사용할 재무 근거가 충분하지 않습니다. 확인 전 수치와 누락 범위는 부록에 구분했습니다.]]
+#for note in R.observations [#v(2mm)#text(size: 8.5pt)[#note]]
+#v(5mm)
+== 연간 흐름도 함께 보기
+#if D.annual_core.len() > 0 [
+  #report-table(("실제 기간", "매출", "영업이익", "순이익"), D.annual_core, (1.65, 1, 1, 1))
+  #v(1mm)#text(size: 7pt, fill: sub)[연간 수치입니다. 위의 단일 분기·누적 실적과 금액 크기를 직접 비교하지 마세요. 원문과 기준은 부록 R0·R1.]
+] else [#text(size: 8.5pt, fill: sub)[연간 비교에 필요한 기간·통화·보고 범위·원문을 확보하지 못했습니다.]]
 #pagebreak()
-= 해석 전에 확인할 빈칸
+= 이익이 현금으로 이어졌나
+#v(2mm)
+#if R.cash != none [
+  #source-row(R.cash)
+  #v(2mm)
+  #report-table(("항목", "금액"), R.cash_rows, (2, 1))
+]
+#for note in R.cash_notes [#v(2mm)#text(size: 8.5pt)[#note]]
+#v(5mm)
+== 최근 공시와 연결하기
+#if D.recent_events.len() > 0 [
+  #report-table(("제출일", "공시 제목", "유형", "원문"), D.recent_events, (0.8, 2.5, 0.7, 0.7))
+  #v(1mm)#text(size: 7.5pt, fill: sub)[수신된 최근 3건 이내입니다. 제목만으로 실적 영향이나 호재·악재를 판단하지 않습니다.]
+] else [#text(size: 8.5pt, fill: sub)[최근 공시 자료를 받지 못했습니다. 사건이나 위험이 없다는 뜻은 아닙니다.]]
+#v(5mm)
+== 숫자를 읽을 때 남겨둘 질문
+#block(fill: fill, radius: 6pt, inset: 4mm, width: 100%)[
+  #text(size: 9pt, weight: 800)[매출과 이익이 달라진 이유]
+  #v(1mm)#text(size: 8.5pt)[사업부·제품별 실적과 가격·판매량·비용 설명을 공시에서 함께 읽으세요. 이익률 변화만으로 원인을 단정할 수 없습니다.]
+  #v(3mm)#text(size: 9pt, weight: 800)[비교 대상의 조건]
+  #v(1mm)#text(size: 8.5pt)[업종 중앙값은 사업 구조·결산기간·계산법이 같은 기업만의 값이 아닐 수 있습니다. 그래서 본문에서 저평가·고평가 판정에 사용하지 않았습니다.]
+]
+#v(4mm)
+#text(size: 7.8pt, fill: sub)[본문 재무: 기준을 갖춘 #(R.accepted)/#(R.received)개 기간. 보고된 숫자와 자체계산을 구분했습니다. 항목별 계정·기간·원문 및 자료 누락은 다음 부록에서 확인할 수 있습니다.]
+#pagebreak()
+= 부록 · 자료 범위와 확인할 빈칸
 #text(size: 8.5pt, fill: sub)[수신된 자료의 한계입니다. 없는 정보를 추정으로 채우지 않습니다.]
 #v(3mm)
 #for g in D.gaps [
@@ -79,11 +103,11 @@
 ]
 #v(3mm)
 == 자료 점검표
-#text(size: 8pt, fill: sub)[수신 여부는 이 종목의 자료가 있는지를 뜻합니다. 아래 갱신 시각은 파일 생성 시각이며, 재무·보유·거래 기준일은 각 표에서 확인하세요.]
+#text(size: 8pt, fill: sub)[수신 여부는 이 종목의 자료가 있는지를 뜻합니다. 파일 생성·공시 제출·SEC 조회 시점이며, 재무·보유·거래 기준일은 각 표에서 확인하세요.]
 #v(2mm)
 #table(columns: (0.35fr, 1fr, 1.25fr, 1.5fr), inset: 4pt,
   stroke: (left: none, right: none, top: none, bottom: 0.4pt + hair),
-  table.header(..("ID", "자료", "조회 결과", "파일 갱신").map(h => text(size: 8pt, weight: 700)[#h])),
+  table.header(..("ID", "자료", "조회 결과", "갱신·제출·조회").map(h => text(size: 8pt, weight: 700)[#h])),
   ..D.coverage.map(c => (c.id, c.label, c.status, c.published)).flatten().map(c => text(size: 8pt)[#c]))
 #v(3mm)
 #for c in D.coverage [
@@ -91,7 +115,7 @@
     #text(size: 7.8pt, weight: 700)[#c.id · #c.label]
     #text(size: 7pt, fill: sub)[ — #c.source]
     #linebreak()
-    #text(size: 7pt, fill: accent)[#link("https://rte5guenhonw9fzn.public.blob.vercel-storage.com/" + c.file)[발행 자료 · #c.file]]
+    #if c.artifact_url != "" [#text(size: 7pt, fill: accent)[#link(c.artifact_url)[발행 자료 · #c.file]]] else [#text(size: 7pt, fill: sub)[원문 위치 미수신]]
     #if c.reason != "" [#linebreak()#text(size: 7pt, fill: sub)[#c.reason]]
   ]
 ]
@@ -100,7 +124,7 @@
 #text(size: 8pt, fill: sub)[표 제목 옆 ID는 앞의 질문과 연결됩니다. 원문 열기는 수신된 문서 URL, 출처 목록은 문서 검색 페이지입니다.]
 #for s in D.sections {
   v(4mm)
-  block(breakable: s.rows.len() > 8 or s.id == "R3")[
+  block(breakable: s.rows.len() > 8 or s.id in ("R3", "B1"))[
     #block(breakable: false, sticky: true)[
       #text(size: 11pt, weight: 800)[#s.title]
       #h(2mm)#text(size: 7.4pt, fill: accent)[#s.id · 표시 #(s.shown)/#(s.total)행]
@@ -117,3 +141,8 @@
 #v(4mm)
 #line(length: 100%, stroke: 0.5pt + hair)
 #text(size: 8pt, fill: sub)[#D.source_line]
+
+#if "prompt_url" in D [
+  #v(3mm)#text(size: 8pt)[원하는 AI에 직접 자료를 전달할 때: ]
+  #link(D.prompt_url, text(size: 8pt, fill: accent)[분석 요청문과 근거 자료 받기 ↗])
+]
