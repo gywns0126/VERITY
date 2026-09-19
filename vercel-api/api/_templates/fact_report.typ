@@ -65,7 +65,8 @@
 #let chart(key) = if key in D.chart_images {
   let c = V.charts.at(key)
   block(breakable: false, width: 100%)[
-    #chart-icon(key)#h(2mm)#text(size: 9pt, weight: 800)[#c.title]
+    #grid(columns: (4mm, 1fr), gutter: 2mm, align: horizon,
+      chart-icon(key), text(size: 9pt, weight: 800)[#c.title])
     #v(1mm)
     #image(bytes(D.chart_images.at(key)), format: "svg", width: 100%)
     #v(1mm)#text(size: 7pt, fill: sub)[#c.note]
