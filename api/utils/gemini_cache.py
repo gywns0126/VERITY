@@ -20,6 +20,19 @@ _CACHE_REGISTRY: Dict[Tuple[str, str], Tuple[str, float]] = {}
 
 _DEFAULT_TTL_SECONDS = 3600
 
+# 2026-09-20: retire the remaining scheduled Google report calls.
+# Guard before cache creation as caches.create is also an external paid operation.
+RETIRED_REPORT_CALLS = frozenset({"daily_report", "periodic_report", "daily_public_report"})
+
+
+class ReportGenerationRetired(RuntimeError):
+    pass
+
+
+def require_active_report_call(call_type: Optional[str]) -> None:
+    if call_type in RETIRED_REPORT_CALLS:
+        raise ReportGenerationRetired("Scheduled Google report generation is disabled by policy")
+
 
 def get_or_create_cache(
     client,
@@ -97,6 +110,7 @@ def generate_with_cache(
     이 함수가 stock_analysis/chat/daily_report/periodic 단일 chokepoint 라 전 경로 동시 보호.
     """
     import sys
+    require_active_report_call(call_type)
     from api.config import GEMINI_MODEL_CHAT
 
     models = [model]

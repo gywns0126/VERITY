@@ -248,7 +248,7 @@ def generate_daily_public_text(
     Args:
         portfolio: portfolio.json 데이터
         channel: "public" | "instagram" | "admin" (가드 동작 결정)
-        llm_caller: 테스트 주입용. None 이면 Gemini 기본 사용.
+        llm_caller: 테스트 주입용. None 이면 중단 상태를 반환하며 외부 호출하지 않는다.
 
     Returns:
         {
@@ -282,7 +282,13 @@ def generate_daily_public_text(
 
     # LLM 호출
     if llm_caller is None:
-        llm_caller = _default_gemini_caller
+        # No generation attempt: do not record synthetic Google usage or retry.
+        result = _empty_public_result({"label": "", "raw_grade": ""}, val_summary)
+        result["cover"] = "자동 AI 요약 제공 중단"
+        result["sections"]["temperature"]["summary"] = "공시·시장 원천 자료를 확인해 주세요"
+        result["sections"]["verity_judgment"] = {}
+        result["metadata"]["status"] = "disabled_by_policy"
+        return result
     try:
         raw_text = llm_caller(prompt)
         parsed = _parse_llm_json(raw_text)
@@ -408,6 +414,8 @@ def _default_gemini_caller(prompt: str) -> str:
     + response_mime_type=application/json + candidates 경유 finish_reason 진단.
     전 모델 소진 시 RuntimeError → caller 의 success=False(fallback 리포트) 유지.
     """
+    from api.utils.gemini_cache import require_active_report_call
+    require_active_report_call("daily_public_report")
     import sys
     import time
     from api.analyzers.gemini_analyst import init_gemini, _pick_model
