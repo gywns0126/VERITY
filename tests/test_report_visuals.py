@@ -139,3 +139,11 @@ def test_missing_operating_profit_uses_explicit_net_panel_without_substitution()
     assert v['charts']['annual']['panels'][1]['title'] == '순이익'
     assert [r['value'] for r in v['charts']['annual']['panels'][1]['rows']] == [10, 12]
     assert 'margin' not in v['charts'] and 'income' not in v['insights']
+
+
+def test_annual_revenue_is_a_line_and_profit_is_a_bar_with_real_observations():
+    c = visuals([period(2023), period(2024, revenue=120), period(2025, revenue=110)])['charts']['annual']
+    assert [p['style'] for p in c['panels']] == ['line', 'bars']
+    root = ET.fromstring(chart_svg(c))
+    assert len(list(root.iter('{http://www.w3.org/2000/svg}circle'))) == 3
+    assert len(list(root.iter('{http://www.w3.org/2000/svg}rect'))) == 3

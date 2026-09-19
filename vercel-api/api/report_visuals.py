@@ -96,11 +96,11 @@ def build_visuals(reader, is_financial, comparable):
                    ('net', '순이익', BLUE) if net_panel else ('op', '영업이익', BLUE)]
         panels = []
         for key, label, color in metrics:
-            panels.append({'title': label, 'rows': [{'label': r['end'][:4], 'value': _number(r.get(key)),
+            panels.append({'title': label, 'style': 'line' if key == 'revenue' else 'bars', 'rows': [{'label': r['end'][:4], 'value': _number(r.get(key)),
                 'display': format_money(r.get(key), r['currency']), 'color': color} for r in cohort]})
         charts['annual'] = {'kind': 'annual', 'title': '최근 연간 실적 흐름', 'unit': cohort[-1]['currency'],
                             'panels': panels, 'sources': [_source(r) for r in cohort],
-                            'note': f'기준이 일치하는 연속 {len(cohort)}개 연도 · 막대 높이는 각 지표 안에서 비교 · 빈 값은 미수신'}
+                            'note': f'기준이 일치하는 연속 {len(cohort)}개 연도 · 높이는 각 지표 안에서 비교 · 빈 값은 미수신'}
         if not is_financial:
             reading = _income_reading(cohort[-2], cohort[-1])
             if reading:
@@ -171,14 +171,22 @@ def chart_svg(chart):
             body.append(f'<line x1="{x0}" x2="{x0+width}" y1="{zero:.2f}" y2="{zero:.2f}" stroke="#a9afbc"/>')
             body.append(_text(x0, 207, '0 기준 · ' + chart['unit'], 10))
             step = width / len(rows)
+            previous = None
             for i, r in enumerate(rows):
                 x = x0 + (i + 0.5) * step
                 if r['value'] is None:
                     body.append(_text(x, 113, '미수신', 11, anchor='middle'))
+                    previous = None
                 else:
                     value_y = y(r['value'])
                     h = abs(zero-value_y)
-                    body.append(f'<rect x="{x-22:.2f}" y="{min(zero,value_y):.2f}" width="44" height="{h:.2f}" rx="3" fill="{r["color"]}"/>')
+                    if panel.get('style') == 'line':
+                        if previous is not None:
+                            body.append(f'<line x1="{previous[0]:.2f}" y1="{previous[1]:.2f}" x2="{x:.2f}" y2="{value_y:.2f}" stroke="{r["color"]}" stroke-width="3"/>')
+                        body.append(f'<circle cx="{x:.2f}" cy="{value_y:.2f}" r="4" fill="{r["color"]}"/>')
+                        previous = (x, value_y)
+                    else:
+                        body.append(f'<rect x="{x-22:.2f}" y="{min(zero,value_y):.2f}" width="44" height="{h:.2f}" rx="3" fill="{r["color"]}"/>')
                     # Negative labels sit above zero, away from the fiscal-year labels.
                     label_y = value_y - 7 if r['value'] >= 0 else zero - 7
                     body.append(_text(x, label_y, r['display'], 11, INK, 'middle', 700))

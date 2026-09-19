@@ -42,6 +42,16 @@
 ]
 #let R = D.reader
 #let V = R.visuals
+#let chart-icon(key) = {
+  let paths = if key == "annual" {
+    "<path d='M3 3v18h18M6 15l5-5 4 3 6-7'/>"
+  } else if key == "cash" {
+    "<rect x='3' y='5' width='18' height='15' rx='3'/><path d='M16 10h5v5h-5zM6 5V3h12'/><circle cx='18' cy='12.5' r='.6'/>"
+  } else {
+    "<path d='M6 18L18 6'/><circle cx='7' cy='7' r='3'/><circle cx='17' cy='17' r='3'/>"
+  }
+  image(bytes("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><g fill='none' stroke='#6c5ce7' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>" + paths + "</g></svg>"), format: "svg", width: 4mm)
+}
 #let reading(key) = if key in V.insights {
   let insight = V.insights.at(key)
   block(fill: fill, radius: 6pt, inset: 4mm, width: 100%, breakable: false)[
@@ -55,7 +65,7 @@
 #let chart(key) = if key in D.chart_images {
   let c = V.charts.at(key)
   block(breakable: false, width: 100%)[
-    #text(size: 9pt, weight: 800)[#c.title]
+    #chart-icon(key)#h(2mm)#text(size: 9pt, weight: 800)[#c.title]
     #v(1mm)
     #image(bytes(D.chart_images.at(key)), format: "svg", width: 100%)
     #v(1mm)#text(size: 7pt, fill: sub)[#c.note]
