@@ -75,6 +75,16 @@ def _fetch(name: str) -> Any:
     ent = _CACHE.get(name)
     if ent and time.time() - ent[0] < _TTL:
         return ent[1]
+    if name.startswith('report-news/'):
+        if __package__:
+            from .stock_news import _fetch_google_news
+        else:
+            from stock_news import _fetch_google_news
+        query = urllib.parse.unquote(name.removeprefix('report-news/'))
+        d = {'items': _fetch_google_news(query, limit=50, strict=True),
+             'fetched_at': datetime.now(timezone.utc).isoformat()}
+        _CACHE[name] = (time.time(), d)
+        return d
     req = urllib.request.Request(BLOB + name, headers={"User-Agent": "AlphaNest fact-report"})
     with urllib.request.urlopen(req, timeout=20) as r:
         d = json.loads(r.read().decode("utf-8", "replace"))

@@ -126,7 +126,7 @@ def test_partial_source_failure_survives_and_is_not_no_risk():
     report = build_report(ticker, fetch, NOW)
     c = next(c for c in report['coverage'] if c['id'] == 'I')
     assert c['status'] == '조회 실패' and c['reason'] == 'TimeoutError'
-    assert len(report['coverage']) == 10
+    assert len(report['coverage']) == 11
     assert 'secret_should_not_leak' not in analysis_prompt(report)
     assert '확정 여부 미확인' in section(report, 'C1')['rows'][0][2]
 
@@ -216,8 +216,8 @@ def test_us_source_denominator_keeps_missing_sec_sources(raw):
     ticker, docs, _ = fixture()
     docs['us_financials/CAT.json'] = raw
     d = build(docs, ticker)
-    assert len(d['coverage']) == 10
-    assert {c['id'] for c in d['coverage']} == set('RQIDEHGXSB')
+    assert len(d['coverage']) == 11
+    assert {c['id'] for c in d['coverage']} == set('RQIDEHGXSB') | {'NW'}
     assert next(c for c in d['coverage'] if c['id'] == 'B')['status'] != '수신'
     if raw.get('meta', {}).get('cik') != '18230':
         assert next(c for c in d['coverage'] if c['id'] == 'X')['status'] != '수신'

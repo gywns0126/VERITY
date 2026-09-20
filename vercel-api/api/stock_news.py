@@ -284,7 +284,7 @@ _GN_DATE_RE = re.compile(r"<pubDate>(.*?)</pubDate>", re.DOTALL)
 _GN_SRC_RE = re.compile(r"<source[^>]*>(.*?)</source>", re.DOTALL)
 
 
-def _fetch_google_news(query, limit=20):
+def _fetch_google_news(query, limit=20, strict=False):
     """Google News RSS(종목명 키워드) — 헤드라인+링크아웃. 정규식 파싱(lxml 미의존)."""
     q = (query or "").strip()
     if not q:
@@ -294,7 +294,11 @@ def _fetch_google_news(query, limit=20):
                          params={"q": q, "hl": "ko", "gl": "KR", "ceid": "KR:ko"},
                          headers={"User-Agent": "VERITY-news-fetcher/1.0 (+https://github.com/gywns0126)"}, timeout=5)
         if not r.ok:
+            if strict:
+                raise RuntimeError('news_rss_http_failure')
             return []
+        if strict and '<rss' not in r.text:
+            raise ValueError('news_rss_invalid_document')
         out = []
         for block in _GN_ITEM_RE.findall(r.text)[:limit]:
             tm = _GN_TITLE_RE.search(block)
@@ -321,6 +325,8 @@ def _fetch_google_news(query, limit=20):
             out.append({"title": title, "url": url, "source": source, "datetime": dt_s})
         return out
     except Exception as e:  # noqa: BLE001
+        if strict:
+            raise
         _logger.warning("google news %s 실패: %s", query, e)
         return []
 

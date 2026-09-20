@@ -102,7 +102,7 @@ def test_business_quote_retains_source_date_and_no_donor_company_fallback():
     assert len(profile['summary']) <= 222
     assert len(d['summary']) == 3 and '다른 기업' not in analysis_prompt(d)
     assert next(c for c in d['coverage'] if c['id']=='B')['status'] == '수신'
-    assert len(d['coverage']) == 10
+    assert len(d['coverage']) == 11
 
 
 @pytest.mark.parametrize('url', ['', 'javascript:alert(1)', 'https://dart.fss.or.kr/'])
