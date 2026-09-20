@@ -16,11 +16,12 @@
 #set text(font: "Pretendard", size: 9pt, weight: 600, lang: "ko", fill: ink)
 #set par(leading: 0.55em)
 #set heading(numbering: none)
+#show heading: set block(sticky: true)
 #show heading.where(level: 1): set text(size: 15pt, weight: 800)
 #show heading.where(level: 2): set text(size: 11pt, weight: 800)
 #let cell(c) = if type(c) == dictionary {
   link(c.url, text(fill: accent, weight: 700)[#c.text])
-} else { text(c) }
+} else if type(c) == content { c } else { text(c) }
 #grid(columns: (1fr, auto), gutter: 5mm,
   [#text(size: 19pt, weight: 800)[#D.name]
    #h(2mm)#text(size: 10pt, fill: sub)[#D.ticker · #D.market]
@@ -40,6 +41,11 @@
   #text(size: 7.5pt, fill: sub)[#row.start - #row.end · #row.currency · #(if row.fs_div == "CFS" {"연결"} else if row.fs_div == "ENTITY" {"보고기업 전체(SEC)"} else {"별도"})]
   #h(2mm)#link(row.source_url, text(size: 7.5pt, fill: accent)[공시 원문 ↗])
 ]
+#if "prompt_url" in D [
+  #text(size: 7.5pt)[자료를 원하는 AI에 전달하려면: ]
+  #link(D.prompt_url, text(size: 7.5pt, fill: accent)[분석 요청문과 근거 자료 받기 ↗])
+  #v(1mm)
+]
 #let R = D.reader
 #let V = R.visuals
 #let chart-icon(key) = {
@@ -58,8 +64,6 @@
     #text(size: 10pt, weight: 800)[#insight.title]
     #v(1.5mm)#text(size: 8.5pt)[#insight.meaning]
     #v(1.5mm)#text(size: 8pt, fill: sub)[#insight.evidence]
-    #v(1.5mm)#text(size: 8pt, fill: sub)[#insight.limit]
-    #v(2mm)#text(size: 8pt, weight: 700, fill: accent)[다음 확인] #text(size: 8pt)[#insight.next]
   ]
 }
 #let chart(key) = if key in D.chart_images {
@@ -74,14 +78,35 @@
     #for row in c.sources [#source-row(row)#linebreak()]
   ]
 }
-#v(3mm)
+#let G = D.reading
+#v(2mm)
+== 먼저 읽을 세 가지
+#for card in G.cards [
+  #block(fill: fill, radius: 5pt, inset: 3mm, width: 100%, breakable: false)[
+    #text(size: 7.5pt, weight: 700, fill: accent)[#card.label]
+    #h(2mm)#text(size: 9pt, weight: 800)[#card.title]
+    #v(1mm)#text(size: 8.2pt)[#card.detail]
+    #if card.sources.len() > 0 [
+      #v(1mm)
+      #for row in card.sources [#source-row(row)#h(2mm)]
+    ]
+  ]
+  #v(1.5mm)
+]
+#v(2mm)
 == 어떤 사업을 하는 기업인가
-#v(1mm)
-#block(fill: fill, radius: 6pt, inset: 4mm, width: 100%)[
-  #text(size: 9pt)[#D.business_profile.summary]
-  #v(2mm)
-  #text(size: 7.5pt, fill: sub)[#D.business_profile.label]
-  #if D.business_profile.source != none [#h(2mm)#cell(D.business_profile.source)]
+#if D.business_profile.overview != none {
+  let b = D.business_profile.overview
+  report-table(("구분", "사업 설명"), b.rows, (0.7, 3.3))
+  v(1mm)
+  text(size: 7pt, fill: sub)[#b.label · #cell(b.source)]
+} else [
+  #block(fill: fill, radius: 5pt, inset: 3mm, width: 100%)[
+    #text(size: 8.5pt)[#D.business_profile.summary]
+    #v(1mm)#text(size: 7pt, fill: sub)[#D.business_profile.label]
+    #if D.business_profile.source != none [#h(2mm)#cell(D.business_profile.source)]
+    #if D.business_profile.available [#v(1mm)#text(size: 7pt, fill: sub)[회사 설명의 일부입니다. 수신한 발췌문 전체는 부록 B1에서 확인할 수 있습니다.]]
+  ]
 ]
 #v(5mm)
 == 최근 실적에서 달라진 점
@@ -95,25 +120,27 @@
 ] else [#text(size: 8.5pt, fill: sub)[본문에 사용할 재무 근거가 충분하지 않습니다. 확인 전 수치와 누락 범위는 부록에 구분했습니다.]]
 #for note in R.observations [#v(2mm)#text(size: 8.5pt)[#note]]
 #v(3mm)
-#chart("margin")
+#if "bridge" in D.chart_images [#chart("bridge")] else [#chart("margin")]
 #v(3mm)
 #reading("income")
 #if "annual" in D.chart_images [
-  #pagebreak()
-  = 실적의 흐름을 함께 읽기
-  #v(5mm)
+  #v(4mm)
+  == 실적의 흐름을 함께 읽기
+  #v(2mm)
   #chart("annual")
   #v(3mm)
   #reading("annual")
 ]
-#v(4mm)
+#if not ("annual" in D.chart_images) [
+#v(3mm)
 == 연간 수치 확인
 #if D.annual_core.len() > 0 [
   #report-table(("실제 기간", "매출", "영업이익", "순이익"), D.annual_core, (1.65, 1, 1, 1))
   #v(1mm)#text(size: 7pt, fill: sub)[연간 수치입니다. 위의 단일 분기·누적 실적과 금액 크기를 직접 비교하지 마세요. 원문과 기준은 부록 R0·R1.]
 ] else [#text(size: 8.5pt, fill: sub)[연간 비교에 필요한 기간·통화·보고 범위·원문을 확보하지 못했습니다.]]
-#pagebreak()
-= 이익이 현금으로 이어졌나
+]
+#v(4mm)
+== 이익이 현금으로 이어졌나
 #v(2mm)
 #if R.cash != none [
   #source-row(R.cash)
@@ -129,17 +156,26 @@
   #report-table(("제출일", "공시 제목", "유형", "원문"), D.recent_events, (0.8, 2.5, 0.7, 0.7))
   #v(1mm)#text(size: 7.5pt, fill: sub)[수신된 최근 3건 이내입니다. 제목만으로 실적 영향이나 호재·악재를 판단하지 않습니다.]
 ] else [#text(size: 8.5pt, fill: sub)[최근 공시 자료를 받지 못했습니다. 사건이나 위험이 없다는 뜻은 아닙니다.]]
-#v(5mm)
-== 원문에서 더 확인할 내용
-#block(fill: fill, radius: 6pt, inset: 4mm, width: 100%)[
-  #text(size: 9pt, weight: 800)[매출과 이익이 달라진 이유]
-  #v(1mm)#text(size: 8.5pt)[사업부·제품별 실적과 가격·판매량·비용 설명을 공시에서 함께 읽으세요. 이익률 변화만으로 원인을 단정할 수 없습니다.]
-  #v(3mm)#text(size: 9pt, weight: 800)[비교 대상의 조건]
-  #v(1mm)#text(size: 8.5pt)[업종 중앙값은 사업 구조·결산기간·계산법이 같은 기업만의 값이 아닐 수 있습니다. 그래서 본문에서 저평가·고평가 판정에 사용하지 않았습니다.]
+#v(4mm)
+== 회사는 변화를 어떻게 설명했나
+#text(size: 7.5pt, fill: sub)[#G.company.note]
+#v(2mm)
+#if G.company.excerpts.len() > 0 [#report-table(("설명 항목", "현재 연결 상태"), G.company.topics.map(t => (t.label, if t.refs.len() > 0 { t.refs.join(" · ") + " 문단에 관련 표현 수신" } else { "해당 기간 설명 미확보" })), (1, 3))]
+#for q in G.company.excerpts [
+  #v(2mm)
+  #block(fill: fill, radius: 5pt, inset: 3mm, width: 100%, breakable: false)[
+    #text(size: 8pt, weight: 700, fill: accent)[#q.id · #q.metric · #q.period]
+    #v(1mm)#text(size: 8pt)[#q.quote]
+  ]
 ]
+#if G.company.source != none [#v(2mm)#cell(G.company.source)]
+#v(4mm)
+== 다음 공시에서 확인할 항목
+#report-table(("항목", "현재 상태", "다음 비교 기준 · 근거"), G.checklist.map(r => (r.item, r.state, [#r.next #linebreak()#cell(r.source)])), (0.7, 1.6, 2))
 #v(4mm)
 #text(size: 7.8pt, fill: sub)[본문 재무: 기준을 갖춘 #(R.accepted)/#(R.received)개 기간. 보고된 숫자와 자체계산을 구분했습니다. 항목별 계정·기간·원문 및 자료 누락은 다음 부록에서 확인할 수 있습니다.]
-#pagebreak()
+#v(6mm)
+#line(length: 100%, stroke: 0.7pt + hair)
 = 부록 · 자료 범위와 확인할 빈칸
 #text(size: 8.5pt, fill: sub)[수신된 자료의 한계입니다. 없는 정보를 추정으로 채우지 않습니다.]
 #v(3mm)
@@ -166,12 +202,13 @@
     #if c.reason != "" [#linebreak()#text(size: 7pt, fill: sub)[#c.reason]]
   ]
 ]
-#pagebreak()
+#v(6mm)
+#line(length: 100%, stroke: 0.7pt + hair)
 = 근거를 따라 읽는 자료
 #text(size: 8pt, fill: sub)[표 제목 옆 ID는 앞의 질문과 연결됩니다. 원문 열기는 수신된 문서 URL, 출처 목록은 문서 검색 페이지입니다.]
 #for s in D.sections {
-  v(4mm)
-  block(breakable: s.rows.len() > 8 or s.id in ("R3", "B1"))[
+  v(3mm)
+  block(breakable: true)[
     #block(breakable: false, sticky: true)[
       #text(size: 11pt, weight: 800)[#s.title]
       #h(2mm)#text(size: 7.4pt, fill: accent)[#s.id · 표시 #(s.shown)/#(s.total)행]
@@ -180,16 +217,8 @@
     ]
     #v(1mm)
     #table(columns: s.widths.map(w => w * 1fr),
-      inset: (x: 2pt, y: 4pt), stroke: (left: none, right: none, top: none, bottom: 0.4pt + hair),
+      inset: (x: 2pt, y: 3.5pt), stroke: (left: none, right: none, top: none, bottom: 0.4pt + hair),
       table.header(..s.headers.map(h => text(size: 8pt, weight: 700, fill: sub)[#h])),
       ..s.rows.flatten().map(c => text(size: 8.3pt)[#cell(c)]))
   ]
 }
-#v(4mm)
-#line(length: 100%, stroke: 0.5pt + hair)
-#text(size: 8pt, fill: sub)[#D.source_line]
-
-#if "prompt_url" in D [
-  #v(3mm)#text(size: 8pt)[원하는 AI에 직접 자료를 전달할 때: ]
-  #link(D.prompt_url, text(size: 8pt, fill: accent)[분석 요청문과 근거 자료 받기 ↗])
-]

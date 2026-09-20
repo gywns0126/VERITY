@@ -38,7 +38,10 @@ def _income_reading(prior, current):
     if dr > 0 and do < 0:
         title = '매출 증가가 영업이익 증가로 이어지지 않았습니다'
         meaning = '매출은 늘었지만 영업이익은 줄었습니다. 더 큰 매출 규모에도 수익성이 낮아진 점이 이번 실적의 확인 과제입니다.'
-    elif o0 <= 0 < o1:
+    elif o0 == 0 and o1 > 0:
+        title = '손익분기에서 영업이익이 발생했습니다'
+        meaning = '전년 동기 영업손익은 0이고 이번 기간에는 양수입니다. 전기 분모가 0이므로 증가율을 계산하지 않습니다.'
+    elif o0 < 0 < o1:
         title = '영업손익이 흑자로 전환됐습니다'
         meaning = '전년 동기의 영업손실에서 이번 기간에는 영업이익이 발생했습니다. 손익 전환의 규모와 반복 가능성을 나누어 살펴볼 필요가 있습니다.'
     elif o1 < 0 <= o0:
@@ -77,6 +80,21 @@ def build_visuals(reader, is_financial, comparable):
                 'unit': '%', 'rows': [{'label': '전년 동기', 'value': _margin(prior), 'display': f'{_margin(prior):.1f}%', 'color': GREY},
                                      {'label': '이번 기간', 'value': _margin(current), 'display': f'{_margin(current):.1f}%', 'color': ACCENT}],
                 'sources': [_source(prior), _source(current)], 'note': '0을 기준으로 표시 · 영업이익 ÷ 매출 × 100 자체계산'}
+
+    if 'margin' in charts:
+        r0, r1, o0, o1 = [float(v) for v in (prior['revenue'], current['revenue'], prior['op'], current['op'])]
+        revenue_effect = (r1-r0) * o0/r0
+        margin_effect = o1-o0-revenue_effect
+        charts['bridge'] = {'kind': 'waterfall', 'title': '영업이익이 달라진 구조', 'unit': current['currency'],
+            'rows': [{'label': '전년 동기', 'from': 0, 'to': o0, 'value': o0, 'color': GREY},
+                     {'label': '매출 규모 변화 몫', 'from': o0, 'to': o0+revenue_effect, 'value': revenue_effect, 'color': ACCENT},
+                     {'label': '이익률 변화 몫', 'from': o0+revenue_effect, 'to': o1, 'value': margin_effect, 'color': BLUE},
+                     {'label': '이번 기간', 'from': 0, 'to': o1, 'value': o1, 'color': INK}],
+            'sources': [_source(prior), _source(current)],
+            'note': '회계적 분해: 전기 이익률을 유지한 매출 변화 몫 + 이익률 변화 몫. 가격·물량·비용의 실제 기여액을 뜻하지 않습니다.',
+            'formula': '전기 영업이익 + (당기 매출−전기 매출)×전기 이익률 + 당기 매출×(당기−전기 이익률) = 당기 영업이익'}
+        for row in charts['bridge']['rows']:
+            row['display'] = format_money(row['value'], current['currency'])
 
     # Consecutive fiscal years only, within the latest income's currency/scope.
     annual = [r for r in reader.get('periods', []) if r['period_kind'] == 'annual' and current
@@ -159,7 +177,23 @@ def _axis(values):
 
 def chart_svg(chart):
     """Inline vector drawing with zero baselines; no network or external assets."""
-    if chart['kind'] == 'annual':
+    if chart['kind'] == 'waterfall':
+        height, body = 206, []
+        rows = chart['rows']
+        lo, hi = _axis([r[k] for r in rows for k in ('from', 'to')])
+        y = lambda v: 160 - (v-lo)/(hi-lo)*113
+        zero = y(0)
+        body.append(f'<line x1="12" x2="608" y1="{zero:.2f}" y2="{zero:.2f}" stroke="#a9afbc"/>')
+        for i, row in enumerate(rows):
+            x = 28 + i*151
+            y0, y1 = y(row['from']), y(row['to'])
+            body.append(f'<rect x="{x}" y="{min(y0,y1):.2f}" width="102" height="{abs(y1-y0):.2f}" rx="3" fill="{row["color"]}"/>')
+            if i < len(rows)-1:
+                body.append(f'<line x1="{x+102}" x2="{x+151}" y1="{y1:.2f}" y2="{y1:.2f}" stroke="#a9afbc" stroke-dasharray="3 3"/>')
+            body.append(_text(x+51, min(y0,y1)-7, row['display'], 12, INK, 'middle', 700))
+            body.append(_text(x+51, 180, row['label'], 11, SUB, 'middle'))
+        body.append(_text(12, 202, '0 기준 · ' + chart['unit'], 10))
+    elif chart['kind'] == 'annual':
         height, body = 215, []
         for index, panel in enumerate(chart['panels']):
             x0, width, top, bottom = 18 + index * 310, 280, 45, 168
