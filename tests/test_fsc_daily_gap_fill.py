@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import sys
 
@@ -78,6 +79,29 @@ def _row(code: str, bas: str, close: int):
 
 def _bulk(bas: str, n: int = 600):
     return [_row(f"{i:06d}", bas, 1000 + i) for i in range(n)]
+
+
+def test_emitted_source_labels_do_not_grant_unrestricted_reuse(monkeypatch, tmp_path):
+    """Attribution is retained; the source label cannot stand in for permission."""
+    monkeypatch.setattr(fsc, "OUT_DIR", str(tmp_path))
+    monkeypatch.setattr(fsc, "HOT_PATH", str(tmp_path / "hot.json"))
+    monkeypatch.setattr(fsc, "CLOSE_LATEST_PATH", str(tmp_path / "close.json"))
+    chunks = [{"as_of": "", "stocks": {}} for _ in range(fsc.N_CHUNKS)]
+    fsc._append_rows(chunks, _bulk("20260916"))
+    rows = _bulk("20260917")
+    fsc._append_rows(chunks, rows)
+    fsc._save_chunks(chunks, "20260917")
+    fsc.emit_hot_stock(rows, "20260917")
+    fsc.emit_close_latest(chunks, "20260917", rows)
+    docs = [json.loads((tmp_path / name).read_text())
+            for name in ("meta.json", "hot.json", "close.json")]
+    for doc in docs:
+        source = doc.get("_meta", doc)["source"]
+        assert "금융위원회_주식시세정보" in source
+        assert "data.go.kr/data/15094808" in source
+        assert "이용허락범위 제한 없음" not in source
+    assert docs[0]["stocks"] == 600
+    assert docs[2]["prices"]["000001"] == 1001
 
 
 @pytest.fixture
