@@ -52,6 +52,19 @@ def _article_url(value):
         return ''
 
 
+def _title_translation_url(headline):
+    """User-opened text translation only; never imply article-body translation.
+
+    No translation request or paid model call is made by the report server.
+    Keep Korean titles untouched; query encoding must preserve the entire title.
+    """
+    if not re.search(r'[A-Za-z]', headline) or re.search(r'[가-힣]', headline):
+        return ''
+    return 'https://translate.google.com/?' + urlencode({
+        'sl': 'auto', 'tl': 'ko', 'text': headline, 'op': 'translate',
+    })
+
+
 def related_news(ticker, stock, fetch, now):
     names = _names(ticker, stock)
     result = {'items': [], 'window_days': WINDOW_DAYS, 'shown': 0, 'matched': 0,
@@ -108,7 +121,8 @@ def related_news(ticker, stock, fetch, now):
                      'published_at': published.isoformat(), 'display_time': published.astimezone(KST).strftime('%m.%d %H:%M KST'),
                      'recent_24h': now - published <= timedelta(hours=24), 'priority': priority,
                      'link_label': '기사 열기 · Google 뉴스' if urlparse(link).hostname == 'news.google.com' else '기사 원문 열기',
-                     'verification': '기사 본문·사건 미검증'})
+                     'verification': '기사 본문·사건 미검증',
+                     'title_translation_url': _title_translation_url(headline)})
     result['matched'] = len(rows)
     seen_urls, seen_titles = set(), set()
     # Same full headline or URL only; do not merge different facts on a shared topic.
