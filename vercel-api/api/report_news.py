@@ -18,8 +18,14 @@ LIMIT = 5
 _TYPES = [
     ('거래·상장·법적 사건', r'거래\s*정지|상장\s*폐지|파산|회생|trading\s+halt|delist|bankrupt|insolvenc'),
     ('실적·전망', r'실적|매출|영업이익|영업손실|가이던스|earnings|revenue|profit|guidance'),
-    ('계약·자금·규제', r'계약|수주|인수|합병|증자|규제|제재|소송|contract|acqui[rs]|merger|financing|regulat|sanction|lawsuit'),
+    ('계약·자금·규제', r'계약|수주|인수|합병|증자|배당|자사주|규제|제재|소송|contract|acqui[rs]|merger|financing|dividend|buyback|repurchase|regulat|sanction|lawsuit'),
 ]
+_BUSINESS_CONTEXT = re.compile(
+    r'\b(?:stocks?|shares?|earnings|revenue|profit|guidance|invest(?:s|ed|ment|ments|or|ors|ing)?|'
+    r'company|corporat\w*|business|market|financial\w*|billion|million|dividend|buyback|repurchase|'
+    r'contract|acqui[rs]\w*|merger|financing|regulat\w*|sanction\w*|lawsuit|bankrupt\w*|'
+    r'delist\w*|trading|partnership|autonomy|production|manufactur\w*|recall|workers|strike|'
+    r'CEO|CFO|NYSE|NASDAQ|TSX)\b|주가|주식|실적|매출|배당|계약|수주|투자|공장|생산|규제|파산', re.I)
 
 
 def _names(ticker, stock):
@@ -82,6 +88,11 @@ def related_news(ticker, stock, fetch, now):
         source = str(item.get('source') or '').strip()
         headline = _company_headline(title, source)
         if not any(_name_in_title(n, headline) for n in names):
+            continue
+        # Common English names (e.g. Caterpillar/Apple/Target) need issuer context.
+        # Classified equipment listings are not reports of corporate events.
+        if market == 'US' and (not _BUSINESS_CONTEXT.search(headline)
+                               or re.search(r'\bfor sale in\b', headline, re.I)):
             continue
         link = _article_url(item.get('url'))
         try:

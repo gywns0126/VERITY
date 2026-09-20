@@ -37,8 +37,14 @@ def test_old_future_missing_time_and_unsafe_link_are_not_recent_news():
     assert d['status'] == 'empty' and d['shown'] == 0
 
 
+def test_ambiguous_us_name_and_classified_ad_are_not_issuer_news():
+    d, _ = news([article('A 250-ft caterpillar dome is a strange sight'),
+                 article('Caterpillar stock equipment for sale in Irvine'), article()])
+    assert d['shown'] == 1 and d['items'][0]['title'] == 'Caterpillar reports earnings'
+
+
 def test_reading_priority_then_time_and_exact_duplicate_removal():
-    rows = [article('Caterpillar launches a product', url='https://example.test/product'),
+    rows = [article('Caterpillar launches a manufacturing product', url='https://example.test/product'),
             article('Caterpillar earnings', datetime='2026.09.19 03:00', url='https://example.test/earnings'),
             article('Caterpillar trading halt', datetime='2026.09.18 03:00', url='https://example.test/halt'),
             article('Caterpillar earnings', datetime='2026.09.19 02:00', url='https://other.test/earnings')]
