@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """FscDailyPrices — 금융위원회_주식시세정보 (공공데이터포털 1160100) 일봉 수집.
 
-🚨 시세 재배포 컴플라이언스 (2026-07-04):
+🚨 시세 재배포 컴플라이언스 (2026-09-17 재확인):
   KRX/KIS raw 시세 = 개인 비사업자 제3자 재배포 불가 → 공개 차트 발행 중단(2026-07-02).
   본 collector 의 source = 금융위 공공데이터 (data.go.kr/data/15094808) —
-  **"이용허락범위 제한 없음" + 무료** (portal 원문, 2026-07-04 확인). 재배포 합법.
+  2026-07-04의 "이용허락범위 제한 없음" 확인은 현재 이용 권한의 근거가 아니다.
+  https://www.data.go.kr/data/15094808/openapi.do (수정일 2026-09-07)는
+  공공누리 4유형 및 상업 여부와 무관한 제3자 무단 제공·재배포 금지를 명시한다.
+  신규 공개 활용은 별도 권한 확인 전 보류. 기존 소비처 권한도 재확인 필요.
+  이 주석 정정은 기존 수집·발행 중단이나 별도 계약 유무의 확인을 뜻하지 않는다.
   · T+1 영업일 지연 (전일 종가까지, 익영업일 13시 이후 갱신) — 당일/실시간 없음.
   · 공개 라벨 의무: "일봉 · 전일까지 · 금융위 공공데이터 (T+1)". 실시간 = 네이버 link-out.
   · 4-카테고리 실호출 검증 완료 (KOSPI 대형/KOSDAQ/우선주/일자별 벌크 2,873종목).
@@ -227,7 +231,7 @@ def _save_chunks(chunks: List[Dict[str, Any]], as_of: str) -> None:
         "stocks": n_stocks,
         "chunks": N_CHUNKS,
         "keep_days": KEEP_DAYS,
-        "source": "금융위원회_주식시세정보 (data.go.kr/data/15094808 · 이용허락범위 제한 없음)",
+        "source": "금융위원회_주식시세정보 (data.go.kr/data/15094808)",
         "updated_at": datetime.now(_KST).isoformat(timespec="seconds"),
     }
     with open(os.path.join(OUT_DIR, "meta.json"), "w", encoding="utf-8") as f:
@@ -280,7 +284,7 @@ def _is_etf_like(name: str) -> bool:
 
 def emit_hot_stock(rows: List[Dict[str, Any]], as_of: str) -> None:
     """전 종목 rows → 거래대금(trPrc) 상위 개별종목 = '그날 핫한 종목'.
-    source = 금융위 공공데이터(공공누리, 재배포 합법 — KRX OpenAPI 와 무관). EOD(전 거래일) 사실.
+    source = 금융위 공공데이터. EOD(전 거래일) 사실; 재배포 권한은 상단 최신 안내 참조.
     """
     cand: List[Dict[str, Any]] = []
     for r in rows:
@@ -310,7 +314,7 @@ def emit_hot_stock(rows: List[Dict[str, Any]], as_of: str) -> None:
     doc = {
         "_meta": {
             "as_of": as_of,
-            "source": "금융위원회_주식시세정보 (data.go.kr/data/15094808 · 거래대금 상위 · 이용허락범위 제한 없음)",
+            "source": "금융위원회_주식시세정보 (data.go.kr/data/15094808 · 거래대금 상위)",
             "basis": "직전 거래일 거래대금(trPrc) 순 — 사실. 추천 아님.",
             "generated_at": datetime.now(_KST).isoformat(timespec="seconds"),
         },
@@ -410,7 +414,7 @@ def emit_close_latest(chunks: List[Dict[str, Any]], as_of: str,
             "chg_source": "원천 fltRt 우선(수정주가 기준), 없으면 전일 대비 차분",
             "excluded_stale": stale,
             "excluded_suspect": suspect,
-            "source": "금융위원회_주식시세정보 (data.go.kr/data/15094808 · 이용허락범위 제한 없음)",
+            "source": "금융위원회_주식시세정보 (data.go.kr/data/15094808)",
             "basis": "직전 거래일 종가 (T+1). 실시간 아님 — 평가 기준가·등락률 SoT. "
                      "자본변경·거래정지 재개 종목은 prev 비수록(차분이 거짓이 되므로).",
             "generated_at": datetime.now(_KST).isoformat(timespec="seconds"),
