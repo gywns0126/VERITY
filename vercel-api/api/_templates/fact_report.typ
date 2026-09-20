@@ -3,6 +3,8 @@
 #let ink = rgb("#191f28")
 #let sub = rgb("#4e5968")
 #let accent = rgb("#6c5ce7")
+#let increase = rgb("#d92d45")
+#let decrease = rgb("#2563eb")
 #let hair = rgb("#e5e8eb")
 #let fill = rgb("#f5f6f8")
 #set page(paper: "a4", margin: (top: 15mm, bottom: 17mm, x: 15mm),
@@ -22,11 +24,13 @@
 #let cell(c) = if type(c) == dictionary {
   link(c.url, text(fill: accent, weight: 700)[#c.text])
 } else if type(c) == content { c } else { text(c) }
+#let direction-color(direction) = if direction == "up" { increase } else if direction == "down" { decrease } else { sub }
 #let change-chip(change) = {
   let arrow = if change.direction == "up" { "↑" } else if change.direction == "down" { "↓" } else if change.direction == "flat" { "→" } else { "—" }
+  let color = direction-color(change.direction)
   box(fill: white, radius: 4pt, inset: (x: 5pt, y: 3pt))[
-    #text(size: 9pt, weight: 800, fill: if change.direction in ("up", "down") { accent } else { sub })[#arrow]
-    #h(1mm)#text(size: 8pt, weight: 700)[#change.label]
+    #text(size: 9pt, weight: 800, fill: color)[#arrow]
+    #h(1mm)#text(size: 8pt, weight: 700, fill: color)[#change.label]
   ]
 }
 #grid(columns: (1fr, auto), gutter: 5mm,
@@ -144,7 +148,7 @@
       #v(1mm)#text(size: 8pt, fill: sub)[전년 동기 #m.prior]
       #v(2mm)#change-chip(m.change)
     ]))
-  #v(1mm)#text(size: 7pt, fill: sub)[화살표는 수치의 방향입니다. 유리·불리의 판정이 아닙니다.]
+  #v(1mm)#text(size: 7pt, fill: sub)[화살표·색은 수치의 방향입니다. 유리·불리의 판정이 아닙니다.]
   #if R.prior != none [#v(1mm)#text(size: 7pt, fill: sub)[전년 동기: ]#source-row(R.prior)]
 ] else [#text(size: 8.5pt, fill: sub)[본문에 사용할 재무 근거가 충분하지 않습니다. 확인 전 수치와 누락 범위는 부록에 구분했습니다.]]
 #for note in R.observations [#v(2mm)#text(size: 8.5pt)[#note]]
@@ -271,7 +275,7 @@
       inset: (x: 2pt, y: 3.5pt), stroke: (left: none, right: none, top: none, bottom: 0.4pt + hair),
       table.header(..s.headers.map(h => text(size: 8pt, weight: 700, fill: sub)[#h])),
       ..s.rows.flatten().map(c => text(size: 8.3pt)[#if s.id == "H1" and type(c) == str and c in ("증가", "감소", "유지") {
-        text(size: 12pt, weight: 800, fill: accent)[#(if c == "증가" { "↑" } else if c == "감소" { "↓" } else { "→" })]
+        text(size: 12pt, weight: 800, fill: direction-color(if c == "증가" { "up" } else if c == "감소" { "down" } else { "flat" }))[#(if c == "증가" { "↑" } else if c == "감소" { "↓" } else { "→" })]
       } else { cell(c) }]))
       if s.id == "H1" { v(1mm); text(size: 7pt, fill: sub)[↑ 주식수 증가 · ↓ 주식수 감소 · → 유지 · 신규는 별도 표시] }
     }
