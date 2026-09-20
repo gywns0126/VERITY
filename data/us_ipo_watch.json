@@ -1,23 +1,23 @@
 {
  "_meta": {
-  "generated_at": "2026-09-19T18:05:13+09:00",
+  "generated_at": "2026-09-20T18:36:14+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 32,
+  "sessions_scanned": 31,
   "sessions_missed": [],
   "counts": {
-   "filings": 927,
-   "companies": 276,
+   "filings": 878,
+   "companies": 269,
    "by_stage": {
-    "신청": 110,
-    "정정(심사중)": 124,
+    "신청": 109,
+    "정정(심사중)": 120,
     "가격확정": 14,
-    "거래소등록": 28
+    "거래소등록": 26
    },
-   "spac_likely": 33,
-   "has_ticker_now": 218,
+   "spac_likely": 32,
+   "has_ticker_now": 211,
    "priced_secondary_excluded": 12,
-   "foreign_issuer": 79,
-   "priced_parse_ok": 5
+   "foreign_issuer": 78,
+   "priced_parse_ok": 4
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
@@ -160,16 +160,16 @@
    "cik": "2109823",
    "name": "Leader's Advantage Acquisition Corp.",
    "forms": {
-    "S-1/A": 2,
+    "S-1/A": 1,
     "8-A12B": 1,
     "CERT": 1
    },
-   "first_filed": "20260805",
+   "first_filed": "20260810",
    "last_filed": "20260914",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": true,
    "has_ticker_now": true,
@@ -872,78 +872,6 @@
    }
   },
   {
-   "cik": "2123955",
-   "name": "Pinnacle Acquisition Corp",
-   "forms": {
-    "424B4": 1,
-    "8-A12B": 1,
-    "CERT": 1,
-    "S-1/A": 1
-   },
-   "first_filed": "20260805",
-   "last_filed": "20260807",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123955&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "PNAQ",
-    "region": "WEST PALM BEACH, FL",
-    "state_of_inc": "E9"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "주식수 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2123955/000121390026086694/ea0295579-04.htm"
-   }
-  },
-  {
-   "cik": "2131524",
-   "name": "Braveheart Bio, Inc.",
-   "forms": {
-    "424B4": 1,
-    "CERT": 1,
-    "S-1MEF": 1
-   },
-   "first_filed": "20260805",
-   "last_filed": "20260806",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2131524&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2834",
-    "sic_desc": "Pharmaceutical Preparations",
-    "is_blank_check": false,
-    "ticker": "BRVE",
-    "region": "SAN FRANCISCO, CA",
-    "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": true,
-    "shares": 21250000,
-    "price_usd": 18.0,
-    "gross_usd": 382500000,
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2131524/000162828026054354/braveheartbioinc-sx1a2.htm",
-    "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
-   }
-  },
-  {
    "cik": "1995704",
    "name": "Cuprina Holdings (Cayman) LTD",
    "forms": {
@@ -1593,14 +1521,14 @@
    "cik": "1131903",
    "name": "SPECTRAL CAPITAL Corp",
    "forms": {
-    "S-1/A": 3
+    "S-1/A": 2
    },
-   "first_filed": "20260805",
+   "first_filed": "20260812",
    "last_filed": "20260918",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 3,
+   "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -1828,10 +1756,9 @@
    "cik": "2123380",
    "name": "Gravity Acquisition Corp.",
    "forms": {
-    "S-1/A": 2,
-    "S-1": 1
+    "S-1/A": 2
    },
-   "first_filed": "20260805",
+   "first_filed": "20260817",
    "last_filed": "20260917",
    "lineage": true,
    "stage": 2,
@@ -1840,7 +1767,16 @@
    "is_foreign_issuer": false,
    "is_spac_likely": true,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123380&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123380&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "GVAC",
+    "region": "CITY OF INDUSTRY, CA",
+    "state_of_inc": "E9"
+   }
   },
   {
    "cik": "720762",
@@ -1857,7 +1793,16 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=720762&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=720762&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3760",
+    "sic_desc": "Guided Missiles & Space Vehicles & Parts",
+    "is_blank_check": false,
+    "ticker": "NIMU",
+    "region": "MIAMI BEACH, FL",
+    "state_of_inc": "FL"
+   }
   },
   {
    "cik": "2112634",
@@ -3503,40 +3448,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1911545&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2079109",
-   "name": "Veraxa Biotech Holding AG",
-   "forms": {
-    "F-1/A": 2
-   },
-   "first_filed": "20260805",
-   "last_filed": "20260805",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2079109&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1506929",
-   "name": "VERDE RESOURCES, INC.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260805",
-   "last_filed": "20260805",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1506929&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2091438",
    "name": "Nex Neo Tech Inc.",
    "forms": {
@@ -3589,24 +3500,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2076765&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2041869",
-   "name": "Canary Marinade Solana ETF",
-   "forms": {
-    "S-1": 1,
-    "S-1/A": 5
-   },
-   "first_filed": "20241030",
-   "last_filed": "20251028",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 5,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2041869&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2039505",
    "name": "Canary XRP ETF",
    "forms": {
@@ -3623,24 +3516,6 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2039505&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2063380",
-   "name": "Fidelity Solana Fund",
-   "forms": {
-    "S-1": 1,
-    "S-1/A": 3
-   },
-   "first_filed": "20250613",
-   "last_filed": "20250926",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 3,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2063380&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1991879",
@@ -5511,23 +5386,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1083522&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "744452",
-   "name": "BNB PLUS CORP.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20260805",
-   "last_filed": "20260805",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=744452&type=S-1&dateb=&owner=include&count=20"
   }
  ]
 }
