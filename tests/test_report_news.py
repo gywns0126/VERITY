@@ -64,6 +64,17 @@ def test_rss_strict_mode_reports_failure_without_changing_existing_consumers(mon
         stock_news._fetch_google_news('Caterpillar', strict=True)
 
 
+def test_rss_locale_is_explicit_for_us_and_kr_default_is_preserved(monkeypatch):
+    queries = []
+    def response(*args, **kwargs):
+        queries.append(kwargs['params'])
+        return SimpleNamespace(ok=True, text='<rss></rss>')
+    monkeypatch.setattr(stock_news.requests, 'get', response)
+    stock_news._fetch_google_news('Caterpillar', market='US')
+    stock_news._fetch_google_news('삼성전자')
+    assert [q['ceid'] for q in queries] == ['US:en', 'KR:ko']
+
+
 def test_news_headline_time_and_clickable_url_survive_pdf_and_prompt():
     pytest.importorskip('typst')
     from pypdf import PdfReader

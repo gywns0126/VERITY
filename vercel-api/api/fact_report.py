@@ -80,8 +80,9 @@ def _fetch(name: str) -> Any:
             from .stock_news import _fetch_google_news
         else:
             from stock_news import _fetch_google_news
-        query = urllib.parse.unquote(name.removeprefix('report-news/'))
-        d = {'items': _fetch_google_news(query, limit=50, strict=True),
+        market, query = name.removeprefix('report-news/').split('/', 1)
+        query = urllib.parse.unquote(query)
+        d = {'items': _fetch_google_news(query, limit=50, strict=True, market=market),
              'fetched_at': datetime.now(timezone.utc).isoformat()}
         _CACHE[name] = (time.time(), d)
         return d

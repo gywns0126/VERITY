@@ -59,9 +59,11 @@ def related_news(ticker, stock, fetch, now):
         coverage['reason'] = '확인된 회사명 미수신'
         return result, coverage
     query = ' OR '.join('"' + n.replace('"', '') + '"' for n in names) + ' when:7d'
-    coverage['artifact_url'] = 'https://news.google.com/rss/search?q=' + quote(query)
+    market = 'KR' if ticker.isdigit() else 'US'
+    locale = '&hl=ko&gl=KR&ceid=KR:ko' if market == 'KR' else '&hl=en-US&gl=US&ceid=US:en'
+    coverage['artifact_url'] = 'https://news.google.com/rss/search?q=' + quote(query) + locale
     try:
-        doc = fetch('report-news/' + quote(query, safe=''))
+        doc = fetch('report-news/' + market + '/' + quote(query, safe=''))
         if not isinstance(doc, dict) or not isinstance(doc.get('items'), list):
             raise ValueError('invalid_news_shape')
         raw = doc['items']

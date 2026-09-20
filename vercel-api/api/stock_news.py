@@ -284,14 +284,15 @@ _GN_DATE_RE = re.compile(r"<pubDate>(.*?)</pubDate>", re.DOTALL)
 _GN_SRC_RE = re.compile(r"<source[^>]*>(.*?)</source>", re.DOTALL)
 
 
-def _fetch_google_news(query, limit=20, strict=False):
+def _fetch_google_news(query, limit=20, strict=False, market="KR"):
     """Google News RSS(종목명 키워드) — 헤드라인+링크아웃. 정규식 파싱(lxml 미의존)."""
     q = (query or "").strip()
     if not q:
         return []
     try:
+        locale = {"hl": "en-US", "gl": "US", "ceid": "US:en"} if market == "US" else {"hl": "ko", "gl": "KR", "ceid": "KR:ko"}
         r = requests.get(_GOOGLE_NEWS_RSS,
-                         params={"q": q, "hl": "ko", "gl": "KR", "ceid": "KR:ko"},
+                         params={"q": q, **locale},
                          headers={"User-Agent": "VERITY-news-fetcher/1.0 (+https://github.com/gywns0126)"}, timeout=5)
         if not r.ok:
             if strict:
