@@ -79,6 +79,20 @@
   ]
 }
 #let G = D.reading
+#let translation-note = [비공식 참고 번역입니다. 수치·조건은 연결된 공시 원문과 함께 확인하세요.]
+#let translated-excerpt(original, translation) = [
+  #if translation != none [
+    #block(breakable: false)[
+      #text(size: 7.5pt, weight: 700, fill: accent)[#translation.label]
+      #v(1mm)#text(size: 8.5pt)[#translation.text]
+      #v(2mm)#text(size: 7pt, fill: sub)[#translation-note]
+    ]
+    #v(3mm)#text(size: 7.5pt, weight: 700, fill: sub)[영문 원문 대조]
+  ] else [
+    #text(size: 7.5pt, weight: 700, fill: sub)[한국어 번역 미준비 · 영문 원문]
+  ]
+  #v(1mm)#text(size: 7.8pt, fill: sub)[#original]
+]
 #v(2mm)
 == 먼저 읽을 세 가지
 #for card in G.cards [
@@ -102,7 +116,7 @@
   text(size: 7pt, fill: sub)[#b.label · #cell(b.source)]
 } else [
   #block(fill: fill, radius: 5pt, inset: 3mm, width: 100%)[
-    #text(size: 8.5pt)[#D.business_profile.summary]
+    #text(size: 8.5pt)[#(if D.business_profile.translation != none { D.business_profile.translation.summary } else { D.business_profile.summary })]
     #v(1mm)#text(size: 7pt, fill: sub)[#D.business_profile.label]
     #if D.business_profile.source != none [#h(2mm)#cell(D.business_profile.source)]
     #if D.business_profile.available [#v(1mm)#text(size: 7pt, fill: sub)[회사 설명의 일부입니다. 수신한 발췌문 전체는 부록 B1에서 확인할 수 있습니다.]]
@@ -158,14 +172,16 @@
 ] else [#text(size: 8.5pt, fill: sub)[최근 공시 자료를 받지 못했습니다. 사건이나 위험이 없다는 뜻은 아닙니다.]]
 #v(4mm)
 == 회사는 변화를 어떻게 설명했나
-#text(size: 7.5pt, fill: sub)[#G.company.note]
+#text(size: 7.5pt, fill: sub)[회사 공시의 설명입니다. 독립적으로 입증한 원인을 뜻하지 않습니다. 설명 미확보는 영향 없음과 다릅니다.]
+#if G.company.excerpts.len() == 0 [#v(1mm)#text(size: 7.5pt, fill: sub)[#G.company.note]]
+#if D.translation_coverage.total > 0 [#v(1mm)#text(size: 7.5pt, fill: sub)[이 리포트의 영문 발췌 번역: #(D.translation_coverage.translated)/#(D.translation_coverage.total)개. 전체 공시의 번역 범위는 아닙니다.]]
 #v(2mm)
 #if G.company.excerpts.len() > 0 [#report-table(("설명 항목", "현재 연결 상태"), G.company.topics.map(t => (t.label, if t.refs.len() > 0 { t.refs.join(" · ") + " 문단에 관련 표현 수신" } else { "해당 기간 설명 미확보" })), (1, 3))]
 #for q in G.company.excerpts [
   #v(2mm)
   #block(fill: fill, radius: 5pt, inset: 3mm, width: 100%, breakable: false)[
     #text(size: 8pt, weight: 700, fill: accent)[#q.id · #q.metric · #q.period]
-    #v(1mm)#text(size: 8pt)[#q.quote]
+    #v(1mm)#translated-excerpt(q.quote, q.translation)
   ]
 ]
 #if G.company.source != none [#v(2mm)#cell(G.company.source)]
@@ -216,9 +232,13 @@
       #text(size: 7.8pt, fill: sub)[#s.note]
     ]
     #v(1mm)
-    #table(columns: s.widths.map(w => w * 1fr),
+    #if s.id == "B1" and D.market == "US" {
+      translated-excerpt(D.business_profile.text, D.business_profile.translation)
+      v(2mm)
+      cell(D.business_profile.source)
+    } else { table(columns: s.widths.map(w => w * 1fr),
       inset: (x: 2pt, y: 3.5pt), stroke: (left: none, right: none, top: none, bottom: 0.4pt + hair),
       table.header(..s.headers.map(h => text(size: 8pt, weight: 700, fill: sub)[#h])),
-      ..s.rows.flatten().map(c => text(size: 8.3pt)[#cell(c)]))
+      ..s.rows.flatten().map(c => text(size: 8.3pt)[#cell(c)])) }
   ]
 }
