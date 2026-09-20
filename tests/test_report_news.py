@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from urllib.parse import urlparse, parse_qs
 
 import pytest
 
@@ -81,6 +82,21 @@ def test_rss_locale_is_explicit_for_us_and_kr_default_is_preserved(monkeypatch):
     assert [q['ceid'] for q in queries] == ['US:en', 'KR:ko']
 
 
+def test_translation_link_preserves_headline_and_does_not_translate_publisher():
+    title = 'Caterpillar earnings +3% & outlook? #2026 — "Q3"'
+    d, _ = news([article(title + ' - Example News')])
+    row = d['items'][0]
+    parsed = urlparse(row['title_translation_url'])
+    assert parsed.scheme == 'https' and parsed.netloc == 'translate.google.com'
+    assert parse_qs(parsed.query) == {
+        'sl': ['auto'], 'tl': ['ko'], 'text': [title], 'op': ['translate'],
+    }
+    assert row['url'] == 'https://example.test/article'
+    assert row['title'] == title + ' - Example News'
+    d, _ = news([article('삼성전자 AI 실적 발표')], {'name': '삼성전자'}, '005930')
+    assert d['items'][0]['title_translation_url'] == ''
+
+
 def test_news_headline_time_and_clickable_url_survive_pdf_and_prompt():
     pytest.importorskip('typst')
     from pypdf import PdfReader
@@ -98,4 +114,7 @@ def test_news_headline_time_and_clickable_url_survive_pdf_and_prompt():
     links = [str(a.get_object().get('/A', {}).get('/URI', '')) for p in pdf.pages for a in p.get('/Annots', [])]
     assert 'Caterpillar reports earnings' in text and '09.20 12:00 KST' in text
     assert 'https://example.test/article' in links and 'https://example.test/article' in analysis_prompt(d)
+    translation_url = d['news']['items'][0]['title_translation_url']
+    assert translation_url in links and translation_url in analysis_prompt(d)
+    assert '제목 한국어로 보기' in text and '제목만 번역' in text
     assert next(c for c in d['coverage'] if c['id'] == 'NW')['status'] == '수신'

@@ -203,6 +203,10 @@
     #v(1mm)#text(size: 9pt, weight: 800)[#n.title]
     #v(1.5mm)#text(size: 7pt, fill: sub)[#n.source · #n.display_time]
     #h(2mm)#link(n.url, text(size: 7.5pt, weight: 700, fill: accent)[#n.link_label ↗])
+    #if n.at("title_translation_url", default: "") != "" [
+      #v(1.5mm)#link(n.title_translation_url, text(size: 8pt, weight: 700, fill: accent)[제목 한국어로 보기 ↗])
+      #h(2mm)#text(size: 7pt, fill: sub)[Google 번역 · 제목만 번역]
+    ]
   ]
 ]
 #v(4mm)
