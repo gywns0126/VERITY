@@ -160,7 +160,14 @@ def build_visuals(reader, is_financial, comparable):
                     'evidence': f"동일 기간 순이익 {format_money(net, cash['currency'])} · 영업현금흐름 {format_money(ocf, cash['currency'])}.",
                     'limit': '이 차이만으로 이익의 질을 확정하지 않습니다. 유형자산 취득 지출 차감액은 회사가 정의한 FCF와 다를 수 있습니다.',
                     'next': '다음 실적도 같은 기간의 손익·현금흐름으로 맞추고, 운전자본이 현금흐름 변화에 미친 영향을 확인하세요.'}
-    return {'version': 'report-visuals-v1', 'charts': charts, 'insights': insights}
+    # Read the observation before the graph, while preserving source and limits below.
+    for key, chart in charts.items():
+        insight = insights.get({'margin': 'income', 'annual': 'annual', 'cash': 'cash'}.get(key, ''))
+        chart['takeaway'] = insight['title'] if insight else (
+            '매출 규모와 이익률 변화가 영업이익 차이를 나눠 설명합니다 · 회계적 분해'
+            if key == 'bridge' else '같은 기준의 연도별 금액을 비교합니다'
+            if key == 'annual' else '수신된 현금 금액만 표시합니다 · 미수신은 0이 아닙니다')
+    return {'version': 'report-visuals-v2', 'charts': charts, 'insights': insights}
 
 
 def _text(x, y, text, size=12, color=SUB, anchor='start', weight=600):
@@ -217,13 +224,13 @@ def chart_svg(chart):
                     if panel.get('style') == 'line':
                         if previous is not None:
                             body.append(f'<line x1="{previous[0]:.2f}" y1="{previous[1]:.2f}" x2="{x:.2f}" y2="{value_y:.2f}" stroke="{r["color"]}" stroke-width="3"/>')
-                        body.append(f'<circle cx="{x:.2f}" cy="{value_y:.2f}" r="4" fill="{r["color"]}"/>')
+                        body.append(f'<circle cx="{x:.2f}" cy="{value_y:.2f}" r="{5 if i == len(rows)-1 else 3}" fill="{r["color"] if i == len(rows)-1 else GREY}"/>')
                         previous = (x, value_y)
                     else:
-                        body.append(f'<rect x="{x-22:.2f}" y="{min(zero,value_y):.2f}" width="44" height="{h:.2f}" rx="3" fill="{r["color"]}"/>')
+                        body.append(f'<rect x="{x-22:.2f}" y="{min(zero,value_y):.2f}" width="44" height="{h:.2f}" rx="3" fill="{r["color"] if i == len(rows)-1 else GREY}"/>')
                     # Negative labels sit above zero, away from the fiscal-year labels.
                     label_y = value_y - 7 if r['value'] >= 0 else zero - 7
-                    body.append(_text(x, label_y, r['display'], 11, INK, 'middle', 700))
+                    body.append(_text(x, label_y, r['display'], 12 if i == len(rows)-1 else 11, INK if i == len(rows)-1 else SUB, 'middle', 800 if i == len(rows)-1 else 600))
                 body.append(_text(x, 189, r['label'], 12, anchor='middle'))
     else:
         rows = chart['rows']

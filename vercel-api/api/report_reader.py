@@ -39,6 +39,29 @@ def comparable(a, b):
     return 350 <= start_delta <= 380 and 350 <= end_delta <= 380 and abs(start_delta - end_delta) <= 14
 
 
+def change_display(before, value, profit=False):
+    """Direction is not an investment verdict; unknown is never flat."""
+    before, value = _number(before), _number(value)
+    if before is None or value is None:
+        return {"direction": "unknown", "label": "비교 불가"}
+    delta = value - before
+    direction = "up" if delta > 0 else "down" if delta < 0 else "flat"
+    if profit and before < 0 < value:
+        label = "흑자 전환"
+    elif profit and value < 0 <= before:
+        label = "적자 전환"
+    elif profit and before < 0 and value < 0:
+        label = "손실 축소" if delta > 0 else "손실 확대" if delta < 0 else "변동 없음"
+    elif delta == 0:
+        label = "변동 없음"
+    elif before > 0:
+        pct = delta / before * 100
+        label = ("+" if pct > 0 else "−") + ("<0.1%" if abs(pct) < 0.05 else f"{abs(pct):.1f}%")
+    else:
+        label = "0 기준 · 비율 미산출" if before == 0 else "음수 기준 · 비율 미산출"
+    return {"direction": direction, "label": label}
+
+
 def reader_financials(periods, is_financial=False):
     usable = sorted([r for r in periods if valid_period(r)], key=lambda r: (r["end"], r["start"], r.get("filed", "")))
     # Keep one filing for a complete period. Never join metrics from different filings here.
@@ -49,13 +72,15 @@ def reader_financials(periods, is_financial=False):
     income = [r for r in usable if any(_number(r.get(k)) is not None for k in ("revenue", "op", "net"))]
     current = max(income, key=lambda r: (r["end"], r["start"]), default=None)
     prior = next((r for r in reversed(income) if current and comparable(r, current)), None)
-    rows, observations = [], []
+    rows, observations, metrics = [], [], []
     if current:
         for key, label in [("revenue", "매출"), ("op", "영업이익"), ("net", "순이익")]:
             value = _number(current.get(key))
             before = _number(prior.get(key)) if prior else None
             change = f"{(value / before - 1) * 100:+.1f}%" if value is not None and before is not None and before > 0 else "미산출"
             rows.append([label, format_money(before, current["currency"]), format_money(value, current["currency"]), change])
+            metrics.append({"label": label, "current": rows[-1][2], "prior": rows[-1][1],
+                            "change": change_display(before, value, profit=key != "revenue")})
         if prior and all(_number(r.get(k)) is not None for r in (prior, current) for k in ("revenue", "op")):
             if prior["revenue"] > 0 and current["revenue"] > 0:
                 m0, m1 = prior["op"] / prior["revenue"] * 100, current["op"] / current["revenue"] * 100
@@ -85,7 +110,7 @@ def reader_financials(periods, is_financial=False):
             cash_notes.insert(0, f"현금흐름의 마지막 확인 기간은 {cash['end']}로, 위 손익보다 이전 자료입니다.")
     else:
         cash_notes.append("기간과 원문이 연결된 영업현금흐름이 없어 순이익과 비교하지 않았습니다.")
-    result = {"current": current, "prior": prior, "rows": rows, "observations": observations,
+    result = {"current": current, "prior": prior, "rows": rows, "metrics": metrics, "observations": observations,
             "cash": cash, "cash_rows": cash_rows, "cash_notes": cash_notes,
             "periods": usable, "accepted": len(usable), "received": len(periods)}
     if __package__:

@@ -22,6 +22,13 @@
 #let cell(c) = if type(c) == dictionary {
   link(c.url, text(fill: accent, weight: 700)[#c.text])
 } else if type(c) == content { c } else { text(c) }
+#let change-chip(change) = {
+  let arrow = if change.direction == "up" { "↑" } else if change.direction == "down" { "↓" } else if change.direction == "flat" { "→" } else { "—" }
+  box(fill: white, radius: 4pt, inset: (x: 5pt, y: 3pt))[
+    #text(size: 9pt, weight: 800, fill: if change.direction in ("up", "down") { accent } else { sub })[#arrow]
+    #h(1mm)#text(size: 8pt, weight: 700)[#change.label]
+  ]
+}
 #grid(columns: (1fr, auto), gutter: 5mm,
   [#text(size: 19pt, weight: 800)[#D.name]
    #h(2mm)#text(size: 10pt, fill: sub)[#D.ticker · #D.market]
@@ -71,6 +78,7 @@
   block(breakable: false, width: 100%)[
     #grid(columns: (4mm, 1fr), gutter: 2mm, align: horizon,
       chart-icon(key), text(size: 9pt, weight: 800)[#c.title])
+    #v(1.5mm)#text(size: 10pt, weight: 800)[#c.takeaway]
     #v(1mm)
     #image(bytes(D.chart_images.at(key)), format: "svg", width: 100%)
     #v(1mm)#text(size: 7pt, fill: sub)[#c.note]
@@ -129,7 +137,14 @@
   #v(1mm)
   #text(size: 8pt, fill: sub)[기간 구분: #(if R.current.period_kind == "quarter" {"단일 분기"} else if R.current.period_kind == "ytd" {"누적"} else {"연간"}). #(if R.prior != none {"전년 동기는 같은 기간 길이·통화·보고 범위로 맞췄습니다."} else {"같은 기준의 전년 동기를 확보하지 못해 증감률을 계산하지 않았습니다."})]
   #v(2mm)
-  #report-table(("항목", "전년 동기", "이번 기간", "증감률"), R.rows, (1, 1.3, 1.3, 0.8))
+  #grid(columns: (1fr, 1fr, 1fr), gutter: 2mm,
+    ..R.metrics.map(m => block(fill: fill, radius: 5pt, inset: 3mm, width: 100%, breakable: false)[
+      #text(size: 8pt, weight: 700, fill: sub)[#m.label · 이번 기간]
+      #v(2mm)#text(size: 17pt, weight: 800)[#m.current]
+      #v(1mm)#text(size: 8pt, fill: sub)[전년 동기 #m.prior]
+      #v(2mm)#change-chip(m.change)
+    ]))
+  #v(1mm)#text(size: 7pt, fill: sub)[화살표는 수치의 방향입니다. 유리·불리의 판정이 아닙니다.]
   #if R.prior != none [#v(1mm)#text(size: 7pt, fill: sub)[전년 동기: ]#source-row(R.prior)]
 ] else [#text(size: 8.5pt, fill: sub)[본문에 사용할 재무 근거가 충분하지 않습니다. 확인 전 수치와 누락 범위는 부록에 구분했습니다.]]
 #for note in R.observations [#v(2mm)#text(size: 8.5pt)[#note]]
@@ -170,6 +185,22 @@
   #report-table(("제출일", "공시 제목", "유형", "원문"), D.recent_events, (0.8, 2.5, 0.7, 0.7))
   #v(1mm)#text(size: 7.5pt, fill: sub)[수신된 최근 3건 이내입니다. 제목만으로 실적 영향이나 호재·악재를 판단하지 않습니다.]
 ] else [#text(size: 8.5pt, fill: sub)[최근 공시 자료를 받지 못했습니다. 사건이나 위험이 없다는 뜻은 아닙니다.]]
+#v(4mm)
+#block(sticky: true, breakable: false)[
+  == 최근 관련 뉴스 · 먼저 확인할 보도
+  #text(size: 7pt, fill: sub)[#D.news.window_start - #D.news.window_end · 조건 일치 #(D.news.shown)/#(D.news.eligible)건 표시]
+  #v(1mm)#text(size: 7.5pt, fill: sub)[#D.news.note]
+]
+#for n in D.news.items [
+  #v(2mm)
+  #block(fill: fill, radius: 5pt, inset: 3mm, width: 100%, breakable: false)[
+    #text(size: 7.5pt, weight: 700, fill: accent)[#n.category]
+    #if n.recent_24h [#h(2mm)#text(size: 7pt, weight: 700)[최근 24시간]]
+    #v(1mm)#text(size: 9pt, weight: 800)[#n.title]
+    #v(1.5mm)#text(size: 7pt, fill: sub)[#n.source · #n.display_time]
+    #h(2mm)#link(n.url, text(size: 7.5pt, weight: 700, fill: accent)[#n.link_label ↗])
+  ]
+]
 #v(4mm)
 == 회사는 변화를 어떻게 설명했나
 #text(size: 7.5pt, fill: sub)[회사 공시의 설명입니다. 독립적으로 입증한 원인을 뜻하지 않습니다. 설명 미확보는 영향 없음과 다릅니다.]
@@ -239,6 +270,10 @@
     } else { table(columns: s.widths.map(w => w * 1fr),
       inset: (x: 2pt, y: 3.5pt), stroke: (left: none, right: none, top: none, bottom: 0.4pt + hair),
       table.header(..s.headers.map(h => text(size: 8pt, weight: 700, fill: sub)[#h])),
-      ..s.rows.flatten().map(c => text(size: 8.3pt)[#cell(c)])) }
+      ..s.rows.flatten().map(c => text(size: 8.3pt)[#if s.id == "H1" and type(c) == str and c in ("증가", "감소", "유지") {
+        text(size: 12pt, weight: 800, fill: accent)[#(if c == "증가" { "↑" } else if c == "감소" { "↓" } else { "→" })]
+      } else { cell(c) }]))
+      if s.id == "H1" { v(1mm); text(size: 7pt, fill: sub)[↑ 주식수 증가 · ↓ 주식수 감소 · → 유지 · 신규는 별도 표시] }
+    }
   ]
 }
