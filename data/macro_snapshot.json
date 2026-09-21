@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-21T22:32:23+09:00",
+  "collected_at": "2026-09-22T00:02:13+09:00",
   "macro": {
     "usd_krw": {
       "value": 1371.98,
@@ -13867,7 +13867,7 @@
       "release_id": 180,
       "source_url": "https://fred.stlouisfed.org/release?rid=180",
       "source_kind": "release",
-      "d_day": 3
+      "d_day": 2
     },
     {
       "name": "미국 주택착공",
@@ -13884,7 +13884,7 @@
       "release_id": 27,
       "source_url": "https://fred.stlouisfed.org/release?rid=27",
       "source_kind": "release",
-      "d_day": 3
+      "d_day": 2
     },
     {
       "name": "Conference Board 소비자신뢰",
@@ -13900,7 +13900,7 @@
       "source": "Conference Board",
       "source_url": "https://www.conference-board.org/topics/consumer-confidence/",
       "source_kind": "release",
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 GDP 발표",
@@ -13917,7 +13917,7 @@
       "release_id": 53,
       "source_url": "https://fred.stlouisfed.org/release?rid=53",
       "source_kind": "release",
-      "d_day": 9
+      "d_day": 8
     },
     {
       "name": "미국 PCE 물가지수",
@@ -13934,7 +13934,7 @@
       "release_id": 54,
       "source_url": "https://fred.stlouisfed.org/release?rid=54",
       "source_kind": "release",
-      "d_day": 9
+      "d_day": 8
     },
     {
       "name": "ISM 제조업 PMI",
@@ -13950,7 +13950,7 @@
       "source": "ISM",
       "source_url": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
       "source_kind": "schedule",
-      "d_day": 10
+      "d_day": 9
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -13967,7 +13967,7 @@
       "release_id": 180,
       "source_url": "https://fred.stlouisfed.org/release?rid=180",
       "source_kind": "release",
-      "d_day": 10
+      "d_day": 9
     },
     {
       "name": "미국 고용지표 (NFP)",
@@ -13985,7 +13985,7 @@
       "release_id": 50,
       "source_url": "https://fred.stlouisfed.org/release?rid=50",
       "source_kind": "release",
-      "d_day": 11
+      "d_day": 10
     },
     {
       "name": "ISM 서비스 PMI",
@@ -14001,16 +14001,22 @@
       "source": "ISM",
       "source_url": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
       "source_kind": "schedule",
-      "d_day": 14
+      "d_day": 13
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 34.49
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 151.45
   },
   "schema_version": "v0"
 }
