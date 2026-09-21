@@ -62,18 +62,24 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run infra status monitor
+        id: monitor
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python scripts/infra_status_monitor.py
+        run: |
+          rm -f data/infra_status.json
+          python scripts/infra_status_monitor.py
 
       - name: Commit infra_status.json
+        if: ${{ !cancelled() && (steps.monitor.outcome == 'success' || steps.monitor.outcome == 'failure') }}
         run: |
+          test -s data/infra_status.json
+          python -c 'import json; d=json.load(open("data/infra_status.json")); assert d["as_of"] and d["providers"] and "alert" in d["summary"]'
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/infra_status.json 2>/dev/null || true
+          git add -- data/infra_status.json
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "infra_status ${TIME_KST}"
@@ -86,4 +92,5 @@ jobs:
             echo "Push attempt $i failed, retrying in $((i * 10))s..."
             sleep $((i * 10))
           done
-          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
+          echo "::error::infra 상태 발행 실패 (5회 재시도 소진)"
+          exit 1
