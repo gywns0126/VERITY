@@ -10,11 +10,12 @@ POST /api/thesis_feed { action, thesis_id, reason? }  → like | unlike | report
 
 데이터 경계:
   · 노출 = public_profiles view(id/nickname/avatar 3컬럼) + user_thesis 공개행(RLS ut_select_public).
+    author_kind=system 은 인증 계정 없는 알파콘솔 공개 관찰 기록이며 공식 원문·자료 기준일을 함께 반환.
     email/phone/실명(display_name)/기록가(entry_price) = 비노출.
   · 쓰기 = 전부 사용자 JWT 로 Supabase RLS 통과 (tl_insert 는 공개 thesis 에만 허용).
   · 020 미적용 DB = GET 이 빈 목록 반환 (graceful).
 
-🚨 RULE 7 — 피드 내용 = 이용자 개인 의견. VERITY/AlphaNest 채점·추천 0. RULE 6 — LLM 0.
+🚨 RULE 7 — 이용자 글은 개인 의견. 시스템 글은 관망 전용 사실 관찰이며 채점·추천 0. RULE 6 — LLM 0.
 """
 from http.server import BaseHTTPRequestHandler
 import json
@@ -45,6 +46,11 @@ _HOT_WINDOW = 300
 # 관점 온도(stats=1) 집계 창 — 인기 창과 별개로 더 넓게(스탠스 분포는 오래된 글도 의미 있음).
 _STATS_WINDOW = 1000
 _ACTIONS = {"like", "unlike", "report", "unpublish"}
+_LEGACY_SELECT = "id,user_id,ticker,stance,note,created_at,updated_at"
+_SYSTEM_SELECT = (
+    _LEGACY_SELECT
+    + ",author_kind,system_label,data_as_of,published_at,source_url,source_title,content_version,observation_meta"
+)
 
 
 def _global_budget_ok() -> bool:
@@ -116,6 +122,30 @@ def _extract_jwt(h) -> Optional[str]:
     return None
 
 
+def _public_feed_item(r: dict, profiles: dict, viewer_id: Optional[str], like_counts: dict, liked_ids: set) -> dict:
+    prof = profiles.get(r.get("user_id"), {})
+    is_system = r.get("author_kind") == "system"
+    return {
+        "id": r.get("id"),
+        "ticker": r.get("ticker") or "",
+        "nickname": (r.get("system_label") or "알파콘솔 시스템") if is_system else (prof.get("nickname") or "익명"),
+        "avatar": prof.get("avatar") or "",
+        "stance": r.get("stance") or "watch",
+        "note": r.get("note") or "",
+        "created_at": r.get("created_at") or "",
+        "likes": like_counts.get(r.get("id"), 0),
+        "liked": r.get("id") in liked_ids,
+        "mine": bool(not is_system and viewer_id and r.get("user_id") == viewer_id),
+        "author_kind": "system" if is_system else "user",
+        "system_generated": is_system,
+        "data_as_of": r.get("data_as_of") or "",
+        "published_at": r.get("published_at") or r.get("created_at") or "",
+        "source_url": r.get("source_url") or "",
+        "source_title": r.get("source_title") or "",
+        "content_version": r.get("content_version") if is_system else None,
+    }
+
+
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
@@ -123,10 +153,11 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _stats(self, ticker: str):
-        """공개 관점 스탠스 집계 — 전체 + 종목별 상위. 사실 집계(글 수)이며 추천·전망이 아님."""
+        """회원 공개 관점 집계. 알파콘솔 시스템 기록은 이용자 온도에서 제외한다."""
         filters = {
             "is_public": "eq.true",
             "hidden": "eq.false",
+            "author_kind": "eq.user",
             "select": "ticker,stance",
             "order": "created_at.desc",
             "limit": str(_STATS_WINDOW),
@@ -136,7 +167,12 @@ class handler(BaseHTTPRequestHandler):
         try:
             rows = sb.select("user_thesis", filters)
         except Exception:
-            return _json_response(self, {"total": {}, "by_ticker": [], "window": _STATS_WINDOW})
+            # Migration not applied yet: retain the legacy member-only table behavior.
+            legacy_filters = {k: v for k, v in filters.items() if k != "author_kind"}
+            try:
+                rows = sb.select("user_thesis", legacy_filters)
+            except Exception:
+                return _json_response(self, {"total": {}, "by_ticker": [], "window": _STATS_WINDOW})
 
         total: dict = {"bull": 0, "watch": 0, "bear": 0}
         per: dict = defaultdict(lambda: {"bull": 0, "watch": 0, "bear": 0})
@@ -196,7 +232,7 @@ class handler(BaseHTTPRequestHandler):
         filters = {
             "is_public": "eq.true",
             "hidden": "eq.false",
-            "select": "id,user_id,ticker,stance,note,created_at,updated_at",
+            "select": _SYSTEM_SELECT,
             "order": "created_at.desc",
             "limit": str(_HOT_WINDOW if hot else limit + 1),
             "offset": "0" if hot else str(offset),
@@ -206,7 +242,12 @@ class handler(BaseHTTPRequestHandler):
         try:
             rows = sb.select("user_thesis", filters)
         except Exception:
-            return _json_response(self, {"items": [], "has_more": False})  # 020 미적용 DB — 컬럼 부재
+            # Migration rollout boundary: old DB does not have system metadata columns.
+            legacy_filters = {**filters, "select": _LEGACY_SELECT}
+            try:
+                rows = sb.select("user_thesis", legacy_filters)
+            except Exception:
+                return _json_response(self, {"items": [], "has_more": False})  # 020 미적용 DB — 컬럼 부재
 
         if not rows:
             return _json_response(self, {"items": [], "has_more": False})
@@ -244,19 +285,7 @@ class handler(BaseHTTPRequestHandler):
 
         items = []
         for r in rows:
-            prof = profiles.get(r.get("user_id"), {})
-            items.append({
-                "id": r.get("id"),
-                "ticker": r.get("ticker") or "",
-                "nickname": prof.get("nickname") or "익명",
-                "avatar": prof.get("avatar") or "",
-                "stance": r.get("stance") or "watch",
-                "note": r.get("note") or "",
-                "created_at": r.get("created_at") or "",
-                "likes": like_counts.get(r.get("id"), 0),
-                "liked": r.get("id") in liked_ids,
-                "mine": bool(viewer_id and r.get("user_id") == viewer_id),
-            })
+            items.append(_public_feed_item(r, profiles, viewer_id, like_counts, liked_ids))
         out = {"items": items, "has_more": has_more}
         if hot:
             out["window"] = _HOT_WINDOW  # UI 라벨 정합 — "최근 N개 중 인기"(전수 아님)
