@@ -415,7 +415,7 @@ def _push_action_queue(title: str, detail: str) -> None:
                 "--category", "monitoring",
                 "--priority", "p0",
                 "--actor", "user",
-                "--detail", detail[:500],
+                "--detail", detail[:500], "--refresh-pending",
             ],
             cwd=str(ROOT),
             timeout=20,

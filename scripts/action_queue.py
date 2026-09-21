@@ -143,6 +143,16 @@ def cmd_add(args: argparse.Namespace) -> int:
     if r.status_code >= 400 and "actor" in payload and "PGRST204" in r.text:
         payload.pop("actor", None)
         r = requests.post(_rest(), headers=_headers(), json=payload, timeout=10)
+    if (getattr(args, "refresh_pending", False) and r.status_code == 409
+            and "23505" in r.text and "uniq_uaq_pending_title" in r.text):
+        # 반복 감시는 기존 pending만 갱신한다. 완료된 작업은 다시 열지 않는다.
+        r = requests.patch(
+            _rest(), headers=_headers(), json=payload,
+            params={"title": f"eq.{args.title}", "category": f"eq.{args.category}",
+                    "status": "eq.pending"}, timeout=10,
+        )
+        if r.status_code < 400 and not r.json():
+            sys.exit("pending 갱신 대상 없음 — 상태 변경 또는 다른 category 충돌")
     if r.status_code >= 400:
         sys.exit(f"insert 실패 [{r.status_code}]: {r.text[:300]}")
     rows = r.json()
@@ -346,6 +356,8 @@ def main() -> int:
     p_add.add_argument("--actor", default="claude", choices=["user", "claude"],
                        help="user=사용자 손가락 필요 (Bell 노출). claude=Claude 가 끝내고 즉시 done (Bell 숨김). 기본값 claude.")
     p_add.add_argument("--detail", default=None)
+    p_add.add_argument("--refresh-pending", action="store_true",
+                       help="동일 제목/category의 pending 작업은 최신 내용으로 갱신")
     p_add.add_argument("--commit", default=None, help="commit hash")
     p_add.add_argument("--component", default=None, help="예: framer-components/X.tsx")
     p_add.add_argument("--snippet", default=None, help="paste 용 raw URL or 코드")
