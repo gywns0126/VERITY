@@ -6,7 +6,7 @@
     "sample_7d": 0,
     "sample_14d": 0,
     "sample_30d": 1,
-    "hits_7d": null,
+    "hits_7d": 0,
     "hits_14d": 0,
     "hits_30d": 1,
     "hit_rate_7d_ci95": null,
@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-09-19 07:22:08.572371+09:00",
+    "applied_at": "2026-09-21 18:12:32.870740+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-09-19 07:22:08.572374+09:00"
+      "fixed_at": "2026-09-21 18:12:32.870743+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -45,14 +45,14 @@
   },
   "evaluation_coverage": {
     "7d": {
-      "evaluation_status": null,
-      "cohort_size": null,
-      "evaluated_count": null,
-      "unresolved_count": null,
+      "evaluation_status": "no_recommendations",
+      "cohort_size": 0,
+      "evaluated_count": 0,
+      "unresolved_count": 0,
       "coverage_pct": null,
-      "unresolved": null,
-      "evaluation_date": null,
-      "snapshot_date": null
+      "unresolved": [],
+      "evaluation_date": "2026-09-21",
+      "snapshot_date": "2026-09-14"
     },
     "14d": {
       "evaluation_status": "no_recommendations",
@@ -61,36 +61,16 @@
       "unresolved_count": 0,
       "coverage_pct": null,
       "unresolved": [],
-      "evaluation_date": "2026-09-19",
-      "snapshot_date": "2026-09-05"
+      "evaluation_date": "2026-09-21",
+      "snapshot_date": "2026-09-07"
     },
     "30d": {
       "evaluation_status": "partial",
-      "cohort_size": 16,
+      "cohort_size": 10,
       "evaluated_count": 1,
-      "unresolved_count": 15,
-      "coverage_pct": 6.2,
+      "unresolved_count": 9,
+      "coverage_pct": 10.0,
       "unresolved": [
-        {
-          "ticker": "000080",
-          "name": "하이트진로",
-          "reason": "missing_evaluation_price"
-        },
-        {
-          "ticker": "000100",
-          "name": "유한양행",
-          "reason": "missing_evaluation_price"
-        },
-        {
-          "ticker": "000150",
-          "name": "두산",
-          "reason": "missing_evaluation_price"
-        },
-        {
-          "ticker": "000240",
-          "name": "한국앤컴퍼니",
-          "reason": "missing_evaluation_price"
-        },
         {
           "ticker": "000640",
           "name": "동아쏘시오홀딩스",
@@ -107,11 +87,6 @@
           "reason": "missing_evaluation_price"
         },
         {
-          "ticker": "ACAD",
-          "name": "ACAD",
-          "reason": "missing_evaluation_price"
-        },
-        {
           "ticker": "ADI",
           "name": "ADI",
           "reason": "missing_evaluation_price"
@@ -119,6 +94,16 @@
         {
           "ticker": "ADM",
           "name": "ADM",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "ALV",
+          "name": "ALV",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "AMG",
+          "name": "AMG",
           "reason": "missing_evaluation_price"
         },
         {
@@ -130,25 +115,10 @@
           "ticker": "A",
           "name": "A",
           "reason": "missing_evaluation_price"
-        },
-        {
-          "ticker": "GOOGL",
-          "name": "Alphabet",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "UNH",
-          "name": "UnitedHealth",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "EOG",
-          "name": "EOG",
-          "reason": "missing_entry_price"
         }
       ],
-      "evaluation_date": "2026-09-19",
-      "snapshot_date": "2026-08-20"
+      "evaluation_date": "2026-09-21",
+      "snapshot_date": "2026-08-22"
     }
   },
   "factor_health": {
@@ -157,12 +127,16 @@
       "brain_score"
     ],
     "weakening": [],
-    "decaying": [
-      "momentum"
-    ],
+    "decaying": [],
     "total_factors": 15
   },
   "ic_adjustments_active": [
+    {
+      "factor": "consensus",
+      "multiplier": 0.0,
+      "status": "DEAD",
+      "ic_recent": 0.0
+    },
     {
       "factor": "prediction",
       "multiplier": 0.0,
@@ -176,12 +150,6 @@
       "ic_recent": 0.0
     },
     {
-      "factor": "consensus",
-      "multiplier": 0.0,
-      "status": "DEAD",
-      "ic_recent": 0.0
-    },
-    {
       "factor": "multi_factor",
       "multiplier": 0.0,
       "status": "DEAD",
@@ -189,5 +157,5 @@
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-09-19 07:22:08.598231+09:00"
+  "generated_at": "2026-09-21 18:12:32.893844+09:00"
 }
