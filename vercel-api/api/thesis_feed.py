@@ -10,7 +10,7 @@ POST /api/thesis_feed { action, thesis_id, reason? }  → like | unlike | report
 
 데이터 경계:
   · 노출 = public_profiles view(id/nickname/avatar 3컬럼) + user_thesis 공개행(RLS ut_select_public).
-    author_kind=system 은 인증 계정 없는 알파콘솔 공개 관찰 기록이며 공식 원문·자료 기준일을 함께 반환.
+    author_kind=system 은 인증 계정 없는 알파네스트 관찰 노트이며 공식 원문·자료 기준일을 함께 반환.
     email/phone/실명(display_name)/기록가(entry_price) = 비노출.
   · 쓰기 = 전부 사용자 JWT 로 Supabase RLS 통과 (tl_insert 는 공개 thesis 에만 허용).
   · 020 미적용 DB = GET 이 빈 목록 반환 (graceful).
@@ -46,6 +46,9 @@ _HOT_WINDOW = 300
 # 관점 온도(stats=1) 집계 창 — 인기 창과 별개로 더 넓게(스탠스 분포는 오래된 글도 의미 있음).
 _STATS_WINDOW = 1000
 _ACTIONS = {"like", "unlike", "report", "unpublish"}
+_SYSTEM_LABEL = "알파네스트 관찰 노트"
+_LEGACY_SYSTEM_PREFIX = "[알파콘솔 시스템 · 공개 관찰 기록]"
+_SYSTEM_PREFIX = "[알파네스트 관찰 노트]"
 _LEGACY_SELECT = "id,user_id,ticker,stance,note,created_at,updated_at"
 _SYSTEM_SELECT = (
     _LEGACY_SELECT
@@ -125,13 +128,16 @@ def _extract_jwt(h) -> Optional[str]:
 def _public_feed_item(r: dict, profiles: dict, viewer_id: Optional[str], like_counts: dict, liked_ids: set) -> dict:
     prof = profiles.get(r.get("user_id"), {})
     is_system = r.get("author_kind") == "system"
+    note = str(r.get("note") or "")
+    if is_system and note.startswith(_LEGACY_SYSTEM_PREFIX):
+        note = _SYSTEM_PREFIX + note[len(_LEGACY_SYSTEM_PREFIX):]
     return {
         "id": r.get("id"),
         "ticker": r.get("ticker") or "",
-        "nickname": (r.get("system_label") or "알파콘솔 시스템") if is_system else (prof.get("nickname") or "익명"),
+        "nickname": _SYSTEM_LABEL if is_system else (prof.get("nickname") or "익명"),
         "avatar": prof.get("avatar") or "",
         "stance": r.get("stance") or "watch",
-        "note": r.get("note") or "",
+        "note": note,
         "created_at": r.get("created_at") or "",
         "likes": like_counts.get(r.get("id"), 0),
         "liked": r.get("id") in liked_ids,
@@ -153,7 +159,7 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _stats(self, ticker: str):
-        """회원 공개 관점 집계. 알파콘솔 시스템 기록은 이용자 온도에서 제외한다."""
+        """회원 공개 관점 집계. 알파네스트 관찰 노트는 이용자 온도에서 제외한다."""
         filters = {
             "is_public": "eq.true",
             "hidden": "eq.false",

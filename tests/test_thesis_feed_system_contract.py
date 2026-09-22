@@ -30,7 +30,7 @@ def test_system_item_has_explicit_identity_and_source_clock():
         "user_id": None,
         "ticker": "005930",
         "stance": "watch",
-        "note": "공개 관찰 기록",
+        "note": "[알파콘솔 시스템 · 공개 관찰 기록]\n확인한 사실",
         "created_at": "2026-09-22T12:00:00Z",
         "author_kind": "system",
         "system_label": "알파콘솔 시스템",
@@ -41,7 +41,9 @@ def test_system_item_has_explicit_identity_and_source_clock():
         "content_version": 1,
     }
     item = feed._public_feed_item(row, {}, "viewer-1", {}, set())
-    assert item["nickname"] == "알파콘솔 시스템"
+    assert item["nickname"] == "알파네스트 관찰 노트"
+    assert item["note"].startswith("[알파네스트 관찰 노트]")
+    assert "알파콘솔 시스템" not in item["note"]
     assert item["author_kind"] == "system"
     assert item["system_generated"] is True
     assert item["mine"] is False

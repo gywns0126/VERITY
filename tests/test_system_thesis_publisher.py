@@ -71,6 +71,8 @@ class SystemThesisPublisherTest(unittest.TestCase):
         self.assertEqual(record["author_kind"], "system")
         self.assertEqual(record["stance"], "watch")
         self.assertIsNone(record["user_id"])
+        self.assertEqual(record["system_label"], "알파네스트 관찰 노트")
+        self.assertTrue(record["note"].startswith("[알파네스트 관찰 노트]"))
         self.assertFalse(record["observation_meta"]["generated_by_ai"])
         self.assertIn("확인한 사실", record["note"])
         self.assertIn("반대 근거", record["note"])
