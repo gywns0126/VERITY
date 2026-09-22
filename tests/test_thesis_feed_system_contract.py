@@ -42,7 +42,7 @@ def test_system_item_has_explicit_identity_and_source_clock():
     }
     item = feed._public_feed_item(row, {}, "viewer-1", {}, set())
     assert item["nickname"] == "알파네스트 관찰 노트"
-    assert item["note"].startswith("[알파네스트 관찰 노트]")
+    assert item["note"].startswith("확인한 사실")
     assert "알파콘솔 시스템" not in item["note"]
     assert item["author_kind"] == "system"
     assert item["system_generated"] is True
@@ -61,3 +61,24 @@ def test_legacy_user_item_keeps_profile_identity():
     assert item["mine"] is True
     assert item["likes"] == 2
     assert item["liked"] is True
+
+
+def test_system_copy_preserves_source_and_dates_without_mutating_record():
+    feed = _load_feed()
+    body = "확인한 사실\n• 공시 제출\n\n자료 기준 2026-09-21 · 게시 2026-09-22 04:08 KST · v1\n출처: DART 원문 https://dart.fss.or.kr/example"
+    for prefix in (feed._LEGACY_SYSTEM_PREFIX, feed._SYSTEM_PREFIX):
+        original = prefix + "\n" + body + "\n" + feed._LEGACY_SYSTEM_FOOTER
+        row = {"author_kind": "system", "note": original, "published_at": "2026-09-21T19:08:05Z"}
+        item = feed._public_feed_item(row, {}, None, {}, set())
+        assert item["note"] == body + "\n\n" + feed._SYSTEM_FOOTER
+        assert row["note"] == original
+        assert item["published_at"] == row["published_at"]
+        again = feed._public_feed_item({**row, "note": item["note"]}, {}, None, {}, set())
+        assert again["note"] == item["note"]
+
+
+def test_member_copy_is_not_rewritten_even_when_it_uses_system_phrases():
+    feed = _load_feed()
+    original = feed._SYSTEM_PREFIX + "\n확인한 사실\n" + feed._LEGACY_SYSTEM_FOOTER
+    item = feed._public_feed_item({"author_kind": "user", "note": original}, {}, None, {}, set())
+    assert item["note"] == original

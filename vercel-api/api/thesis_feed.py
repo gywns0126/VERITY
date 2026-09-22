@@ -49,6 +49,8 @@ _ACTIONS = {"like", "unlike", "report", "unpublish"}
 _SYSTEM_LABEL = "알파네스트 관찰 노트"
 _LEGACY_SYSTEM_PREFIX = "[알파콘솔 시스템 · 공개 관찰 기록]"
 _SYSTEM_PREFIX = "[알파네스트 관찰 노트]"
+_LEGACY_SYSTEM_FOOTER = "매매 지시나 수익률 예측이 아닌 공개 학습용 기록입니다."
+_SYSTEM_FOOTER = "이 글은 공시를 살펴본 기록이며, 특정 종목의 매매를 권유하지 않습니다."
 _LEGACY_SELECT = "id,user_id,ticker,stance,note,created_at,updated_at"
 _SYSTEM_SELECT = (
     _LEGACY_SELECT
@@ -129,8 +131,14 @@ def _public_feed_item(r: dict, profiles: dict, viewer_id: Optional[str], like_co
     prof = profiles.get(r.get("user_id"), {})
     is_system = r.get("author_kind") == "system"
     note = str(r.get("note") or "")
-    if is_system and note.startswith(_LEGACY_SYSTEM_PREFIX):
-        note = _SYSTEM_PREFIX + note[len(_LEGACY_SYSTEM_PREFIX):]
+    if is_system:
+        # Presentation only: preserve the immutable source record and its clocks.
+        for prefix in (_LEGACY_SYSTEM_PREFIX, _SYSTEM_PREFIX):
+            if note.startswith(prefix + "\n"):
+                note = note[len(prefix) + 1:]
+                break
+        if note.endswith(_LEGACY_SYSTEM_FOOTER):
+            note = note[:-len(_LEGACY_SYSTEM_FOOTER)].rstrip() + "\n\n" + _SYSTEM_FOOTER
     return {
         "id": r.get("id"),
         "ticker": r.get("ticker") or "",
