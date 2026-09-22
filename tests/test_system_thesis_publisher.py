@@ -74,7 +74,7 @@ class SystemThesisPublisherTest(unittest.TestCase):
         self.assertEqual(record["system_label"], "알파네스트 관찰 노트")
         self.assertTrue(record["note"].startswith("확인한 사실\n• "))
         self.assertNotIn("[알파네스트 관찰 노트]", record["note"])
-        self.assertTrue(record["note"].endswith("이 글은 공시를 살펴본 기록이며, 특정 종목의 매매를 권유하지 않습니다."))
+        self.assertTrue(record["note"].endswith(rows[0].source_url))
         self.assertFalse(record["observation_meta"]["generated_by_ai"])
         self.assertIn("확인한 사실", record["note"])
         self.assertIn("반대 근거", record["note"])

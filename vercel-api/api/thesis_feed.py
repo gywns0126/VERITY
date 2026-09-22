@@ -137,8 +137,10 @@ def _public_feed_item(r: dict, profiles: dict, viewer_id: Optional[str], like_co
             if note.startswith(prefix + "\n"):
                 note = note[len(prefix) + 1:]
                 break
-        if note.endswith(_LEGACY_SYSTEM_FOOTER):
-            note = note[:-len(_LEGACY_SYSTEM_FOOTER)].rstrip() + "\n\n" + _SYSTEM_FOOTER
+        for footer in (_LEGACY_SYSTEM_FOOTER, _SYSTEM_FOOTER):
+            if note.rstrip().endswith(footer):
+                note = note.rstrip()[:-len(footer)].rstrip()
+                break
     return {
         "id": r.get("id"),
         "ticker": r.get("ticker") or "",
