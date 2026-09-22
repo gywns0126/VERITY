@@ -8,7 +8,7 @@ import { ArrowRight, ChatCircle, DotsThree, Heart, User } from "@phosphor-icons/
  * 🚨 배치 참조: 토스(중앙 단일 컬럼 + 세그먼트 정렬 + 종목 칩 필터 + 카드 리스트) × 인스타/쓰레드(아바타 헤더 + 본문 + 하트·⋯ 액션 행).
  * 🚨 공개 게이트: 이 컴포넌트를 올린 Framer 페이지 = 네비 미연결 초안 유지. 규모 확인 후 PM 이 공개 결정.
  * 데이터 = /api/thesis_feed (ticker 생략 = 전 종목 최신). 종목명 = universe_search.json 매핑.
- * 🚨 RULE 7 — 피드 = 이용자 개인 의견 라벨 필수 (AlphaNest 분석·판단 아님). RULE 6 — LLM 0.
+ * 🚨 RULE 7 — 이용자 글은 개인 의견, 알파네스트 관찰 노트는 공식 원문 기반 공개 학습 기록. RULE 6 — LLM 0.
  *
  * 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-vcp-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
  *   <style>{AN_PALETTE} 정적 HTML 정합. Phosphor 아이콘 = 부모 color(var) currentColor 상속. 필터칩 = onAccent 토큰(플립). 되돌리지 말 것.
@@ -1278,7 +1278,7 @@ export default function PublicCommunityPage(props: Props) {
                 )}
 
                 <div style={{ textAlign: "center", fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 16, lineHeight: 1.6 }}>
-                    피드의 모든 글 = 이용자 개인 의견 · AlphaNest 의 분석·판단·추천 아님 · 부적절한 글은 ⋯ 메뉴로 신고
+                    이용자 글은 개인 의견 · 알파네스트 관찰 노트는 공식 원문 기반 공개 학습 기록 · 모두 매매 추천 아님 · 부적절한 글은 ⋯ 메뉴로 신고
                 </div>
                 </>
                 )}

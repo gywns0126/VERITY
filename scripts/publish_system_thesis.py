@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish grounded AlphaConsole observations to the public thesis feed.
+"""Publish grounded AlphaNest Observation Notes to the public thesis feed.
 
 Cadence is stored in Supabase: one run becomes due every 1-3 days and publishes
 1-3 records. Copy is deterministic and source-bound; no LLM is used. Every item
@@ -28,8 +28,8 @@ ROOT = Path(__file__).resolve().parents[1]
 KR_FEED = ROOT / "data" / "public_disclosure_feed.json"
 US_FEED = ROOT / "data" / "us_disclosure_feed.json"
 SCHEDULE_ID = "alphaconsole_public"
-SYSTEM_LABEL = "알파콘솔 시스템"
-GENERATOR_VERSION = "public_observation_rule_v1"
+SYSTEM_LABEL = "알파네스트 관찰 노트"
+GENERATOR_VERSION = "public_observation_rule_v2"
 MAX_ARTIFACT_AGE_HOURS = 48
 MAX_EVENT_AGE_DAYS = 7
 OFFICIAL_HOSTS = {"dart.fss.or.kr", "www.sec.gov"}
@@ -281,7 +281,7 @@ def select_candidates(candidates: Iterable[Candidate], count: int, rng: random.R
 def make_note(row: Candidate, published_at: datetime) -> str:
     stamp = published_at.astimezone(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M KST")
     note = (
-        "[알파콘솔 시스템 · 공개 관찰 기록]\n"
+        "[알파네스트 관찰 노트]\n"
         "확인한 사실\n"
         f"• {row.event_date.isoformat()} {row.name}의 ‘{row.title}’ 공시가 제출됐어요.\n\n"
         "가능한 해석\n"
