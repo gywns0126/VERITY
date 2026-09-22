@@ -29,7 +29,7 @@ KR_FEED = ROOT / "data" / "public_disclosure_feed.json"
 US_FEED = ROOT / "data" / "us_disclosure_feed.json"
 SCHEDULE_ID = "alphaconsole_public"
 SYSTEM_LABEL = "알파네스트 관찰 노트"
-GENERATOR_VERSION = "public_observation_rule_v2"
+GENERATOR_VERSION = "public_observation_rule_v3"
 MAX_ARTIFACT_AGE_HOURS = 48
 MAX_EVENT_AGE_DAYS = 7
 OFFICIAL_HOSTS = {"dart.fss.or.kr", "www.sec.gov"}
@@ -281,7 +281,6 @@ def select_candidates(candidates: Iterable[Candidate], count: int, rng: random.R
 def make_note(row: Candidate, published_at: datetime) -> str:
     stamp = published_at.astimezone(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M KST")
     note = (
-        "[알파네스트 관찰 노트]\n"
         "확인한 사실\n"
         f"• {row.event_date.isoformat()} {row.name}의 ‘{row.title}’ 공시가 제출됐어요.\n\n"
         "가능한 해석\n"
@@ -291,8 +290,8 @@ def make_note(row: Candidate, published_at: datetime) -> str:
         "다음 확인\n"
         f"• {_next_check(row.label, row.title)}\n\n"
         f"자료 기준 {row.event_date.isoformat()} · 게시 {stamp} · v1\n"
-        f"출처: {row.source_name} 원문 {row.source_url}\n"
-        "매매 지시나 수익률 예측이 아닌 공개 학습용 기록입니다."
+        f"출처: {row.source_name} 원문 {row.source_url}\n\n"
+        "이 글은 공시를 살펴본 기록이며, 특정 종목의 매매를 권유하지 않습니다."
     )
     if any(term in note for term in PROHIBITED_COPY):
         raise ValueError("prohibited investment-direction copy detected")
