@@ -47,7 +47,7 @@ _HOT_WINDOW = 300
 _STATS_WINDOW = 1000
 _ACTIONS = {"like", "unlike", "report", "unpublish"}
 _SYSTEM_LABEL = "알파네스트 관찰 노트"
-_SYSTEM_AVATAR_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 870 830" fill="none"><path d="M74.9999 403.5C74.9999 617 249 754.5 434 754.5C619 754.5 794.5 617 794.5 403.5" stroke="#3A4268" stroke-width="150" stroke-linecap="round"/><path d="M648.655 309.5C648.655 479 561.655 598 433.655 598C309.943 598 216.155 465 220.655 309.5C220.655 143.815 331.655 0 434.655 0C537.655 0 648.655 140 648.655 309.5Z" fill="#6B51EA"/></svg>"""
+_SYSTEM_AVATAR_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="-115 -135 1100 1100" fill="none"><path d="M74.9999 403.5C74.9999 617 249 754.5 434 754.5C619 754.5 794.5 617 794.5 403.5" stroke="#3A4268" stroke-width="150" stroke-linecap="round"/><path d="M648.655 309.5C648.655 479 561.655 598 433.655 598C309.943 598 216.155 465 220.655 309.5C220.655 143.815 331.655 0 434.655 0C537.655 0 648.655 140 648.655 309.5Z" fill="#6B51EA"/></svg>"""
 _SYSTEM_AVATAR = "data:image/svg+xml," + quote(_SYSTEM_AVATAR_SVG, safe="")
 _LEGACY_SYSTEM_PREFIX = "[알파콘솔 시스템 · 공개 관찰 기록]"
 _SYSTEM_PREFIX = "[알파네스트 관찰 노트]"

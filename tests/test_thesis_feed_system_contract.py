@@ -45,6 +45,7 @@ def test_system_item_has_explicit_identity_and_source_clock():
     assert item["nickname"] == "알파네스트 관찰 노트"
     assert item["avatar"].startswith("data:image/svg+xml,")
     avatar_svg = urllib.parse.unquote(item["avatar"].split(",", 1)[1])
+    assert 'viewBox="-115 -135 1100 1100"' in avatar_svg
     assert 'stroke="#3A4268"' in avatar_svg
     assert 'fill="#6B51EA"' in avatar_svg
     assert item["note"].startswith("확인한 사실")
