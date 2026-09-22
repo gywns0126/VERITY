@@ -1,4 +1,5 @@
 import importlib.util
+import urllib.parse
 import sys
 import types
 from pathlib import Path
@@ -42,6 +43,10 @@ def test_system_item_has_explicit_identity_and_source_clock():
     }
     item = feed._public_feed_item(row, {}, "viewer-1", {}, set())
     assert item["nickname"] == "알파네스트 관찰 노트"
+    assert item["avatar"].startswith("data:image/svg+xml,")
+    avatar_svg = urllib.parse.unquote(item["avatar"].split(",", 1)[1])
+    assert 'stroke="#3A4268"' in avatar_svg
+    assert 'fill="#6B51EA"' in avatar_svg
     assert item["note"].startswith("확인한 사실")
     assert "알파콘솔 시스템" not in item["note"]
     assert item["author_kind"] == "system"
@@ -56,6 +61,7 @@ def test_legacy_user_item_keeps_profile_identity():
     row = {"id": "u1", "user_id": "viewer-1", "ticker": "AAPL", "stance": "bull", "note": "내 관점"}
     item = feed._public_feed_item(row, {"viewer-1": {"nickname": "사용자", "avatar": "a.png"}}, "viewer-1", {"u1": 2}, {"u1"})
     assert item["nickname"] == "사용자"
+    assert item["avatar"] == "a.png"
     assert item["author_kind"] == "user"
     assert item["system_generated"] is False
     assert item["mine"] is True
