@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-23T23:32:33+09:00",
+  "collected_at": "2026-09-24T00:02:39+09:00",
   "macro": {
     "usd_krw": {
       "value": 1367.22,
@@ -13874,7 +13874,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-09-23T23:33:03+09:00",
+    "updated_at": "2026-09-24T00:03:39+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.77,
       "us_ig_risk": "LOW",
@@ -13884,7 +13884,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260923",
-      "collected_at": "2026-09-23T23:33:03+09:00",
+      "collected_at": "2026-09-24T00:03:39+09:00",
       "grades": {
         "AA-": {
           "yield": 4.689,
@@ -13915,7 +13915,7 @@
       "release_id": 180,
       "source_url": "https://fred.stlouisfed.org/release?rid=180",
       "source_kind": "release",
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "미국 주택착공",
@@ -13932,7 +13932,7 @@
       "release_id": 27,
       "source_url": "https://fred.stlouisfed.org/release?rid=27",
       "source_kind": "release",
-      "d_day": 1
+      "d_day": 0
     },
     {
       "name": "Conference Board 소비자신뢰",
@@ -13948,7 +13948,7 @@
       "source": "Conference Board",
       "source_url": "https://www.conference-board.org/topics/consumer-confidence/",
       "source_kind": "release",
-      "d_day": 6
+      "d_day": 5
     },
     {
       "name": "미국 GDP 발표",
@@ -13965,7 +13965,7 @@
       "release_id": 53,
       "source_url": "https://fred.stlouisfed.org/release?rid=53",
       "source_kind": "release",
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "미국 PCE 물가지수",
@@ -13982,7 +13982,7 @@
       "release_id": 54,
       "source_url": "https://fred.stlouisfed.org/release?rid=54",
       "source_kind": "release",
-      "d_day": 7
+      "d_day": 6
     },
     {
       "name": "ISM 제조업 PMI",
@@ -13998,7 +13998,7 @@
       "source": "ISM",
       "source_url": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
       "source_kind": "schedule",
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 주간 실업수당 청구",
@@ -14015,7 +14015,7 @@
       "release_id": 180,
       "source_url": "https://fred.stlouisfed.org/release?rid=180",
       "source_kind": "release",
-      "d_day": 8
+      "d_day": 7
     },
     {
       "name": "미국 고용지표 (NFP)",
@@ -14033,7 +14033,7 @@
       "release_id": 50,
       "source_url": "https://fred.stlouisfed.org/release?rid=50",
       "source_kind": "release",
-      "d_day": 9
+      "d_day": 8
     },
     {
       "name": "ISM 서비스 PMI",
@@ -14049,16 +14049,53 @@
       "source": "ISM",
       "source_url": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
       "source_kind": "schedule",
-      "d_day": 12
+      "d_day": 11
+    },
+    {
+      "name": "미국 주간 실업수당 청구",
+      "severity": "medium",
+      "impact_area": [
+        "경기",
+        "고용"
+      ],
+      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
+      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
+      "date": "2026-10-08",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 180,
+      "source_url": "https://fred.stlouisfed.org/release?rid=180",
+      "source_kind": "release",
+      "d_day": 14
+    },
+    {
+      "name": "옵션만기일 (한국)",
+      "date": "2026-10-08",
+      "country": "한국",
+      "severity": "medium",
+      "impact_area": [
+        "변동성",
+        "지수"
+      ],
+      "impact": "프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
+      "action": "만기일 장중 단기 매매 자제",
+      "source": "KRX",
+      "source_url": "https://global.krx.co.kr/contents/GLB/02/0201/0201040202/GLB0201040202.jsp",
+      "source_kind": "product_rule",
+      "d_day": 14
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 46.1
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 129.26
   },
   "schema_version": "v0"
 }
