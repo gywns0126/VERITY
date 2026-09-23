@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-23T18:06:54+09:00",
+ "as_of": "2026-09-23T23:26:16+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -126,7 +126,7 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 14,
+     "events_scanned": 13,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
@@ -160,9 +160,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 13,
-   "days_without_any_cap_pct": 10.2,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.6%). cap 없는 날 13/127일",
+   "days_without_any_cap": 14,
+   "days_without_any_cap_pct": 11.0,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.6%). cap 없는 날 14/127일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -231,13 +231,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 18,
+     "n_present": 30,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 18,
+     "n_present": 30,
      "constant_value": 0.0,
      "severity": "high"
     }
