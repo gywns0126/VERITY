@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-23T09:34:47+09:00",
+ "as_of": "2026-09-23T18:06:54+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -70,7 +70,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "75/75",
+     "coverage": "79/79",
      "via": [
       "current_price",
       "price"
@@ -81,7 +81,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "64/75",
+     "coverage": "53/79",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -92,7 +92,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "75/75",
+     "coverage": "79/79",
      "via": [
       "fscore_deltas"
      ],
@@ -102,7 +102,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "66/75",
+     "coverage": "76/79",
      "via": [
       "industry"
      ],
@@ -112,7 +112,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "64/75",
+     "coverage": "53/79",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -145,18 +145,12 @@
   "rule_discrimination": {
    "ok": false,
    "snapshots": 127,
-   "cap_rules_checked": 9,
+   "cap_rules_checked": 8,
    "degenerate_rules": [
     {
      "rule": "oil_geopolitical_shock",
      "fired_days": 2,
      "activation_pct": 1.6,
-     "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
-    },
-    {
-     "rule": "fx_shock",
-     "fired_days": 1,
-     "activation_pct": 0.8,
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     }
    ],
@@ -168,7 +162,7 @@
    },
    "days_without_any_cap": 13,
    "days_without_any_cap_pct": 10.2,
-   "detail": "상시/미발동 등급 규칙 2종 — oil_geopolitical_shock(1.6%), fx_shock(0.8%). cap 없는 날 13/127일",
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.6%). cap 없는 날 13/127일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -178,15 +172,11 @@
   "flag_coverage": {
    "ok": false,
    "rules_defined": 24,
-   "rules_fired": 13,
-   "stock_days": 6891,
+   "rules_fired": 14,
+   "stock_days": 6860,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
-     "fired": 0
-    },
-    {
-     "rule": "계속기업 불확실성 (감사인 명시)",
      "fired": 0
     },
     {
@@ -227,7 +217,7 @@
     }
    ],
    "always_fired": [],
-   "detail": "정의 24종 중 발동 13종 · 미발동 11종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
+   "detail": "정의 24종 중 발동 14종 · 미발동 10종. 🚨 미발동 ≠ 고장 — 입력 결손(배선 문제)인지 원래 드문 사건인지 확인해야 한다. 검사 B(죽은 키)와 교차 대조할 것.",
    "note": "미발동 규칙은 **확인 대상**이지 판정이 아니다. 계속기업 불확실성·불성실공시 같은 규칙은 107일 0건이 정상일 수 있다. 반면 입력 필드가 항상 결손이면 배선 결함이다. 임계 조정은 사전등록 대상(RULE 7).",
    "baseline": {
     "never_fired": 13
@@ -241,13 +231,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 10,
+     "n_present": 18,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 10,
+     "n_present": 18,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -280,8 +270,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 35,
-    "scored": 35,
+    "with_pct": 40,
+    "scored": 40,
     "ok": true
    },
    "dead_guards": [],
