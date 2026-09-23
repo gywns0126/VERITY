@@ -5,10 +5,10 @@
     "hit_rate_30d": null,
     "sample_7d": 0,
     "sample_14d": 0,
-    "sample_30d": 0,
+    "sample_30d": 7,
     "hits_7d": 0,
     "hits_14d": 0,
-    "hits_30d": 0,
+    "hits_30d": 3,
     "hit_rate_7d_ci95": null,
     "hit_rate_14d_ci95": null,
     "hit_rate_30d_ci95": null,
@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-09-23 23:05:37.976351+09:00",
+    "applied_at": "2026-09-24 07:21:09.701312+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-09-23 23:05:37.976356+09:00"
+      "fixed_at": "2026-09-24 07:21:09.701314+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -51,8 +51,8 @@
       "unresolved_count": 0,
       "coverage_pct": null,
       "unresolved": [],
-      "evaluation_date": "2026-09-23",
-      "snapshot_date": "2026-09-16"
+      "evaluation_date": "2026-09-24",
+      "snapshot_date": "2026-09-17"
     },
     "14d": {
       "evaluation_status": "no_recommendations",
@@ -61,27 +61,99 @@
       "unresolved_count": 0,
       "coverage_pct": null,
       "unresolved": [],
-      "evaluation_date": "2026-09-23",
+      "evaluation_date": "2026-09-24",
       "snapshot_date": "2026-09-08"
     },
     "30d": {
-      "evaluation_status": "no_recommendations",
-      "cohort_size": 0,
-      "evaluated_count": 0,
-      "unresolved_count": 0,
-      "coverage_pct": null,
-      "unresolved": [],
-      "evaluation_date": "2026-09-23",
-      "snapshot_date": "2026-08-24"
+      "evaluation_status": "partial",
+      "cohort_size": 21,
+      "evaluated_count": 7,
+      "unresolved_count": 14,
+      "coverage_pct": 33.3,
+      "unresolved": [
+        {
+          "ticker": "A",
+          "name": "A",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "AA",
+          "name": "AA",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "ABT",
+          "name": "ABT",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "ACN",
+          "name": "ACN",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "ADI",
+          "name": "ADI",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "ADM",
+          "name": "ADM",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "ALV",
+          "name": "ALV",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "252990",
+          "name": "샘씨엔에스",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "003160",
+          "name": "디아이",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "014830",
+          "name": "유니드",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "214450",
+          "name": "파마리서치",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "EXE",
+          "name": "Expand Energy Corporation",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "DVN",
+          "name": "Devon Energy Corporation",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "AMG",
+          "name": "AMG",
+          "reason": "missing_evaluation_price"
+        }
+      ],
+      "evaluation_date": "2026-09-24",
+      "snapshot_date": "2026-08-25"
     }
   },
   "factor_health": {
     "healthy": [],
     "weakening": [
-      "flow",
-      "volatility"
+      "flow"
     ],
-    "decaying": [],
+    "decaying": [
+      "perplexity_risk"
+    ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
@@ -92,13 +164,13 @@
       "ic_recent": 0.0
     },
     {
-      "factor": "timing",
+      "factor": "prediction",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     },
     {
-      "factor": "prediction",
+      "factor": "timing",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
@@ -111,5 +183,5 @@
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-09-23 23:05:38.006142+09:00"
+  "generated_at": "2026-09-24 07:21:09.728718+09:00"
 }
