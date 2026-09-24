@@ -1,7 +1,7 @@
 {
  "_meta": {
-  "generated_at": "2026-09-18T07:57:35.525229+09:00",
-  "for_date": "2026-09-18",
+  "generated_at": "2026-09-25T07:31:21.405200+09:00",
+  "for_date": "2026-09-25",
   "trail": "kr_cross_section_observations.jsonl",
   "note": "관측 only · 점수·방향·조합식 0(RULE 7). 이 파일은 trail 의 읽는 법이다."
  },
@@ -84,11 +84,11 @@
  "🚨 판정 가능성 자기신고 (§7-3 (7)·(8))": {
   "_설명": "k = 독립관측(§7-3 (7)) = span // 지평. k<3 = 이 칸은 설계상 판정 불가.",
   "_출력_의미": "'더 모아라' 가 아니라 '지금 무엇이 판정 가능한가' 다(§7-1 폐기 사유 정합).",
-  "observed_dates": 12,
-  "span_days": 89,
+  "observed_dates": 13,
+  "span_days": 96,
   "flow.fwd5d": {
    "horizon_days": 5,
-   "k": 12,
+   "k": 13,
    "evidence_class": "confirmatory"
   },
   "flow.fwd20d": {
@@ -98,17 +98,17 @@
   },
   "insider.fwd1m": {
    "horizon_days": 30,
-   "k": 2,
-   "evidence_class": "판정 불가(설계상)"
+   "k": 3,
+   "evidence_class": "exploratory"
   },
   "insider.fwd3m": {
    "horizon_days": 90,
-   "k": 0,
+   "k": 1,
    "evidence_class": "판정 불가(설계상)"
   },
   "dilution.fwd3m": {
    "horizon_days": 90,
-   "k": 0,
+   "k": 1,
    "evidence_class": "판정 불가(설계상)"
   }
  },
@@ -117,8 +117,7 @@
  },
  "last_run": {
   "due_groups": [
-   "flow",
-   "insider"
+   "flow"
   ],
   "stale_inputs": []
  }
