@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-25T18:17:09+09:00",
+ "as_of": "2026-09-25T23:04:26+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -138,7 +138,7 @@
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 6,
+   "holdings_checked": 7,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -184,11 +184,11 @@
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
@@ -251,21 +251,21 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 6,
+   "holdings_checked": 7,
    "coverage": {
     "sector": {
-     "filled": 6,
-     "total": 6,
+     "filled": 7,
+     "total": 7,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 6,
-     "total": 6,
+     "filled": 7,
+     "total": 7,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 6,
-     "total": 6,
+     "filled": 7,
+     "total": 7,
      "guard": "팩터 쏠림 차단"
     }
    },
@@ -279,7 +279,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 6,
+   "holdings_checked": 7,
    "no_profit_exit": [],
    "ladder_broken": [
     {
