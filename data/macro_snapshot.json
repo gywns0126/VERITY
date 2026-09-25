@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-25T08:32:15+09:00",
+  "collected_at": "2026-09-25T09:02:23+09:00",
   "macro": {
     "usd_krw": {
       "value": 1367.75,
@@ -13864,7 +13864,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-09-25T08:32:30+09:00",
+    "updated_at": "2026-09-25T09:03:23+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.77,
       "us_ig_risk": "LOW",
@@ -13874,7 +13874,7 @@
     },
     "kr_corp_spreads": {
       "date": "20260923",
-      "collected_at": "2026-09-25T08:32:30+09:00",
+      "collected_at": "2026-09-25T09:03:23+09:00",
       "grades": {
         "AA-": {
           "yield": 4.689,
@@ -13890,40 +13890,6 @@
     }
   },
   "global_events": [
-    {
-      "name": "미국 주간 실업수당 청구",
-      "severity": "medium",
-      "impact_area": [
-        "경기",
-        "고용"
-      ],
-      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
-      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
-      "date": "2026-09-24",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 180,
-      "source_url": "https://fred.stlouisfed.org/release?rid=180",
-      "source_kind": "release",
-      "d_day": -1
-    },
-    {
-      "name": "미국 주택착공",
-      "severity": "low",
-      "impact_area": [
-        "부동산",
-        "금리민감"
-      ],
-      "impact": "금리 민감 섹터. 건설주/가전주/목재주에 영향",
-      "action": "주택 관련 섹터 비중 점검",
-      "date": "2026-09-24",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 27,
-      "source_url": "https://fred.stlouisfed.org/release?rid=27",
-      "source_kind": "release",
-      "d_day": -1
-    },
     {
       "name": "Conference Board 소비자신뢰",
       "date": "2026-09-29",
@@ -14008,24 +13974,6 @@
       "d_day": 6
     },
     {
-      "name": "미국 고용지표 (NFP)",
-      "severity": "high",
-      "impact_area": [
-        "경기",
-        "금리",
-        "환율"
-      ],
-      "impact": "고용 강세→금리 인상 우려, 약세→경기침체 우려. 양면 리스크",
-      "action": "발표일 장 초반 관망, 시장 반응 확인 후 대응",
-      "date": "2026-10-02",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 50,
-      "source_url": "https://fred.stlouisfed.org/release?rid=50",
-      "source_kind": "release",
-      "d_day": 7
-    },
-    {
       "name": "ISM 서비스 PMI",
       "date": "2026-10-05",
       "country": "미국",
@@ -14092,12 +14040,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 29.87
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 147.29
   },
   "schema_version": "v0"
 }
