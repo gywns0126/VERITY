@@ -26,6 +26,7 @@ from collections import defaultdict
 from urllib.parse import urlparse, parse_qs
 
 import api.supabase_client as sb
+from api.notice_editorial import editorial_query, public_metadata
 
 _rate_limit: dict = defaultdict(list)
 _RATE_WINDOW = 60
@@ -95,6 +96,11 @@ class handler(BaseHTTPRequestHandler):
             params["kind"] = f"eq.{kind}"
         if notice_id:
             params["id"] = f"eq.{notice_id}"  # Same anon RLS, including expiry/active checks.
+        try:
+            if not notice_id:
+                params.update(editorial_query(qs))
+        except ValueError:
+            return _json_response(self, {"error": "invalid_related_context"}, 400, "no-store")
 
         try:
             rows = sb.select("notices", params)
@@ -103,9 +109,11 @@ class handler(BaseHTTPRequestHandler):
             detail = getattr(response, "text", "") or ""
             missing = any(code in detail for code in ("PGRST205", "42P01"))
             migration = "site_wide" in detail and any(code in detail for code in ("42703", "PGRST204"))
+            if any(k in detail for k in ("display_date", "home_visible", "related_tickers", "related_topics")) and any(code in detail for code in ("42703", "PGRST204")):
+                return _json_response(self, {"items": [], "migration_required": "2026092202_notice_editorial"}, 200, "no-store")
             if missing or migration:
                 return _json_response(self, {"items": [], "migration_required": "038_notice_sitewide" if migration else "027_notices"}, 200, "no-store")
-            _safe_err(exc)
+            _safe_err(exc, "notices_unavailable")
             return _json_response(self, {"items": [], "error": "notices_unavailable"}, 503, "no-store")
 
         items = [{
@@ -119,5 +127,8 @@ class handler(BaseHTTPRequestHandler):
             "starts_at": r.get("starts_at") or "",
             "ends_at": r.get("ends_at") or "",
             "created_at": r.get("created_at") or "",
+            "thumbnail_theme": r.get("thumbnail_theme") or "auto",
+            "thumbnail_url": r.get("thumbnail_url") or "",
+            **public_metadata(r),
         } for r in (rows or [])]
         _json_response(self, {"items": items})
