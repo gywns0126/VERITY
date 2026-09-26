@@ -230,7 +230,7 @@ export function NoticeArtwork({ notice, previewImage = "" }: { notice: Pick<Noti
     const [failedUrl, setFailedUrl] = React.useState("")
     const custom = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(previewImage) && previewImage.length < 350050 ? previewImage : safeLink(notice.thumbnail_url)
     if ((custom.startsWith("https://") || custom.startsWith("data:image/png;base64,")) && custom !== failedUrl)
-        return <img className="an-notice-art" src={custom} alt="" referrerPolicy="no-referrer" onError={() => setFailedUrl(custom)} style={{ display: "block", width: "100%", height: "100%", objectFit: "cover" }} />
+        return <img className="an-notice-art" src={custom} alt="" referrerPolicy="no-referrer" onError={() => setFailedUrl(custom)} style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }} />
     return <svg className="an-notice-art" viewBox="0 0 600 180" fill="none" aria-hidden="true" style={{ display: "block", width: "100%", height: "100%" }}>
         <rect width="600" height="180" rx="20" fill="#F2F0FC" />
         <circle cx="310" cy="92" r="75" fill="#E7E1FF" />
