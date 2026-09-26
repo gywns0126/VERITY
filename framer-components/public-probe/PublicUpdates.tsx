@@ -1,5 +1,6 @@
 import * as React from "react"
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import { Link } from "@phosphor-icons/react"
 import { NoticeArtwork, NoticeBody, resolveNoticeTheme } from "https://framer.com/m/PublicNoticeBanner-WLqzZR.js"
 
 // Keep: service updates use the existing public notices API and its publication RLS.
@@ -73,7 +74,7 @@ function Card({ notice, href, open }: { notice: Notice; href: string; open: (eve
 }
 const CSS = `
 .an-updates{--u-bg:#fff;--u-ink:#191f28;--u-sub:#4e5968;--u-muted:#6b7684;--u-line:#e5e8eb;--u-soft:#f5f6f8;--u-accent:#6c5ce7;--u-art:#f2f0fc;background:var(--u-bg);color:var(--u-ink);font-family:${FONT};font-weight:600;line-height:1.6;min-height:100vh;width:100%;container-type:inline-size;box-sizing:border-box}
-body[data-framer-theme="dark"] .an-updates{--u-bg:#101419;--u-ink:#e3e7ec;--u-sub:#bdc5d0;--u-muted:#9aa4b1;--u-line:#2b323d;--u-soft:#1b222c;--u-accent:#a99bff}
+html[data-an-theme="dark"] .an-updates,body[data-framer-theme="dark"] .an-updates{--u-bg:#101419;--u-ink:#e3e7ec;--u-sub:#bdc5d0;--u-muted:#9aa4b1;--u-line:#2b323d;--u-soft:#1b222c;--u-accent:#a99bff;--u-art:#1a2030}
 .an-updates *{box-sizing:border-box}
 .an-updates a{color:inherit;text-decoration:none}
 .an-updates button{font:inherit;font-weight:700;cursor:pointer;border:0;color:inherit;background:none}
@@ -260,7 +261,7 @@ export default function PublicUpdates({ apiBase = API, updatesPath = "/updates",
                     : status === "error" ? <div className="an-updates-state" role="alert"><h2>소식을 불러오지 못했어요</h2><p>잠시 후 다시 확인해 주세요.</p><button onClick={() => setRetry(n => n + 1)}>다시 불러오기</button></div>
                     : route ? selected ? <article className="an-updates-article">
                         <a className="an-updates-back" href={path} onClick={event => navigate(event, "")}><Arrow back />소식 목록</a>
-                        <header className="an-updates-article-head"><div className="an-updates-meta"><span>{category(selected)}</span><NoticeDate value={selected.display_date || selected.created_at} /></div><h1>{selected.title}</h1><div className="an-updates-byline"><span>알파네스트 팀</span><button className="an-updates-share" onClick={copyLink}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m10 13 4-4m-5 7-2 2a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 0 2-2a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>링크 복사</button></div><span className="an-updates-sr" role="status">{share}</span>{copyFallback && <label className="an-updates-copy-fallback">아래 주소를 복사해 주세요<input value={copyFallback} readOnly onFocus={event => event.target.select()} /></label>}</header>
+                        <header className="an-updates-article-head"><div className="an-updates-meta"><span>{category(selected)}</span><NoticeDate value={selected.display_date || selected.created_at} /></div><h1>{selected.title}</h1><div className="an-updates-byline"><span>알파네스트 팀</span><button className="an-updates-share" onClick={copyLink}><Link size={16} weight="bold" aria-hidden="true" />링크 복사</button></div><span className="an-updates-sr" role="status">{share}</span>{copyFallback && <label className="an-updates-copy-fallback">아래 주소를 복사해 주세요<input value={copyFallback} readOnly onFocus={event => event.target.select()} /></label>}</header>
                         <Cover notice={selected} />
                         <div className="an-updates-body"><NoticeBody text={selected.body} /></div>
                         <footer className="an-updates-article-foot"><a className="an-updates-back" href={path} onClick={event => navigate(event, "")}><Arrow back />소식 목록</a>{related && <a className="an-updates-related" href={related} target={related.startsWith("https://") ? "_blank" : undefined} rel="noopener noreferrer">관련 페이지 살펴보기 <Arrow /></a>}</footer>
