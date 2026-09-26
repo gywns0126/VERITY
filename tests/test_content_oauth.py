@@ -140,6 +140,17 @@ def test_valid_authorization_and_state_boundaries(state):
     assert m.challenge(VERIFIER) == CHALLENGE
 
 
+@pytest.mark.parametrize("locale", ["ko-KR", "en-US", "ko-KR en-US", "", '<script>alert(1)</script>'])
+def test_locale_hint_is_ignored_before_consent(clock, local_only, locale):
+    params = authorization(ui_locales=locale)
+    assert m.validated_authorization(params, m.config()) == authorization()
+    assert params["ui_locales"] == locale  # Do not mutate caller-owned input.
+    signed, cookie, _ = consent(params)
+    assert m.unseal(signed, cookie) == authorization()
+    local_only.assert_not_called()
+
+
+@pytest.mark.parametrize("locale_fields", [{}, {"ui_locales": "ko-KR"}])
 @pytest.mark.parametrize("key,value", [
     ("redirect_uri", "https://evil.example/callback"),
     ("redirect_uri", m.REDIRECT + "?next=evil"), ("redirect_uri", m.REDIRECT + "/"),
@@ -152,23 +163,36 @@ def test_valid_authorization_and_state_boundaries(state):
     ("state", ""), ("state", "x" * 1025), ("state", "bad\nstate"),
     ("state", "bad\x00state"), ("state", "bad\x7fstate"), ("extra", "value"),
 ])
-def test_invalid_authorization_never_redirects_or_calls_rpc(local_only, key, value):
-    path = "/api/content_oauth?" + urlencode({"op": "authorize", **authorization(**{key: value})})
+def test_invalid_authorization_never_redirects_or_calls_rpc(local_only, key, value, locale_fields):
+    path = "/api/content_oauth?" + urlencode({"op": "authorize", **authorization(**{key: value}), **locale_fields})
     assert_error(400, "invalid_authorization_request", m.process, "GET", path, {}, b"")
     local_only.assert_not_called()
 
 
+@pytest.mark.parametrize("locale_fields", [{}, {"ui_locales": "ko-KR"}])
 @pytest.mark.parametrize("missing", list(authorization()))
-def test_missing_authorization_fields(missing):
-    params = authorization()
+def test_missing_authorization_fields(missing, locale_fields):
+    params = authorization(**locale_fields)
     del params[missing]
     assert_error(400, "invalid_authorization_request", m.validated_authorization, params, m.config())
 
 
-@pytest.mark.parametrize("raw", ["state=a&state=b", "state=%FF", "state=" + "x" * 4097,
+@pytest.mark.parametrize("raw", ["state=a&state=b", "ui_locales=ko-KR&ui_locales=en-US",
+                                 "ui_locales=" + "x" * 4097, "state=%FF", "state=" + "x" * 4097,
                                  "&".join(f"k{i}=v" for i in range(17))])
 def test_form_ambiguity_and_invalid_encoding(raw):
     assert_error(400, "invalid_request", m.fields, raw)
+
+
+def test_locale_hint_is_not_accepted_by_other_endpoints(clock, local_only):
+    assert_error(400, "invalid_request", m.process, "GET",
+                 "/api/content_oauth?op=server&ui_locales=ko-KR", {}, b"")
+    assert_error(400, "invalid_grant", post, "token", token_form(ui_locales="ko-KR"))
+    signed, cookie, _ = consent(authorization(ui_locales="ko-KR"))
+    assert_error(403, "invalid_consent", post, "authorize",
+                 {"consent": signed, "invite": INVITE, "decision": "allow", "ui_locales": "ko-KR"},
+                 {"Origin": ORIGIN, "Cookie": cookie})
+    local_only.assert_not_called()
 
 
 def test_signed_consent_cookie_attributes_and_round_trip(clock, local_only):
@@ -236,9 +260,10 @@ def test_consent_requires_configured_signing_secret(monkeypatch, key):
     assert_error(503, "connection_not_configured", consent)
 
 
+@pytest.mark.parametrize("locale_fields", [{}, {"ui_locales": "ko-KR"}])
 @pytest.mark.parametrize("decision", ["allow", "deny"])
-def test_allow_deny_redirect_preserves_issuer_state_and_clears_cookie(clock, local_only, decision):
-    signed, cookie, _ = consent()
+def test_allow_deny_redirect_preserves_issuer_state_and_clears_cookie(clock, local_only, decision, locale_fields):
+    signed, cookie, _ = consent(authorization(**locale_fields))
     local_only.side_effect = None
     local_only.return_value = {"status": "allowed"}
     status, body, headers = post("authorize",
