@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-26T10:43:57+09:00",
+ "as_of": "2026-09-26T14:11:39+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -80,6 +80,21 @@
      ]
     },
     {
+     "key": "dart_financials",
+     "coverage": "40/77",
+     "via": [
+      "dart_report_date",
+      "dart_source"
+     ],
+     "modules": [
+      "fact.py",
+      "moat.py",
+      "quality.py",
+      "red_flags.py",
+      "value_guards.py"
+     ]
+    },
+    {
      "key": "operating_income",
      "coverage": "65/77",
      "via": [
@@ -98,6 +113,16 @@
      ],
      "modules": [
       "quality.py"
+     ]
+    },
+    {
+     "key": "quant_factors",
+     "coverage": "77/77",
+     "via": [
+      "multi_factor.quant_factors"
+     ],
+     "modules": [
+      "fact.py"
      ]
     },
     {
@@ -184,11 +209,11 @@
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
