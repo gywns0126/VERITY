@@ -1063,7 +1063,67 @@ def handle_audit_log(handler, method: str, body: dict) -> dict:
 
 
 _NOTICE_KINDS = ("notice", "event")
-_NOTICE_FIELDS = ("kind", "title", "body", "link", "pinned", "site_wide", "starts_at", "ends_at", "is_active")
+_NOTICE_FIELDS = ("kind", "title", "body", "link", "pinned", "site_wide", "starts_at", "ends_at", "is_active", "thumbnail_theme", "thumbnail_url")
+_NOTICE_THEMES = ("auto", "report", "feature", "event", "maintenance", "community", "general")
+
+
+def _notice_image_prefix() -> str:
+    return SUPABASE_URL.rstrip("/") + "/storage/v1/object/public/notice-images/"
+
+
+def _notice_png(encoded: str) -> bytes:
+    """Accept bounded PNGs only; validate chunk lengths/CRC, dimensions and terminator."""
+    import base64
+    import struct
+    import zlib
+    if not isinstance(encoded, str) or len(encoded) > 350000:
+        raise ValueError("notice_image_too_large")
+    try:
+        data = base64.b64decode(encoded, validate=True)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("invalid_notice_image") from exc
+    if len(data) > 262144 or data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("invalid_notice_image")
+    pos, has_header, has_pixels = 8, False, False
+    while pos + 12 <= len(data):
+        length = struct.unpack(">I", data[pos:pos + 4])[0]
+        chunk = data[pos + 4:pos + 8]
+        end = pos + 12 + length
+        if end > len(data) or zlib.crc32(data[pos + 4:end - 4]) & 0xffffffff != struct.unpack(">I", data[end - 4:end])[0]:
+            raise ValueError("invalid_notice_image")
+        if not has_header:
+            if chunk != b"IHDR" or length != 13:
+                raise ValueError("invalid_notice_image")
+            width, height = struct.unpack(">II", data[pos + 8:pos + 16])
+            if not (1 <= width <= 1200 and 1 <= height <= 800):
+                raise ValueError("notice_image_dimensions")
+            has_header = True
+        elif chunk == b"IHDR":
+            raise ValueError("invalid_notice_image")
+        if chunk == b"IDAT":
+            has_pixels = True
+        if chunk == b"IEND":
+            if length or end != len(data) or not has_pixels:
+                raise ValueError("invalid_notice_image")
+            return data
+        pos = end
+    raise ValueError("invalid_notice_image")
+
+
+def _upload_notice_image(body: dict) -> dict:
+    # Only called after the existing admin authorization. No client-supplied bucket/path.
+    import hashlib
+    try:
+        image = _notice_png(body.get("image_base64"))
+    except ValueError as exc:
+        return {"_status": 400, "_body": {"error": str(exc)}}
+    name = hashlib.sha256(image).hexdigest() + ".png"
+    r = requests.post(SUPABASE_URL.rstrip("/") + "/storage/v1/object/notice-images/" + name,
+                      headers=_svc_headers({"Content-Type": "image/png", "x-upsert": "true", "Cache-Control": "31536000"}),
+                      data=image, timeout=_t(10))
+    if r.status_code not in (200, 201):
+        return {"_status": 502, "_body": {"error": "notice_image_upload_failed"}}
+    return {"_status": 200, "_body": {"url": _notice_image_prefix() + name}}
 
 
 def _notice_payload(body: dict) -> dict:
@@ -1077,6 +1137,13 @@ def _notice_payload(body: dict) -> dict:
             v = str(v or "notice").strip()
             if v not in _NOTICE_KINDS:
                 v = "notice"
+        elif k == "thumbnail_theme":
+            if not isinstance(v, str) or v not in _NOTICE_THEMES:
+                raise ValueError("invalid_notice_theme")
+        elif k == "thumbnail_url":
+            import re
+            if not isinstance(v, str) or (v and not re.fullmatch(re.escape(_notice_image_prefix()) + r"[0-9a-f]{64}\.png", v)):
+                raise ValueError("invalid_notice_image_url")
         elif k == "link":
             v = str(v or "").strip()
             if len(v) > 500 or any(ord(c) < 32 for c in v) or "\\" in v:
@@ -1097,6 +1164,8 @@ def _notice_payload(body: dict) -> dict:
         elif k in ("starts_at", "ends_at"):
             v = (str(v).strip() or None) if v else None
         out[k] = v
+    from api.notice_editorial import editorial_payload
+    out.update(editorial_payload(body))
     return out
 
 
@@ -1104,6 +1173,8 @@ def handle_notices(handler, method: str, body: dict) -> dict:
     """공지·이벤트 발행 (027 migration). 공개 읽기는 /api/notices — 여기는 운영 쓰기·전량 목록."""
     if not _svc_ready():
         return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
+    if method == "POST" and body.get("action") == "upload_thumbnail":
+        return _upload_notice_image(body)
     actor = _caller_identity(headers_to_dict(handler))
 
     if method == "GET":
@@ -1111,12 +1182,26 @@ def handle_notices(handler, method: str, body: dict) -> dict:
         params = parse_qs(urlparse(handler.path).query)
         limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
         fields = "id,kind,title,body,link,pinned,starts_at,ends_at,is_active,created_at,updated_at"
-        query = {"select": fields + ",site_wide", "order": "pinned.desc,created_at.desc", "limit": str(limit)}
+        legacy_fields = fields + ",site_wide,thumbnail_theme,thumbnail_url"
+        query = {"select": legacy_fields + ",display_date,home_visible,related_tickers,related_topics", "order": "pinned.desc,created_at.desc", "limit": str(limit)}
         r = requests.get(f"{SUPABASE_URL}/rest/v1/notices", headers=_svc_headers(), params=query, timeout=_t(10))
+        editorial_ready = True
+        if r.status_code == 400 and any(k in (r.text or "") for k in ("display_date", "home_visible", "related_tickers", "related_topics")) and any(code in r.text for code in ("42703", "PGRST204")):
+            editorial_ready = False
+            query["select"] = legacy_fields
+            r = requests.get(f"{SUPABASE_URL}/rest/v1/notices", headers=_svc_headers(), params=query, timeout=_t(10))
+        artwork_ready = True
+        if r.status_code == 400 and "thumbnail_" in (r.text or "") and any(code in r.text for code in ("42703", "PGRST204")):
+            artwork_ready = False
+            editorial_ready = False
+            query["select"] = fields + ",site_wide"
+            r = requests.get(f"{SUPABASE_URL}/rest/v1/notices", headers=_svc_headers(), params=query, timeout=_t(10))
         site_wide_ready = True
         if r.status_code == 400 and "site_wide" in (r.text or "") and any(code in r.text for code in ("42703", "PGRST204")):
             # Deploy before migration must not break the existing notice manager.
             site_wide_ready = False
+            artwork_ready = False
+            editorial_ready = False
             query["select"] = fields
             r = requests.get(f"{SUPABASE_URL}/rest/v1/notices", headers=_svc_headers(), params=query, timeout=_t(10))
         if r.status_code == 404 or "PGRST205" in (r.text or ""):
@@ -1124,7 +1209,7 @@ def handle_notices(handler, method: str, body: dict) -> dict:
             return {"_status": 200, "_body": {"items": [], "migration_required": "027_notices"}}
         if r.status_code != 200:
             return {"_status": 502, "_body": {"error": "list_failed", "detail": r.text[:200]}}
-        return {"_status": 200, "_body": {"items": r.json(), "site_wide_ready": site_wide_ready,
+        return {"_status": 200, "_body": {"items": r.json(), "site_wide_ready": site_wide_ready, "artwork_ready": artwork_ready, "editorial_ready": editorial_ready,
                                         "site_wide_migration": "" if site_wide_ready else "038_notice_sitewide"}}
 
     if method == "POST":
