@@ -86,7 +86,7 @@ def fields(raw):
 def validated_authorization(params, cfg):
     required = {"client_id", "response_type", "redirect_uri", "resource", "scope",
                 "state", "code_challenge", "code_challenge_method"}
-    if (set(params) != required or params["client_id"] != CLIENT_ID
+    if (set(params) - {"ui_locales"} != required or params["client_id"] != CLIENT_ID
             or params["redirect_uri"] != REDIRECT or params["response_type"] != "code"
             or params["resource"] != cfg["resource"] or params["scope"] != SCOPE
             or params["code_challenge_method"] != "S256"
@@ -95,7 +95,9 @@ def validated_authorization(params, cfg):
             or any(ord(c) < 32 or ord(c) == 127 for c in params["state"])):
         # Invalid/untrusted requests never receive a redirect.
         raise ServiceError(400, "invalid_authorization_request")
-    return params
+    # ChatGPT sends this optional display hint. fields() already bounds its
+    # length and rejects duplicates; never render, seal or forward the hint.
+    return {key: value for key, value in params.items() if key in required}
 
 
 def signing_key():
