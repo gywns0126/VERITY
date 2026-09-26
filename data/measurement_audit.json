@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-25T23:04:26+09:00",
+ "as_of": "2026-09-26T10:43:57+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -70,7 +70,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "81/81",
+     "coverage": "77/77",
      "via": [
       "current_price",
       "price"
@@ -81,7 +81,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "52/81",
+     "coverage": "65/77",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -92,7 +92,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "81/81",
+     "coverage": "77/77",
      "via": [
       "fscore_deltas"
      ],
@@ -102,7 +102,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "73/81",
+     "coverage": "67/77",
      "via": [
       "industry"
      ],
@@ -112,7 +112,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "45/81",
+     "coverage": "65/77",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -126,7 +126,7 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 12,
+     "events_scanned": 16,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
@@ -138,19 +138,19 @@
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 7,
+   "holdings_checked": 6,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 129,
+   "snapshots": 130,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
      "rule": "oil_geopolitical_shock",
      "fired_days": 2,
-     "activation_pct": 1.6,
+     "activation_pct": 1.5,
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     }
    ],
@@ -161,8 +161,8 @@
     "watch_pct": 85.0
    },
    "days_without_any_cap": 16,
-   "days_without_any_cap_pct": 12.4,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.6%). cap 없는 날 16/129일",
+   "days_without_any_cap_pct": 12.3,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.5%). cap 없는 날 16/130일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -173,7 +173,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 14,
-   "stock_days": 7036,
+   "stock_days": 7132,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -184,11 +184,11 @@
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
@@ -251,27 +251,27 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 7,
+   "holdings_checked": 6,
    "coverage": {
     "sector": {
-     "filled": 7,
-     "total": 7,
+     "filled": 6,
+     "total": 6,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 7,
-     "total": 7,
+     "filled": 6,
+     "total": 6,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 7,
-     "total": 7,
+     "filled": 6,
+     "total": 6,
      "guard": "팩터 쏠림 차단"
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 39,
-    "scored": 39,
+    "with_pct": 35,
+    "scored": 35,
     "ok": true
    },
    "dead_guards": [],
@@ -279,7 +279,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 7,
+   "holdings_checked": 6,
    "no_profit_exit": [],
    "ladder_broken": [
     {

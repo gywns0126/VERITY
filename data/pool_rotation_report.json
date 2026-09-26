@@ -1,95 +1,104 @@
 {
- "as_of": "2026-09-19T13:49:21+09:00",
+ "as_of": "2026-09-26T10:45:31+09:00",
  "version": "v0 (PREREG_POOL_ROTATION_2026_08_04 — 보고서만, 집행 없음)",
  "evidence_days": 40,
  "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 40일. 미달 임계는 발동하지 않음",
  "pool": {
-  "size": 74,
-  "kr": 47,
+  "size": 77,
+  "kr": 48,
   "kr_floor": 20,
   "kr_deficit": 0,
-  "size_note": "정원 초과 74 > 70",
-  "sector_over_cap": {
-   "Technology": 27.0
-  }
+  "size_note": "정원 초과 77 > 70",
+  "sector_over_cap": {}
  },
  "r1_held": [
   "003550",
   "028050",
-  "035420"
+  "035420",
+  "080580",
+  "FUL",
+  "PARR"
  ],
  "r1_held_out_of_pool": [],
  "exits": [
   {
    "ticker": "V",
-   "reason": "R2a 배지 AVOID 21일 연속",
-   "avoid_streak": 21,
+   "reason": "R2a 배지 AVOID 27일 연속",
+   "avoid_streak": 27,
    "pollution_streak": 0,
    "lowliq_streak": 0,
-   "evidence_days": 21
+   "evidence_days": 27
   },
   {
    "ticker": "CME",
-   "reason": "R2a 배지 AVOID 21일 연속",
-   "avoid_streak": 21,
+   "reason": "R2a 배지 AVOID 27일 연속",
+   "avoid_streak": 27,
    "pollution_streak": 0,
    "lowliq_streak": 0,
-   "evidence_days": 21
+   "evidence_days": 27
   },
   {
    "ticker": "094970",
-   "reason": "R2c 거래대금 10억 미만 28일",
+   "reason": "R2c 거래대금 10억 미만 34일",
    "avoid_streak": 0,
    "pollution_streak": 0,
-   "lowliq_streak": 28,
+   "lowliq_streak": 34,
    "evidence_days": 40
   },
   {
    "ticker": "418470",
-   "reason": "R2c 거래대금 10억 미만 27일",
+   "reason": "R2c 거래대금 10억 미만 33일",
    "avoid_streak": 0,
    "pollution_streak": 0,
-   "lowliq_streak": 27,
+   "lowliq_streak": 33,
    "evidence_days": 40
   }
  ],
  "entries": [
   {
-   "ticker": "007110",
-   "name": "일신석재",
+   "ticker": "317850",
+   "name": "대모",
    "source": "smallcap",
-   "trading_value": 2143739526
-  },
-  {
-   "ticker": "011390",
-   "name": "부산산업",
-   "source": "smallcap",
-   "trading_value": 1594517362
-  },
-  {
-   "ticker": "463020",
-   "name": "뉴엔AI",
-   "source": "smallcap",
-   "trading_value": 1164571404
+   "trading_value": 1663000800
   },
   {
    "ticker": "228340",
    "name": "동양파일",
    "source": "smallcap",
-   "trading_value": 9955506658
+   "trading_value": 10892613035
   },
   {
    "ticker": "248170",
    "name": "샘표식품",
    "source": "smallcap",
-   "trading_value": 2756852612
+   "trading_value": 6357719980
+  },
+  {
+   "ticker": "079650",
+   "name": "서산",
+   "source": "smallcap",
+   "trading_value": 41129419239
+  },
+  {
+   "ticker": "457550",
+   "name": "우진엔텍",
+   "source": "smallcap",
+   "trading_value": 1477603548
   }
  ],
- "watch_streaks": [],
+ "watch_streaks": [
+  {
+   "ticker": "032350",
+   "avoid_streak": 5,
+   "pollution_streak": 0,
+   "lowliq_streak": 0,
+   "evidence_days": 17
+  }
+ ],
  "candidate_supply": {
-  "funnel_total": 44,
+  "funnel_total": 45,
   "funnel_kr_out_of_pool": 0,
-  "smallcap_total": 1639,
+  "smallcap_total": 1632,
   "smallcap_liquidity_field_missing": false
  },
  "swap_cap": 5,

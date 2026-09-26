@@ -3,10 +3,10 @@
     "hit_rate_7d": null,
     "hit_rate_14d": null,
     "hit_rate_30d": null,
-    "sample_7d": 0,
+    "sample_7d": 10,
     "sample_14d": 0,
     "sample_30d": 0,
-    "hits_7d": 0,
+    "hits_7d": 5,
     "hits_14d": null,
     "hits_30d": 0,
     "hit_rate_7d_ci95": null,
@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-09-25 22:45:24.965726+09:00",
+    "applied_at": "2026-09-26 10:19:31.419393+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-09-25 22:45:24.965730+09:00"
+      "fixed_at": "2026-09-26 10:19:31.419397+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -45,14 +45,95 @@
   },
   "evaluation_coverage": {
     "7d": {
-      "evaluation_status": "no_recommendations",
-      "cohort_size": 0,
-      "evaluated_count": 0,
-      "unresolved_count": 0,
-      "coverage_pct": null,
-      "unresolved": [],
-      "evaluation_date": "2026-09-25",
-      "snapshot_date": "2026-09-18"
+      "evaluation_status": "partial",
+      "cohort_size": 26,
+      "evaluated_count": 10,
+      "unresolved_count": 16,
+      "coverage_pct": 38.5,
+      "unresolved": [
+        {
+          "ticker": "051900",
+          "name": "LG생활건강",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "PR",
+          "name": "PR",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "PSX",
+          "name": "PSX",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "192400",
+          "name": "쿠쿠홀딩스",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "356860",
+          "name": "티엘비",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "003160",
+          "name": "디아이",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "327260",
+          "name": "RF머트리얼즈",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "213420",
+          "name": "덕산네오룩스",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "053610",
+          "name": "프로텍",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "080580",
+          "name": "오킨스전자",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "336570",
+          "name": "원텍",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "029460",
+          "name": "케이씨",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "340570",
+          "name": "티앤엘",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "PHM",
+          "name": "PHM",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "NXPI",
+          "name": "NXPI",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "OHI",
+          "name": "OHI",
+          "reason": "missing_entry_price"
+        }
+      ],
+      "evaluation_date": "2026-09-26",
+      "snapshot_date": "2026-09-19"
     },
     "14d": {
       "evaluation_status": null,
@@ -71,18 +152,18 @@
       "unresolved_count": 0,
       "coverage_pct": null,
       "unresolved": [],
-      "evaluation_date": "2026-09-25",
-      "snapshot_date": "2026-08-26"
+      "evaluation_date": "2026-09-26",
+      "snapshot_date": "2026-08-27"
     }
   },
   "factor_health": {
-    "healthy": [],
+    "healthy": [
+      "momentum"
+    ],
     "weakening": [
       "flow"
     ],
-    "decaying": [
-      "perplexity_risk"
-    ],
+    "decaying": [],
     "total_factors": 15
   },
   "ic_adjustments_active": [
@@ -112,5 +193,5 @@
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-09-25 22:45:24.996194+09:00"
+  "generated_at": "2026-09-26 10:19:31.450896+09:00"
 }
