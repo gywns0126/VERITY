@@ -116,6 +116,14 @@
   ],
   "rewrites": [
     {
+      "source": "/.well-known/oauth-authorization-server/api/content_oauth",
+      "destination": "/api/content_oauth?op=server"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/api/content_mcp",
+      "destination": "/api/content_oauth?op=resource"
+    },
+    {
       "source": "/api/estate/corp-holdings",
       "destination": "/api/estate_corp_holdings"
     },
