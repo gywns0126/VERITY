@@ -66,7 +66,7 @@ def news(n=12):
 def briefing():
     return {"date": "2026-09-27", "generated_at": "2026-09-27T13:43:29+09:00", "session": "휴장",
             "recap_as_of": "20260922", "disclaimer": "자체계산 예상 창 · 매매의견 아님",
-            "sections": [{"title": "시장", "as_of": "20260922", "note": "이전 거래일; 등락률 단위 %",
+            "sections": [{"title": "직전 거래일 시장", "as_of": "20260922", "note": "이전 거래일; 등락률 단위 %",
                           "recap": {"date": "09/22", "kospi": .15, "kospi_close": 7017.91},
                           "items": [{"name": "지수", "text": "코스피 7,017.91 (+0.15%)"}]},
                          {"title": "예상 일정", "note": "자체계산 ±7일, 확정 아님",
@@ -113,10 +113,10 @@ class PublicTests(unittest.TestCase):
         with patch.object(public, "_fetch_bytes", return_value=json.dumps(data, ensure_ascii=False).encode()):
             return public.load_public(kind)
 
-    def test_exact_dossier_gates_units_coverage_and_no_outer_prompt(self):
+    def test_selected_dossier_gates_units_coverage_and_no_outer_prompt(self):
         data = dossier()
         result = self.company(data)
-        self.assertEqual(result["dossier"], data)
+        self.assertEqual(result["dossier"], {k: v for k, v in data.items() if k not in ("reading", "issues")})
         self.assertEqual(result["source_response_checked_at"], CHECKED)
         self.assertEqual(result["retrieved_at"], CHECKED)
         self.assertEqual(result["freshness"], "unknown")
@@ -128,7 +128,7 @@ class PublicTests(unittest.TestCase):
     def test_top_whitelist_and_nested_private_fail_closed(self):
         data = dossier()
         data.update(prompt_rules=["EXECUTE_ME"], private_data="PRIVATE", prompt_url="https://evil.test")
-        self.assertEqual(self.company(data)["dossier"], dossier())
+        self.assertEqual(self.company(data)["dossier"], {k: v for k, v in dossier().items() if k not in ("reading", "issues")})
         public._CACHE.clear()
         data["reader"]["access_token"] = "SECRET"
         with self.assertRaisesRegex(public.PublicSourceError, "source_field_not_public"):
@@ -147,9 +147,20 @@ class PublicTests(unittest.TestCase):
                 self.assertIsInstance(report["news"], dict)
                 raw = fixtures.analysis_prompt(report).encode("utf-8")
                 result = self.company(raw=raw, ticker=ticker)
-                expected = {key: value for key, value in report.items()
-                            if key not in ("prompt_rules", "disclaimer", "source_line")}
-                self.assertEqual(result["dossier"], expected)
+                selected = result["dossier"]
+                self.assertNotIn("issues", selected)
+                self.assertNotIn("reading", selected)
+                self.assertNotIn("kv", selected)
+                self.assertNotIn("visuals", selected["reader"])
+                self.assertEqual(selected["company_explanation"], report["reading"]["company"])
+                for key in ("business_profile", "summary", "annual_core", "annual_basis", "coverage", "gaps"):
+                    self.assertEqual(selected[key], report[key])
+                self.assertEqual(selected["comparison"], {k: v for k, v in report["comparison"].items() if k != "bridge"})
+                self.assertNotIn("bridge", selected["comparison"])
+                for section in selected["sections"]:
+                    self.assertIn(section["id"], ("B1", "R0", "R1", "Q2", "CF1", "D1"))
+                    self.assertIn(section, report["sections"])
+                self.assertEqual(result["selection"]["sections_in_source"], len(report["sections"]))
                 self.assertEqual(result["dossier"]["news"], report["news"])
                 self.assertEqual(result["dossier"]["annual_basis"], report["annual_basis"])
                 self.assertEqual(result["freshness"], "unknown")
@@ -276,7 +287,11 @@ class PublicTests(unittest.TestCase):
         data = briefing()
         result = self.source("briefing", data)
         self.assertEqual(result["items_in_feed"], 13)
-        self.assertEqual(result["items_displayed"], 11)
+        self.assertEqual(result["items_displayed"], 1)
+        self.assertEqual(result["items_omitted"], 12)
+        self.assertEqual(result["selection"]["sections_selected"], 1)
+        self.assertEqual(result["selection"]["sections_in_source"], 2)
+        self.assertEqual(result["selection"]["omitted_section_titles"], ["예상 일정"])
         self.assertEqual(result["metadata"]["recap_as_of"], "20260922")
         self.assertEqual(result["metadata"]["disclaimer"], data["disclaimer"])
         for i, group in enumerate(result["sections"]):
@@ -284,6 +299,58 @@ class PublicTests(unittest.TestCase):
             self.assertEqual(group["items"], data["sections"][i]["items"][:10])
         self.assertEqual(result["sections"][0]["recap"], data["sections"][0]["recap"])
         self.assertEqual(result["freshness"], "unknown")
+
+    def test_company_editorial_selection_preserves_complete_tables_and_gaps(self):
+        data = dossier()
+        kept = deepcopy(data["sections"][0])
+        kept["headers"] = ["기간", "금액·단위", "원문"]
+        data["sections"] = [kept] + [dict(kept, id=ident) for ident in
+                                    ("R3", "R4", "I1", "H1", "F1", "C2", "FUTURE_SECTION")]
+        data["reader"]["visuals"] = {"chart": "DUPLICATE_RENDER_DATA"}
+        data["comparison"]["bridge"] = {"revenue_effect": 42, "formula": "ACCOUNTING_DECOMPOSITION"}
+        data["reading"]["company"] = {"excerpts": [], "note": "회사 설명 미확보"}
+        result = self.company(data)
+        self.assertEqual(result["dossier"]["sections"], [kept])
+        self.assertEqual(result["selection"]["sections_in_source"], 8)
+        self.assertEqual(result["selection"]["sections_selected"], 1)
+        self.assertEqual(result["selection"]["sections_omitted"], 7)
+        self.assertEqual(result["selection"]["omitted_section_ids"], [s["id"] for s in data["sections"][1:]])
+        self.assertIn("upstream report", result["selection"]["coverage_scope"])
+        self.assertEqual(result["dossier"]["gaps"], data["gaps"])
+        self.assertEqual(result["dossier"]["reader"]["cash_notes"], data["reader"]["cash_notes"])
+        self.assertEqual(result["dossier"]["company_explanation"], data["reading"]["company"])
+        self.assertNotIn("DUPLICATE_RENDER_DATA", json.dumps(result))
+        self.assertNotIn("ACCOUNTING_DECOMPOSITION", json.dumps(result))
+        self.assertNotIn("bridge", result["dossier"]["comparison"])
+        self.assertEqual(result["dossier"]["comparison"]["reason"], data["comparison"]["reason"])
+
+    def test_briefing_only_market_and_disclosures_unknown_groups_excluded(self):
+        titles = ["직전 거래일 시장", "밤사이 미국 공시", "이번 주 실적 공시 예상", "최근 주요 공시",
+                  "최근 7일 내부자 변동", "외인·기관 동반 순매수", "새 분류"]
+        data = {"sections": [{"title": title, "note": "기준일 미확인", "items": [{"name": "지수", "text": "표본"}]} for title in titles]}
+        result = self.source("briefing", data)
+        self.assertEqual([s["title"] for s in result["sections"]], [titles[i] for i in (0, 1, 3)])
+        self.assertEqual(result["selection"]["sections_in_source"], 7)
+        self.assertEqual(result["selection"]["sections_selected"], 3)
+        self.assertEqual(result["items_in_feed"], 7)
+        self.assertEqual(result["items_displayed"], 3)
+        self.assertEqual(result["items_omitted"], 4)
+        self.assertTrue(all(s["note"] == "기준일 미확인" for s in result["sections"]))
+
+    def test_market_context_excludes_stock_movers_and_retains_original_denominator(self):
+        data = briefing()
+        market = data["sections"][0]
+        market["items"] += [{"ticker": "005930", "name": "지수", "text": "거래대금 1위"},
+                            {"ticker": "000660", "name": "종목", "text": "+9% · 같은 날 공시"},
+                            {"name": "새 순위", "text": "unknown item"}]
+        result = self.source("briefing", data)
+        group = result["sections"][0]
+        self.assertEqual(group["items"], market["items"][:1])
+        self.assertEqual(group["items_in_feed"], 4)
+        self.assertEqual(group["items_omitted"], 3)
+        self.assertEqual(group["recap"], market["recap"])
+        self.assertEqual(result["items_in_feed"], 16)
+        self.assertEqual(result["items_omitted"], 15)
 
     def test_empty_feed_distinct_from_malformed(self):
         self.assertEqual(self.source("news", news(0))["items_in_feed"], 0)

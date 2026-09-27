@@ -23,6 +23,10 @@ VERSIONS = ("2025-06-18", "2025-03-26")
 INSTRUCTIONS = (
     "알파네스트 공개 자료를 활용하는 콘텐츠 근거 도구입니다. 출처·기준기간·신선도 제약을 먼저 확인하세요. "
     "기업 자료는 get_company_content_evidence, 뉴스·브리핑은 get_public_content로 조회하세요. "
+    "콘텐츠 범위는 공시 읽기·기업 사업 소개·실적과 현금흐름 교육·시장 맥락입니다. "
+    "전체 리포트 대신 선택된 근거만 제공하며 selection의 제외 항목은 자료 부재를 뜻하지 않습니다. "
+    "소재 요청에는 관련성이 높은 후보 최대 3개와 각각의 교육 포인트·핵심 근거·기준일·원문 링크를 먼저 제시하세요. "
+    "순위·목표주가·매수 타이밍이나 수익 보장형 콘텐츠로 바꾸지 마세요. "
     "사이트와 같은 공개 자료를 사용하지만 조회 성공이나 파일 생성일이 자료의 최신성을 보장하지 않습니다. "
     "누락 사유·원문 연결·기간·단위·계산 기준을 유지하세요. 뉴스 제목을 기사 본문 확인으로 해석하지 마세요. "
     "검색은 제목 기반이며 개별 조회의 original_document에 원문 발췌·표·정정 이력을 제공합니다. "
@@ -37,14 +41,14 @@ INSTRUCTIONS = (
 TOOLS = [
     {
         "name": "get_company_content_evidence",
-        "description": "알파네스트 기업 분석 자료와 동일한 공개 근거를 조회합니다. 사업 설명·재무 기간·공시·뉴스·자료별 기준일·누락 사유를 보존합니다. 실시간 시세나 매매 추천이 아닙니다.",
+        "description": "기업 소개·실적 읽기·이익과 현금의 차이·최근 공시 콘텐츠에 필요한 공개 근거만 선별합니다. 원문·기간·단위·누락 사유는 유지하고 밸류에이션·매매용 부록은 제외합니다.",
         "inputSchema": {"type": "object", "additionalProperties": False,
                         "properties": {"ticker": {"type": "string", "pattern": "^(?:[0-9]{6}|[A-Z][A-Z0-9.\\-]{0,9})$"}},
                         "required": ["ticker"]},
     },
     {
         "name": "get_public_content",
-        "description": "알파네스트 공개 뉴스 제목·링크 또는 데일리 브리핑을 조회합니다. 생성일과 사건·거래 기준일을 구분하며 뉴스 원문 전체나 속보 완전성을 보장하지 않습니다.",
+        "description": "공개 뉴스 제목·링크 또는 콘텐츠용 시장 요약·국내외 공시 브리핑을 조회합니다. 예상 일정·내부자·수급 순위는 브리핑에서 제외합니다. 생성일과 사건 기준일을 구분하며 원문 전체나 속보 완전성은 보장하지 않습니다.",
         "inputSchema": {"type": "object", "additionalProperties": False,
                         "properties": {"source": {"type": "string", "enum": ["news", "briefing"]}},
                         "required": ["source"]},
@@ -169,7 +173,7 @@ def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=lo
         requested = params.get("protocolVersion")
         result = {"protocolVersion": requested if requested in VERSIONS else VERSIONS[0],
                   "capabilities": {"tools": {"listChanged": False}},
-                  "serverInfo": {"name": "alphanest-content", "version": "0.3.0"},
+                  "serverInfo": {"name": "alphanest-content", "version": "0.3.1"},
                   "instructions": INSTRUCTIONS}
     elif operation == "ping":
         result = {}

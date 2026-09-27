@@ -37,10 +37,15 @@ _CACHE = OrderedDict()
 _LOCK = Lock()
 _DOSSIER_KEYS = frozenset((
     "version", "name", "ticker", "market", "business", "report_label", "generated",
-    "kv", "summary", "business_profile", "translation_coverage", "annual_basis",
-    "comparison", "reader", "reading", "annual_core", "recent_events", "news",
-    "issues", "gaps", "sections", "coverage", "disclaimer", "source_line",
+    "summary", "business_profile", "translation_coverage", "annual_basis",
+    "comparison", "reader", "annual_core", "recent_events", "news",
+    "gaps", "sections", "coverage", "disclaimer", "source_line",
 ))
+# Editorial scope, not an investment ranking. Keep complete evidence tables and
+# their caveats; do not expose the full report's trading/valuation appendices.
+_CONTENT_SECTIONS = frozenset(("B1", "R0", "R1", "Q2", "CF1", "D1"))
+_BRIEFING_TITLES = frozenset(("직전 거래일 시장", "밤사이 미국 공시", "최근 주요 공시"))
+_MARKET_ITEMS = frozenset(("지수", "흐름", "내린 쪽", "올린 쪽"))
 _PRIVATE_KEYS = frozenset((
     "password", "secret", "api_key", "apikey", "access_token", "refresh_token",
     "authorization", "cookie", "cookies", "service_role_key", "private_data",
@@ -212,8 +217,26 @@ def _company(raw, ticker):
     if any(not isinstance(section, dict) or not isinstance(section.get("rows"), list)
            or not isinstance(section.get("note"), str) for section in dossier["sections"]):
         raise PublicSourceError("invalid_dossier_shape")
+    sections = dossier["sections"]
+    dossier["sections"] = [s for s in sections if s.get("id") in _CONTENT_SECTIONS]
+    dossier["reader"] = {k: v for k, v in dossier["reader"].items() if k != "visuals"}
+    # R5's explanatory table is not included, so do not return its decomposition
+    # separately without the accounting-identity vs causation qualification.
+    dossier["comparison"] = {k: v for k, v in dossier["comparison"].items() if k != "bridge"}
+    explanation = data["reading"].get("company")
+    if explanation is not None:
+        if not isinstance(explanation, dict):
+            raise PublicSourceError("invalid_dossier_shape")
+        _check_tree(explanation)
+        dossier["company_explanation"] = explanation
     return {"ticker": ticker, "dossier": dossier,
-            "scope": "Exact public prompt export dossier; upstream selections, omissions and gates retained."}
+            "selection": {"profile": "editorial-v1", "sections_in_source": len(sections),
+                          "sections_selected": len(dossier["sections"]),
+                          "sections_omitted": len(sections) - len(dossier["sections"]),
+                          "omitted_section_ids": [s.get("id") for s in sections if s.get("id") not in _CONTENT_SECTIONS],
+                          "omitted_fields": ["kv", "issues", "reading", "reader.visuals", "comparison.bridge"],
+                          "coverage_scope": "coverage and gaps describe the upstream report, not only selected sections"},
+            "scope": "Selected business, earnings, cash-flow and disclosure evidence. Source tables, periods, caveats and upstream coverage retained; valuation/trading appendices omitted."}
 
 
 def _counts(total, shown):
@@ -225,7 +248,7 @@ def _public(raw, kind):
     if not isinstance(data, dict):
         raise PublicSourceError("invalid_source_shape")
     meta = _project(data, _META_FIELDS[kind])
-    groups, total, shown = [], 0, 0
+    groups, total, shown, omitted_titles = [], 0, 0, []
     if kind == "news":
         entries = [(key, data.get(key)) for key in ("headlines", "us_headlines", "bloomberg_google_headlines")]
     else:
@@ -236,16 +259,25 @@ def _public(raw, kind):
     for group, rows in entries:
         if not isinstance(rows, list) or len(rows) > 5000:
             raise PublicSourceError("invalid_source_shape")
+        total += len(rows)
         if kind == "news":
             projected = {"category": group}
         else:
             projected = _project(group, _SECTION_FIELDS)
             if not isinstance(projected.get("title"), str):
                 raise PublicSourceError("invalid_source_shape")
+            if projected["title"] not in _BRIEFING_TITLES:
+                omitted_titles.append(projected["title"])
+                continue
             if "recap" in group:
                 projected["recap"] = _project(group["recap"], _RECAP_FIELDS)
+        eligible = rows
+        if kind == "briefing" and projected["title"] == "직전 거래일 시장":
+            if any(not isinstance(row, dict) for row in rows):
+                raise PublicSourceError("invalid_source_shape")
+            eligible = [row for row in rows if row.get("name") in _MARKET_ITEMS and not row.get("ticker")]
         selected = []
-        for row in rows[:ITEM_LIMIT]:
+        for row in eligible[:ITEM_LIMIT]:
             item = _project(row, _NEWS_FIELDS if kind == "news" else _ITEM_FIELDS)
             if kind == "news" and (not isinstance(item.get("title"), str) or not item["title"]):
                 raise PublicSourceError("invalid_source_shape")
@@ -254,12 +286,16 @@ def _public(raw, kind):
             selected.append(item)
         projected.update(items=selected, **_counts(len(rows), len(selected)))
         groups.append(projected)
-        total += len(rows)
         shown += len(selected)
-    return {"metadata": meta, "categories" if kind == "news" else "sections": groups,
+    result = {"metadata": meta, "categories" if kind == "news" else "sections": groups,
             "limit_per_group": ITEM_LIMIT, **_counts(total, shown),
             "scope": "Headline metadata only; article bodies not read." if kind == "news" else
-                     "Published briefing sections; section notes/units/as-of retained. Item lists are bounded samples."}
+                     "Selected index/breadth/sector recap and KR/US disclosures; source notes/units/as-of retained. Individual stock movers, estimated schedules, insider and flow rankings omitted. Item lists are bounded samples."}
+    if kind == "briefing":
+        result["selection"] = {"profile": "editorial-v1", "sections_in_source": len(entries),
+                               "sections_selected": len(groups), "sections_omitted": len(omitted_titles),
+                               "omitted_section_titles": omitted_titles}
+    return result
 
 
 def _load(key, url, parser, maximum):
