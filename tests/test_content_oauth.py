@@ -2,7 +2,7 @@
 
 These tests check validation and the RPC contract. They do not establish SQL
 atomicity, code replay protection, persistent quotas, or deployed revocation.
-No real credentials, DB, ChatGPT connection, or model API is used.
+No real credentials, DB, ChatGPT/Perplexity connection, or model API is used.
 """
 import base64
 import hashlib
@@ -28,6 +28,15 @@ CHALLENGE = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
 INVITE = "aninvite_" + "I" * 43
 CODE = "ancode_" + "C" * 43
 TOKEN = "ancontent_" + "T" * 43
+REFRESH = "anrefresh_" + "R" * 43
+CHATGPT = "alphanest-content-chatgpt"
+PERPLEXITY = "alphanest-content-perplexity"
+CHATGPT_REDIRECT = "https://chatgpt.com/connector_platform_oauth_redirect"
+PERPLEXITY_REDIRECT = "https://www.perplexity.ai/rest/connections/oauth_callback"
+CLIENT_CASES = [(CHATGPT, CHATGPT_REDIRECT), (PERPLEXITY, PERPLEXITY_REDIRECT)]
+CLIENT_ORIGINS = [(CHATGPT, None), (CHATGPT, "https://chatgpt.com"),
+                  (CHATGPT, "https://chat.openai.com"), (PERPLEXITY, None),
+                  (PERPLEXITY, "https://www.perplexity.ai")]
 REAL_RPC = m.rpc
 
 
@@ -61,6 +70,11 @@ def token_form(**changes):
     return {"grant_type": "authorization_code", "code": CODE, "client_id": m.CLIENT_ID,
             "redirect_uri": m.REDIRECT, "resource": RESOURCE, "code_verifier": VERIFIER,
             **changes}
+
+
+def refresh_form(**changes):
+    return {"grant_type": "refresh_token", "refresh_token": REFRESH,
+            "client_id": CHATGPT, "resource": RESOURCE, **changes}
 
 
 def post(op, data, headers=None):
@@ -109,7 +123,7 @@ def test_metadata(kind, path, local_only):
         assert body["authorization_endpoint"] == ISSUER + "?op=authorize"
         assert body["token_endpoint"] == ISSUER + "?op=token"
         assert body["response_types_supported"] == ["code"]
-        assert body["grant_types_supported"] == ["authorization_code"]
+        assert body["grant_types_supported"] == ["authorization_code", "refresh_token"]
         assert body["token_endpoint_auth_methods_supported"] == ["none"]
         assert body["code_challenge_methods_supported"] == ["S256"]
         assert body["authorization_response_iss_parameter_supported"] is True
@@ -171,10 +185,12 @@ def test_invalid_authorization_never_redirects_or_calls_rpc(local_only, key, val
 
 @pytest.mark.parametrize("locale_fields", [{}, {"ui_locales": "ko-KR"}])
 @pytest.mark.parametrize("missing", list(authorization()))
-def test_missing_authorization_fields(missing, locale_fields):
-    params = authorization(**locale_fields)
+@pytest.mark.parametrize("client_id,redirect_uri", CLIENT_CASES)
+def test_missing_authorization_fields(local_only, missing, locale_fields, client_id, redirect_uri):
+    params = authorization(client_id=client_id, redirect_uri=redirect_uri, **locale_fields)
     del params[missing]
     assert_error(400, "invalid_authorization_request", m.validated_authorization, params, m.config())
+    local_only.assert_not_called()
 
 
 @pytest.mark.parametrize("raw", ["state=a&state=b", "ui_locales=ko-KR&ui_locales=en-US",
@@ -262,8 +278,9 @@ def test_consent_requires_configured_signing_secret(monkeypatch, key):
 
 @pytest.mark.parametrize("locale_fields", [{}, {"ui_locales": "ko-KR"}])
 @pytest.mark.parametrize("decision", ["allow", "deny"])
-def test_allow_deny_redirect_preserves_issuer_state_and_clears_cookie(clock, local_only, decision, locale_fields):
-    signed, cookie, _ = consent(authorization(**locale_fields))
+@pytest.mark.parametrize("client_id,redirect_uri", CLIENT_CASES)
+def test_allow_deny_redirect_preserves_issuer_state_and_clears_cookie(clock, local_only, decision, locale_fields, client_id, redirect_uri):
+    signed, cookie, _ = consent(authorization(client_id=client_id, redirect_uri=redirect_uri, **locale_fields))
     local_only.side_effect = None
     local_only.return_value = {"status": "allowed"}
     status, body, headers = post("authorize",
@@ -271,7 +288,7 @@ def test_allow_deny_redirect_preserves_issuer_state_and_clears_cookie(clock, loc
         {"Origin": ORIGIN, "Cookie": cookie})
     target = urlsplit(headers["Location"])
     assert status == 303 and body == {}
-    assert target._replace(query="").geturl() == m.REDIRECT
+    assert target._replace(query="").geturl() == redirect_uri
     query = parse_qs(target.query)
     assert query["iss"] == [ISSUER] and query["state"] == [authorization()["state"]]
     assert "Max-Age=0" in headers["Set-Cookie"]
@@ -284,8 +301,8 @@ def test_allow_deny_redirect_preserves_issuer_state_and_clears_cookie(clock, loc
         assert set(query) == {"iss", "state", "code"}
         assert re.fullmatch(r"ancode_[A-Za-z0-9_-]{43}", code)
         local_only.assert_called_once_with("content_mcp_issue_code", {
-            "p_invite_hash": sha(INVITE), "p_code_hash": sha(code), "p_client_id": m.CLIENT_ID,
-            "p_redirect_uri": m.REDIRECT, "p_resource": RESOURCE, "p_scope": "content:read",
+            "p_invite_hash": sha(INVITE), "p_code_hash": sha(code), "p_client_id": client_id,
+            "p_redirect_uri": redirect_uri, "p_resource": RESOURCE, "p_scope": "content:read",
             "p_code_challenge": CHALLENGE})
         assert INVITE not in repr(local_only.call_args) and code not in repr(local_only.call_args)
 
@@ -320,23 +337,28 @@ def test_invalid_consent_fields(clock, local_only, changes, status, code):
 
 
 @pytest.mark.parametrize("explicit_scope", [False, True])
-@pytest.mark.parametrize("origin", [None, "https://chatgpt.com", "https://chat.openai.com"])
-def test_exchange_binds_hashes_resource_scope_and_pkce(local_only, explicit_scope, origin):
+@pytest.mark.parametrize("client_id,origin", CLIENT_ORIGINS)
+def test_exchange_binds_hashes_resource_scope_and_pkce(local_only, explicit_scope, client_id, origin):
     local_only.side_effect = None
-    local_only.return_value = {"status": "allowed", "expires_in": 3600}
-    form = token_form(**({"scope": "content:read"} if explicit_scope else {}))
+    local_only.return_value = {"status": "allowed", "expires_in": 3600, "refresh_expires_in": 2592000}
+    redirect_uri = dict(CLIENT_CASES)[client_id]
+    form = token_form(client_id=client_id, redirect_uri=redirect_uri,
+                      **({"scope": "content:read"} if explicit_scope else {}))
     status, body, _ = post("token", form, {"Origin": origin} if origin else {})
     assert status == 200
-    assert set(body) == {"access_token", "token_type", "expires_in", "scope"}
+    assert set(body) == {"access_token", "token_type", "expires_in", "scope", "refresh_token", "refresh_expires_in"}
     assert body["token_type"] == "Bearer" and body["scope"] == "content:read"
     assert body["expires_in"] == 3600
     token = body["access_token"]
+    refresh = body["refresh_token"]
     assert re.fullmatch(r"ancontent_[A-Za-z0-9_-]{43}", token)
-    local_only.assert_called_once_with("content_mcp_exchange_code", {
+    assert re.fullmatch(r"anrefresh_[A-Za-z0-9_-]{43}", refresh)
+    assert body["refresh_expires_in"] == 2592000
+    local_only.assert_called_once_with("content_mcp_exchange_code_refresh", {
         "p_code_hash": sha(CODE), "p_token_hash": sha(token), "p_scope": "content:read",
-        "p_code_challenge": CHALLENGE, "p_client_id": m.CLIENT_ID,
-        "p_redirect_uri": m.REDIRECT, "p_resource": RESOURCE})
-    assert all(secret not in repr(local_only.call_args) for secret in (CODE, token, VERIFIER))
+        "p_code_challenge": CHALLENGE, "p_client_id": client_id,
+        "p_redirect_uri": redirect_uri, "p_resource": RESOURCE, "p_refresh_hash": sha(refresh)})
+    assert all(secret not in repr(local_only.call_args) for secret in (CODE, token, refresh, VERIFIER))
 
 
 @pytest.mark.parametrize("key,value", [
@@ -352,8 +374,9 @@ def test_invalid_exchange_fields_do_not_reach_rpc(local_only, key, value):
 
 
 @pytest.mark.parametrize("missing", list(token_form()))
-def test_missing_exchange_fields(local_only, missing):
-    form = token_form()
+@pytest.mark.parametrize("client_id,redirect_uri", CLIENT_CASES)
+def test_missing_exchange_fields(local_only, missing, client_id, redirect_uri):
+    form = token_form(client_id=client_id, redirect_uri=redirect_uri)
     del form[missing]
     assert_error(400, "invalid_grant", post, "token", form)
     local_only.assert_not_called()
@@ -367,8 +390,8 @@ def test_exchange_rejects_auth_header_and_untrusted_origin(local_only, headers):
     local_only.assert_not_called()
 
 
-@pytest.mark.parametrize("reply", [{"status": "denied"}, {"status": "limited"}, {},
-    {"status": "allowed"}, *[{"status": "allowed", "expires_in": value}
+@pytest.mark.parametrize("reply", [{"status": "denied"}, {},
+    {"status": "allowed"}, *[{"status": "allowed", "expires_in": value, "refresh_expires_in": 2592000}
                             for value in (None, True, False, "3600", 1.5, 0, -1, 3601)]])
 def test_exchange_denial_or_invalid_expiry_never_returns_token(local_only, reply):
     local_only.side_effect = None
@@ -387,7 +410,7 @@ def test_wrong_but_well_formed_verifier_is_bound_to_rpc_denial(local_only):
 
 @pytest.mark.parametrize("auth", ["", "Bearer website-login-token", "bearer " + TOKEN,
     "Basic abc", "Bearer ancontent_" + "T" * 42, "Bearer ancontent_" + "T" * 44,
-    "Bearer " + TOKEN + " ", "Bearer " + TOKEN + "\n"])
+    "Bearer " + TOKEN + " ", "Bearer " + TOKEN + "\n", "Bearer " + REFRESH])
 def test_authenticate_rejects_invalid_tokens_before_rpc(local_only, auth):
     assert_error(401, "unauthorized", m.authenticate, {"authorization": auth})
     local_only.assert_not_called()
@@ -429,13 +452,15 @@ def test_malformed_rpc_reply_is_unavailable_not_authenticated(monkeypatch, reply
     assert_error(503, "access_check_unavailable", m.authenticate, {"authorization": "Bearer " + TOKEN})
 
 
-@pytest.mark.parametrize("operation", ["authenticate", "token", "authorize"])
+@pytest.mark.parametrize("operation", ["authenticate", "token", "refresh", "authorize"])
 def test_rpc_unavailable_propagates_without_success(clock, local_only, operation):
     local_only.side_effect = m.ServiceError(503, "upstream_unavailable")
     if operation == "authenticate":
         assert_error(503, "upstream_unavailable", m.authenticate, {"authorization": "Bearer " + TOKEN})
     elif operation == "token":
         assert_error(503, "upstream_unavailable", post, "token", token_form())
+    elif operation == "refresh":
+        assert_error(503, "upstream_unavailable", post, "token", refresh_form())
     else:
         signed, cookie, _ = consent()
         assert_error(503, "upstream_unavailable", post, "authorize",
@@ -454,7 +479,8 @@ def test_rpc_configuration_rejected_before_network(monkeypatch, key, value):
 
 
 @pytest.mark.parametrize("stage,expected_status", [("consent", 200), ("deny", 303)])
-def test_adapter_consent_headers_allow_exact_callback(clock, local_only, stage, expected_status):
+@pytest.mark.parametrize("client_id,redirect_uri", CLIENT_CASES)
+def test_adapter_consent_headers_allow_exact_callback(clock, local_only, stage, expected_status, client_id, redirect_uri):
     """Exercise real adapter headers locally; not a browser CSP/navigation test."""
     import importlib.util
     from email.message import Message
@@ -467,10 +493,11 @@ def test_adapter_consent_headers_allow_exact_callback(clock, local_only, stage, 
     handler = object.__new__(adapter.handler)
     handler.headers = Message()
     handler.command = "GET"
-    handler.path = "/api/content_oauth?" + urlencode({"op": "authorize", **authorization()})
+    params = authorization(client_id=client_id, redirect_uri=redirect_uri)
+    handler.path = "/api/content_oauth?" + urlencode({"op": "authorize", **params})
     body = b""
     if stage == "deny":
-        signed, cookie, _ = consent()
+        signed, cookie, _ = consent(params)
         handler.command = "POST"
         handler.path = "/api/content_oauth?op=authorize"
         body = urlencode({"consent": signed, "invite": "", "decision": "deny"}).encode()
@@ -489,12 +516,205 @@ def test_adapter_consent_headers_allow_exact_callback(clock, local_only, stage, 
     policies = [call.args[1] for call in sent if call.args[0] == "Content-Security-Policy"]
     assert len(policies) == 1
     directives = [part.strip().split() for part in policies[0].split(";") if part.strip()]
-    assert [parts[1:] for parts in directives if parts[0] == "form-action"] == [
-        ["'self'", "https://chatgpt.com/connector_platform_oauth_redirect"]]
+    actions = [parts[1:] for parts in directives if parts[0] == "form-action"]
+    assert len(actions) == 1 and len(actions[0]) == 3
+    assert set(actions[0]) == {"'self'", CHATGPT_REDIRECT, PERPLEXITY_REDIRECT}
     handler.send_header.assert_any_call("Cache-Control", "no-store")
     if stage == "deny":
         location = next(call.args[1] for call in sent if call.args[0] == "Location")
         target = urlsplit(location)
-        assert target._replace(query="").geturl() == "https://chatgpt.com/connector_platform_oauth_redirect"
+        assert target._replace(query="").geturl() == redirect_uri
         assert parse_qs(target.query)["error"] == ["access_denied"]
+    local_only.assert_not_called()
+
+
+def test_fixed_client_registry_keeps_chatgpt_aliases():
+    assert m.CLIENT_ID == CHATGPT and m.REDIRECT == CHATGPT_REDIRECT
+    assert set(m.CLIENTS) == {CHATGPT, PERPLEXITY}
+    for client_id, callback in CLIENT_CASES:
+        client = m.CLIENTS[client_id]
+        assert set(client) == {"name", "redirect_uri", "origins"}
+        assert client["redirect_uri"] == callback
+        assert client["name"] == ("ChatGPT" if client_id == CHATGPT else "Perplexity")
+        assert set(client["origins"]) == ({"https://chatgpt.com", "https://chat.openai.com"}
+                                          if client_id == CHATGPT else {"https://www.perplexity.ai"})
+
+
+@pytest.mark.parametrize("client_id,redirect_uri", CLIENT_CASES)
+def test_consent_names_actual_client_and_discloses_invite_capped_lifetime(clock, local_only, client_id, redirect_uri):
+    params = authorization(client_id=client_id, redirect_uri=redirect_uri, ui_locales="ko-KR")
+    status, page, _ = m.process("GET", "/api/content_oauth?" + urlencode({"op": "authorize", **params}), {}, b"")
+    assert status == 200
+    assert ("ChatGPT" if client_id == CHATGPT else "Perplexity") in page
+    assert ("Perplexity" if client_id == CHATGPT else "ChatGPT") not in page
+    assert re.search(r"최대\s*30\s*일", page)
+    # Check the disclosure rather than deriving its wording from implementation.
+    paragraphs = re.findall(r"<p\b[^>]*>(.*?)</p>", page, re.S)
+    assert any("초대" in p and "만료" in p for p in paragraphs)
+    assert "만료 시 다시 연결합니다" not in page  # old one-hour-only consent promise
+    signed, cookie, _ = consent(params)
+    assert m.unseal(signed, cookie) == authorization(client_id=client_id, redirect_uri=redirect_uri)
+    local_only.assert_not_called()
+
+
+@pytest.mark.parametrize("client_id,redirect_uri", [
+    (CHATGPT, PERPLEXITY_REDIRECT), (PERPLEXITY, CHATGPT_REDIRECT),
+    (PERPLEXITY, PERPLEXITY_REDIRECT + "/"),
+    (PERPLEXITY, PERPLEXITY_REDIRECT + "?next=evil"),
+    (PERPLEXITY, PERPLEXITY_REDIRECT + "#fragment"),
+    (PERPLEXITY, "https://perplexity.ai/rest/connections/oauth_callback"),
+    (PERPLEXITY, "https://www.perplexity.ai.evil.example/rest/connections/oauth_callback"),
+])
+@pytest.mark.parametrize("locale_fields", [{}, {"ui_locales": "ko-KR"}])
+def test_registry_callback_binding_rejects_cross_client_and_variants(local_only, client_id, redirect_uri, locale_fields):
+    params = authorization(client_id=client_id, redirect_uri=redirect_uri, **locale_fields)
+    assert_error(400, "invalid_authorization_request", m.process, "GET",
+                 "/api/content_oauth?" + urlencode({"op": "authorize", **params}), {}, b"")
+    assert_error(400, "invalid_grant", post, "token", token_form(client_id=client_id, redirect_uri=redirect_uri))
+    local_only.assert_not_called()
+
+
+@pytest.mark.parametrize("explicit_scope", [False, True])
+@pytest.mark.parametrize("client_id,origin", CLIENT_ORIGINS)
+def test_refresh_rotates_only_hashed_tokens_with_exact_rpc_contract(local_only, explicit_scope, client_id, origin):
+    local_only.side_effect = None
+    # Reduced lifetimes simulate an invitation expiring before the maximum.
+    local_only.return_value = {"status": "allowed", "expires_in": 91, "refresh_expires_in": 120}
+    form = refresh_form(client_id=client_id, **({"scope": "content:read"} if explicit_scope else {}))
+    status, body, headers = post("token", form, {"Origin": origin} if origin else {})
+    assert status == 200 and headers == {}
+    assert set(body) == {"access_token", "refresh_token", "token_type", "scope", "expires_in", "refresh_expires_in"}
+    token, refresh = body["access_token"], body["refresh_token"]
+    assert re.fullmatch(r"ancontent_[A-Za-z0-9_-]{43}", token)
+    assert re.fullmatch(r"anrefresh_[A-Za-z0-9_-]{43}", refresh)
+    assert refresh != REFRESH
+    assert body["token_type"] == "Bearer" and body["scope"] == "content:read"
+    assert body["expires_in"] == 91 and body["refresh_expires_in"] == 120
+    local_only.assert_called_once_with("content_mcp_rotate_refresh", {
+        "p_refresh_hash": sha(REFRESH), "p_token_hash": sha(token), "p_next_refresh_hash": sha(refresh),
+        "p_client_id": client_id, "p_resource": RESOURCE, "p_scope": "content:read"})
+    assert all(secret not in repr(local_only.call_args) for secret in (REFRESH, token, refresh))
+
+
+@pytest.mark.parametrize("client_id,origin", [
+    (CHATGPT, "https://www.perplexity.ai"), (PERPLEXITY, "https://chatgpt.com"),
+    (PERPLEXITY, "https://chat.openai.com"), (PERPLEXITY, "https://perplexity.ai"),
+    (PERPLEXITY, "https://www.perplexity.ai/"), (PERPLEXITY, "https://www.perplexity.ai.evil.example"),
+    (PERPLEXITY, "http://www.perplexity.ai"), (PERPLEXITY, "null"), (PERPLEXITY, ""),
+])
+@pytest.mark.parametrize("grant", ["authorization_code", "refresh_token"])
+def test_token_origin_is_client_specific_before_rpc(local_only, client_id, origin, grant):
+    form = (refresh_form(client_id=client_id) if grant == "refresh_token" else
+            token_form(client_id=client_id, redirect_uri=dict(CLIENT_CASES)[client_id]))
+    assert_error(400, "invalid_grant", post, "token", form, {"Origin": origin})
+    local_only.assert_not_called()
+
+
+@pytest.mark.parametrize("key,value", [
+    ("grant_type", "authorization_code"), ("grant_type", "client_credentials"),
+    ("client_id", "unknown"), ("resource", RESOURCE + "/"),
+    ("resource", "https://evil.example/api/content_mcp"),
+    ("scope", ""), ("scope", "content:read content:write"),
+    ("refresh_token", TOKEN), ("refresh_token", CODE), ("refresh_token", "website-login-token"),
+    ("refresh_token", "anrefresh_" + "A" * 42), ("refresh_token", "anrefresh_" + "A" * 44),
+    ("refresh_token", "anrefresh_" + "+" * 43), ("refresh_token", REFRESH + "\n"),
+    ("client_secret", "not-accepted"), ("redirect_uri", CHATGPT_REDIRECT),
+    ("code", CODE), ("code_verifier", VERIFIER), ("ui_locales", "ko-KR"),
+])
+def test_invalid_refresh_fields_do_not_reach_rpc(local_only, key, value):
+    assert_error(400, "invalid_grant", post, "token", refresh_form(**{key: value}))
+    local_only.assert_not_called()
+
+
+@pytest.mark.parametrize("missing", list(refresh_form()))
+@pytest.mark.parametrize("client_id", [CHATGPT, PERPLEXITY])
+def test_refresh_requires_all_binding_fields(local_only, missing, client_id):
+    form = refresh_form(client_id=client_id)
+    del form[missing]
+    assert_error(400, "invalid_grant", post, "token", form)
+    local_only.assert_not_called()
+
+
+@pytest.mark.parametrize("authorization", ["Basic abc", "Bearer " + TOKEN, "Bearer " + REFRESH])
+def test_refresh_rejects_header_auth(local_only, authorization):
+    assert_error(400, "invalid_grant", post, "token", refresh_form(), {"Authorization": authorization})
+    local_only.assert_not_called()
+
+
+@pytest.mark.parametrize("field", list(refresh_form()) + ["scope"])
+def test_refresh_duplicate_fields_rejected_before_rpc(local_only, field):
+    form = refresh_form(scope="content:read")
+    raw = urlencode(form) + "&" + urlencode({field: form[field]})
+    assert_error(400, "invalid_request", m.process, "POST", "/api/content_oauth?op=token",
+                 {"Content-Type": "application/x-www-form-urlencoded"}, raw.encode())
+    local_only.assert_not_called()
+
+
+@pytest.mark.parametrize("grant", ["authorization_code", "refresh_token"])
+@pytest.mark.parametrize("field", ["expires_in", "refresh_expires_in"])
+@pytest.mark.parametrize("invalid", [None, True, False, "3600", 1.5, 0, -1, "over-cap", "missing"])
+def test_both_grants_fail_closed_on_each_invalid_lifetime(local_only, grant, field, invalid):
+    reply = {"status": "allowed", "expires_in": 3600, "refresh_expires_in": 2592000}
+    if invalid == "missing":
+        del reply[field]
+    elif invalid == "over-cap":
+        reply[field] += 1
+    else:
+        reply[field] = invalid
+    local_only.side_effect = None
+    local_only.return_value = reply
+    assert_error(400, "invalid_grant", post, "token", refresh_form() if grant == "refresh_token" else token_form())
+    assert local_only.call_count == 1
+
+
+@pytest.mark.parametrize("reply", [{}, {"status": "denied"}, {"status": "revoked"},
+    {"status": "expired"}, {"status": "replayed"}, {"status": True}])
+def test_refresh_rpc_denial_never_returns_tokens(local_only, reply):
+    local_only.side_effect = None
+    local_only.return_value = {"expires_in": 3600, "refresh_expires_in": 2592000, **reply}
+    assert_error(400, "invalid_grant", post, "token", refresh_form())
+
+
+def test_refresh_decision_is_not_cached_or_replayed_locally(local_only):
+    # Mocked allowed -> denied sequence, NOT proof of database rotation atomicity.
+    local_only.side_effect = [{"status": "allowed", "expires_in": 3600, "refresh_expires_in": 2592000},
+                              {"status": "denied"}]
+    assert post("token", refresh_form())[0] == 200
+    assert_error(400, "invalid_grant", post, "token", refresh_form())
+    assert local_only.call_count == 2
+    assert all(call.args[0] == "content_mcp_rotate_refresh" for call in local_only.call_args_list)
+
+
+@pytest.mark.parametrize("grant", ["authorization_code", "refresh_token"])
+def test_token_grants_surface_rpc_quota_as_429_without_tokens(local_only, grant):
+    local_only.side_effect = None
+    local_only.return_value = {"status": "limited", "expires_in": 3600, "refresh_expires_in": 2592000}
+    assert_error(429, "request_limit_reached", post, "token",
+                 refresh_form() if grant == "refresh_token" else token_form())
+    assert local_only.call_count == 1
+
+
+@pytest.mark.parametrize("grant", ["authorization_code", "refresh_token"])
+@pytest.mark.parametrize("access_lifetime,refresh_lifetime,accepted", [
+    (1, 1, True), (3600, 3600, True), (3600, 2592000, True),
+    (120, 119, False), (3600, 3599, False),
+])
+def test_access_lifetime_cannot_outlast_refresh_or_invitation(local_only, grant, access_lifetime, refresh_lifetime, accepted):
+    local_only.side_effect = None
+    local_only.return_value = {"status": "allowed", "expires_in": access_lifetime,
+                              "refresh_expires_in": refresh_lifetime}
+    form = refresh_form() if grant == "refresh_token" else token_form()
+    if accepted:
+        status, body, _ = post("token", form)
+        assert status == 200
+        assert body["expires_in"] == access_lifetime
+        assert body["refresh_expires_in"] == refresh_lifetime
+    else:
+        assert_error(400, "invalid_grant", post, "token", form)
+
+
+@pytest.mark.parametrize("form", [{}, {"grant_type": "refresh_token"},
+                                 {"grant_type": "authorization_code"}, {"client_id": PERPLEXITY}])
+def test_empty_or_incomplete_grants_are_safe_errors_without_rpc(local_only, form):
+    assert_error(400, "invalid_grant", post, "token", form)
     local_only.assert_not_called()

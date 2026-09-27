@@ -3,7 +3,7 @@ from http.server import BaseHTTPRequestHandler
 import json
 
 from content_mcp import ServiceError
-from content_oauth import process
+from content_oauth import CONSENT_CSP, process
 
 
 class handler(BaseHTTPRequestHandler):
@@ -38,7 +38,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Referrer-Policy", "strict-origin")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://chatgpt.com/connector_platform_oauth_redirect; frame-ancestors 'none'; base-uri 'none'")
+        self.send_header("Content-Security-Policy", CONSENT_CSP)
         self.send_header("Content-Length", str(len(raw)))
         for key, value in extra.items():
             self.send_header(key, value)

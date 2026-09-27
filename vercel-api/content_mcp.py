@@ -139,7 +139,7 @@ def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=lo
     """Return (HTTP status, JSON object or None). Stateless Streamable HTTP subset."""
     headers = {k.lower(): v for k, v in headers.items()}
     origin = headers.get("origin")
-    if origin is not None and origin not in ("https://chatgpt.com", "https://chat.openai.com"):
+    if origin is not None and origin not in ("https://chatgpt.com", "https://chat.openai.com", "https://www.perplexity.ai"):
         raise ServiceError(403, "origin_not_allowed")
     authorize_fn(headers)
     if method != "POST":

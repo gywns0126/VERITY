@@ -1,7 +1,7 @@
 """Invite-only OAuth code + S256 PKCE for public content, not website login.
 
-No refresh tokens, dynamic clients, private user scopes or outbound redirects
-except the pre-registered ChatGPT callback. DB checks are never cached.
+Only registered public clients, S256 PKCE and rotating refresh tokens are supported.
+No dynamic clients or private user scopes. DB checks are never cached.
 """
 import base64
 import hashlib
@@ -20,6 +20,18 @@ from content_mcp import ServiceError, _json_request
 SCOPE = "content:read"
 CLIENT_ID = "alphanest-content-chatgpt"
 REDIRECT = "https://chatgpt.com/connector_platform_oauth_redirect"
+CLIENTS = {
+    CLIENT_ID: {"name": "ChatGPT", "redirect_uri": REDIRECT,
+                "origins": ("https://chatgpt.com", "https://chat.openai.com")},
+    "alphanest-content-perplexity": {
+        "name": "Perplexity",
+        "redirect_uri": "https://www.perplexity.ai/rest/connections/oauth_callback",
+        "origins": ("https://www.perplexity.ai",)},
+}
+# Construct exclusively from static registration, never from a request parameter.
+CONSENT_CSP = ("default-src 'none'; style-src 'unsafe-inline'; form-action 'self' "
+               + " ".join(client["redirect_uri"] for client in CLIENTS.values())
+               + "; frame-ancestors 'none'; base-uri 'none'")
 COOKIE = "__Host-ancontent-consent"
 
 
@@ -86,8 +98,9 @@ def fields(raw):
 def validated_authorization(params, cfg):
     required = {"client_id", "response_type", "redirect_uri", "resource", "scope",
                 "state", "code_challenge", "code_challenge_method"}
-    if (set(params) - {"ui_locales"} != required or params["client_id"] != CLIENT_ID
-            or params["redirect_uri"] != REDIRECT or params["response_type"] != "code"
+    client = CLIENTS.get(params.get("client_id"))
+    if (set(params) - {"ui_locales"} != required or client is None
+            or params["redirect_uri"] != client["redirect_uri"] or params["response_type"] != "code"
             or params["resource"] != cfg["resource"] or params["scope"] != SCOPE
             or params["code_challenge_method"] != "S256"
             or not re.fullmatch(r"[A-Za-z0-9_-]{43}", params["code_challenge"])
@@ -139,7 +152,7 @@ def metadata(kind, cfg):
                 "resource_name": "AlphaNest public content"}
     return {"issuer": cfg["issuer"], "authorization_endpoint": cfg["issuer"] + "?op=authorize",
             "token_endpoint": cfg["issuer"] + "?op=token", "response_types_supported": ["code"],
-            "grant_types_supported": ["authorization_code"], "scopes_supported": [SCOPE],
+            "grant_types_supported": ["authorization_code", "refresh_token"], "scopes_supported": [SCOPE],
             "token_endpoint_auth_methods_supported": ["none"],
             "code_challenge_methods_supported": ["S256"],
             "authorization_response_iss_parameter_supported": True}
@@ -169,15 +182,16 @@ def process(method, path, headers, body):
         page = '''<!doctype html><html lang="ko"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>알파네스트 콘텐츠 연결</title>
 <style>body{font:17px/1.7 system-ui;margin:40px auto;padding:24px;max-width:520px;color:#202530;background:#f7f8fa}main{background:white;padding:28px;border-radius:20px}input,button{box-sizing:border-box;font:inherit;padding:12px;margin-top:12px;width:100%%}button{cursor:pointer}small{color:#596474}</style>
-<main><h1>알파네스트 콘텐츠 연결</h1><p>ChatGPT에 공개 공시·교육용 자료 조회를 허용합니다.</p>
+<main><h1>알파네스트 콘텐츠 연결</h1><p>%s에 공개 공시·교육용 자료 조회를 허용합니다.</p>
 <p>개인 보유종목·계정 정보·관리자 권한은 포함하지 않습니다. 매매와 자동 게시도 할 수 없습니다.</p>
-<p><small>허용 권한: content:read · 연결 유효기간 최대 1시간 · 만료 시 다시 연결합니다.</small></p>
+<p><small>허용 권한: content:read · 접근 토큰은 최대 1시간, 자동 갱신 연결은 최대 30일입니다. 초대코드 만료·취소 시 더 일찍 종료됩니다.</small></p>
 <form method="post" action="/api/content_oauth?op=authorize">
 <input type="hidden" name="consent" value="%s">
 <label>전달받은 콘텐츠 전용 초대코드<input type="password" name="invite" maxlength="53" autocomplete="off" spellcheck="false"></label>
 <button name="decision" value="allow">공개 자료 조회 허용</button>
 <button name="decision" value="deny">취소</button></form>
-<p><small>사이트 비밀번호나 증권사·관리자 키를 입력하지 마세요.</small></p></main></html>''' % html.escape(signed, quote=True)
+<p><small>사이트 비밀번호나 증권사·관리자 키를 입력하지 마세요.</small></p></main></html>''' % (
+            html.escape(CLIENTS[params["client_id"]]["name"]), html.escape(signed, quote=True))
         return 200, page, {"Set-Cookie": COOKIE + "=" + nonce + "; Path=/; Max-Age=300; Secure; HttpOnly; SameSite=Lax"}
     if method != "POST" or op not in ("authorize", "token") or query:
         raise ServiceError(405, "method_not_allowed")
@@ -208,24 +222,44 @@ def process(method, path, headers, body):
             response["code"] = code
         else:
             raise ServiceError(400, "invalid_consent")
-        return 303, {}, {"Location": REDIRECT + "?" + urlencode(response),
+        return 303, {}, {"Location": params["redirect_uri"] + "?" + urlencode(response),
                          "Set-Cookie": COOKIE + "=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Lax"}
-    # Token exchange: no website login tokens and no client secret accepted.
-    required = {"grant_type", "code", "client_id", "redirect_uri", "resource", "code_verifier"}
-    if (set(data) - {"scope"} != required or data["grant_type"] != "authorization_code"
-            or data["client_id"] != CLIENT_ID or data["redirect_uri"] != REDIRECT
-            or data["resource"] != cfg["resource"] or data.get("scope", SCOPE) != SCOPE
-            or not re.fullmatch(r"ancode_[A-Za-z0-9_-]{43}", data["code"])
-            or not re.fullmatch(r"[A-Za-z0-9._~-]{43,128}", data["code_verifier"])
-            or headers.get("authorization")
-            or headers.get("origin", "https://chatgpt.com") not in ("https://chatgpt.com", "https://chat.openai.com")):
+    # Both grants bind to a registered public client and the one read-only resource.
+    client = CLIENTS.get(data.get("client_id"))
+    if (client is None or data.get("resource") != cfg["resource"]
+            or data.get("scope", SCOPE) != SCOPE or headers.get("authorization")
+            or ("origin" in headers and headers["origin"] not in client["origins"])):
         raise ServiceError(400, "invalid_grant")
     token = "ancontent_" + secrets.token_urlsafe(32)
-    result = rpc("content_mcp_exchange_code", {
-        "p_code_hash": digest(data["code"]), "p_token_hash": digest(token), "p_scope": SCOPE,
-        "p_code_challenge": challenge(data["code_verifier"]),
-        **{"p_" + k: data[k] for k in ("client_id", "redirect_uri", "resource")}})
-    expires = result.get("expires_in")
-    if result.get("status") != "allowed" or type(expires) is not int or not 0 < expires <= 3600:
+    refresh = "anrefresh_" + secrets.token_urlsafe(32)
+    if data.get("grant_type") == "authorization_code":
+        required = {"grant_type", "code", "client_id", "redirect_uri", "resource", "code_verifier"}
+        if (set(data) - {"scope"} != required or data["redirect_uri"] != client["redirect_uri"]
+                or not re.fullmatch(r"ancode_[A-Za-z0-9_-]{43}", data["code"])
+                or not re.fullmatch(r"[A-Za-z0-9._~-]{43,128}", data["code_verifier"])):
+            raise ServiceError(400, "invalid_grant")
+        result = rpc("content_mcp_exchange_code_refresh", {
+            "p_code_hash": digest(data["code"]), "p_token_hash": digest(token),
+            "p_refresh_hash": digest(refresh), "p_scope": SCOPE,
+            "p_code_challenge": challenge(data["code_verifier"]),
+            **{"p_" + k: data[k] for k in ("client_id", "redirect_uri", "resource")}})
+    elif data.get("grant_type") == "refresh_token":
+        required = {"grant_type", "refresh_token", "client_id", "resource"}
+        if (set(data) - {"scope"} != required
+                or not re.fullmatch(r"anrefresh_[A-Za-z0-9_-]{43}", data["refresh_token"])):
+            raise ServiceError(400, "invalid_grant")
+        result = rpc("content_mcp_rotate_refresh", {
+            "p_refresh_hash": digest(data["refresh_token"]), "p_token_hash": digest(token),
+            "p_next_refresh_hash": digest(refresh), "p_client_id": data["client_id"],
+            "p_resource": data["resource"], "p_scope": SCOPE})
+    else:
         raise ServiceError(400, "invalid_grant")
-    return 200, {"access_token": token, "token_type": "Bearer", "expires_in": expires, "scope": SCOPE}, {}
+    if result.get("status") == "limited":
+        raise ServiceError(429, "request_limit_reached")
+    expires = result.get("expires_in")
+    refresh_expires = result.get("refresh_expires_in")
+    if (result.get("status") != "allowed" or type(expires) is not int or not 0 < expires <= 3600
+            or type(refresh_expires) is not int or not expires <= refresh_expires <= 2592000):
+        raise ServiceError(400, "invalid_grant")
+    return 200, {"access_token": token, "token_type": "Bearer", "expires_in": expires, "scope": SCOPE,
+                 "refresh_token": refresh, "refresh_expires_in": refresh_expires}, {}
