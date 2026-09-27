@@ -272,7 +272,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 578822,
+   "size_bytes": 579948,
    "producers": [
     "api/notifications/telegram.py"
    ]
@@ -435,7 +435,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 4751785,
+   "size_bytes": 4753315,
    "producers": [
     "api/intelligence/ticker_facts.py",
     "api/builders/stock_report_public_builder.py",
@@ -516,7 +516,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 9832,
+   "size_bytes": 10112,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py",
@@ -555,7 +555,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 83615,
+   "size_bytes": 83684,
    "producers": [
     "api/builders/crypto_collect_builder.py"
    ]
@@ -566,7 +566,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 1212,
+   "size_bytes": 1204,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py",
@@ -579,7 +579,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 16828,
+   "size_bytes": 17576,
    "producers": [
     "api/builders/crypto_collect_builder.py"
    ]
@@ -590,7 +590,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 959,
+   "size_bytes": 960,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -602,7 +602,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 900,
+   "size_bytes": 902,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -614,7 +614,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 15445,
+   "size_bytes": 15441,
    "producers": [
     "api/builders/crypto_regime_synthesis.py"
    ]
@@ -625,7 +625,7 @@
    "publish": false,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 291140,
+   "size_bytes": 291236,
    "producers": [
     "api/collectors/crypto_regime_history.py"
    ]
@@ -636,7 +636,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 9453,
+   "size_bytes": 9551,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/collectors/crypto_regime_history.py",
@@ -674,7 +674,7 @@
    "publish": true,
    "sla": "crypto:P0",
    "contract": null,
-   "size_bytes": 45173,
+   "size_bytes": 45242,
    "producers": [
     "api/builders/crypto_regime_synthesis.py",
     "api/builders/crypto_collect_builder.py"
@@ -697,9 +697,10 @@
    "publish": true,
    "sla": "daily_briefing:P1",
    "contract": null,
-   "size_bytes": 7476,
+   "size_bytes": 7499,
    "producers": [
-    "api/builders/daily_briefing_builder.py"
+    "api/builders/daily_briefing_builder.py",
+    "vercel-api/content_public.py"
    ]
   },
   {
@@ -708,7 +709,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 150309,
+   "size_bytes": 153353,
    "producers": [
     "api/builders/daily_briefing_builder.py"
    ]
@@ -808,7 +809,7 @@
    "publish": false,
    "sla": "dart_fundamentals_kr:P1",
    "contract": null,
-   "size_bytes": 3118188,
+   "size_bytes": 3240331,
    "producers": [
     "api/analyzers/stock_filter.py",
     "api/intelligence/ticker_facts.py",
@@ -882,7 +883,7 @@
    "publish": true,
    "sla": "dart_quarterly_public:P2",
    "contract": null,
-   "size_bytes": 10011953,
+   "size_bytes": 10243938,
    "producers": [
     "api/intelligence/ticker_facts.py",
     "api/builders/us_quarterly_public_builder.py",
@@ -895,7 +896,7 @@
    "publish": false,
    "sla": "dart_quarterly_snapshots:P1",
    "contract": null,
-   "size_bytes": 52461591,
+   "size_bytes": 55138282,
    "producers": [
     "api/main.py",
     "api/utils/fscore_delta.py",
@@ -1028,7 +1029,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 13738,
+   "size_bytes": 13737,
    "producers": [
     "api/main.py",
     "api/execution/paper_track_v1.py",
@@ -1067,7 +1068,7 @@
    "publish": true,
    "sla": "freshness_board:P2",
    "contract": null,
-   "size_bytes": 18006,
+   "size_bytes": 18012,
    "producers": [
     "api/builders/data_health_builder.py",
     "api/builders/freshness_board_builder.py"
@@ -1182,7 +1183,7 @@
    "publish": false,
    "sla": "equity_research:P2",
    "contract": null,
-   "size_bytes": 268605,
+   "size_bytes": 282485,
    "producers": [
     "api/intelligence/macro_industry_align.py",
     "api/builders/industry_themes_pulse_builder.py"
@@ -1484,7 +1485,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 1301,
+   "size_bytes": 1299,
    "producers": [
     "scripts/local_lake_heartbeat.py",
     "scripts/cron_health_monitor.py",
@@ -1530,7 +1531,7 @@
    "publish": true,
    "sla": "macro_snapshot:P0",
    "contract": null,
-   "size_bytes": 277974,
+   "size_bytes": 277452,
    "producers": [
     "api/observability/data_pipeline_health.py",
     "api/builders/macro_collect_builder.py",
@@ -1566,7 +1567,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 68121,
+   "size_bytes": 68122,
    "producers": [
     "scripts/recovery/verify_universe_gap_backfill.py",
     "scripts/recovery/universe_gap_backfill.py",
@@ -1616,7 +1617,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 2349,
+   "size_bytes": 2344,
    "producers": [
     "scripts/cockpit_aggregate.py",
     "scripts/pre_registration_audit.py"
@@ -1628,7 +1629,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 1282908,
+   "size_bytes": 1287509,
    "producers": [
     "api/observability/data_health.py",
     "scripts/cron_health_monitor.py",
@@ -1641,7 +1642,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 1889,
+   "size_bytes": 2022,
    "producers": [
     "api/observability/data_health.py",
     "api/builders/data_health_builder.py",
@@ -1654,7 +1655,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 6636,
+   "size_bytes": 6664,
    "producers": [
     "api/observability/data_pipeline_health.py",
     "api/observability/data_health.py",
@@ -1715,7 +1716,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 45470,
+   "size_bytes": 22247,
    "producers": [
     "api/builders/nest_briefing_index_builder.py"
    ]
@@ -1751,7 +1752,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 542109,
+   "size_bytes": 542231,
    "producers": [
     "api/main.py",
     "api/collectors/news_translation.py"
@@ -1878,7 +1879,7 @@
    "publish": false,
    "sla": "penny_watchlist:P2",
    "contract": null,
-   "size_bytes": 1836,
+   "size_bytes": 1919,
    "producers": [
     "scripts/scout_penny.py"
    ]
@@ -1924,7 +1925,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 5023726,
+   "size_bytes": 4041627,
    "producers": [
     "api/main.py",
     "api/vams/engine.py",
@@ -1937,7 +1938,7 @@
    "publish": true,
    "sla": "portfolio:P2",
    "contract": null,
-   "size_bytes": 5441156,
+   "size_bytes": 4921585,
    "producers": [
     "api/main.py",
     "api/run_bond_etf.py",
@@ -1974,7 +1975,7 @@
    "publish": true,
    "sla": "price_pulse:P0",
    "contract": null,
-   "size_bytes": 3126,
+   "size_bytes": 2933,
    "producers": [
     "api/cron/price_pulse.py",
     "scripts/system_map.py",
@@ -1987,7 +1988,7 @@
    "publish": true,
    "sla": "public_disclosure_feed:P1",
    "contract": null,
-   "size_bytes": 580146,
+   "size_bytes": 582884,
    "producers": [
     "api/intelligence/ticker_facts.py",
     "api/observability/data_pipeline_health.py",
@@ -2013,7 +2014,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 4108882,
+   "size_bytes": 3278016,
    "producers": []
   },
   {
@@ -2022,7 +2023,7 @@
    "publish": true,
    "sla": "recommendations:P2",
    "contract": null,
-   "size_bytes": 3723797,
+   "size_bytes": 3726042,
    "producers": [
     "api/main.py",
     "api/arena/berserker_shadow.py",
@@ -2127,7 +2128,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 531063,
+   "size_bytes": 530364,
    "producers": [
     "api/builders/us_disclosure_forensics_builder.py",
     "api/builders/us_smallcap_corner_builder.py",
@@ -2140,7 +2141,7 @@
    "publish": true,
    "sla": "smallcap_corner_filters:P2",
    "contract": null,
-   "size_bytes": 470990,
+   "size_bytes": 468486,
    "producers": [
     "api/intelligence/ticker_facts.py",
     "api/builders/smallcap_corner_filters_builder.py",
@@ -2204,7 +2205,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 4177,
+   "size_bytes": 4350,
    "producers": [
     "api/main.py",
     "scripts/upload_operator_data_to_supabase.py",
@@ -2217,7 +2218,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 144,
+   "size_bytes": 95,
    "producers": [
     "api/notifications/telegram.py"
    ]
@@ -2228,7 +2229,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 999934,
+   "size_bytes": 1000892,
    "producers": [
     "api/notifications/telegram.py",
     "scripts/cockpit_aggregate.py"
@@ -2290,7 +2291,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 3793339,
+   "size_bytes": 3890849,
    "producers": [
     "api/builders/crypto_collect_builder.py",
     "api/collectors/upbit_orderbook_slippage.py"
@@ -2395,7 +2396,7 @@
    "publish": true,
    "sla": "us_disclosure_forensics:P2",
    "contract": null,
-   "size_bytes": 4483969,
+   "size_bytes": 4483966,
    "producers": [
     "api/intelligence/ticker_facts.py",
     "api/builders/us_disclosure_forensics_builder.py",
@@ -2443,7 +2444,7 @@
    "publish": true,
    "sla": "us_etf:P2",
    "contract": null,
-   "size_bytes": 1689620,
+   "size_bytes": 1689622,
    "producers": [
     "api/intelligence/ticker_facts.py",
     "api/builders/krx_mktcap_snapshot.py",
@@ -2456,7 +2457,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 5140052,
+   "size_bytes": 5140054,
    "producers": [
     "api/builders/us_etf_public_builder.py"
    ]
@@ -2517,7 +2518,7 @@
    "publish": true,
    "sla": "us_insider_trades:P1",
    "contract": null,
-   "size_bytes": 3597560,
+   "size_bytes": 3604069,
    "producers": [
     "api/intelligence/ticker_facts.py",
     "api/observability/data_pipeline_health.py",
@@ -2541,7 +2542,7 @@
    "publish": true,
    "sla": null,
    "contract": null,
-   "size_bytes": 142404,
+   "size_bytes": 140642,
    "producers": [
     "api/collectors/us_ipo_scout.py"
    ]
@@ -2652,7 +2653,7 @@
    "publish": true,
    "sla": "us_short_interest:P2",
    "contract": null,
-   "size_bytes": 959147,
+   "size_bytes": 958779,
    "producers": [
     "api/intelligence/ticker_facts.py",
     "api/builders/us_short_interest_public_builder.py",
@@ -2665,7 +2666,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 1035422,
+   "size_bytes": 1035447,
    "producers": [
     "api/builders/us_short_interest_public_builder.py"
    ]
@@ -2740,7 +2741,7 @@
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 181653,
+   "size_bytes": 181682,
    "producers": [
     "api/intelligence/ticker_facts.py",
     "api/builders/krx_mktcap_snapshot.py",
