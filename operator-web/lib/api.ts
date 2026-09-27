@@ -52,29 +52,69 @@ export async function fetchPublic<T = unknown>(file: string): Promise<FetchResul
 
 // ── 온디맨드 사실 번들 (오퍼레이터 전용) ────────────────────────────────────
 // 생성형 종합은 종료. 백엔드는 자체 사실·출처·기준일·결손 질문만 반환한다.
-export type AskSection = { label: string; source: string; as_of?: string; data: unknown }
+export type AskSection = {
+    label: string
+    source: string
+    as_of?: string
+    observed_at?: string
+    source_periods?: Record<string, unknown>
+    data: unknown
+}
+export type AskCoverage = {
+    total: number
+    applicable: number
+    checked: number
+    hit: number
+    unavailable: number
+    no_record: number
+    skipped: number
+    sources: Array<{
+        source: string
+        label: string
+        status: "hit" | "no_record" | "unavailable" | "skipped"
+        reason?: string | null
+        as_of?: string | null
+    }>
+}
+export type FetchDiagnostic = {
+    source: string
+    status: "received" | "cache_hit" | "unavailable"
+    reason?: string | null
+}
 export type AskResult = {
-    ticker?: string
+    status?: "unresolved" | "empty" | "partial" | "ready"
+    ticker?: string | null
     name?: string
     sections?: AskSection[]
     missing?: string[]
     collected_at?: string
+    coverage?: AskCoverage | null
+    fetch_diagnostics?: FetchDiagnostic[]
     facts_text?: string
     research_questions?: Array<{ key?: string; label?: string; query?: string; recency?: string }>
     contract?: { contract?: string; llm_calls?: number; final_reasoner?: string; legacy_chain_retired?: boolean }
     legacy_llm_retired?: boolean
 }
 
-export async function fetchAsk(ticker: string, question = ""): Promise<FetchResult<AskResult>> {
+export function askResultState(result: AskResult): "unresolved" | "empty" | "degraded" | "ready" {
+    if (!result.ticker || result.status === "unresolved") return "unresolved"
+    if (result.status === "empty") return "empty"
+    if (result.status === "ready") return "ready"
+    return "degraded"
+}
+
+export async function fetchAsk(ticker: string, question = "", signal?: AbortSignal): Promise<FetchResult<AskResult>> {
     const headers = authHeaders()
     if (!headers.Authorization) return { ok: false, status: 401, error: "auth" }
     const p = new URLSearchParams({ ticker })
     if (question) p.set("q", question)
     try {
-        const r = await fetch(`${API_BASE}/api/operator_ask?${p.toString()}`, { headers, cache: "no-store" })
+        const r = await fetch(`${API_BASE}/api/operator_ask?${p.toString()}`, { headers, cache: "no-store", signal })
         if (r.status === 401 || r.status === 403) return { ok: false, status: r.status, error: "auth" }
-        if (!r.ok) return { ok: false, status: r.status, error: "http" }
-        return { ok: true, data: (await r.json()) as AskResult }
+        const data = await r.json().catch(() => null)
+        if (!r.ok) return { ok: false, status: r.status, error: typeof data?.error === "string" ? data.error : "http" }
+        if (!data || !Array.isArray(data.sections)) return { ok: false, status: r.status, error: "invalid_response" }
+        return { ok: true, data: data as AskResult }
     } catch (e) {
         return { ok: false, status: 0, error: String(e) }
     }

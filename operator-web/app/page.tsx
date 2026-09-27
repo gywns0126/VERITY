@@ -10,8 +10,8 @@
 import { useEffect, useState } from "react"
 import { useDark, palette, FONT } from "@/lib/theme"
 import { fetchPortfolioSlim, fetchPublic } from "@/lib/api"
-import { isAuthed } from "@/lib/auth"
-import { captureOAuthHash, refreshIfNeeded } from "@/lib/supabase"
+import { refreshAuth } from "@/lib/auth"
+import { captureOAuthHash } from "@/lib/supabase"
 import { useDataRefreshEpoch } from "@/lib/useDataRefreshEpoch"
 import type { AlertItem, MarketExplain, PortfolioFull } from "@/lib/types"
 import TopBar from "./components/TopBar"
@@ -43,15 +43,9 @@ export default function Home() {
 
     // 인증 게이트 — 미인증 = /login
     useEffect(() => {
+        let cancelled = false
+        let iv: ReturnType<typeof setInterval> | undefined
         captureOAuthHash()
-        if (!isAuthed()) {
-            window.location.replace("/login")
-            return
-        }
-        setAuthed(true)
-        refreshIfNeeded()
-        const iv = setInterval(() => refreshIfNeeded(), 60_000)
-
         function onKey(e: KeyboardEvent) {
             const tag = (e.target as HTMLElement)?.tagName?.toLowerCase()
             if (e.key === "/" && tag !== "input" && tag !== "textarea") {
@@ -59,9 +53,19 @@ export default function Home() {
                 document.getElementById("af-search")?.focus()
             }
         }
-        window.addEventListener("keydown", onKey)
+        void refreshAuth().then((allowed) => {
+            if (cancelled) return
+            if (!allowed) {
+                window.location.replace("/login")
+                return
+            }
+            setAuthed(true)
+            iv = setInterval(() => { void refreshAuth() }, 60_000)
+            window.addEventListener("keydown", onKey)
+        })
         return () => {
-            clearInterval(iv)
+            cancelled = true
+            if (iv !== undefined) clearInterval(iv)
             window.removeEventListener("keydown", onKey)
         }
     }, [])

@@ -869,6 +869,26 @@ jobs:
         if: always() && steps.coverage_gate.outcome != 'failure'
         run: python3 api/builders/multibagger_picks_builder.py || echo "[multibagger_picks] skip"
 
+      - name: Collect analyst metadata for private operator (no LLM)
+        id: operator_analyst
+        # 2026-09-27 PM 승인. 7축: 기존 full 일정/직렬 그룹 유지, 새 secret/push/KIS/LLM 0.
+        # 공개 빌더·git commit 이후 수집; data/.gitignore 봉인 + private upload만 허용.
+        # requests/bs4는 기존 requirements. N=1 직접 실행/N=2 다음 full의 산출물 별도 감사.
+        if: ${{ !cancelled() && steps.detect_mode.outputs.mode == 'full' && steps.coverage_gate.outcome != 'failure' }}
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          VERITY_MODE: prod
+        run: |
+          python - <<'PY'
+          from api.collectors.ReportScout import scout_reports
+          result = scout_reports()
+          count = len(result.get("company_reports") or [])
+          print(f"operator analyst collected={count}, updated_at={result.get('updated_at')}")
+          if not count:
+              raise SystemExit("No company reports collected; existing private snapshot retained")
+          PY
+
       - name: Upload operator full data to private Supabase Storage
         # VERITY↔AlphaNest 분리 Stage 1 (2026-07-23): full portfolio.json → verity-reports private bucket.
         # /api/admin(?type=portfolio_full, authed=is_admin/토큰) 이 서빙 → 오퍼레이터 콘솔이 공개 blob 대신
@@ -895,4 +915,10 @@ jobs:
         if: always() && steps.nps_holdings.outcome == 'failure'
         run: |
           echo "::error::국민연금 보유 수집 실패 — 기존 정상본 유지, 즉시 알림 전송"
+          exit 1
+
+      - name: Fail on missing operator analyst refresh
+        if: always() && steps.operator_analyst.outcome == 'failure'
+        run: |
+          echo "::error::Operator analyst metadata refresh failed; do not treat old private data as fresh"
           exit 1

@@ -13,7 +13,8 @@ Brain Observatory admin API — 단일 파일 통합 (Hobby 12 함수 제한 회
   /api/admin?type=community_moderation · audit_log · growth_stats
   /api/admin?type=security           ← IP 침입 추적·차단 (Railway 미들웨어와 blocked_ips 공유)
 
-인증: X-Admin-Token 또는 Bearer JWT (profiles.is_admin=true)
+인증: X-Admin-Token 또는 Bearer JWT.
+일반 사이트 관리 = is_admin, 개인 투자/분석 데이터 = is_admin + is_super_admin.
 """
 from __future__ import annotations
 # deploy-marker: 206 fix (2026-07-17)
@@ -182,7 +183,7 @@ def is_admin_token(token: str) -> bool:
     return bool(ADMIN_BYPASS_TOKEN and token and token == ADMIN_BYPASS_TOKEN)
 
 
-def verify_admin_jwt(jwt: str) -> bool:
+def verify_admin_jwt(jwt: str, *, require_owner: bool = False) -> bool:
     if not jwt or not SUPABASE_URL or not SUPABASE_ANON_KEY:
         return False
     try:
@@ -193,32 +194,37 @@ def verify_admin_jwt(jwt: str) -> bool:
         )
         if r.status_code != 200:
             return False
-        user_id = r.json().get("id")
-        if not user_id:
+        user = r.json()
+        user_id = user.get("id") if isinstance(user, dict) else None
+        if not isinstance(user_id, str) or not user_id.strip():
             return False
         p = requests.get(
             f"{SUPABASE_URL}/rest/v1/profiles",
-            params={"id": f"eq.{user_id}", "select": "is_admin"},
+            params={"id": f"eq.{user_id}", "select": "is_admin,is_super_admin"},
             headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"},
             timeout=_t(5),
         )
         if p.status_code != 200:
             return False
         rows = p.json()
-        return bool(rows and rows[0].get("is_admin") is True)
+        if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+            return False
+        return rows[0].get("is_admin") is True and (
+            not require_owner or rows[0].get("is_super_admin") is True
+        )
     except (requests.RequestException, ValueError) as e:
         _logger.warning("admin verify failed: %s", e)
         return False
 
 
-def authorize(headers_dict: Dict[str, str]) -> Tuple[bool, str]:
+def authorize(headers_dict: Dict[str, str], *, require_owner: bool = False) -> Tuple[bool, str]:
     bypass = headers_dict.get("x-admin-token") or headers_dict.get("X-Admin-Token")
     if bypass and is_admin_token(bypass):
         return True, "bypass_token"
     auth = headers_dict.get("authorization") or headers_dict.get("Authorization") or ""
     if auth.lower().startswith("bearer "):
         jwt = auth.split(" ", 1)[1].strip()
-        if verify_admin_jwt(jwt):
+        if verify_admin_jwt(jwt, require_owner=require_owner):
             return True, "supabase_admin"
     if not ADMIN_BYPASS_TOKEN and not SUPABASE_URL:
         return False, "no_auth_configured"
@@ -818,6 +824,12 @@ def _audit(actor: dict, action: str, target_type: str, target_id: Optional[str],
         _logger.warning("audit write failed: %s", e)
 
 
+_MEMBER_ADMIN_FIELDS = (
+    "id", "email", "display_name", "nickname", "status", "is_admin", "is_super_admin",
+    "is_banned", "ban_reason", "banned_at", "created_at",
+)
+
+
 def handle_member_management(handler, method: str, body: dict) -> dict:
     if not _svc_ready():
         return {"_status": 503, "_body": {"error": "service_role_unconfigured"}}
@@ -828,7 +840,7 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
         q = (params.get("q", [""])[0] or "").strip()
         limit = min(200, max(1, int((params.get("limit", ["100"])[0] or "100"))))
         offset = max(0, int((params.get("offset", ["0"])[0] or "0")))
-        sel = "id,email,display_name,nickname,status,is_admin,is_super_admin,is_banned,ban_reason,banned_at,created_at"
+        sel = ",".join(_MEMBER_ADMIN_FIELDS)
         qp = {"select": sel, "order": "created_at.desc", "limit": str(limit), "offset": str(offset)}
         if q:
             qp["or"] = f"(email.ilike.*{q}*,nickname.ilike.*{q}*,display_name.ilike.*{q}*)"
@@ -880,7 +892,9 @@ def handle_member_management(handler, method: str, body: dict) -> dict:
             return {"_status": 502, "_body": {"error": "update_failed", "detail": r.text[:200]}}
         _audit(actor, audit_action, "user", uid, patch)
         rows = r.json() if r.text else []
-        return {"_status": 200, "_body": {"ok": True, "member": rows[0] if rows else None}}
+        # Site management must not return financial settings added to profiles.
+        member = {key: rows[0].get(key) for key in _MEMBER_ADMIN_FIELDS} if rows else None
+        return {"_status": 200, "_body": {"ok": True, "member": member}}
 
     if method == "DELETE":
         # 완전 삭제 = auth 계정 제거 → profiles·user_thesis cascade. UI 2단계 확인(confirm) 후 호출.
@@ -1443,7 +1457,7 @@ def handle_security(handler, method: str, body: dict) -> dict:
 
 def handle_portfolio_full(request_handler) -> dict:
     """오퍼레이터 authed full portfolio 서빙 (분리 Stage 1, 2026-07-23).
-    do_GET 이 authorize()(X-Admin-Token OR JWT+is_admin) 선행 → 통과분만 도달. pages/* 오퍼레이터 카드가
+    do_GET 이 소유자 인증(X-Admin-Token OR JWT+is_admin+is_super_admin) 선행 → 통과분만 도달. pages/* 오퍼레이터 카드가
     공개 blob(sanitized 예정) 대신 이 라우트(?type=portfolio_full)로 full 데이터 fetch."""
     portfolio = fetch_portfolio()
     if not portfolio:
@@ -1504,7 +1518,7 @@ def handle_portfolio_terminal(request_handler) -> dict:
 # ── 오퍼레이터 파일 authed 서빙 (VERITY↔AlphaNest 분리 Stage 3 후속, 2026-07-23) ──
 # history/system_health_snapshot/brain_kb_usage/admin_todos = 오퍼레이터 전용(public-probe 소비 0).
 # 공개 발행 제거 → private bucket(_operator/*) 우선, 전환기 공개 blob fallback(제거 전엔 존재). do_GET
-# authorize() 통과분만 도달 = authed. pages/* 오퍼레이터 카드가 공개 blob 대신 이 라우트로 fetch.
+# 소유자 인증 통과분만 도달. pages/* 오퍼레이터 카드가 공개 blob 대신 이 라우트로 fetch.
 _BLOB_BASE = PORTFOLIO_URL.rsplit("/", 1)[0] + "/"
 
 
@@ -1529,6 +1543,7 @@ def _make_operator_file_handler(public_name: str):
     return _handler
 
 
+# 개인 투자/분석 데이터는 소유자 전용. 일반 사이트 관리는 MOD_ROUTES 권한을 유지한다.
 ROUTES = {
     "brain_health": handle_brain_health,
     "data_health": handle_data_health,
@@ -1615,13 +1630,16 @@ class handler(BaseHTTPRequestHandler):
         _budget_start()
         hdrs = headers_to_dict(self)
         ip = _sec_client_ip(hdrs)
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        endpoint = (params.get("type", [""])[0] or "").strip()
         try:
             _stage("blocklist")
             if _sec_is_blocked(ip):
                 write_response(self, 403, {"error": "forbidden"})
                 return
             _stage("authorize")
-            ok, reason = authorize(hdrs)
+            ok, reason = authorize(hdrs, require_owner=endpoint not in MOD_ROUTES)
             if not ok:
                 _sec_note_unauthorized(ip, self.path, "GET", hdrs.get("user-agent", ""))
                 write_response(self, 401, {"error": "unauthorized", "reason": reason})
@@ -1629,10 +1647,6 @@ class handler(BaseHTTPRequestHandler):
         except _BudgetExceeded as e:
             _budget_timeout_response(self, e, "auth")
             return
-
-        parsed = urlparse(self.path)
-        params = parse_qs(parsed.query)
-        endpoint = (params.get("type", [""])[0] or "").strip()
 
         # 운영 목록(회원/모더레이션)은 method-aware 핸들러로 위임
         if endpoint in MOD_ROUTES:

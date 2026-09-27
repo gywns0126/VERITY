@@ -17,11 +17,17 @@ import sys
 import requests
 
 BUCKET = os.environ.get("OPERATOR_BUCKET", "verity-reports")
+APPROVED_PRIVATE_DESTS = frozenset({
+    "_operator/analyst_reports.json", "_operator/dart_kr_backfill_result.json",
+})
 
 # (로컬 소스, bucket 내 경로, content-type).
 # 2026-07-23 분리 Stage 3 후속: 오퍼레이터 전용 파일(public-probe 소비 0)을 private bucket 으로.
 # 공개 발행 제거(action.yml)와 짝 — authed /api/admin?type=<name> 라우트로 서빙.
 UPLOADS = [
+    # PM 승인 2026-09-27: 오퍼레이터 조인의 배포 결손 복구. 공개 발행 금지.
+    ("data/analyst_reports.json", "_operator/analyst_reports.json", "application/json"),
+    ("data/dart_kr_backfill_result.json", "_operator/dart_kr_backfill_result.json", "application/json"),
     ("data/portfolio.json", "_operator/portfolio_full.json", "application/json"),
     ("data/history.json", "_operator/history.json", "application/json"),
     ("data/system_health_snapshot.json", "_operator/system_health_snapshot.json", "application/json"),
@@ -100,6 +106,30 @@ def guard_legacy_performance(doc: dict, dest: str) -> dict:
     return result
 
 
+def _backfill_keys(doc: dict) -> set:
+    rows = doc.get("rows") if isinstance(doc, dict) else None
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("empty backfill")
+    keys = set()
+    for row in rows:
+        if not isinstance(row, dict) or not row.get("ticker") or not row.get("fiscal_year"):
+            raise ValueError("invalid backfill row")
+        keys.add((str(row["ticker"]), str(row["fiscal_year"]), str(row.get("period") or "annual")))
+    return keys
+
+
+def _backfill_preserves_coverage(doc: dict, previous: requests.Response) -> bool:
+    """Do not replace the full historical dataset with a smoke-test subset."""
+    try:
+        new_keys = _backfill_keys(doc)
+        old = previous.json()
+        if previous.status_code == 200:
+            return new_keys.issuperset(_backfill_keys(old))
+        return str(old.get("statusCode")) == "404" and old.get("error") == "not_found"
+    except (ValueError, AttributeError):
+        return False
+
+
 def main() -> int:
     supabase_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -115,7 +145,26 @@ def main() -> int:
             only = sys.argv[i + 1]
 
     uploads = [u for u in UPLOADS if (only is None or only in u[0] or only in u[1])]
+    # These newly authorized payloads must never follow an accidental public-bucket override.
+    if any(dest in APPROVED_PRIVATE_DESTS and os.path.isfile(src) for src, dest, _ in uploads):
+        if BUCKET != "verity-reports":
+            print("ERROR: approved operator facts require verity-reports", file=sys.stderr)
+            return 2
+        try:
+            check = requests.get(
+                f"{supabase_url}/storage/v1/bucket/{BUCKET}",
+                headers={"apikey": key, "Authorization": f"Bearer {key}"}, timeout=20,
+            )
+            private = check.status_code == 200 and check.json().get("public") is False
+        except (requests.RequestException, ValueError, AttributeError):
+            private = False
+        if not private:
+            print("ERROR: private bucket verification failed; upload blocked", file=sys.stderr)
+            return 2
     ok = 0
+    approved_expected = {dest for src, dest, _ in uploads
+                         if dest in APPROVED_PRIVATE_DESTS and (only is not None or os.path.isfile(src))}
+    approved_ok = set()
     for src, dest, ctype in uploads:
         if not os.path.isfile(src):
             print(f"WARN: {src} 부재 — skip")
@@ -135,6 +184,14 @@ def main() -> int:
                 print(f"ERROR: {src} JSON parse 실패 — skip: {e}", file=sys.stderr)
                 continue
         try:
+            if dest == "_operator/dart_kr_backfill_result.json":
+                previous = requests.get(
+                    f"{supabase_url}/storage/v1/object/{BUCKET}/{dest}",
+                    headers={"apikey": key, "Authorization": f"Bearer {key}"}, timeout=20,
+                )
+                if not _backfill_preserves_coverage(parsed, previous):
+                    print("ERROR: backfill coverage shrank or comparison failed; upload blocked", file=sys.stderr)
+                    continue
             r = requests.post(
                 f"{supabase_url}/storage/v1/object/{BUCKET}/{dest}",
                 headers={
@@ -153,12 +210,13 @@ def main() -> int:
         if r.status_code in (200, 201):
             print(f"  ✓ {src} → {BUCKET}/{dest} ({len(body):,} bytes)")
             ok += 1
+            approved_ok.add(dest)
         else:
             print(f"  ✗ {src} → {r.status_code} {r.text[:150]}", file=sys.stderr)
 
     print(f"operator upload: {ok}/{len(uploads)}")
-    # 부분 실패도 발행 파이프라인 중단 X (fallback = 공개 blob) — 단 stderr 로 명시.
-    return 0
+    # 새 private 입력에는 공개 fallback이 없다. 실패를 성공 종료로 숨기지 않는다.
+    return 1 if approved_expected - approved_ok else 0
 
 
 if __name__ == "__main__":

@@ -26,9 +26,10 @@ grounding = ticker_facts.collect() — 우리가 가진 전 발행물 + 로컬 +
 from __future__ import annotations
 
 import hashlib
+import math
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # 소비자 2곳에서 모두 import 되어야 한다 (SSOT = api/intelligence/, 복제 = vercel-api/api/_operator/).
 #   · 패키지 컨텍스트(api.intelligence / api._operator) → 상대 import
@@ -101,16 +102,28 @@ def _sec_data(facts: Dict[str, Any], *label_prefixes: str) -> Optional[Any]:
     return None
 
 
-def _move_pct(facts: Dict[str, Any]) -> Optional[float]:
-    """오늘 등락률(실시간 우선, 없으면 직전 확정 종가)."""
-    for lab in ("실시간 시세", "종가"):
-        d = _sec_data(facts, lab)
-        if isinstance(d, dict) and d.get("등락률"):
+def _move_quote(facts: Dict[str, Any]) -> Optional[Tuple[float, Dict[str, Any]]]:
+    """등락률과 그 출처 섹션을 함께 선택한다. 라벨만으로 장중 여부를 단정하지 않는다."""
+    for lab in ("실시간 시세", "미국 실시간 시세", "미국 시세", "종가"):
+        for sec in facts.get("sections") or []:
+            if not str(sec.get("label") or "").startswith(lab):
+                continue
+            d = sec.get("data")
+            if not isinstance(d, dict) or d.get("등락률") is None:
+                continue
             try:
-                return float(str(d["등락률"]).replace("%", "").replace("+", ""))
+                move = float(str(d["등락률"]).replace("%", ""))
             except (TypeError, ValueError):
-                pass
+                continue
+            if math.isfinite(move):
+                return move, sec
     return None
+
+
+def _move_pct(facts: Dict[str, Any]) -> Optional[float]:
+    """관측된 등락률(실시간 소스 우선, 없으면 종가). 관측일은 출처 기준이다."""
+    quote = _move_quote(facts)
+    return quote[0] if quote is not None else None
 
 
 def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, str]]:
@@ -121,7 +134,6 @@ def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, s
     """
     name = facts.get("name") or ""
     tk = facts.get("ticker") or ""
-    today = _now().strftime("%Y년 %m월 %d일")
     gaps: List[Dict[str, str]] = []
 
     rep = _sec_data(facts, "리포트") or {}
@@ -137,32 +149,48 @@ def research_gaps(facts: Dict[str, Any], question: str = "") -> List[Dict[str, s
 
     # ① 급변 사유 미상 — 최우선. 우리 데이터로는 "얼마나" 만 알고 "왜" 를 모른다.
     #    단, 공시 축은 DART 직조회(ticker_facts 상설 섹션)가 이미 단정한다 — 외부에 되묻지 않는다.
-    mv = _move_pct(facts)
-    if mv is not None and abs(mv) >= 5.0:
+    quote = _move_quote(facts)
+    if quote is not None and abs(quote[0]) >= 5.0:
+        mv, sec = quote
+        stamp = sec.get("as_of") or "기준일·시각 미확인"
+        label = str(sec.get("label") or "")
+        basis = sec["data"].get("기준") or (
+            label if label.startswith("종가") else "장 개폐·가격 기준 미확인"
+        )
         direction = "급등" if mv > 0 else "급락"
-        dart_direct = _sec_data(facts, "DART 공시")
+        dart_direct = _sec_data(facts, "DART 공시") if market == "KR" else None
         if isinstance(dart_direct, dict) and dart_direct.get("건수") == 0:
             dart_note = ("참고: DART 직조회로 최근 30일 공시 0건은 이미 확정했다 — 공시 재확인은 "
                          "불필요하고, 뉴스·테마 동반·특징주 코너 쪽만 확인하라.\n")
         elif isinstance(dart_direct, dict) and dart_direct.get("공시"):
             titles = " / ".join(f"{r.get('date')} {r.get('title')}" for r in dart_direct["공시"][:5])
             dart_note = (f"참고: DART 직조회로 확인된 최근 공시 = {titles}. "
-                         f"이 공시와 오늘 {direction}의 연관 보도가 있는지 확인하라.\n")
+                         f"이 공시와 해당 시세의 {direction} 사이 연관 보도가 있는지 확인하라.\n")
         else:
             dart_note = ""
+        filings = (
+            "KIND·DART — 단일판매·공급계약, 최대주주 변경, 무상증자, "
+            "자기주식 취득, 조회공시 요구 등"
+            if market == "KR" else
+            "SEC EDGAR·발행사(운용사) 공식 공시 — 실적 발표, 8-K·6-K, "
+            "기업행사·상품 공지 등"
+        )
         gaps.append({
             "key": "catalyst",
             "label": f"{direction} 사유 ({mv:+.1f}%)",
-            "recency": "day",
+            "recency": "",  # 출처 기준일 확인 전 최근 24시간 검색으로 제한하지 않는다.
             "tier": "pro",
             "query": (
-                f"{who} 주가가 {today} 장중 {mv:+.1f}% {direction}했다. 그 사유는 무엇인가?\n"
+                f"{who}의 수집 시세에 관측 등락률 {mv:+.1f}%가 있다. "
+                f"이 등락과 관련된 확인된 사유는 무엇인가?\n"
+                f"출처: {sec.get('source') or '출처 미확인'} · 자료 기준일·시각: {stamp} · "
+                f"가격 기준: {basis}.\n"
+                f"먼저 거래소 현지 거래일·장 개폐 상태·등락 비교 기준을 확인하고, "
+                f"확인된 거래일 주변의 근거만 연결하라. 미확인 항목은 미확인으로 남겨라.\n"
                 f"{dart_note}"
                 f"확인할 것: (1) 관련 뉴스·보도 (2) 이 종목이 속한 테마·업종의 동반 {direction} 여부 "
                 f"(3) 특징주·급등주 코너 언급"
-                + ("" if dart_note else
-                   f" (4) {today} 또는 직전 영업일 공시(KIND·DART — 단일판매·공급계약, "
-                   f"최대주주 변경, 무상증자, 자기주식 취득, 조회공시 요구 등)")
+                + ("" if dart_note else f" (4) 해당 거래일 또는 직전 영업일 공시({filings})")
                 + f".\n{rules}"
             ),
         })
@@ -237,9 +265,11 @@ def ask(query: str, question: str = "", facts_only: bool = False,
         no_cache: bool = False) -> Dict[str, Any]:
     """생성형 호출 없이 사실 번들과 외부 확인 질문만 반환한다.
 
-    facts_only/no_cache 인자는 기존 CLI·Vercel 호출 호환을 위해 유지한다.
+    facts_only=True 는 외부 확인 질문 생성을 생략한다.
+    no_cache=True 는 수집기의 요청 단위 캐시 우회를 활성화한다.
     """
-    facts = ticker_facts.collect(query)
+    facts = (ticker_facts.collect(query, no_cache=True) if no_cache
+             else ticker_facts.collect(query))
     facts_text = ticker_facts.render_text(facts)
     out: Dict[str, Any] = {
         "facts": facts,
@@ -275,17 +305,19 @@ if __name__ == "__main__":
     import argparse
 
     ap = argparse.ArgumentParser(description="종목 사실·신선도 번들 (오퍼레이터 전용)")
-    ap.add_argument("query", help="종목명 또는 6자리 코드")
+    ap.add_argument("query", help="종목명, 6자리 코드 또는 미국 티커")
     ap.add_argument("--q", default="", help="질문")
-    ap.add_argument("--facts-only", action="store_true", help="사실 조인만")
-    ap.add_argument("--questions", action="store_true",
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--facts-only", action="store_true", help="사실 조인만 (외부 확인 질문 생략)")
+    mode.add_argument("--questions", action="store_true",
                     help="결측 축 위임 질문만 출력 (호출 0 · 비용 0). 웹 퍼플렉시티 Pro 복붙용")
-    ap.add_argument("--no-cache", action="store_true", help="과거 CLI 호환용; 현재는 효과 없음")
+    ap.add_argument("--no-cache", action="store_true", help="이번 사실 수집의 캐시를 우회")
     a = ap.parse_args()
 
     if a.questions:
         # 외부 도구 또는 Codex가 원문 확인에 사용할 중립 질문만 만든다.
-        f = ticker_facts.collect(a.query)
+        f = (ticker_facts.collect(a.query, no_cache=True) if a.no_cache
+             else ticker_facts.collect(a.query))
         if not f.get("ticker"):
             print(ticker_facts.render_text(f))
             sys.exit(1)
@@ -295,7 +327,8 @@ if __name__ == "__main__":
         if not gs:
             print("위임할 결측 축 없음 — 자체 데이터로 충분하다.")
         for i, g in enumerate(gs, 1):
-            print(f"{'─' * 70}\n[{i}] {g['label']}  (최근성 {g['recency']})\n{'─' * 70}\n{g['query']}\n")
+            recency = g['recency'] or '시세 기준일 확인 후 설정'
+            print(f"{'─' * 70}\n[{i}] {g['label']}  (최근성 {recency})\n{'─' * 70}\n{g['query']}\n")
         sys.exit(0)
 
     print(render(ask(a.query, a.q, a.facts_only, a.no_cache)))
