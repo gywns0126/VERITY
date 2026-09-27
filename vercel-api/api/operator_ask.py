@@ -8,7 +8,7 @@
 2026-09-05 PM 결정: 서버 생성형 종합은 종료했다. 과거 llm=1 인자는 호환용으로만
 받으며 모델을 호출하지 않는다. 최종 해석은 Codex 세션이 수행한다.
 
-🚨 인증 = admin.py 와 동일 규약(X-Admin-Token 또는 Bearer JWT + profiles.is_admin).
+🚨 개인 분석 인증 = X-Admin-Token 또는 Bearer JWT + profiles.is_admin/is_super_admin 둘 다 True.
    공개 노출 절대 금지 — 종목 상담·분석·추천이 포함된다(PM 2026-08-03, 유사투자자문 회피).
    authorize() 통과분만 도달하므로 응답 본문에 판단이 들어가도 된다.
 
@@ -36,12 +36,13 @@ ADMIN_BYPASS_TOKEN = os.environ.get("ADMIN_BYPASS_TOKEN", "")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
-# ── 인증 (admin.py 규약 동일) ────────────────────────────────────────────────
+# ── 개인 분석 인증 (일반 사이트 관리자 권한만으로는 접근 불가) ────────────────
 def _headers_to_dict(handler) -> Dict[str, str]:
     return {k.lower(): v for k, v in handler.headers.items()}
 
 
 def _verify_admin_jwt(jwt: str) -> bool:
+    """Keep the existing helper name; personal facts require both owner flags."""
     if not jwt or not SUPABASE_URL or not SUPABASE_ANON_KEY:
         return False
     try:
@@ -52,19 +53,22 @@ def _verify_admin_jwt(jwt: str) -> bool:
         )
         if r.status_code != 200:
             return False
-        uid = r.json().get("id")
-        if not uid:
+        user = r.json()
+        uid = user.get("id") if isinstance(user, dict) else None
+        if not isinstance(uid, str) or not uid.strip():
             return False
         p = requests.get(
             f"{SUPABASE_URL}/rest/v1/profiles",
-            params={"id": f"eq.{uid}", "select": "is_admin"},
+            params={"id": f"eq.{uid}", "select": "is_admin,is_super_admin"},
             headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"},
             timeout=5,
         )
         if p.status_code != 200:
             return False
         rows = p.json()
-        return bool(rows and rows[0].get("is_admin") is True)
+        if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+            return False
+        return rows[0].get("is_admin") is True and rows[0].get("is_super_admin") is True
     except (requests.RequestException, ValueError) as e:
         _logger.warning("operator_ask admin verify failed: %s", e)
         return False

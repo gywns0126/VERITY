@@ -9,7 +9,7 @@ VERITY 리포트 PDF 서빙 — Supabase Storage signed URL 발급.
   (feedback_scope: 시스템 트랙 비공개).
 
   → cron 이 PDF 생성 후 Supabase Storage private bucket
-    `verity-reports` 에 업로드. 이 함수가 JWT/admin 검증 후
+    `verity-reports` 에 업로드. 이 함수가 JWT/소유자 권한 검증 후
     short-lived signed URL 을 발급한다.
 
 엔드포인트:
@@ -26,9 +26,9 @@ VERITY 리포트 PDF 서빙 — Supabase Storage signed URL 발급.
     → 응답: 200 {items: [{date, filename}, ...], period, type}
 
 공통:
-  - admin: Bearer JWT 필수 + profiles.is_admin=TRUE
+  - admin: Bearer JWT 필수 + profiles.is_admin/is_super_admin 둘 다 TRUE
   - public: Bearer JWT 필수 (일반 로그인 사용자)
-  - 401 (no/invalid token) | 403 (admin only) | 404 (PDF 없음) | 500
+  - 401 (no/invalid token) | 403 (owner only) | 404 (PDF 없음) | 500
 
 period: daily | weekly | monthly | quarterly | semi | annual
 type:   admin  | public
@@ -118,18 +118,22 @@ def _verify_user(jwt: str) -> Optional[str]:
 
 
 def _is_admin(jwt: str, user_id: str) -> bool:
-    """profiles.is_admin 조회. RLS 가 본인 row 만 허용하는데 admin 본인 조회라 OK."""
+    """Private PDFs require both owner flags; preserve this module's helper name."""
+    if not isinstance(user_id, str) or not user_id.strip():
+        return False
     try:
         r = requests.get(
             f"{SUPABASE_URL}/rest/v1/profiles",
-            params={"id": f"eq.{user_id}", "select": "is_admin"},
+            params={"id": f"eq.{user_id}", "select": "is_admin,is_super_admin"},
             headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"},
             timeout=5,
         )
         if r.status_code != 200:
             return False
         rows = r.json()
-        return bool(rows and rows[0].get("is_admin") is True)
+        if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+            return False
+        return rows[0].get("is_admin") is True and rows[0].get("is_super_admin") is True
     except (requests.RequestException, ValueError) as e:
         _logger.warning("admin check failed: %s", e)
         return False
@@ -256,7 +260,7 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             if kind == "admin" and not _is_admin(jwt, user_id):
-                _json(self, 403, {"error": "Admin only"})
+                _json(self, 403, {"error": "Owner only"})
                 return
 
             # ── action=list: archive 목록 반환 ─────────────────
