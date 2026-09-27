@@ -415,12 +415,13 @@ for (const [name, read] of Object.entries(reads)) {
     })
     for (const phase of ["auth", "fetch", "body"]) test(`${name}: deadline includes ${phase}; late completion cannot start another request`, async () => {
         const time = clock(), pending = deferred(), calls = []
+        const timeout = name === "facts" ? 300000 : 30000
         const client = api(async (_url, options) => {
             calls.push(options)
             return phase === "fetch" ? pending.promise : { ...response(503), json: () => pending.promise }
         }, undefined, time.globals, { refreshAuth: () => phase === "auth" ? pending.promise : Promise.resolve(true) })
         const request = read(client)
-        await time.advance(29999)
+        await time.advance(timeout - 1)
         assert.equal(calls.length, phase === "auth" ? 0 : 1)
         await time.advance(1)
         const result = await request
@@ -477,17 +478,44 @@ for (const status of [401, 403, 400, 429, 500]) test(`admin: HTTP ${status} neve
     assert.equal(calls, 1)
 })
 
-test("retry does not reset the read deadline", async () => {
-    const time = clock(), first = deferred(), calls = []
-    const client = api(async (_url, options) => { calls.push(options); return calls.length === 1 ? first.promise : new Promise(() => {}) }, undefined, time.globals)
-    const pending = reads.facts(client)
-    await time.advance(20000)
+for (const [name, read] of Object.entries(reads)) test(`${name}: retry does not reset the read deadline including auth wait`, async () => {
+    const time = clock(), auth = deferred(), first = deferred(), calls = []
+    const timeout = name === "facts" ? 300000 : 30000
+    const client = api(async (_url, options) => { calls.push(options); return calls.length === 1 ? first.promise : new Promise(() => {}) },
+        undefined, time.globals, { refreshAuth: () => auth.promise })
+    const pending = read(client)
+    await time.advance(5000)
+    assert.equal(calls.length, 0)
+    auth.resolve(true)
+    await time.advance(timeout - 15000)
     first.resolve(response(503))
     await flush()
     assert.equal(calls.length, 2)
     await time.advance(10000)
     assert.match((await pending).error, /TimeoutError/)
+    assert.equal(calls.length, 2)
     assert.ok(calls.every(c => c.signal.aborted))
+    assert.equal(time.pending, 0)
+})
+
+test("facts: a response after 30s succeeds before the 300s deadline", async () => {
+    const time = clock(), responseReady = deferred(), calls = []
+    const client = api(async (_url, options) => { calls.push(options); return responseReady.promise }, undefined, time.globals)
+    let settled = false
+    const pending = reads.facts(client).then(result => { settled = true; return result })
+    await time.advance(30001)
+    assert.equal(settled, false)
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].signal.aborted, false)
+    await time.advance(209999) // 240s total, matching the facts core's work budget.
+    assert.equal(settled, false)
+    assert.equal(calls[0].signal.aborted, false)
+    const payload = { ticker: "fixture", sections: [] }
+    responseReady.resolve(response(200, payload))
+    const result = await pending
+    assert.equal(result.ok, true)
+    assert.equal(result.data, payload)
+    assert.equal(calls.length, 1)
     assert.equal(time.pending, 0)
 })
 

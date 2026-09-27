@@ -19,20 +19,22 @@ export function alphanestStockUrl(ticker: string): string {
 export type FetchResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string }
 
 const READ_TIMEOUT_MS = 30000 // One deadline for auth wait, both GET attempts and body reads.
+const FACTS_TIMEOUT_MS = 300000 // Facts core allows 240s; operator_ask deployment allows 300s.
 
 // GET only. Retry is opt-in for admin/facts; balance must remain a single attempt.
 async function authenticatedRead<T>(url: string, signal?: AbortSignal, options: {
     valid?: (data: T) => boolean
     retryTransient?: boolean
     preserveForbiddenError?: boolean
+    timeoutMs?: number
 } = {}): Promise<FetchResult<T>> {
-    const { valid, retryTransient = false, preserveForbiddenError = false } = options
+    const { valid, retryTransient = false, preserveForbiddenError = false, timeoutMs = READ_TIMEOUT_MS } = options
     const controller = new AbortController()
     const onAbort = () => controller.abort(signal?.reason)
     const cancelled = new Promise<never>((_, reject) => {
         controller.signal.addEventListener("abort", () => reject(controller.signal.reason), { once: true })
     })
-    const timer = setTimeout(() => controller.abort(new DOMException("Read timed out", "TimeoutError")), READ_TIMEOUT_MS)
+    const timer = setTimeout(() => controller.abort(new DOMException("Read timed out", "TimeoutError")), timeoutMs)
     signal?.addEventListener("abort", onAbort, { once: true })
     if (signal?.aborted) onAbort()
     const read = async (): Promise<FetchResult<T>> => {
@@ -171,6 +173,7 @@ export async function fetchAsk(ticker: string, question = "", signal?: AbortSign
     if (question) p.set("q", question)
     const url = `${API_BASE}/api/operator_ask?${p.toString()}`
     return authenticatedRead<AskResult>(url, signal, {
+        timeoutMs: FACTS_TIMEOUT_MS,
         retryTransient: true, valid: data => !!data && Array.isArray(data.sections),
     })
 }
