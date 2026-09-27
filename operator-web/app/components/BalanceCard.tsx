@@ -3,10 +3,9 @@
 // 경로 = vercel /api/order GET(Supabase JWT 검증 → Railway 프록시 → KIS TTTC8434R raw).
 // KIS raw 방어 파싱: output2[0] 요약(예수금·총평가·평가손익) + output1[] 보유.
 // 폴링 없음(잔고 API 남용 방지) — 1회 로드 + 수동 새로고침.
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useDark, palette, cardStyle, FONT, NUM, CARD_TITLE, RAIL_PAD } from "@/lib/theme"
-import { API_BASE } from "@/lib/api"
-import { authHeaders } from "@/lib/auth"
+import { fetchBalance } from "@/lib/api"
 import StockLogo from "./StockLogo"
 import { selectTicker } from "@/lib/types"
 
@@ -23,12 +22,27 @@ function num(v: unknown): number {
     return isFinite(n) ? n : 0
 }
 
-function parse(d: Record<string, unknown>): Bal | { error: string } {
-    if (String(d.rt_cd ?? "") !== "0" && d.rt_cd !== undefined) {
+function amount(v: unknown): number | null {
+    if (typeof v !== "string" && typeof v !== "number") return null
+    const text = String(v).replace(/,/g, "").trim()
+    const n = text ? Number(text) : NaN
+    return Number.isFinite(n) ? n : null
+}
+
+function parse(raw: unknown): Bal | { error: string } {
+    const unavailable = { error: "잔고 응답을 확인할 수 없습니다" }
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return unavailable
+    const d = raw as Record<string, unknown>
+    if (d.rt_cd === undefined || d.rt_cd === null) return unavailable
+    if (String(d.rt_cd) !== "0") {
         return { error: String(d.msg1 || d.error || "잔고 조회 거부") }
     }
-    const o2 = Array.isArray(d.output2) ? (d.output2[0] as KisRow) || {} : {}
-    const o1 = Array.isArray(d.output1) ? (d.output1 as KisRow[]) : []
+    const o2 = Array.isArray(d.output2) ? d.output2[0] : null
+    if (!o2 || typeof o2 !== "object" || Array.isArray(o2) || !Array.isArray(d.output1)) return unavailable
+    const cash = amount(o2.dnca_tot_amt), totalEval = amount(o2.tot_evlu_amt), pnl = amount(o2.evlu_pfls_smtl_amt)
+    if (cash === null || totalEval === null || pnl === null) return unavailable
+    if (d.output1.some(r => !r || typeof r !== "object" || Array.isArray(r) || amount(r.hldg_qty) === null)) return unavailable
+    const o1 = d.output1 as KisRow[]
     const holdings = o1
         .filter((r) => num(r.hldg_qty) > 0)
         .map((r) => ({
@@ -41,9 +55,9 @@ function parse(d: Record<string, unknown>): Bal | { error: string } {
             evalAmt: num(r.evlu_amt),
         }))
     return {
-        cash: o2.dnca_tot_amt !== undefined ? num(o2.dnca_tot_amt) : null,
-        totalEval: o2.tot_evlu_amt !== undefined ? num(o2.tot_evlu_amt) : null,
-        pnl: o2.evlu_pfls_smtl_amt !== undefined ? num(o2.evlu_pfls_smtl_amt) : null,
+        cash,
+        totalEval,
+        pnl,
         holdings,
     }
 }
@@ -54,29 +68,35 @@ export default function BalanceCard() {
     const [bal, setBal] = useState<Bal | null>(null)
     const [err, setErr] = useState("")
     const [busy, setBusy] = useState(false)
+    const pending = useRef<AbortController | null>(null)
 
     const load = useCallback(async () => {
+        pending.current?.abort()
+        const controller = new AbortController()
+        pending.current = controller
         setBusy(true)
         setErr("")
+        setBal(null)
         try {
-            const r = await fetch(`${API_BASE}/api/order?market=kr`, { headers: authHeaders(), cache: "no-store" })
-            const d = await r.json().catch(() => ({}))
+            const r = await fetchBalance(controller.signal)
+            if (controller.signal.aborted) return
             if (!r.ok) {
-                setErr(String((d as { error?: string }).error || `HTTP ${r.status}`).slice(0, 120))
+                setErr(r.error.slice(0, 120))
                 return
             }
-            const p = parse(d as Record<string, unknown>)
+            const p = parse(r.data)
             if ("error" in p) setErr(p.error.slice(0, 120))
             else setBal(p)
         } catch (e) {
-            setErr(String((e as Error).message || e).slice(0, 100))
+            if (!controller.signal.aborted) setErr(String((e as Error).message || e).slice(0, 100))
         } finally {
-            setBusy(false)
+            if (!controller.signal.aborted) setBusy(false)
         }
     }, [])
 
     useEffect(() => {
-        load()
+        void load()
+        return () => pending.current?.abort()
     }, [load])
 
     return (

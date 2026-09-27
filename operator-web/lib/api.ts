@@ -1,7 +1,7 @@
 "use client"
 // 데이터 fetch 단일 소스 — 프레이머의 fetchJson 복붙(16파일) 제거.
 // authed(/api/admin) = 오퍼레이터 데이터 · public(blob) = 사실만(사실은 공개 OK).
-import { authHeaders } from "./auth"
+import { authHeaders, refreshAuth } from "./auth"
 
 export const API_BASE = "https://project-yw131.vercel.app"
 export const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
@@ -18,24 +18,87 @@ export function alphanestStockUrl(ticker: string): string {
 
 export type FetchResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string }
 
-// 오퍼레이터 authed — /api/admin?type=<name>. 미로그인/401 → auth 상태로 구분.
-export async function fetchOperator<T = unknown>(type: string): Promise<FetchResult<T>> {
-    const headers = authHeaders()
-    if (!headers.Authorization) return { ok: false, status: 401, error: "auth" }
+const READ_TIMEOUT_MS = 30000 // One deadline for auth wait, both GET attempts and body reads.
+
+// GET only. Retry is opt-in for admin/facts; balance must remain a single attempt.
+async function authenticatedRead<T>(url: string, signal?: AbortSignal, options: {
+    valid?: (data: T) => boolean
+    retryTransient?: boolean
+    preserveForbiddenError?: boolean
+} = {}): Promise<FetchResult<T>> {
+    const { valid, retryTransient = false, preserveForbiddenError = false } = options
+    const controller = new AbortController()
+    const onAbort = () => controller.abort(signal?.reason)
+    const cancelled = new Promise<never>((_, reject) => {
+        controller.signal.addEventListener("abort", () => reject(controller.signal.reason), { once: true })
+    })
+    const timer = setTimeout(() => controller.abort(new DOMException("Read timed out", "TimeoutError")), READ_TIMEOUT_MS)
+    signal?.addEventListener("abort", onAbort, { once: true })
+    if (signal?.aborted) onAbort()
+    const read = async (): Promise<FetchResult<T>> => {
+        controller.signal.throwIfAborted()
+        // auth -> supabase only; cancellation of one read does not cancel shared refresh.
+        await refreshAuth()
+        for (let attempt = 0; attempt < (retryTransient ? 2 : 1); attempt++) {
+            controller.signal.throwIfAborted()
+            const headers = authHeaders()
+            if (!headers.Authorization) return { ok: false, status: 401, error: "auth" }
+            // Keep synchronous request construction errors outside transport retry handling.
+            const request = fetch(url, { method: "GET", headers, cache: "no-store", signal: controller.signal })
+            let r: Response
+            try {
+                r = await request
+            } catch (e) {
+                controller.signal.throwIfAborted()
+                const transport = typeof e === "object" && e !== null && "name" in e && e.name === "TypeError"
+                if (retryTransient && attempt === 0 && transport) continue
+                throw e
+            }
+            controller.signal.throwIfAborted()
+            if (r.status === 401 || (r.status === 403 && !preserveForbiddenError)) return { ok: false, status: r.status, error: "auth" }
+            let data: T & { error?: unknown }
+            try {
+                data = await r.json()
+            } catch {
+                controller.signal.throwIfAborted()
+                return { ok: false, status: r.status, error: r.ok ? "invalid_response" : "http" }
+            }
+            controller.signal.throwIfAborted()
+            if (!r.ok) {
+                if (retryTransient && attempt === 0 && [502, 503, 504].includes(r.status)) continue
+                return { ok: false, status: r.status, error: typeof data?.error === "string" ? data.error : "http" }
+            }
+            if (valid && !valid(data)) return { ok: false, status: r.status, error: "invalid_response" }
+            return { ok: true, data }
+        }
+        return { ok: false, status: 0, error: "http" }
+    }
     try {
-        const r = await fetch(`${API_BASE}/api/admin?type=${encodeURIComponent(type)}`, { headers })
-        if (r.status === 401 || r.status === 403) return { ok: false, status: r.status, error: "auth" }
-        if (!r.ok) return { ok: false, status: r.status, error: "http" }
-        return { ok: true, data: (await r.json()) as T }
+        return await Promise.race([read(), cancelled])
     } catch (e) {
         return { ok: false, status: 0, error: String(e) }
+    } finally {
+        clearTimeout(timer)
+        signal?.removeEventListener("abort", onAbort)
+        controller.abort()
     }
+}
+
+// 오퍼레이터 authed — /api/admin?type=<name>. 미로그인/401 → auth 상태로 구분.
+export function fetchOperator<T = unknown>(type: string, signal?: AbortSignal): Promise<FetchResult<T>> {
+    return authenticatedRead<T>(`${API_BASE}/api/admin?type=${encodeURIComponent(type)}`, signal, { retryTransient: true })
+}
+
+/** KIS balance read only: auth wait and deadline, deliberately no automatic retries. */
+export function fetchBalance(signal?: AbortSignal): Promise<FetchResult<unknown>> {
+    // Broker configuration failures also use 403; retain their diagnosis for the card.
+    return authenticatedRead(`${API_BASE}/api/order?market=kr`, signal, { preserveForbiddenError: true })
 }
 
 /** 터미널 포트폴리오 — 슬림 라우트 우선(full 3.57MB = Safari 메모리 킬), 미배포 전환기만 full 폴백. */
 export async function fetchPortfolioSlim<T = unknown>(): Promise<FetchResult<T>> {
     const r = await fetchOperator<T>("portfolio_terminal")
-    if (r.ok || r.error === "auth") return r
+    if (r.ok || !(r.status === 404 || (r.status === 400 && r.error === "unknown_endpoint"))) return r
     return fetchOperator<T>("portfolio_full")
 }
 
@@ -104,27 +167,12 @@ export function askResultState(result: AskResult): "unresolved" | "empty" | "deg
 }
 
 export async function fetchAsk(ticker: string, question = "", signal?: AbortSignal): Promise<FetchResult<AskResult>> {
-    const headers = authHeaders()
-    if (!headers.Authorization) return { ok: false, status: 401, error: "auth" }
     const p = new URLSearchParams({ ticker })
     if (question) p.set("q", question)
     const url = `${API_BASE}/api/operator_ask?${p.toString()}`
-    const options: RequestInit = { headers, cache: "no-store", signal }
-    try {
-        const r = await fetch(url, options).catch((e: unknown) => {
-            // Retry one rejected transport request only; name also works across browser/VM realms.
-            const transportFailure = typeof e === "object" && e !== null && "name" in e && e.name === "TypeError"
-            if (signal?.aborted || !transportFailure) throw e
-            return fetch(url, options)
-        })
-        if (r.status === 401 || r.status === 403) return { ok: false, status: r.status, error: "auth" }
-        const data = await r.json().catch(() => null)
-        if (!r.ok) return { ok: false, status: r.status, error: typeof data?.error === "string" ? data.error : "http" }
-        if (!data || !Array.isArray(data.sections)) return { ok: false, status: r.status, error: "invalid_response" }
-        return { ok: true, data: data as AskResult }
-    } catch (e) {
-        return { ok: false, status: 0, error: String(e) }
-    }
+    return authenticatedRead<AskResult>(url, signal, {
+        retryTransient: true, valid: data => !!data && Array.isArray(data.sections),
+    })
 }
 
 // Railway 실시간 서버 (KIS 본인 이용, 발급 X 소비자). path 예: "quotes?tickers=005930,000660".
