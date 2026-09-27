@@ -119,6 +119,125 @@ test("fetchAsk preserves typed diagnostics, errors, cancellation and auth bounda
     assert.equal((await nonJson.fetchAsk("JEPQ")).status, 502)
 })
 
+for (const [realm, failure] of [
+    ["host", new TypeError("Failed to fetch")],
+    ["other VM", vm.runInNewContext('new TypeError("Failed to fetch")')],
+]) test(`fetchAsk retries one ${realm} transport failure with the same request`, async () => {
+    const fixture = { ticker: "fixture", status: "ready", sections: [] }
+    const controller = new AbortController(), calls = []
+    if (realm === "other VM") assert.equal(failure instanceof TypeError, false)
+    const client = api(async (url, options) => {
+        calls.push({ url, options })
+        if (calls.length === 1) throw failure
+        return { ok: true, status: 200, json: async () => fixture }
+    })
+    const result = await client.fetchAsk("fixture", "source & date?", controller.signal)
+    assert.equal(result.ok, true)
+    assert.equal(result.data, fixture)
+    assert.equal(calls.length, 2)
+    assert.equal(calls[1].url, calls[0].url)
+    assert.equal(new URL(calls[1].url).searchParams.get("q"), "source & date?")
+    assert.equal(calls[1].options, calls[0].options)
+    assert.equal(calls[1].options.headers, calls[0].options.headers)
+    assert.equal(calls[1].options.headers.Authorization, "Bearer fixture")
+    assert.equal(calls[1].options.signal, controller.signal)
+    assert.equal(calls[1].options.cache, "no-store")
+})
+
+test("fetchAsk surfaces the second transport failure without a third attempt", async () => {
+    let calls = 0
+    const client = api(async () => { calls++; throw new TypeError(`transport failure ${calls}`) })
+    const result = await client.fetchAsk("fixture")
+    assert.equal(calls, 2)
+    assert.equal(result.ok, false)
+    assert.equal(result.status, 0)
+    assert.equal(result.error, "TypeError: transport failure 2")
+})
+
+for (const [label, failure] of [
+    ["AbortError", Object.assign(new Error("cancelled"), { name: "AbortError" })],
+    ["ordinary error", new Error("offline")],
+]) test(`fetchAsk never retries ${label} rejection`, async () => {
+    let calls = 0
+    const client = api(async () => { calls++; throw failure })
+    const result = await client.fetchAsk("fixture", "", new AbortController().signal)
+    assert.equal(calls, 1)
+    assert.equal(result.ok, false)
+    assert.equal(result.error, String(failure))
+})
+
+for (const timing of ["before fetch", "during fetch"]) test(`fetchAsk never retries an aborted signal ${timing}`, async () => {
+    const controller = new AbortController()
+    const failure = new TypeError("custom cancellation")
+    if (timing === "before fetch") controller.abort(failure)
+    let calls = 0
+    const client = api(async (_url, options) => {
+        calls++
+        assert.equal(options.signal, controller.signal)
+        controller.abort(failure)
+        throw failure
+    })
+    const result = await client.fetchAsk("fixture", "", controller.signal)
+    assert.equal(calls, 1)
+    assert.equal(result.ok, false)
+    assert.equal(result.error, String(failure))
+})
+
+test("fetchAsk does not retry a synchronous fetch TypeError", async () => {
+    let calls = 0
+    const client = api(() => { calls++; throw new TypeError("invalid request") })
+    const result = await client.fetchAsk("fixture")
+    assert.equal(calls, 1)
+    assert.equal(result.ok, false)
+    assert.equal(result.error, "TypeError: invalid request")
+})
+
+for (const status of [401, 403, 400, 429, 500, 502, 503]) test(`fetchAsk never retries HTTP ${status}`, async () => {
+    let calls = 0
+    const client = api(async () => {
+        calls++
+        return { ok: false, status, json: async () => ({ error: "fixture-http-error" }) }
+    })
+    const result = await client.fetchAsk("fixture")
+    assert.equal(calls, 1)
+    assert.equal(result.ok, false)
+    assert.equal(result.status, status)
+    assert.equal(result.error, status === 401 || status === 403 ? "auth" : "fixture-http-error")
+})
+
+for (const [label, json] of [
+    ["invalid JSON", async () => { throw new SyntaxError("invalid JSON") }],
+    ["body TypeError", async () => { throw new TypeError("body read failed") }],
+    ["null payload", async () => null],
+    ["missing sections", async () => ({ ticker: "fixture" })],
+    ["malformed sections", async () => ({ sections: {} })],
+]) test(`fetchAsk never retries ${label}`, async () => {
+    let calls = 0
+    const client = api(async () => { calls++; return { ok: true, status: 200, json } })
+    const result = await client.fetchAsk("fixture")
+    assert.equal(calls, 1)
+    assert.equal(result.ok, false)
+    assert.equal(result.status, 200)
+    assert.equal(result.error, "invalid_response")
+})
+
+for (const [stock, expected] of [
+    [{ ticker: "JEPQ", name: "JEPQ", market: "ETF", type: "us_etf" }, "US"],
+    [{ ticker: "AAPL", name: "Apple", market: "US" }, "US"],
+    [{ ticker: "005930", name: "삼성전자", market: "KR" }, "KR"],
+    [{ ticker: "069500", name: "KODEX 200", market: "ETF", type: "kr_etf" }, "KR"],
+]) test(`search market label: ${stock.ticker} renders ${expected}`, () => {
+    const h = hooks([[stock], stock.ticker, -1, []])
+    const Search = load("app/components/StockSearch.tsx", {
+        react: h.react, "@/lib/theme": { ...theme, NUM: {} },
+        "@/lib/api": { fetchPublic: () => { throw Error("no network") } },
+    }).default
+    const html = renderToStaticMarkup(h.render(Search, {}))
+    assert.match(html, /role="option"/)
+    const labels = [...html.matchAll(/<span[^>]*>(US|KR)<\/span>/g)].map(match => match[1])
+    assert.deepEqual(labels, [expected])
+})
+
 for (const [status, text] of [["unresolved", "종목을 확인하지 못했습니다"], ["empty", "조회된 자료 없음"],
     ["partial", "일부 소스 확인 불가"], ["ready", "사실 조회됨"]]) {
     test(`panel renders ${status}, source distinctions and unknown as-of`, () => {

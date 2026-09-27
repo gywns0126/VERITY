@@ -9,7 +9,7 @@ import { fetchPublic } from "@/lib/api"
 const RECENT_KEY = "verity_recent_tickers"
 const LAST_KEY = "verity_last_ticker"
 
-type Stock = { ticker: string; name?: string; name_ko?: string; kw?: string; market?: string }
+type Stock = { ticker: string; name?: string; name_ko?: string; kw?: string; market?: string; type?: string }
 
 function loadRecent(): Stock[] {
     try {
@@ -78,7 +78,7 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
     const hover = dark ? "rgba(169,155,255,0.14)" : "rgba(108,92,231,0.08)"
 
     function Row({ item, k, active }: { item: Stock; k: string; active?: boolean }) {
-        const isUS = item.market === "US"
+        const isUS = item.market === "US" || item.type === "us_etf"
         return (
             <button
                 type="button"

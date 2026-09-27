@@ -108,8 +108,15 @@ export async function fetchAsk(ticker: string, question = "", signal?: AbortSign
     if (!headers.Authorization) return { ok: false, status: 401, error: "auth" }
     const p = new URLSearchParams({ ticker })
     if (question) p.set("q", question)
+    const url = `${API_BASE}/api/operator_ask?${p.toString()}`
+    const options: RequestInit = { headers, cache: "no-store", signal }
     try {
-        const r = await fetch(`${API_BASE}/api/operator_ask?${p.toString()}`, { headers, cache: "no-store", signal })
+        const r = await fetch(url, options).catch((e: unknown) => {
+            // Retry one rejected transport request only; name also works across browser/VM realms.
+            const transportFailure = typeof e === "object" && e !== null && "name" in e && e.name === "TypeError"
+            if (signal?.aborted || !transportFailure) throw e
+            return fetch(url, options)
+        })
         if (r.status === 401 || r.status === 403) return { ok: false, status: r.status, error: "auth" }
         const data = await r.json().catch(() => null)
         if (!r.ok) return { ok: false, status: r.status, error: typeof data?.error === "string" ? data.error : "http" }
