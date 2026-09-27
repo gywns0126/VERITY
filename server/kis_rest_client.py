@@ -2,9 +2,9 @@
 KIS REST API 클라이언트 — Railway 상시 구동용.
 
 토큰 전략:
-  1. 디스크 캐시 (/tmp/verity_kis_rest_token.json) → 재시작 시 기존 토큰 재사용
-  2. 메모리 캐시 → 프로세스 수명 동안 재발급 없음
-  3. 만료 5분 전에만 갱신
+  GH Actions 단일 발급원의 공유 토큰을 메모리·디스크 캐시로 재사용한다.
+  만료 여유 5분은 소비 유효성 검사이며 발급 주기가 아니다.
+  Railway의 기본 동작은 발급 금지이며 발급 간격 최소 24시간 가드를 유지한다.
 """
 from __future__ import annotations
 
@@ -396,9 +396,14 @@ def _account_parts_for(broker: str) -> tuple[str, str]:
     """
     creds = broker_credentials(broker)
     if not creds:
+        env_names = (
+            "KIS_APP_KEY / KIS_APP_SECRET / KIS_ACCOUNT_NO"
+            if broker == "operator"
+            else "KIS_APP_KEY__<SLUG> / KIS_APP_SECRET__<SLUG> / KIS_ACCOUNT_NO__<SLUG>"
+        )
         raise BrokerMismatch(
             f"알 수 없거나 미설정된 계좌 슬러그: {broker!r}. "
-            "BROKER_SLUGS allowlist 와 KIS_APP_KEY__<SLUG> 계열 env 를 확인."
+            f"BROKER_SLUGS allowlist 와 {env_names} env 를 확인."
         )
     return _split_account(creds["account_no"])
 
@@ -933,4 +938,5 @@ def get_balance(market: str = "kr", broker: str = "operator") -> dict:
             "FUND_STTL_ICLD_YN": "N", "FNCG_AMT_AUTO_RDPT_YN": "N",
             "PRCS_DVSN": "01", "CTX_AREA_FK100": "", "CTX_AREA_NK100": "",
         },
+        broker,
     )

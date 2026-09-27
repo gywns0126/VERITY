@@ -65,8 +65,8 @@ def broker_credentials(slug: str) -> dict | None:
     return {"slug": slug, "app_key": key, "app_secret": secret, "account_no": acct}
 
 # ── KIS 공유 토큰 store (Supabase) — RULE 1 단일 발급원 (PM 결정 2026-05-31) ──
-# Railway = 유일 발급원 → 발급 시 kis_shared_token 테이블에 토큰 값 기록.
-# GH/Vercel = service_role 읽기 소비. KIS_SHARED_TOKEN=1 일 때만 활성 (단계적 cutover).
+# GH Actions = 단일 발급원 → 발급 시 kis_shared_token 테이블에 토큰 값 기록.
+# Railway/Vercel = service_role 읽기 소비. KIS_SHARED_TOKEN=1 일 때 활성.
 KIS_SHARED_TOKEN: bool = os.getenv("KIS_SHARED_TOKEN", "").strip().lower() in ("1", "true", "yes", "on")
 SUPABASE_URL: str = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
 SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()

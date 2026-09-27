@@ -183,38 +183,57 @@ def is_admin_token(token: str) -> bool:
     return bool(ADMIN_BYPASS_TOKEN and token and token == ADMIN_BYPASS_TOKEN)
 
 
+class _AuthServiceUnavailable(Exception):
+    """Authentication could not be verified; never authorize on this outcome."""
+
+
 def verify_admin_jwt(jwt: str, *, require_owner: bool = False) -> bool:
     if not jwt or not SUPABASE_URL or not SUPABASE_ANON_KEY:
         return False
+    stage, status = "user", None
     try:
         r = requests.get(
             f"{SUPABASE_URL}/auth/v1/user",
             headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"},
             timeout=_t(5),
         )
-        if r.status_code != 200:
+        status = r.status_code
+        if status != 200:
+            if status in (408, 429) or status >= 500 or status < 400:
+                raise _AuthServiceUnavailable
             return False
         user = r.json()
         user_id = user.get("id") if isinstance(user, dict) else None
         if not isinstance(user_id, str) or not user_id.strip():
-            return False
+            raise _AuthServiceUnavailable
+        stage, status = "profile", None
         p = requests.get(
             f"{SUPABASE_URL}/rest/v1/profiles",
             params={"id": f"eq.{user_id}", "select": "is_admin,is_super_admin"},
             headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"},
             timeout=_t(5),
         )
-        if p.status_code != 200:
+        status = p.status_code
+        if status != 200:
+            if status in (408, 429) or status >= 500 or status < 400:
+                raise _AuthServiceUnavailable
             return False
         rows = p.json()
-        if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+        if rows == []:
             return False
+        if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+            raise _AuthServiceUnavailable
         return rows[0].get("is_admin") is True and (
             not require_owner or rows[0].get("is_super_admin") is True
         )
-    except (requests.RequestException, ValueError) as e:
-        _logger.warning("admin verify failed: %s", e)
+    except (requests.exceptions.InvalidURL, requests.exceptions.MissingSchema,
+            requests.exceptions.InvalidSchema, requests.exceptions.InvalidHeader):
+        # Malformed local configuration/credentials remain a denial, not an outage.
         return False
+    except (_AuthServiceUnavailable, requests.RequestException, ValueError, _BudgetExceeded):
+        # Exception text and upstream bodies may contain credentials or user details.
+        _logger.warning("admin auth service unavailable: stage=%s status=%s", stage, status)
+        raise _AuthServiceUnavailable from None
 
 
 def authorize(headers_dict: Dict[str, str], *, require_owner: bool = False) -> Tuple[bool, str]:
@@ -224,8 +243,11 @@ def authorize(headers_dict: Dict[str, str], *, require_owner: bool = False) -> T
     auth = headers_dict.get("authorization") or headers_dict.get("Authorization") or ""
     if auth.lower().startswith("bearer "):
         jwt = auth.split(" ", 1)[1].strip()
-        if verify_admin_jwt(jwt, require_owner=require_owner):
-            return True, "supabase_admin"
+        try:
+            if verify_admin_jwt(jwt, require_owner=require_owner):
+                return True, "supabase_admin"
+        except _AuthServiceUnavailable:
+            return False, "auth_service_unavailable"
     if not ADMIN_BYPASS_TOKEN and not SUPABASE_URL:
         return False, "no_auth_configured"
     return False, "unauthorized"
@@ -1602,6 +1624,9 @@ class handler(BaseHTTPRequestHandler):
             _stage("authorize")
             ok, reason = authorize(hdrs)
             if not ok:
+                if reason == "auth_service_unavailable":
+                    write_response(self, 503, {"error": reason})
+                    return
                 _sec_note_unauthorized(ip, self.path, method, hdrs.get("user-agent", ""))
                 write_response(self, 401, {"error": "unauthorized", "reason": reason})
                 return
@@ -1641,6 +1666,9 @@ class handler(BaseHTTPRequestHandler):
             _stage("authorize")
             ok, reason = authorize(hdrs, require_owner=endpoint not in MOD_ROUTES)
             if not ok:
+                if reason == "auth_service_unavailable":
+                    write_response(self, 503, {"error": reason})
+                    return
                 _sec_note_unauthorized(ip, self.path, "GET", hdrs.get("user-agent", ""))
                 write_response(self, 401, {"error": "unauthorized", "reason": reason})
                 return

@@ -12,6 +12,8 @@ const SESSION_KEY = "verity_supabase_session"
 const LOCK_KEY = "verity_session_refresh_lock"
 const LOCK_MS = 20000          // 다중 탭 동시 refresh 디바운스 (SessionKeeper 정합)
 const REFRESH_MARGIN_S = 300   // 만료 5분 전 선제 갱신
+const REFRESH_TIMEOUT_MS = 15000 // 락 대기 + 토큰 응답(본문 포함)의 전체 예산
+let pendingRefresh: Promise<boolean> | null = null
 
 export type Session = { access_token: string; refresh_token: string; expires_at: number; user_email?: string }
 
@@ -38,11 +40,12 @@ export function clearSession(): void {
     } catch {}
 }
 
-async function tokenRequest(grant: string, body: Record<string, string>): Promise<Session> {
+async function tokenRequest(grant: string, body: Record<string, string>, signal?: AbortSignal): Promise<Session> {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=${grant}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: ANON_KEY },
         body: JSON.stringify(body),
+        signal,
     })
     const d = await r.json().catch(() => ({}))
     if (!r.ok || !d.access_token) {
@@ -86,24 +89,86 @@ export function captureOAuthHash(): boolean {
     return true
 }
 
-/** 만료 임박 시 refresh — 성공 true. 다중 탭 락(SessionKeeper 패턴, 회전 충돌 방지). */
-export async function refreshIfNeeded(): Promise<boolean> {
-    const s = loadSession()
-    if (!s || !s.refresh_token) return false
-    const now = Math.floor(Date.now() / 1000)
-    if (s.expires_at && now < s.expires_at - REFRESH_MARGIN_S) return false
+function needsRefresh(s: Session | null): s is Session {
+    return !!s?.refresh_token && (!s.expires_at || Date.now() / 1000 >= s.expires_at - REFRESH_MARGIN_S)
+}
+
+function waitForRefreshLock(signal: AbortSignal, ms = 100): Promise<void> {
+    return new Promise((resolve, reject) => {
+        signal.throwIfAborted()
+        const onAbort = () => { clearTimeout(timer); reject(signal.reason) }
+        const timer = setTimeout(() => {
+            signal.removeEventListener("abort", onAbort)
+            resolve()
+        }, ms)
+        signal.addEventListener("abort", onAbort, { once: true })
+    })
+}
+
+async function refreshSession(): Promise<boolean> {
+    if (!needsRefresh(loadSession())) return false
+    const controller = new AbortController()
+    const { signal } = controller
+    let ownLock: string | null = null
+    const cancelled = new Promise<never>((_, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true })
+    })
+    const timer = setTimeout(() => controller.abort(new DOMException("Session refresh timed out", "TimeoutError")), REFRESH_TIMEOUT_MS)
+    const refresh = async () => {
+        while (true) {
+            signal.throwIfAborted()
+            // Always reload after another tab's flight; its refresh token may have rotated.
+            if (!needsRefresh(loadSession())) return false
+            const lock = localStorage.getItem(LOCK_KEY)
+            if (lock && Date.now() - Number(lock) < LOCK_MS) {
+                await waitForRefreshLock(signal)
+                continue
+            }
+            // Numeric timestamp stays compatible with older tabs. The fractional suffix
+            // identifies this claim so cleanup cannot remove a replacement tab's lock.
+            ownLock = `${Date.now()}.${Math.random().toString().slice(2)}`
+            localStorage.setItem(LOCK_KEY, ownLock)
+            await waitForRefreshLock(signal, 0)
+            if (localStorage.getItem(LOCK_KEY) !== ownLock) continue
+            const s = loadSession()
+            if (!needsRefresh(s)) return false
+            const next = await Promise.race([
+                tokenRequest("refresh_token", { refresh_token: s.refresh_token }, signal), cancelled,
+            ])
+            signal.throwIfAborted()
+            const current = loadSession()
+            // A logout, login or other tab's newer session must win over this response.
+            if (current?.access_token !== s.access_token || current?.refresh_token !== s.refresh_token) return false
+            saveSession({ ...next, user_email: next.user_email || s.user_email })
+            return true
+        }
+    }
     try {
-        const lock = Number(localStorage.getItem(LOCK_KEY) || 0)
-        if (Date.now() - lock < LOCK_MS) return false
-        localStorage.setItem(LOCK_KEY, String(Date.now()))
-    } catch {}
-    try {
-        const next = await tokenRequest("refresh_token", { refresh_token: s.refresh_token })
-        saveSession({ ...next, user_email: next.user_email || s.user_email })
-        return true
+        // Web Locks make claims atomic across current tabs; the storage lease also
+        // coordinates older tabs and provides a bounded fallback where unavailable.
+        return await Promise.race([
+            typeof navigator !== "undefined" && navigator.locks
+                ? navigator.locks.request(LOCK_KEY, { signal }, refresh)
+                : refresh(),
+            cancelled,
+        ])
     } catch {
         return false
+    } finally {
+        clearTimeout(timer)
+        controller.abort()
+        try {
+            if (ownLock && localStorage.getItem(LOCK_KEY) === ownLock) localStorage.removeItem(LOCK_KEY)
+        } catch {}
     }
+}
+
+/** Near-expiry refresh, shared by both page gates and reads in this tab. */
+export function refreshIfNeeded(): Promise<boolean> {
+    if (!pendingRefresh) {
+        pendingRefresh = refreshSession().finally(() => { pendingRefresh = null })
+    }
+    return pendingRefresh
 }
 
 // ── 내 프로필 (계좌 라우팅·시드) — PM 2026-08-07 다계좌 ──────────────

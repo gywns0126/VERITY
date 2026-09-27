@@ -94,6 +94,24 @@ def test_account_parts_never_cross_accounts(monkeypatch):
     assert krc._account_parts_for("friend") == ("22222222", "01")
 
 
+@pytest.mark.parametrize("market", ["kr", "us"])
+@pytest.mark.parametrize("broker,cano", [("operator", "11111111"), ("friend", "22222222")])
+def test_balance_forwards_matching_account_and_credentials(monkeypatch, market, broker, cano):
+    """잔고 요청도 계좌번호와 인증 슬러그를 같은 사람 것으로 전달한다."""
+    krc = _multi(monkeypatch)
+    calls = []
+
+    def fake_get(path, tr_id, params, broker="operator"):
+        calls.append((path, params["CANO"], params["ACNT_PRDT_CD"], broker))
+        return {"rt_cd": "0"}
+
+    monkeypatch.setattr(krc, "_get", fake_get)
+    assert krc.get_balance(market, broker) == {"rt_cd": "0"}
+    assert len(calls) == 1
+    assert calls[0][1:] == (cano, "01", broker)
+    assert ("overseas-stock" if market == "us" else "domestic-stock") in calls[0][0]
+
+
 def test_alt_broker_token_never_falls_back_to_operator(monkeypatch):
     """공유 store 에 친구 토큰이 없으면 예외 — 오퍼레이터 토큰으로 대신 나가지 않는다.
 
@@ -249,6 +267,15 @@ def test_unknown_slug_raises_not_falls_back(monkeypatch):
         krc._account_parts_for("friend")
     with pytest.raises(krc.BrokerMismatch):
         krc._account_parts_for("")
+
+
+def test_operator_configuration_error_names_unsuffixed_env(monkeypatch):
+    krc = _multi(monkeypatch)
+    monkeypatch.setattr(krc, "broker_credentials", lambda slug: None)
+    with pytest.raises(krc.BrokerMismatch) as exc:
+        krc._account_parts_for("operator")
+    assert "KIS_APP_KEY / KIS_APP_SECRET / KIS_ACCOUNT_NO" in str(exc.value)
+    assert "__<SLUG>" not in str(exc.value)
 
 
 # ── 4. 슬러그 출처 = 헤더, 본문 아님 ─────────────────────────────────

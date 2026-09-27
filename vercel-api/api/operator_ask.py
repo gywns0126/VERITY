@@ -41,37 +41,56 @@ def _headers_to_dict(handler) -> Dict[str, str]:
     return {k.lower(): v for k, v in handler.headers.items()}
 
 
+class _AuthServiceUnavailable(Exception):
+    """Authentication could not be verified; never authorize on this outcome."""
+
+
 def _verify_admin_jwt(jwt: str) -> bool:
     """Keep the existing helper name; personal facts require both owner flags."""
     if not jwt or not SUPABASE_URL or not SUPABASE_ANON_KEY:
         return False
+    stage, status = "user", None
     try:
         r = requests.get(
             f"{SUPABASE_URL}/auth/v1/user",
             headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"},
             timeout=5,
         )
-        if r.status_code != 200:
+        status = r.status_code
+        if status != 200:
+            if status in (408, 429) or status >= 500 or status < 400:
+                raise _AuthServiceUnavailable
             return False
         user = r.json()
         uid = user.get("id") if isinstance(user, dict) else None
         if not isinstance(uid, str) or not uid.strip():
-            return False
+            raise _AuthServiceUnavailable
+        stage, status = "profile", None
         p = requests.get(
             f"{SUPABASE_URL}/rest/v1/profiles",
             params={"id": f"eq.{uid}", "select": "is_admin,is_super_admin"},
             headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {jwt}"},
             timeout=5,
         )
-        if p.status_code != 200:
+        status = p.status_code
+        if status != 200:
+            if status in (408, 429) or status >= 500 or status < 400:
+                raise _AuthServiceUnavailable
             return False
         rows = p.json()
-        if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+        if rows == []:
             return False
+        if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+            raise _AuthServiceUnavailable
         return rows[0].get("is_admin") is True and rows[0].get("is_super_admin") is True
-    except (requests.RequestException, ValueError) as e:
-        _logger.warning("operator_ask admin verify failed: %s", e)
+    except (requests.exceptions.InvalidURL, requests.exceptions.MissingSchema,
+            requests.exceptions.InvalidSchema, requests.exceptions.InvalidHeader):
+        # Malformed local configuration/credentials remain a denial, not an outage.
         return False
+    except (_AuthServiceUnavailable, requests.RequestException, ValueError):
+        # Exception text and upstream bodies may contain credentials or user details.
+        _logger.warning("operator_ask auth service unavailable: stage=%s status=%s", stage, status)
+        raise _AuthServiceUnavailable from None
 
 
 def _authorize(h: Dict[str, str]) -> Tuple[bool, str]:
@@ -79,8 +98,12 @@ def _authorize(h: Dict[str, str]) -> Tuple[bool, str]:
     if bypass and ADMIN_BYPASS_TOKEN and bypass == ADMIN_BYPASS_TOKEN:
         return True, "bypass_token"
     auth = h.get("authorization") or ""
-    if auth.lower().startswith("bearer ") and _verify_admin_jwt(auth.split(" ", 1)[1].strip()):
-        return True, "supabase_admin"
+    if auth.lower().startswith("bearer "):
+        try:
+            if _verify_admin_jwt(auth.split(" ", 1)[1].strip()):
+                return True, "supabase_admin"
+        except _AuthServiceUnavailable:
+            return False, "auth_service_unavailable"
     return False, "unauthorized"
 
 
@@ -107,6 +130,8 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         ok, reason = _authorize(_headers_to_dict(self))
         if not ok:
+            if reason == "auth_service_unavailable":
+                return _write(self, 503, {"error": reason})
             return _write(self, 401, {"error": "unauthorized", "reason": reason})
 
         qs = parse_qs(urlparse(self.path).query)
