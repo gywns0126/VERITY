@@ -15,13 +15,14 @@ import content_oauth as oauth
 HEADERS = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
 
 
-def call(method="tools/list", params=None, *, headers=None, authorize=None, feed=None):
+def call(method="tools/list", params=None, *, headers=None, authorize=None, feed=None, original=None):
     msg = {"jsonrpc": "2.0", "id": 1, "method": method}
     if params is not None:
         msg["params"] = params
     return m.process_request("POST", headers or HEADERS, json.dumps(msg).encode(),
                              authorize_fn=authorize or (lambda h: None),
-                             feed_fn=feed or (lambda: {"items": []}))
+                             feed_fn=feed or (lambda: {"items": []}),
+                             original_fn=original or (lambda receipt: {"original_status": "unavailable"}))
 
 
 def test_closed_by_default_before_source(monkeypatch):
@@ -190,3 +191,51 @@ def test_discovery_routes_preserve_deploy_guard():
     assert routes["/.well-known/oauth-authorization-server/api/content_oauth"] == "/api/content_oauth?op=server"
     assert routes["/.well-known/oauth-protected-resource/api/content_mcp"] == "/api/content_oauth?op=resource"
     assert "git diff --quiet $B HEAD -- vercel-api/" in config["ignoreCommand"]
+
+
+def example_feed():
+    return {"items": [{"ticker": "083650", "name": "예시 기업", "disclosures": [{
+        "title": "[정정]단일판매ㆍ공급계약체결", "date": "2026-09-23",
+        "is_correction": True,
+        "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260923900749",
+    }]}]}
+
+
+def test_original_only_after_auth_and_exact_feed_membership():
+    original = Mock()
+    for args in ({"id": "20260923999999"}, {"id": "https://evil.example"}):
+        call("tools/call", {"name": "get_content_evidence", "arguments": args},
+             feed=example_feed, original=original)
+    call("tools/call", {"name": "search_content_candidates"}, feed=example_feed, original=original)
+    original.assert_not_called()
+    with pytest.raises(m.ServiceError):
+        call("tools/call", {"name": "get_content_evidence", "arguments": {"id": "20260923900749"}},
+             authorize=Mock(side_effect=m.ServiceError(401, "denied")), feed=example_feed, original=original)
+    original.assert_not_called()
+
+
+def test_original_provenance_is_not_market_freshness_or_latest_revision():
+    original = Mock(return_value={"receipt_id": "20260923900749", "original_status": "available",
+        "source_checked_at": "2026-09-27T03:00:00+00:00", "excerpt": "계약금액 변경"})
+    _, response = call("tools/call", {"name": "get_content_evidence", "arguments": {"id": "20260923900749"}},
+                       feed=example_feed, original=original)
+    evidence = response["result"]["structuredContent"]
+    item = evidence["items"][0]
+    original.assert_called_once_with("20260923900749")
+    assert item["original_document"]["excerpt"] == "계약금액 변경"
+    for row in (item, evidence):
+        assert row["source_checked_at"] == original.return_value["source_checked_at"]
+        assert row["evidence_basis"] == "original_excerpt_and_title"
+        assert row["freshness_status"] == "unknown"
+        assert row["latest_revision_verified"] is False
+        assert row["breaking_eligible"] is False
+
+
+@pytest.mark.parametrize("status", ["unavailable", "unsupported"])
+def test_original_failure_preserves_explicit_title_only_fallback(status):
+    _, response = call("tools/call", {"name": "get_content_evidence", "arguments": {"id": "20260923900749"}},
+                       feed=example_feed, original=lambda receipt: {"original_status": status})
+    evidence = response["result"]["structuredContent"]
+    assert evidence["evidence_basis"] == "title_only"
+    assert evidence["source_checked_at"] is None
+    assert evidence["items"][0]["original_document"]["original_status"] == status
