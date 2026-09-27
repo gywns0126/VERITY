@@ -23,12 +23,16 @@
 from __future__ import annotations
 
 import json
+import math
+import socket
 import os
 import re
 import time
 import urllib.parse
 import urllib.request
+import urllib.error
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import ContextVar, copy_context
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -47,6 +51,23 @@ _CACHE_BASE = os.environ.get("OPERATOR_CACHE_DIR") or (
 _CACHE_DIR = os.path.join(_CACHE_BASE, "ticker_facts")
 _CACHE_TTL = 1800  # 30분 — 발행물은 5분~일단위 갱신이라 이 정도면 충분히 신선
 _TIMEOUT = 25
+_FETCH_TRACE: ContextVar = ContextVar("operator_fetch_trace", default=None)
+_BYPASS_CACHE: ContextVar = ContextVar("operator_bypass_cache", default=False)
+_LOCAL_ORIGINS: ContextVar = ContextVar("operator_local_origins", default=None)
+_REQUEST_DEADLINE: ContextVar = ContextVar("operator_request_deadline", default=None)
+
+# 이미 공개 Git에 추적된 사실 파일만 허용. recommendations/private/임의 경로 폴백 금지.
+# Vercel 번들에는 repo-root data/가 없으므로 누락 시 현재 공개 산출물을 읽는다.
+PUBLIC_LOCAL_FALLBACKS = frozenset({
+    "data/chain_snippets.json", "data/commodity_impact.json", "data/dart_analysis_cache.json",
+    "data/dart_business_overview.json", "data/dart_cb_bw_cache.json", "data/dart_fundamentals_kr.json",
+    "data/dart_kam_cache.json", "data/dart_kr_fin_history.json", "data/dart_litigation_cache.json",
+    "data/dart_related_party_cache.json", "data/dividends_kr.json", "data/group_structure.json",
+    "data/kr_listed.json", "data/kr_lynch_class.json", "data/kr_major_shareholders.json",
+    "data/kr_sector_map.json", "data/krx_mktcap.json", "data/mapping.json",
+    "data/us_fin_annual_compact.json", "data/us_form144.json", "data/us_options.json",
+    "data/us_sector_cache.json", "data/us_short_pressure.json",
+})
 
 # ── 핵심 발행물: 전용 포맷터가 있는 것 ───────────────────────────────────────
 #   (파일, 라벨). 나머지는 제네릭 스캔이 잡는다.
@@ -148,24 +169,48 @@ def _cache_path(key: str) -> str:
     return os.path.join(_CACHE_DIR, safe)
 
 
+def _trace_fetch(url: str, status: str, reason: str = "") -> None:
+    trace = _FETCH_TRACE.get()
+    if trace is not None:
+        # Query strings can contain DART keys. Never persist headers or exception text.
+        parsed = urllib.parse.urlsplit(url)
+        trace.append({"source": f"{parsed.hostname}{parsed.path}",
+                      "status": status, "reason": reason})
+
+
 def _fetch_json(url: str, cache_key: Optional[str] = None,
                 headers: Optional[Dict[str, str]] = None) -> Optional[Any]:
-    """URL → JSON. cache_key 주면 TTL 캐시. 실패는 None(조용히) — 한 소스가 죽어도 나머지는 산다."""
-    if cache_key:
+    """URL → JSON. 실패 원인은 요청별 진단에 남기고 나머지 소스는 계속한다."""
+    if cache_key and not _BYPASS_CACHE.get():
         p = _cache_path(cache_key)
         try:
             if os.path.exists(p) and time.time() - os.path.getmtime(p) < _CACHE_TTL:
                 with open(p, encoding="utf-8") as f:
-                    return json.load(f)
+                    doc = json.load(f)
+                _trace_fetch(url, "cache_hit")
+                return doc
         except Exception:
             pass
     try:
+        deadline = _REQUEST_DEADLINE.get()
+        remaining = deadline - time.monotonic() if deadline is not None else _TIMEOUT
+        if remaining <= 0:
+            _trace_fetch(url, "unavailable", "budget_exhausted")
+            return None
         req = urllib.request.Request(url, headers=headers or {"User-Agent": "verity-facts/1.0"})
-        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
+        with urllib.request.urlopen(req, timeout=min(_TIMEOUT, remaining)) as r:
             body = r.read().decode("utf-8", "replace")
         doc = json.loads(body)
-    except Exception:
+    except Exception as exc:
+        cause = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+        reason = (f"http_{exc.code}" if isinstance(exc, urllib.error.HTTPError) else
+                  "dns_error" if isinstance(cause, socket.gaierror) else
+                  "timeout" if isinstance(cause, (TimeoutError, socket.timeout)) else
+                  "invalid_json" if isinstance(exc, (ValueError, UnicodeError)) else
+                  type(cause).__name__)
+        _trace_fetch(url, "unavailable", reason)
         return None
+    _trace_fetch(url, "received")
     if cache_key:
         try:
             os.makedirs(_CACHE_DIR, exist_ok=True)
@@ -181,7 +226,13 @@ def _load_local(rel: str) -> Optional[Any]:
         with open(os.path.join(_ROOT, rel), encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return None
+        if rel not in PUBLIC_LOCAL_FALLBACKS:
+            return None
+    url = f"https://raw.githubusercontent.com/gywns0126/VERITY/main/{rel}"
+    doc = _fetch_json(url, "public_local_" + os.path.basename(rel))
+    if doc is not None and _LOCAL_ORIGINS.get() is not None:
+        _LOCAL_ORIGINS.get()[rel] = url
+    return doc
 
 
 def _meta_as_of(doc: Any) -> str:
@@ -189,11 +240,25 @@ def _meta_as_of(doc: Any) -> str:
     if not isinstance(doc, dict):
         return ""
     m = doc.get("_meta") if isinstance(doc.get("_meta"), dict) else doc
-    for k in ("as_of", "bas_dd", "basDt", "generated_at", "updated_at", "collected_at", "date"):
+    for k in ("as_of", "bas_dd", "basDt", "date", "기준일"):
         v = (m or {}).get(k)
         if v:
             return str(v)
     return ""
+
+
+def _record_as_of(data: Any, doc: Any) -> str:
+    """회전 수집의 종목 기준일이 파일 생성 시각보다 우선한다."""
+    record = data[0] if isinstance(data, list) and len(data) == 1 else data
+    return _meta_as_of(record) or _meta_as_of(doc)
+
+
+def _number(value: Any) -> Optional[float]:
+    try:
+        result = float(value)
+        return result if math.isfinite(result) else None
+    except (TypeError, ValueError, OverflowError):
+        return None
 
 
 # ── 종목 해석 ────────────────────────────────────────────────────────────────
@@ -402,14 +467,18 @@ def _us_quote(tk: str) -> Optional[Dict[str, Any]]:
     except (KeyError, IndexError, TypeError):
         return None
     px = meta.get("regularMarketPrice")
-    if px is None:
+    px = _number(px)
+    if px is None or px <= 0:
         return None
-    closes = [(t, c) for t, c in zip(ts, q.get("close") or []) if c is not None]
+    closes = [(t, _number(c)) for t, c in zip(ts, q.get("close") or [])
+              if _number(c) is not None and float(c) > 0]
     if not closes:
         return None
     out: Dict[str, Any] = {"현재가": round(float(px), 4)}
-    if len(closes) >= 2:
+    prev = _number(meta.get("previousClose"))
+    if prev is None and len(closes) >= 2:
         prev = closes[-2][1]
+    if prev and prev > 0:
         out["전일종가"] = round(float(prev), 4)
         out["등락률"] = f"{(float(px) / float(prev) - 1) * 100:+.2f}%"
     last_dt = datetime.fromtimestamp(int(meta.get("regularMarketTime") or closes[-1][0]), _KST)
@@ -420,7 +489,8 @@ def _us_quote(tk: str) -> Optional[Dict[str, Any]]:
         "거래량": meta.get("regularMarketVolume"),
         "최근 5봉 [일,종가,거래량]": [
             [datetime.fromtimestamp(int(t), _KST).strftime("%Y%m%d"), round(float(c), 4),
-             (q.get("volume") or [None])[ts.index(t)] if t in ts else None]
+             (q.get("volume") or [])[ts.index(t)]
+             if t in ts and ts.index(t) < len(q.get("volume") or []) else None]
             for t, c in closes[-5:]
         ],
         "_as_of": last_dt.isoformat(timespec="seconds"),
@@ -430,7 +500,7 @@ def _us_quote(tk: str) -> Optional[Dict[str, Any]]:
 
 
 def _us_session_label(meta: Dict[str, Any], last_dt: datetime) -> str:
-    """미국장 개폐 상태 + 그 값이 '장중가' 인지 '종가' 인지를 못 박아 돌려준다.
+    """미국장 개폐 상태와 실제 체결 시각을 분리해 표시한다.
 
     🚨 2026-08-15 사고 고정. KST 09:24 에 SPCX 를 조회해 "미국 실시간 시세" 섹션의
     $140.00 을 현재가로 답했다. 실제는 8/14 종가다(`regularMarketTime` = 8/14 20:00 UTC
@@ -450,12 +520,15 @@ def _us_session_label(meta: Dict[str, Any], last_dt: datetime) -> str:
         # 거래소 현지(ET) 기준 세션 일자 — KST 일자로 말하면 하루 어긋난다.
         sess = datetime.utcfromtimestamp(int(end) + int(off)).strftime("%Y-%m-%d")
     now_ep = int(_now().timestamp())
+    trade_label = last_dt.strftime('%Y-%m-%d %H:%M KST')
     if start is not None and end is not None:
         if int(start) <= now_ep <= int(end):
-            return f"미국장 개장 중 · 장중 체결가 ({sess} ET 세션)"
+            if last_dt.timestamp() < int(start):
+                return f"미국장 개장 중 · 이전 세션 체결값 (최종 체결 {trade_label})"
+            return f"미국장 개장 중 · 최종 체결 {trade_label} ({sess} ET 세션)"
         if now_ep < int(start):
-            return f"미국장 개장 전 · 직전 거래일 종가 (다음 세션 {sess} ET)"
-        return f"🚨 미국장 마감 · **{sess} (ET) 종가** — 현재가 아님"
+            return f"미국장 개장 전 · 최종 체결 {trade_label} (다음 세션 {sess} ET)"
+        return f"미국장 마감 · 최종 체결 {trade_label} — 조회 시각의 현재가 아님"
     return f"미국장 개폐 판정 불가 · 최종 체결 {last_dt.strftime('%Y-%m-%d %H:%M KST')}"
 
 
@@ -502,10 +575,12 @@ def _dart_recent_filings(tk: str) -> Optional[Dict[str, Any]]:
     """
     key = os.environ.get("DART_API_KEY")
     if not key:
+        _trace_fetch("https://opendart.fss.or.kr/api/list.json", "unavailable", "dart_key_missing")
         return None
     mapping = _load_local("data/mapping.json")
     cc = (mapping or {}).get(tk) if isinstance(mapping, dict) else None
     if not cc:
+        _trace_fetch("https://opendart.fss.or.kr/api/list.json", "unavailable", "dart_corp_mapping_unresolved")
         return None
     end = _now()
     bgn = end - timedelta(days=_DART_WINDOW_DAYS)
@@ -514,10 +589,8 @@ def _dart_recent_filings(tk: str) -> Optional[Dict[str, Any]]:
         "bgn_de": bgn.strftime("%Y%m%d"), "end_de": end.strftime("%Y%m%d"),
         "page_count": 20,
     })
-    try:
-        with urllib.request.urlopen(url, timeout=10) as r:
-            doc = json.loads(r.read().decode("utf-8", "replace"))
-    except Exception:
+    doc = _fetch_json(url)
+    if not isinstance(doc, dict):
         return None
     status = str(doc.get("status") or "")
     window = f"{bgn.strftime('%Y-%m-%d')} ~ {end.strftime('%Y-%m-%d')}"
@@ -525,6 +598,7 @@ def _dart_recent_filings(tk: str) -> Optional[Dict[str, Any]]:
         return {"조회구간": window, "건수": 0,
                 "확정": "구간 내 공시 0건 — DART 직조회 확정 (추정 아님)"}
     if status != "000":  # 010 키오류 · 020 쿼터 초과 등 — 실패는 missing 으로
+        _trace_fetch(url, "unavailable", "dart_status_" + status)
         return None
     rows = []
     for it in (doc.get("list") or []):
@@ -557,12 +631,18 @@ def _daily_bars(tk: str) -> Optional[Dict[str, Any]]:
     종목이 "MA·고저·거래량 평균조차 없음" 상태로 나오던 갭의 입력을 여기서 공급한다.
     파생은 전부 산술(사실) — MA/고저/평균거래량. 해석·신호는 상위 레이어 몫.
     """
+    if not re.fullmatch(r"\d{6}", tk or ""):
+        return None
     idx = _chunk_idx(tk)
     if idx < 0:
         return None
     doc = _fetch_json(f"{BLOB}/kr_chart_daily/chunk_{idx:02d}.json", f"chart_chunk_{idx:02d}")
     c = (((doc or {}).get("stocks") or {}).get(tk) or {}).get("c")
     if not isinstance(c, list) or len(c) < 5:
+        return None
+    if any(not isinstance(r, list) or len(r) < 6 or
+           any(_number(v) is None for v in r[1:6]) or
+           any(float(v) <= 0 for v in r[2:5]) for r in c):
         return None
     closes = [r[4] for r in c]
     vols = [r[5] for r in c]
@@ -656,7 +736,33 @@ def past_decisions_section(tk: str, limit: int = PAST_DECISIONS_LIMIT,
     }, None
 
 
-def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
+def collect(query: str, include_private: bool = True, *, no_cache: bool = False) -> Dict[str, Any]:
+    """요청별 진단·캐시 정책을 격리한다. 동시 사용자 사이에 진단이 섞이지 않는다."""
+    trace: List[Dict[str, str]] = []
+    trace_token = _FETCH_TRACE.set(trace)
+    cache_token = _BYPASS_CACHE.set(no_cache)
+    origins_token = _LOCAL_ORIGINS.set({})
+    started = time.monotonic()
+    deadline_token = _REQUEST_DEADLINE.set(started + 240)
+    try:
+        out = _collect(query, include_private)
+        out["_meta"].update(fetch_diagnostics=trace,
+                            elapsed_seconds=round(time.monotonic() - started, 3))
+        coverage = out.get("coverage", {})
+        out["_meta"]["status"] = (
+            "unresolved" if not out["ticker"] else "empty" if not out["sections"] else
+            "partial" if coverage.get("unavailable") or out["missing"] or
+            any(x["status"] == "unavailable" for x in trace) else "ready"
+        )
+        return out
+    finally:
+        _FETCH_TRACE.reset(trace_token)
+        _BYPASS_CACHE.reset(cache_token)
+        _LOCAL_ORIGINS.reset(origins_token)
+        _REQUEST_DEADLINE.reset(deadline_token)
+
+
+def _collect(query: str, include_private: bool = True) -> Dict[str, Any]:
     """종목 하나에 대한 전 소스 사실 조인.
 
     반환 = {ticker, name, sections:[{label, source, as_of, data}], missing:[...], _meta}
@@ -669,16 +775,49 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
                   "note": "사실 조인만 — 판단·전망·추천 없음(RULE 7). 오퍼레이터 전용."},
     }
     if not tk:
-        out["missing"].append(f"종목 해석 실패: {query!r} — 유니버스에 없음")
+        out["missing"].append(f"종목 해석 실패: {query!r} — 입력·유니버스 조회 상태 확인 필요")
         return out
+
+    ledger: Dict[str, Dict[str, Any]] = {}
+
+    def _mark(source: str, label: str, status: str, reason: str = "", as_of: str = "") -> None:
+        ledger[source] = dict(source=source, label=label, status=status, reason=reason, as_of=as_of)
+
+    def _check(source: str, label: str, doc: Any, got: Any) -> None:
+        status = "unavailable" if doc is None else "hit" if got not in (None, [], {}) else "no_record"
+        reason = "" if status == "hit" else "조회 실패 또는 파일 미배치" if doc is None else "응답 내 종목 레코드 없음"
+        if doc is None:
+            for event in reversed(_FETCH_TRACE.get() or []):
+                if event["source"].endswith("/" + source) and event["status"] == "unavailable":
+                    reason = event["reason"]
+                    break
+        _mark(source, label, status, reason, _record_as_of(got, doc))
+
+    def _safe(source: str, label: str, fn):
+        try:
+            value = fn()
+        except Exception as exc:
+            _mark(source, label, "unavailable", type(exc).__name__)
+            return None
+        _check(source, label, value, value)
+        return value
 
     def _add(label: str, source: str, doc: Any, data: Any) -> None:
         if data in (None, {}, []):
             out["missing"].append(f"{label} ({source})")
             return
-        out["sections"].append({
-            "label": label, "source": source, "as_of": _meta_as_of(doc), "data": data,
-        })
+        section = {
+            "label": label, "source": source, "as_of": _record_as_of(data, doc), "data": data,
+        }
+        origin = (_LOCAL_ORIGINS.get() or {}).get(source)
+        if origin:
+            section["retrieved_from"] = origin
+        if isinstance(doc, dict) and isinstance(doc.get("_meta"), dict):
+            periods = {k: v for k, v in doc["_meta"].items()
+                       if k.endswith("_as_of") or k.endswith("_period")}
+            if periods:
+                section["source_periods"] = periods
+        out["sections"].append(section)
 
     # 1) 공개 발행물 — 병렬 fetch
     # 🚨 2026-08-06 전송량 fix (Vercel 과금 대응): 이전엔 종목 1건 조회에 발행물 **전체 35개
@@ -697,46 +836,53 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
     _skipped = len(SCAN_FILES) - len(_scan)
     urls = [(f, lab) for f, lab in CORE_FILES if _needed(f)] + [(f, f[:-5]) for f in _scan]
     docs: Dict[str, Any] = {}
+    for f, label in CORE_FILES + [(f, f[:-5]) for f in SCAN_FILES]:
+        if not _needed(f):
+            _mark(f, label, "skipped", "다른 시장 전용")
     with ThreadPoolExecutor(max_workers=8) as ex:
-        futs = {ex.submit(_fetch_json, f"{BLOB}/{f}", f.replace("/", "_")): f for f, _ in urls}
+        futs = {ex.submit(copy_context().run, _fetch_json, f"{BLOB}/{f}", f.replace("/", "_")): f
+                for f, _ in urls}
         for fut, f in futs.items():
             try:
                 docs[f] = fut.result()
             except Exception:
                 docs[f] = None
+    for f, label in urls:
+        _check(f, label, docs.get(f), _extract_for_ticker(docs.get(f), tk))
 
     # 실시간 — 있으면 **가장 먼저**. 종가만 보다가 장중을 놓치는 사고 방지(2026-08-03).
-    rt = _realtime(tk) if include_private else None
+    rt = _safe("railway:quotes", "국내 시세", lambda: _realtime(tk)) if include_private and not _is_us_q else None
+    if not include_private or _is_us_q:
+        _mark("railway:quotes", "국내 시세", "skipped", "본인 시세 조회 제외 또는 다른 시장")
     if rt:
         out["sections"].append({
-            "label": "실시간 시세 (KIS · 본인 이용)", "source": "railway:quotes",
-            "as_of": str(rt.pop("_asof", "") or ""), "data": rt,
+            "label": "실시간 시세 (KIS · 본인 이용 · 체결시각 미제공)", "source": "railway:quotes",
+            "as_of": "", "observed_at": str(rt.pop("_asof", "") or ""), "data": rt,
         })
-    elif not _is_us_q:
+    elif not _is_us_q and include_private:
         # 🚨 '없는 것' 은 **적용 가능한데 비어 있는** 축만 적는다(2026-08-09). US 종목에
         #   KR 전용 축(KIS 실시간·DART 직조회·금융위 일봉)을 적으면 "찾아봤는데 없더라" 로
         #   읽혀 실제보다 결손이 커 보인다. 애초에 해당되지 않는 축은 침묵이 정직하다.
         out["missing"].append("실시간 시세 (KIS — 미도달·장 마감)")
 
     # US 시세 — 발행물이 아니라 연결 소스 실호출. KR 의 (KIS 실시간 + 금융위 일봉) 2층에 대응한다.
-    #   ① KIS 해외 현재체결가 = 장중 현재가. ② 야후 = 최종 체결일 + 5봉 + 52주 고저.
-    #   🚨 둘을 섞지 말 것 — ①이 있으면 그게 '지금', ②는 '마지막 마감' 이다(SKILL.md 규율 2 정합).
+    #   KIS 응답의 asof는 조회 시각이다. 체결 시각이 있는 야후 값과 신선도를 섞지 않는다.
     if _is_us_q:
-        urt = _us_realtime(tk) if include_private else None
-        uq = _us_quote(tk)
+        urt = _safe("railway:us_quotes", "미국 KIS 시세", lambda: _us_realtime(tk)) if include_private else None
+        if not include_private:
+            _mark("railway:us_quotes", "미국 KIS 시세", "skipped", "본인 시세 조회 제외")
+        uq = _safe("yahoo:chart", "미국 시세·일봉", lambda: _us_quote(tk))
         # 🚨 KIS 섹션 라벨이 "실시간" 이라 한국 낮 시간 조회에서 종가를 현재가로 읽는 사고가
         #    났다(2026-08-15 SPCX). 미국장은 KST 22:30~05:00 이라 한국 업무시간 조회는
         #    **항상 마감 후**다. 야후가 판정한 세션 상태를 KIS 섹션 라벨에도 그대로 얹어
         #    라벨만 보고도 틀릴 수 없게 한다.
         sess = (uq or {}).get("기준") or ""
-        closed = "마감" in sess or "개장 전" in sess
         if urt:
             urt["기준"] = sess or "미국장 개폐 판정 불가 (야후 미응답)"
             out["sections"].append({
-                "label": ("미국 시세 (KIS · 본인 이용) — 🚨 장 마감, 직전 거래일 종가"
-                          if closed else "미국 실시간 시세 (KIS · 본인 이용) — 장중"),
+                "label": "미국 시세 (KIS · 본인 이용) — 체결시각 미제공",
                 "source": "railway:us_quotes",
-                "as_of": str(urt.pop("_asof", "") or ""), "data": urt,
+                "as_of": "", "observed_at": str(urt.pop("_asof", "") or ""), "data": urt,
             })
         if uq:
             out["sections"].append({
@@ -762,30 +908,42 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
                 import us_filing_probe as _ufp  # type: ignore[no-redef]
             except ImportError:
                 _ufp = None
+        etf_record = _extract_for_ticker(docs.get("us_etf.json"), tk)
+        is_etf = bool(etf_record)
         try:
-            sec = _ufp.probe(tk) if _ufp else None
+            sec = _ufp.probe(tk, no_cache=_BYPASS_CACHE.get(), diagnostics=_FETCH_TRACE.get(),
+                             budget_seconds=max(0, (_REQUEST_DEADLINE.get() or time.monotonic()) - time.monotonic())) if _ufp and not is_etf else None
         except Exception:  # noqa: BLE001
             sec = None
+        _check("sec:submissions+companyfacts", "SEC 기업 공시", sec, sec)
+        if is_etf:
+            _mark("sec:submissions+companyfacts", "SEC 기업 공시", "skipped", "ETF는 펀드 공시 별도 조회 필요")
+            out["missing"].append("ETF 투자설명서·펀드 공시 원문은 별도 검증 필요 (기업 CIK 조회 대상 아님)")
         if sec:
             cap = sec.pop("_capital", None)
             # 시총 사다리는 **실호출로 확보한 가격이 있을 때만** 만든다. 가격을 지어내지 않는다.
             px_now = None
+            px_as_of = ""
             for _s in out["sections"]:
-                if _s.get("source") in ("railway:us_quotes", "yahoo:chart"):
+                if _s.get("source") in ("railway:us_quotes", "yahoo:chart") and _s.get("as_of"):
                     px_now = (_s.get("data") or {}).get("현재가")
                     if px_now:
+                        px_as_of = _s["as_of"]
                         break
             if cap and px_now:
                 lad = _ufp.market_cap_ladder(cap, float(px_now))
                 if lad and isinstance(sec.get("자본구조"), dict):
-                    sec["자본구조"]["시가총액 (종가 × 주식수)"] = lad
+                    sec["자본구조"][f"시가총액 (체결가 기준 {px_as_of} × 주식수)"] = lad
             out["sections"].append({
                 "label": f"SEC 공시·자본구조 (직조회 · {_ufp.WINDOW_DAYS}일)",
                 "source": "sec:submissions+companyfacts",
-                "as_of": _now().isoformat(timespec="seconds"), "data": sec,
+                "as_of": "", "observed_at": _now().isoformat(timespec="seconds"), "data": sec,
             })
-        elif _is_us_q:
-            out["missing"].append("SEC 직조회 (CIK 미해석·호출 실패 — 미국 상장사가 아닐 수 있음)")
+        elif not is_etf:
+            out["missing"].append("SEC 직조회 미완료 (CIK 해석·호출 상태 확인 필요 — 미상장 판단 근거 아님)")
+    else:
+        for source in ("railway:us_quotes", "yahoo:chart", "sec:submissions+companyfacts"):
+            _mark(source, source, "skipped", "다른 시장 전용")
 
     # 종가 — 전 종목 동일 거래일(kr_close_latest). 등락은 prev 있을 때만.
     d = docs.get("kr_close_latest.json")
@@ -806,17 +964,21 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
             out["missing"].append("종가 (kr_close_latest.json — 당일 미거래·비수록)")
 
     # DART 공시 직조회 — 상설 (PM 2026-08-03). "0건" 도 사실 — 급변 사유 판단의 1차 관문.
-    df = _dart_recent_filings(tk)
+    df = _safe("opendart:list.json", "DART 직조회", lambda: _dart_recent_filings(tk)) if not _is_us_q else None
+    if _is_us_q:
+        _mark("opendart:list.json", "DART 직조회", "skipped", "다른 시장 전용")
     if df is not None:
         out["sections"].append({
             "label": f"DART 공시 (직조회 · {_DART_WINDOW_DAYS}일)", "source": "opendart:list.json",
-            "as_of": _now().isoformat(timespec="seconds"), "data": df,
+            "as_of": "", "observed_at": _now().isoformat(timespec="seconds"), "data": df,
         })
     elif not _is_us_q:
         out["missing"].append("DART 공시 직조회 (키 없음·corp_code 미해석·호출 실패)")
 
     # 일봉 250일 + 산술 파생 (금융위 T+1) — 2026-08-03 배선 감사로 추가.
-    bars = _daily_bars(tk)
+    bars = _safe("kr_chart_daily/chunk (금융위)", "국내 일봉", lambda: _daily_bars(tk)) if not _is_us_q else None
+    if _is_us_q:
+        _mark("kr_chart_daily/chunk (금융위)", "국내 일봉", "skipped", "다른 시장 전용")
     if bars is not None:
         out["sections"].append({
             "label": "일봉 (250일 · 산술 파생)", "source": "kr_chart_daily/chunk (금융위)",
@@ -867,31 +1029,46 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
     #   (4.5MB)까지 매번 파싱해 애초에 매칭될 수 없는 파일에 시간을 쓴다(2026-08-06 전송량 fix 동형).
     for rel, label, is_map in LOCAL_FILES:
         if not _needed(os.path.basename(rel)):
+            _mark(rel, label, "skipped", "다른 시장 전용")
             continue
         d = _load_local(rel)
         if d is None:
+            _check(rel, label, None, None)
             continue
         got = (d.get(tk) if isinstance(d, dict) and is_map else None) or _extract_for_ticker(d, tk)
+        _check(rel, label, d, got)
         if got:
             _add(label, rel, d, _trim(got))
 
     # 3) 오퍼레이터 private
     if include_private:
         for path, label in PRIVATE_FILES:
+            if not os.environ.get("SUPABASE_URL") or not os.environ.get("SUPABASE_SERVICE_ROLE_KEY"):
+                _mark(f"private:{path}", label, "unavailable", "private 인증 설정 없음")
+                continue
             d = _private_json(path)
             if d is None:
+                _check(f"private:{path}", label, None, None)
                 continue
             got = _extract_for_ticker(d, tk)
+            _check(f"private:{path}", label, d, got)
             if got:
                 _add(label, f"private:{path}", d, _trim(got))
+    else:
+        for path, label in PRIVATE_FILES:
+            _mark(f"private:{path}", label, "skipped", "private 조회 제외")
 
     # 4) 과거 판단 (실험 노트) — 2026-08-09
     if include_private:
         sec, err = past_decisions_section(tk)
+        _mark("private:decisions/verdicts.jsonl", "과거 판단", "unavailable" if err else "hit" if sec else "no_record",
+              err or ("" if sec else "기록 없음 또는 이 배포에서 미지원"))
         if err:
             out["missing"].append(err)
         elif sec:
             out["sections"].append(sec)
+    else:
+        _mark("private:decisions/verdicts.jsonl", "과거 판단", "skipped", "private 조회 제외")
 
     # 5) 🚨 가격 축 부재 신고 (2026-08-09) — 이 레이어가 존재하는 이유가 가격 환각 차단인데
     #   (2026-06-03 삼성전자 "65,000원 지지선"), US 조회는 시세·일봉이 **한 축도 배선돼 있지
@@ -899,7 +1076,7 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
     #   없는 것 0" 으로 나와 **결손이 아예 없는 것처럼** 읽힌다 — 조용한 누락의 반대 방향
     #   함정이다. 가격이 안 잡혔으면 반드시 명시한다. 소비자(LLM 포함)가 "가격은 모른다" 를
     #   알아야 지어내지 않는다.
-    _PRICE_LABELS = ("실시간 시세", "종가", "일봉", "미국 시세")
+    _PRICE_LABELS = ("실시간 시세", "종가", "일봉", "미국 시세", "미국 실시간 시세")
     if not any(str(s.get("label", "")).startswith(_PRICE_LABELS) for s in out["sections"]):
         out["missing"].append(
             "시세·일봉 — 이 종목의 가격 축이 하나도 잡히지 않았다. "
@@ -908,12 +1085,19 @@ def collect(query: str, include_private: bool = True) -> Dict[str, Any]:
             "발행물에 없다고 '모른다' 로 끝내면 그건 배선 핑계다"
         )
 
+    rows = list(ledger.values())
+    counts = {status: sum(row["status"] == status for row in rows)
+              for status in ("hit", "no_record", "unavailable", "skipped")}
+    out["coverage"] = {"total": len(rows), "applicable": len(rows) - counts["skipped"],
+                       "checked": len(rows) - counts["skipped"], **counts, "sources": rows}
     return out
 
 
 def _fmt_num(v: Any) -> str:
     if isinstance(v, bool):
         return "예" if v else "아니오"
+    if isinstance(v, float) and not math.isfinite(v):
+        return "값 확인 필요"
     if isinstance(v, float) and v == int(v):
         v = int(v)
     if isinstance(v, int):
@@ -980,16 +1164,36 @@ def render_text(res: Dict[str, Any]) -> str:
     head = f"{res.get('name') or '?'} ({res.get('ticker') or '해석실패'})"
     L.append(f"# {head}")
     L.append(f"수집 {res['_meta']['collected_at']} · 섹션 {len(res['sections'])}개")
+    coverage = res.get("coverage") or {}
+    if coverage:
+        L.append(f"소스 조회 {coverage['checked']}/{coverage['applicable']} · "
+                 f"조인 {coverage['hit']}/{coverage['applicable']} · "
+                 f"조회 불가 {coverage['unavailable']} · 미수록 {coverage['no_record']} · "
+                 f"제외 {coverage['skipped']} (등록 {coverage['total']})")
     L.append("")
     for sec in res["sections"]:
-        stamp = f" · 기준 {sec['as_of']}" if sec.get("as_of") else ""
+        stamp = f" · 기준 {sec['as_of']}" if sec.get("as_of") else " · 자료 기준일 미상"
         L.append(f"## {sec['label']}  [{sec['source']}{stamp}]")
+        if sec.get("observed_at"):
+            L.append(f"조회 시각 {sec['observed_at']} (자료 기준시각과 다름)")
+        if sec.get("retrieved_from"):
+            L.append(f"원격 공개 산출물: {sec['retrieved_from']}")
+        if sec.get("source_periods"):
+            L.append("축별 기준: " + " · ".join(f"{k}={v}" for k, v in sec['source_periods'].items()))
         L.extend(_fmt_data(sec["data"]))
         L.append("")
     if res["missing"]:
-        L.append("## 없는 것 (지어내지 말 것)")
+        L.append("## 미확인 항목 (없다는 확정이 아님)")
         for m in res["missing"]:
             L.append(f"- {m}")
+    unavailable = [row for row in coverage.get("sources", []) if row["status"] == "unavailable"]
+    if unavailable:
+        L.append("## 소스 조회 실패·미배치")
+        L.extend(f"- {row['source']}: {row['reason']}" for row in unavailable)
+    failures = [x for x in res.get("_meta", {}).get("fetch_diagnostics", []) if x["status"] == "unavailable"]
+    if failures:
+        L.append("## 네트워크 진단")
+        L.extend(f"- {x['source']}: {x['reason']}" for x in failures)
     return "\n".join(L)
 
 

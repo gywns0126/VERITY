@@ -26,19 +26,28 @@ SEC rate limit = 10 req/s. 티커당 호출 = CIK맵(주 1회 캐시) + submissi
 from __future__ import annotations
 
 import html
+import hashlib
 import json
 import os
 import re
+import socket
 import sys as _sys
 import time
 import urllib.parse
 import urllib.request
+import urllib.error
+from contextvars import ContextVar
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 _KST = timezone(timedelta(hours=9))
 _TIMEOUT = 20
 _CACHE_DIR = os.path.join("/tmp", "verity_sec_probe")
+_BYPASS_CACHE: ContextVar = ContextVar("sec_bypass_cache", default=False)
+_FETCH_TRACE: ContextVar = ContextVar("sec_fetch_trace", default=None)
+_REQUEST_MEMO: ContextVar = ContextVar("sec_request_memo", default=None)
+_DEADLINE: ContextVar = ContextVar("sec_deadline", default=None)
+_PROBE_BUDGET_SECONDS = 90  # API 300초 중 다른 소스와 응답 직렬화 시간을 확보
 
 # TTL — 공시 목록은 자주, CIK 맵과 문서 본문은 드물게.
 _TTL_SUBMISSIONS = 6 * 3600
@@ -157,31 +166,62 @@ def _cache_path(key: str) -> str:
     return os.path.join(_CACHE_DIR, safe)
 
 
+def _trace(url: str, status: str, reason: str = "") -> None:
+    trace = _FETCH_TRACE.get()
+    if trace is not None:
+        parsed = urllib.parse.urlsplit(url)
+        trace.append({"source": f"{parsed.hostname}{parsed.path}", "status": status, "reason": reason})
+
+
 def _fetch(url: str, cache_key: Optional[str], ttl: int, as_json: bool = True) -> Optional[Any]:
-    """URL → JSON 또는 텍스트. 실패는 None(조용히) — 한 축이 죽어도 조인은 산다."""
-    if cache_key:
+    """실패·기한 초과는 진단에 남긴다. 문서 중복 조회는 요청 안에서 재사용한다."""
+    memo = _REQUEST_MEMO.get()
+    memo_key = (url, as_json)
+    if memo is not None and memo_key in memo:
+        return memo[memo_key]
+    if cache_key and not _BYPASS_CACHE.get():
         p = _cache_path(cache_key)
         try:
             if os.path.exists(p) and time.time() - os.path.getmtime(p) < ttl:
                 with open(p, encoding="utf-8") as f:
-                    return json.load(f) if as_json else f.read()
+                    doc = json.load(f) if as_json else f.read()
+                _trace(url, "cache_hit")
+                if memo is not None:
+                    memo[memo_key] = doc
+                return doc
         except Exception:  # noqa: BLE001
             pass
+    deadline = _DEADLINE.get()
+    remaining = deadline - time.monotonic() if deadline is not None else _TIMEOUT
+    if remaining <= 0:
+        _trace(url, "unavailable", "budget_exhausted")
+        return None
     try:
         req = urllib.request.Request(url, headers={
             "User-Agent": _ua(),
             "Accept-Encoding": "gzip, deflate",
             "Accept": "application/json, text/html;q=0.9",
         })
-        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
+        with urllib.request.urlopen(req, timeout=min(_TIMEOUT, remaining)) as r:
             raw = r.read()
             if (r.headers.get("Content-Encoding") or "") == "gzip":
                 import gzip
                 raw = gzip.decompress(raw)
         body = raw.decode("utf-8", "replace")
         doc = json.loads(body) if as_json else body
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        cause = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+        reason = (f"http_{exc.code}" if isinstance(exc, urllib.error.HTTPError) else
+                  "dns_error" if isinstance(cause, socket.gaierror) else
+                  "timeout" if isinstance(cause, (TimeoutError, socket.timeout)) else
+                  "invalid_json" if isinstance(exc, ValueError) else type(cause).__name__)
+        _trace(url, "unavailable", reason)
+        if memo is not None:
+            memo[memo_key] = None
         return None
+    _trace(url, "received")
+    if memo is not None:
+        memo[memo_key] = doc
     if cache_key:
         try:
             os.makedirs(_CACHE_DIR, exist_ok=True)
@@ -258,7 +298,10 @@ def _doc_text(cik: str, accession: str, doc: str, limit: int = 1_500_000,
     """
     if not doc:
         return None
-    raw = _fetch(_doc_url(cik, accession, doc), f"doc_{accession}.txt", _TTL_DOC, as_json=False)
+    url = _doc_url(cik, accession, doc)
+    # 한 접수의 본문·EX-99 등이 서로 다른 문서다. 접수번호만 키로 쓰면 본문이 첨부를 대체한다.
+    document_key = hashlib.sha256(url.encode("utf-8")).hexdigest()[:20]
+    raw = _fetch(url, f"doc_{accession}_{document_key}.txt", _TTL_DOC, as_json=False)
     if not isinstance(raw, str):
         return None
     txt = _strip_html(raw)
@@ -318,8 +361,8 @@ def _filings_block(cik: str, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     out: Dict[str, Any] = {
         "건수": len(keep),
         "창": f"최근 {WINDOW_DAYS}일",
-        "확정": ("구간 내 대상 공시 0건 — SEC 직조회 확정 (추정 아님)"
-                 if not keep else "SEC EDGAR submissions 직조회"),
+        "확정": ("SEC recent 응답 내 해당 기간 대상 공시 0건 — 미조회 archive까지 부재 확정 아님"
+                 if not keep else "SEC EDGAR submissions recent 응답 기준"),
     }
     # 🚨 렌더에서 자를 때는 반드시 "미표시 N" 을 신고한다 — 조인 성공을 출력 도달로
     #   착각하면 "배선 0" 보다 발견이 늦다([[feedback_render_stage_silent_field_drop]]).
@@ -1016,7 +1059,23 @@ def _segment_block(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, A
 
 # ── 공개 진입점 ───────────────────────────────────────────────────────────
 
-def probe(ticker: str) -> Optional[Dict[str, Any]]:
+def probe(ticker: str, *, no_cache: bool = False,
+          diagnostics: Optional[List[Dict[str, str]]] = None,
+          budget_seconds: float = _PROBE_BUDGET_SECONDS) -> Optional[Dict[str, Any]]:
+    cache_token = _BYPASS_CACHE.set(no_cache)
+    trace_token = _FETCH_TRACE.set(diagnostics)
+    memo_token = _REQUEST_MEMO.set({})
+    deadline_token = _DEADLINE.set(time.monotonic() + min(_PROBE_BUDGET_SECONDS, max(0, budget_seconds)))
+    try:
+        return _probe(ticker)
+    finally:
+        _BYPASS_CACHE.reset(cache_token)
+        _FETCH_TRACE.reset(trace_token)
+        _REQUEST_MEMO.reset(memo_token)
+        _DEADLINE.reset(deadline_token)
+
+
+def _probe(ticker: str) -> Optional[Dict[str, Any]]:
     """티커 → {공시 이력, 자본구조, 경보}. 미국 종목이 아니거나 실패하면 None.
 
     반환값의 `_capital` 은 시총 사다리 계산용 원시값이며 렌더 대상이 아니다.
@@ -1053,6 +1112,13 @@ def probe(ticker: str) -> Optional[Dict[str, Any]]:
         out["경보"] = al
 
     out.update(_filings_block(cik, rows))
+    archived = ((subs.get("filings") or {}).get("files") or [])
+    out["조회 범위"] = {
+        "recent_rows": len(rows),
+        "recent_earliest": min((r["filingDate"] for r in rows if r.get("filingDate")), default=""),
+        "archive_files_unread": len(archived),
+        "note": "recent 응답 기준; archive 미조회. 진단에 실패·기한 초과가 있으면 본문 분석 미완료.",
+    }
     return out
 
 

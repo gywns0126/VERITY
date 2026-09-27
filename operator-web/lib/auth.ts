@@ -4,7 +4,10 @@
 // 🚨 오퍼레이터 데이터(Brain grounding)는 authed /api/admin?type= 로만. 공개 blob 직독 금지.
 // TODO(보안 상향, v2): @supabase/ssr httpOnly 쿠키 + 서버사이드 service_role fetch 로 이전
 //   (localStorage JWT = XSS 노출면). 현 v1 = 기존 백엔드(/api/admin Bearer) 즉시 호환 우선.
+import { refreshIfNeeded } from "./supabase"
+
 const SESSION_KEY = "verity_supabase_session"
+let pendingRefresh: Promise<boolean> | null = null
 
 export function getJwt(): string | null {
     try {
@@ -25,4 +28,14 @@ export function authHeaders(): Record<string, string> {
 
 export function isAuthed(): boolean {
     return getJwt() !== null
+}
+
+/** 만료 세션도 갱신 후 판정. StrictMode 재실행은 진행 중인 갱신을 함께 기다린다. */
+export function refreshAuth(): Promise<boolean> {
+    if (!pendingRefresh) {
+        pendingRefresh = refreshIfNeeded()
+            .then(() => isAuthed(), () => isAuthed())
+            .finally(() => { pendingRefresh = null })
+    }
+    return pendingRefresh
 }

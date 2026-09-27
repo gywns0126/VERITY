@@ -125,12 +125,22 @@ class handler(BaseHTTPRequestHandler):
             return _write(self, 500, {"error": "ask_failed"})
 
         facts = out.get("facts") or {}
+        meta = facts.get("_meta") or {}
+        status = meta.get("status")
+        if not facts.get("ticker"):
+            status = "unresolved"
+        elif status not in ("unresolved", "empty", "partial", "ready"):
+            # 구형 코어의 응답도 읽되 진단 없는 결과를 ready로 승격하지 않는다.
+            status = "partial"
         body: Dict[str, Any] = {
+            "status": status,
             "ticker": facts.get("ticker"),
             "name": facts.get("name"),
             "sections": facts.get("sections") or [],
             "missing": facts.get("missing") or [],
-            "collected_at": (facts.get("_meta") or {}).get("collected_at"),
+            "collected_at": meta.get("collected_at"),
+            "coverage": facts.get("coverage"),
+            "fetch_diagnostics": meta.get("fetch_diagnostics") or [],
             "facts_text": out.get("facts_text"),
             "research_questions": out.get("research_questions") or [],
             "contract": out.get("_meta") or {},
