@@ -17,7 +17,7 @@ RULE 7 (자기 산식 비노출):
 
 feedback_data_collection_verification_mandatory:
   - try/finally + logged stderr 표식. silent skip 금지.
-  - 산출 0건이면 직전 snapshot 보존 (덮어쓰기 X).
+  - 산출 0건이면 직전 items/generated_at 보존; source_collection 증거만 갱신.
 
 publish (RULE 4 / feedback_publish_data_file_list_audit):
   - 산출 data/public_disclosure_feed.json 은 publish-data action 파일 목록에 추가 필요.
@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
@@ -39,6 +40,7 @@ KST = timezone(timedelta(hours=9))
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 INPUT_PATH = os.path.join(_REPO_ROOT, "data", "dart_catalyst_alerts.jsonl")
 OUTPUT_PATH = os.path.join(_REPO_ROOT, "data", "public_disclosure_feed.json")
+HEARTBEAT_PATH = os.path.join(_REPO_ROOT, "data", "metadata", "dart_catalyst_heartbeat.json")
 
 WINDOW_DAYS = 14            # 피드 노출 기간
 MAX_PER_TICKER = 8         # 종목당 공시 최대 노출
@@ -71,6 +73,62 @@ def _load_alerts() -> List[Dict[str, Any]]:
             except json.JSONDecodeError:
                 continue
     return rows
+
+
+def _source_collection(now: datetime) -> Dict[str, Any]:
+    """Listing-query evidence only; legacy liveness is not a successful source check."""
+    unknown = {"status": "unknown", "attempted_at": None, "completed_at": None,
+               "successful_checked_at": None, "raw_body_checked": False,
+               "whole_market_coverage": False}
+    try:
+        with open(HEARTBEAT_PATH, encoding="utf-8") as f:
+            source = json.load(f)["source_collection"]
+        if source["schema_version"] != 1 or source["endpoint"] != "list.json":
+            return unknown
+        fields = ("schema_version", "endpoint", "status", "attempted_at", "completed_at",
+                  "successful_checked_at", "window", "scope", "max_pages_per_group",
+                  "groups_expected", "groups_completed", "pages_attempted", "pages_succeeded")
+        result = {key: source[key] for key in fields}
+        result.update(raw_body_checked=False, whole_market_coverage=False)
+        scope = source["scope"]
+        result["scope"] = {key: scope[key] for key in (
+            "corp_cls", "pblntf_ty", "i_title_keywords", "requires_stock_code")}
+        result["window"] = {key: source["window"][key] for key in ("bgn", "end")}
+        group_fields = ("corp_cls", "pblntf_ty", "status", "pages_attempted",
+                        "pages_succeeded", "total_pages", "failure")
+        groups = [{key: group[key] for key in group_fields} for group in source["groups"]]
+        result["groups"] = groups
+        attempted = datetime.fromisoformat(result["attempted_at"])
+        if attempted.tzinfo is None or attempted > now:
+            return unknown
+        status = result["status"]
+        if status not in ("running", "success", "partial", "failed"):
+            return unknown
+        if status != "running":
+            completed = datetime.fromisoformat(result["completed_at"])
+            if completed.tzinfo is None or not attempted <= completed <= now:
+                return unknown
+        # Recheck the success denominator instead of trusting a status label alone.
+        if status == "success":
+            expected = {(cls, ty) for cls in scope["corp_cls"] for ty in scope["pblntf_ty"]}
+            actual = {(g["corp_cls"], g["pblntf_ty"]) for g in groups}
+            if (not expected or scope["pblntf_ty"] != ["B", "C", "D", "I"]
+                    or actual != expected or len(groups) != len(expected)
+                    or result["groups_expected"] != len(expected)
+                    or result["groups_completed"] != len(expected)
+                    or result["successful_checked_at"] != result["completed_at"]
+                    or any(g["status"] != "success" or g["failure"] is not None
+                           or g["pages_attempted"] != g["pages_succeeded"]
+                           or g["pages_succeeded"] != max(1, g["total_pages"])
+                           or g["pages_succeeded"] > result["max_pages_per_group"] for g in groups)
+                    or any(result[key] != sum(g[key] for g in groups)
+                           for key in ("pages_attempted", "pages_succeeded"))):
+                return unknown
+        else:
+            result["successful_checked_at"] = None
+        return result
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        return unknown
 
 
 def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
@@ -151,6 +209,7 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
     return {
         "_meta": {
             "generated_at": now.isoformat(),
+            "source_collection": _source_collection(now),
             "source": "DART OpenAPI (전자공시)",
             "window_days": window_days,
             "count": len(items),
@@ -161,6 +220,20 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
     }
 
 
+def _write_feed_atomic(feed: Dict[str, Any]) -> None:
+    """A failed metadata refresh must leave the prior snapshot intact."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False,
+                                         dir=os.path.dirname(OUTPUT_PATH)) as f:
+            temporary = f.name
+            json.dump(feed, f, ensure_ascii=False, indent=2)
+        os.replace(temporary, OUTPUT_PATH)
+    finally:
+        if temporary and os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 def main() -> int:
     ok = False
     try:
@@ -169,11 +242,19 @@ def main() -> int:
         n_disc = feed["_meta"]["disclosure_count"]
 
         if n_disc == 0:
-            # 산출 0건 — 직전 snapshot 보존 (덮어쓰기 X)
+            # Keep historical rows and their generation time; only the independent
+            # listing-check evidence changes (including a current unknown result).
             if os.path.isfile(OUTPUT_PATH):
+                with open(OUTPUT_PATH, encoding="utf-8") as f:
+                    previous = json.load(f)
+                if (not isinstance(previous, dict) or not isinstance(previous.get("_meta"), dict)
+                        or not isinstance(previous.get("items"), list)):
+                    raise ValueError("Cannot refresh metadata on an invalid prior snapshot")
+                previous["_meta"]["source_collection"] = feed["_meta"]["source_collection"]
+                _write_feed_atomic(previous)
                 print(
-                    f"[public_disclosure_feed] 0 disclosures in window — "
-                    f"기존 snapshot 보존 (no overwrite)",
+                    "[public_disclosure_feed] 0 disclosures in window — "
+                    "retained items/generated_at; refreshed source_collection only",
                     file=sys.stderr,
                 )
                 ok = True
@@ -184,8 +265,7 @@ def main() -> int:
                 file=sys.stderr,
             )
 
-        with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-            json.dump(feed, f, ensure_ascii=False, indent=2)
+        _write_feed_atomic(feed)
 
         print(
             f"[public_disclosure_feed] logged=True · {n_items} 종목 · "

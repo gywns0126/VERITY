@@ -3,7 +3,8 @@ name: DART Catalyst Pulse (공시속보 신선도)
 # 공개 터미널 공시속보 장중 신선도 전용 (2026-06-18).
 # daily_analysis_full(평일 2회)와 별개로 장중~마감후 30분 간격 시장 전체 catalyst 수집
 # + public-safe 피드 빌드 + publish. DART only — KIS 무관(RULE 1), brain 산식 영향 0.
-# 신규 공시 0이면 commit/publish 생략 (timestamp-only commit spam 방지).
+# Publish listing-check evidence even with zero new filings; data-only commits
+# remain outside the unchanged Vercel ignoreCommand's vercel-api/ deploy scope.
 #
 # 7축 audit (CLAUDE.md):
 #  1 env/secret: DART_API_KEY (full 과 동일 secret). publish = VERITY_DATA_PAT + VERCEL_BLOB_TOKEN.
@@ -76,32 +77,64 @@ jobs:
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: |
-          set +e
-          NEW=$(python -c "from api.collectors.dart_catalyst import fetch_catalysts_market_wide, persist_catalyst_alerts as P; print(P(fetch_catalysts_market_wide(lookback_days=7)['events']))")
-          RC=$?
-          if [ $RC -ne 0 ] || [ -z "$NEW" ]; then
-            echo "::warning::시장전체 catalyst 수집 실패 또는 0 (RC=$RC) — skip"
-            NEW=0
-          fi
-          echo "신규 공시: $NEW"
-          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from api.collectors.dart_catalyst import fetch_catalysts_market_wide, persist_catalyst_alerts
+          from api.config import DATA_DIR
 
-      - name: 공개 피드 빌드 + commit + push
-        if: steps.collect.outputs.new != '0'
+          result = fetch_catalysts_market_wide(lookback_days=7)
+          new = persist_catalyst_alerts(result["events"])
+          heartbeat = json.loads((Path(DATA_DIR) / "metadata/dart_catalyst_heartbeat.json").read_text())
+          if heartbeat.get("source_collection") != result["source_collection"]:
+              raise RuntimeError("Current listing-check evidence was not persisted")
+          # This proves a recorded listing attempt, not successful ledger delivery.
+          # Failed/partial source responses must also reach the public metadata.
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print(f"new={new}", file=output)
+              print("attempted=true", file=output)
+              print(f"collection_status={result['source_collection']['status']}", file=output)
+          print(f"New filings: {new}; listing check: {result['source_collection']['status']}")
+          PY
+
+      - name: Build public feed with listing-check evidence
+        if: steps.collect.outputs.attempted == 'true'
         run: |
           python -m api.builders.public_disclosure_feed_builder
+
+      - name: Build dependent alerts only for new filings
+        if: steps.collect.outputs.attempted == 'true' && steps.collect.outputs.new != '0'
+        run: |
           # 종목 변화 센터 = 기존 공개 산출 조인. 티커 앞 세 자리 조각 + 커버리지 요약.
           # 외부 호출·점수·추천 0. data/ 명시 범위 안에서 state와 조각을 함께 보존한다.
           python -m api.builders.stock_change_public_builder
-          # 투자 캘린더 = 공시피드+배당락+IPO 재배열 (2026-07-12, KIS 무관·신규수집 0). git add data/ 로 자동 포함.
+          # Existing optional calendar/alert builders; no additional collection.
           python -m api.builders.calendar_public_builder || echo "[calendar] build 실패(비차단)"
           # 긴급 팝업 피드 (2026-08-01) = 임원/대주주 대량거래(금액=주식수×평가기준가) + 긴급공시(sev3).
           #   방금 수집한 dart_catalyst_alerts.jsonl + insider_trades.json + kr_close_latest.json 조인.
-          #   공시 사실만(RULE 7). git add data/ 로 urgent_alerts.json 자동 포함(RULE 4).
+          #   공시 사실만(RULE 7). Outputs are explicitly staged below.
           python -m api.builders.urgent_alerts_builder || echo "[urgent_alerts] build 실패(비차단)"
+
+      - name: Commit and push pulse artifacts
+        if: steps.collect.outputs.attempted == 'true'
+        env:
+          NEW: ${{ steps.collect.outputs.new }}
+        run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/
+          git add -- data/metadata/dart_catalyst_heartbeat.json
+          git add -- data/public_disclosure_feed.json
+          if [ "$NEW" != '0' ]; then
+            git add -- data/dart_catalyst_alerts.jsonl
+            git add -- data/stock_change_public/
+            git add -- data/portfolio_exposure_map.json
+            for artifact in data/metadata/business_overview_state.json data/calendar_public.json data/urgent_alerts.json; do
+              if [ -f "$artifact" ]; then
+                git add -- "$artifact"
+              fi
+            done
+          fi
           git diff --staged --quiet && { echo "변경 없음"; exit 0; }
           git commit -m "📡 공시속보 pulse $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
           BRANCH="${{ github.ref_name }}"
@@ -115,9 +148,56 @@ jobs:
           echo "::error::5회 push 실패"; exit 1
 
       - name: Publish to VERITY-data + Blob
-        if: steps.collect.outputs.new != '0'
+        # Existing uploader skips unchanged SHA-256 content with a valid manifest.
+        if: steps.collect.outputs.attempted == 'true'
         uses: ./.github/actions/publish-data
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           personal_token: ${{ secrets.VERITY_DATA_PAT }}
           blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
+
+      - name: Verify published Blob source-check evidence
+        if: steps.collect.outputs.attempted == 'true'
+        run: |
+          python - <<'PY'
+          import json
+          import time
+          from pathlib import Path
+          from urllib.parse import quote
+          from urllib.request import Request, urlopen
+
+          url = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/public_disclosure_feed.json"
+          keys = ("attempted_at", "status")
+          try:
+              local = json.loads(Path("data/public_disclosure_feed.json").read_text())["_meta"]["source_collection"]
+              expected = tuple(local[key] for key in keys)
+              if not isinstance(expected[0], str) or not expected[0] or expected[1] not in ("success", "partial", "failed"):
+                  raise ValueError("Missing current evidence")
+          except (OSError, ValueError, KeyError, TypeError):
+              raise SystemExit("::error::Current artifact source-check evidence unavailable") from None
+          for attempt in range(3):
+              try:
+                  # Fixed public Blob target; cache-buster prevents checking an old CDN object.
+                  request = Request(url + "?readback=" + quote(expected[0], safe=""), headers={"Cache-Control": "no-cache"})
+                  with urlopen(request, timeout=10) as response:
+                      body = response.read(8_000_001)
+                  if len(body) > 8_000_000:
+                      raise ValueError("Oversized response")
+                  remote = json.loads(body)["_meta"]["source_collection"]
+                  if tuple(remote[key] for key in keys) == expected:
+                      print("Blob source-check readback matched")
+                      break
+              except Exception:
+                  pass  # Never print response bodies, request URLs, or exception details.
+              print(f"Blob source-check readback unmatched: attempt {attempt + 1}/3")
+              if attempt < 2:
+                  time.sleep(5)
+          else:
+              raise SystemExit("::error::Blob source-check publication not verified")
+          PY
+
+      - name: Fail incomplete collection after publishing evidence
+        if: steps.collect.outputs.attempted == 'true' && steps.collect.outputs.collection_status != 'success'
+        run: |
+          echo "::error::DART listing collection incomplete; source-check metadata publication was attempted"
+          exit 1

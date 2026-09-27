@@ -96,6 +96,62 @@ def _artifact(meta, now):
     return stamp.isoformat(), "stale" if age > timedelta(days=14) else "unknown"
 
 
+def _listing_check(meta, now):
+    """Validate the scoped collector proof, independently of artifact/original age."""
+    unknown = {"status": "unknown", "checked_at": None, "groups_completed": None,
+               "groups_expected": 8, "whole_market_coverage": False,
+               "raw_body_checked": False, "recent_threshold_hours": 36}
+    src = meta.get("source_collection")
+    if not isinstance(src, dict):
+        return unknown
+    try:
+        scope = src["scope"]
+        if (src["schema_version"] != 1 or src["endpoint"] != "list.json"
+                or scope["corp_cls"] != ["Y", "K"] or scope["pblntf_ty"] != ["B", "C", "D", "I"]
+                or scope["requires_stock_code"] is not True
+                or scope["i_title_keywords"] != ["단일판매", "공급계약", "수주"]):
+            return unknown
+        groups = src["groups"]
+        expected = {(cls, ty) for cls in ("Y", "K") for ty in ("B", "C", "D", "I")}
+        if (not isinstance(groups, list) or len(groups) != 8
+                or {(g["corp_cls"], g["pblntf_ty"]) for g in groups} != expected):
+            return unknown
+        completed = sum(g["status"] == "success" for g in groups)
+        if type(src["groups_completed"]) is not int or src["groups_completed"] != completed or src["groups_expected"] != 8:
+            return unknown
+        if src["status"] in ("partial", "failed", "running"):
+            return dict(unknown, status=src["status"], groups_completed=completed)
+        if src["status"] != "success" or completed != 8:
+            return unknown
+        for group in groups:
+            if (any(type(group[k]) is not int or group[k] < 0 for k in ("pages_attempted", "pages_succeeded", "total_pages"))
+                    or group["failure"] is not None
+                    or group["pages_attempted"] != group["pages_succeeded"]
+                    or group["pages_succeeded"] != max(1, group["total_pages"])):
+                return unknown
+        if any(src[k] != sum(g[k] for g in groups) for k in ("pages_attempted", "pages_succeeded")):
+            return unknown
+        def stamp(key):
+            value = src[key]
+            if not isinstance(value, str) or not _GENERATED.fullmatch(value):
+                raise ValueError("invalid timestamp")
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        attempted, finished, checked = (stamp(k) for k in ("attempted_at", "completed_at", "successful_checked_at"))
+        generated, state = _artifact(meta, now)
+        if (not generated or state in ("future", "malformed")
+                or not attempted <= finished == checked <= now
+                or src["window"]["end"] != finished.astimezone(KST).date().isoformat()
+                or date.fromisoformat(src["window"]["bgn"]) > date.fromisoformat(src["window"]["end"])):
+            return unknown
+        return dict(unknown, status="recent" if now - checked <= timedelta(hours=36) else "stale",
+                    checked_at=checked.isoformat(), groups_completed=8,
+                    scope={"corp_cls": ["Y", "K"], "pblntf_ty": ["B", "C", "D", "I"],
+                           "i_title_keywords": ["단일판매", "공급계약", "수주"], "requires_stock_code": True},
+                    window={k: src["window"][k] for k in ("bgn", "end")})
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return unknown
+
+
 def _filing(group, row, today):
     title, name, ticker = row.get("title"), group.get("name"), group.get("ticker")
     url, day = row.get("source_url"), row.get("date")
@@ -203,6 +259,7 @@ def build_result(feed: dict, tool: str, arguments: dict, now: datetime) -> dict:
     if not matched:
         limitations.append("조건에 맞는 자료가 제공된 피드에 없습니다. 전체 DART 검색 결과가 아닙니다.")
     shared = {
+        "listing_collection": _listing_check(meta, now_kst),
         "artifact_generated_at": generated,
         "retrieved_at": now_kst.isoformat(),
         "source_checked_at": None,

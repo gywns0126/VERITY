@@ -14,13 +14,17 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from content_evidence import build_result
 from content_original import load_original
+from content_public import load_company, load_public, PublicSourceError
 
 FEED_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/public_disclosure_feed.json"
 MAX_BODY = 16_384
 MAX_FEED = 4_000_000
 VERSIONS = ("2025-06-18", "2025-03-26")
 INSTRUCTIONS = (
-    "알파네스트 공개 공시의 교육용 소재 도구입니다. 출처·접수일·신선도 제약을 먼저 확인하세요. "
+    "알파네스트 공개 자료를 활용하는 콘텐츠 근거 도구입니다. 출처·기준기간·신선도 제약을 먼저 확인하세요. "
+    "기업 자료는 get_company_content_evidence, 뉴스·브리핑은 get_public_content로 조회하세요. "
+    "사이트와 같은 공개 자료를 사용하지만 조회 성공이나 파일 생성일이 자료의 최신성을 보장하지 않습니다. "
+    "누락 사유·원문 연결·기간·단위·계산 기준을 유지하세요. 뉴스 제목을 기사 본문 확인으로 해석하지 마세요. "
     "검색은 제목 기반이며 개별 조회의 original_document에 원문 발췌·표·정정 이력을 제공합니다. "
     "original_status와 source_checked_at을 확인하고 미지원·실패를 원문 확인 성공으로 해석하지 마세요. "
     "표의 원래 단위·열 제목을 유지하고 정정 전후 값을 새 계약으로 설명하지 마세요. "
@@ -31,6 +35,20 @@ INSTRUCTIONS = (
 )
 
 TOOLS = [
+    {
+        "name": "get_company_content_evidence",
+        "description": "알파네스트 기업 분석 자료와 동일한 공개 근거를 조회합니다. 사업 설명·재무 기간·공시·뉴스·자료별 기준일·누락 사유를 보존합니다. 실시간 시세나 매매 추천이 아닙니다.",
+        "inputSchema": {"type": "object", "additionalProperties": False,
+                        "properties": {"ticker": {"type": "string", "pattern": "^(?:[0-9]{6}|[A-Z][A-Z0-9.\\-]{0,9})$"}},
+                        "required": ["ticker"]},
+    },
+    {
+        "name": "get_public_content",
+        "description": "알파네스트 공개 뉴스 제목·링크 또는 데일리 브리핑을 조회합니다. 생성일과 사건·거래 기준일을 구분하며 뉴스 원문 전체나 속보 완전성을 보장하지 않습니다.",
+        "inputSchema": {"type": "object", "additionalProperties": False,
+                        "properties": {"source": {"type": "string", "enum": ["news", "briefing"]}},
+                        "required": ["source"]},
+    },
     {
         "name": "search_content_candidates",
         "description": "최근 14일 이내 수신한 국내 공시에서 교육 콘텐츠 소재를 찾습니다. 시장 전체/실시간 피드가 아닙니다.",
@@ -113,7 +131,7 @@ def _rpc_error(rid, code, message):
 
 
 def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=load_feed,
-                    original_fn=load_original, now=None):
+                    original_fn=load_original, company_fn=load_company, public_fn=load_public, now=None):
     """Return (HTTP status, JSON object or None). Stateless Streamable HTTP subset."""
     headers = {k.lower(): v for k, v in headers.items()}
     origin = headers.get("origin")
@@ -151,7 +169,7 @@ def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=lo
         requested = params.get("protocolVersion")
         result = {"protocolVersion": requested if requested in VERSIONS else VERSIONS[0],
                   "capabilities": {"tools": {"listChanged": False}},
-                  "serverInfo": {"name": "alphanest-content", "version": "0.2.0"},
+                  "serverInfo": {"name": "alphanest-content", "version": "0.3.0"},
                   "instructions": INSTRUCTIONS}
     elif operation == "ping":
         result = {}
@@ -167,7 +185,12 @@ def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=lo
             if not isinstance(arguments, dict):
                 raise ValueError("Arguments must be an object")
             _validate_arguments(name, arguments)
-            evidence = build_result(feed_fn(), name, arguments, now or datetime.now(timezone.utc))
+            if name == "get_company_content_evidence":
+                evidence = company_fn(arguments["ticker"])
+            elif name == "get_public_content":
+                evidence = public_fn(arguments["source"])
+            else:
+                evidence = build_result(feed_fn(), name, arguments, now or datetime.now(timezone.utc))
             # Membership is established by the strict, conflict-excluding feed
             # projection. Never accept a caller URL or fetch arbitrary receipts.
             if name == "get_content_evidence" and evidence["items"]:
@@ -188,7 +211,7 @@ def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=lo
                       "structuredContent": evidence, "isError": False}
         except ValueError:
             return 200, _rpc_error(rid, -32602, "Invalid tool arguments or source data")
-        except ServiceError:
+        except (ServiceError, PublicSourceError):
             result = {"content": [{"type": "text", "text": "자료를 현재 확인할 수 없습니다. 이전 자료를 최신으로 대체하지 마세요."}],
                       "isError": True}
     else:
@@ -198,6 +221,16 @@ def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=lo
 
 def _validate_arguments(name, args):
     import re
+    if name == "get_company_content_evidence":
+        ticker = args.get("ticker")
+        if (set(args) != {"ticker"} or not isinstance(ticker, str)
+                or not re.fullmatch(r"(?:[0-9]{6}|[A-Z][A-Z0-9.\-]{0,9})", ticker)):
+            raise ValueError("Invalid ticker")
+        return
+    if name == "get_public_content":
+        if set(args) != {"source"} or args.get("source") not in ("news", "briefing"):
+            raise ValueError("Invalid source")
+        return
     if name == "get_content_evidence":
         if set(args) != {"id"} or not isinstance(args["id"], str) or not re.fullmatch(r"[0-9]{14}", args["id"]):
             raise ValueError("Invalid id")

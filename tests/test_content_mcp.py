@@ -15,14 +15,17 @@ import content_oauth as oauth
 HEADERS = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
 
 
-def call(method="tools/list", params=None, *, headers=None, authorize=None, feed=None, original=None):
+def call(method="tools/list", params=None, *, headers=None, authorize=None, feed=None, original=None,
+         company=None, public=None):
     msg = {"jsonrpc": "2.0", "id": 1, "method": method}
     if params is not None:
         msg["params"] = params
     return m.process_request("POST", headers or HEADERS, json.dumps(msg).encode(),
                              authorize_fn=authorize or (lambda h: None),
                              feed_fn=feed or (lambda: {"items": []}),
-                             original_fn=original or (lambda receipt: {"original_status": "unavailable"}))
+                             original_fn=original or (lambda receipt: {"original_status": "unavailable"}),
+                             company_fn=company or (lambda ticker: {"ticker": ticker}),
+                             public_fn=public or (lambda source: {"source": source}))
 
 
 def test_closed_by_default_before_source(monkeypatch):
@@ -40,7 +43,8 @@ def test_initialize_and_readonly_inventory():
     assert body["result"]["protocolVersion"] == "2025-06-18"
     status, body = call()
     tools = body["result"]["tools"]
-    assert {t["name"] for t in tools} == {"search_content_candidates", "get_content_evidence"}
+    assert {t["name"] for t in tools} == {"search_content_candidates", "get_content_evidence",
+                                         "get_company_content_evidence", "get_public_content"}
     assert all(t["annotations"]["readOnlyHint"] for t in tools)
     assert all(not t["annotations"]["destructiveHint"] for t in tools)
     assert all(t["securitySchemes"] == [{"type": "oauth2", "scopes": ["content:read"]}] for t in tools)
@@ -239,3 +243,48 @@ def test_original_failure_preserves_explicit_title_only_fallback(status):
     assert evidence["evidence_basis"] == "title_only"
     assert evidence["source_checked_at"] is None
     assert evidence["items"][0]["original_document"]["original_status"] == status
+
+
+@pytest.mark.parametrize("name,args", [
+    ("get_company_content_evidence", {"ticker": "005930"}),
+    ("get_company_content_evidence", {"ticker": "BRK.B"}),
+    ("get_public_content", {"source": "news"}),
+    ("get_public_content", {"source": "briefing"}),
+])
+def test_public_routes_are_authenticated_without_disclosure_fetch(name, args):
+    feed, original, company, public = Mock(), Mock(), Mock(return_value={"ok": 1}), Mock(return_value={"ok": 1})
+    _, response = call("tools/call", {"name": name, "arguments": args}, feed=feed,
+                       original=original, company=company, public=public)
+    assert response["result"]["structuredContent"] == {"ok": 1}
+    (company if "ticker" in args else public).assert_called_once_with(next(iter(args.values())))
+    feed.assert_not_called()
+    original.assert_not_called()
+    company.reset_mock(); public.reset_mock()
+    with pytest.raises(m.ServiceError):
+        call("tools/call", {"name": name, "arguments": args}, company=company, public=public,
+             authorize=Mock(side_effect=m.ServiceError(401, "denied")))
+    company.assert_not_called(); public.assert_not_called()
+
+
+@pytest.mark.parametrize("name,args", [
+    ("get_company_content_evidence", {}),
+    ("get_company_content_evidence", {"ticker": "../../secret"}),
+    ("get_company_content_evidence", {"ticker": "aapl"}),
+    ("get_company_content_evidence", {"ticker": "005930", "url": "https://evil.test"}),
+    ("get_public_content", {"source": "portfolio"}),
+    ("get_public_content", {"source": []}),
+    ("get_public_content", {"source": "news", "user_id": "x"}),
+])
+def test_public_route_arguments_fail_before_fetch(name, args):
+    company, public = Mock(), Mock()
+    _, result = call("tools/call", {"name": name, "arguments": args}, company=company, public=public)
+    assert result["error"]["code"] == -32602
+    company.assert_not_called(); public.assert_not_called()
+
+
+def test_public_source_failure_is_tool_error_without_payload_or_stale_data():
+    _, response = call("tools/call", {"name": "get_public_content", "arguments": {"source": "news"}},
+                       public=Mock(side_effect=m.PublicSourceError("sensitive upstream detail")))
+    assert response["result"]["isError"] is True
+    assert "structuredContent" not in response["result"]
+    assert "sensitive" not in json.dumps(response)
