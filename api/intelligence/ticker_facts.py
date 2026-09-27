@@ -55,6 +55,16 @@ _FETCH_TRACE: ContextVar = ContextVar("operator_fetch_trace", default=None)
 _BYPASS_CACHE: ContextVar = ContextVar("operator_bypass_cache", default=False)
 _LOCAL_ORIGINS: ContextVar = ContextVar("operator_local_origins", default=None)
 _REQUEST_DEADLINE: ContextVar = ContextVar("operator_request_deadline", default=None)
+_INCLUDE_PRIVATE: ContextVar = ContextVar("operator_include_private", default=True)
+_PRIVATE_DOCS: ContextVar = ContextVar("operator_private_docs", default=None)
+
+# 2026-09-27 사용자 승인: 두 미발행 자료는 기존 private bucket에서만 읽는다.
+# 운영풀은 이미 발행된 비공개 portfolio의 recommendations만 재사용한다.
+PRIVATE_LOCAL_FALLBACKS = {
+    "data/recommendations.json": "_operator/portfolio_full.json",
+    "data/analyst_reports.json": "_operator/analyst_reports.json",
+    "data/dart_kr_backfill_result.json": "_operator/dart_kr_backfill_result.json",
+}
 
 # 이미 공개 Git에 추적된 사실 파일만 허용. recommendations/private/임의 경로 폴백 금지.
 # Vercel 번들에는 repo-root data/가 없으므로 누락 시 현재 공개 산출물을 읽는다.
@@ -222,12 +232,26 @@ def _fetch_json(url: str, cache_key: Optional[str] = None,
 
 
 def _load_local(rel: str) -> Optional[Any]:
+    private_path = PRIVATE_LOCAL_FALLBACKS.get(rel)
+    if private_path and not _INCLUDE_PRIVATE.get():
+        return None
     try:
         with open(os.path.join(_ROOT, rel), encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        if rel not in PUBLIC_LOCAL_FALLBACKS:
-            return None
+        pass
+    if private_path:
+        doc = _private_json(private_path)
+        if rel == "data/recommendations.json":
+            if not isinstance(doc, dict) or not isinstance(doc.get("recommendations"), (dict, list)):
+                return None
+            # 보유종목을 추천 목록으로 잘못 매칭하거나 전체 portfolio를 이 소스로 노출하지 않는다.
+            doc = {k: doc[k] for k in ("recommendations", "_meta", "as_of", "date") if k in doc}
+        if doc is not None and _LOCAL_ORIGINS.get() is not None:
+            _LOCAL_ORIGINS.get()[rel] = "private:" + private_path
+        return doc
+    if rel not in PUBLIC_LOCAL_FALLBACKS:
+        return None
     url = f"https://raw.githubusercontent.com/gywns0126/VERITY/main/{rel}"
     doc = _fetch_json(url, "public_local_" + os.path.basename(rel))
     if doc is not None and _LOCAL_ORIGINS.get() is not None:
@@ -671,13 +695,21 @@ def _daily_bars(tk: str) -> Optional[Dict[str, Any]]:
 
 
 def _private_json(path: str) -> Optional[Any]:
+    if not _INCLUDE_PRIVATE.get():
+        return None
+    memo = _PRIVATE_DOCS.get()
+    if memo is not None and path in memo:
+        return memo[path]
     url = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
     if not url or not key:
         return None
     bucket = os.environ.get("OPERATOR_BUCKET", "verity-reports")
     full = f"{url}/storage/v1/object/{bucket}/{urllib.parse.quote(path)}"
-    return _fetch_json(full, None, {"apikey": key, "Authorization": f"Bearer {key}"})
+    doc = _fetch_json(full, None, {"apikey": key, "Authorization": f"Bearer {key}"})
+    if memo is not None:
+        memo[path] = doc
+    return doc
 
 
 # ── 메인 ─────────────────────────────────────────────────────────────────────
@@ -742,6 +774,8 @@ def collect(query: str, include_private: bool = True, *, no_cache: bool = False)
     trace_token = _FETCH_TRACE.set(trace)
     cache_token = _BYPASS_CACHE.set(no_cache)
     origins_token = _LOCAL_ORIGINS.set({})
+    private_token = _INCLUDE_PRIVATE.set(include_private)
+    private_docs_token = _PRIVATE_DOCS.set({})
     started = time.monotonic()
     deadline_token = _REQUEST_DEADLINE.set(started + 240)
     try:
@@ -759,6 +793,8 @@ def collect(query: str, include_private: bool = True, *, no_cache: bool = False)
         _FETCH_TRACE.reset(trace_token)
         _BYPASS_CACHE.reset(cache_token)
         _LOCAL_ORIGINS.reset(origins_token)
+        _INCLUDE_PRIVATE.reset(private_token)
+        _PRIVATE_DOCS.reset(private_docs_token)
         _REQUEST_DEADLINE.reset(deadline_token)
 
 
@@ -1028,6 +1064,9 @@ def _collect(query: str, include_private: bool = True) -> Dict[str, Any]:
     #   심화 4종을 추가하며 넣었다 — 없으면 KR 조회 1건마다 us_form144(2.1MB)·us_fin_annual
     #   (4.5MB)까지 매번 파싱해 애초에 매칭될 수 없는 파일에 시간을 쓴다(2026-08-06 전송량 fix 동형).
     for rel, label, is_map in LOCAL_FILES:
+        if not include_private and rel in PRIVATE_LOCAL_FALLBACKS:
+            _mark(rel, label, "skipped", "private 조회 제외")
+            continue
         if not _needed(os.path.basename(rel)):
             _mark(rel, label, "skipped", "다른 시장 전용")
             continue
@@ -1177,7 +1216,7 @@ def render_text(res: Dict[str, Any]) -> str:
         if sec.get("observed_at"):
             L.append(f"조회 시각 {sec['observed_at']} (자료 기준시각과 다름)")
         if sec.get("retrieved_from"):
-            L.append(f"원격 공개 산출물: {sec['retrieved_from']}")
+            L.append(f"원격 산출물: {sec['retrieved_from']}")
         if sec.get("source_periods"):
             L.append("축별 기준: " + " · ".join(f"{k}={v}" for k, v in sec['source_periods'].items()))
         L.extend(_fmt_data(sec["data"]))
