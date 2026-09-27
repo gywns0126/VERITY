@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -39,6 +40,34 @@ from api.config import DATA_DIR, now_kst
 logger = logging.getLogger(__name__)
 
 OUTPUT_PATH = os.path.join(DATA_DIR, "dart_catalyst_alerts.jsonl")
+
+
+def _update_heartbeat(**fields: Any) -> None:
+    """Merge liveness and listing-check evidence without inferring one from the other."""
+    path = os.path.join(DATA_DIR, "metadata", "dart_catalyst_heartbeat.json")
+    temporary = None
+    try:
+        try:
+            with open(path, encoding="utf-8") as f:
+                previous = json.load(f)
+            if not isinstance(previous, dict):
+                previous = {}
+        except (OSError, ValueError):
+            previous = {}
+        previous.update(fields)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=os.path.dirname(path), delete=False) as f:
+            temporary = f.name
+            json.dump(previous, f, ensure_ascii=False)
+        os.replace(temporary, path)
+    except OSError:
+        logger.warning("[dart_catalyst] heartbeat write failed")
+    finally:
+        if temporary and os.path.exists(temporary):
+            try:
+                os.unlink(temporary)
+            except OSError:
+                logger.warning("[dart_catalyst] temporary heartbeat cleanup failed")
 
 # pblntf_ty 별 catalyst 분류 (사용자 facing label)
 PBLNTF_LABELS: Dict[str, str] = {
@@ -263,15 +292,39 @@ def fetch_catalysts_market_wide(
     2026-06-18 커버리지 확장 — 운영 풀 종목 한정 대신 KOSPI(Y)+KOSDAQ(K) 전 종목.
     DART list.json 은 corp_code 없이 bgn_de/end_de/pblntf_ty/corp_cls 만으로 시장 전체
     공시를 페이지네이션 반환하며, 각 레코드에 stock_code(6자리)+corp_name 이 직접 포함.
-    req = 3 pblntf_ty × len(corp_cls) × pages (7일 ≈ 수십 req, 20K/일 대비 무시).
+    req = 4 pblntf_ty × len(corp_cls) × pages (default: 8 query groups).
 
     산식 동결 가드 정합 — brain 산식 영향 0, 별 reporting 만 (RULE 7 사전등록 불요, 점수 wire 0).
     Returns: fetch_catalysts_for_pool 과 동일 schema.
     """
-    end_dt = now_kst().date()
+    attempted_at = now_kst()
+    end_dt = attempted_at.date()
     bgn_dt = end_dt - timedelta(days=lookback_days)
     end_de = end_dt.strftime("%Y%m%d")
     bgn_de = bgn_dt.strftime("%Y%m%d")
+
+    collection = {
+        "schema_version": 1,
+        "endpoint": "list.json",
+        "status": "running",
+        "attempted_at": attempted_at.isoformat(timespec="seconds"),
+        "completed_at": None,
+        # Current attempt only; never carry a previous success into a failed run.
+        "successful_checked_at": None,
+        "window": {"bgn": bgn_dt.isoformat(), "end": end_dt.isoformat()},
+        "scope": {"corp_cls": list(corp_cls), "pblntf_ty": ["B", "C", "D", "I"],
+                  "i_title_keywords": list(I_KEYWORDS), "requires_stock_code": True},
+        "raw_body_checked": False,
+        "whole_market_coverage": False,
+        "max_pages_per_group": max_pages,
+        "groups_expected": len(corp_cls) * 4,
+        "groups_completed": 0,
+        "pages_attempted": 0,
+        "pages_succeeded": 0,
+        "groups": [],
+    }
+    # A cancelled attempt must not leave the prior attempt looking successful.
+    _update_heartbeat(source_collection=collection)
 
     all_events: List[Dict[str, Any]] = []
     by_ticker: Dict[str, int] = {}
@@ -281,8 +334,13 @@ def fetch_catalysts_market_wide(
 
     for cls in corp_cls:
         for ty in ("B", "C", "D", "I"):
+            group = {"corp_cls": cls, "pblntf_ty": ty, "status": "failed",
+                     "pages_attempted": 0, "pages_succeeded": 0,
+                     "total_pages": None, "failure": None}
+            collection["groups"].append(group)
             page = 1
             while page <= max_pages:
+                group["pages_attempted"] += 1
                 try:
                     data = _call("list.json", {
                         "bgn_de": bgn_de,
@@ -294,12 +352,37 @@ def fetch_catalysts_market_wide(
                         "sort": "date",
                         "sort_mth": "desc",
                     })
-                except Exception as e:
-                    logger.warning("[dart_catalyst] 시장전체 %s/%s p%d 실패: %s", cls, ty, page, str(e)[:120])
+                except Exception:
+                    # No request URLs, credentials, or remote messages in public metadata.
+                    group["failure"] = "request_exception"
+                    logger.warning("[dart_catalyst] query %s/%s page %d failed", cls, ty, page)
                     break
-                rows = data.get("list", []) if isinstance(data, dict) else []
-                if not rows:
+                status = data.get("status") if isinstance(data, dict) else None
+                if status == "013" and page == 1:
+                    group.update(status="success", total_pages=0, pages_succeeded=1)
                     break
+                if status != "000":
+                    group["failure"] = ("api_" + status if isinstance(status, str)
+                                        and (status.isdigit() and len(status) == 3 or status == "timeout")
+                                        else "invalid_response")
+                    break
+                rows = data.get("list")
+                try:
+                    value = data["total_page"]
+                    if type(value) not in (int, str) or not str(value).isascii() or not str(value).isdigit():
+                        raise ValueError("invalid page count")
+                    total_page = int(value)
+                    valid_pages = total_page >= page and (
+                        group["total_pages"] is None or group["total_pages"] == total_page)
+                except (KeyError, TypeError, ValueError, OverflowError):
+                    valid_pages = False
+                if not valid_pages or not isinstance(rows, list) or not rows or any(
+                    not isinstance(row, dict) for row in rows
+                ):
+                    group["failure"] = "invalid_pagination_or_rows"
+                    break
+                group["total_pages"] = total_page
+                group["pages_succeeded"] += 1
                 for d in rows:
                     sc = str(d.get("stock_code", "") or "").strip()
                     if len(sc) != 6 or not sc.isdigit():
@@ -329,13 +412,22 @@ def fetch_catalysts_market_wide(
                     by_type[ty] = by_type.get(ty, 0) + 1
                     if is_corr:
                         corrections += 1
-                try:
-                    total_page = int(data.get("total_page", 1) or 1)
-                except (TypeError, ValueError):
-                    total_page = 1
                 if page >= total_page:
+                    group["status"] = "success"
                     break
                 page += 1
+            else:
+                group.update(status="truncated", failure="page_cap")
+
+    collection["groups_completed"] = sum(g["status"] == "success" for g in collection["groups"])
+    for key in ("pages_attempted", "pages_succeeded"):
+        collection[key] = sum(g[key] for g in collection["groups"])
+    complete = bool(collection["groups_expected"]) and collection["groups_completed"] == collection["groups_expected"]
+    collection["completed_at"] = now_kst().isoformat(timespec="seconds")
+    collection["status"] = "success" if complete else ("partial" if collection["pages_succeeded"] else "failed")
+    if complete:
+        collection["successful_checked_at"] = collection["completed_at"]
+    _update_heartbeat(source_collection=collection)
 
     return {
         "events": all_events,
@@ -348,6 +440,7 @@ def fetch_catalysts_market_wide(
         "lookback_days": lookback_days,
         "window": {"bgn": bgn_dt.strftime("%Y-%m-%d"), "end": end_dt.strftime("%Y-%m-%d")},
         "fetched_at": now_kst().isoformat(timespec="seconds"),
+        "source_collection": collection,
     }
 
 
@@ -357,16 +450,10 @@ def persist_catalyst_alerts(events: List[Dict[str, Any]]) -> int:
     중복 회피 (rcept_no 기준) — 같은 공시 다시 처리 X.
     Returns: 신규 append 한 entry 수.
     """
-    # 하트비트 — 이벤트 유무와 무관하게 매 실행 last_run_at 기록(freshness 라이브니스 신호).
-    # 조용한 장(신규 catalyst 0)에도 pulse 생존 증명 → detected_at 이벤트-기반 stale 오탐 방지.
+    # Legacy persistence liveness only, never proof that source queries succeeded.
+    # Keep independent source_collection evidence written by the market-wide scan.
     def _hb(n: int) -> None:
-        try:
-            hb_dir = os.path.join(DATA_DIR, "metadata")
-            os.makedirs(hb_dir, exist_ok=True)
-            with open(os.path.join(hb_dir, "dart_catalyst_heartbeat.json"), "w", encoding="utf-8") as hf:
-                json.dump({"last_run_at": now_kst().isoformat(timespec="seconds"), "new_events": n}, hf, ensure_ascii=False)
-        except OSError as e:
-            logger.warning("[dart_catalyst] heartbeat 쓰기 실패: %s", e)
+        _update_heartbeat(last_run_at=now_kst().isoformat(timespec="seconds"), new_events=n)
 
     if not events:
         _hb(0)
