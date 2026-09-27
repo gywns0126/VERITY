@@ -1,21 +1,19 @@
 {
  "_meta": {
-  "generated_at": "2026-09-27T18:45:32.531700+09:00",
+  "generated_at": "2026-09-27T23:58:24.878317+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
- "reasons": [
-  "배달 검증 실패 1건"
- ],
+ "status": "green",
+ "reasons": [],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-09-27T18:45:32.489050+09:00",
-  "ok": false,
-  "failed": 1,
-  "max_cdn_age_s": 0,
+  "generated_at": "2026-09-27T23:58:24.821085+09:00",
+  "ok": true,
+  "failed": 0,
+  "max_cdn_age_s": 66324,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -25,7 +23,7 @@
      "PBR": 95.7
     },
     "total": 2518,
-    "cdn_age_s": 0,
+    "cdn_age_s": 9487,
     "error": null
    },
    {
@@ -36,7 +34,7 @@
      "PBR": 73.6
     },
     "total": 5079,
-    "cdn_age_s": 0,
+    "cdn_age_s": 66324,
     "error": null
    },
    {
@@ -47,16 +45,16 @@
      "PBR": 75.3
     },
     "total": 3851,
-    "cdn_age_s": 0,
+    "cdn_age_s": 66321,
     "error": null
    },
    {
     "file": "_verity_data_push_recency",
-    "ok": false,
+    "ok": true,
     "pct": null,
     "total": null,
     "cdn_age_s": null,
-    "error": "VERITY-data push 3.9h 정지 (SLA 3.0h) — 배달 경로 붕괴. run 이 초록불이어도 사이트는 멎어 있다"
+    "error": null
    }
   ]
  },
@@ -75,7 +73,7 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-09-27T18:45:23.807370+09:00",
+  "generated_at": "2026-09-27T23:58:20.837338+09:00",
   "summary": {
    "fresh": 31,
    "stale": 0,
