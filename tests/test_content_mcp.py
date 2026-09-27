@@ -73,6 +73,48 @@ def test_header_rejections(headers, expected):
     assert error.value.status == expected
 
 
+@pytest.mark.parametrize("origin", [None, "https://chatgpt.com", "https://chat.openai.com",
+                                    "https://www.perplexity.ai"])
+def test_registered_origins_still_require_authorization_before_content(origin):
+    headers = {**HEADERS, **({"Origin": origin} if origin else {})}
+    authorize = Mock(return_value=None)
+    assert call(headers=headers, authorize=authorize)[0] == 200
+    authorize.assert_called_once_with({k.lower(): v for k, v in headers.items()})
+    feed = Mock()
+    denied = Mock(side_effect=m.ServiceError(401, "unauthorized"))
+    with pytest.raises(m.ServiceError) as error:
+        call("tools/call", {"name": "search_content_candidates"}, headers=headers,
+             authorize=denied, feed=feed)
+    assert error.value.status == 401
+    feed.assert_not_called()
+
+
+@pytest.mark.parametrize("origin", ["https://perplexity.ai", "https://www.perplexity.ai/",
+    "https://www.perplexity.ai.evil.example", "http://www.perplexity.ai", "null", ""])
+def test_perplexity_origin_variants_fail_before_auth_or_content(origin):
+    authorize, feed = Mock(), Mock()
+    with pytest.raises(m.ServiceError) as error:
+        call("tools/call", {"name": "search_content_candidates"},
+             headers={**HEADERS, "Origin": origin}, authorize=authorize, feed=feed)
+    assert (error.value.status, error.value.code) == (403, "origin_not_allowed")
+    authorize.assert_not_called()
+    feed.assert_not_called()
+
+
+def test_refresh_token_is_not_an_mcp_access_token(monkeypatch):
+    enable(monkeypatch)
+    rpc, feed = Mock(), Mock()
+    monkeypatch.setattr(oauth, "_json_request", rpc)
+    with pytest.raises(m.ServiceError) as error:
+        call("tools/call", {"name": "search_content_candidates"},
+             headers={**HEADERS, "Origin": "https://www.perplexity.ai",
+                      "Authorization": "Bearer anrefresh_" + "R" * 43},
+             authorize=m.authorize, feed=feed)
+    assert error.value.status == 401
+    rpc.assert_not_called()
+    feed.assert_not_called()
+
+
 @pytest.mark.parametrize("args", [{"limit": True}, {"limit": 11}, {"days": 0},
     {"url": "https://evil.example"}, {"ticker": "ABC"}, {"topic": "a" * 81},
     {"topic": ""}, {"topic": " "}, {"topic": "a\nb"}])
