@@ -1,14 +1,14 @@
 {
- "generated_at": "2026-09-27T08:21:17.936519+09:00",
- "ok": true,
+ "generated_at": "2026-09-27T12:08:21.408099+09:00",
+ "ok": false,
  "checked": 4,
- "failed": 0,
+ "failed": 1,
  "results": [
   {
    "file": "stock_report_public.json",
    "ok": true,
    "total": 2518,
-   "cdn_age_s": 0,
+   "cdn_age_s": 66604,
    "pct": {
     "PER": 61.8,
     "PBR": 95.7
@@ -49,7 +49,7 @@
    "file": "us_stock_report_public.json",
    "ok": true,
    "total": 5079,
-   "cdn_age_s": 73075,
+   "cdn_age_s": 23720,
    "pct": {
     "PER": 45.0,
     "PBR": 73.6
@@ -90,7 +90,7 @@
    "file": "us_stock_report_us_smallcap.json",
    "ok": true,
    "total": 3851,
-   "cdn_age_s": 73073,
+   "cdn_age_s": 23717,
    "pct": {
     "PER": 38.3,
     "PBR": 75.3
@@ -129,10 +129,11 @@
   },
   {
    "file": "_verity_data_push_recency",
-   "ok": true,
-   "pushed_at": "2026-09-26T22:48:07Z",
-   "age_h": 0.55,
-   "sla_h": 3.0
+   "ok": false,
+   "pushed_at": "2026-09-26T23:56:24Z",
+   "age_h": 3.2,
+   "sla_h": 3.0,
+   "error": "VERITY-data push 3.2h 정지 (SLA 3.0h) — 배달 경로 붕괴. run 이 초록불이어도 사이트는 멎어 있다"
   }
  ]
 }
