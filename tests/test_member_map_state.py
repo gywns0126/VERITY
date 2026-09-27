@@ -277,6 +277,24 @@ def test_ambiguous_or_deep_json_is_rejected_without_exception(modules, raw):
     assert api._read_json(h) is None
 
 
+@pytest.mark.parametrize("depth", [13, 64])
+def test_json_depth_limit_does_not_depend_on_interpreter_recursion(modules, depth):
+    api, _, _ = modules
+    raw = b'{"document":' + b'[' * depth + b']' * depth + b'}'
+    h = types.SimpleNamespace(headers={"Content-Length": str(len(raw))}, rfile=io.BytesIO(raw))
+    assert api._read_json(h) is None
+
+
+def test_note_brackets_quotes_and_escapes_do_not_count_as_json_depth(modules):
+    api, _, _ = modules
+    doc = _document()
+    doc["layouts"][0]["notes"][0]["text"] = '[]{}' * 80 + chr(34) + chr(92) + "한글"
+    payload = {"expected_revision": 0, "document": doc}
+    raw = json.dumps(payload, ensure_ascii=False).encode()
+    h = types.SimpleNamespace(headers={"Content-Length": str(len(raw))}, rfile=io.BytesIO(raw))
+    assert api._read_json(h) == payload
+
+
 def test_duplicate_layouts_and_invalid_note_anchor_rejected(modules):
     _, validation, _ = modules
     duplicate = _document()

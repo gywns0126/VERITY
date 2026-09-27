@@ -54,8 +54,28 @@ def _read_json(handler):
         return result
 
     try:
+        raw = handler.rfile.read(length)
+        # Bound nesting before parsing, independent of Python's recursion limit.
+        # The request contract needs <=7 levels; brackets inside notes are text.
+        depth, quoted, escaped = 0, False, False
+        for byte in raw:
+            if quoted:
+                if escaped:
+                    escaped = False
+                elif byte == 92:
+                    escaped = True
+                elif byte == 34:
+                    quoted = False
+            elif byte == 34:
+                quoted = True
+            elif byte in (91, 123):
+                depth += 1
+                if depth > 12:
+                    return None
+            elif byte in (93, 125):
+                depth -= 1
         data = json.loads(
-            handler.rfile.read(length).decode("utf-8"),
+            raw.decode("utf-8"),
             object_pairs_hook=unique_pairs,
             parse_constant=lambda _value: (_ for _ in ()).throw(ValueError("invalid_number")),
         )
