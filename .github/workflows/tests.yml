@@ -54,7 +54,7 @@ jobs:
           # 🚨 `cache: npm` 을 쓰지 않는다 — lockfile 이 있어야 하는데 repo 에 없다.
           #   넣었다가 `Dependencies lock file is not found` 로 CI 가 죽었다(1차 시도 실패).
 
-      - name: Install esbuild (tsx 문법 게이트용)
+      - name: Install isolated Node test tools
         # 🚨 `npm ci` 가 아니라 직접 설치다. 이유 = `.gitignore:10-11` 이 루트
         #   `package.json` / `package-lock.json` 을 **의도적으로** 제외한다
         #   (`/node_modules/` 와 함께 8~11행). 저장소 루트는 파이썬 프로젝트이고
@@ -64,7 +64,10 @@ jobs:
         #   **로컬 디스크를 저장소 상태로 읽은 것**이었다. CI 체크아웃에는 그 파일이 없다.
         # 버전 고정 = 재현성. 로컬은 ^0.28.1 이라 패치 수준에서 갈릴 수 있는데,
         # 문법 파싱 게이트라 그 차이는 판정에 영향이 없다.
-        run: npm install --no-save --no-audit --no-fund esbuild@0.28.1
+        run: npm install --no-save --no-audit --no-fund esbuild@0.28.1 @electric-sql/pglite@0.5.8
+
+      - name: Profile privacy SQL regression (isolated PostgreSQL)
+        run: node tests/profile_private_boundary_sql.cjs
 
       - name: Syntax sanity (ast.parse on all .py)
         run: |
