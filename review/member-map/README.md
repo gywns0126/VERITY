@@ -21,6 +21,8 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 
 The path supplies already-installed esbuild/React and existing `.env` public Supabase URL/anon key. The build validates project ref and `role=anon`; no service key, private response or member record is included. No source map or external script is loaded. Review-specific CSP/robots/cache headers do not modify existing API routes, `ignoreCommand`, authentication or database permissions.
 
+Static files belong under the API project's existing `vercel-api/public/` output directory. `public/member-map-review.html` is served at `/member-map-review` with the existing `cleanUrls` setting; its script and stylesheet live under `public/member-map-review/`. Do not place them beside `vercel.json`: the existing `public` directory means those root-level files are not served.
+
 ## Verify
 
 Check the signed-out page and console first. Once deployed, read back HTML/asset hashes and scoped headers, then have the user complete normal Google sign-in. Verify holdings retrieval, existing map-state retrieval, explicit test edits, save acknowledgement and a fresh page restoration separately. Preserve existing notes/layouts/marks. Do not infer browser acceptance from prior API-runner tests.
