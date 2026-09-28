@@ -1311,5 +1311,3 @@ addPropertyControls(AlphaNestAuth, {
         defaultValue: "/policy",
     },
 })
-
-

@@ -8,7 +8,7 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 - Existing AlphaNest Google/email sign-in; no new provider, test identity creation, or session transfer.
 - The review shell is publicly downloadable; holdings and map records require the existing member JWT and owner checks. `noindex` is not an access control.
 - Holdings are read-only in this client. Map positions, notes and marks are drafts until explicit save; existing revision-conflict and account-switch protections are unchanged.
-- `Map.snapshot.tsx` is the saved Framer review component (`aPYjLyI`, source SHA `e4660dcfb7e0eb814a8d6586acc739748a32a2d9032cd0b1c78ebd9819e0e0be`) with only a trailing newline added.
+- `Map.snapshot.tsx` is the saved Framer review component (`aPYjLyI`, source SHA `e4660dcfb7e0eb814a8d6586acc739748a32a2d9032cd0b1c78ebd9819e0e0be`).
 - `Auth.snapshot.tsx` was fresh-read from `k5Rb6uP` on 2026-09-29 KST; it matches the local mirror after whitespace normalization. It is reused, not pushed back to Framer. Only normal browser login creates the session.
 - PublicAuth remains mounted when its account panel is hidden so refresh/listeners survive. The map is not mounted while signed out.
 - Only the exact review return URL may be added to Supabase's existing redirect list. Existing URLs and Site URL must remain unchanged.

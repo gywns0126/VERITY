@@ -2700,4 +2700,3 @@ export default function PublicPortfolioMapReview({ minHeight = 820, style }: { m
 addPropertyControls(PublicPortfolioMapReview, {
   minHeight: { type: ControlType.Number, title: "최소 높이", defaultValue: 820, min: 480, max: 1200, step: 20 }
 });
-
