@@ -71,11 +71,29 @@ def _cors_headers(h):
         from api.cors_helper import resolve_origin  # type: ignore
     except Exception:
         resolve_origin = lambda _o: ""  # noqa: E731
-    origin = resolve_origin(h.headers.get("Origin") or "")
+    try:
+        from api.cors_helper import (  # type: ignore
+            MEMBER_PORTFOLIO_PREVIEW_ORIGIN,
+            resolve_member_portfolio_origin,
+        )
+    except Exception:
+        MEMBER_PORTFOLIO_PREVIEW_ORIGIN = ""
+        resolve_member_portfolio_origin = lambda _o: ""  # noqa: E731
+    request_origin = h.headers.get("Origin") or ""
+    requested_method = (h.headers.get("Access-Control-Request-Method") or "").upper()
+    method = getattr(h, "command", "").upper()
+    preview_read = request_origin == MEMBER_PORTFOLIO_PREVIEW_ORIGIN and (
+        method == "GET" or (method == "OPTIONS" and requested_method == "GET")
+    )
+    if request_origin == MEMBER_PORTFOLIO_PREVIEW_ORIGIN:
+        origin = resolve_member_portfolio_origin(request_origin) if preview_read else ""
+    else:
+        origin = resolve_origin(request_origin)
     if origin:
         h.send_header("Access-Control-Allow-Origin", origin)
         h.send_header("Vary", "Origin")
-    h.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+    h.send_header("Access-Control-Allow-Methods", "GET, OPTIONS" if preview_read
+                  else "GET, POST, PATCH, DELETE, OPTIONS")
     h.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 

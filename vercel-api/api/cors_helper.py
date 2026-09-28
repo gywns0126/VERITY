@@ -35,6 +35,10 @@ _env_origins: FrozenSet[str] = frozenset(
 )
 ALLOWED_ORIGINS: FrozenSet[str] = _env_origins | _DEFAULT_ORIGINS
 _WILDCARD_IN_ENV = any(s.strip() == "*" for s in _raw.split(","))
+MEMBER_PORTFOLIO_PREVIEW_ORIGIN = "https://project-m8t0hwzrnycqtnr6cs51.framercanvas.com"
+_MEMBER_PORTFOLIO_ORIGINS: FrozenSet[str] = ALLOWED_ORIGINS | frozenset(
+    {MEMBER_PORTFOLIO_PREVIEW_ORIGIN}
+)
 
 if not _env_origins:
     _logger.warning(
@@ -45,13 +49,21 @@ if _WILDCARD_IN_ENV:
     _logger.warning("API_ALLOWED_ORIGINS 에 '*' 포함됨 — 무시. 명시 origin 만 사용")
 
 
+def _resolve(request_origin: str, origins: FrozenSet[str]) -> str:
+    """Allow an exact origin from the supplied scope, otherwise fail closed."""
+    request_origin = (request_origin or "").strip()
+    return request_origin if request_origin in origins else ""
+
+
 def resolve_origin(request_origin: str) -> str:
     """허용 origin 이면 그대로 반환, 아니면 빈 문자열.
 
     호출자는 빈 문자열이면 `Access-Control-Allow-Origin` 헤더를 아예 붙이지 않아
     브라우저가 응답을 거부하게 한다.
     """
-    request_origin = (request_origin or "").strip()
-    if not ALLOWED_ORIGINS:
-        return ""
-    return request_origin if request_origin in ALLOWED_ORIGINS else ""
+    return _resolve(request_origin, ALLOWED_ORIGINS)
+
+
+def resolve_member_portfolio_origin(request_origin: str) -> str:
+    """Allow the existing production origins plus the one editor canvas origin only."""
+    return _resolve(request_origin, _MEMBER_PORTFOLIO_ORIGINS)
