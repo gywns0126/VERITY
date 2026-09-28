@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-28T18:25:24+09:00",
+ "as_of": "2026-09-29T02:27:35+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -47,30 +47,9 @@
      ]
     },
     {
-     "key": "kis_credit_balance",
-     "modules": [
-      "red_flags.py"
-     ]
-    },
-    {
-     "key": "kis_financial_ratio",
-     "modules": [
-      "fact.py",
-      "graham.py",
-      "moat.py",
-      "red_flags.py"
-     ]
-    },
-    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
-     ]
-    },
-    {
-     "key": "kis_short_sale",
-     "modules": [
-      "red_flags.py"
      ]
     },
     {
@@ -86,11 +65,24 @@
      ]
     }
    ],
-   "thin_keys": [],
+   "thin_keys": [
+    {
+     "key": "kis_financial_ratio",
+     "coverage": "1/76"
+    },
+    {
+     "key": "kis_credit_balance",
+     "coverage": "1/76"
+    },
+    {
+     "key": "kis_short_sale",
+     "coverage": "1/76"
+    }
+   ],
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "77/77",
+     "coverage": "76/76",
      "via": [
       "current_price",
       "price"
@@ -101,7 +93,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "54/77",
+     "coverage": "42/76",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -112,7 +104,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "77/77",
+     "coverage": "76/76",
      "via": [
       "fscore_deltas"
      ],
@@ -122,7 +114,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "61/77",
+     "coverage": "63/76",
      "via": [
       "industry"
      ],
@@ -132,7 +124,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "53/77",
+     "coverage": "41/76",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -153,7 +145,7 @@
      ]
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 9종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 6종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
@@ -164,7 +156,7 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 131,
+   "snapshots": 132,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
@@ -181,8 +173,8 @@
     "watch_pct": 85.0
    },
    "days_without_any_cap": 16,
-   "days_without_any_cap_pct": 12.2,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.5%). cap 없는 날 16/131일",
+   "days_without_any_cap_pct": 12.1,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.5%). cap 없는 날 16/132일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -193,7 +185,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 14,
-   "stock_days": 7209,
+   "stock_days": 7290,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -273,8 +265,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 40,
-    "scored": 40,
+    "with_pct": 55,
+    "scored": 55,
     "ok": true
    },
    "dead_guards": [],
