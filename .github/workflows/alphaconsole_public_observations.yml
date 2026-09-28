@@ -4,7 +4,7 @@ name: AlphaConsole Public Observations
 # 1 env: existing SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY only.
 # 2 push trigger: none. The job writes Supabase only and creates no git commit.
 # 3 concurrency: dedicated group; duplicate scheduled/manual runs cannot overlap.
-# 4 cron: once daily at 13:17 UTC (22:17 KST). Durable DB state chooses a 1-3 day interval.
+# 4 cron: once daily at 13:17 UTC (22:17 KST). Durable DB state chooses a 1-3 day interval; each due run publishes at most one high-signal note.
 # 5 KIS: not imported and no token path is used.
 # 6 pip: none; stdlib publisher and unittest only.
 # 7 N=2: after migration and merge, verify one manual live run and the next due scheduled run.
