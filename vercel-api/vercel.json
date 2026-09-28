@@ -166,6 +166,17 @@
   ],
   "headers": [
     {
+      "source": "/member-map-review(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "private, no-store" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://lykqebdcurreppowulsl.supabase.co; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'" }
+      ]
+    },
+    {
       "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!holdings(?:$|/))(?!trades(?:$|/))(?!thesis(?:$|/))(?!thesis_feed(?:$|/))(?!portfolio_experiments(?:$|/))(?!support(?:$|/))(?!reports(?:$|/))(?!member_map_state(?:$|/|\\.py$)).*)",
       "headers": [
         {
