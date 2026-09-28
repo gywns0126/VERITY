@@ -1,10 +1,10 @@
 """🚨 RULE 1 — KIS 1일 1토큰 ABSOLUTE 가드 (2026-05-22 사고 정정).
 
-검증: force_refresh=True 가 23h 파일 lock 을 존중 (2번째 토큰 발급 차단).
+검증: force_refresh=True 가 최소 24h 파일 lock 을 존중 (2번째 토큰 발급 차단).
 배경: 5/22 21:09 preflight 발급 후 latent bug 발견 —
   옛 broker `interval_h = 6 if force_refresh` + `if not force_refresh and lock`
   → force_refresh=True + fresh runner(빈 cache) = 파일 lock bypass → 2번째 토큰 가능.
-정정: interval 23h 통일 + 파일 lock 전 caller 강제.
+정정: 발급 간격 최소 24h + 파일 lock 전 caller 강제.
 """
 from __future__ import annotations
 
@@ -67,8 +67,8 @@ def test_interval_guard_blocks_23h_to_24h_window(tmp_path):
     assert token == "CACHED"
 
 
-def test_force_refresh_issues_after_23h(tmp_path):
-    """25h 전 lock(>23h) + 빈 cache + force_refresh=True → 정상 발급 (backup 작동)."""
+def test_force_refresh_issues_after_24h(tmp_path):
+    """25h 전 lock(>24h) + 빈 cache + force_refresh=True → 정상 발급 (backup 작동)."""
     b = _broker(tmp_path, lock_hours_ago=25)
     b._token = None
     b._token_expires = None
@@ -83,7 +83,7 @@ def test_force_refresh_issues_after_23h(tmp_path):
          mock.patch.object(b, "_mark_issued_today"), \
          mock.patch.object(kb.requests, "post", return_value=fake) as mpost:
         token = b.authenticate(force_refresh=True)
-    mpost.assert_called_once()  # 23h 경과 = backup 발급 정상
+    mpost.assert_called_once()  # 24h 이상 경과 = backup 발급 정상
     assert token == "NEW_TOKEN"
 
 

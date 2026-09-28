@@ -294,7 +294,7 @@ def _quote_rate_ok(ip: str) -> bool:
 async def quotes(request: Request, tickers: str = Query("", description="쉼표구분 종목코드 (최대 15)")):
     """오퍼레이터 실시간 시세 배치 — 현재가·등락률·거래량·OHLC.
     🚨 RULE 1: fetch_price = KIS_SHARED_TOKEN 순수 소비자(공유 store 읽기만, 토큰 발급 절대 X).
-      배포 시 Railway KIS_SHARED_TOKEN=1 필수(미설정=legacy self-issue fail-open, 6/17 클래스).
+      배포 시 Railway KIS_SHARED_TOKEN=1 필수. 미설정도 기본 발급 금지(fail-closed).
     per-IP 레이트리밋으로 쿼터 남용 차단. 본인 이용 실시간 시세."""
     from datetime import datetime, timezone, timedelta
     ip = request.client.host if request.client else "unknown"
@@ -303,9 +303,10 @@ async def quotes(request: Request, tickers: str = Query("", description="쉼표�
     kst = timezone(timedelta(hours=9))
     codes = [t.strip().zfill(6) for t in tickers.split(",") if t.strip()][:15]
     out: Dict[str, dict] = {}
+    loop = asyncio.get_running_loop()
     for code in codes:
         try:
-            q = fetch_price(code)
+            q = await loop.run_in_executor(None, fetch_price, code)
             if q and q.get("price"):
                 out[code] = q
         except Exception:
@@ -335,9 +336,10 @@ async def us_quotes(request: Request,
     syms = [t.strip().upper() for t in tickers.split(",") if t.strip()][:10]
     ex = (excd or "").strip().upper()
     out: Dict[str, dict] = {}
+    loop = asyncio.get_running_loop()
     for s in syms:
         try:
-            q = fetch_us_price(s, ex)
+            q = await loop.run_in_executor(None, fetch_us_price, s, ex)
             if q and q.get("price"):
                 out[s] = q
         except Exception:
@@ -555,11 +557,11 @@ async def order_balance(request: Request, market: str = Query("kr")):
         data = await loop.run_in_executor(None, get_balance, market.lower(), broker)
         return data
     except BrokerMismatch as e:
-        logger.error("잔고 조회 거절 (계좌 라우팅): %s", e)
-        return JSONResponse({"error": str(e)}, status_code=403)
+        logger.error("잔고 조회 거절 (계좌 라우팅): %s", type(e).__name__)
+        return JSONResponse({"error": "KIS account routing mismatch"}, status_code=403)
     except Exception as e:
-        logger.error("잔고 조회 실패: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=502)
+        logger.error("잔고 조회 실패: %s", type(e).__name__)
+        return JSONResponse({"error": "KIS balance unavailable"}, status_code=502)
 
 
 @app.post("/api/order")

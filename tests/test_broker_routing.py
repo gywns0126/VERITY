@@ -100,13 +100,18 @@ def test_balance_forwards_matching_account_and_credentials(monkeypatch, market, 
     """잔고 요청도 계좌번호와 인증 슬러그를 같은 사람 것으로 전달한다."""
     krc = _multi(monkeypatch)
     calls = []
+    summary = {"frcr_pchs_amt1": "0", "ovrs_tot_pfls": "0"} if market == "us" else [
+        {"dnca_tot_amt": "0", "tot_evlu_amt": "0", "evlu_pfls_smtl_amt": "0"}
+    ]
+    payload = {"rt_cd": "0", "output1": [], "output2": summary}
 
-    def fake_get(path, tr_id, params, broker="operator"):
+    def fake_get(path, tr_id, params, broker="operator", *, raise_on_error=False):
+        assert raise_on_error is True
         calls.append((path, params["CANO"], params["ACNT_PRDT_CD"], broker))
-        return {"rt_cd": "0"}
+        return payload
 
     monkeypatch.setattr(krc, "_get", fake_get)
-    assert krc.get_balance(market, broker) == {"rt_cd": "0"}
+    assert krc.get_balance(market, broker) == payload
     assert len(calls) == 1
     assert calls[0][1:] == (cano, "01", broker)
     assert ("overseas-stock" if market == "us" else "domestic-stock") in calls[0][0]

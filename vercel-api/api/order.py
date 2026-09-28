@@ -405,7 +405,7 @@ def _prune_dedupe(now: float) -> None:
 
 class handler(BaseHTTPRequestHandler):
     def _order_limits_for(self, user_id: str, jwt: str) -> dict:
-        """profiles 테이블에서 사용자별 주문 권한/한도/계좌 라우팅 조회. 실패 시 기본값.
+        """profiles 권한/한도/계좌 조회. 빈 결과·권한 거절과 의존성 실패를 구분한다.
 
         🚨 broker_slug 는 기본값을 두지 않는다(None). 회원이 2명 이상인 순간
         기본값 = "조회에 실패하면 남의 계좌로 주문" 이 되기 때문이다. 없으면 거절.
@@ -426,10 +426,15 @@ class handler(BaseHTTPRequestHandler):
                     "limit": "1",
                 },
                 user_jwt=jwt,
+                strict=True,
             )
-            if not rows:
+            if rows == []:
                 return defaults
+            if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+                raise sb.AuthServiceUnavailable
             row = rows[0]
+            if row.get("order_enabled") is not None and not isinstance(row["order_enabled"], bool):
+                raise sb.AuthServiceUnavailable
             slug = (row.get("broker_slug") or "").strip()
             return {
                 "order_enabled": bool(row.get("order_enabled")),
@@ -440,9 +445,12 @@ class handler(BaseHTTPRequestHandler):
                 "broker_slug": slug if _SLUG_RE.match(slug) else None,
                 "seed_krw": int(row["seed_krw"]) if _to_float(row.get("seed_krw")) > 0 else None,
             }
-        except Exception as e:
-            _logger.warning("order limits lookup failed: %s", e)
-            return defaults
+        except requests.HTTPError as exc:
+            if exc.response is not None and exc.response.status_code in (401, 403):
+                return defaults
+            raise sb.AuthServiceUnavailable from None
+        except Exception:
+            raise sb.AuthServiceUnavailable from None
 
     def _authorized_user(self) -> Optional[dict]:
         """Supabase access_token 검증 + 주문 권한 확인. 실패 시 401/403/503 응답."""
@@ -463,11 +471,18 @@ class handler(BaseHTTPRequestHandler):
         if not jwt:
             self._json(401, {"error": "Unauthorized"})
             return None
-        uid = sb.verify_jwt(jwt)
-        if not uid:
-            self._json(401, {"error": "Invalid token"})
+        stage = "user"
+        try:
+            uid = sb.verify_jwt(jwt, strict=True)
+            if not uid:
+                self._json(401, {"error": "Invalid token"})
+                return None
+            stage = "profile"
+            limits = self._order_limits_for(uid, jwt)
+        except sb.AuthServiceUnavailable:
+            _logger.warning("order auth service unavailable: stage=%s", stage)
+            self._json(503, {"error": "auth_service_unavailable"})
             return None
-        limits = self._order_limits_for(uid, jwt)
         if not limits.get("order_enabled"):
             self._json(403, {"error": "Order not permitted for this account"})
             return None
