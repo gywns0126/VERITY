@@ -29,7 +29,24 @@ def _json(handler, status, payload):
         from api.cors_helper import resolve_origin
     except Exception:
         resolve_origin = lambda _origin: ""
-    allowed_origin = resolve_origin(handler.headers.get("Origin") or "")
+    try:
+        from api.cors_helper import (
+            MEMBER_PORTFOLIO_PREVIEW_ORIGIN,
+            resolve_member_portfolio_origin,
+        )
+    except Exception:
+        MEMBER_PORTFOLIO_PREVIEW_ORIGIN = ""
+        resolve_member_portfolio_origin = lambda _origin: ""
+    request_origin = handler.headers.get("Origin") or ""
+    requested_method = (handler.headers.get("Access-Control-Request-Method") or "").upper()
+    method = getattr(handler, "command", "").upper()
+    preview_method_allowed = request_origin == MEMBER_PORTFOLIO_PREVIEW_ORIGIN and (
+        method in {"GET", "POST"} or (method == "OPTIONS" and requested_method in {"GET", "POST"})
+    )
+    if request_origin == MEMBER_PORTFOLIO_PREVIEW_ORIGIN:
+        allowed_origin = resolve_member_portfolio_origin(request_origin) if preview_method_allowed else ""
+    else:
+        allowed_origin = resolve_origin(request_origin)
     if allowed_origin:
         handler.send_header("Access-Control-Allow-Origin", allowed_origin)
     handler.send_header("Content-Length", str(len(body)))
