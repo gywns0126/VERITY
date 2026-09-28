@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-28T08:32:19+09:00",
+  "collected_at": "2026-09-28T09:02:23+09:00",
   "macro": {
     "usd_krw": {
       "value": 1355.25,
@@ -14005,12 +14005,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 24.61
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 138.06
   },
   "schema_version": "v0"
 }
