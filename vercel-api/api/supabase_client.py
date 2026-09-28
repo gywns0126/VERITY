@@ -35,13 +35,22 @@ def is_configured() -> bool:
     return bool(SUPABASE_URL and SUPABASE_ANON_KEY)
 
 
-def verify_jwt(jwt: str) -> Optional[str]:
+class AuthServiceUnavailable(Exception):
+    """Authentication dependency failed; never authorize on this outcome."""
+
+
+def verify_jwt(jwt: str, *, strict: bool = False) -> Optional[str]:
     """Supabase /auth/v1/user로 토큰을 검증하고 user_id(sub) 반환. 실패 시 None.
 
     반드시 서버 측에서 호출하여 클라이언트가 주장하는 user_id 대신
-    Supabase가 검증한 UID만 신뢰한다.
+    Supabase가 검증한 UID만 신뢰한다. strict=True는 의존성/설정/응답 오류를
+    AuthServiceUnavailable로 구분하며, 실제 토큰 거절은 계속 None을 반환한다.
     """
-    if not jwt or not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    if not jwt:
+        return None
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        if strict:
+            raise AuthServiceUnavailable
         return None
     try:
         r = requests.get(
@@ -51,16 +60,39 @@ def verify_jwt(jwt: str) -> Optional[str]:
                 "Authorization": f"Bearer {jwt}",
             },
             timeout=5,
+            allow_redirects=not strict,
         )
         if r.status_code != 200:
+            if strict and r.status_code not in (400, 401, 403):
+                raise AuthServiceUnavailable
             return None
-        return r.json().get("id")
+        uid = r.json().get("id")
+        if strict and (not isinstance(uid, str) or not uid.strip()):
+            raise AuthServiceUnavailable
+        return uid
     except Exception:
+        if strict:
+            # Raw exceptions/upstream bodies can contain credentials or user data.
+            raise AuthServiceUnavailable from None
         return None
 
 
-def select(table: str, params: Dict[str, str], user_jwt: Optional[str] = None) -> List[Dict[str, Any]]:
-    r = requests.get(_rest(table), headers=_headers(user_jwt), params=params, timeout=8)
+def select(
+    table: str,
+    params: Dict[str, str],
+    user_jwt: Optional[str] = None,
+    *,
+    strict: bool = False,
+) -> List[Dict[str, Any]]:
+    """Read rows; strict auth reads require HTTP 200, preserving 401/403 denials."""
+    if strict and not is_configured():
+        raise AuthServiceUnavailable
+    r = requests.get(
+        _rest(table), headers=_headers(user_jwt), params=params, timeout=8,
+        allow_redirects=not strict,
+    )
+    if strict and r.status_code not in (200, 401, 403):
+        raise AuthServiceUnavailable
     r.raise_for_status()
     return r.json()
 

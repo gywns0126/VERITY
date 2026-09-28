@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json as _json
 import logging
+import math
 import os
 import threading
 import time
@@ -44,7 +45,7 @@ _TOKEN_CACHE_PATH = os.path.join(
 
 # 🚨 RULE 1 — KIS 발급 간격 최소 24h. 발급원 = GH Actions 단일 (PM 결정 2026-05-31).
 # Railway(이 모듈) = KIS_SHARED_TOKEN=1 시 순수 소비자 (Supabase 공유 store 읽기, 발급 금지).
-# flag off = legacy 롤백 (자체 발급 + /tmp + 24h 가드). _MIN_ISSUE_INTERVAL_S = legacy 가드용.
+# 공유 모드 off 도 기본 발급 금지. legacy 는 KIS_ALLOW_SELF_ISSUE=1 명시 opt-in + 24h 가드.
 _MIN_ISSUE_INTERVAL_S = 24 * 3600
 
 
@@ -154,9 +155,10 @@ def _get_token() -> str:
       2. Supabase 공유 store (GH publish 분) 유효 → 사용 + /tmp cache. 반환.
       3. /tmp cache fallback (Supabase 일시 장애).
       4. 어디에도 없음 → RuntimeError. GH 가 아직 publish 안 함 — 소비자는 발급 금지.
-         (_get/_post 가 catch → {} 반환. 다음 GH 발급/publish 까지 대기.)
+         (잔고 읽기는 오류 전파, 기타 _get/_post 는 {} 반환. 다음 GH publish 까지 대기.)
 
-    KIS_SHARED_TOKEN 미설정 시(legacy 롤백) = 자체 발급 + /tmp + 24h 가드.
+    공유 모드가 꺼져도 기본 발급 금지. KIS_ALLOW_SELF_ISSUE=1 명시 opt-in 시에만
+    legacy 자체 발급 + /tmp + 24h 가드 경로를 허용한다.
     """
     global _token, _token_expires, _token_source
     with _lock:
@@ -340,7 +342,8 @@ def _headers(tr_id: str, broker: str = "operator") -> dict:
     }
 
 
-def _get(path: str, tr_id: str, params: dict, broker: str = "operator") -> dict:
+def _get(path: str, tr_id: str, params: dict, broker: str = "operator", *,
+         raise_on_error: bool = False) -> dict:
     try:
         r = requests.get(
             f"{KIS_BASE_URL}{path}",
@@ -351,6 +354,11 @@ def _get(path: str, tr_id: str, params: dict, broker: str = "operator") -> dict:
         r.raise_for_status()
         return r.json()
     except Exception as e:
+        if raise_on_error:
+            if isinstance(e, BrokerMismatch):
+                raise
+            logger.warning("KIS REST 잔고 요청 실패: %s", type(e).__name__)
+            raise RuntimeError("KIS balance unavailable") from None
         logger.warning("KIS REST 요청 실패 %s: %s", path, e)
         return {}
 
@@ -918,7 +926,7 @@ def place_us_order(excd: str, ticker: str, side: str, qty: int, price: float, or
 def get_balance(market: str = "kr", broker: str = "operator") -> dict:
     cano, prdt = _account_parts_for(broker)
     if market == "us":
-        return _get(
+        data = _get(
             "/uapi/overseas-stock/v1/trading/inquire-balance",
             "TTTS3012R",
             {
@@ -927,16 +935,41 @@ def get_balance(market: str = "kr", broker: str = "operator") -> dict:
                 "CTX_AREA_FK200": "", "CTX_AREA_NK200": "",
             },
             broker,
+            raise_on_error=True,
         )
-    return _get(
-        "/uapi/domestic-stock/v1/trading/inquire-balance",
-        "TTTC8434R",
-        {
-            "CANO": cano, "ACNT_PRDT_CD": prdt,
-            "AFHR_FLPR_YN": "N", "OFL_YN": "",
-            "INQR_DVSN": "02", "UNPR_DVSN": "01",
-            "FUND_STTL_ICLD_YN": "N", "FNCG_AMT_AUTO_RDPT_YN": "N",
-            "PRCS_DVSN": "01", "CTX_AREA_FK100": "", "CTX_AREA_NK100": "",
-        },
-        broker,
-    )
+    else:
+        data = _get(
+            "/uapi/domestic-stock/v1/trading/inquire-balance",
+            "TTTC8434R",
+            {
+                "CANO": cano, "ACNT_PRDT_CD": prdt,
+                "AFHR_FLPR_YN": "N", "OFL_YN": "",
+                "INQR_DVSN": "02", "UNPR_DVSN": "01",
+                "FUND_STTL_ICLD_YN": "N", "FNCG_AMT_AUTO_RDPT_YN": "N",
+                "PRCS_DVSN": "01", "CTX_AREA_FK100": "", "CTX_AREA_NK100": "",
+            },
+            broker,
+            raise_on_error=True,
+        )
+    # KR/US summary shapes differ; empty holdings and zero amounts are valid.
+    # An absent/failed summary is unavailable, never an empty account.
+    if (not isinstance(data, dict) or data.get("rt_cd") != "0"
+            or not isinstance(data.get("output1"), list)
+            or not isinstance(data.get("output2"), (dict, list))):
+        raise RuntimeError("KIS balance unavailable")
+    summaries = data["output2"]
+    summary = (summaries[0] if summaries else None) if isinstance(summaries, list) else summaries
+    if not isinstance(summary, dict) or not summary:
+        raise RuntimeError("KIS balance unavailable")
+    if market != "us":
+        # The KR balance card requires these three amounts from output2[0].
+        try:
+            if not isinstance(summaries, list):
+                raise ValueError
+            for field in ("dnca_tot_amt", "tot_evlu_amt", "evlu_pfls_smtl_amt"):
+                value = summary.get(field)
+                if isinstance(value, bool) or not math.isfinite(float(value)):
+                    raise ValueError
+        except (TypeError, ValueError, OverflowError):
+            raise RuntimeError("KIS balance unavailable") from None
+    return data
