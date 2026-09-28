@@ -220,3 +220,14 @@ def test_numeric_side_is_canonicalized(monkeypatch):
                                     "qty": 1, "price": 70000, "market": "kr"})
     assert ok, msg
     assert sell["side"] == "SELL"
+
+
+def test_balance_function_budget_exceeds_sequential_read_timeouts():
+    """Do not terminate balance reads before auth/profile/upstream waits finish."""
+    import json
+    from pathlib import Path
+
+    config = json.loads((Path(__file__).resolve().parents[1] / "vercel-api/vercel.json").read_text())
+    # Nominal GET budgets: verified user (5s), profile (8s), Railway balance (12s).
+    # Keep headroom for response handling; no automatic balance retry is added.
+    assert config["functions"]["api/order.py"]["maxDuration"] > 5 + 8 + 12
