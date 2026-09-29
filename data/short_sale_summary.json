@@ -1,7 +1,7 @@
 {
- "as_of": "2026-09-29T02:27:26+09:00",
+ "as_of": "2026-09-29T18:15:00+09:00",
  "version": "short_sale_trail_v0",
- "n_observations": 7393,
+ "n_observations": 7422,
  "window_start": null,
  "thresholds_observed": {
   "kr_auto_avoid": 15.0,
@@ -50,7 +50,7 @@
    }
   },
   "clean": {
-   "n_observations": 789,
+   "n_observations": 788,
    "n_tickers": 161,
    "fwd_20d": {
     "n_tickers": 55,
@@ -70,8 +70,8 @@
    }
   },
   "missing": {
-   "n_observations": 1589,
-   "n_tickers": 185,
+   "n_observations": 1604,
+   "n_tickers": 211,
    "fwd_20d": {
     "n_tickers": 111,
     "n_observations": 1274,
@@ -132,8 +132,8 @@
    }
   },
   "clean": {
-   "n_observations": 2545,
-   "n_tickers": 388,
+   "n_observations": 2553,
+   "n_tickers": 398,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -152,8 +152,8 @@
    }
   },
   "missing": {
-   "n_observations": 1838,
-   "n_tickers": 276,
+   "n_observations": 1845,
+   "n_tickers": 277,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -174,8 +174,8 @@
  },
  "labels": [
   "예비 결과 — auto_avoid 종목 N=20 < 100",
-  "US 지표 결측 1838건 — clean 과 분리 집계됨(무혐의 통과 아님)",
-  "KR 지표 결측 1589건 — 수집 이전 기간 포함. clean 과 분리 집계"
+  "US 지표 결측 1845건 — clean 과 분리 집계됨(무혐의 통과 아님)",
+  "KR 지표 결측 1604건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
  "note": "공매도 규칙 사후 수익률 관측 — 임계·강도 재판단의 판정 근거. 점수·집행 입력 0. KR=거래량 비중(흐름) / US=숏인터레스트(포지션) 로 측정 대상이 다르므로 시장 간 수치를 비교하지 말 것. 수익률은 KR 전용(US 일봉 레이크 미도달)."
