@@ -10,8 +10,8 @@
   },
   "funding_rate": {
     "ok": true,
-    "rate": 3.99869885474e-05,
-    "rate_pct": 0.004,
+    "rate": 3.33909206773e-05,
+    "rate_pct": 0.0033,
     "prev_rate_pct": null,
     "signal": "neutral",
     "timestamp": "1790668800000",
@@ -19,29 +19,26 @@
   },
   "kimchi_premium": {
     "ok": true,
-    "premium_pct": -0.19,
-    "upbit_krw": 113655000.0,
-    "global_usd": 83924.2,
-    "binance_usd": 83924.2,
-    "usdt_krw": 1356.8800048828125,
+    "premium_pct": -0.04,
+    "upbit_krw": 113750000.0,
+    "global_usd": 83871.8,
+    "binance_usd": 83871.8,
+    "usdt_krw": 1356.780029296875,
     "signal": "normal",
     "source": "upbit+bybit/okx"
   },
   "btc_nasdaq_corr": {
     "ok": true,
-    "correlation": -0.044,
+    "correlation": -0.043,
     "period_days": 30,
     "signal": "decoupled",
-    "btc_last_price": 83932.0
+    "btc_last_price": 83871.8
   },
   "stablecoin_mcap": {
-    "ok": true,
-    "total_mcap_usd": 258502235140.44983,
-    "total_mcap_b": 258.5,
-    "usdt_mcap_b": 183.8,
-    "usdc_mcap_b": 74.7
+    "ok": false,
+    "error": "403 Client Error: Forbidden for url: https://api.coingecko.com/api/v3/simple/price?ids=tether%2Cusd-coin&vs_currencies=u"
   },
-  "ok_count": 5,
+  "ok_count": 4,
   "total": 5,
   "composite": {
     "score": 57,
@@ -49,10 +46,10 @@
     "risk_level": "normal",
     "signals": []
   },
-  "collected_at": "2026-09-29T15:32:27+09:00",
+  "collected_at": "2026-09-29T16:02:19+09:00",
   "schema_version": "v0",
   "diagnostics": {
-    "ok_count": 5,
+    "ok_count": 4,
     "used_prev_snapshot": false
   }
 }
