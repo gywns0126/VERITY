@@ -8,14 +8,22 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 - Existing AlphaNest Google/email sign-in; no new provider, test identity creation, or session transfer.
 - The review shell is publicly downloadable; holdings and map records require the existing member JWT and owner checks. `noindex` is not an access control.
 - Holdings are read-only in this client. Map positions, notes and marks are drafts until explicit save; existing revision-conflict and account-switch protections are unchanged.
-- `Map.snapshot.tsx` starts from the saved Framer review component (`aPYjLyI`, source SHA `e4660dcfb7e0eb814a8d6586acc739748a32a2d9032cd0b1c78ebd9819e0e0be`). The 2026-09-29 compact-design delivery replaces only its Canvas and PublicPortfolioMap presentation sections. The 11 data/workspace/detail/theme sections and original review wrapper are retained byte-for-byte. This newer standalone snapshot has not been saved back into Framer.
+- `Map.snapshot.tsx` is a generated projection of the tested local `PortfolioMapReview.entry.tsx` and its real-controller module graph. It supersedes the earlier two-section visual-only projection. Existing auth, member-state transport, document sources, quote normalizer and API routes are unchanged. This standalone snapshot has not been saved back into Framer.
 - `Auth.snapshot.tsx` was fresh-read from `k5Rb6uP` on 2026-09-29 KST; it matches the local mirror after whitespace normalization. It is reused, not pushed back to Framer. Only normal browser login creates the session.
 - PublicAuth remains mounted when its account panel is hidden so refresh/listeners survive. The map is not mounted while signed out.
 - Only the exact review return URL may be added to Supabase's existing redirect list. Existing URLs and Site URL must remain unchanged.
 - The review uses the API's own origin: no CORS allowlist expansion, proxy or origin spoofing.
-- Graph data represents company-to-source-document associations. Shared documents are not automatically verified common events or investment impact. Cards use source-type colors, not fabricated impact/strength scores. Verified relationship/event inputs remain pending.
+- Document mode represents company-to-source-document associations, not automatically verified events. Separate reviewed modes contain exactly four manually compared official documents, two dated relationships and one historical common announcement (NVDA/INTC/TSM). They are not a current market-wide feed or evidence of investment impact. Missing matching holdings produce an honest empty state.
 
-## Compact design provenance
+## Data and records delivery — 2026-09-29
+
+The current priority is actual data and explicit private persistence; further design alignment is deferred. New reviewed state uses `reviewed:relationships:<id>` and `reviewed:events:<id>` keys. Only personal marks and an equality-only content fingerprint are stored, not copied source documents. Existing notes, positions and document marks are preserved. Content changes request re-reading; the fingerprint is not an event timestamp or an ordered version.
+
+The read-only holdings list reuses the same holdings response; it neither edits holdings nor treats the 30-company map window as a holdings limit. Quantity and cost are shown only when valid, and duplicate lots are not incorrectly summed. Closing-price eligibility remains unchanged; no sample quote replaces missing or permission-blocked data.
+
+Prior source validation: 47/47 focused renderer, reviewed-state and fresh-controller journey checks, strict TypeScript, and 3/3 reviewed-mark payloads accepted by the local API validator. Those used synthetic transport and do not prove deployed member acceptance. After delivery, separately verify authenticated save acknowledgement and a fresh-page restore. No DB, API, CORS, provider or redirect change is part of this delivery.
+
+## Earlier compact design provenance (historical)
 
 The same local renderer passed 53 focused checks plus bounded 30-company browser checks before projection into this snapshot. Rebuilt with existing esbuild (`bundle`, ESM, classic JSX transform, UTF-8, React/ReactDOM/Framer external), only these two source sections were substituted; the other generated sections were compared exactly before writing:
 

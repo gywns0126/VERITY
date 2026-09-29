@@ -19,6 +19,20 @@ function memberMapStore() {
     return context.makeStore
 }
 
+function reviewedRuntime() {
+    const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
+    const stateStart = source.indexOf("// framer-components/public-probe/MemberMapState.tsx")
+    const stateEnd = source.indexOf("// framer-components/public-probe/PortfolioMapWorkspace.tsx", stateStart)
+    const reviewedStart = source.indexOf("// framer-components/public-probe/PortfolioReviewedState.tsx")
+    const reviewedEnd = source.indexOf("// framer-components/public-probe/PublicPortfolioMap.tsx", reviewedStart)
+    assert.ok(stateStart >= 0 && stateEnd > stateStart, "review snapshot contains member state")
+    assert.ok(reviewedStart >= 0 && reviewedEnd > reviewedStart, "review snapshot contains reviewed state")
+    const context = { AbortController, JSON, Number, Set, clearTimeout, setTimeout }
+    vm.runInNewContext(`${source.slice(stateStart, stateEnd)}\n${source.slice(reviewedStart, reviewedEnd)}\n` +
+        "globalThis.reviewedRuntime = { createMemberMapStore, mapReadState, reviewedRecord, withReviewedMark }", context)
+    return context.reviewedRuntime
+}
+
 const document = () => ({ layouts: [{ map_key: "main", positions: [], notes: [], marks: {} }] })
 const response = (revision, value) => ({ ok: true, json: async () => ({ revision, document: value }) })
 
@@ -78,29 +92,67 @@ test("review HTML and referenced assets are inside Vercel's existing public outp
     assert.match(build, /outfile: path\.join\(repo, 'vercel-api\/public\/member-map-review\/app\.js'\)/)
 })
 
-test("compact visual delivery preserves the accepted auth and 11 non-visual module sections", () => {
+test("reviewed facts use the member map store without copying primary-source text into saved state", async () => {
+    const { createMemberMapStore, mapReadState, reviewedRecord, withReviewedMark } = reviewedRuntime()
+    const fact = {
+        id: "relation:test",
+        from: { ticker: "NVDA", market: "US" },
+        to: { ticker: "INTC", market: "US" },
+        label: "검토된 공동 개발",
+        asOf: "2026-09-29",
+        status: "historical-announcement",
+        sourceIds: ["source-b", "source-a"],
+        sources: [
+            { id: "source-a", url: "https://example.com/a", publisher: "A", publishedAt: "2025-01-01", statement: "official statement A" },
+            { id: "source-b", url: "https://example.com/b", publisher: "B", publishedAt: "2025-01-02", statement: "official statement B" },
+        ],
+        limitations: "당시 발표 범위만 확인",
+        review: "manual-primary-source-comparison",
+        impact: "unknown",
+    }
+    const legacyMark = { read_revision: 7, important: false, disposition: "inbox" }
+    const initial = { layouts: [{ map_key: "main", positions: [], notes: [], marks: { "document:legacy": legacyMark } }] }
+    const calls = []
+    const store = createMemberMapStore({ getSession: () => ({ userId: USER, token: "reviewed-state-token" }), fetcher: async (_url, init) => {
+        calls.push(init)
+        if (init.method === "GET") return response(12, initial)
+        return response(13, JSON.parse(init.body).document)
+    } })
+
+    assert.equal(await store.load(), true)
+    const record = reviewedRecord("relationships", fact)
+    assert.equal(record.id, "reviewed:relationships:relation:test")
+    assert.ok(Number.isSafeInteger(record.read_revision) && record.read_revision > 0)
+    assert.equal(store.update(value => ({ layouts: [withReviewedMark(value.layouts[0], "relationships", fact, {
+        read: true, important: true, disposition: "later",
+    })] })), true)
+    assert.equal(await store.save(), true)
+
+    const body = JSON.parse(calls[1].body)
+    const savedMarks = body.document.layouts[0].marks
+    assert.deepEqual(JSON.parse(JSON.stringify(savedMarks["document:legacy"])), legacyMark)
+    assert.equal(savedMarks[record.id].read_revision, record.read_revision)
+    assert.equal(savedMarks[record.id].important, true)
+    assert.equal(savedMarks[record.id].disposition, "later")
+    assert.equal(mapReadState(savedMarks[record.id], record.read_revision), "read")
+    assert.equal(mapReadState(savedMarks[record.id], reviewedRecord("relationships", { ...fact, label: "변경된 의미" }).read_revision), "changed")
+    assert.doesNotMatch(calls[1].body, /official statement|https:\/\/example\.com|publishedAt|publisher/)
+    assert.equal(store.getState().revision, 13)
+    assert.equal(store.getState().dirty, false)
+})
+
+test("review snapshot uses the actual workspace and reviewed-state graph while auth stays pinned", () => {
     const digest = value => createHash("sha256").update(value).digest("hex")
     const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
-    const modules = ["StockInfoMapData", "PortfolioMapSources", "PortfolioCloseQuote", "PortfolioMapData",
-        "MemberMapState", "PortfolioMapWorkspace", "PortfolioMapGuide", "PortfolioCompanyDetails",
-        "PortfolioCloseDetails", "PortfolioSourceDetails", "PortfolioMapTheme"]
-    const preserved = modules.map(name => {
-        const start = source.indexOf(`// framer-components/public-probe/${name}.tsx\n`)
-        const end = source.indexOf("\n// ", start)
-        assert.ok(start >= 0 && end > start, name)
-        return source.slice(start, end)
-    }).join("\n")
-    // Pin the already accepted delivery, not whichever candidate happens to be on disk.
-    assert.equal(digest(preserved), "cfa9f93291c0e07b3f34257a8d3591f82baaf732f5bea9bb7bca514f591e0463")
+    const modules = ["PortfolioMapData", "MemberMapState", "PortfolioMapWorkspace", "PortfolioReviewedFacts",
+        "PortfolioReviewedRegistry", "PortfolioReviewedView", "PortfolioReviewedState", "PublicPortfolioMap"]
+    for (const name of modules) assert.match(source, new RegExp(`// framer-components/public-probe/${name}\\.tsx`), name)
+    assert.match(source, /\/\/ output\/member-map-integration-20260927\/PortfolioMapReview\.entry\.tsx/)
+    assert.match(source, /selectedFact && viewMode !== "documents" \? reviewedRecord\(viewMode, selectedFact\)/)
+    assert.match(source, /else if \(selectedFact && viewMode !== "documents"\) edit\(\(value\) => withReviewedMark\(value, viewMode, selectedFact, change\)\)/)
+    assert.match(source, /workspace = createPortfolioMapWorkspace\(\)/)
+    assert.match(source, /createElement\(PublicPortfolioMap, null\)/)
+    assert.doesNotMatch(source, /TestWorkspace/)
     assert.equal(digest(fs.readFileSync(review("review/member-map/Auth.snapshot.tsx"))),
         "3a2d96eeadb1e349a9f42af115d16497d6a154fb6cb0e0b490c90f697eacd2d4")
-    assert.match(source, /import \{ createPortal \} from "react-dom"/)
-    assert.match(source, /shouldAutoFitCanvas/)
-    assert.match(source, /sourceKind: d\.evidence\[0\]\?\.kind \|\| "other"/)
-    assert.match(source, /\.pmc-toolbar\{width:max-content/)
-    assert.match(source, /topInset = 112/)
-    assert.match(source, /\.pmc-node strong,\.pmc-node span\{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden\}/)
-    assert.match(source, /hover\.node\.title/)
-    assert.match(source, /hover\.node\.subtitle/)
-    assert.match(source, /node\.title\}\. \$\{node\.subtitle\}/)
 })
