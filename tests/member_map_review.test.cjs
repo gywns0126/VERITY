@@ -167,6 +167,17 @@ test("workspace ignores a holdings response after the active owner changes", asy
     workspace.dispose()
 })
 
+test("design shell retains real-item rail, neutral controls and guarded state", () => {
+    const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
+    assert.match(source, /지도 항목 목록/)
+    assert.match(source, /grid-template-columns:220px minmax\(0,1fr\) 300px/)
+    assert.match(source, /font:400 13px\/1\.55/)
+    assert.match(source, /previous\?\.kind === "document" && previous\.id === item\.id \? null/)
+    assert.match(source, /ppm-reviewed-date/)
+    const entry = fs.readFileSync(review("review/member-map/entry.tsx"), "utf8")
+    assert.ok(entry.indexOf('className="review-boundary"') > entry.indexOf('className="review-auth"'))
+})
+
 test("review shell stays same-origin, provider-free, and without an iframe", () => {
     const entry = fs.readFileSync(review("review/member-map/entry.tsx"), "utf8")
     const shim = fs.readFileSync(review("review/member-map/framer-shim.ts"), "utf8")

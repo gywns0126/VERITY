@@ -27,6 +27,10 @@ Prior source validation: 47/47 focused renderer, reviewed-state and fresh-contro
 
 The map reads the current same-member session immediately before requesting holdings. After a 401 it retries once only if the normal authentication flow has already produced a different token for that same member. Both attempts share the original 15-second timeout. Logout, account changes, disposal and superseding requests prevent stale results or retries. An unchanged token or a second 401 remains an explicit error; this does not refresh credentials, poll for a future refresh or change shared authentication. The prior live first-load failure was not traced to a captured token race, so synthetic regression coverage alone does not establish its original cause or complete resolution.
 
+## Design-first shell alignment — 2026-09-30
+
+The user moved accepted-design alignment ahead of OHLC integration; no quote work is included. This increment restores the wide-screen item rail, central map and right detail panel, consolidates the header, uses neutral inactive controls and lighter body typography, and removes the duplicate review notice above the signed-in workspace (it remains inside the account panel). The rail shows actual current map items, not fabricated new events, and a second click clears selection. Existing map controls, member persistence, authentication, source evidence and holdings are unchanged. Below 1100px the rail hides, and below 760px details stack after the map. Root UI tests 40/40 and strict TypeScript passed; synthetic browser checks covered 30 holdings, desktop/dark selection, keyboard focus and 390px overflow. Local visual checks do not prove deployment or real-member acceptance.
+
 ## Earlier compact design provenance (historical)
 
 The same local renderer passed 53 focused checks plus bounded 30-company browser checks before projection into this snapshot. Rebuilt with existing esbuild (`bundle`, ESM, classic JSX transform, UTF-8, React/ReactDOM/Framer external), only these two source sections were substituted; the other generated sections were compared exactly before writing:
