@@ -1,31 +1,31 @@
 {
  "_meta": {
-  "generated_at": "2026-09-29T15:32:23.409689+09:00",
+  "generated_at": "2026-09-29T22:41:48.208583+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
  "reasons": [
-  "비P0 stale 5건"
+  "비P0 stale 1건"
  ],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-09-29T15:32:23.370003+09:00",
+  "generated_at": "2026-09-29T22:41:48.147921+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 0,
+  "max_cdn_age_s": 137282,
   "files": [
    {
     "file": "stock_report_public.json",
     "ok": true,
     "pct": {
-     "PER": 61.4,
+     "PER": 61.6,
      "PBR": 96.1
     },
     "total": 2534,
-    "cdn_age_s": 0,
+    "cdn_age_s": 3763,
     "error": null
    },
    {
@@ -36,7 +36,7 @@
      "PBR": 73.6
     },
     "total": 5079,
-    "cdn_age_s": 0,
+    "cdn_age_s": 68889,
     "error": null
    },
    {
@@ -47,7 +47,7 @@
      "PBR": 75.3
     },
     "total": 3851,
-    "cdn_age_s": 0,
+    "cdn_age_s": 137282,
     "error": null
    },
    {
@@ -61,12 +61,12 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-09-29T03:16:35.857260+09:00",
+  "generated_at": "2026-09-29T18:04:07.276730+09:00",
   "kr_total": 2534,
   "us_total": 5079,
   "core_fill_pct": {
    "fields.facts.PBR": 96.1,
-   "fields.facts.PER": 61.4,
+   "fields.facts.PER": 61.6,
    "us_fields.facts.PBR": 73.6,
    "us_fields.facts.PER": 45.0
   },
@@ -75,37 +75,33 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-09-29T15:32:12.682152+09:00",
+  "generated_at": "2026-09-29T22:41:43.912180+09:00",
   "summary": {
-   "fresh": 57,
-   "stale": 5,
-   "closed": 0,
+   "fresh": 59,
+   "stale": 1,
+   "closed": 2,
    "discontinued": 3,
    "p0": {
     "total": 7,
-    "fresh": 7,
-    "closed": 0,
-    "active": 7
+    "fresh": 5,
+    "closed": 2,
+    "active": 5
    },
    "p1": {
     "total": 22,
-    "fresh": 18,
+    "fresh": 20,
     "closed": 0,
     "active": 20
    },
    "p2": {
     "total": 36,
-    "fresh": 32,
+    "fresh": 34,
     "closed": 0,
     "active": 35
    }
   },
   "stale_p0": [],
   "stale_other": [
-   "kr_close_latest",
-   "kr_index_daily",
-   "hot_stock",
-   "kr_chart_daily",
    "securities_lending"
   ]
  }
