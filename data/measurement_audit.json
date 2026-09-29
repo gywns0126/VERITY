@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-29T18:15:10+09:00",
+ "as_of": "2026-09-30T00:23:47+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -47,30 +47,9 @@
      ]
     },
     {
-     "key": "kis_credit_balance",
-     "modules": [
-      "red_flags.py"
-     ]
-    },
-    {
-     "key": "kis_financial_ratio",
-     "modules": [
-      "fact.py",
-      "graham.py",
-      "moat.py",
-      "red_flags.py"
-     ]
-    },
-    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
-     ]
-    },
-    {
-     "key": "kis_short_sale",
-     "modules": [
-      "red_flags.py"
      ]
     },
     {
@@ -86,11 +65,24 @@
      ]
     }
    ],
-   "thin_keys": [],
+   "thin_keys": [
+    {
+     "key": "kis_financial_ratio",
+     "coverage": "1/89"
+    },
+    {
+     "key": "kis_short_sale",
+     "coverage": "1/89"
+    },
+    {
+     "key": "kis_credit_balance",
+     "coverage": "1/89"
+    }
+   ],
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "105/105",
+     "coverage": "89/89",
      "via": [
       "current_price",
       "price"
@@ -101,7 +93,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "69/105",
+     "coverage": "52/89",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -112,7 +104,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "105/105",
+     "coverage": "89/89",
      "via": [
       "fscore_deltas"
      ],
@@ -122,7 +114,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "90/105",
+     "coverage": "76/89",
      "via": [
       "industry"
      ],
@@ -132,7 +124,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "68/105",
+     "coverage": "51/89",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -153,7 +145,7 @@
      ]
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 9종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 6종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
@@ -193,7 +185,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 14,
-   "stock_days": 7319,
+   "stock_days": 7303,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -204,11 +196,11 @@
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
@@ -273,8 +265,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 68,
-    "scored": 68,
+    "with_pct": 71,
+    "scored": 71,
     "ok": true
    },
    "dead_guards": [],
