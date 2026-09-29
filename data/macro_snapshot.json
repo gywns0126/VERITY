@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-29T14:32:24+09:00",
+  "collected_at": "2026-09-29T15:02:19+09:00",
   "macro": {
     "usd_krw": {
       "value": 1356.11,
@@ -13902,23 +13902,6 @@
       "d_day": 1
     },
     {
-      "name": "미국 PCE 물가지수",
-      "severity": "high",
-      "impact_area": [
-        "물가",
-        "금리기대"
-      ],
-      "impact": "Fed 선호 인플레 지표. CPI와 유사하나 실질 정책 영향 큼",
-      "action": "CPI와 교차 확인, 인플레 추세 판단",
-      "date": "2026-09-30",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 54,
-      "source_url": "https://fred.stlouisfed.org/release?rid=54",
-      "source_kind": "release",
-      "d_day": 1
-    },
-    {
       "name": "ISM 제조업 PMI",
       "date": "2026-10-01",
       "country": "미국",
@@ -14053,12 +14036,18 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 31.73
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 147.76
   },
   "schema_version": "v0"
 }
