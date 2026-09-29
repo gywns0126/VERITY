@@ -99,4 +99,8 @@ test("compact visual delivery preserves the accepted auth and 11 non-visual modu
     assert.match(source, /sourceKind: d\.evidence\[0\]\?\.kind \|\| "other"/)
     assert.match(source, /\.pmc-toolbar\{width:max-content/)
     assert.match(source, /topInset = 112/)
+    assert.match(source, /\.pmc-node strong,\.pmc-node span\{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden\}/)
+    assert.match(source, /hover\.node\.title/)
+    assert.match(source, /hover\.node\.subtitle/)
+    assert.match(source, /node\.title\}\. \$\{node\.subtitle\}/)
 })
