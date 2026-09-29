@@ -33,6 +33,16 @@ function reviewedRuntime() {
     return context.reviewedRuntime
 }
 
+function workspaceRuntime() {
+    const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
+    const start = source.indexOf("// framer-components/public-probe/MemberMapState.tsx")
+    const end = source.indexOf("// framer-components/public-probe/PortfolioMapCanvas.tsx", start)
+    assert.ok(start >= 0 && end > start, "review snapshot contains the workspace runtime")
+    const context = { AbortController, JSON, Number, Set, Map, clearTimeout, setTimeout }
+    vm.runInNewContext(`${source.slice(start, end)}\nglobalThis.makeWorkspace = createPortfolioMapWorkspace`, context)
+    return context.makeWorkspace
+}
+
 const document = () => ({ layouts: [{ map_key: "main", positions: [], notes: [], marks: {} }] })
 const response = (revision, value) => ({ ok: true, json: async () => ({ revision, document: value }) })
 
@@ -87,6 +97,74 @@ test("member map load and save use a freshly rotated token without discarding a 
     assert.equal(JSON.parse(calls[1].body).document.layouts[0].notes[0].text, "keep this draft")
     assert.deepEqual(store.getState().document.layouts[0].notes[0].text, "keep this draft")
     assert.equal(store.getState().dirty, false)
+})
+
+test("workspace recovers one holdings 401 with a freshly rotated same-owner token", async () => {
+    let token = "stale-token"
+    const holdingCalls = []
+    const Workspace = workspaceRuntime()
+    const workspace = Workspace({
+        getSession: () => ({ userId: USER, token }),
+        fetcher: async (url, init) => {
+            if (!url.endsWith("/api/holdings")) return response(1, document())
+            holdingCalls.push(init.headers.Authorization)
+            if (holdingCalls.length === 1) {
+                token = "rotated-token"
+                return { ok: false, status: 401, json: async () => ({}) }
+            }
+            return { ok: true, status: 200, json: async () => ([{ ticker: "NVDA", name: "NVIDIA", market: "US", shares: 1, avg_cost: 1 }]) }
+        },
+        graphLoader: async tickers => ({ companies: tickers.map(ticker => ({ ticker })), documents: [], links: [] }),
+    })
+
+    assert.equal(await workspace.open(), true)
+    assert.deepEqual(holdingCalls, ["Bearer stale-token", "Bearer rotated-token"])
+    assert.equal(workspace.getState().phase, "ready")
+    workspace.dispose()
+})
+
+test("workspace does not retry a holdings 401 when the same token is still current", async () => {
+    const holdingCalls = []
+    const Workspace = workspaceRuntime()
+    const workspace = Workspace({
+        getSession: () => ({ userId: USER, token: "unchanged-token" }),
+        fetcher: async (url, init) => {
+            if (!url.endsWith("/api/holdings")) return response(1, document())
+            holdingCalls.push(init.headers.Authorization)
+            return { ok: false, status: 401, json: async () => ({}) }
+        },
+        graphLoader: async () => ({ companies: [], documents: [], links: [] }),
+    })
+
+    assert.equal(await workspace.open(), false)
+    assert.deepEqual(holdingCalls, ["Bearer unchanged-token"])
+    assert.equal(workspace.getState().error, "authentication-required")
+    workspace.dispose()
+})
+
+test("workspace ignores a holdings response after the active owner changes", async () => {
+    const OWNER_B = "22222222-2222-4222-8222-222222222222"
+    let session = { userId: USER, token: "owner-a-token" }
+    let releaseHoldings
+    const Workspace = workspaceRuntime()
+    const workspace = Workspace({
+        getSession: () => session,
+        fetcher: async (url) => {
+            if (!url.endsWith("/api/holdings")) return response(1, document())
+            return new Promise(resolve => { releaseHoldings = resolve })
+        },
+        graphLoader: async () => { throw new Error("owner-changed response must not load a graph") },
+    })
+
+    const opening = workspace.open()
+    session = { userId: OWNER_B, token: "owner-b-token" }
+    releaseHoldings({ ok: true, status: 200, json: async () => ([{ ticker: "NVDA", name: "NVIDIA", market: "US", shares: 1, avg_cost: 1 }]) })
+
+    assert.equal(await opening, false)
+    assert.deepEqual(workspace.getState().holdings, [])
+    assert.equal(workspace.getState().graph, null)
+    assert.equal(workspace.getState().phase, "signed-out")
+    workspace.dispose()
 })
 
 test("review shell stays same-origin, provider-free, and without an iframe", () => {
