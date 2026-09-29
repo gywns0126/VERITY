@@ -3,6 +3,7 @@ const assert = require("node:assert/strict")
 const fs = require("node:fs")
 const path = require("node:path")
 const vm = require("node:vm")
+const { createHash } = require("node:crypto")
 
 const root = path.resolve(__dirname, "..")
 const review = (...parts) => path.join(root, ...parts)
@@ -75,4 +76,27 @@ test("review HTML and referenced assets are inside Vercel's existing public outp
     assert.equal(fs.existsSync(review("vercel-api/member-map-review")), false)
     const build = fs.readFileSync(review("review/member-map/build.cjs"), "utf8")
     assert.match(build, /outfile: path\.join\(repo, 'vercel-api\/public\/member-map-review\/app\.js'\)/)
+})
+
+test("compact visual delivery preserves the accepted auth and 11 non-visual module sections", () => {
+    const digest = value => createHash("sha256").update(value).digest("hex")
+    const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
+    const modules = ["StockInfoMapData", "PortfolioMapSources", "PortfolioCloseQuote", "PortfolioMapData",
+        "MemberMapState", "PortfolioMapWorkspace", "PortfolioMapGuide", "PortfolioCompanyDetails",
+        "PortfolioCloseDetails", "PortfolioSourceDetails", "PortfolioMapTheme"]
+    const preserved = modules.map(name => {
+        const start = source.indexOf(`// framer-components/public-probe/${name}.tsx\n`)
+        const end = source.indexOf("\n// ", start)
+        assert.ok(start >= 0 && end > start, name)
+        return source.slice(start, end)
+    }).join("\n")
+    // Pin the already accepted delivery, not whichever candidate happens to be on disk.
+    assert.equal(digest(preserved), "cfa9f93291c0e07b3f34257a8d3591f82baaf732f5bea9bb7bca514f591e0463")
+    assert.equal(digest(fs.readFileSync(review("review/member-map/Auth.snapshot.tsx"))),
+        "3a2d96eeadb1e349a9f42af115d16497d6a154fb6cb0e0b490c90f697eacd2d4")
+    assert.match(source, /import \{ createPortal \} from "react-dom"/)
+    assert.match(source, /shouldAutoFitCanvas/)
+    assert.match(source, /sourceKind: d\.evidence\[0\]\?\.kind \|\| "other"/)
+    assert.match(source, /\.pmc-toolbar\{width:max-content/)
+    assert.match(source, /topInset = 112/)
 })
