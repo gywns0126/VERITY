@@ -1041,13 +1041,22 @@ function createPortfolioMapWorkspace(options = {}) {
     emit();
     try {
       if (!valid(version) || controller.signal.aborted) return false;
-      const response = await fetcher(API + "/api/holdings", {
-        headers: { Authorization: "Bearer " + next.token },
+      const requestSession = getSession();
+      if (!requestSession || !sameAccount(next, requestSession) || !valid(version) || controller.signal.aborted) return false;
+      const requestHoldings = (token) => fetcher(API + "/api/holdings", {
+        headers: { Authorization: "Bearer " + token },
         signal: controller.signal,
         cache: "no-store",
         credentials: "omit",
         redirect: "error"
       });
+      let response = await requestHoldings(requestSession.token);
+      if (!valid(version) || controller.signal.aborted) return false;
+      if (response.status === 401) {
+        const refreshed = getSession();
+        if (refreshed?.token && sameAccount(next, refreshed) && refreshed.token !== requestSession.token && valid(version) && !controller.signal.aborted) response = await requestHoldings(refreshed.token);
+      }
+      if (!valid(version) || controller.signal.aborted) return false;
       if (!response.ok) throw new Error(response.status === 401 ? "authentication-required" : "holdings-unavailable");
       const result = normalizeMapHoldings(await response.json());
       if (!valid(version) || controller.signal.aborted) return false;

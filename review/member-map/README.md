@@ -23,6 +23,10 @@ The read-only holdings list reuses the same holdings response; it neither edits 
 
 Prior source validation: 47/47 focused renderer, reviewed-state and fresh-controller journey checks, strict TypeScript, and 3/3 reviewed-mark payloads accepted by the local API validator. Those used synthetic transport and do not prove deployed member acceptance. After delivery, separately verify authenticated save acknowledgement and a fresh-page restore. No DB, API, CORS, provider or redirect change is part of this delivery.
 
+## Holdings token-rotation recovery — 2026-09-30
+
+The map reads the current same-member session immediately before requesting holdings. After a 401 it retries once only if the normal authentication flow has already produced a different token for that same member. Both attempts share the original 15-second timeout. Logout, account changes, disposal and superseding requests prevent stale results or retries. An unchanged token or a second 401 remains an explicit error; this does not refresh credentials, poll for a future refresh or change shared authentication. The prior live first-load failure was not traced to a captured token race, so synthetic regression coverage alone does not establish its original cause or complete resolution.
+
 ## Earlier compact design provenance (historical)
 
 The same local renderer passed 53 focused checks plus bounded 30-company browser checks before projection into this snapshot. Rebuilt with existing esbuild (`bundle`, ESM, classic JSX transform, UTF-8, React/ReactDOM/Framer external), only these two source sections were substituted; the other generated sections were compared exactly before writing:
