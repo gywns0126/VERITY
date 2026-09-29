@@ -1,11 +1,12 @@
 // @ts-nocheck
-// Generated review bundle; editable TypeScript sources passed noEmit before bundling.
+// Generated review bundle; source modules were typechecked before bundling.
 // Review only: no published page replacement, fixture holdings, or embedded credentials.
 // output/member-map-integration-20260927/PortfolioMapReview.entry.tsx
+import * as React9 from "react";
 import { addPropertyControls, ControlType, useIsStaticRenderer } from "framer";
 
 // framer-components/public-probe/PublicPortfolioMap.tsx
-import * as React6 from "react";
+import * as React8 from "react";
 
 // framer-components/public-probe/StockInfoMapData.tsx
 var SECTION_ORDER = [
@@ -905,6 +906,12 @@ var API = "https://project-yw131.vercel.app";
 var clone = (value) => JSON.parse(JSON.stringify(value));
 var sameAccount = (a, b) => a?.userId === b?.userId;
 var empty = (privateState) => ({ phase: "signed-out", holdings: [], unsupportedCount: 0, selectedTickers: [], graph: null, privateState, error: null });
+var finitePositive = (value) => {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && !value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
 function normalizeMapHoldings(payload) {
   const rows2 = Array.isArray(payload) ? payload : payload?.holdings;
   if (!Array.isArray(rows2)) throw new Error("invalid-holdings-response");
@@ -920,7 +927,18 @@ function normalizeMapHoldings(payload) {
     }
     const prior = holdings.get(ticker);
     if (prior && prior.market !== market) throw new Error("ambiguous-holding-market");
-    holdings.set(ticker, { ticker, name: typeof row.name === "string" && row.name.trim() ? row.name.trim() : ticker, market });
+    if (prior) {
+      holdings.set(ticker, { ...prior, shares: null, avg_cost: null, duplicate: true });
+      continue;
+    }
+    holdings.set(ticker, {
+      ticker,
+      name: typeof row.name === "string" && row.name.trim() ? row.name.trim() : ticker,
+      market,
+      shares: finitePositive(row.shares),
+      avg_cost: finitePositive(row.avg_cost),
+      duplicate: false
+    });
   }
   return { holdings: [...holdings.values()], unsupportedCount };
 }
@@ -1329,6 +1347,7 @@ var CSS = `
 .pmc *{box-sizing:border-box}.pmc button{font:700 12px/1 ${FONT};color:inherit}.pmc-grid{position:absolute;inset:0;background-image:linear-gradient(to right,var(--grid) 1px,transparent 1px),linear-gradient(to bottom,var(--grid) 1px,transparent 1px);pointer-events:none}
 .pmc-world{position:absolute;inset:0;transform-origin:0 0;pointer-events:none}.pmc-lines{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}.pmc-edge{fill:none;stroke:var(--line);stroke-width:1.8;vector-effect:non-scaling-stroke}.pmc-edge[data-confirmation=unknown]{stroke:var(--unknown);stroke-dasharray:6 6}.pmc-edge[data-active=true]{stroke:var(--accent);stroke-width:2.8}.pmc-edge-hit{fill:none;stroke:transparent;stroke-width:16;pointer-events:stroke;cursor:pointer}.pmc-edge-hit:focus{stroke:color-mix(in srgb,var(--accent) 25%,transparent);outline:none}.pmc-chevron{fill:none;stroke:var(--line);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}.pmc-edge[data-active=true]~.pmc-chevron{stroke:var(--accent)}
 .pmc-moving-chevron{offset-distance:50%;offset-rotate:auto;animation:pmc-chevron-move 3.2s linear infinite}.pmc-moving-chevron path{fill:var(--surface);stroke:var(--accent);stroke-width:4.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}.pmc-dim{opacity:.18}
+.pmc[data-active=false]{pointer-events:none}.pmc[data-active=false] .pmc-moving-chevron{animation:none}
 .pmc-node{position:absolute;width:max-content;min-width:108px;max-width:min(168px,calc(100vw - 40px));min-height:42px;border:0;border-radius:12px;padding:7px 9px;background:var(--surface);box-shadow:0 4px 12px color-mix(in srgb,var(--ink) 10%,transparent);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;overflow:visible;text-align:left;pointer-events:auto;cursor:grab;transition:opacity .18s ease,box-shadow .18s ease,transform .18s ease}.pmc-node[data-kind=document]{min-height:34px;padding:5px 7px;border-radius:10px;background:var(--source-other)}.pmc-node[data-source=disclosure]{background:var(--source-disclosure)}.pmc-node[data-source=business]{background:var(--source-business)}.pmc-node[data-source=news]{background:var(--source-news)}.pmc-node[data-source=schedule]{background:var(--source-schedule)}.pmc-node[data-kind=note]{background:var(--note)}.pmc-node[data-kind=note][data-done=true]{padding-right:50px}.pmc-node[data-selected=true]{background:var(--soft);box-shadow:0 0 0 2px var(--accent),0 8px 20px color-mix(in srgb,var(--accent) 18%,transparent)}.pmc-node:active{cursor:grabbing}.pmc-node strong,.pmc-node span{max-width:100%;overflow-wrap:anywhere;white-space:normal}.pmc-node strong{font-size:13px;font-weight:700;line-height:1.4}.pmc-node span{color:var(--muted);font-size:11px;font-weight:600;line-height:1.4}.pmc-note-done{position:absolute;top:5px;right:7px;border-radius:7px;padding:2px 4px;background:color-mix(in srgb,var(--ink) 10%,transparent);font-size:9px;font-weight:700;color:var(--ink)}
 .pmc-node:focus-visible,.pmc-control:focus-visible{outline:none;background:color-mix(in srgb,var(--accent) 18%,var(--surface));color:var(--ink)}.pmc-toolbar{position:absolute;z-index:5;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--ink) 10%,transparent);border-radius:13px;background:color-mix(in srgb,var(--surface) 92%,transparent);box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 10%,transparent);backdrop-filter:blur(8px)}
 .pmc-toolbar{width:max-content;max-width:calc(100% - 24px);justify-content:center;flex-wrap:wrap}.pmc-control{border:0;border-radius:8px;min-width:30px;height:30px;padding:0 7px;background:transparent;cursor:pointer;white-space:nowrap;flex-shrink:0}.pmc-control:hover:not(:disabled),.pmc-control[aria-pressed=true]{background:var(--soft);color:var(--accent)}.pmc-control:disabled{opacity:.35;cursor:not-allowed}.pmc-zoom{min-width:42px;color:var(--muted);text-align:center;font-size:11px;font-weight:700;flex-shrink:0}.pmc-divider{width:1px;height:18px;background:color-mix(in srgb,var(--ink) 12%,transparent)}
@@ -1340,6 +1359,29 @@ var CSS = `
 `;
 var controlTitle = (label2) => label2;
 var selectionSignature = (value) => value ? `${value.kind}:${value.id}` : "none";
+function canvasModeText(mode) {
+  if (mode === "relationships") return {
+    region: "보유종목의 수동 검토 관계 지도",
+    item: "확인 관계",
+    line: "종목과 확인된 관계의 연결선",
+    legend: "실선 · 원문 대조로 확인한 당시 관계",
+    disclaimer: "현재 관계의 지속·강도·수익 영향을 뜻하지 않습니다."
+  };
+  if (mode === "events") return {
+    region: "보유종목의 수동 검토 공통 사건 지도",
+    item: "공통 사건",
+    line: "종목과 공통 사건의 참여 연결선",
+    legend: "실선 · 원문 대조로 묶은 당시 공통 사건",
+    disclaimer: "같은 사건 참여를 나타내며 현재 영향·인과·수익을 뜻하지 않습니다."
+  };
+  return {
+    region: "포트폴리오 자료 지도",
+    item: "자료",
+    line: "종목과 자료의 직접 연결선",
+    legend: "실선 · 직접적인 문서 연결 확인",
+    disclaimer: "움직이는 갈매기는 선택 위치 안내이며, 선은 기업 간 인과·수익 영향을 뜻하지 않습니다."
+  };
+}
 function PortfolioMapCanvas({
   nodes,
   links,
@@ -1350,7 +1392,9 @@ function PortfolioMapCanvas({
   editable,
   motion,
   onMotionChange,
-  theme
+  theme,
+  mode = "documents",
+  active = true
 }) {
   const rootRef = React.useRef(null);
   const onSelectRef = React.useRef(onSelect);
@@ -1388,6 +1432,8 @@ function PortfolioMapCanvas({
   const positionsKey = positionSignature(positions);
   const priorSchemaKey = React.useRef(schemaKey);
   const priorPositionsKey = React.useRef(positionsKey);
+  const modeText = canvasModeText(mode);
+  const overviewLabel = mode === "documents" ? "전체 자료 묶음 한눈에 보기" : `전체 ${modeText.item} 묶음 한눈에 보기`;
   React.useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
@@ -1413,9 +1459,9 @@ function PortfolioMapCanvas({
     setLocalPositionsState(next);
   }, []);
   const cancelActive = React.useCallback(() => {
-    const active = activeRef.current;
-    if (active?.kind === "nodes") setLocalPositions(active.before);
-    else if (active?.kind === "pan") setCamera(active.camera);
+    const active2 = activeRef.current;
+    if (active2?.kind === "nodes") setLocalPositions(active2.before);
+    else if (active2?.kind === "pan") setCamera(active2.camera);
     activeRef.current = null;
     spaceRef.current = false;
     setMarquee(null);
@@ -1430,7 +1476,10 @@ function PortfolioMapCanvas({
   const focusIds = React.useMemo(() => focusCompanyId ? companyNeighborhood(focusCompanyId, links) : null, [focusCompanyId, links]);
   React.useEffect(() => {
     const element = rootRef.current;
-    if (!element) return;
+    if (!element || !active) {
+      cancelActive();
+      return;
+    }
     const resize = () => {
       setHover(null);
       setHoverGuide("");
@@ -1454,10 +1503,10 @@ function PortfolioMapCanvas({
       element.removeEventListener("wheel", wheel);
       window.removeEventListener("blur", blur);
     };
-  }, [cancelActive, setCamera]);
+  }, [active, cancelActive, setCamera]);
   React.useLayoutEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    if (!root || !active) return;
     const measure = () => {
       const next = /* @__PURE__ */ new Map();
       root.querySelectorAll(".pmc-node[data-node]").forEach((element) => {
@@ -1477,9 +1526,9 @@ function PortfolioMapCanvas({
     const observer = new ResizeObserver(measure);
     root.querySelectorAll(".pmc-node[data-node]").forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [schemaKey, nodesKey, theme]);
+  }, [active, schemaKey, nodesKey, theme]);
   React.useLayoutEffect(() => {
-    if (!hover || hover.box || !hoverRef.current || typeof window === "undefined") return;
+    if (!active || !hover || hover.box || !hoverRef.current || typeof window === "undefined") return;
     const box = nodeHoverAbove(hover.anchor, window.innerWidth, hoverRef.current.offsetHeight);
     if (!box) {
       setHover(null);
@@ -1487,16 +1536,23 @@ function PortfolioMapCanvas({
       return;
     }
     setHover((current) => current?.node.id === hover.node.id ? { ...current, box } : current);
-  }, [hover]);
+  }, [active, hover]);
   React.useEffect(() => {
-    if (!hover || typeof window === "undefined") return;
+    if (!active || !hover || typeof window === "undefined") return;
     const hide = () => {
       setHover(null);
       setHoverGuide("");
     };
     window.addEventListener("scroll", hide, true);
     return () => window.removeEventListener("scroll", hide, true);
-  }, [hover]);
+  }, [active, hover]);
+  React.useEffect(() => {
+    if (!active) {
+      cancelActive();
+      setHover(null);
+      setHoverGuide("");
+    }
+  }, [active, cancelActive]);
   React.useEffect(() => {
     if (priorEditableRef.current && !editable) cancelActive();
     priorEditableRef.current = editable;
@@ -1523,8 +1579,8 @@ function PortfolioMapCanvas({
   React.useEffect(() => {
     if (priorSchemaKey.current === schemaKey) return;
     priorSchemaKey.current = schemaKey;
-    const active = activeRef.current;
-    const stable2 = active?.kind === "nodes" ? active.before : positionsRef.current;
+    const active2 = activeRef.current;
+    const stable2 = active2?.kind === "nodes" ? active2.before : positionsRef.current;
     const next = reconcileCanvasPositions(nodes, positions, stable2);
     cancelActive();
     setLocalPositions(next);
@@ -1552,7 +1608,7 @@ function PortfolioMapCanvas({
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
   const showNodeHover = (event, node) => {
-    if (activeRef.current) return;
+    if (!active || activeRef.current) return;
     const anchor = event.currentTarget.getBoundingClientRect();
     setHover({ node, anchor: { left: anchor.left, top: anchor.top, width: anchor.width }, box: null });
     setHoverGuide("");
@@ -1645,7 +1701,7 @@ function PortfolioMapCanvas({
     captureSelectionReturn();
     setSelectedIds(/* @__PURE__ */ new Set([node.id]));
     emitSelection({ kind: node.kind, id: node.id });
-    announce(`${node.title} ${node.kind === "note" ? "메모를" : "자료를"} 선택했습니다.`);
+    announce(`${node.title} ${node.kind === "note" ? "메모를" : mode === "documents" ? "자료를" : "검토 항목을"} 선택했습니다.`);
   };
   const clearSelection = (notify = true) => {
     selectionReturnRef.current = null;
@@ -1682,7 +1738,7 @@ function PortfolioMapCanvas({
     captureSelectionReturn();
     setSelectedIds(/* @__PURE__ */ new Set());
     emitSelection({ kind: "link", id });
-    announce("연결 자료를 선택했습니다.");
+    announce(mode === "documents" ? "연결 자료를 선택했습니다." : "검토 연결을 선택했습니다.");
   };
   React.useEffect(() => {
     const key = selectionSignature(selection);
@@ -1714,7 +1770,7 @@ function PortfolioMapCanvas({
     else setSelectedIds(/* @__PURE__ */ new Set());
   }, [selection?.kind, selection?.id]);
   const begin = (event, node) => {
-    if (event.button !== 0) return;
+    if (!active || event.button !== 0) return;
     event.stopPropagation();
     setHover(null);
     setHoverGuide("");
@@ -1747,32 +1803,32 @@ function PortfolioMapCanvas({
     rootRef.current?.setPointerCapture(pointerId);
   };
   const move = (event) => {
-    const active = activeRef.current;
-    if (!active || active.pointerId !== event.pointerId) return;
-    const cursor = point(event), dx = cursor.x - active.start.x, dy = cursor.y - active.start.y;
-    if (active.kind === "pan") setCamera({ ...active.camera, x: active.camera.x + dx, y: active.camera.y + dy });
-    else if (active.kind === "marquee") {
-      active.current = cursor;
-      setMarquee(marqueeFrom(active.start, cursor));
+    const active2 = activeRef.current;
+    if (!active2 || active2.pointerId !== event.pointerId) return;
+    const cursor = point(event), dx = cursor.x - active2.start.x, dy = cursor.y - active2.start.y;
+    if (active2.kind === "pan") setCamera({ ...active2.camera, x: active2.camera.x + dx, y: active2.camera.y + dy });
+    else if (active2.kind === "marquee") {
+      active2.current = cursor;
+      setMarquee(marqueeFrom(active2.start, cursor));
     } else {
-      active.moved ||= Math.abs(dx) + Math.abs(dy) > 3;
-      if (active.moved) setLocalPositions(applyNodeMovement(active.before, active.ids, dx / active.zoom, dy / active.zoom));
+      active2.moved ||= Math.abs(dx) + Math.abs(dy) > 3;
+      if (active2.moved) setLocalPositions(applyNodeMovement(active2.before, active2.ids, dx / active2.zoom, dy / active2.zoom));
     }
   };
   const finish = (event, cancelled = false) => {
-    const active = activeRef.current;
-    if (!active || active.pointerId !== event.pointerId) return;
+    const active2 = activeRef.current;
+    if (!active2 || active2.pointerId !== event.pointerId) return;
     activeRef.current = null;
     if (rootRef.current?.hasPointerCapture(event.pointerId)) rootRef.current.releasePointerCapture(event.pointerId);
-    if (active.kind === "nodes") {
-      if (cancelled) setLocalPositions(active.before);
-      else if (active.moved) commitMovement(active.before, positionsRef.current, `${active.ids.length}개 항목 위치를 변경했습니다.`);
-      else activateNode(active.node, active.additive);
-    } else if (active.kind === "marquee") {
+    if (active2.kind === "nodes") {
+      if (cancelled) setLocalPositions(active2.before);
+      else if (active2.moved) commitMovement(active2.before, positionsRef.current, `${active2.ids.length}개 항목 위치를 변경했습니다.`);
+      else activateNode(active2.node, active2.additive);
+    } else if (active2.kind === "marquee") {
       setMarquee(null);
       if (cancelled) return;
-      const found = nodesInMarquee(currentNodes, cameraRef.current, marqueeFrom(active.start, active.current));
-      const next = active.additive ? /* @__PURE__ */ new Set([...selectedIds, ...found]) : new Set(found);
+      const found = nodesInMarquee(currentNodes, cameraRef.current, marqueeFrom(active2.start, active2.current));
+      const next = active2.additive ? /* @__PURE__ */ new Set([...selectedIds, ...found]) : new Set(found);
       selectionReturnRef.current = null;
       setSelectedIds(next);
       if (next.size === 1) {
@@ -1819,15 +1875,18 @@ function PortfolioMapCanvas({
       ref: rootRef,
       className: "pmc",
       "data-theme": theme,
+      "data-active": active,
       role: "region",
-      tabIndex: 0,
-      "aria-label": "포트폴리오 자료 지도. 휠 또는 두 손가락으로 이동하고, Control 또는 Command와 휠로 확대합니다.",
+      tabIndex: active ? 0 : -1,
+      "aria-hidden": !active,
+      "aria-label": `${modeText.region}. 휠 또는 두 손가락으로 이동하고, Control 또는 Command와 휠로 확대합니다.`,
       onPointerDown: (event) => begin(event),
       onPointerMove: move,
       onPointerUp: (event) => finish(event),
       onPointerCancel: (event) => finish(event, true),
       onLostPointerCapture: (event) => finish(event, true),
       onKeyDown: (event) => {
+        if (!active) return;
         const target = event.target;
         const editing = !!target.closest('input,textarea,select,[contenteditable="true"]');
         if (!editing && !event.nativeEvent.isComposing && (event.metaKey || event.ctrlKey)) {
@@ -1890,7 +1949,7 @@ function PortfolioMapCanvas({
       backgroundSize: `${gridSize}px ${gridSize}px`,
       backgroundPosition: `${camera.x % gridSize}px ${camera.y % gridSize}px`
     } }),
-    /* @__PURE__ */ React.createElement("div", { className: "pmc-summary", "aria-label": `전체 ${companyCount}종목, 자료 ${documentCount}건` }, "전체 ", companyCount, "종목 · 자료 ", documentCount, "건"),
+    /* @__PURE__ */ React.createElement("div", { className: "pmc-summary", "aria-label": `전체 ${companyCount}종목, ${modeText.item} ${documentCount}건` }, "전체 ", companyCount, "종목 · ", modeText.item, " ", documentCount, "건"),
     /* @__PURE__ */ React.createElement("div", { className: "pmc-toolbar", role: "toolbar", "aria-label": "지도 보기와 배치 도구", onPointerDown: (event) => event.stopPropagation() }, /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -1909,7 +1968,7 @@ function PortfolioMapCanvas({
         onClick: () => setCamera(zoomMapCamera(cameraRef.current, 1.2, { x: size.width / 2, y: size.height / 2 }))
       },
       "＋"
-    ), /* @__PURE__ */ React.createElement("span", { className: "pmc-divider", "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("button", { className: "pmc-control", type: "button", "aria-label": "위치 변경 되돌리기", title: "되돌리기", disabled: !editable || !historyRef.current.length, onClick: () => travel(false) }, "↶"), /* @__PURE__ */ React.createElement("button", { className: "pmc-control", type: "button", "aria-label": "위치 변경 다시 실행", title: "다시 실행", disabled: !editable || !futureRef.current.length, onClick: () => travel(true) }, "↷"), /* @__PURE__ */ React.createElement("button", { className: "pmc-control", type: "button", "aria-label": "전체 자료 묶음 한눈에 보기", title: "한눈에", onClick: () => restoreOverview() }, "전체"), /* @__PURE__ */ React.createElement("button", { className: "pmc-control", type: "button", "aria-label": "기본 배치로 초기화", title: "배치 초기화", disabled: !editable, onClick: resetLayout }, "초기화"), /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("span", { className: "pmc-divider", "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("button", { className: "pmc-control", type: "button", "aria-label": "위치 변경 되돌리기", title: "되돌리기", disabled: !editable || !historyRef.current.length, onClick: () => travel(false) }, "↶"), /* @__PURE__ */ React.createElement("button", { className: "pmc-control", type: "button", "aria-label": "위치 변경 다시 실행", title: "다시 실행", disabled: !editable || !futureRef.current.length, onClick: () => travel(true) }, "↷"), /* @__PURE__ */ React.createElement("button", { className: "pmc-control", type: "button", "aria-label": overviewLabel, title: "한눈에", onClick: () => restoreOverview() }, "전체"), /* @__PURE__ */ React.createElement("button", { className: "pmc-control", type: "button", "aria-label": "기본 배치로 초기화", title: "배치 초기화", disabled: !editable, onClick: resetLayout }, "초기화"), /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "pmc-control",
@@ -1921,21 +1980,21 @@ function PortfolioMapCanvas({
       },
       "움직임"
     )),
-    /* @__PURE__ */ React.createElement("div", { className: "pmc-world", style: { transform: `translate(${camera.x}px,${camera.y}px) scale(${camera.zoom})` } }, /* @__PURE__ */ React.createElement("svg", { className: "pmc-lines", "aria-label": "종목과 자료의 직접 연결선" }, links.map((link) => {
+    /* @__PURE__ */ React.createElement("div", { className: "pmc-world", style: { transform: `translate(${camera.x}px,${camera.y}px) scale(${camera.zoom})` } }, /* @__PURE__ */ React.createElement("svg", { className: "pmc-lines", "aria-label": modeText.line }, links.map((link) => {
       const from = nodeById.get(link.companyId), to = nodeById.get(link.documentId);
       if (!from || !to) return null;
       const geometry = edgeGeometry(from, to);
       const relevant = selectedLink === link.id || currentSelection?.id === link.companyId || currentSelection?.id === link.documentId;
       const dim = !!focusIds && !(focusIds.has(link.companyId) && focusIds.has(link.documentId));
-      const label2 = link.confirmation === "confirmed" ? "직접적인 문서 연결 확인" : "종목과 자료 연결 미확인";
+      const label2 = link.label || (link.confirmation === "confirmed" ? "직접적인 문서 연결 확인" : "종목과 자료 연결 미확인");
       return /* @__PURE__ */ React.createElement("g", { key: link.id, className: dim ? "pmc-dim" : void 0 }, /* @__PURE__ */ React.createElement("path", { className: "pmc-edge", "data-confirmation": link.confirmation, "data-active": relevant, d: geometry.d }), motion && relevant ? /* @__PURE__ */ React.createElement("g", { className: "pmc-moving-chevron", style: { offsetPath: `path('${geometry.d}')` }, "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("path", { d: "M -4 -4 L 0 0 L -4 4" })) : /* @__PURE__ */ React.createElement("path", { className: "pmc-chevron", d: "M -4 -4 L 0 0 L -4 4", transform: `translate(${geometry.mx} ${geometry.my}) rotate(${geometry.angle})`, "aria-hidden": "true" }), /* @__PURE__ */ React.createElement(
         "path",
         {
           className: "pmc-edge-hit",
           d: geometry.d,
-          tabIndex: 0,
+          tabIndex: active ? 0 : -1,
           role: "button",
-          "aria-label": `${label2}. 기업 영향 관계가 아닙니다. 상세 선택`,
+          "aria-label": `${label2}. ${mode === "documents" ? "기업 영향 관계가 아닙니다." : modeText.disclaimer} 상세 선택`,
           onPointerDown: (event) => event.stopPropagation(),
           onClick: () => activateLink(link.id),
           onKeyDown: (event) => {
@@ -1951,6 +2010,7 @@ function PortfolioMapCanvas({
       {
         key: node.id,
         type: "button",
+        tabIndex: active ? 0 : -1,
         className: `pmc-node${focusIds && !focusIds.has(node.id) ? " pmc-dim" : ""}`,
         "data-node": node.id,
         "data-kind": node.kind,
@@ -1960,7 +2020,7 @@ function PortfolioMapCanvas({
         style: { left: node.x, top: node.y },
         "aria-pressed": selectedIds.has(node.id) || currentSelection?.id === node.id,
         "aria-describedby": hover?.node.id === node.id && hover.box ? "pmc-node-hover" : void 0,
-        "aria-label": `${node.kind === "company" ? "종목" : node.kind === "document" ? "자료" : "메모"}: ${node.title}. ${node.subtitle}`,
+        "aria-label": node.semanticLabel || `${node.kind === "company" ? "종목" : node.kind === "document" ? "자료" : "메모"}: ${node.title}. ${node.subtitle}`,
         onPointerDown: (event) => begin(event, node),
         onClick: (event) => {
           if (event.detail === 0) activateNode(node, event.shiftKey);
@@ -1988,7 +2048,7 @@ function PortfolioMapCanvas({
       node.kind === "note" && node.done ? /* @__PURE__ */ React.createElement("small", { className: "pmc-note-done", "aria-hidden": "true" }, "✓ 완료") : null
     ))),
     marquee ? /* @__PURE__ */ React.createElement("div", { className: "pmc-marquee", style: marquee, "aria-hidden": "true" }) : null,
-    hover && typeof document !== "undefined" && typeof window !== "undefined" ? createPortal(/* @__PURE__ */ React.createElement(
+    active && hover && typeof document !== "undefined" && typeof window !== "undefined" ? createPortal(/* @__PURE__ */ React.createElement(
       "div",
       {
         ref: hoverRef,
@@ -2002,9 +2062,9 @@ function PortfolioMapCanvas({
       /* @__PURE__ */ React.createElement("span", null, hover.node.subtitle),
       /* @__PURE__ */ React.createElement("small", null, "클릭해 상세 보기")
     ), document.body) : null,
-    !nodes.length ? /* @__PURE__ */ React.createElement("div", { className: "pmc-empty" }, "표시할 종목과 자료가 없습니다.") : null,
+    !nodes.length ? /* @__PURE__ */ React.createElement("div", { className: "pmc-empty" }, "표시할 종목과 ", modeText.item, "가 없습니다.") : null,
     /* @__PURE__ */ React.createElement("div", { className: "pmc-help" }, hoverGuide || "빈 공간 드래그 선택 · Shift 추가 · Space+드래그 이동"),
-    /* @__PURE__ */ React.createElement("div", { className: "pmc-legend", "aria-label": "연결선 범례" }, /* @__PURE__ */ React.createElement("span", { className: "pmc-legend-row" }, /* @__PURE__ */ React.createElement("i", { className: "pmc-legend-line" }), " 실선 · 직접적인 문서 연결 확인"), /* @__PURE__ */ React.createElement("span", { className: "pmc-legend-row" }, /* @__PURE__ */ React.createElement("i", { className: "pmc-legend-line", "data-kind": "unknown" }), " 점선 · 종목과 자료 연결 미확인"), /* @__PURE__ */ React.createElement("span", null, "움직이는 갈매기는 선택 위치 안내이며, 선은 기업 간 인과·수익 영향을 뜻하지 않습니다.")),
+    /* @__PURE__ */ React.createElement("div", { className: "pmc-legend", "aria-label": "연결선 범례" }, /* @__PURE__ */ React.createElement("span", { className: "pmc-legend-row" }, /* @__PURE__ */ React.createElement("i", { className: "pmc-legend-line" }), " ", modeText.legend), mode === "documents" ? /* @__PURE__ */ React.createElement("span", { className: "pmc-legend-row" }, /* @__PURE__ */ React.createElement("i", { className: "pmc-legend-line", "data-kind": "unknown" }), " 점선 · 종목과 자료 연결 미확인") : null, /* @__PURE__ */ React.createElement("span", null, modeText.disclaimer)),
     /* @__PURE__ */ React.createElement("span", { className: "pmc-status", role: "status", "aria-live": "polite" }, status)
   );
 }
@@ -2234,9 +2294,9 @@ var CSS3 = `
 @media(prefers-reduced-motion:reduce){.pcclose-chevron{transition:none}}
 `;
 function PortfolioCloseDetails({ quote }) {
-  const unavailable = !quote || quote.state === "unavailable";
+  const unavailable2 = !quote || quote.state === "unavailable";
   const reason = quote?.state === "unavailable" ? quote.reason : "";
-  return /* @__PURE__ */ React4.createElement("details", { className: "pcclose" }, /* @__PURE__ */ React4.createElement("summary", null, /* @__PURE__ */ React4.createElement("span", null, "종가"), /* @__PURE__ */ React4.createElement("span", { className: "pcclose-chevron", "aria-hidden": "true" }, "⌄")), /* @__PURE__ */ React4.createElement("style", null, CSS3), /* @__PURE__ */ React4.createElement("div", { className: "pcclose-body" }, unavailable ? /* @__PURE__ */ React4.createElement("p", { className: "pcclose-note" }, "종가 정보 미제공", reason ? ` · ${reason}` : "") : /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("p", { className: "pcclose-price" }, closePriceLabel(quote.price, quote.currency)), /* @__PURE__ */ React4.createElement("p", { className: "pcclose-note" }, changeLabel(quote.changePct)), /* @__PURE__ */ React4.createElement("dl", { className: "pcclose-meta" }, /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("dt", null, "기준일"), /* @__PURE__ */ React4.createElement("dd", null, quote.priceDate || "미제공")), /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("dt", null, "출처"), /* @__PURE__ */ React4.createElement("dd", null, quote.source || "미제공")), /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("dt", null, "거래일 상태"), /* @__PURE__ */ React4.createElement("dd", null, freshnessLabel(quote.freshness))), quote.expectedDate ? /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("dt", null, "확인된 마지막 거래일"), /* @__PURE__ */ React4.createElement("dd", null, quote.expectedDate)) : null, quote.basis ? /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("dt", null, "가격 기준"), /* @__PURE__ */ React4.createElement("dd", null, quote.basis)) : null))));
+  return /* @__PURE__ */ React4.createElement("details", { className: "pcclose" }, /* @__PURE__ */ React4.createElement("summary", null, /* @__PURE__ */ React4.createElement("span", null, "종가"), /* @__PURE__ */ React4.createElement("span", { className: "pcclose-chevron", "aria-hidden": "true" }, "⌄")), /* @__PURE__ */ React4.createElement("style", null, CSS3), /* @__PURE__ */ React4.createElement("div", { className: "pcclose-body" }, unavailable2 ? /* @__PURE__ */ React4.createElement("p", { className: "pcclose-note" }, "종가 정보 미제공", reason ? ` · ${reason}` : "") : /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("p", { className: "pcclose-price" }, closePriceLabel(quote.price, quote.currency)), /* @__PURE__ */ React4.createElement("p", { className: "pcclose-note" }, changeLabel(quote.changePct)), /* @__PURE__ */ React4.createElement("dl", { className: "pcclose-meta" }, /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("dt", null, "기준일"), /* @__PURE__ */ React4.createElement("dd", null, quote.priceDate || "미제공")), /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("dt", null, "출처"), /* @__PURE__ */ React4.createElement("dd", null, quote.source || "미제공")), /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("dt", null, "거래일 상태"), /* @__PURE__ */ React4.createElement("dd", null, freshnessLabel(quote.freshness))), quote.expectedDate ? /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("dt", null, "확인된 마지막 거래일"), /* @__PURE__ */ React4.createElement("dd", null, quote.expectedDate)) : null, quote.basis ? /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("dt", null, "가격 기준"), /* @__PURE__ */ React4.createElement("dd", null, quote.basis)) : null))));
 }
 
 // framer-components/public-probe/PortfolioSourceDetails.tsx
@@ -2247,8 +2307,8 @@ function publishedAtLabel(kind) {
 function correctionLabel(value) {
   return value === true ? "정정 표시 있음" : value === false ? "정정 표시 없음" : "정정 여부 미제공";
 }
-function missingNewsTimezone(record5) {
-  return record5.kind === "news" && /[T ]\d{2}:\d{2}/.test(record5.publishedAt || "") && !/(?:Z|[+-]\d{2}:?\d{2})$/.test(record5.publishedAt || "");
+function missingNewsTimezone(record6) {
+  return record6.kind === "news" && /[T ]\d{2}:\d{2}/.test(record6.publishedAt || "") && !/(?:Z|[+-]\d{2}:?\d{2})$/.test(record6.publishedAt || "");
 }
 function backfillLabel(value) {
   return value === true ? "과거 자료를 나중에 수집 · 새 사건이라는 뜻은 아니에요" : value === false ? "과거 자료 후수집 표시 없음 · 새 자료라는 뜻은 아니에요" : "후수집 여부 미제공 · 실시간·신규 자료로 판단하지 않습니다.";
@@ -2263,7 +2323,7 @@ var CSS4 = `
 `;
 function PortfolioSourceDetails({ records }) {
   if (!records?.length) return null;
-  return /* @__PURE__ */ React5.createElement("details", { className: "psd" }, /* @__PURE__ */ React5.createElement("summary", null, /* @__PURE__ */ React5.createElement("span", null, "출처·날짜 자세히"), /* @__PURE__ */ React5.createElement("span", { className: "psd-chevron", "aria-hidden": "true" }, "⌄")), /* @__PURE__ */ React5.createElement("style", null, CSS4), /* @__PURE__ */ React5.createElement("div", { className: "psd-body" }, /* @__PURE__ */ React5.createElement("p", { className: "psd-observed-note" }, "수집 시각은 공시 접수일·기사 게시일·수정 시각이 아니며, 전체 시스템의 최초 관측 시각을 뜻하지 않습니다."), /* @__PURE__ */ React5.createElement("ol", { className: "psd-list" }, records.map((record5, index) => /* @__PURE__ */ React5.createElement("li", { className: "psd-record", key: `${record5.kind}:${record5.url}:${index}` }, /* @__PURE__ */ React5.createElement("div", { className: "psd-head" }, /* @__PURE__ */ React5.createElement("span", { className: "psd-kind" }, record5.kind === "disclosure" ? "공시" : "뉴스"), /* @__PURE__ */ React5.createElement("h4", { className: "psd-title" }, record5.title)), /* @__PURE__ */ React5.createElement("p", { className: "psd-source" }, record5.source), /* @__PURE__ */ React5.createElement("dl", { className: "psd-meta" }, /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("dt", null, publishedAtLabel(record5.kind)), /* @__PURE__ */ React5.createElement("dd", null, record5.publishedAt || "미제공")), /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("dt", null, "수집 시각"), /* @__PURE__ */ React5.createElement("dd", null, record5.observedAt || "미제공")), record5.receiptNumber ? /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("dt", null, "접수번호"), /* @__PURE__ */ React5.createElement("dd", null, record5.receiptNumber)) : null, /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("dt", null, "정정 여부"), /* @__PURE__ */ React5.createElement("dd", null, correctionLabel(record5.isCorrection)))), missingNewsTimezone(record5) ? /* @__PURE__ */ React5.createElement("p", { className: "psd-flag" }, "게시 시각의 시간대 표기가 없어요. 한국시간으로 단정하지 않습니다.") : null, record5.receiptConflict ? /* @__PURE__ */ React5.createElement("p", { className: "psd-flag psd-conflict" }, "식별자 불일치 · 확인이 필요합니다.") : null, /* @__PURE__ */ React5.createElement("p", { className: "psd-flag" }, backfillLabel(record5.isBackfill)))))));
+  return /* @__PURE__ */ React5.createElement("details", { className: "psd" }, /* @__PURE__ */ React5.createElement("summary", null, /* @__PURE__ */ React5.createElement("span", null, "출처·날짜 자세히"), /* @__PURE__ */ React5.createElement("span", { className: "psd-chevron", "aria-hidden": "true" }, "⌄")), /* @__PURE__ */ React5.createElement("style", null, CSS4), /* @__PURE__ */ React5.createElement("div", { className: "psd-body" }, /* @__PURE__ */ React5.createElement("p", { className: "psd-observed-note" }, "수집 시각은 공시 접수일·기사 게시일·수정 시각이 아니며, 전체 시스템의 최초 관측 시각을 뜻하지 않습니다."), /* @__PURE__ */ React5.createElement("ol", { className: "psd-list" }, records.map((record6, index) => /* @__PURE__ */ React5.createElement("li", { className: "psd-record", key: `${record6.kind}:${record6.url}:${index}` }, /* @__PURE__ */ React5.createElement("div", { className: "psd-head" }, /* @__PURE__ */ React5.createElement("span", { className: "psd-kind" }, record6.kind === "disclosure" ? "공시" : "뉴스"), /* @__PURE__ */ React5.createElement("h4", { className: "psd-title" }, record6.title)), /* @__PURE__ */ React5.createElement("p", { className: "psd-source" }, record6.source), /* @__PURE__ */ React5.createElement("dl", { className: "psd-meta" }, /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("dt", null, publishedAtLabel(record6.kind)), /* @__PURE__ */ React5.createElement("dd", null, record6.publishedAt || "미제공")), /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("dt", null, "수집 시각"), /* @__PURE__ */ React5.createElement("dd", null, record6.observedAt || "미제공")), record6.receiptNumber ? /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("dt", null, "접수번호"), /* @__PURE__ */ React5.createElement("dd", null, record6.receiptNumber)) : null, /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("dt", null, "정정 여부"), /* @__PURE__ */ React5.createElement("dd", null, correctionLabel(record6.isCorrection)))), missingNewsTimezone(record6) ? /* @__PURE__ */ React5.createElement("p", { className: "psd-flag" }, "게시 시각의 시간대 표기가 없어요. 한국시간으로 단정하지 않습니다.") : null, record6.receiptConflict ? /* @__PURE__ */ React5.createElement("p", { className: "psd-flag psd-conflict" }, "식별자 불일치 · 확인이 필요합니다.") : null, /* @__PURE__ */ React5.createElement("p", { className: "psd-flag" }, backfillLabel(record6.isBackfill)))))));
 }
 
 // framer-components/public-probe/PortfolioMapTheme.tsx
@@ -2328,6 +2388,536 @@ function usePortfolioMapTheme() {
   return theme;
 }
 
+// framer-components/public-probe/PortfolioReviewedFacts.tsx
+var LIMITS = {
+  holdings: 200,
+  sources: 200,
+  relationships: 200,
+  events: 100,
+  sourceIds: 20,
+  participants: 50,
+  id: 128,
+  factId: 90,
+  label: 160,
+  prose: 2e3,
+  url: 2048
+};
+var SOURCE_KEYS = ["id", "url", "publisher", "publishedAt", "statement"];
+var RELATIONSHIP_KEYS = ["id", "from", "to", "label", "asOf", "status", "sourceIds", "limitations", "review", "impact"];
+var EVENT_KEYS = ["id", "title", "date", "status", "participants", "sourceIds", "mergeBasis", "review", "impact"];
+var ENTITY_KEYS = ["ticker", "market"];
+var PARTICIPANT_KEYS = ["ticker", "market", "role", "sourceIds"];
+var failure = (reason) => ({ ok: false, reason });
+var record5 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
+function exactRecord(value, keys) {
+  const item = record5(value);
+  if (!item) return null;
+  const actual = Object.keys(item);
+  return actual.length === keys.length && actual.every((key) => keys.includes(key)) ? item : null;
+}
+var text4 = (value, max) => {
+  if (typeof value !== "string" || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)) return null;
+  const clean = value.trim();
+  return clean && clean.length <= max ? clean : null;
+};
+var stableId = (value, max = LIMITS.id) => {
+  const clean = text4(value, max);
+  return clean && /^[A-Za-z0-9][A-Za-z0-9:._-]*$/.test(clean) ? clean : null;
+};
+function dateOnly2(value) {
+  const raw = text4(value, 10), match = raw && /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (!match || Number(match[1]) < 1900) return null;
+  const time = Date.parse(raw + "T00:00:00Z");
+  return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === raw ? raw : null;
+}
+function secureUrl(value) {
+  const raw = text4(value, LIMITS.url);
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === "https:" && !!parsed.hostname && !parsed.username && !parsed.password ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+function normalizeMarket(value) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toUpperCase();
+  return normalized === "KR" || normalized === "US" ? normalized : null;
+}
+function normalizeTicker(value, market) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toUpperCase();
+  if (market === "KR") return /^\d{6}$/.test(normalized) ? normalized : null;
+  return normalized.length <= 15 && /^[A-Z][A-Z0-9]*(?:[.-][A-Z0-9]+)*$/.test(normalized) ? normalized : null;
+}
+var entityKey = (entity) => `${entity.market}:${entity.ticker}`;
+function parseEntity(value, exactKeys = ENTITY_KEYS) {
+  const item = exactRecord(value, exactKeys), market = item && normalizeMarket(item.market);
+  if (!item || !market || item.market !== market) return null;
+  const ticker = normalizeTicker(item.ticker, market);
+  return ticker && item.ticker === ticker ? { ticker, market } : null;
+}
+function parseIdList(value, sourceIds, path, minimum = 1) {
+  if (!Array.isArray(value) || value.length < minimum || value.length > LIMITS.sourceIds) return failure(path);
+  const result = [], seen = /* @__PURE__ */ new Set();
+  for (const candidate of value) {
+    const id = stableId(candidate);
+    if (!id || seen.has(id) || !sourceIds.has(id)) return failure(path);
+    seen.add(id);
+    result.push(id);
+  }
+  return { ok: true, value: result };
+}
+function parseHoldings(value) {
+  if (!Array.isArray(value) || value.length > LIMITS.holdings) return failure("holdings.shape");
+  const result = [], seen = /* @__PURE__ */ new Set();
+  for (let index = 0; index < value.length; index++) {
+    const item = exactRecord(value[index], ENTITY_KEYS), market = item && normalizeMarket(item.market);
+    const ticker = market && item ? normalizeTicker(item.ticker, market) : null;
+    if (!item || !market || !ticker) return failure(`holdings[${index}]`);
+    const entity = { ticker, market }, key = entityKey(entity);
+    if (seen.has(key)) return failure(`holdings[${index}].duplicate`);
+    seen.add(key);
+    result.push(entity);
+  }
+  return { ok: true, value: result };
+}
+function parseRegistry(value) {
+  const registry = exactRecord(value, ["schemaVersion", "reviewedAt", "sources", "relationships", "events"]);
+  if (!registry || registry.schemaVersion !== 1) return failure("registry.schemaVersion");
+  const reviewedAt = dateOnly2(registry.reviewedAt);
+  if (!reviewedAt) return failure("registry.reviewedAt");
+  if (!Array.isArray(registry.sources) || registry.sources.length > LIMITS.sources) return failure("registry.sources");
+  if (!Array.isArray(registry.relationships) || registry.relationships.length > LIMITS.relationships) return failure("registry.relationships");
+  if (!Array.isArray(registry.events) || registry.events.length > LIMITS.events) return failure("registry.events");
+  const sources = [], sourceIds = /* @__PURE__ */ new Set(), allIds = /* @__PURE__ */ new Set();
+  for (let index = 0; index < registry.sources.length; index++) {
+    const item = exactRecord(registry.sources[index], SOURCE_KEYS);
+    const id = item && stableId(item.id), url = item && secureUrl(item.url);
+    const publisher = item && text4(item.publisher, LIMITS.label), publishedAt = item && dateOnly2(item.publishedAt);
+    const statement = item && text4(item.statement, LIMITS.prose);
+    if (!item || !id || !url || !publisher || !publishedAt || publishedAt > reviewedAt || !statement || allIds.has(id))
+      return failure(`registry.sources[${index}]`);
+    sourceIds.add(id);
+    allIds.add(id);
+    sources.push({ id, url, publisher, publishedAt, statement });
+  }
+  const relationships = [];
+  for (let index = 0; index < registry.relationships.length; index++) {
+    const item = exactRecord(registry.relationships[index], RELATIONSHIP_KEYS);
+    const id = item && stableId(item.id, LIMITS.factId), from = item && parseEntity(item.from), to = item && parseEntity(item.to);
+    const label2 = item && text4(item.label, LIMITS.label), asOf = item && dateOnly2(item.asOf);
+    const limitations = item && text4(item.limitations, LIMITS.prose);
+    const refs = item ? parseIdList(item.sourceIds, sourceIds, `registry.relationships[${index}].sourceIds`, 2) : failure("relationship");
+    if (!item || !id || !from || !to || entityKey(from) === entityKey(to) || !label2 || !asOf || asOf > reviewedAt || !limitations || !refs.ok || !["historical-announcement", "dated-fact"].includes(item.status) || item.review !== "manual-primary-source-comparison" || item.impact !== "unknown" || allIds.has(id))
+      return failure(`registry.relationships[${index}]`);
+    allIds.add(id);
+    relationships.push({
+      id,
+      from,
+      to,
+      label: label2,
+      asOf,
+      status: item.status,
+      sourceIds: refs.value,
+      limitations,
+      review: "manual-primary-source-comparison",
+      impact: "unknown"
+    });
+  }
+  const events = [];
+  for (let index = 0; index < registry.events.length; index++) {
+    const item = exactRecord(registry.events[index], EVENT_KEYS);
+    const id = item && stableId(item.id, LIMITS.factId), title = item && text4(item.title, LIMITS.label);
+    const date = item && dateOnly2(item.date), mergeBasis = item && text4(item.mergeBasis, LIMITS.prose);
+    const refs = item ? parseIdList(item.sourceIds, sourceIds, `registry.events[${index}].sourceIds`, 2) : failure("event");
+    if (!item || !id || !title || !date || date > reviewedAt || !mergeBasis || !refs.ok || item.status !== "historical-announcement" || item.review !== "manual-primary-source-comparison" || item.impact !== "unknown" || allIds.has(id) || !Array.isArray(item.participants) || item.participants.length < 2 || item.participants.length > LIMITS.participants)
+      return failure(`registry.events[${index}]`);
+    const allowedRefs = new Set(refs.value), participants = [], participantIds = /* @__PURE__ */ new Set();
+    for (let participantIndex = 0; participantIndex < item.participants.length; participantIndex++) {
+      const participant = exactRecord(item.participants[participantIndex], PARTICIPANT_KEYS);
+      const entity = participant && parseEntity({ ticker: participant.ticker, market: participant.market });
+      const role = participant && text4(participant.role, LIMITS.label);
+      const participantRefs = participant ? parseIdList(
+        participant.sourceIds,
+        allowedRefs,
+        `registry.events[${index}].participants[${participantIndex}].sourceIds`
+      ) : failure("participant");
+      if (!participant || !entity || !role || !participantRefs.ok || participantIds.has(entityKey(entity)))
+        return failure(`registry.events[${index}].participants[${participantIndex}]`);
+      participantIds.add(entityKey(entity));
+      participants.push({ ...entity, role, sourceIds: participantRefs.value });
+    }
+    allIds.add(id);
+    events.push({
+      id,
+      title,
+      date,
+      status: "historical-announcement",
+      participants,
+      sourceIds: refs.value,
+      mergeBasis,
+      review: "manual-primary-source-comparison",
+      impact: "unknown"
+    });
+  }
+  return { ok: true, value: { schemaVersion: 1, reviewedAt, sources, relationships, events } };
+}
+function unavailable(status, reason, provided, eligible = 0) {
+  return { relationships: [], events: [], coverage: {
+    status,
+    reason,
+    reviewedAt: null,
+    holdings: { provided, eligible, matched: 0 },
+    sources: { reviewed: 0 },
+    relationships: { reviewed: 0, included: 0 },
+    events: { reviewed: 0, included: 0 }
+  } };
+}
+function buildReviewedPortfolioFacts(holdings, registry) {
+  const parsedHoldings = parseHoldings(holdings);
+  const provided = Array.isArray(holdings) ? holdings.length : 0;
+  if (!parsedHoldings.ok) return unavailable("invalid-holdings", parsedHoldings.reason, provided);
+  const parsedRegistry = parseRegistry(registry);
+  if (!parsedRegistry.ok) return unavailable("invalid-registry", parsedRegistry.reason, provided, parsedHoldings.value.length);
+  const valid = parsedRegistry.value, holdingKeys = new Set(parsedHoldings.value.map(entityKey));
+  const sourcesById = new Map(valid.sources.map((source) => [source.id, source]));
+  const matchedKeys = /* @__PURE__ */ new Set();
+  const relationships = [];
+  for (const relationship of valid.relationships) {
+    if (!holdingKeys.has(entityKey(relationship.from)) || !holdingKeys.has(entityKey(relationship.to))) continue;
+    matchedKeys.add(entityKey(relationship.from));
+    matchedKeys.add(entityKey(relationship.to));
+    relationships.push({
+      ...relationship,
+      from: { ...relationship.from },
+      to: { ...relationship.to },
+      sourceIds: [...relationship.sourceIds],
+      sources: relationship.sourceIds.map((id) => ({ ...sourcesById.get(id) }))
+    });
+  }
+  const events = [];
+  for (const event of valid.events) {
+    const matchedHoldings = event.participants.filter((participant) => holdingKeys.has(entityKey(participant))).map(({ ticker, market }) => ({ ticker, market }));
+    if (matchedHoldings.length < 2) continue;
+    matchedHoldings.forEach((entity) => matchedKeys.add(entityKey(entity)));
+    events.push({
+      ...event,
+      participants: event.participants.map((participant) => ({ ...participant, sourceIds: [...participant.sourceIds] })),
+      matchedHoldings,
+      sourceIds: [...event.sourceIds],
+      sources: event.sourceIds.map((id) => ({ ...sourcesById.get(id) }))
+    });
+  }
+  const status = relationships.length || events.length ? "available" : "empty";
+  return { relationships, events, coverage: {
+    status,
+    reason: status === "empty" ? "no-held-reviewed-facts" : null,
+    reviewedAt: valid.reviewedAt,
+    holdings: { provided, eligible: parsedHoldings.value.length, matched: matchedKeys.size },
+    sources: { reviewed: valid.sources.length },
+    relationships: { reviewed: valid.relationships.length, included: relationships.length },
+    events: { reviewed: valid.events.length, included: events.length }
+  } };
+}
+
+// framer-components/public-probe/PortfolioReviewedRegistry.tsx
+var portfolioReviewedRegistry = {
+  schemaVersion: 1,
+  reviewedAt: "2026-09-29",
+  sources: [
+    {
+      id: "nvda-intc-nvidia",
+      publisher: "NVIDIA",
+      publishedAt: "2025-09-18",
+      url: "https://nvidianews.nvidia.com/news/nvidia-and-intel-to-develop-ai-infrastructure-and-personal-computing-products",
+      statement: "NVIDIA와 Intel이 데이터센터·PC 제품 공동개발 계획을 발표했다. Intel은 맞춤형 x86 CPU와 RTX GPU 칩렛 통합 제품을 개발할 예정이라고 밝혔다."
+    },
+    {
+      id: "nvda-intc-intel",
+      publisher: "Intel",
+      publishedAt: "2025-09-18",
+      url: "https://www.intel.com/content/www/us/en/newsroom/news/artificial-intelligence/intel-and-nvidia-to-jointly-develop-ai-infrastructure-and-personal-computing-products.html",
+      statement: "Intel도 같은 날짜에 같은 참여 기업과 데이터센터·PC 공동개발 계획을 발표했다. 당시 투자 계획은 별도 종결 조건이 있는 미래 계획이었다."
+    },
+    {
+      id: "nvda-tsmc-production",
+      publisher: "NVIDIA",
+      publishedAt: "2025-04-14",
+      url: "https://blogs.nvidia.com/blog/nvidia-manufacture-american-made-ai-supercomputers-us/",
+      statement: "NVIDIA는 TSMC의 미국 피닉스 공장에서 Blackwell 칩 생산이 시작됐다고 발표했다."
+    },
+    {
+      id: "tsmc-customer",
+      publisher: "TSMC",
+      publishedAt: "2025-03-04",
+      url: "https://pr.tsmc.com/english/news/3210",
+      statement: "TSMC는 미국 투자 확대 발표에서 NVIDIA를 자사의 주요 고객 중 하나로 명시했다. 4월의 생산 발표와는 별도 사건이다."
+    }
+  ],
+  relationships: [
+    {
+      id: "relation:nvda-intc-collaboration-20250918",
+      from: { ticker: "NVDA", market: "US" },
+      to: { ticker: "INTC", market: "US" },
+      label: "제품 공동개발 발표",
+      asOf: "2025-09-18",
+      status: "historical-announcement",
+      sourceIds: ["nvda-intc-nvidia", "nvda-intc-intel"],
+      review: "manual-primary-source-comparison",
+      impact: "unknown",
+      limitations: "두 회사의 당시 공동개발 발표를 확인했다. 현재 제품 출시·매출 효과·지분 보유 상태는 이 자료만으로 확인하지 않았다."
+    },
+    {
+      id: "relation:tsmc-nvda-manufacturing-20250414",
+      from: { ticker: "TSM", market: "US" },
+      to: { ticker: "NVDA", market: "US" },
+      label: "칩 생산·고객 관계",
+      asOf: "2025-04-14",
+      status: "dated-fact",
+      sourceIds: ["nvda-tsmc-production", "tsmc-customer"],
+      review: "manual-primary-source-comparison",
+      impact: "unknown",
+      limitations: "당시 생산 발표와 고객 관계를 확인했다. 두 발표는 서로 다른 사건이며, 현재 공급량·매출 비중·주가 영향은 확인하지 않았다."
+    }
+  ],
+  events: [
+    {
+      id: "event:nvda-intc-collaboration-20250918",
+      title: "NVIDIA·Intel 제품 공동개발 발표",
+      date: "2025-09-18",
+      status: "historical-announcement",
+      sourceIds: ["nvda-intc-nvidia", "nvda-intc-intel"],
+      participants: [
+        { ticker: "NVDA", market: "US", role: "공동개발 참여 · AI 기반 시스템·GPU 기술", sourceIds: ["nvda-intc-nvidia", "nvda-intc-intel"] },
+        { ticker: "INTC", market: "US", role: "공동개발 참여 · 맞춤형 x86 CPU 개발 계획", sourceIds: ["nvda-intc-nvidia", "nvda-intc-intel"] }
+      ],
+      mergeBasis: "양사의 2025-09-18 원문에서 참여 기업·발표일·공동개발 대상이 일치한다. 같은 공동 발표의 두 게재본이며 독립적인 성과 검증은 아니다. TSMC 관련 발표는 합치지 않았다.",
+      review: "manual-primary-source-comparison",
+      impact: "unknown"
+    }
+  ]
+};
+
+// framer-components/public-probe/PortfolioReviewedView.tsx
+import * as React6 from "react";
+var entityKey2 = (entity) => `${entity.market}:${entity.ticker}`;
+var reviewedCompanyNodeId = (entity) => `company:${entity.ticker}`;
+var reviewedFactNodeId = (mode, id) => `reviewed:${mode}:${id}`;
+function buildPortfolioReviewedCanvasView(facts, mode, holdings) {
+  const nodes = holdings.map((holding, index) => ({
+    id: reviewedCompanyNodeId(holding),
+    kind: "company",
+    title: holding.name,
+    subtitle: holding.ticker,
+    semanticLabel: `보유 종목: ${holding.name}. ${holding.market} ${holding.ticker}`,
+    x: index % 2 * 180,
+    y: Math.floor(index / 2) * 86
+  }));
+  const links = [];
+  const factIdsByNode = /* @__PURE__ */ new Map(), factIdsByLink = /* @__PURE__ */ new Map();
+  if (mode === "relationships") {
+    facts.relationships.forEach((relationship, index) => {
+      const nodeId = reviewedFactNodeId(mode, relationship.id);
+      nodes.push({
+        id: nodeId,
+        kind: "document",
+        title: relationship.label,
+        sourceKind: "other",
+        subtitle: `${relationship.asOf} · ${relationship.status === "historical-announcement" ? "당시 발표" : "해당 날짜에 확인"} · 영향 미확인`,
+        semanticLabel: `확인된 관계: ${relationship.label}. 기준일 ${relationship.asOf}. 영향 미확인`,
+        x: 470 + index % 3 * 180,
+        y: Math.floor(index / 3) * 86
+      });
+      factIdsByNode.set(nodeId, relationship.id);
+      for (const endpoint of [relationship.from, relationship.to]) {
+        const id = `reviewed-link:${relationship.id}:${entityKey2(endpoint)}`;
+        links.push({
+          id,
+          companyId: reviewedCompanyNodeId(endpoint),
+          documentId: nodeId,
+          confirmation: "confirmed",
+          label: `${relationship.label} · 연결 기업`
+        });
+        factIdsByLink.set(id, relationship.id);
+      }
+    });
+  } else {
+    facts.events.forEach((event, index) => {
+      const nodeId = reviewedFactNodeId(mode, event.id);
+      nodes.push({
+        id: nodeId,
+        kind: "document",
+        title: event.title,
+        sourceKind: "other",
+        subtitle: `${event.date} · 당시 발표 · 보유 참여 ${event.matchedHoldings.length}/${event.participants.length}`,
+        semanticLabel: `공통 사건: ${event.title}. 발표일 ${event.date}. 영향 미확인`,
+        x: 470 + index % 3 * 180,
+        y: Math.floor(index / 3) * 86
+      });
+      factIdsByNode.set(nodeId, event.id);
+      const participants = new Map(event.participants.map((participant) => [entityKey2(participant), participant]));
+      for (const holding of event.matchedHoldings) {
+        const participant = participants.get(entityKey2(holding));
+        const id = `reviewed-link:${event.id}:${entityKey2(holding)}`;
+        links.push({
+          id,
+          companyId: reviewedCompanyNodeId(holding),
+          documentId: nodeId,
+          confirmation: "confirmed",
+          label: `${event.title} · ${participant.role}`
+        });
+        factIdsByLink.set(id, event.id);
+      }
+    });
+  }
+  return { nodes, links, factIdsByNode, factIdsByLink };
+}
+function selectedReviewedFact(facts, mode, factId) {
+  if (!factId) return void 0;
+  return mode === "relationships" ? facts.relationships.find((fact) => fact.id === factId) : facts.events.find((fact) => fact.id === factId);
+}
+function reviewedCoverageMessage(facts) {
+  const coverage = facts.coverage;
+  if (coverage.status === "invalid-registry" || coverage.status === "invalid-holdings")
+    return `검토 자료를 사용할 수 없어 확인된 항목을 표시하지 않습니다. (${coverage.reason || "형식 확인 필요"})`;
+  if (!facts.relationships.length && !facts.events.length)
+    return "현재 보유 선택에 맞는 검토 완료 항목이 0건입니다. 관계나 공통 사건이 없다는 뜻이 아니며, 검수 대상 밖일 수 있습니다.";
+  return `검수 범위 · ${coverage.reviewedAt || "검토일 미제공"} · 공식 원문 ${coverage.sources.reviewed}개 · 관계 ${coverage.relationships.included}/${coverage.relationships.reviewed} · 공통 사건 ${coverage.events.included}/${coverage.events.reviewed}. 전체 시장이나 보유 관계 전수조사가 아닙니다.`;
+}
+var statusLabel = (status) => status === "historical-announcement" ? "당시 발표" : "해당 날짜에 확인";
+var entityLabel = (entity) => `${entity.market} ${entity.ticker}`;
+function PortfolioReviewedView({ fact }) {
+  const relationship = "from" in fact ? fact : null;
+  const event = "participants" in fact ? fact : null;
+  return /* @__PURE__ */ React6.createElement("div", { className: "ppm-reviewed" }, /* @__PURE__ */ React6.createElement("p", null, relationship ? `${entityLabel(relationship.from)} ↔ ${entityLabel(relationship.to)}` : event.title), /* @__PURE__ */ React6.createElement("small", null, statusLabel(fact.status), " · ", relationship ? relationship.asOf : event.date, " · 수익·강도·현재 영향 미확인"), relationship ? /* @__PURE__ */ React6.createElement("article", { className: "ppm-evidence" }, /* @__PURE__ */ React6.createElement("h4", null, "확인 범위와 한계"), /* @__PURE__ */ React6.createElement("p", null, relationship.limitations)) : null, event ? /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("article", { className: "ppm-evidence" }, /* @__PURE__ */ React6.createElement("h4", null, "참여 역할"), event.participants.map((participant) => /* @__PURE__ */ React6.createElement("p", { key: entityKey2(participant) }, /* @__PURE__ */ React6.createElement("strong", null, entityLabel(participant)), " · ", participant.role))), /* @__PURE__ */ React6.createElement("article", { className: "ppm-evidence" }, /* @__PURE__ */ React6.createElement("h4", null, "묶은 근거"), /* @__PURE__ */ React6.createElement("p", null, event.mergeBasis))) : null, /* @__PURE__ */ React6.createElement("div", { className: "ppm-evidence" }, /* @__PURE__ */ React6.createElement("h4", null, "검토 원문"), fact.sources.map((source) => /* @__PURE__ */ React6.createElement("div", { key: source.id }, /* @__PURE__ */ React6.createElement("small", null, source.publisher, " · 원문 날짜 ", source.publishedAt), /* @__PURE__ */ React6.createElement("p", null, source.statement), /* @__PURE__ */ React6.createElement("a", { href: source.url, target: "_blank", rel: "noopener noreferrer" }, "공식 원문 열기")))), /* @__PURE__ */ React6.createElement("small", null, "수동 원문 대조 · 영향 미확인 · 현재 상태나 인과·수익을 추정하지 않습니다."));
+}
+
+// framer-components/public-probe/PortfolioHoldingsList.tsx
+import * as React7 from "react";
+var quantity = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 8 });
+var won = new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 });
+var dollar = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 4 });
+function formatHoldingQuantity(value) {
+  if (value === null) return "확인 필요";
+  return value < 1e-8 ? "0.00000001 미만" : quantity.format(value);
+}
+function formatHoldingAverageCost(holding) {
+  if (holding.duplicate) return "중복 행 확인 필요";
+  if (holding.avg_cost === null) return "확인 필요";
+  if (holding.market === "KR" && holding.avg_cost < 1) return "1 KRW 미만";
+  if (holding.market === "US" && holding.avg_cost < 1e-4) return "0.0001 USD 미만";
+  return holding.market === "KR" ? `${won.format(holding.avg_cost)} KRW` : `${dollar.format(holding.avg_cost)} USD`;
+}
+var CSS5 = `
+.phl{--panel:#fff;--ink:#191f28;--muted:#4e5968;--soft:#f0edff;--divider:#e5e8eb;--accent:#6c5ce7;background:var(--panel);color:var(--ink);font:600 13px/1.55 Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;padding:16px;min-width:0}
+.phl *{box-sizing:border-box}.phl h3,.phl p{margin:0}.phl h3{font-size:16px;font-weight:800;letter-spacing:-.2px}.phl-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.phl-head p{color:var(--muted);font-weight:600}.phl-count{white-space:nowrap;font-weight:700;color:var(--accent)}
+.phl-table-wrap{overflow:auto;border:1px solid var(--divider);border-radius:12px}.phl table{width:100%;border-collapse:collapse;min-width:650px}.phl th,.phl td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--divider);font-weight:600}.phl th{background:color-mix(in srgb,var(--soft) 56%,var(--panel));font-weight:700;color:var(--muted);white-space:nowrap}.phl tbody tr:last-child td{border-bottom:0}.phl-company{display:grid;gap:2px}.phl-company strong{font-weight:700}.phl-company span,.phl-note{color:var(--muted);font-weight:600}.phl-map-state{display:inline-flex;border-radius:999px;padding:4px 8px;background:var(--soft);color:var(--accent);font-weight:700;white-space:nowrap}.phl-map-state[data-visible=false]{background:color-mix(in srgb,var(--muted) 10%,var(--panel));color:var(--muted)}.phl-empty{padding:28px 16px;text-align:center;color:var(--muted)}.phl-note{margin-top:10px}
+.phl[data-theme=dark]{--panel:#171c23;--ink:#e3e7ec;--muted:#9aa4b1;--soft:#241f3a;--divider:#3c4350;--accent:#a99bff}
+@media(max-width:720px){.phl{padding:12px}.phl-head{flex-direction:column}.phl th,.phl td{padding:10px}}
+`;
+function emptyHoldingsMessage(phase) {
+  if (phase === "loading") return "보유종목을 불러오는 중…";
+  if (phase === "error") return "보유종목을 불러오지 못해 목록을 확인할 수 없습니다.";
+  if (phase === "signed-out") return "로그인한 뒤 보유종목 목록을 확인할 수 있습니다.";
+  return "표시할 보유종목이 없습니다.";
+}
+function PortfolioHoldingsList({ holdings, selectedTickers, unsupportedCount = 0, phase, theme }) {
+  const selected = React7.useMemo(() => new Set(selectedTickers), [selectedTickers]);
+  const known = phase === "ready" || phase === "choose-stocks";
+  return /* @__PURE__ */ React7.createElement("section", { className: "phl", "data-theme": theme, "aria-label": "국내 미국 지원 보유종목 목록" }, /* @__PURE__ */ React7.createElement("style", null, CSS5), /* @__PURE__ */ React7.createElement("header", { className: "phl-head" }, /* @__PURE__ */ React7.createElement("div", null, /* @__PURE__ */ React7.createElement("h3", null, "보유 목록"), /* @__PURE__ */ React7.createElement("p", null, "불러온 국내·미국 지원 종목 목록입니다. 지도에는 이 중 최대 30종목을 표시합니다.")), known ? /* @__PURE__ */ React7.createElement("span", { className: "phl-count" }, "지원 ", holdings.length, "종목 · 제외 ", unsupportedCount, "개") : null), /* @__PURE__ */ React7.createElement("div", { className: "phl-table-wrap" }, /* @__PURE__ */ React7.createElement("table", null, /* @__PURE__ */ React7.createElement("thead", null, /* @__PURE__ */ React7.createElement("tr", null, /* @__PURE__ */ React7.createElement("th", { scope: "col" }, "종목"), /* @__PURE__ */ React7.createElement("th", { scope: "col" }, "시장"), /* @__PURE__ */ React7.createElement("th", { scope: "col" }, "수량"), /* @__PURE__ */ React7.createElement("th", { scope: "col" }, "평균 매수가"), /* @__PURE__ */ React7.createElement("th", { scope: "col" }, "현재 지도"))), /* @__PURE__ */ React7.createElement("tbody", null, holdings.map((holding) => /* @__PURE__ */ React7.createElement("tr", { key: `${holding.market}:${holding.ticker}` }, /* @__PURE__ */ React7.createElement("td", null, /* @__PURE__ */ React7.createElement("span", { className: "phl-company" }, /* @__PURE__ */ React7.createElement("strong", null, holding.name), /* @__PURE__ */ React7.createElement("span", null, holding.ticker))), /* @__PURE__ */ React7.createElement("td", null, holding.market), /* @__PURE__ */ React7.createElement("td", null, holding.duplicate ? "중복 행 확인 필요" : formatHoldingQuantity(holding.shares)), /* @__PURE__ */ React7.createElement("td", null, formatHoldingAverageCost(holding)), /* @__PURE__ */ React7.createElement("td", null, /* @__PURE__ */ React7.createElement("span", { className: "phl-map-state", "data-visible": selected.has(holding.ticker) }, selected.has(holding.ticker) ? "표시 중" : "미표시")))))), !holdings.length ? /* @__PURE__ */ React7.createElement("p", { className: "phl-empty", role: "status" }, emptyHoldingsMessage(phase)) : null), unsupportedCount ? /* @__PURE__ */ React7.createElement("p", { className: "phl-note" }, "지도 자료 조회를 지원하지 않는 보유 항목 ", unsupportedCount, "개는 이 목록의 종목 정보에 포함되지 않습니다.") : null);
+}
+
+// framer-components/public-probe/PortfolioReviewedState.tsx
+var MAX_REVISION2 = Number.MAX_SAFE_INTEGER;
+var FNV_OFFSET = 1469598103934665603n;
+var FNV_PRIME = 1099511628211n;
+var UINT64_MASK = (1n << 64n) - 1n;
+var compareCanonical = (left, right) => {
+  const a = JSON.stringify(left), b = JSON.stringify(right);
+  return a < b ? -1 : a > b ? 1 : 0;
+};
+var sortedIds = (ids) => [...ids].sort();
+var sourceValue = (source) => [
+  source.id,
+  source.url,
+  source.publisher,
+  source.publishedAt,
+  source.statement
+];
+var sortedSources = (sources) => sources.map(sourceValue).sort(compareCanonical);
+function relationshipValue(fact) {
+  return [
+    "relationships",
+    [fact.from.market, fact.from.ticker],
+    [fact.to.market, fact.to.ticker],
+    fact.label,
+    fact.asOf,
+    fact.status,
+    fact.limitations,
+    fact.review,
+    fact.impact,
+    sortedIds(fact.sourceIds),
+    sortedSources(fact.sources)
+  ];
+}
+function eventValue(fact) {
+  const participants = fact.participants.map((participant) => [
+    participant.market,
+    participant.ticker,
+    participant.role,
+    sortedIds(participant.sourceIds)
+  ]).sort(compareCanonical);
+  return [
+    "events",
+    fact.title,
+    fact.date,
+    fact.status,
+    participants,
+    fact.mergeBasis,
+    fact.review,
+    fact.impact,
+    sortedIds(fact.sourceIds),
+    sortedSources(fact.sources)
+  ];
+}
+function revision(value) {
+  const canonical = JSON.stringify(value);
+  let hash = FNV_OFFSET;
+  for (let index = 0; index < canonical.length; index++) {
+    hash ^= BigInt(canonical.charCodeAt(index));
+    hash = hash * FNV_PRIME & UINT64_MASK;
+  }
+  return Number(hash % BigInt(MAX_REVISION2 - 1) + 1n);
+}
+function reviewedRecord(mode, fact) {
+  const relationship = "from" in fact;
+  if (mode === "relationships" !== relationship) throw new Error("reviewed-mode-mismatch");
+  return {
+    id: `reviewed:${mode}:${fact.id}`,
+    read_revision: revision(relationship ? relationshipValue(fact) : eventValue(fact))
+  };
+}
+function withReviewedMark(layout, mode, fact, change) {
+  if (!validMapDocument({ layouts: [layout] })) throw new Error("invalid-layout");
+  const allowed = /* @__PURE__ */ new Set(["read", "important", "disposition"]);
+  if (Object.keys(change).some((key) => !allowed.has(key))) throw new Error("invalid-reviewed-mark-change");
+  if (change.read !== void 0 && typeof change.read !== "boolean") throw new Error("invalid-reviewed-mark-change");
+  const record6 = reviewedRecord(mode, fact);
+  const exists = Object.hasOwn(layout.marks, record6.id);
+  if (!exists && Object.keys(layout.marks).length >= 200) throw new Error("reviewed-marks-limit");
+  const prior = layout.marks[record6.id] || { read_revision: null, important: false, disposition: "inbox" };
+  const mark = {
+    read_revision: change.read === void 0 ? prior.read_revision : change.read ? record6.read_revision : null,
+    important: change.important ?? prior.important,
+    disposition: change.disposition ?? prior.disposition
+  };
+  const next = { ...layout, marks: { ...layout.marks, [record6.id]: mark } };
+  if (!validMapDocument({ layouts: [next] })) throw new Error("invalid-reviewed-mark");
+  return next;
+}
+
 // framer-components/public-probe/PublicPortfolioMap.tsx
 var MAP_KEY2 = "main";
 var LIMIT2 = 1e6;
@@ -2342,7 +2932,13 @@ var blank = {
 };
 var baseLayout = () => ({ map_key: MAP_KEY2, positions: [], notes: [], marks: {} });
 var bound = (value) => Math.max(-LIMIT2, Math.min(LIMIT2, value));
-var Chev = () => /* @__PURE__ */ React6.createElement("svg", { width: "12", height: "12", viewBox: "0 0 12 12", "aria-hidden": "true" }, /* @__PURE__ */ React6.createElement("path", { d: "m4 2 4 4-4 4", fill: "none", stroke: "currentColor", strokeWidth: "1.5" }));
+var Chev = () => /* @__PURE__ */ React8.createElement("svg", { width: "12", height: "12", viewBox: "0 0 12 12", "aria-hidden": "true" }, /* @__PURE__ */ React8.createElement("path", { d: "m4 2 4 4-4 4", fill: "none", stroke: "currentColor", strokeWidth: "1.5" }));
+function holdingsSummaryState(state) {
+  if (state.phase === "ready" || state.phase === "choose-stocks") return { known: true, message: "" };
+  if (state.phase === "loading") return { known: false, message: "보유종목 불러오는 중…" };
+  if (state.phase === "error") return { known: false, message: "보유종목·지도 자료 확인 실패" };
+  return { known: false, message: "보유종목 확인은 로그인이 필요합니다." };
+}
 function editableMap(state) {
   return state.phase === "ready" && !!state.privateState.document && state.privateState.revision !== null && ["ready", "saving"].includes(state.privateState.phase);
 }
@@ -2481,6 +3077,15 @@ function sourceGroupPositions(nodes, links) {
   }
   return result;
 }
+function mapNoteAnchorLabel(note, nodes, links) {
+  if (!note.anchor) return "자유 메모";
+  if (note.anchor.kind === "node") return nodes.find((node) => node.id === note.anchor.id)?.title || "연결 대상이 현재 지도 밖에 있어요";
+  const link = links.find((row) => row.id === note.anchor.id);
+  if (!link) return "연결 대상이 현재 지도 밖에 있어요";
+  const company = nodes.find((node) => node.id === link.companyId);
+  const subject = nodes.find((node) => node.id === link.documentId);
+  return [company?.title, subject?.title].filter(Boolean).join(" ↔ ") || "연결 대상이 현재 지도 밖에 있어요";
+}
 function mapView(graph, layout, filters, applySavedPositions = true, recordsKnown = true) {
   if (!graph) return { nodes: [], links: [], documents: [] };
   const documents = graph.documents.filter((doc) => matchesSource(doc, filters) && (!filters.review || !recordsKnown || layout.marks[doc.id]?.disposition !== "irrelevant" && mapReadState(layout.marks[doc.id], doc.read_revision) !== "read"));
@@ -2512,7 +3117,7 @@ function mapView(graph, layout, filters, applySavedPositions = true, recordsKnow
   }));
   return { nodes, documents, links: graph.links.filter((link) => ids.has(link.documentId)) };
 }
-var CSS5 = `
+var CSS6 = `
 .ppm{--bg:#f2f4f6;--panel:#fff;--ink:#191f28;--muted:#4e5968;--soft:#f0edff;--accent:#6c5ce7;--divider:#e5e8eb;background:var(--bg);color:var(--ink);font:600 13px/1.55 Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;min-width:0;border-radius:18px;overflow:hidden;isolation:isolate}
 .ppm *{box-sizing:border-box}.ppm :where(button,input,select,textarea){font:inherit;color:inherit;border:0;border-radius:8px;background:var(--soft);padding:7px 9px}
 .ppm :where(button){font-weight:700}.ppm :where(input,select,textarea){font-weight:600}
@@ -2521,7 +3126,9 @@ var CSS5 = `
 .ppm :where(button,input,select,textarea,a,[tabindex]):not(.pmc):focus-visible{outline:none;background:color-mix(in srgb,var(--accent) 18%,var(--panel));color:var(--ink)}
 .ppm .ppm-primary{background:var(--accent);color:white}.ppm h2,.ppm h3,.ppm h4,.ppm p{margin:0}.ppm h2{font-size:18px;font-weight:800;letter-spacing:-.3px}.ppm h3{font-size:15px;font-weight:700}.ppm h4{font-size:13px;font-weight:700}.ppm small{font-size:12px;font-weight:600;color:var(--muted)}
 .ppm-head,.ppm-toolbar,.ppm-status{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:9px 12px;background:var(--panel)}.ppm-head{justify-content:space-between;padding:12px 16px}.ppm-toolbar{justify-content:center;border-top:1px solid var(--divider)}
+.ppm-surface-tabs{display:flex;gap:4px}.ppm-holdings-summary{display:flex;flex-wrap:wrap;gap:7px;padding:8px 12px;border-top:1px solid var(--divider);background:var(--panel);color:var(--muted);font-weight:600}.ppm-holdings-summary span{padding:4px 8px;border-radius:999px;background:var(--soft)}.ppm-surface[hidden]{display:none}
 .ppm-search{display:flex;gap:4px;align-items:center}.ppm-search input{width:145px}.ppm-search-results{padding:4px 12px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px}.ppm-filter-empty{padding:9px 12px;color:var(--muted);background:var(--soft);font-size:12px}.ppm-filter-empty span{display:block}
+.ppm-view-tabs{display:flex;gap:4px;flex-wrap:wrap}.ppm-reviewed{display:flex;flex-direction:column;gap:12px}.ppm-reviewed .ppm-evidence>div{display:grid;gap:5px}.ppm-reviewed strong{font-weight:750}
 .ppm-work{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:0}.ppm-map-area{position:relative;min-width:0;height:clamp(540px,65vh,760px)}.ppm-map-area .pmc-empty{display:none}.ppm-map-area>.ppm-empty{position:absolute;left:16px;right:16px;top:96px;padding:18px;border-radius:12px;color:var(--muted);background:var(--panel);pointer-events:none}
 .ppm-panel{padding:18px 16px;max-height:650px;overflow:auto;background:var(--panel);border-left:1px solid var(--divider);display:flex;flex-direction:column;gap:12px;min-width:0}.ppm-panel p,.ppm-panel a{overflow-wrap:anywhere;white-space:pre-wrap}.ppm-panel p{font-size:14px;line-height:1.7}.ppm-panel a{color:var(--accent);font-weight:700;display:inline-flex;gap:4px;align-items:center}
 .ppm-evidence,.ppm-note{background:color-mix(in srgb,var(--bg) 88%,var(--panel));padding:11px;border-radius:12px;display:flex;flex-direction:column;gap:7px}.ppm-actions{display:flex;gap:6px;flex-wrap:wrap}.ppm-note textarea{width:100%;min-height:80px;resize:vertical;background:var(--panel)}
@@ -2534,18 +3141,21 @@ var CSS5 = `
 @media(max-width:760px){.ppm{border-radius:14px}.ppm .ppm-work{grid-template-columns:minmax(0,1fr)}.ppm .ppm-map-area{height:480px}.ppm .ppm-panel{max-height:480px;border-left:0;border-top:1px solid var(--divider)}.ppm .ppm-toolbar{gap:5px}}
 `;
 function PublicPortfolioMap() {
-  const controller = React6.useRef(null);
-  const deleteButtonRefs = React6.useRef(/* @__PURE__ */ new Map());
-  const restoreDeleteFocusId = React6.useRef(null);
+  const controller = React8.useRef(null);
+  const deleteButtonRefs = React8.useRef(/* @__PURE__ */ new Map());
+  const restoreDeleteFocusId = React8.useRef(null);
   const theme = usePortfolioMapTheme();
-  const [state, setState] = React6.useState(blank);
-  const [canvasEpoch, setCanvasEpoch] = React6.useState(0);
-  const [filters, setFilters] = React6.useState({ source: "all", common: false, review: false });
-  const [query, setQuery] = React6.useState(""), [selection, setSelection] = React6.useState(null);
-  const [picker, setPicker] = React6.useState(false), [picked, setPicked] = React6.useState([]);
-  const [notesOpen, setNotesOpen] = React6.useState(false), [motion, setMotion] = React6.useState(true);
-  const [pendingDeleteNoteId, setPendingDeleteNoteId] = React6.useState(null);
-  const [notice, setNotice] = React6.useState(""), [savedRevision, setSavedRevision] = React6.useState(null);
+  const [state, setState] = React8.useState(blank);
+  const [canvasEpoch, setCanvasEpoch] = React8.useState(0);
+  const [surfaceMode, setSurfaceMode] = React8.useState("map");
+  const [mapMounted, setMapMounted] = React8.useState(false);
+  const [viewMode, setViewMode] = React8.useState("documents");
+  const [filters, setFilters] = React8.useState({ source: "all", common: false, review: false });
+  const [query, setQuery] = React8.useState(""), [selection, setSelection] = React8.useState(null);
+  const [picker, setPicker] = React8.useState(false), [picked, setPicked] = React8.useState([]);
+  const [notesOpen, setNotesOpen] = React8.useState(false), [motion, setMotion] = React8.useState(true);
+  const [pendingDeleteNoteId, setPendingDeleteNoteId] = React8.useState(null);
+  const [notice, setNotice] = React8.useState(""), [savedRevision, setSavedRevision] = React8.useState(null);
   const cancelNoteDeletion = () => {
     if (pendingDeleteNoteId) restoreDeleteFocusId.current = pendingDeleteNoteId;
     setPendingDeleteNoteId(null);
@@ -2556,6 +3166,7 @@ function PublicPortfolioMap() {
     setQuery("");
     setPicked([]);
     setPicker(false);
+    setViewMode("documents");
     setFilters({ source: "all", common: false, review: false });
     setNotesOpen(false);
     restoreDeleteFocusId.current = null;
@@ -2564,7 +3175,7 @@ function PublicPortfolioMap() {
     setNotice("");
     setSavedRevision(null);
   };
-  React6.useEffect(() => {
+  React8.useEffect(() => {
     const workspace = createPortfolioMapWorkspace();
     controller.current = workspace;
     const unsubscribe = workspace.subscribe((next) => {
@@ -2580,34 +3191,56 @@ function PublicPortfolioMap() {
       controller.current = null;
     };
   }, []);
+  React8.useEffect(() => {
+    if (surfaceMode === "map") setMapMounted(true);
+  }, [surfaceMode]);
   const layout = state.privateState.document?.layouts.find((row) => row.map_key === MAP_KEY2) || baseLayout();
   const recordsKnown = reviewRecordsKnown(state);
   const reviewSummary = mapReviewSummary(state.graph, layout, filters, recordsKnown);
-  const view = React6.useMemo(() => mapView(state.graph, layout, filters, false, recordsKnown), [state.graph, state.privateState.document, filters, recordsKnown]);
-  const canvasNodes = React6.useMemo(() => withCanvasNotes(view.nodes, layout), [view.nodes, layout.notes]);
-  React6.useEffect(() => {
-    if (selection && !(selection.kind === "link" ? view.links : canvasNodes).some((item) => item.id === selection.id)) setSelection(null);
-  }, [selection, view.links, canvasNodes]);
+  const view = React8.useMemo(() => mapView(state.graph, layout, filters, false, recordsKnown), [state.graph, state.privateState.document, filters, recordsKnown]);
+  const reviewedHoldings = React8.useMemo(() => {
+    const selected = new Set(state.selectedTickers);
+    return state.holdings.filter((holding) => selected.has(holding.ticker)).map((holding) => ({ ticker: holding.ticker, market: holding.market, name: holding.name }));
+  }, [state.holdings, state.selectedTickers]);
+  const reviewedFacts = React8.useMemo(() => buildReviewedPortfolioFacts(
+    reviewedHoldings.map(({ ticker, market }) => ({ ticker, market })),
+    portfolioReviewedRegistry
+  ), [reviewedHoldings]);
+  const reviewedView = React8.useMemo(() => {
+    const base = buildPortfolioReviewedCanvasView(reviewedFacts, viewMode === "events" ? "events" : "relationships", reviewedHoldings);
+    const defaults = sourceGroupPositions(base.nodes, base.links);
+    return { ...base, nodes: base.nodes.map((node) => ({ ...node, ...defaults.get(node.id) })) };
+  }, [reviewedFacts, reviewedHoldings, viewMode]);
+  const activeNodes = viewMode === "documents" ? view.nodes : reviewedView.nodes;
+  const activeLinks = viewMode === "documents" ? view.links : reviewedView.links;
+  const canvasNodes = React8.useMemo(() => withCanvasNotes(activeNodes, layout), [activeNodes, layout.notes]);
+  React8.useEffect(() => {
+    if (selection && !(selection.kind === "link" ? activeLinks : canvasNodes).some((item) => item.id === selection.id)) setSelection(null);
+  }, [selection, activeLinks, canvasNodes]);
   const editable = editableMap(state);
-  const selectedLink = selection?.kind === "link" ? view.links.find((l) => l.id === selection.id) : void 0;
-  const selectedDoc = view.documents.find((d) => d.id === (selectedLink?.documentId || (selection?.kind === "document" ? selection.id : "")));
-  const selectedSources = [...new Map((selectedLink?.evidence || selectedDoc?.evidence || []).flatMap((evidence) => evidence.sourceRecords || []).map((record5) => [JSON.stringify(record5), record5])).values()];
+  const selectedLink = viewMode === "documents" && selection?.kind === "link" ? view.links.find((l) => l.id === selection.id) : void 0;
+  const selectedDoc = viewMode === "documents" ? view.documents.find((d) => d.id === (selectedLink?.documentId || (selection?.kind === "document" ? selection.id : ""))) : void 0;
+  const selectedFactId = viewMode === "documents" ? void 0 : selection?.kind === "link" ? reviewedView.factIdsByLink.get(selection.id) : selection?.kind === "document" ? reviewedView.factIdsByNode.get(selection.id) : void 0;
+  const selectedFact = viewMode === "documents" ? void 0 : selectedReviewedFact(reviewedFacts, viewMode, selectedFactId);
+  const selectedFactTitle = selectedFact ? "title" in selectedFact ? selectedFact.title : selectedFact.label : void 0;
+  const selectedRecord = selectedDoc || (selectedFact && viewMode !== "documents" ? reviewedRecord(viewMode, selectedFact) : void 0);
+  const selectedSources = [...new Map((selectedLink?.evidence || selectedDoc?.evidence || []).flatMap((evidence) => evidence.sourceRecords || []).map((record6) => [JSON.stringify(record6), record6])).values()];
   const selectedCompany = selection?.kind === "company" ? state.graph?.companies.find((c) => c.id === selection.id) : void 0;
   const selectedNote = selection?.kind === "note" ? layout.notes.find((n) => noteCanvasId(n.note_id) === selection.id) : void 0;
   const shownNotes = selectedNote ? [selectedNote, ...layout.notes.filter((n) => n.note_id !== selectedNote.note_id)] : layout.notes;
-  React6.useEffect(() => {
+  React8.useEffect(() => {
     if (pendingDeleteNoteId && (!notesOpen || !pendingNoteCanDelete(layout, pendingDeleteNoteId, editable))) {
       restoreDeleteFocusId.current = null;
       setPendingDeleteNoteId(null);
     }
   }, [notesOpen, layout.notes, pendingDeleteNoteId, editable]);
-  React6.useEffect(() => {
+  React8.useEffect(() => {
     if (pendingDeleteNoteId || !restoreDeleteFocusId.current) return;
     const noteId = restoreDeleteFocusId.current;
     restoreDeleteFocusId.current = null;
     deleteButtonRefs.current.get(noteId)?.focus();
   }, [pendingDeleteNoteId]);
-  React6.useEffect(() => {
+  React8.useEffect(() => {
     if (!pendingDeleteNoteId) return;
     const cancel = (event) => {
       if (event.key !== "Escape") return;
@@ -2619,7 +3252,7 @@ function PublicPortfolioMap() {
     window.addEventListener("keydown", cancel, true);
     return () => window.removeEventListener("keydown", cancel, true);
   }, [pendingDeleteNoteId]);
-  const relatedLinks = selectedCompany ? view.links.filter((l) => l.companyId === selectedCompany.id) : selectedDoc ? view.links.filter((l) => l.documentId === selectedDoc.id) : [];
+  const relatedLinks = selectedCompany ? activeLinks.filter((l) => l.companyId === selectedCompany.id) : selectedDoc ? activeLinks.filter((l) => l.documentId === selectedDoc.id) : [];
   const matches = query.trim() ? state.holdings.filter((h) => `${h.name} ${h.ticker}`.toLowerCase().includes(query.trim().toLowerCase())) : [];
   const run = (action) => {
     try {
@@ -2641,13 +3274,14 @@ function PublicPortfolioMap() {
   };
   const mark = (change) => {
     if (selectedDoc && controller.current && editableMap(controller.current.getState())) run(() => controller.current.markDocument(MAP_KEY2, selectedDoc.id, change));
+    else if (selectedFact && viewMode !== "documents") edit((value) => withReviewedMark(value, viewMode, selectedFact, change));
   };
   const addNote = () => {
     const anchor = selection && selection.kind !== "note" ? { kind: selection.kind === "link" ? "edge" : "node", id: selection.id } : null;
     const noteId = `note:${crypto.randomUUID()}`;
     if (edit((l) => {
       if (l.notes.length >= 100) throw new Error("메모는 100개까지 저장할 수 있습니다.");
-      const all = mapView(state.graph, l, { source: "all", common: false, review: false });
+      const all = viewMode === "documents" ? mapView(state.graph, l, { source: "all", common: false, review: false }) : { nodes: activeNodes, links: activeLinks };
       const position = nextNotePosition(all.nodes, l.notes, selection, all.links);
       return { ...l, notes: [...l.notes, { note_id: noteId, anchor, ...position, text: "", done: false }] };
     })) {
@@ -2674,7 +3308,7 @@ function PublicPortfolioMap() {
     }
   };
   const choose = (ticker) => {
-    const node = view.nodes.find((n) => n.id === `company:${ticker}`);
+    const node = activeNodes.find((n) => n.id === `company:${ticker}`);
     if (!node) {
       setPicker(true);
       setPicked(state.selectedTickers);
@@ -2693,43 +3327,47 @@ function PublicPortfolioMap() {
       setNotice("저장을 확인하지 못했습니다. 초안을 유지합니다.");
     }
   };
+  const changeViewMode = (next) => {
+    if (next === viewMode) return;
+    setViewMode(next);
+    setSelection(null);
+    setCanvasEpoch((value) => value + 1);
+  };
   const privatePhase = state.privateState.phase;
+  const holdingsSummary = holdingsSummaryState(state);
   const filtersActive = filters.source !== "all" || filters.common || filters.review;
   const resetFilters = () => setFilters({ source: "all", common: false, review: false });
   const status = privatePhase === "saving" ? "저장 확인 중…" : privatePhase === "conflict" ? "다른 창의 저장과 충돌 · 초안 미저장" : privatePhase === "error" ? "회원 기록 요청 실패 · 저장 확인 안 됨" : privatePhase === "loading" ? "회원 기록 불러오는 중…" : privatePhase === "signed-out" ? "로그인이 필요합니다." : state.privateState.dirty ? "변경사항 미저장" : savedRevision !== null && savedRevision === state.privateState.revision ? "서버 저장 확인됨" : "회원 기록 불러옴 · 미저장 수정 없음";
-  const currentMark = selectedDoc ? layout.marks[selectedDoc.id] : void 0;
+  const currentMark = selectedRecord ? layout.marks[selectedRecord.id] : void 0;
   const linkLabel = (link) => link.evidence.some((e) => e.kind === "disclosure" && e.confirmation === "confirmed") ? "공시 자료에 포함" : link.confirmation === "confirmed" ? "사업 자료에 포함" : "조회에 포함 · 관계 미확인";
   const noteAnchorLabel = (note) => {
-    if (!note.anchor) return "자유 메모";
-    const link = state.graph?.links.find((row) => note.anchor?.kind === "edge" && row.id === note.anchor.id);
-    const company = state.graph?.companies.find((row) => row.id === (link?.companyId || note.anchor?.id));
-    const document2 = state.graph?.documents.find((row) => row.id === (link?.documentId || note.anchor?.id));
-    return [company?.name, document2?.title].filter(Boolean).join(" ↔ ") || "연결 대상이 현재 지도 밖에 있어요";
+    return mapNoteAnchorLabel(note, activeNodes, activeLinks);
   };
-  return /* @__PURE__ */ React6.createElement("section", { className: "ppm", "data-theme": theme, "aria-label": "보유종목 자료 연결 지도" }, /* @__PURE__ */ React6.createElement("style", null, CSS5), /* @__PURE__ */ React6.createElement("header", { className: "ppm-head" }, /* @__PURE__ */ React6.createElement("div", null, /* @__PURE__ */ React6.createElement("h2", null, "내 보유종목 자료 지도"), /* @__PURE__ */ React6.createElement("small", null, "원문 자료 연결 · 기업 영향은 아직 미판정")), /* @__PURE__ */ React6.createElement("div", { className: "ppm-actions" }, /* @__PURE__ */ React6.createElement(PortfolioMapGuide, null), /* @__PURE__ */ React6.createElement("button", { className: "ppm-primary", disabled: !canSaveMap(state), onClick: () => void save() }, privatePhase === "error" ? "초안 저장 재시도" : "명시 저장", " ", /* @__PURE__ */ React6.createElement(Chev, null)))), /* @__PURE__ */ React6.createElement("div", { className: "ppm-toolbar", "aria-label": "지도 도구" }, /* @__PURE__ */ React6.createElement("form", { className: "ppm-search", onSubmit: (e) => {
+  return /* @__PURE__ */ React8.createElement("section", { className: "ppm", "data-theme": theme, "aria-label": "보유종목 지도와 목록" }, /* @__PURE__ */ React8.createElement("style", null, CSS6), /* @__PURE__ */ React8.createElement("header", { className: "ppm-head" }, /* @__PURE__ */ React8.createElement("div", null, /* @__PURE__ */ React8.createElement("h2", null, surfaceMode === "holdings" ? "내 보유종목 목록" : viewMode === "documents" ? "내 보유종목 자료 지도" : "내 보유종목 검토 지도"), /* @__PURE__ */ React8.createElement("small", null, surfaceMode === "holdings" ? "보유 수량과 평균 매수가 · 조회 전용" : viewMode === "documents" ? "원문 자료 연결 · 기업 영향은 아직 미판정" : "공식 원문 수동 대조 · 현재 영향 미확인")), /* @__PURE__ */ React8.createElement("div", { className: "ppm-actions" }, /* @__PURE__ */ React8.createElement("div", { className: "ppm-surface-tabs", role: "group", "aria-label": "보유종목 보기 선택" }, /* @__PURE__ */ React8.createElement("button", { "aria-pressed": surfaceMode === "map", onClick: () => setSurfaceMode("map") }, "지도"), /* @__PURE__ */ React8.createElement("button", { "aria-pressed": surfaceMode === "holdings", onClick: () => setSurfaceMode("holdings") }, "보유 목록")), surfaceMode === "map" ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement(PortfolioMapGuide, null), /* @__PURE__ */ React8.createElement("button", { className: "ppm-primary", disabled: !canSaveMap(state), onClick: () => void save() }, privatePhase === "error" ? "초안 저장 재시도" : "명시 저장", " ", /* @__PURE__ */ React8.createElement(Chev, null))) : null)), /* @__PURE__ */ React8.createElement("div", { className: "ppm-holdings-summary", "aria-label": "보유종목 요약" }, holdingsSummary.known ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement("span", null, "지원 보유 ", state.holdings.length, "종목"), /* @__PURE__ */ React8.createElement("span", null, "지도 표시 ", state.selectedTickers.length, "종목"), /* @__PURE__ */ React8.createElement("span", null, "지원 제외 ", state.unsupportedCount, "개")) : /* @__PURE__ */ React8.createElement("span", { role: "status" }, holdingsSummary.message)), /* @__PURE__ */ React8.createElement("div", { className: "ppm-surface", hidden: surfaceMode !== "map" }, /* @__PURE__ */ React8.createElement("div", { className: "ppm-toolbar", "aria-label": "지도 도구" }, /* @__PURE__ */ React8.createElement("div", { className: "ppm-view-tabs", role: "group", "aria-label": "지도 내용 선택" }, /* @__PURE__ */ React8.createElement("button", { "aria-pressed": viewMode === "documents", onClick: () => changeViewMode("documents") }, "자료"), /* @__PURE__ */ React8.createElement("button", { "aria-pressed": viewMode === "relationships", onClick: () => changeViewMode("relationships") }, "확인된 관계"), /* @__PURE__ */ React8.createElement("button", { "aria-pressed": viewMode === "events", onClick: () => changeViewMode("events") }, "공통 사건")), /* @__PURE__ */ React8.createElement("form", { className: "ppm-search", onSubmit: (e) => {
     e.preventDefault();
     if (matches[0]) choose(matches[0].ticker);
-  } }, /* @__PURE__ */ React6.createElement("input", { "aria-label": "보유종목 내 찾기", placeholder: "보유종목 내 찾기", value: query, onChange: (e) => setQuery(e.target.value) }), /* @__PURE__ */ React6.createElement("button", { type: "submit", disabled: !matches.length, "aria-label": "검색한 종목 찾기" }, /* @__PURE__ */ React6.createElement(Chev, null))), /* @__PURE__ */ React6.createElement("select", { "aria-label": "자료 출처 종류", value: filters.source, onChange: (e) => setFilters((f) => ({ ...f, source: e.target.value })) }, /* @__PURE__ */ React6.createElement("option", { value: "all" }, "전체 자료"), /* @__PURE__ */ React6.createElement("option", { value: "disclosure" }, "공시"), /* @__PURE__ */ React6.createElement("option", { value: "business" }, "사업 자료"), /* @__PURE__ */ React6.createElement("option", { value: "news" }, "뉴스 조회"), /* @__PURE__ */ React6.createElement("option", { value: "schedule" }, "일정"), /* @__PURE__ */ React6.createElement("option", { value: "other" }, "기타")), /* @__PURE__ */ React6.createElement("button", { "aria-pressed": filters.common, onClick: () => setFilters((f) => ({ ...f, common: !f.common })) }, "공통 자료만"), /* @__PURE__ */ React6.createElement("button", { "aria-pressed": filters.review && recordsKnown, disabled: !reviewSummary, title: recordsKnown ? "읽음 표시가 없거나 확인 후 제공 자료가 달라진 항목 · 무관 제외 · 한 번 더 누르면 해제" : "확인 기록을 불러온 뒤 이용할 수 있어요", onClick: () => setFilters((f) => ({ ...f, review: !f.review })) }, "확인할 자료", reviewSummary ? ` ${reviewSummary.pending}` : ""), /* @__PURE__ */ React6.createElement("button", { disabled: !filtersActive, onClick: resetFilters }, "필터 초기화"), /* @__PURE__ */ React6.createElement("button", { "aria-pressed": notesOpen, onClick: () => setNotesOpen((v) => {
+  } }, /* @__PURE__ */ React8.createElement("input", { "aria-label": "보유종목 내 찾기", placeholder: "보유종목 내 찾기", value: query, onChange: (e) => setQuery(e.target.value) }), /* @__PURE__ */ React8.createElement("button", { type: "submit", disabled: !matches.length, "aria-label": "검색한 종목 찾기" }, /* @__PURE__ */ React8.createElement(Chev, null))), viewMode === "documents" ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement("select", { "aria-label": "자료 출처 종류", value: filters.source, onChange: (e) => setFilters((f) => ({ ...f, source: e.target.value })) }, /* @__PURE__ */ React8.createElement("option", { value: "all" }, "전체 자료"), /* @__PURE__ */ React8.createElement("option", { value: "disclosure" }, "공시"), /* @__PURE__ */ React8.createElement("option", { value: "business" }, "사업 자료"), /* @__PURE__ */ React8.createElement("option", { value: "news" }, "뉴스 조회"), /* @__PURE__ */ React8.createElement("option", { value: "schedule" }, "일정"), /* @__PURE__ */ React8.createElement("option", { value: "other" }, "기타")), /* @__PURE__ */ React8.createElement("button", { "aria-pressed": filters.common, onClick: () => setFilters((f) => ({ ...f, common: !f.common })) }, "공통 자료만"), /* @__PURE__ */ React8.createElement("button", { "aria-pressed": filters.review && recordsKnown, disabled: !reviewSummary, title: recordsKnown ? "읽음 표시가 없거나 확인 후 제공 자료가 달라진 항목 · 무관 제외 · 한 번 더 누르면 해제" : "확인 기록을 불러온 뒤 이용할 수 있어요", onClick: () => setFilters((f) => ({ ...f, review: !f.review })) }, "확인할 자료", reviewSummary ? ` ${reviewSummary.pending}` : ""), /* @__PURE__ */ React8.createElement("button", { disabled: !filtersActive, onClick: resetFilters }, "필터 초기화")) : null, /* @__PURE__ */ React8.createElement("button", { "aria-pressed": notesOpen, onClick: () => setNotesOpen((v) => {
     if (v) {
       restoreDeleteFocusId.current = null;
       setPendingDeleteNoteId(null);
     }
     ;
     return !v;
-  }) }, "메모 ", layout.notes.length)), query.trim() ? /* @__PURE__ */ React6.createElement("div", { className: "ppm-search-results" }, matches.length ? matches.map((h) => /* @__PURE__ */ React6.createElement("button", { key: h.ticker, onClick: () => choose(h.ticker) }, h.name, " · ", h.ticker, /* @__PURE__ */ React6.createElement(Chev, null))) : /* @__PURE__ */ React6.createElement("small", null, "보유종목 내 검색 결과가 없습니다.")) : null, /* @__PURE__ */ React6.createElement("div", { className: "ppm-status", role: "status" }, /* @__PURE__ */ React6.createElement("span", null, status), /* @__PURE__ */ React6.createElement("span", null, "지도 보기 최대 30종목 · 등록 제한 아님"), /* @__PURE__ */ React6.createElement("button", { disabled: !state.holdings.length || state.phase === "loading", onClick: () => {
+  }) }, "메모 ", layout.notes.length)), query.trim() ? /* @__PURE__ */ React8.createElement("div", { className: "ppm-search-results" }, matches.length ? matches.map((h) => /* @__PURE__ */ React8.createElement("button", { key: h.ticker, onClick: () => choose(h.ticker) }, h.name, " · ", h.ticker, /* @__PURE__ */ React8.createElement(Chev, null))) : /* @__PURE__ */ React8.createElement("small", null, "보유종목 내 검색 결과가 없습니다.")) : null, /* @__PURE__ */ React8.createElement("div", { className: "ppm-status", role: "status" }, /* @__PURE__ */ React8.createElement("span", null, status), /* @__PURE__ */ React8.createElement("span", null, "지도 보기 최대 30종목 · 등록 제한 아님"), /* @__PURE__ */ React8.createElement("button", { disabled: !state.holdings.length || state.phase === "loading", onClick: () => {
     setPicked(state.selectedTickers);
     setPicker((v) => !v);
-  } }, "보기 종목 선택 ", /* @__PURE__ */ React6.createElement(Chev, null)), state.graph ? /* @__PURE__ */ React6.createElement("span", null, "표시 종목 ", state.graph.companies.length, " · 자료 ", view.documents.length, "/", state.graph.documents.length, " · 자료 제공 ", state.graph.coverage.available, "/", state.graph.coverage.total, " 조회 구간") : null), state.phase === "ready" && state.graph && state.graph.documents.length > 0 && !view.documents.length && filtersActive ? /* @__PURE__ */ React6.createElement("p", { className: "ppm-filter-empty", role: "status" }, /* @__PURE__ */ React6.createElement("span", null, "현재 조건에 맞는 자료가 없어요."), /* @__PURE__ */ React6.createElement("span", null, "필터를 초기화하면 전체 자료를 다시 볼 수 있어요.")) : null, filters.review && reviewSummary ? /* @__PURE__ */ React6.createElement("p", { className: "ppm-filter-empty", role: "status" }, /* @__PURE__ */ React6.createElement("span", null, "현재 출처·공통 조건의 ", reviewSummary.total, "개 자료 중 읽음 표시 없음 ", reviewSummary.unread, " · 확인 후 자료 변경 ", reviewSummary.changed, " · 무관 ", reviewSummary.ignored, "개 제외"), /* @__PURE__ */ React6.createElement("span", null, "원문 수정이나 지난 방문 이후의 새 사건을 확정하는 표시는 아니에요.")) : null, notice ? /* @__PURE__ */ React6.createElement("p", { className: "ppm-warning", role: "alert" }, notice) : null, state.error ? /* @__PURE__ */ React6.createElement("p", { className: "ppm-warning", role: "alert" }, "보유종목·자료를 불러오지 못했습니다. (", state.error, ") ", /* @__PURE__ */ React6.createElement("button", { onClick: () => void controller.current?.open() }, "다시 불러오기")) : null, privatePhase === "error" || privatePhase === "conflict" ? /* @__PURE__ */ React6.createElement("div", { className: "ppm-warning", role: "alert" }, state.privateState.error, " · 기존 초안을 자동으로 덮어쓰지 않습니다.", /* @__PURE__ */ React6.createElement("button", { onClick: () => {
+  } }, "보기 종목 선택 ", /* @__PURE__ */ React8.createElement(Chev, null)), state.graph ? viewMode === "documents" ? /* @__PURE__ */ React8.createElement("span", null, "표시 종목 ", state.graph.companies.length, " · 자료 ", view.documents.length, "/", state.graph.documents.length, " · 자료 제공 ", state.graph.coverage.available, "/", state.graph.coverage.total, " 조회 구간") : /* @__PURE__ */ React8.createElement("span", null, "표시 종목 ", reviewedHoldings.length, " · ", viewMode === "relationships" ? `확인 관계 ${reviewedFacts.relationships.length}` : `공통 사건 ${reviewedFacts.events.length}`) : null), viewMode === "documents" && state.phase === "ready" && state.graph && state.graph.documents.length > 0 && !view.documents.length && filtersActive ? /* @__PURE__ */ React8.createElement("p", { className: "ppm-filter-empty", role: "status" }, /* @__PURE__ */ React8.createElement("span", null, "현재 조건에 맞는 자료가 없어요."), /* @__PURE__ */ React8.createElement("span", null, "필터를 초기화하면 전체 자료를 다시 볼 수 있어요.")) : null, viewMode === "documents" && filters.review && reviewSummary ? /* @__PURE__ */ React8.createElement("p", { className: "ppm-filter-empty", role: "status" }, /* @__PURE__ */ React8.createElement("span", null, "현재 출처·공통 조건의 ", reviewSummary.total, "개 자료 중 읽음 표시 없음 ", reviewSummary.unread, " · 확인 후 자료 변경 ", reviewSummary.changed, " · 무관 ", reviewSummary.ignored, "개 제외"), /* @__PURE__ */ React8.createElement("span", null, "원문 수정이나 지난 방문 이후의 새 사건을 확정하는 표시는 아니에요.")) : null, viewMode !== "documents" ? /* @__PURE__ */ React8.createElement("p", { className: "ppm-filter-empty", role: "status" }, /* @__PURE__ */ React8.createElement("span", null, reviewedCoverageMessage(reviewedFacts))) : null, notice ? /* @__PURE__ */ React8.createElement("p", { className: "ppm-warning", role: "alert" }, notice) : null, state.error ? /* @__PURE__ */ React8.createElement("p", { className: "ppm-warning", role: "alert" }, "보유종목·자료를 불러오지 못했습니다. (", state.error, ") ", /* @__PURE__ */ React8.createElement("button", { onClick: () => void controller.current?.open() }, "다시 불러오기")) : null, privatePhase === "error" || privatePhase === "conflict" ? /* @__PURE__ */ React8.createElement("div", { className: "ppm-warning", role: "alert" }, state.privateState.error, " · 기존 초안을 자동으로 덮어쓰지 않습니다.", /* @__PURE__ */ React8.createElement("button", { onClick: () => {
     if (!state.privateState.dirty || window.confirm("현재 미저장 초안을 버리고 서버 기록을 다시 불러올까요?")) void controller.current?.reloadSaved(state.privateState.dirty);
-  } }, "서버 기록 다시 불러오기")) : null, state.unsupportedCount ? /* @__PURE__ */ React6.createElement("p", { className: "ppm-status" }, "현재 자료 조회를 지원하지 않는 보유 항목 ", state.unsupportedCount, "개는 지도에서 제외됩니다.") : null, picker || state.phase === "choose-stocks" ? /* @__PURE__ */ React6.createElement("div", { className: "ppm-picker" }, /* @__PURE__ */ React6.createElement("h3", null, "지도에서 볼 보유종목 선택"), /* @__PURE__ */ React6.createElement("p", null, "전체 ", state.holdings.length, "종목 중 ", picked.length, "/30 선택 · 실제 보유 등록은 바뀌지 않습니다."), /* @__PURE__ */ React6.createElement("div", { className: "ppm-picks" }, state.holdings.map((h) => /* @__PURE__ */ React6.createElement("label", { key: h.ticker }, /* @__PURE__ */ React6.createElement("input", { type: "checkbox", checked: picked.includes(h.ticker), disabled: !picked.includes(h.ticker) && picked.length >= 30, onChange: (e) => setPicked((v) => e.target.checked ? [...v, h.ticker] : v.filter((t) => t !== h.ticker)) }), " ", h.name, " · ", h.ticker))), /* @__PURE__ */ React6.createElement("button", { disabled: !picked.length || state.phase === "loading", onClick: () => {
+  } }, "서버 기록 다시 불러오기")) : null, state.unsupportedCount ? /* @__PURE__ */ React8.createElement("p", { className: "ppm-status" }, "현재 자료 조회를 지원하지 않는 보유 항목 ", state.unsupportedCount, "개는 지도에서 제외됩니다.") : null, picker || state.phase === "choose-stocks" ? /* @__PURE__ */ React8.createElement("div", { className: "ppm-picker" }, /* @__PURE__ */ React8.createElement("h3", null, "지도에서 볼 보유종목 선택"), /* @__PURE__ */ React8.createElement("p", null, "전체 ", state.holdings.length, "종목 중 ", picked.length, "/30 선택 · 실제 보유 등록은 바뀌지 않습니다."), /* @__PURE__ */ React8.createElement("div", { className: "ppm-picks" }, state.holdings.map((h) => /* @__PURE__ */ React8.createElement("label", { key: h.ticker }, /* @__PURE__ */ React8.createElement("input", { type: "checkbox", checked: picked.includes(h.ticker), disabled: !picked.includes(h.ticker) && picked.length >= 30, onChange: (e) => setPicked((v) => e.target.checked ? [...v, h.ticker] : v.filter((t) => t !== h.ticker)) }), " ", h.name, " · ", h.ticker))), /* @__PURE__ */ React8.createElement("button", { disabled: !picked.length || state.phase === "loading", onClick: () => {
     setPicker(false);
     void controller.current?.showTickers(picked).catch(() => setNotice("보기 종목을 선택하지 못했습니다."));
-  } }, "선택한 종목 보기 ", /* @__PURE__ */ React6.createElement(Chev, null))) : null, /* @__PURE__ */ React6.createElement("div", { className: "ppm-work" }, /* @__PURE__ */ React6.createElement("div", { className: "ppm-map-area" }, /* @__PURE__ */ React6.createElement(
+  } }, "선택한 종목 보기 ", /* @__PURE__ */ React8.createElement(Chev, null))) : null, /* @__PURE__ */ React8.createElement("div", { className: "ppm-work" }, /* @__PURE__ */ React8.createElement("div", { className: "ppm-map-area" }, mapMounted ? /* @__PURE__ */ React8.createElement(
     PortfolioMapCanvas,
     {
       key: canvasEpoch,
       nodes: canvasNodes,
-      links: view.links,
+      links: activeLinks,
+      mode: viewMode,
       selection,
       onSelect: selectCanvas,
       positions: mapCanvasPositions(layout),
@@ -2737,18 +3375,28 @@ function PublicPortfolioMap() {
       editable,
       motion,
       onMotionChange: setMotion,
-      theme
+      theme,
+      active: surfaceMode === "map"
     }
-  ), !canvasNodes.length ? /* @__PURE__ */ React6.createElement("div", { className: "ppm-empty" }, state.phase === "loading" ? "보유종목과 자료를 불러오는 중…" : state.phase === "signed-out" ? "기존 알파네스트 계정으로 로그인한 뒤 이용하세요." : state.phase === "choose-stocks" ? "위에서 지도에 표시할 종목을 선택하세요." : "표시할 자료가 없습니다. 조회 실패·자료 미제공은 관계가 없다는 뜻이 아닙니다.") : null), /* @__PURE__ */ React6.createElement("aside", { className: "ppm-panel", "aria-label": "원문과 종목별 이유" }, /* @__PURE__ */ React6.createElement("h3", null, selectedNote ? "내 메모" : selectedDoc?.title || selectedCompany?.name || "자료를 선택하세요"), selectedDoc ? /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("p", null, selectedLink ? linkLabel(selectedLink) : selectedDoc.reason), /* @__PURE__ */ React6.createElement("small", null, selectedDoc.isCorrection ? "정정 표시가 있는 자료" : "정정 여부는 출처별 확인이 필요해요.", " · ", selectedDoc.asOf || "통합 기준일 미제공 · 아래 개별 근거 확인"), safeSourceLink(selectedDoc.url) ? /* @__PURE__ */ React6.createElement("a", { href: safeSourceLink(selectedDoc.url), target: "_blank", rel: "noopener noreferrer" }, "제공된 원문 직접 열기 ", /* @__PURE__ */ React6.createElement(Chev, null)) : /* @__PURE__ */ React6.createElement("small", null, "안전하게 열 수 있는 원문 링크가 없습니다."), /* @__PURE__ */ React6.createElement("div", { className: "ppm-actions" }, /* @__PURE__ */ React6.createElement("button", { disabled: !editable, "aria-pressed": currentMark?.read_revision === selectedDoc.read_revision, onClick: () => mark({ read: currentMark?.read_revision !== selectedDoc.read_revision }) }, "읽음"), /* @__PURE__ */ React6.createElement("button", { disabled: !editable, "aria-pressed": !!currentMark?.important, onClick: () => mark({ important: !currentMark?.important }) }, "중요"), /* @__PURE__ */ React6.createElement("button", { disabled: !editable, "aria-pressed": currentMark?.disposition === "later", onClick: () => mark({ disposition: currentMark?.disposition === "later" ? "inbox" : "later" }) }, "나중에"), /* @__PURE__ */ React6.createElement("button", { disabled: !editable, "aria-pressed": currentMark?.disposition === "irrelevant", onClick: () => mark({ disposition: currentMark?.disposition === "irrelevant" ? "inbox" : "irrelevant" }) }, "무관")), /* @__PURE__ */ React6.createElement("small", null, !recordsKnown ? "확인 기록을 불러오지 못해 읽음 여부를 알 수 없어요." : mapReadState(currentMark, selectedDoc.read_revision) === "changed" ? "확인 후 자료 변경 · 원문 자체의 수정 확정은 아닙니다." : mapReadState(currentMark, selectedDoc.read_revision) === "read" ? "현재 제공 자료 읽음 표시" : "아직 읽음 표시하지 않은 자료"), /* @__PURE__ */ React6.createElement(PortfolioSourceDetails, { key: selectedLink?.id || selectedDoc.id, records: selectedSources }), (selectedLink?.evidence || selectedDoc.evidence).map((e, index) => /* @__PURE__ */ React6.createElement("article", { className: "ppm-evidence", key: `${e.ticker}:${index}` }, /* @__PURE__ */ React6.createElement("h4", null, e.ticker, " · ", e.reason), /* @__PURE__ */ React6.createElement("p", null, e.explanation), /* @__PURE__ */ React6.createElement("small", null, e.source, " · ", e.asOf || "기준일 미제공", " · ", e.confirmation === "confirmed" ? "제공된 종목 자료에 포함" : "자료 관계 미확인", e.isCorrection ? " · 정정 표시" : ""), e.sources.map((source, i) => /* @__PURE__ */ React6.createElement("div", { key: i }, /* @__PURE__ */ React6.createElement("small", null, source.source, " · ", source.asOf || "기준일 미제공"), safeSourceLink(source.url) ? /* @__PURE__ */ React6.createElement("a", { href: safeSourceLink(source.url), target: "_blank", rel: "noopener noreferrer" }, source.title || "원문", /* @__PURE__ */ React6.createElement(Chev, null)) : null))))) : selectedNote ? /* @__PURE__ */ React6.createElement("p", null, "내가 남긴 기록이에요. 원문 근거나 확인된 관계로 사용되지 않아요. 수정·이동 뒤 ‘명시 저장’을 눌러야 서버에 반영됩니다.") : /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("p", null, "원문·종목별 연결 이유·기준일을 확인하세요. 메모와 표시 변경은 ‘명시 저장’을 눌러야 서버에 저장됩니다."), relatedLinks.map((link) => /* @__PURE__ */ React6.createElement("button", { key: link.id, onClick: () => setSelection({ kind: "link", id: link.id }) }, view.documents.find((d) => d.id === link.documentId)?.title, /* @__PURE__ */ React6.createElement(Chev, null))), selectedCompany && !relatedLinks.length ? /* @__PURE__ */ React6.createElement("small", null, "현재 필터에서 연결 자료가 없습니다. 실제 사업관계 부재를 뜻하지 않습니다.") : null), selectedCompany ? /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement(PortfolioCloseDetails, { key: selectedCompany.id + ":close", quote: selectedCompany.closeQuote }), /* @__PURE__ */ React6.createElement(PortfolioCompanyDetails, { key: selectedCompany.id, sections: selectedCompany.sections })) : null, !selectedNote ? state.graph?.coverage.sources.filter((c) => !selectedCompany || c.ticker === selectedCompany.ticker).filter((c) => c.state !== "available").map((c) => /* @__PURE__ */ React6.createElement("small", { key: `${c.ticker}:${c.sectionId}` }, c.ticker, " · ", c.sectionId === "business" ? "사업 자료" : "사건 자료", " · ", c.state, " · ", c.messages.join(" · ") || "자료 수집 완전성 미확인")) : null, /* @__PURE__ */ React6.createElement("button", { disabled: !editable, onClick: addNote }, "메모 추가 ", /* @__PURE__ */ React6.createElement(Chev, null)), notesOpen ? /* @__PURE__ */ React6.createElement("div", { className: "ppm-note-list" }, /* @__PURE__ */ React6.createElement("h3", null, "내 메모 · ", layout.notes.length), /* @__PURE__ */ React6.createElement("small", null, "지도에서 메모를 끌어 이동할 수 있어요. 배치 초기화는 메모 위치를 유지해요."), shownNotes.map((note) => /* @__PURE__ */ React6.createElement("article", { className: "ppm-note", "data-selected": selectedNote?.note_id === note.note_id, key: note.note_id }, /* @__PURE__ */ React6.createElement("small", null, noteAnchorLabel(note)), /* @__PURE__ */ React6.createElement("textarea", { "aria-label": `메모 ${note.note_id}`, value: note.text, disabled: !editable, onChange: (e) => {
-    const text4 = e.target.value;
-    edit((l) => ({ ...l, notes: l.notes.map((n) => n.note_id === note.note_id ? { ...n, text: text4 } : n) }));
-  } }), /* @__PURE__ */ React6.createElement("div", { className: "ppm-actions" }, /* @__PURE__ */ React6.createElement("label", null, /* @__PURE__ */ React6.createElement("input", { type: "checkbox", checked: note.done, disabled: !editable, onChange: (e) => {
+  ) : null, !canvasNodes.length || viewMode !== "documents" && !(viewMode === "relationships" ? reviewedFacts.relationships.length : reviewedFacts.events.length) ? /* @__PURE__ */ React8.createElement("div", { className: "ppm-empty" }, state.phase === "loading" ? "보유종목과 자료를 불러오는 중…" : state.phase === "signed-out" ? "기존 알파네스트 계정으로 로그인한 뒤 이용하세요." : state.phase === "choose-stocks" ? "위에서 지도에 표시할 종목을 선택하세요." : viewMode === "documents" ? "표시할 자료가 없습니다. 조회 실패·자료 미제공은 관계가 없다는 뜻이 아닙니다." : "현재 보유 선택에 맞는 검토 완료 항목이 없습니다. 관계나 공통 사건이 없다는 뜻이 아니며 검수 대상 밖일 수 있습니다.") : null), /* @__PURE__ */ React8.createElement("aside", { className: "ppm-panel", "aria-label": "원문과 종목별 이유" }, /* @__PURE__ */ React8.createElement("h3", null, selectedNote ? "내 메모" : selectedFactTitle || selectedDoc?.title || selectedCompany?.name || (viewMode === "documents" ? "자료를 선택하세요" : "검토 항목을 선택하세요")), selectedRecord ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement("div", { className: "ppm-actions", role: "group", "aria-label": "선택 항목 확인 상태" }, /* @__PURE__ */ React8.createElement("button", { disabled: !editable, "aria-pressed": currentMark?.read_revision === selectedRecord.read_revision, onClick: () => mark({ read: currentMark?.read_revision !== selectedRecord.read_revision }) }, "읽음"), /* @__PURE__ */ React8.createElement("button", { disabled: !editable, "aria-pressed": !!currentMark?.important, onClick: () => mark({ important: !currentMark?.important }) }, "중요"), /* @__PURE__ */ React8.createElement("button", { disabled: !editable, "aria-pressed": currentMark?.disposition === "later", onClick: () => mark({ disposition: currentMark?.disposition === "later" ? "inbox" : "later" }) }, "나중에"), /* @__PURE__ */ React8.createElement("button", { disabled: !editable, "aria-pressed": currentMark?.disposition === "irrelevant", onClick: () => mark({ disposition: currentMark?.disposition === "irrelevant" ? "inbox" : "irrelevant" }) }, "무관")), /* @__PURE__ */ React8.createElement("small", null, !recordsKnown ? "확인 기록을 불러오지 못해 읽음 여부를 알 수 없어요." : mapReadState(currentMark, selectedRecord.read_revision) === "changed" ? selectedFact ? "확인 후 검토 내용 변경 · 새 사건이나 원문 수정 확정은 아닙니다." : "확인 후 자료 변경 · 원문 자체의 수정 확정은 아닙니다." : mapReadState(currentMark, selectedRecord.read_revision) === "read" ? selectedFact ? "현재 검토 내용 읽음 표시" : "현재 제공 자료 읽음 표시" : selectedFact ? "아직 읽음 표시하지 않은 검토 항목" : "아직 읽음 표시하지 않은 자료"), selectedFact ? /* @__PURE__ */ React8.createElement("small", null, "개인 확인 상태예요. ‘명시 저장’ 후 다음 접속에 이어집니다.") : null) : null, selectedDoc ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement("p", null, selectedLink ? linkLabel(selectedLink) : selectedDoc.reason), /* @__PURE__ */ React8.createElement("small", null, selectedDoc.isCorrection ? "정정 표시가 있는 자료" : "정정 여부는 출처별 확인이 필요해요.", " · ", selectedDoc.asOf || "통합 기준일 미제공 · 아래 개별 근거 확인"), safeSourceLink(selectedDoc.url) ? /* @__PURE__ */ React8.createElement("a", { href: safeSourceLink(selectedDoc.url), target: "_blank", rel: "noopener noreferrer" }, "제공된 원문 직접 열기 ", /* @__PURE__ */ React8.createElement(Chev, null)) : /* @__PURE__ */ React8.createElement("small", null, "안전하게 열 수 있는 원문 링크가 없습니다."), /* @__PURE__ */ React8.createElement(PortfolioSourceDetails, { key: selectedLink?.id || selectedDoc.id, records: selectedSources }), (selectedLink?.evidence || selectedDoc.evidence).map((e, index) => /* @__PURE__ */ React8.createElement("article", { className: "ppm-evidence", key: `${e.ticker}:${index}` }, /* @__PURE__ */ React8.createElement("h4", null, e.ticker, " · ", e.reason), /* @__PURE__ */ React8.createElement("p", null, e.explanation), /* @__PURE__ */ React8.createElement("small", null, e.source, " · ", e.asOf || "기준일 미제공", " · ", e.confirmation === "confirmed" ? "제공된 종목 자료에 포함" : "자료 관계 미확인", e.isCorrection ? " · 정정 표시" : ""), e.sources.map((source, i) => /* @__PURE__ */ React8.createElement("div", { key: i }, /* @__PURE__ */ React8.createElement("small", null, source.source, " · ", source.asOf || "기준일 미제공"), safeSourceLink(source.url) ? /* @__PURE__ */ React8.createElement("a", { href: safeSourceLink(source.url), target: "_blank", rel: "noopener noreferrer" }, source.title || "원문", /* @__PURE__ */ React8.createElement(Chev, null)) : null))))) : selectedFact ? /* @__PURE__ */ React8.createElement(PortfolioReviewedView, { fact: selectedFact }) : selectedNote ? /* @__PURE__ */ React8.createElement("p", null, "내가 남긴 기록이에요. 원문 근거나 확인된 관계로 사용되지 않아요. 수정·이동 뒤 ‘명시 저장’을 눌러야 서버에 반영됩니다.") : /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement("p", null, viewMode === "documents" ? "원문·종목별 연결 이유·기준일을 확인하세요." : "검토 항목을 선택해 원문 날짜·참여 역할·한계를 확인하세요.", " 메모와 배치 변경은 ‘명시 저장’을 눌러야 서버에 저장됩니다."), relatedLinks.map((link) => /* @__PURE__ */ React8.createElement("button", { key: link.id, onClick: () => setSelection({ kind: "link", id: link.id }) }, activeNodes.find((node) => node.id === link.documentId)?.title, /* @__PURE__ */ React8.createElement(Chev, null))), selectedCompany && !relatedLinks.length ? /* @__PURE__ */ React8.createElement("small", null, viewMode === "documents" ? "현재 필터에서 연결 자료가 없습니다. 실제 사업관계 부재를 뜻하지 않습니다." : "현재 검수 범위에서 이 종목과 맞는 항목이 없습니다. 관계 부재를 뜻하지 않습니다.") : null), selectedCompany ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement(PortfolioCloseDetails, { key: selectedCompany.id + ":close", quote: selectedCompany.closeQuote }), /* @__PURE__ */ React8.createElement(PortfolioCompanyDetails, { key: selectedCompany.id, sections: selectedCompany.sections })) : null, !selectedNote && viewMode === "documents" ? state.graph?.coverage.sources.filter((c) => !selectedCompany || c.ticker === selectedCompany.ticker).filter((c) => c.state !== "available").map((c) => /* @__PURE__ */ React8.createElement("small", { key: `${c.ticker}:${c.sectionId}` }, c.ticker, " · ", c.sectionId === "business" ? "사업 자료" : "사건 자료", " · ", c.state, " · ", c.messages.join(" · ") || "자료 수집 완전성 미확인")) : null, /* @__PURE__ */ React8.createElement("button", { disabled: !editable, onClick: addNote }, "메모 추가 ", /* @__PURE__ */ React8.createElement(Chev, null)), notesOpen ? /* @__PURE__ */ React8.createElement("div", { className: "ppm-note-list" }, /* @__PURE__ */ React8.createElement("h3", null, "내 메모 · ", layout.notes.length), /* @__PURE__ */ React8.createElement("small", null, "지도에서 메모를 끌어 이동할 수 있어요. 배치 초기화는 메모 위치를 유지해요."), shownNotes.map((note) => /* @__PURE__ */ React8.createElement("article", { className: "ppm-note", "data-selected": selectedNote?.note_id === note.note_id, key: note.note_id }, /* @__PURE__ */ React8.createElement("small", null, noteAnchorLabel(note)), /* @__PURE__ */ React8.createElement("textarea", { "aria-label": `메모 ${note.note_id}`, value: note.text, disabled: !editable, onChange: (e) => {
+    const text5 = e.target.value;
+    edit((l) => ({ ...l, notes: l.notes.map((n) => n.note_id === note.note_id ? { ...n, text: text5 } : n) }));
+  } }), /* @__PURE__ */ React8.createElement("div", { className: "ppm-actions" }, /* @__PURE__ */ React8.createElement("label", null, /* @__PURE__ */ React8.createElement("input", { type: "checkbox", checked: note.done, disabled: !editable, onChange: (e) => {
     const done = e.target.checked;
     edit((l) => ({ ...l, notes: l.notes.map((n) => n.note_id === note.note_id ? { ...n, done } : n) }));
-  } }), " 완료"), /* @__PURE__ */ React6.createElement("small", null, [...note.text].length, "/2000자"), pendingDeleteNoteId === note.note_id ? /* @__PURE__ */ React6.createElement("div", { className: "ppm-note-delete-confirm", role: "group", "aria-label": "메모 삭제 확인" }, /* @__PURE__ */ React6.createElement("small", null, "이 메모를 초안에서 삭제합니다. 서버 반영은 ‘명시 저장’ 후입니다."), /* @__PURE__ */ React6.createElement("div", { className: "ppm-note-delete-actions" }, /* @__PURE__ */ React6.createElement("button", { autoFocus: true, onClick: cancelNoteDeletion }, "취소"), /* @__PURE__ */ React6.createElement("button", { className: "ppm-note-delete", disabled: !editable, onClick: confirmNoteDeletion }, "삭제"))) : /* @__PURE__ */ React6.createElement("button", { ref: (button) => {
+  } }), " 완료"), /* @__PURE__ */ React8.createElement("small", null, [...note.text].length, "/2000자"), pendingDeleteNoteId === note.note_id ? /* @__PURE__ */ React8.createElement("div", { className: "ppm-note-delete-confirm", role: "group", "aria-label": "메모 삭제 확인" }, /* @__PURE__ */ React8.createElement("small", null, "이 메모를 초안에서 삭제합니다. 서버 반영은 ‘명시 저장’ 후입니다."), /* @__PURE__ */ React8.createElement("div", { className: "ppm-note-delete-actions" }, /* @__PURE__ */ React8.createElement("button", { autoFocus: true, onClick: cancelNoteDeletion }, "취소"), /* @__PURE__ */ React8.createElement("button", { className: "ppm-note-delete", disabled: !editable, onClick: confirmNoteDeletion }, "삭제"))) : /* @__PURE__ */ React8.createElement("button", { ref: (button) => {
     if (button) deleteButtonRefs.current.set(note.note_id, button);
     else deleteButtonRefs.current.delete(note.note_id);
-  }, disabled: !editable, onClick: () => setPendingDeleteNoteId(note.note_id) }, "메모 삭제")))), !layout.notes.length ? /* @__PURE__ */ React6.createElement("p", null, "아직 메모가 없습니다.") : null) : null)));
+  }, disabled: !editable, onClick: () => setPendingDeleteNoteId(note.note_id) }, "메모 삭제")))), !layout.notes.length ? /* @__PURE__ */ React8.createElement("p", null, "아직 메모가 없습니다.") : null) : null))), /* @__PURE__ */ React8.createElement("div", { className: "ppm-surface", hidden: surfaceMode !== "holdings" }, /* @__PURE__ */ React8.createElement(
+    PortfolioHoldingsList,
+    {
+      holdings: state.holdings,
+      selectedTickers: state.selectedTickers,
+      unsupportedCount: state.unsupportedCount,
+      phase: state.phase,
+      theme
+    }
+  ), state.error ? /* @__PURE__ */ React8.createElement("p", { className: "ppm-warning", role: "alert" }, "보유종목 또는 지도 자료를 확인하지 못했습니다. (", state.error, ")") : null));
 }
 
 // output/member-map-integration-20260927/PortfolioMapReview.entry.tsx
@@ -2762,14 +3410,13 @@ function PublicPortfolioMap() {
  * @framerSupportedLayoutWidth any-prefer-fixed
  * @framerSupportedLayoutHeight auto
  */
-export default function PublicPortfolioMapReview({ minHeight = 820, style }: { minHeight?: number; style?: React.CSSProperties }) {
+function PublicPortfolioMapReview({ minHeight = 820, style }) {
   const isStatic = useIsStaticRenderer();
-  return <div style={{ ...style, position: "relative", width: "100%", minHeight, boxSizing: "border-box" }}>
-    {isStatic
-      ? <section aria-label="회원 지도 검수용"><h2>회원 지도 검수용</h2><p>실제 미리보기에서 로그인 후 보유종목과 저장 기록을 불러옵니다. 공개 사이트는 바꾸지 않습니다.</p></section>
-      : <PublicPortfolioMap />}
-  </div>;
+  return /* @__PURE__ */ React9.createElement("div", { style: { ...style, position: "relative", width: "100%", minHeight, boxSizing: "border-box" } }, isStatic ? /* @__PURE__ */ React9.createElement("section", { "aria-label": "회원 지도 검수용" }, /* @__PURE__ */ React9.createElement("h2", null, "회원 지도 검수용"), /* @__PURE__ */ React9.createElement("p", null, "실제 미리보기에서 로그인 후 보유종목과 저장 기록을 불러옵니다. 공개 사이트는 바꾸지 않습니다.")) : /* @__PURE__ */ React9.createElement(PublicPortfolioMap, null));
 }
 addPropertyControls(PublicPortfolioMapReview, {
   minHeight: { type: ControlType.Number, title: "최소 높이", defaultValue: 820, min: 480, max: 1200, step: 20 }
 });
+export {
+  PublicPortfolioMapReview as default
+};
