@@ -19,9 +19,11 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 
 The same local renderer passed 53 focused checks plus bounded 30-company browser checks before projection into this snapshot. Rebuilt with existing esbuild (`bundle`, ESM, classic JSX transform, UTF-8, React/ReactDOM/Framer external), only these two source sections were substituted; the other generated sections were compared exactly before writing:
 
-- `PortfolioMapCanvas.tsx`: `d18956b538f31f17079698ffb1ea7899f0491869850ad01f6a4f74a8018f9694`
+- `PortfolioMapCanvas.tsx`: `e4943d3a267add06d2acb95723a1be69ebef6afcd842b71b5454c2d3b8b5e611`
 - `PublicPortfolioMap.tsx`: `8271b591aeee91241d02c119ffb1b082dde03a5b6ea9a40c9c3b60975841b03c`
-- Resulting `Map.snapshot.tsx`: `72f51608c0b64cd048581271a1b04f758cc5fc15f588c1edcb3748866e23adf7`
+- Resulting `Map.snapshot.tsx`: `d5aec3b9cf7263e3f16f55d65e750efa0b59c6e968078a64581f9a18a7b4d700`
+
+Long-title follow-up: each card title and subtitle is limited to two visible lines. Full text stays in the DOM, accessible name, hover and detail panel; saved coordinates are not rewritten. A synthetic 30-company / 6-long-document view measured 78px document heights and zero overlapping pairs out of 630 at the default layout. This does not prevent a user from deliberately dragging cards on top of each other.
 
 This brings the accepted v36 compact controls, source colors, pan/zoom grid, measured cards and above-card hover placement into the authenticated review. Actual document content and evidence boundaries intentionally differ from the fictional design fixture. A real pointer-hover placement acceptance remains separate from the source/geometry checks.
 
