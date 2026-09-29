@@ -1,31 +1,29 @@
 {
  "_meta": {
-  "generated_at": "2026-09-29T22:41:48.208583+09:00",
+  "generated_at": "2026-09-30T04:06:06.229246+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "amber",
- "reasons": [
-  "비P0 stale 1건"
- ],
+ "status": "green",
+ "reasons": [],
  "publish_guard": {
   "held_24h": 0,
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-09-29T22:41:48.147921+09:00",
+  "generated_at": "2026-09-30T04:06:06.171858+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 137282,
+  "max_cdn_age_s": 0,
   "files": [
    {
     "file": "stock_report_public.json",
     "ok": true,
     "pct": {
-     "PER": 61.6,
+     "PER": 61.4,
      "PBR": 96.1
     },
     "total": 2534,
-    "cdn_age_s": 3763,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -33,10 +31,10 @@
     "ok": true,
     "pct": {
      "PER": 45.0,
-     "PBR": 73.6
+     "PBR": 73.7
     },
     "total": 5079,
-    "cdn_age_s": 68889,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -47,7 +45,7 @@
      "PBR": 75.3
     },
     "total": 3851,
-    "cdn_age_s": 137282,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -61,13 +59,13 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-09-29T18:04:07.276730+09:00",
+  "generated_at": "2026-09-30T01:38:39.679409+09:00",
   "kr_total": 2534,
   "us_total": 5079,
   "core_fill_pct": {
    "fields.facts.PBR": 96.1,
-   "fields.facts.PER": 61.6,
-   "us_fields.facts.PBR": 73.6,
+   "fields.facts.PER": 61.4,
+   "us_fields.facts.PBR": 73.7,
    "us_fields.facts.PER": 45.0
   },
   "last_run_blocked": false,
@@ -75,10 +73,10 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-09-29T22:41:43.912180+09:00",
+  "generated_at": "2026-09-30T04:05:56.442909+09:00",
   "summary": {
-   "fresh": 59,
-   "stale": 1,
+   "fresh": 60,
+   "stale": 0,
    "closed": 2,
    "discontinued": 3,
    "p0": {
@@ -95,14 +93,12 @@
    },
    "p2": {
     "total": 36,
-    "fresh": 34,
+    "fresh": 35,
     "closed": 0,
     "active": 35
    }
   },
   "stale_p0": [],
-  "stale_other": [
-   "securities_lending"
-  ]
+  "stale_other": []
  }
 }
