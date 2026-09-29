@@ -13,7 +13,7 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 - PublicAuth remains mounted when its account panel is hidden so refresh/listeners survive. The map is not mounted while signed out.
 - Only the exact review return URL may be added to Supabase's existing redirect list. Existing URLs and Site URL must remain unchanged.
 - The review uses the API's own origin: no CORS allowlist expansion, proxy or origin spoofing.
-- Document mode represents company-to-source-document associations, not automatically verified events. Separate reviewed modes contain exactly four manually compared official documents, two dated relationships and one historical common announcement (NVDA/INTC/TSM). They are not a current market-wide feed or evidence of investment impact. Missing matching holdings produce an honest empty state.
+- Document mode represents company-to-source-document associations, not automatically verified events. Separate reviewed modes contain seven official documents, three dated relationships and two historical common announcements (NVDA/INTC/TSM and SK hynix). Document count is not independent-publisher count: the SK hynix 2024-04-19 Korean/English releases are two editions of one announcement. TSMC's 2023-09-28 memory-partner release corroborates the broader HBM relationship, not that later MOU or current production. These are not a current market-wide feed or evidence of investment impact. Missing matching holdings produce an honest empty state.
 
 ## Data and records delivery — 2026-09-29
 
