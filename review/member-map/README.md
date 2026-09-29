@@ -8,12 +8,22 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 - Existing AlphaNest Google/email sign-in; no new provider, test identity creation, or session transfer.
 - The review shell is publicly downloadable; holdings and map records require the existing member JWT and owner checks. `noindex` is not an access control.
 - Holdings are read-only in this client. Map positions, notes and marks are drafts until explicit save; existing revision-conflict and account-switch protections are unchanged.
-- `Map.snapshot.tsx` is the saved Framer review component (`aPYjLyI`, source SHA `e4660dcfb7e0eb814a8d6586acc739748a32a2d9032cd0b1c78ebd9819e0e0be`).
+- `Map.snapshot.tsx` starts from the saved Framer review component (`aPYjLyI`, source SHA `e4660dcfb7e0eb814a8d6586acc739748a32a2d9032cd0b1c78ebd9819e0e0be`). The 2026-09-29 compact-design delivery replaces only its Canvas and PublicPortfolioMap presentation sections. The 11 data/workspace/detail/theme sections and original review wrapper are retained byte-for-byte. This newer standalone snapshot has not been saved back into Framer.
 - `Auth.snapshot.tsx` was fresh-read from `k5Rb6uP` on 2026-09-29 KST; it matches the local mirror after whitespace normalization. It is reused, not pushed back to Framer. Only normal browser login creates the session.
 - PublicAuth remains mounted when its account panel is hidden so refresh/listeners survive. The map is not mounted while signed out.
 - Only the exact review return URL may be added to Supabase's existing redirect list. Existing URLs and Site URL must remain unchanged.
 - The review uses the API's own origin: no CORS allowlist expansion, proxy or origin spoofing.
-- Graph data represents company-to-source-document associations. Shared documents are not automatically verified common events or investment impact. Accepted visual parity and verified relationship/event inputs remain pending.
+- Graph data represents company-to-source-document associations. Shared documents are not automatically verified common events or investment impact. Cards use source-type colors, not fabricated impact/strength scores. Verified relationship/event inputs remain pending.
+
+## Compact design provenance
+
+The same local renderer passed 53 focused checks plus bounded 30-company browser checks before projection into this snapshot. Rebuilt with existing esbuild (`bundle`, ESM, classic JSX transform, UTF-8, React/ReactDOM/Framer external), only these two source sections were substituted; the other generated sections were compared exactly before writing:
+
+- `PortfolioMapCanvas.tsx`: `d18956b538f31f17079698ffb1ea7899f0491869850ad01f6a4f74a8018f9694`
+- `PublicPortfolioMap.tsx`: `8271b591aeee91241d02c119ffb1b082dde03a5b6ea9a40c9c3b60975841b03c`
+- Resulting `Map.snapshot.tsx`: `72f51608c0b64cd048581271a1b04f758cc5fc15f588c1edcb3748866e23adf7`
+
+This brings the accepted v36 compact controls, source colors, pan/zoom grid, measured cards and above-card hover placement into the authenticated review. Actual document content and evidence boundaries intentionally differ from the fictional design fixture. A real pointer-hover placement acceptance remains separate from the source/geometry checks.
 
 ## Build
 

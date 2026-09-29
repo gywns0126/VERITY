@@ -1153,8 +1153,9 @@ function createPortfolioMapWorkspace(options = {}) {
 
 // framer-components/public-probe/PortfolioMapCanvas.tsx
 import * as React from "react";
-var NODE_WIDTH = 148;
-var NODE_HEIGHT = 58;
+import { createPortal } from "react-dom";
+var FALLBACK_NODE_WIDTH = 148;
+var FALLBACK_NODE_HEIGHT = 42;
 var GRID = 24;
 var LIMIT = 1e6;
 var AUTO_MIN_ZOOM = 1e-6;
@@ -1236,15 +1237,17 @@ function zoomMapCamera(camera, factor, anchor) {
     y: anchor.y - (anchor.y - camera.y) * zoom / startZoom
   };
 }
+var nodeWidth = (node) => node.width || FALLBACK_NODE_WIDTH;
+var nodeHeight = (node) => node.height || FALLBACK_NODE_HEIGHT;
 function fitMapCamera(nodes, size) {
   if (!nodes.length || size.width <= 0 || size.height <= 0) return EMPTY_CAMERA;
-  const leftInset = 32, rightInset = 32, topInset = 76, bottomInset = 92;
+  const leftInset = 32, rightInset = 32, topInset = 112, bottomInset = 92;
   let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
   for (const node of nodes) {
     left = Math.min(left, node.x);
     top = Math.min(top, node.y);
-    right = Math.max(right, node.x + NODE_WIDTH);
-    bottom = Math.max(bottom, node.y + NODE_HEIGHT);
+    right = Math.max(right, node.x + nodeWidth(node));
+    bottom = Math.max(bottom, node.y + nodeHeight(node));
   }
   const width = Math.max(1, right - left), height = Math.max(1, bottom - top);
   const availableWidth = Math.max(1, size.width - leftInset - rightInset);
@@ -1273,17 +1276,22 @@ function nodesInMarquee(nodes, camera, box) {
   const right = box.left + box.width, bottom = box.top + box.height;
   return nodes.filter((node) => {
     const left = camera.x + node.x * camera.zoom, top = camera.y + node.y * camera.zoom;
-    return left < right && left + NODE_WIDTH * camera.zoom > box.left && top < bottom && top + NODE_HEIGHT * camera.zoom > box.top;
+    return left < right && left + nodeWidth(node) * camera.zoom > box.left && top < bottom && top + nodeHeight(node) * camera.zoom > box.top;
   }).map((node) => node.id);
 }
-function nodeHoverAbove(anchor, canvasWidth) {
-  const width = Math.min(248, canvasWidth - 16), height = 74;
-  if (width < 120 || anchor.top < height + 12) return null;
+function nodeHoverAbove(anchor, viewportWidth, hoverHeight) {
+  const width = Math.min(270, viewportWidth - 16);
+  if (width < 120) return null;
+  const top = anchor.top - hoverHeight - 8;
+  if (top < 8) return null;
   return {
-    left: Math.max(8, Math.min(canvasWidth - width - 8, anchor.left + anchor.width / 2 - width / 2)),
-    top: anchor.top - height - 8,
+    left: Math.max(8, Math.min(viewportWidth - width - 8, anchor.left + anchor.width / 2 - width / 2)),
+    top,
     width
   };
+}
+function shouldAutoFitCanvas(schemaKey, fittedSchema, nodeIds, sizes) {
+  return fittedSchema !== schemaKey && nodeIds.every((id) => sizes.has(id));
 }
 function resetVisiblePositions(nodes, current) {
   const visible = new Map(nodes.map((node) => [node.id, node]));
@@ -1305,8 +1313,8 @@ function positionedNodes(nodes, positions) {
 }
 function edgeGeometry(from, to) {
   const forward = to.x >= from.x;
-  const x1 = from.x + (forward ? NODE_WIDTH : 0), y1 = from.y + NODE_HEIGHT / 2;
-  const x2 = to.x + (forward ? 0 : NODE_WIDTH), y2 = to.y + NODE_HEIGHT / 2;
+  const x1 = from.x + (forward ? from.width : 0), y1 = from.y + from.height / 2;
+  const x2 = to.x + (forward ? 0 : to.width), y2 = to.y + to.height / 2;
   const bend = Math.max(34, Math.min(120, Math.abs(x2 - x1) * 0.42));
   const c1x = x1 + (forward ? bend : -bend), c2x = x2 - (forward ? bend : -bend);
   const mx = (x1 + 3 * c1x + 3 * c2x + x2) / 8;
@@ -1316,18 +1324,18 @@ function edgeGeometry(from, to) {
   return { d: `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`, mx, my, angle: Math.atan2(dy, dx) * 180 / Math.PI };
 }
 var CSS = `
-.pmc{--bg:#f2f1f4;--surface:#fff;--ink:#292632;--muted:#6f6a78;--line:#8d8796;--accent:#6953b8;--company:#e8e1f8;--document:#e3f1ed;--note:#fff0b8;--unknown:#827a8d;position:relative;width:100%;height:100%;min-height:420px;overflow:hidden;background:var(--bg);color:var(--ink);font:400 13px/1.45 ${FONT};isolation:isolate;touch-action:none;user-select:none}
-.pmc[data-theme=dark]{--bg:#17161c;--surface:#242129;--ink:#f1eef5;--muted:#b8b1c0;--line:#aaa2b2;--accent:#bba3ff;--company:#393047;--document:#263c37;--note:#594a32;--unknown:#aaa1b4}
-.pmc *{box-sizing:border-box}.pmc button{font:500 12px/1 ${FONT};color:inherit}.pmc-grid{position:absolute;inset:0;background-image:radial-gradient(color-mix(in srgb,var(--muted) 28%,transparent) .8px,transparent .8px);pointer-events:none}
+.pmc{--bg:#f2f4f6;--surface:#fff;--ink:#191f28;--muted:#4e5968;--grid:#dfe3e9;--line:#8994a5;--accent:#6c5ce7;--soft:#f0edff;--note:#fff3d7;--unknown:#7b8798;--source-disclosure:#edf4ff;--source-business:#eaf7f2;--source-news:#fff0f2;--source-schedule:#fff4df;--source-other:#f2effb;position:relative;width:100%;height:100%;min-height:420px;overflow:hidden;background:var(--bg);color:var(--ink);font:600 13px/1.45 ${FONT};isolation:isolate;touch-action:none;user-select:none}
+.pmc[data-theme=dark]{--bg:#0f1318;--surface:#171c23;--ink:#e3e7ec;--muted:#9aa4b1;--grid:#1e2631;--line:#9aaac0;--accent:#a99bff;--soft:#241f3a;--note:#3c3020;--unknown:#7f8fa5;--source-disclosure:#172c44;--source-business:#12312b;--source-news:#35222b;--source-schedule:#322812;--source-other:#29243a}
+.pmc *{box-sizing:border-box}.pmc button{font:700 12px/1 ${FONT};color:inherit}.pmc-grid{position:absolute;inset:0;background-image:linear-gradient(to right,var(--grid) 1px,transparent 1px),linear-gradient(to bottom,var(--grid) 1px,transparent 1px);pointer-events:none}
 .pmc-world{position:absolute;inset:0;transform-origin:0 0;pointer-events:none}.pmc-lines{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}.pmc-edge{fill:none;stroke:var(--line);stroke-width:1.8;vector-effect:non-scaling-stroke}.pmc-edge[data-confirmation=unknown]{stroke:var(--unknown);stroke-dasharray:6 6}.pmc-edge[data-active=true]{stroke:var(--accent);stroke-width:2.8}.pmc-edge-hit{fill:none;stroke:transparent;stroke-width:16;pointer-events:stroke;cursor:pointer}.pmc-edge-hit:focus{stroke:color-mix(in srgb,var(--accent) 25%,transparent);outline:none}.pmc-chevron{fill:none;stroke:var(--line);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}.pmc-edge[data-active=true]~.pmc-chevron{stroke:var(--accent)}
 .pmc-moving-chevron{offset-distance:50%;offset-rotate:auto;animation:pmc-chevron-move 3.2s linear infinite}.pmc-moving-chevron path{fill:var(--surface);stroke:var(--accent);stroke-width:4.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}.pmc-dim{opacity:.18}
-.pmc-node{position:absolute;width:${NODE_WIDTH}px;height:${NODE_HEIGHT}px;border:1px solid color-mix(in srgb,var(--ink) 12%,transparent);border-radius:13px;padding:8px 10px;background:var(--document);box-shadow:0 5px 16px color-mix(in srgb,var(--ink) 8%,transparent);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;overflow:hidden;text-align:left;pointer-events:auto;cursor:grab;transition:opacity .18s ease,box-shadow .18s ease,transform .18s ease}.pmc-node[data-kind=company]{background:var(--company)}.pmc-node[data-kind=note]{background:var(--note)}.pmc-node[data-kind=note][data-done=true] strong{max-width:calc(100% - 38px)}.pmc-node[data-selected=true]{box-shadow:0 0 0 2px var(--accent),0 8px 20px color-mix(in srgb,var(--accent) 18%,transparent)}.pmc-node:active{cursor:grabbing}.pmc-node strong,.pmc-node span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pmc-node strong{font-weight:500}.pmc-node span{color:var(--muted);font-size:11px;font-weight:400}.pmc-note-done{position:absolute;top:5px;right:7px;border-radius:7px;padding:2px 4px;background:color-mix(in srgb,var(--ink) 10%,transparent);font-size:9px;font-weight:500;color:var(--ink)}
+.pmc-node{position:absolute;width:max-content;min-width:108px;max-width:min(168px,calc(100vw - 40px));min-height:42px;border:0;border-radius:12px;padding:7px 9px;background:var(--surface);box-shadow:0 4px 12px color-mix(in srgb,var(--ink) 10%,transparent);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;overflow:visible;text-align:left;pointer-events:auto;cursor:grab;transition:opacity .18s ease,box-shadow .18s ease,transform .18s ease}.pmc-node[data-kind=document]{min-height:34px;padding:5px 7px;border-radius:10px;background:var(--source-other)}.pmc-node[data-source=disclosure]{background:var(--source-disclosure)}.pmc-node[data-source=business]{background:var(--source-business)}.pmc-node[data-source=news]{background:var(--source-news)}.pmc-node[data-source=schedule]{background:var(--source-schedule)}.pmc-node[data-kind=note]{background:var(--note)}.pmc-node[data-kind=note][data-done=true]{padding-right:50px}.pmc-node[data-selected=true]{background:var(--soft);box-shadow:0 0 0 2px var(--accent),0 8px 20px color-mix(in srgb,var(--accent) 18%,transparent)}.pmc-node:active{cursor:grabbing}.pmc-node strong,.pmc-node span{max-width:100%;overflow-wrap:anywhere;white-space:normal}.pmc-node strong{font-size:13px;font-weight:700;line-height:1.4}.pmc-node span{color:var(--muted);font-size:11px;font-weight:600;line-height:1.4}.pmc-note-done{position:absolute;top:5px;right:7px;border-radius:7px;padding:2px 4px;background:color-mix(in srgb,var(--ink) 10%,transparent);font-size:9px;font-weight:700;color:var(--ink)}
 .pmc-node:focus-visible,.pmc-control:focus-visible{outline:none;background:color-mix(in srgb,var(--accent) 18%,var(--surface));color:var(--ink)}.pmc-toolbar{position:absolute;z-index:5;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--ink) 10%,transparent);border-radius:13px;background:color-mix(in srgb,var(--surface) 92%,transparent);box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 10%,transparent);backdrop-filter:blur(8px)}
-.pmc-control{border:0;border-radius:9px;min-width:31px;height:31px;padding:0 8px;background:transparent;cursor:pointer;white-space:nowrap;flex-shrink:0}.pmc-control:hover:not(:disabled),.pmc-control[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}.pmc-control:disabled{opacity:.35;cursor:not-allowed}.pmc-zoom{min-width:45px;color:var(--muted);text-align:center;font-size:11px;flex-shrink:0}.pmc-divider{width:1px;height:18px;background:color-mix(in srgb,var(--ink) 12%,transparent)}
-.pmc-summary,.pmc-legend,.pmc-help{position:absolute;z-index:4;border-radius:10px;background:color-mix(in srgb,var(--surface) 91%,transparent);color:var(--muted);backdrop-filter:blur(7px)}.pmc-summary{top:13px;left:13px;padding:7px 9px}.pmc-legend{right:13px;bottom:13px;padding:8px 10px;display:grid;gap:4px;max-width:min(350px,calc(100% - 26px));font-size:11px}.pmc-legend-row{display:flex;align-items:center;gap:7px}.pmc-legend-line{width:24px;border-top:2px solid var(--line)}.pmc-legend-line[data-kind=unknown]{border-top-style:dashed}.pmc-help{left:13px;bottom:13px;padding:7px 9px;font-size:11px}.pmc-hover{position:absolute;z-index:6;height:74px;overflow:hidden;border-radius:11px;padding:9px 10px;background:var(--surface);box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 14%,transparent);pointer-events:none;display:flex;flex-direction:column;gap:2px}.pmc-hover strong{font-weight:500}.pmc-hover span,.pmc-hover small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-weight:400}.pmc-marquee{position:absolute;z-index:3;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 13%,transparent);pointer-events:none}.pmc-empty{position:absolute;inset:0;display:grid;place-items:center;padding:24px;color:var(--muted);text-align:center}.pmc-status{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pmc-toolbar{width:max-content;max-width:calc(100% - 24px);justify-content:center;flex-wrap:wrap}.pmc-control{border:0;border-radius:8px;min-width:30px;height:30px;padding:0 7px;background:transparent;cursor:pointer;white-space:nowrap;flex-shrink:0}.pmc-control:hover:not(:disabled),.pmc-control[aria-pressed=true]{background:var(--soft);color:var(--accent)}.pmc-control:disabled{opacity:.35;cursor:not-allowed}.pmc-zoom{min-width:42px;color:var(--muted);text-align:center;font-size:11px;font-weight:700;flex-shrink:0}.pmc-divider{width:1px;height:18px;background:color-mix(in srgb,var(--ink) 12%,transparent)}
+.pmc-summary,.pmc-legend,.pmc-help{position:absolute;z-index:4;border-radius:10px;background:color-mix(in srgb,var(--surface) 91%,transparent);color:var(--muted);font-weight:600;backdrop-filter:blur(7px)}.pmc-summary{top:62px;left:13px;padding:7px 9px}.pmc-legend{right:13px;bottom:13px;padding:8px 10px;display:grid;gap:4px;max-width:min(350px,calc(100% - 26px));font-size:11px}.pmc-legend-row{display:flex;align-items:center;gap:7px}.pmc-legend-line{width:24px;border-top:2px solid var(--line)}.pmc-legend-line[data-kind=unknown]{border-top-style:dashed}.pmc-help{left:13px;bottom:13px;padding:7px 9px;font-size:11px}.pmc-hover{--hover-surface:#fff;--hover-ink:#191f28;--hover-muted:#4e5968;box-sizing:border-box;position:fixed;z-index:2147483000;max-height:calc(100vh - 16px);overflow:auto;border-radius:12px;padding:10px 12px;background:var(--hover-surface);color:var(--hover-ink);box-shadow:0 8px 28px color-mix(in srgb,var(--hover-ink) 16%,transparent);pointer-events:none;display:flex;flex-direction:column;gap:4px;font:600 12px/1.5 ${FONT}}.pmc-hover[data-theme=dark]{--hover-surface:#171c23;--hover-ink:#e3e7ec;--hover-muted:#9aa4b1}.pmc-hover strong{font-size:13px;font-weight:700}.pmc-hover span,.pmc-hover small{overflow-wrap:anywhere;white-space:normal;color:var(--hover-muted);font-weight:600}.pmc-marquee{position:absolute;z-index:3;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 13%,transparent);pointer-events:none}.pmc-empty{position:absolute;inset:0;display:grid;place-items:center;padding:24px;color:var(--muted);font-weight:600;text-align:center}.pmc-status{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @keyframes pmc-chevron-move{from{offset-distance:8%}to{offset-distance:92%}}
 @media(prefers-reduced-motion:reduce){.pmc *{animation:none!important;transition:none!important}.pmc-moving-chevron{offset-distance:50%}}
-@media(max-width:720px){.pmc{min-height:460px}.pmc-toolbar{top:10px;max-width:calc(100% - 20px)}.pmc-control{padding:0 6px}.pmc-summary{top:51px}.pmc-help{display:none}.pmc-legend{left:10px;right:10px;bottom:10px}}
+@media(max-width:720px){.pmc{min-height:460px}.pmc-toolbar{top:10px;max-width:calc(100% - 20px)}.pmc-control{padding:0 6px}.pmc-help{display:none}.pmc-legend{left:10px;right:10px;bottom:10px}}
 `;
 var controlTitle = (label2) => label2;
 var selectionSignature = (value) => value ? `${value.kind}:${value.id}` : "none";
@@ -1348,6 +1356,8 @@ function PortfolioMapCanvas({
   const onPositionsChangeRef = React.useRef(onPositionsChange);
   const onMotionChangeRef = React.useRef(onMotionChange);
   const [size, setSize] = React.useState({ width: 0, height: 0 });
+  const [nodeSizes, setNodeSizes] = React.useState(() => /* @__PURE__ */ new Map());
+  const nodeSizesRef = React.useRef(nodeSizes);
   const [camera, setCameraState] = React.useState(EMPTY_CAMERA);
   const cameraRef = React.useRef(camera);
   const [localPositions, setLocalPositionsState] = React.useState(() => normalizeCanvasPositions(nodes, positions));
@@ -1356,6 +1366,7 @@ function PortfolioMapCanvas({
   const [focusCompanyId, setFocusCompanyId] = React.useState(null);
   const [marquee, setMarquee] = React.useState(null);
   const [hover, setHover] = React.useState(null);
+  const hoverRef = React.useRef(null);
   const [hoverGuide, setHoverGuide] = React.useState("");
   const [status, setStatus] = React.useState("");
   const activeRef = React.useRef(null);
@@ -1410,7 +1421,10 @@ function PortfolioMapCanvas({
     setHover(null);
     setHoverGuide("");
   }, [setCamera, setLocalPositions]);
-  const currentNodes = React.useMemo(() => positionedNodes(nodes, localPositions), [nodesKey, localPositions]);
+  const currentNodes = React.useMemo(() => positionedNodes(nodes, localPositions).map((node) => {
+    const measured = nodeSizes.get(node.id);
+    return { ...node, width: measured?.width || FALLBACK_NODE_WIDTH, height: measured?.height || FALLBACK_NODE_HEIGHT };
+  }), [nodesKey, localPositions, nodeSizes]);
   const nodeById = React.useMemo(() => new Map(currentNodes.map((node) => [node.id, node])), [currentNodes]);
   const focusIds = React.useMemo(() => focusCompanyId ? companyNeighborhood(focusCompanyId, links) : null, [focusCompanyId, links]);
   React.useEffect(() => {
@@ -1440,6 +1454,48 @@ function PortfolioMapCanvas({
       window.removeEventListener("blur", blur);
     };
   }, [cancelActive, setCamera]);
+  React.useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const measure = () => {
+      const next = /* @__PURE__ */ new Map();
+      root.querySelectorAll(".pmc-node[data-node]").forEach((element) => {
+        const id = element.dataset.node;
+        if (id) next.set(id, { width: element.offsetWidth, height: element.offsetHeight });
+      });
+      const current = nodeSizesRef.current;
+      const changed = current.size !== next.size || [...next].some(([id, value]) => {
+        const before = current.get(id);
+        return before?.width !== value.width || before?.height !== value.height;
+      });
+      if (!changed) return;
+      nodeSizesRef.current = next;
+      setNodeSizes(next);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    root.querySelectorAll(".pmc-node[data-node]").forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [schemaKey, nodesKey, theme]);
+  React.useLayoutEffect(() => {
+    if (!hover || hover.box || !hoverRef.current || typeof window === "undefined") return;
+    const box = nodeHoverAbove(hover.anchor, window.innerWidth, hoverRef.current.offsetHeight);
+    if (!box) {
+      setHover(null);
+      setHoverGuide("위쪽 공간이 부족합니다 · 클릭해 상세 보기");
+      return;
+    }
+    setHover((current) => current?.node.id === hover.node.id ? { ...current, box } : current);
+  }, [hover]);
+  React.useEffect(() => {
+    if (!hover || typeof window === "undefined") return;
+    const hide = () => {
+      setHover(null);
+      setHoverGuide("");
+    };
+    window.addEventListener("scroll", hide, true);
+    return () => window.removeEventListener("scroll", hide, true);
+  }, [hover]);
   React.useEffect(() => {
     if (priorEditableRef.current && !editable) cancelActive();
     priorEditableRef.current = editable;
@@ -1481,25 +1537,24 @@ function PortfolioMapCanvas({
     historyVersion((value) => value + 1);
   }, [schemaKey, positionsKey, cancelActive, setLocalPositions]);
   React.useEffect(() => {
-    if (!size.width || !size.height || fittedNodesRef.current === schemaKey) return;
+    if (!size.width || !size.height || !shouldAutoFitCanvas(
+      schemaKey,
+      fittedNodesRef.current,
+      currentNodes.map((node) => node.id),
+      nodeSizes
+    )) return;
     fittedNodesRef.current = schemaKey;
-    setCamera(fitMapCamera(positionedNodes(nodes, positionsRef.current), size));
-  }, [schemaKey, size.width, size.height, setCamera]);
+    setCamera(fitMapCamera(currentNodes, size));
+  }, [schemaKey, size.width, size.height, currentNodes, nodeSizes, setCamera]);
   const point = (event) => {
     const rect = rootRef.current.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
   const showNodeHover = (event, node) => {
-    if (activeRef.current || !rootRef.current) return;
-    const canvasBox = rootRef.current.getBoundingClientRect(), anchor = event.currentTarget.getBoundingClientRect();
-    const box = nodeHoverAbove({ left: anchor.left - canvasBox.left, top: anchor.top - canvasBox.top, width: anchor.width }, canvasBox.width);
-    if (box) {
-      setHover({ node, box });
-      setHoverGuide("");
-    } else {
-      setHover(null);
-      setHoverGuide("위쪽 공간이 부족합니다 · 클릭해 상세 보기");
-    }
+    if (activeRef.current) return;
+    const anchor = event.currentTarget.getBoundingClientRect();
+    setHover({ node, anchor: { left: anchor.left, top: anchor.top, width: anchor.width }, box: null });
+    setHoverGuide("");
   };
   const announce = (message) => {
     setStatus("");
@@ -1551,7 +1606,7 @@ function PortfolioMapCanvas({
     setFocusCompanyId(null);
     previousCameraRef.current = null;
     setSelectedIds(/* @__PURE__ */ new Set());
-    setCamera(restorePrevious && previous ? previous : fitMapCamera(positionedNodes(nodes, positionsRef.current), size));
+    setCamera(restorePrevious && previous ? previous : fitMapCamera(currentNodes, size));
     if (notify) emitSelection(null);
     else selectionRef.current = null;
     announce("전체 자료 묶음을 표시합니다.");
@@ -1896,12 +1951,14 @@ function PortfolioMapCanvas({
         key: node.id,
         type: "button",
         className: `pmc-node${focusIds && !focusIds.has(node.id) ? " pmc-dim" : ""}`,
+        "data-node": node.id,
         "data-kind": node.kind,
         "data-done": node.kind === "note" && node.done ? "true" : void 0,
+        "data-source": node.kind === "document" ? node.sourceKind || "other" : void 0,
         "data-selected": selectedIds.has(node.id) || currentSelection?.id === node.id,
         style: { left: node.x, top: node.y },
         "aria-pressed": selectedIds.has(node.id) || currentSelection?.id === node.id,
-        "aria-describedby": hover?.node.id === node.id ? "pmc-node-hover" : void 0,
+        "aria-describedby": hover?.node.id === node.id && hover.box ? "pmc-node-hover" : void 0,
         "aria-label": `${node.kind === "company" ? "종목" : node.kind === "document" ? "자료" : "메모"}: ${node.title}. ${node.subtitle}`,
         onPointerDown: (event) => begin(event, node),
         onClick: (event) => {
@@ -1930,7 +1987,20 @@ function PortfolioMapCanvas({
       node.kind === "note" && node.done ? /* @__PURE__ */ React.createElement("small", { className: "pmc-note-done", "aria-hidden": "true" }, "✓ 완료") : null
     ))),
     marquee ? /* @__PURE__ */ React.createElement("div", { className: "pmc-marquee", style: marquee, "aria-hidden": "true" }) : null,
-    hover ? /* @__PURE__ */ React.createElement("div", { id: "pmc-node-hover", className: "pmc-hover", role: "tooltip", style: hover.box }, /* @__PURE__ */ React.createElement("strong", null, hover.node.title), /* @__PURE__ */ React.createElement("span", null, hover.node.subtitle), /* @__PURE__ */ React.createElement("small", null, "클릭해 상세 보기")) : null,
+    hover && typeof document !== "undefined" && typeof window !== "undefined" ? createPortal(/* @__PURE__ */ React.createElement(
+      "div",
+      {
+        ref: hoverRef,
+        id: "pmc-node-hover",
+        className: "pmc-hover",
+        "data-theme": theme,
+        role: "tooltip",
+        style: hover.box || { left: -1e4, top: -1e4, width: Math.min(270, Math.max(120, window.innerWidth - 16)), visibility: "hidden" }
+      },
+      /* @__PURE__ */ React.createElement("strong", null, hover.node.title),
+      /* @__PURE__ */ React.createElement("span", null, hover.node.subtitle),
+      /* @__PURE__ */ React.createElement("small", null, "클릭해 상세 보기")
+    ), document.body) : null,
     !nodes.length ? /* @__PURE__ */ React.createElement("div", { className: "pmc-empty" }, "표시할 종목과 자료가 없습니다.") : null,
     /* @__PURE__ */ React.createElement("div", { className: "pmc-help" }, hoverGuide || "빈 공간 드래그 선택 · Shift 추가 · Space+드래그 이동"),
     /* @__PURE__ */ React.createElement("div", { className: "pmc-legend", "aria-label": "연결선 범례" }, /* @__PURE__ */ React.createElement("span", { className: "pmc-legend-row" }, /* @__PURE__ */ React.createElement("i", { className: "pmc-legend-line" }), " 실선 · 직접적인 문서 연결 확인"), /* @__PURE__ */ React.createElement("span", { className: "pmc-legend-row" }, /* @__PURE__ */ React.createElement("i", { className: "pmc-legend-line", "data-kind": "unknown" }), " 점선 · 종목과 자료 연결 미확인"), /* @__PURE__ */ React.createElement("span", null, "움직이는 갈매기는 선택 위치 안내이며, 선은 기업 간 인과·수익 영향을 뜻하지 않습니다.")),
@@ -2427,6 +2497,7 @@ function mapView(graph, layout, filters, applySavedPositions = true, recordsKnow
       id: d.id,
       kind: "document",
       title: d.title,
+      sourceKind: d.evidence[0]?.kind || "other",
       subtitle: `${recordsKnown && mapReadState(layout.marks[d.id], d.read_revision) === "changed" ? "확인 후 자료 변경 · " : ""}${d.tickers.length >= 2 ? "공통 자료 · " : ""}${d.isCorrection ? "정정 표시 · " : ""}${d.source}`,
       x: 470 + i % 3 * 180,
       y: Math.floor(i / 3) * 86
@@ -2441,24 +2512,25 @@ function mapView(graph, layout, filters, applySavedPositions = true, recordsKnow
   return { nodes, documents, links: graph.links.filter((link) => ids.has(link.documentId)) };
 }
 var CSS5 = `
-.ppm{--bg:#fff;--ink:#292636;--muted:#716d7f;--soft:#f4f1fb;--accent:#7254ce;background:var(--bg);color:var(--ink);font:400 13px/1.55 Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;min-width:0;isolation:isolate}
+.ppm{--bg:#f2f4f6;--panel:#fff;--ink:#191f28;--muted:#4e5968;--soft:#f0edff;--accent:#6c5ce7;--divider:#e5e8eb;background:var(--bg);color:var(--ink);font:600 13px/1.55 Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;min-width:0;border-radius:18px;overflow:hidden;isolation:isolate}
 .ppm *{box-sizing:border-box}.ppm :where(button,input,select,textarea){font:inherit;color:inherit;border:0;border-radius:8px;background:var(--soft);padding:7px 9px}
+.ppm :where(button){font-weight:700}.ppm :where(input,select,textarea){font-weight:600}
 .ppm :where(button){cursor:pointer;display:inline-flex;gap:5px;align-items:center;justify-content:center}.ppm :where(button:disabled){opacity:.45;cursor:not-allowed}
-.ppm :where(button:hover:not(:disabled),button[aria-pressed=true]){background:#e9e0ff;color:var(--accent)}
-.ppm :where(button,input,select,textarea,a,[tabindex]):not(.pmc):focus-visible{outline:none;background:#e3d8ff;color:#382366}
-.ppm .ppm-primary{background:var(--accent);color:white}.ppm h2,.ppm h3,.ppm h4,.ppm p{margin:0}.ppm h2{font-size:16px;font-weight:500}.ppm h3{font-size:15px;font-weight:500}.ppm h4{font-size:13px;font-weight:500}.ppm small{font-size:12px;color:var(--muted)}
-.ppm-head,.ppm-toolbar,.ppm-status{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:8px 12px}.ppm-head{justify-content:space-between}.ppm-toolbar{justify-content:center;background:var(--bg)}
+.ppm :where(button:hover:not(:disabled),button[aria-pressed=true]){background:color-mix(in srgb,var(--accent) 14%,var(--panel));color:var(--accent)}
+.ppm :where(button,input,select,textarea,a,[tabindex]):not(.pmc):focus-visible{outline:none;background:color-mix(in srgb,var(--accent) 18%,var(--panel));color:var(--ink)}
+.ppm .ppm-primary{background:var(--accent);color:white}.ppm h2,.ppm h3,.ppm h4,.ppm p{margin:0}.ppm h2{font-size:18px;font-weight:800;letter-spacing:-.3px}.ppm h3{font-size:15px;font-weight:700}.ppm h4{font-size:13px;font-weight:700}.ppm small{font-size:12px;font-weight:600;color:var(--muted)}
+.ppm-head,.ppm-toolbar,.ppm-status{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:9px 12px;background:var(--panel)}.ppm-head{justify-content:space-between;padding:12px 16px}.ppm-toolbar{justify-content:center;border-top:1px solid var(--divider)}
 .ppm-search{display:flex;gap:4px;align-items:center}.ppm-search input{width:145px}.ppm-search-results{padding:4px 12px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px}.ppm-filter-empty{padding:9px 12px;color:var(--muted);background:var(--soft);font-size:12px}.ppm-filter-empty span{display:block}
-.ppm-work{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:10px}.ppm-map-area{position:relative;min-width:0;height:clamp(540px,65vh,760px)}.ppm-map-area .pmc-empty{display:none}.ppm-map-area>.ppm-empty{position:absolute;left:16px;right:16px;top:96px;padding:18px;border-radius:10px;color:var(--muted);background:var(--bg);pointer-events:none}
-.ppm-panel{padding:14px;max-height:650px;overflow:auto;background:var(--bg);display:flex;flex-direction:column;gap:12px;min-width:0}.ppm-panel p,.ppm-panel a{overflow-wrap:anywhere;white-space:pre-wrap}.ppm-panel a{color:var(--accent);display:inline-flex;gap:4px;align-items:center}
-.ppm-evidence,.ppm-note{background:var(--soft);padding:10px;border-radius:10px;display:flex;flex-direction:column;gap:7px}.ppm-actions{display:flex;gap:6px;flex-wrap:wrap}.ppm-note textarea{width:100%;min-height:80px;resize:vertical;background:var(--bg)}
+.ppm-work{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:0}.ppm-map-area{position:relative;min-width:0;height:clamp(540px,65vh,760px)}.ppm-map-area .pmc-empty{display:none}.ppm-map-area>.ppm-empty{position:absolute;left:16px;right:16px;top:96px;padding:18px;border-radius:12px;color:var(--muted);background:var(--panel);pointer-events:none}
+.ppm-panel{padding:18px 16px;max-height:650px;overflow:auto;background:var(--panel);border-left:1px solid var(--divider);display:flex;flex-direction:column;gap:12px;min-width:0}.ppm-panel p,.ppm-panel a{overflow-wrap:anywhere;white-space:pre-wrap}.ppm-panel p{font-size:14px;line-height:1.7}.ppm-panel a{color:var(--accent);font-weight:700;display:inline-flex;gap:4px;align-items:center}
+.ppm-evidence,.ppm-note{background:color-mix(in srgb,var(--bg) 88%,var(--panel));padding:11px;border-radius:12px;display:flex;flex-direction:column;gap:7px}.ppm-actions{display:flex;gap:6px;flex-wrap:wrap}.ppm-note textarea{width:100%;min-height:80px;resize:vertical;background:var(--panel)}
 .ppm-note[data-selected=true]{box-shadow:inset 3px 0 var(--accent)}.ppm-note-list{display:grid;gap:9px}
-.ppm-note-delete-confirm{display:grid;gap:7px;padding:8px;border-radius:8px;background:var(--bg)}.ppm-note-delete-actions{display:flex;gap:6px;flex-wrap:wrap}.ppm-note-delete{color:var(--ink)}
+.ppm-note-delete-confirm{display:grid;gap:7px;padding:8px;border-radius:8px;background:var(--panel)}.ppm-note-delete-actions{display:flex;gap:6px;flex-wrap:wrap}.ppm-note-delete{color:var(--ink)}
 .ppm-picker{padding:14px;display:flex;flex-direction:column;gap:10px}.ppm-picks{display:flex;flex-wrap:wrap;gap:7px;max-height:220px;overflow:auto}.ppm-warning{color:#8d4d28;background:#fcf2e9;padding:9px 12px;border-radius:8px}.ppm-status{font-size:12px;color:var(--muted)}
 .ppm a,.ppm a:hover,.ppm a:focus,.ppm a:visited{text-decoration:none}
-.ppm[data-theme=dark]{--bg:#191820;--ink:#efedf5;--muted:#b4afc2;--soft:#282432;--accent:#b79bff}
-.ppm[data-theme=dark] :where(button:hover:not(:disabled),button[aria-pressed=true]){background:#423254;color:#eadfff}.ppm[data-theme=dark] .ppm-primary{background:#7451bd;color:#fff}.ppm[data-theme=dark] .ppm-warning{background:#382b22;color:#edc4a5}
-@media(max-width:760px){.ppm .ppm-work{grid-template-columns:minmax(0,1fr)}.ppm .ppm-map-area{height:480px}.ppm .ppm-panel{max-height:480px}.ppm .ppm-toolbar{gap:5px}}
+.ppm[data-theme=dark]{--bg:#0f1318;--panel:#171c23;--ink:#e3e7ec;--muted:#9aa4b1;--soft:#241f3a;--accent:#a99bff;--divider:#3c4350}
+.ppm[data-theme=dark] .ppm-primary{background:#7451bd;color:#fff}.ppm[data-theme=dark] .ppm-warning{background:#382b22;color:#edc4a5}
+@media(max-width:760px){.ppm{border-radius:14px}.ppm .ppm-work{grid-template-columns:minmax(0,1fr)}.ppm .ppm-map-area{height:480px}.ppm .ppm-panel{max-height:480px;border-left:0;border-top:1px solid var(--divider)}.ppm .ppm-toolbar{gap:5px}}
 `;
 function PublicPortfolioMap() {
   const controller = React6.useRef(null);
@@ -2470,7 +2542,7 @@ function PublicPortfolioMap() {
   const [filters, setFilters] = React6.useState({ source: "all", common: false, review: false });
   const [query, setQuery] = React6.useState(""), [selection, setSelection] = React6.useState(null);
   const [picker, setPicker] = React6.useState(false), [picked, setPicked] = React6.useState([]);
-  const [notesOpen, setNotesOpen] = React6.useState(false), [motion, setMotion] = React6.useState(false);
+  const [notesOpen, setNotesOpen] = React6.useState(false), [motion, setMotion] = React6.useState(true);
   const [pendingDeleteNoteId, setPendingDeleteNoteId] = React6.useState(null);
   const [notice, setNotice] = React6.useState(""), [savedRevision, setSavedRevision] = React6.useState(null);
   const cancelNoteDeletion = () => {
@@ -2487,7 +2559,7 @@ function PublicPortfolioMap() {
     setNotesOpen(false);
     restoreDeleteFocusId.current = null;
     setPendingDeleteNoteId(null);
-    setMotion(false);
+    setMotion(true);
     setNotice("");
     setSavedRevision(null);
   };
