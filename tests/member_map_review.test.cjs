@@ -36,6 +36,34 @@ function reviewedRuntime() {
 const document = () => ({ layouts: [{ map_key: "main", positions: [], notes: [], marks: {} }] })
 const response = (revision, value) => ({ ok: true, json: async () => ({ revision, document: value }) })
 
+test("HBM evidence matches the mixed-market pair without changing existing saved fingerprints", () => {
+    const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
+    const start = source.indexOf("// framer-components/public-probe/PortfolioReviewedFacts.tsx")
+    const end = source.indexOf("// framer-components/public-probe/PortfolioReviewedView.tsx", start)
+    assert.ok(start >= 0 && end > start)
+    const context = { URL }
+    vm.runInNewContext(source.slice(start, end) + "\nglobalThis.facts = h => buildReviewedPortfolioFacts(h, portfolioReviewedRegistry)", context)
+    const pair = [{ ticker: "000660", market: "KR" }, { ticker: "TSM", market: "US" }]
+    const result = context.facts(pair)
+    assert.equal(result.coverage.sources.reviewed, 7)
+    assert.equal(result.relationships.length, 1)
+    assert.equal(result.events.length, 1)
+    assert.equal(result.events[0].id, "event:skh-tsmc-hbm4-mou-20240419")
+    assert.equal(result.events[0].date, "2024-04-19")
+    assert.match(result.events[0].mergeBasis, /독립된 두 기관의 확인은 아니다/)
+    assert.equal(result.events[0].sourceIds.includes("tsmc-skh-memory-partner"), false)
+    for (const h of [[pair[0]], [pair[1]], [{ ...pair[0], market: "US" }, pair[1]]]) {
+        const missing = context.facts(h)
+        assert.equal(missing.relationships.length, 0)
+        assert.equal(missing.events.length, 0)
+    }
+    const previous = context.facts(["NVDA", "INTC", "TSM"].map(ticker => ({ ticker, market: "US" })))
+    const { reviewedRecord } = reviewedRuntime()
+    assert.deepEqual(previous.relationships.map(f => reviewedRecord("relationships", f).read_revision).join(","),
+        "4057281121906998,6744488560557087")
+    assert.equal(reviewedRecord("events", previous.events[0]).read_revision, 1342022201796333)
+})
+
 test("member map load and save use a freshly rotated token without discarding a same-member draft", async () => {
     let session = { userId: USER, token: "rotated-before-load" }
     const calls = []

@@ -2654,6 +2654,27 @@ var portfolioReviewedRegistry = {
       publishedAt: "2025-03-04",
       url: "https://pr.tsmc.com/english/news/3210",
       statement: "TSMC는 미국 투자 확대 발표에서 NVIDIA를 자사의 주요 고객 중 하나로 명시했다. 4월의 생산 발표와는 별도 사건이다."
+    },
+    {
+      id: "skh-tsmc-hbm4-ko",
+      publisher: "SK하이닉스 · 한국어",
+      publishedAt: "2024-04-19",
+      url: "https://news.skhynix.co.kr/skhynix-tsmc-hbm4-mou/",
+      statement: "SK하이닉스는 TSMC와 기술 협력 양해각서(MOU)를 체결했다고 발표했다. HBM4 개발과 HBM·CoWoS 패키징(칩 결합) 최적화 협력 계획이며, 현재 양산 실적을 확인하는 자료는 아니다."
+    },
+    {
+      id: "skh-tsmc-hbm4-en",
+      publisher: "SK하이닉스 · 영어",
+      publishedAt: "2024-04-19",
+      url: "https://news.skhynix.com/en/sk-hynix-partners-with-tsmc-to-strengthen-hbm-technological-leadership/",
+      statement: "같은 발표의 영문본도 HBM4의 하단 제어 칩에 TSMC 공정을 활용하고 HBM·CoWoS 결합을 최적화할 계획을 설명한다. 한국어본과 같은 발행사의 자료로 독립 확인은 아니다."
+    },
+    {
+      id: "tsmc-skh-memory-partner",
+      publisher: "TSMC",
+      publishedAt: "2023-09-28",
+      url: "https://pr.tsmc.com/english/news/3070",
+      statement: "TSMC는 SK하이닉스를 HBM3·HBM3e 협력 메모리 파트너로 명시했다. 본문 행사일은 미국 현지 2023-09-27, 사이트 발행일은 09-28이다. 2024년 HBM4 양해각서와는 별도 발표다."
     }
   ],
   relationships: [
@@ -2680,6 +2701,18 @@ var portfolioReviewedRegistry = {
       review: "manual-primary-source-comparison",
       impact: "unknown",
       limitations: "당시 생산 발표와 고객 관계를 확인했다. 두 발표는 서로 다른 사건이며, 현재 공급량·매출 비중·주가 영향은 확인하지 않았다."
+    },
+    {
+      id: "relation:skh-tsmc-hbm-collaboration-20240419",
+      from: { ticker: "000660", market: "KR" },
+      to: { ticker: "TSM", market: "US" },
+      label: "HBM 기술 협력",
+      asOf: "2024-04-19",
+      status: "historical-announcement",
+      sourceIds: ["skh-tsmc-hbm4-ko", "tsmc-skh-memory-partner"],
+      review: "manual-primary-source-comparison",
+      impact: "unknown",
+      limitations: "양사의 서로 다른 시점 원문으로 HBM 협력 관계를 확인했다. 2023년 파트너 발표와 2024년 HBM4 협력 계획은 별도 사건이다. 현재 양산·공급량·매출·주가 영향은 확인하지 않았다."
     }
   ],
   events: [
@@ -2694,6 +2727,20 @@ var portfolioReviewedRegistry = {
         { ticker: "INTC", market: "US", role: "공동개발 참여 · 맞춤형 x86 CPU 개발 계획", sourceIds: ["nvda-intc-nvidia", "nvda-intc-intel"] }
       ],
       mergeBasis: "양사의 2025-09-18 원문에서 참여 기업·발표일·공동개발 대상이 일치한다. 같은 공동 발표의 두 게재본이며 독립적인 성과 검증은 아니다. TSMC 관련 발표는 합치지 않았다.",
+      review: "manual-primary-source-comparison",
+      impact: "unknown"
+    },
+    {
+      id: "event:skh-tsmc-hbm4-mou-20240419",
+      title: "SK하이닉스·TSMC HBM4 협력 발표",
+      date: "2024-04-19",
+      status: "historical-announcement",
+      sourceIds: ["skh-tsmc-hbm4-ko", "skh-tsmc-hbm4-en"],
+      participants: [
+        { ticker: "000660", market: "KR", role: "HBM4 메모리 개발 · TSMC 공정 활용 계획", sourceIds: ["skh-tsmc-hbm4-ko", "skh-tsmc-hbm4-en"] },
+        { ticker: "TSM", market: "US", role: "제어 칩 공정·칩 결합 기술 협력 계획", sourceIds: ["skh-tsmc-hbm4-ko", "skh-tsmc-hbm4-en"] }
+      ],
+      mergeBasis: "같은 SK하이닉스 발표의 한국어·영어본에서 참여 기업·발표일·협력 대상이 일치해 사건 하나로 묶었다. 독립된 두 기관의 확인은 아니다. 2023년 TSMC 파트너 발표는 합치지 않았다. 당시 계획이며 현재 양산 성과는 확인하지 않았다.",
       review: "manual-primary-source-comparison",
       impact: "unknown"
     }
