@@ -44,7 +44,7 @@ def test_initialize_and_readonly_inventory():
     status, body = call()
     tools = body["result"]["tools"]
     assert {t["name"] for t in tools} == {"search_content_candidates", "get_content_evidence",
-                                         "get_company_content_evidence", "get_public_content"}
+                                         "get_company_content_evidence", "get_public_content", "get_alphanest_content"}
     assert all(t["annotations"]["readOnlyHint"] for t in tools)
     assert all(not t["annotations"]["destructiveHint"] for t in tools)
     assert all(t["securitySchemes"] == [{"type": "oauth2", "scopes": ["content:read"]}] for t in tools)

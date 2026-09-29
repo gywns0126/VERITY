@@ -15,6 +15,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from content_evidence import build_result
 from content_original import load_original
 from content_public import load_company, load_public, PublicSourceError
+from content_site import load_site, validate as validate_site
 
 FEED_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/public_disclosure_feed.json"
 MAX_BODY = 16_384
@@ -23,6 +24,7 @@ VERSIONS = ("2025-06-18", "2025-03-26")
 INSTRUCTIONS = (
     "알파네스트 공개 자료를 활용하는 콘텐츠 근거 도구입니다. 출처·기준기간·신선도 제약을 먼저 확인하세요. "
     "기업 자료는 get_company_content_evidence, 뉴스·브리핑은 get_public_content로 조회하세요. "
+    "알파네스트 소식·교육은 get_alphanest_content로 목록을 읽고 ID로 본문을 조회하세요. 교육 편집본의 공개 웹페이지 반영 여부는 publication_status를 확인하세요. "
     "콘텐츠 범위는 공시 읽기·기업 사업 소개·실적과 현금흐름 교육·시장 맥락입니다. "
     "전체 리포트 대신 선택된 근거만 제공하며 selection의 제외 항목은 자료 부재를 뜻하지 않습니다. "
     "소재 요청에는 관련성이 높은 후보 최대 3개와 각각의 교육 포인트·핵심 근거·기준일·원문 링크를 먼저 제시하세요. "
@@ -39,6 +41,16 @@ INSTRUCTIONS = (
 )
 
 TOOLS = [
+    {
+        "name": "get_alphanest_content",
+        "description": "알파네스트 공개 소식 또는 승인된 교육 편집본을 조회합니다. source=notices/lessons/guides 목록에서 ID를 골라 본문·해설·출처를 읽습니다. 교육 스냅샷과 웹 Publish 상태는 다르며 가상 예제는 시장 사실이 아닙니다.",
+        "inputSchema": {"type": "object", "additionalProperties": False,
+                        "properties": {"source": {"type": "string", "enum": ["notices", "lessons", "guides"]},
+                                       "id": {"type": "string", "maxLength": 40},
+                                       "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+                                       "offset": {"type": "integer", "minimum": 0, "maximum": 100}},
+                        "required": ["source"]},
+    },
     {
         "name": "get_company_content_evidence",
         "description": "기업 소개·실적 읽기·이익과 현금의 차이·최근 공시 콘텐츠에 필요한 공개 근거만 선별합니다. 원문·기간·단위·누락 사유는 유지하고 밸류에이션·매매용 부록은 제외합니다.",
@@ -135,7 +147,8 @@ def _rpc_error(rid, code, message):
 
 
 def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=load_feed,
-                    original_fn=load_original, company_fn=load_company, public_fn=load_public, now=None):
+                    original_fn=load_original, company_fn=load_company, public_fn=load_public,
+                    site_fn=load_site, now=None):
     """Return (HTTP status, JSON object or None). Stateless Streamable HTTP subset."""
     headers = {k.lower(): v for k, v in headers.items()}
     origin = headers.get("origin")
@@ -173,7 +186,7 @@ def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=lo
         requested = params.get("protocolVersion")
         result = {"protocolVersion": requested if requested in VERSIONS else VERSIONS[0],
                   "capabilities": {"tools": {"listChanged": False}},
-                  "serverInfo": {"name": "alphanest-content", "version": "0.3.1"},
+                  "serverInfo": {"name": "alphanest-content", "version": "0.4.0"},
                   "instructions": INSTRUCTIONS}
     elif operation == "ping":
         result = {}
@@ -189,7 +202,9 @@ def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=lo
             if not isinstance(arguments, dict):
                 raise ValueError("Arguments must be an object")
             _validate_arguments(name, arguments)
-            if name == "get_company_content_evidence":
+            if name == "get_alphanest_content":
+                evidence = site_fn(arguments)
+            elif name == "get_company_content_evidence":
                 evidence = company_fn(arguments["ticker"])
             elif name == "get_public_content":
                 evidence = public_fn(arguments["source"])
@@ -225,6 +240,9 @@ def process_request(method, headers, body, *, authorize_fn=authorize, feed_fn=lo
 
 def _validate_arguments(name, args):
     import re
+    if name == "get_alphanest_content":
+        validate_site(args)
+        return
     if name == "get_company_content_evidence":
         ticker = args.get("ticker")
         if (set(args) != {"ticker"} or not isinstance(ticker, str)
