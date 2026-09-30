@@ -1,7 +1,7 @@
 {
- "as_of": "2026-09-30T18:28:20+09:00",
+ "as_of": "2026-10-01T01:09:55+09:00",
  "version": "short_sale_trail_v0",
- "n_observations": 7479,
+ "n_observations": 7582,
  "window_start": null,
  "thresholds_observed": {
   "kr_auto_avoid": 15.0,
@@ -10,68 +10,68 @@
  },
  "KR": {
   "auto_avoid": {
-   "n_observations": 161,
+   "n_observations": 163,
    "n_tickers": 48,
    "fwd_20d": {
     "n_tickers": 23,
-    "n_observations": 110,
-    "mean": -2.55,
+    "n_observations": 111,
+    "mean": -2.6,
     "median": -3.66,
-    "mean_by_observation": -2.31,
+    "mean_by_observation": -2.34,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    },
    "fwd_60d": {
-    "n_tickers": 8,
-    "n_observations": 24,
-    "mean": -8.59,
-    "median": -9.23,
-    "mean_by_observation": -11.25,
+    "n_tickers": 9,
+    "n_observations": 26,
+    "mean": -7.18,
+    "median": -7.06,
+    "mean_by_observation": -10.75,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    }
   },
   "downgrade": {
-   "n_observations": 450,
+   "n_observations": 460,
    "n_tickers": 83,
    "fwd_20d": {
-    "n_tickers": 43,
-    "n_observations": 317,
-    "mean": 2.6,
-    "median": 1.17,
-    "mean_by_observation": 1.11,
+    "n_tickers": 49,
+    "n_observations": 327,
+    "mean": 2.83,
+    "median": 0.73,
+    "mean_by_observation": 0.99,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    },
    "fwd_60d": {
     "n_tickers": 18,
-    "n_observations": 102,
-    "mean": -2.21,
+    "n_observations": 106,
+    "mean": -2.27,
     "median": 0.13,
-    "mean_by_observation": -2.37,
+    "mean_by_observation": -2.19,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    }
   },
   "clean": {
-   "n_observations": 789,
-   "n_tickers": 161,
+   "n_observations": 817,
+   "n_tickers": 162,
    "fwd_20d": {
-    "n_tickers": 62,
-    "n_observations": 425,
-    "mean": 2.65,
-    "median": -2.49,
-    "mean_by_observation": 2.16,
+    "n_tickers": 65,
+    "n_observations": 433,
+    "mean": 2.23,
+    "median": -2.61,
+    "mean_by_observation": 2.07,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    },
    "fwd_60d": {
-    "n_tickers": 20,
-    "n_observations": 67,
-    "mean": -1.0,
-    "median": -1.25,
-    "mean_by_observation": -4.04,
+    "n_tickers": 21,
+    "n_observations": 71,
+    "mean": -2.35,
+    "median": -1.3,
+    "mean_by_observation": -3.99,
     "_note": "mean/median = 종목 단위(의사복제 제거). 관측 단위는 참고값."
    }
   },
   "missing": {
-   "n_observations": 1619,
-   "n_tickers": 212,
+   "n_observations": 1612,
+   "n_tickers": 193,
    "fwd_20d": {
     "n_tickers": 111,
     "n_observations": 1283,
@@ -112,8 +112,8 @@
    }
   },
   "downgrade": {
-   "n_observations": 21,
-   "n_tickers": 14,
+   "n_observations": 22,
+   "n_tickers": 15,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -132,8 +132,8 @@
    }
   },
   "clean": {
-   "n_observations": 2579,
-   "n_tickers": 408,
+   "n_observations": 2611,
+   "n_tickers": 415,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -152,8 +152,8 @@
    }
   },
   "missing": {
-   "n_observations": 1860,
-   "n_tickers": 282,
+   "n_observations": 1897,
+   "n_tickers": 291,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -174,8 +174,8 @@
  },
  "labels": [
   "예비 결과 — auto_avoid 종목 N=23 < 100",
-  "US 지표 결측 1860건 — clean 과 분리 집계됨(무혐의 통과 아님)",
-  "KR 지표 결측 1619건 — 수집 이전 기간 포함. clean 과 분리 집계"
+  "US 지표 결측 1897건 — clean 과 분리 집계됨(무혐의 통과 아님)",
+  "KR 지표 결측 1612건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
  "note": "공매도 규칙 사후 수익률 관측 — 임계·강도 재판단의 판정 근거. 점수·집행 입력 0. KR=거래량 비중(흐름) / US=숏인터레스트(포지션) 로 측정 대상이 다르므로 시장 간 수치를 비교하지 말 것. 수익률은 KR 전용(US 일봉 레이크 미도달)."

@@ -3,10 +3,10 @@
     "hit_rate_7d": null,
     "hit_rate_14d": null,
     "hit_rate_30d": null,
-    "sample_7d": 10,
+    "sample_7d": 14,
     "sample_14d": 0,
     "sample_30d": 0,
-    "hits_7d": 5,
+    "hits_7d": 8,
     "hits_14d": 0,
     "hits_30d": 0,
     "hit_rate_7d_ci95": null,
@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-09-30 18:06:06.087644+09:00",
+    "applied_at": "2026-10-01 00:41:52.064364+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-09-30 18:06:06.087647+09:00"
+      "fixed_at": "2026-10-01 00:41:52.064368+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -46,45 +46,25 @@
   "evaluation_coverage": {
     "7d": {
       "evaluation_status": "partial",
-      "cohort_size": 22,
-      "evaluated_count": 10,
-      "unresolved_count": 12,
-      "coverage_pct": 45.5,
+      "cohort_size": 25,
+      "evaluated_count": 14,
+      "unresolved_count": 11,
+      "coverage_pct": 56.0,
       "unresolved": [
         {
-          "ticker": "058850",
-          "name": "KTcs",
-          "reason": "missing_entry_price"
+          "ticker": "081660",
+          "name": "미스토홀딩스",
+          "reason": "missing_evaluation_price"
         },
         {
-          "ticker": "SNA",
-          "name": "SNA",
-          "reason": "missing_entry_price"
+          "ticker": "082740",
+          "name": "한화엔진",
+          "reason": "missing_evaluation_price"
         },
         {
-          "ticker": "SRE",
-          "name": "SRE",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "SSD",
-          "name": "SSD",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "STLD",
-          "name": "STLD",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "STT",
-          "name": "STT",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "SWK",
-          "name": "SWK",
-          "reason": "missing_entry_price"
+          "ticker": "UBER",
+          "name": "UBER",
+          "reason": "missing_evaluation_price"
         },
         {
           "ticker": "336570",
@@ -102,18 +82,33 @@
           "reason": "missing_evaluation_price"
         },
         {
-          "ticker": "RS",
-          "name": "RS",
+          "ticker": "INVA",
+          "name": "INVA",
           "reason": "missing_entry_price"
         },
         {
-          "ticker": "SF",
-          "name": "SF",
+          "ticker": "PPLI",
+          "name": "PPLI",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "TDS",
+          "name": "TDS",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "TDY",
+          "name": "TDY",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "TROW",
+          "name": "TROW",
           "reason": "missing_entry_price"
         }
       ],
-      "evaluation_date": "2026-09-30",
-      "snapshot_date": "2026-09-23"
+      "evaluation_date": "2026-10-01",
+      "snapshot_date": "2026-09-24"
     },
     "14d": {
       "evaluation_status": "no_recommendations",
@@ -122,8 +117,8 @@
       "unresolved_count": 0,
       "coverage_pct": null,
       "unresolved": [],
-      "evaluation_date": "2026-09-30",
-      "snapshot_date": "2026-09-16"
+      "evaluation_date": "2026-10-01",
+      "snapshot_date": "2026-09-17"
     },
     "30d": {
       "evaluation_status": "no_recommendations",
@@ -132,14 +127,14 @@
       "unresolved_count": 0,
       "coverage_pct": null,
       "unresolved": [],
-      "evaluation_date": "2026-09-30",
-      "snapshot_date": "2026-08-31"
+      "evaluation_date": "2026-10-01",
+      "snapshot_date": "2026-09-01"
     }
   },
   "factor_health": {
     "healthy": [
-      "perplexity_risk",
-      "momentum"
+      "momentum",
+      "consensus"
     ],
     "weakening": [
       "flow"
@@ -149,7 +144,7 @@
   },
   "ic_adjustments_active": [
     {
-      "factor": "prediction",
+      "factor": "timing",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
@@ -167,12 +162,12 @@
       "ic_recent": 0.0
     },
     {
-      "factor": "timing",
+      "factor": "prediction",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-09-30 18:06:06.116621+09:00"
+  "generated_at": "2026-10-01 00:41:52.098371+09:00"
 }

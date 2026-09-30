@@ -2,45 +2,25 @@
   "periods": {
     "7d": {
       "evaluation_status": "partial",
-      "cohort_size": 22,
-      "evaluated_count": 10,
-      "unresolved_count": 12,
-      "coverage_pct": 45.5,
+      "cohort_size": 25,
+      "evaluated_count": 14,
+      "unresolved_count": 11,
+      "coverage_pct": 56.0,
       "unresolved": [
         {
-          "ticker": "058850",
-          "name": "KTcs",
-          "reason": "missing_entry_price"
+          "ticker": "081660",
+          "name": "미스토홀딩스",
+          "reason": "missing_evaluation_price"
         },
         {
-          "ticker": "SNA",
-          "name": "SNA",
-          "reason": "missing_entry_price"
+          "ticker": "082740",
+          "name": "한화엔진",
+          "reason": "missing_evaluation_price"
         },
         {
-          "ticker": "SRE",
-          "name": "SRE",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "SSD",
-          "name": "SSD",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "STLD",
-          "name": "STLD",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "STT",
-          "name": "STT",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "SWK",
-          "name": "SWK",
-          "reason": "missing_entry_price"
+          "ticker": "UBER",
+          "name": "UBER",
+          "reason": "missing_evaluation_price"
         },
         {
           "ticker": "336570",
@@ -58,47 +38,62 @@
           "reason": "missing_evaluation_price"
         },
         {
-          "ticker": "RS",
-          "name": "RS",
+          "ticker": "INVA",
+          "name": "INVA",
           "reason": "missing_entry_price"
         },
         {
-          "ticker": "SF",
-          "name": "SF",
+          "ticker": "PPLI",
+          "name": "PPLI",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "TDS",
+          "name": "TDS",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "TDY",
+          "name": "TDY",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "TROW",
+          "name": "TROW",
           "reason": "missing_entry_price"
         }
       ],
       "observed": {
-        "hit_rate_gross": 50.0,
-        "hit_rate_net": 30.0,
-        "avg_return_gross": 0.05,
-        "avg_return_net": -0.5,
-        "max_return": 5.92,
+        "hit_rate_gross": 57.1,
+        "hit_rate_net": 42.9,
+        "avg_return_gross": 1.25,
+        "avg_return_net": 0.69,
+        "max_return": 6.84,
         "min_return": -3.67,
-        "sharpe": 0.02,
-        "sample": 10,
-        "hits_gross": 5,
-        "hits_net": 3
+        "sharpe": 0.42,
+        "sample": 14,
+        "hits_gross": 8,
+        "hits_net": 6
       },
-      "evaluation_date": "2026-09-30",
+      "evaluation_date": "2026-10-01",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
       "avg_return_gross": null,
-      "skipped_no_t_plus_1": 9,
+      "skipped_no_t_plus_1": 5,
       "rec_price_basis": "next_available_snapshot_price",
       "hit_rate": null,
       "avg_return": null,
       "max_return": null,
       "min_return": null,
       "sharpe": null,
-      "total_recs": 10,
-      "total_recs_with_delisted": 10,
-      "hits": 5,
-      "hits_net": 3,
+      "total_recs": 14,
+      "total_recs_with_delisted": 14,
+      "hits": 8,
+      "hits_net": 6,
       "delisted_count": null,
       "listing_status_checked": false,
-      "snapshot_date": "2026-09-23"
+      "snapshot_date": "2026-09-24"
     },
     "14d": {
       "evaluation_status": "no_recommendations",
@@ -119,7 +114,7 @@
         "hits_gross": 0,
         "hits_net": 0
       },
-      "evaluation_date": "2026-09-30",
+      "evaluation_date": "2026-10-01",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
@@ -137,7 +132,7 @@
       "hits_net": 0,
       "delisted_count": null,
       "listing_status_checked": false,
-      "snapshot_date": "2026-09-16"
+      "snapshot_date": "2026-09-17"
     },
     "30d": {
       "evaluation_status": "no_recommendations",
@@ -158,7 +153,7 @@
         "hits_gross": 0,
         "hits_net": 0
       },
-      "evaluation_date": "2026-09-30",
+      "evaluation_date": "2026-10-01",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
@@ -176,18 +171,18 @@
       "hits_net": 0,
       "delisted_count": null,
       "listing_status_checked": false,
-      "snapshot_date": "2026-08-31"
+      "snapshot_date": "2026-09-01"
     }
   },
   "recommendations": [
     {
       "ticker": "053610",
       "name": "프로텍",
-      "rec_date": "2026-09-23",
+      "rec_date": "2026-09-24",
       "rec_price": 76000.0,
-      "current_price": 80500.0,
-      "return_pct_gross": 5.92,
-      "return_pct_net": 5.19,
+      "current_price": 81200.0,
+      "return_pct_gross": 6.84,
+      "return_pct_net": 6.11,
       "slippage_pct": 0.7,
       "hit_gross": true,
       "hit_net": true,
@@ -195,17 +190,17 @@
       "recommendation": "WATCH",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": 5.92,
+      "return_pct": 6.84,
       "hit": true
     },
     {
-      "ticker": "029460",
-      "name": "케이씨",
-      "rec_date": "2026-09-23",
-      "rec_price": 43350.0,
-      "current_price": 43950.0,
-      "return_pct_gross": 1.38,
-      "return_pct_net": 0.65,
+      "ticker": "PARR",
+      "name": "PARR",
+      "rec_date": "2026-09-24",
+      "rec_price": 76.7699966430664,
+      "current_price": 81.31999969482422,
+      "return_pct_gross": 5.93,
+      "return_pct_net": 5.2,
       "slippage_pct": 0.7,
       "hit_gross": true,
       "hit_net": true,
@@ -213,17 +208,53 @@
       "recommendation": "WATCH",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": 1.38,
+      "return_pct": 5.93,
+      "hit": true
+    },
+    {
+      "ticker": "327260",
+      "name": "RF머트리얼즈",
+      "rec_date": "2026-09-24",
+      "rec_price": 47050.0,
+      "current_price": 49250.0,
+      "return_pct_gross": 4.68,
+      "return_pct_net": 3.95,
+      "slippage_pct": 0.7,
+      "hit_gross": true,
+      "hit_net": true,
+      "period": "7d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": 4.68,
+      "hit": true
+    },
+    {
+      "ticker": "TXN",
+      "name": "Texas Instruments Incorporated",
+      "rec_date": "2026-09-24",
+      "rec_price": 270.6499938964844,
+      "current_price": 279.8919982910156,
+      "return_pct_gross": 3.41,
+      "return_pct_net": 2.68,
+      "slippage_pct": 0.7,
+      "hit_gross": true,
+      "hit_net": true,
+      "period": "7d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": 3.41,
       "hit": true
     },
     {
       "ticker": "GOOGL",
       "name": "Alphabet",
-      "rec_date": "2026-09-23",
-      "rec_price": 338.614990234375,
-      "current_price": 340.9200134277344,
-      "return_pct_gross": 0.68,
-      "return_pct_net": 0.35,
+      "rec_date": "2026-09-24",
+      "rec_price": 342.3599853515625,
+      "current_price": 348.5899963378906,
+      "return_pct_gross": 1.82,
+      "return_pct_net": 1.49,
       "slippage_pct": 0.3,
       "hit_gross": true,
       "hit_net": true,
@@ -231,35 +262,35 @@
       "recommendation": "BUY",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": 0.68,
+      "return_pct": 1.82,
       "hit": true
     },
     {
-      "ticker": "AMZN",
-      "name": "Amazon",
-      "rec_date": "2026-09-23",
-      "rec_price": 246.11000061035156,
-      "current_price": 246.6699981689453,
-      "return_pct_gross": 0.23,
-      "return_pct_net": -0.1,
-      "slippage_pct": 0.3,
+      "ticker": "029460",
+      "name": "케이씨",
+      "rec_date": "2026-09-24",
+      "rec_price": 43350.0,
+      "current_price": 43900.0,
+      "return_pct_gross": 1.27,
+      "return_pct_net": 0.54,
+      "slippage_pct": 0.7,
       "hit_gross": true,
-      "hit_net": false,
+      "hit_net": true,
       "period": "7d",
-      "recommendation": "BUY",
+      "recommendation": "WATCH",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": 0.23,
+      "return_pct": 1.27,
       "hit": true
     },
     {
       "ticker": "144960",
       "name": "뉴파워프라즈마",
-      "rec_date": "2026-09-23",
+      "rec_date": "2026-09-24",
       "rec_price": 12790.0,
-      "current_price": 12810.0,
-      "return_pct_gross": 0.16,
-      "return_pct_net": -0.57,
+      "current_price": 12840.0,
+      "return_pct_gross": 0.39,
+      "return_pct_net": -0.34,
       "slippage_pct": 0.7,
       "hit_gross": true,
       "hit_net": false,
@@ -267,13 +298,49 @@
       "recommendation": "BUY",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": 0.16,
+      "return_pct": 0.39,
       "hit": true
+    },
+    {
+      "ticker": "LLY",
+      "name": "Eli Lilly",
+      "rec_date": "2026-09-24",
+      "rec_price": 1181.8900146484375,
+      "current_price": 1185.574951171875,
+      "return_pct_gross": 0.31,
+      "return_pct_net": -0.02,
+      "slippage_pct": 0.3,
+      "hit_gross": true,
+      "hit_net": false,
+      "period": "7d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": 0.31,
+      "hit": true
+    },
+    {
+      "ticker": "SHEL",
+      "name": "Shell plc",
+      "rec_date": "2026-09-24",
+      "rec_price": 95.5999984741211,
+      "current_price": 95.20500183105469,
+      "return_pct_gross": -0.41,
+      "return_pct_net": -1.14,
+      "slippage_pct": 0.7,
+      "hit_gross": false,
+      "hit_net": false,
+      "period": "7d",
+      "recommendation": "BUY",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": -0.41,
+      "hit": false
     },
     {
       "ticker": "035420",
       "name": "NAVER",
-      "rec_date": "2026-09-23",
+      "rec_date": "2026-09-24",
       "rec_price": 194700.0,
       "current_price": 193700.0,
       "return_pct_gross": -0.51,
@@ -289,9 +356,45 @@
       "hit": false
     },
     {
+      "ticker": "080580",
+      "name": "오킨스전자",
+      "rec_date": "2026-09-24",
+      "rec_price": 24850.0,
+      "current_price": 24650.0,
+      "return_pct_gross": -0.8,
+      "return_pct_net": -1.53,
+      "slippage_pct": 0.7,
+      "hit_gross": false,
+      "hit_net": false,
+      "period": "7d",
+      "recommendation": "BUY",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": -0.8,
+      "hit": false
+    },
+    {
+      "ticker": "003550",
+      "name": "LG",
+      "rec_date": "2026-09-24",
+      "rec_price": 111900.0,
+      "current_price": 110800.0,
+      "return_pct_gross": -0.98,
+      "return_pct_net": -1.11,
+      "slippage_pct": 0.1,
+      "hit_gross": false,
+      "hit_net": false,
+      "period": "7d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": -0.98,
+      "hit": false
+    },
+    {
       "ticker": "192400",
       "name": "쿠쿠홀딩스",
-      "rec_date": "2026-09-23",
+      "rec_date": "2026-09-24",
       "rec_price": 27250.0,
       "current_price": 26950.0,
       "return_pct_gross": -1.1,
@@ -307,45 +410,9 @@
       "hit": false
     },
     {
-      "ticker": "080580",
-      "name": "오킨스전자",
-      "rec_date": "2026-09-23",
-      "rec_price": 24850.0,
-      "current_price": 24500.0,
-      "return_pct_gross": -1.41,
-      "return_pct_net": -2.14,
-      "slippage_pct": 0.7,
-      "hit_gross": false,
-      "hit_net": false,
-      "period": "7d",
-      "recommendation": "BUY",
-      "brain_score": null,
-      "source": "gemini",
-      "return_pct": -1.41,
-      "hit": false
-    },
-    {
-      "ticker": "SHEL",
-      "name": "Shell plc",
-      "rec_date": "2026-09-23",
-      "rec_price": 96.63500213623047,
-      "current_price": 95.13999938964844,
-      "return_pct_gross": -1.55,
-      "return_pct_net": -2.28,
-      "slippage_pct": 0.7,
-      "hit_gross": false,
-      "hit_net": false,
-      "period": "7d",
-      "recommendation": "BUY",
-      "brain_score": null,
-      "source": "gemini",
-      "return_pct": -1.55,
-      "hit": false
-    },
-    {
       "ticker": "028050",
       "name": "삼성E&A",
-      "rec_date": "2026-09-23",
+      "rec_date": "2026-09-24",
       "rec_price": 49350.0,
       "current_price": 47700.0,
       "return_pct_gross": -3.34,
@@ -361,10 +428,10 @@
       "hit": false
     }
   ],
-  "updated_at": "2026-09-30 18:06:06.087621+09:00",
+  "updated_at": "2026-10-01 00:41:52.064341+09:00",
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-09-30 18:06:06.087644+09:00",
+    "applied_at": "2026-10-01 00:41:52.064364+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -374,7 +441,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-09-30 18:06:06.087647+09:00"
+      "fixed_at": "2026-10-01 00:41:52.064368+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
