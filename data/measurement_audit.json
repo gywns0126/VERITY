@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-30T10:46:39+09:00",
+ "as_of": "2026-09-30T18:28:29+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -90,7 +90,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "41/41",
+     "coverage": "73/73",
      "via": [
       "current_price",
       "price"
@@ -101,7 +101,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "33/41",
+     "coverage": "50/73",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -112,7 +112,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "41/41",
+     "coverage": "73/73",
      "via": [
       "fscore_deltas"
      ],
@@ -122,7 +122,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "40/41",
+     "coverage": "58/73",
      "via": [
       "industry"
      ],
@@ -132,7 +132,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "33/41",
+     "coverage": "52/73",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -165,18 +165,12 @@
   "rule_discrimination": {
    "ok": false,
    "snapshots": 133,
-   "cap_rules_checked": 9,
+   "cap_rules_checked": 8,
    "degenerate_rules": [
     {
      "rule": "oil_geopolitical_shock",
      "fired_days": 2,
      "activation_pct": 1.5,
-     "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
-    },
-    {
-     "rule": "rate_shock_up",
-     "fired_days": 1,
-     "activation_pct": 0.8,
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     }
    ],
@@ -188,7 +182,7 @@
    },
    "days_without_any_cap": 16,
    "days_without_any_cap_pct": 12.0,
-   "detail": "상시/미발동 등급 규칙 2종 — oil_geopolitical_shock(1.5%), rate_shock_up(0.8%). cap 없는 날 16/133일",
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.5%). cap 없는 날 16/133일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -199,7 +193,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 14,
-   "stock_days": 7388,
+   "stock_days": 7376,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -279,8 +273,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 25,
-    "scored": 25,
+    "with_pct": 38,
+    "scored": 38,
     "ok": true
    },
    "dead_guards": [],

@@ -3,10 +3,10 @@
     "hit_rate_7d": null,
     "hit_rate_14d": null,
     "hit_rate_30d": null,
-    "sample_7d": 6,
+    "sample_7d": 10,
     "sample_14d": 0,
     "sample_30d": 0,
-    "hits_7d": 4,
+    "hits_7d": 5,
     "hits_14d": 0,
     "hits_30d": 0,
     "hit_rate_7d_ci95": null,
@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-09-30 10:22:33.000448+09:00",
+    "applied_at": "2026-09-30 18:06:06.087644+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-09-30 10:22:33.000453+09:00"
+      "fixed_at": "2026-09-30 18:06:06.087647+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -47,9 +47,9 @@
     "7d": {
       "evaluation_status": "partial",
       "cohort_size": 22,
-      "evaluated_count": 6,
-      "unresolved_count": 16,
-      "coverage_pct": 27.3,
+      "evaluated_count": 10,
+      "unresolved_count": 12,
+      "coverage_pct": 45.5,
       "unresolved": [
         {
           "ticker": "058850",
@@ -85,26 +85,6 @@
           "ticker": "SWK",
           "name": "SWK",
           "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "192400",
-          "name": "쿠쿠홀딩스",
-          "reason": "missing_evaluation_price"
-        },
-        {
-          "ticker": "053610",
-          "name": "프로텍",
-          "reason": "missing_evaluation_price"
-        },
-        {
-          "ticker": "144960",
-          "name": "뉴파워프라즈마",
-          "reason": "missing_evaluation_price"
-        },
-        {
-          "ticker": "029460",
-          "name": "케이씨",
-          "reason": "missing_evaluation_price"
         },
         {
           "ticker": "336570",
@@ -158,24 +138,16 @@
   },
   "factor_health": {
     "healthy": [
-      "flow",
+      "perplexity_risk",
       "momentum"
     ],
     "weakening": [
-      "volatility"
+      "flow"
     ],
-    "decaying": [
-      "technical"
-    ],
+    "decaying": [],
     "total_factors": 15
   },
   "ic_adjustments_active": [
-    {
-      "factor": "multi_factor",
-      "multiplier": 0.0,
-      "status": "DEAD",
-      "ic_recent": 0.0
-    },
     {
       "factor": "prediction",
       "multiplier": 0.0,
@@ -189,6 +161,12 @@
       "ic_recent": 0.0
     },
     {
+      "factor": "multi_factor",
+      "multiplier": 0.0,
+      "status": "DEAD",
+      "ic_recent": 0.0
+    },
+    {
       "factor": "timing",
       "multiplier": 0.0,
       "status": "DEAD",
@@ -196,5 +174,5 @@
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-09-30 10:22:33.031473+09:00"
+  "generated_at": "2026-09-30 18:06:06.116621+09:00"
 }
