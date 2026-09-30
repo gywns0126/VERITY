@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-30T07:18:38+09:00",
+ "as_of": "2026-09-30T10:46:39+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -47,9 +47,30 @@
      ]
     },
     {
+     "key": "kis_credit_balance",
+     "modules": [
+      "red_flags.py"
+     ]
+    },
+    {
+     "key": "kis_financial_ratio",
+     "modules": [
+      "fact.py",
+      "graham.py",
+      "moat.py",
+      "red_flags.py"
+     ]
+    },
+    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
+     ]
+    },
+    {
+     "key": "kis_short_sale",
+     "modules": [
+      "red_flags.py"
      ]
     },
     {
@@ -65,20 +86,7 @@
      ]
     }
    ],
-   "thin_keys": [
-    {
-     "key": "kis_financial_ratio",
-     "coverage": "1/41"
-    },
-    {
-     "key": "kis_short_sale",
-     "coverage": "1/41"
-    },
-    {
-     "key": "kis_credit_balance",
-     "coverage": "1/41"
-    }
-   ],
+   "thin_keys": [],
    "fallback_covered": [
     {
      "key": "close",
@@ -138,19 +146,19 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 19,
+     "events_scanned": 16,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
      ]
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 6종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 9종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 6,
+   "holdings_checked": 7,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -202,11 +210,11 @@
      "fired": 0
     },
     {
-     "rule": "SEC 8-K 리스크 공시:",
+     "rule": "컨센서스↑ vs 수출↓ 괴리",
      "fired": 0
     },
     {
-     "rule": "컨센서스↑ vs 수출↓ 괴리",
+     "rule": "SEC 8-K 리스크 공시:",
      "fired": 0
     },
     {
@@ -252,21 +260,21 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 6,
+   "holdings_checked": 7,
    "coverage": {
     "sector": {
-     "filled": 6,
-     "total": 6,
+     "filled": 7,
+     "total": 7,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 6,
-     "total": 6,
+     "filled": 7,
+     "total": 7,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 6,
-     "total": 6,
+     "filled": 7,
+     "total": 7,
      "guard": "팩터 쏠림 차단"
     }
    },
@@ -280,7 +288,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 6,
+   "holdings_checked": 7,
    "no_profit_exit": [],
    "ladder_broken": [
     {
@@ -298,9 +306,17 @@
       "target_1": 1,
       "target_2": 0
      }
+    },
+    {
+     "name": "Alphabet",
+     "qty": 2.0,
+     "splittable": {
+      "target_1": 1,
+      "target_2": 0
+     }
     }
    ],
-   "detail": "확정 경로 정합 (사다리 불능 2건 — 고가주 잔존분)"
+   "detail": "확정 경로 정합 (사다리 불능 3건 — 고가주 잔존분)"
   },
   "as_of_staleness": {
    "ok": true,
