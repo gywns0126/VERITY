@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-30T16:32:17+09:00",
+  "collected_at": "2026-09-30T17:02:25+09:00",
   "macro": {
     "usd_krw": {
       "value": 1351.71,
@@ -13763,42 +13763,42 @@
         "curve": [
           {
             "tenor": "1Y",
-            "yield": 3.724,
-            "as_of": "20260929"
+            "yield": 3.733,
+            "as_of": "20260930"
           },
           {
             "tenor": "2Y",
-            "yield": 4.031,
-            "as_of": "20260929"
+            "yield": 3.978,
+            "as_of": "20260930"
           },
           {
             "tenor": "3Y",
-            "yield": 4.076,
-            "as_of": "20260929"
+            "yield": 4.011,
+            "as_of": "20260930"
           },
           {
             "tenor": "5Y",
-            "yield": 4.276,
-            "as_of": "20260929"
+            "yield": 4.203,
+            "as_of": "20260930"
           },
           {
             "tenor": "10Y",
-            "yield": 4.476,
-            "as_of": "20260929"
+            "yield": 4.407,
+            "as_of": "20260930"
           },
           {
             "tenor": "20Y",
-            "yield": 4.513,
-            "as_of": "20260929"
+            "yield": 4.42,
+            "as_of": "20260930"
           },
           {
             "tenor": "30Y",
-            "yield": 4.603,
-            "as_of": "20260929"
+            "yield": 4.526,
+            "as_of": "20260930"
           }
         ],
         "curve_shape": "normal",
-        "curve_as_of": "20260929"
+        "curve_as_of": "20260930"
       },
       "us": {
         "curve": [
@@ -13854,7 +13854,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-09-30T16:32:31+09:00",
+    "updated_at": "2026-09-30T17:03:25+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.83,
       "us_ig_risk": "LOW",
@@ -13863,18 +13863,18 @@
       "us_hy_risk": "MODERATE"
     },
     "kr_corp_spreads": {
-      "date": "20260929",
-      "collected_at": "2026-09-30T16:32:31+09:00",
+      "date": "20260930",
+      "collected_at": "2026-09-30T17:03:25+09:00",
       "grades": {
         "AA-": {
-          "yield": 4.755,
-          "spread_vs_3y": 0.679,
-          "as_of": "20260929"
+          "yield": 4.703,
+          "spread_vs_3y": 0.692,
+          "as_of": "20260930"
         },
         "BBB-": {
-          "yield": 10.56,
-          "spread_vs_3y": 6.484,
-          "as_of": "20260929"
+          "yield": 10.506,
+          "spread_vs_3y": 6.495,
+          "as_of": "20260930"
         }
       }
     }
@@ -14083,12 +14083,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 29.35
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 139.12
   },
   "schema_version": "v0"
 }
