@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-30T21:32:35+09:00",
+  "collected_at": "2026-09-30T22:02:23+09:00",
   "macro": {
     "usd_krw": {
       "value": 1351.28,
@@ -14063,33 +14063,21 @@
       "source_url": "https://fred.stlouisfed.org/release?rid=291",
       "source_kind": "release",
       "d_day": 13
-    },
-    {
-      "name": "미국 CPI 발표",
-      "severity": "high",
-      "impact_area": [
-        "물가",
-        "금리기대",
-        "성장주"
-      ],
-      "impact": "예상 상회 시 금리 인상 우려로 시장 하락, 하회 시 반등",
-      "action": "발표 전 변동성 대비, 인플레 수혜주 vs 피해주 구분",
-      "date": "2026-10-14",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 10,
-      "source_url": "https://fred.stlouisfed.org/release?rid=10",
-      "source_kind": "release",
-      "d_day": 14
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
-    "bonds_ok": true,
+    "macro_ok": false,
+    "bonds_ok": false,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 56.67
+    "errors": [
+      "macro: timeout_60s",
+      "bonds: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro",
+      "bonds"
+    ],
+    "elapsed_s": 152.66
   },
   "schema_version": "v0"
 }
