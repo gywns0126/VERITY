@@ -6,7 +6,7 @@
     "sample_7d": 14,
     "sample_14d": 0,
     "sample_30d": 0,
-    "hits_7d": 8,
+    "hits_7d": 7,
     "hits_14d": 0,
     "hits_30d": 0,
     "hit_rate_7d_ci95": null,
@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-10-01 00:41:52.064364+09:00",
+    "applied_at": "2026-10-01 07:07:18.777454+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-10-01 00:41:52.064368+09:00"
+      "fixed_at": "2026-10-01 07:07:18.777457+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -133,11 +133,12 @@
   },
   "factor_health": {
     "healthy": [
-      "momentum",
-      "consensus"
+      "consensus",
+      "perplexity_risk"
     ],
     "weakening": [
-      "flow"
+      "flow",
+      "volatility"
     ],
     "decaying": [],
     "total_factors": 15
@@ -150,7 +151,7 @@
       "ic_recent": 0.0
     },
     {
-      "factor": "consensus",
+      "factor": "prediction",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
@@ -162,12 +163,12 @@
       "ic_recent": 0.0
     },
     {
-      "factor": "prediction",
+      "factor": "consensus",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-10-01 00:41:52.098371+09:00"
+  "generated_at": "2026-10-01 07:07:18.803690+09:00"
 }

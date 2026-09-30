@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-01T01:10:06+09:00",
+ "as_of": "2026-10-01T07:26:26+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -70,7 +70,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "88/88",
+     "coverage": "60/60",
      "via": [
       "current_price",
       "price"
@@ -81,7 +81,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "60/88",
+     "coverage": "54/60",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -92,7 +92,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "88/88",
+     "coverage": "60/60",
      "via": [
       "fscore_deltas"
      ],
@@ -102,7 +102,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "69/88",
+     "coverage": "55/60",
      "via": [
       "industry"
      ],
@@ -112,7 +112,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "60/88",
+     "coverage": "52/60",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -126,7 +126,7 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 16,
+     "events_scanned": 20,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
@@ -145,18 +145,12 @@
   "rule_discrimination": {
    "ok": false,
    "snapshots": 134,
-   "cap_rules_checked": 9,
+   "cap_rules_checked": 8,
    "degenerate_rules": [
     {
      "rule": "oil_geopolitical_shock",
      "fired_days": 2,
      "activation_pct": 1.5,
-     "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
-    },
-    {
-     "rule": "rate_shock_up",
-     "fired_days": 1,
-     "activation_pct": 0.7,
      "verdict": "거의 미발동 — 표본 부족으로 검증 불가"
     }
    ],
@@ -168,7 +162,7 @@
    },
    "days_without_any_cap": 17,
    "days_without_any_cap_pct": 12.7,
-   "detail": "상시/미발동 등급 규칙 2종 — oil_geopolitical_shock(1.5%), rate_shock_up(0.7%). cap 없는 날 17/134일",
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.5%). cap 없는 날 17/134일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -276,8 +270,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 53,
-    "scored": 53,
+    "with_pct": 25,
+    "scored": 25,
     "ok": true
    },
    "dead_guards": [],
