@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-09-30T12:32:55.165971+09:00",
+  "generated_at": "2026-09-30T19:14:12.074643+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
@@ -12,16 +12,16 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-09-30T12:32:55.108678+09:00",
+  "generated_at": "2026-09-30T19:14:12.032615+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 75632,
+  "max_cdn_age_s": 55707,
   "files": [
    {
     "file": "stock_report_public.json",
     "ok": true,
     "pct": {
-     "PER": 61.4,
+     "PER": 61.6,
      "PBR": 96.1
     },
     "total": 2534,
@@ -36,7 +36,7 @@
      "PBR": 73.7
     },
     "total": 5079,
-    "cdn_age_s": 0,
+    "cdn_age_s": 55707,
     "error": null
    },
    {
@@ -47,7 +47,7 @@
      "PBR": 75.3
     },
     "total": 3851,
-    "cdn_age_s": 75632,
+    "cdn_age_s": 1,
     "error": null
    },
    {
@@ -61,12 +61,12 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-09-30T10:34:25.662301+09:00",
+  "generated_at": "2026-09-30T18:16:19.058434+09:00",
   "kr_total": 2534,
   "us_total": 5079,
   "core_fill_pct": {
    "fields.facts.PBR": 96.1,
-   "fields.facts.PER": 61.4,
+   "fields.facts.PER": 61.6,
    "us_fields.facts.PBR": 73.7,
    "us_fields.facts.PER": 45.0
   },
@@ -75,17 +75,17 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-09-30T12:32:44.208984+09:00",
+  "generated_at": "2026-09-30T19:14:01.148725+09:00",
   "summary": {
-   "fresh": 61,
+   "fresh": 59,
    "stale": 1,
-   "closed": 0,
+   "closed": 2,
    "discontinued": 3,
    "p0": {
     "total": 7,
-    "fresh": 7,
-    "closed": 0,
-    "active": 7
+    "fresh": 5,
+    "closed": 2,
+    "active": 5
    },
    "p1": {
     "total": 22,
