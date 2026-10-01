@@ -82,8 +82,8 @@ test("snapshot opt-in unions and deduplicates watched stocks without changing ho
     assert.deepEqual(h.graphs, [["000660", "TSM"]])
     assert.deepEqual(clone(state.holdings), clone(runtime.normalizeMapHoldings([held]).holdings))
     assert.deepEqual(clone(runtime.workspaceStocks(state)), [
-        { ticker: "000660", name: held.name, market: "KR", held: true, watched: true },
-        { ticker: "TSM", name: "TSMC", market: "US", held: false, watched: true },
+        { ticker: "000660", name: held.name, market: "KR", held: true, watched: true, exploring: false },
+        { ticker: "TSM", name: "TSMC", market: "US", held: false, watched: true, exploring: false },
     ])
     assert.ok(state.watchlist.every(stock => !["shares", "avg_cost", "id"].some(key => key in stock)))
     const request = h.calls.find(call => call.url.endsWith("/api/watchgroups")).init

@@ -1007,11 +1007,12 @@ async function fetchMapWatchlist(options) {
 var API = "https://project-yw131.vercel.app";
 var clone = (value) => JSON.parse(JSON.stringify(value));
 var sameAccount = (a, b) => a?.userId === b?.userId;
-var empty = (privateState) => ({ phase: "signed-out", holdings: [], watchlist: [], watchlistError: null, watchlistUnsupportedCount: 0, unsupportedCount: 0, selectedTickers: [], graph: null, privateState, error: null });
+var empty = (privateState) => ({ phase: "signed-out", holdings: [], watchlist: [], watchlistError: null, watchlistUnsupportedCount: 0, exploratory: [], unsupportedCount: 0, selectedTickers: [], graph: null, privateState, error: null });
 function workspaceStocks(state) {
   const watched = new Set((state.watchlist || []).map((row) => `${row.market}:${row.ticker}`));
-  const stocks = new Map(state.holdings.map((row) => [row.ticker, { ticker: row.ticker, name: row.name, market: row.market, held: true, watched: watched.has(`${row.market}:${row.ticker}`) }]));
-  for (const row of state.watchlist || []) if (!stocks.has(row.ticker)) stocks.set(row.ticker, { ...row, held: false, watched: true });
+  const stocks = new Map(state.holdings.map((row) => [row.ticker, { ticker: row.ticker, name: row.name, market: row.market, held: true, watched: watched.has(`${row.market}:${row.ticker}`), exploring: false }]));
+  for (const row of state.watchlist || []) if (!stocks.has(row.ticker)) stocks.set(row.ticker, { ...row, held: false, watched: true, exploring: false });
+  for (const row of state.exploratory || []) if (!stocks.has(row.ticker)) stocks.set(row.ticker, { ...row, held: false, watched: false, exploring: true });
   return [...stocks.values()];
 }
 var finitePositive = (value) => {
@@ -1130,6 +1131,40 @@ function createPortfolioMapWorkspace(options = {}) {
       return false;
     }
   };
+  const exploreStock = async (metadata) => {
+    if (!account || !valid(generation) || state.phase !== "ready" || !state.graph) return false;
+    if (!metadata || typeof metadata.ticker !== "string" || typeof metadata.name !== "string" || !metadata.name.trim() || metadata.ticker !== metadata.ticker.trim() || !(metadata.market === "KR" ? /^\d{6}$/.test(metadata.ticker) : metadata.market === "US" && /^[A-Z][A-Z0-9.-]{0,15}$/.test(metadata.ticker))) throw new Error("invalid-exploratory-stock");
+    const stock = { ticker: metadata.ticker, name: metadata.name.trim(), market: metadata.market };
+    const known = workspaceStocks(state).find((row) => row.ticker === stock.ticker);
+    if (known && known.market !== stock.market) throw new Error("ambiguous-exploratory-market");
+    const codes = [.../* @__PURE__ */ new Set([...state.selectedTickers, stock.ticker])];
+    if (codes.length > 30) throw new Error("choose-up-to-30-holdings");
+    if (state.selectedTickers.includes(stock.ticker)) return true;
+    pending?.abort();
+    const controller = new AbortController();
+    pending = controller;
+    const version = ++generation, signal = controller.signal;
+    try {
+      const graph = await graphLoader([...codes], API, signal);
+      if (!valid(version) || signal.aborted) return false;
+      if (graph.companies.length !== codes.length || new Set(graph.companies.map((row) => row.ticker)).size !== codes.length || graph.companies.some((row) => !codes.includes(row.ticker) || typeof row.id !== "string" || !row.id.trim()) || new Set(graph.companies.map((row) => row.id)).size !== codes.length) throw new Error("graph-exploration-mismatch");
+      const companies = graph.companies.map((company) => company.ticker === stock.ticker && (!company.name.trim() || company.name.trim() === company.ticker) ? { ...company, name: known?.name || stock.name } : company);
+      automaticSelection = false;
+      state = {
+        ...state,
+        graph: { ...graph, companies },
+        selectedTickers: codes,
+        exploratory: known ? state.exploratory : [...state.exploratory || [], stock]
+      };
+      emit();
+      return valid(version);
+    } catch {
+      valid(version);
+      return false;
+    } finally {
+      if (pending === controller) pending = null;
+    }
+  };
   const open = async () => {
     if (disposed) return false;
     const next = getSession(), changed = !sameAccount(account, next);
@@ -1229,6 +1264,7 @@ function createPortfolioMapWorkspace(options = {}) {
     },
     open,
     showTickers,
+    exploreStock,
     editLayout(mapKey, change) {
       if (!valid(generation)) return false;
       return store.update((document) => editMapLayout(document, mapKey, change));
@@ -1976,6 +2012,135 @@ function emptyReviewedPrototype() {
   };
 }
 
+// framer-components/public-probe/PortfolioStockSearch.ts
+var MAX_RESULTS = 12;
+var MAX_BODY_BYTES = 64 * 1024;
+var KR_MARKETS = /* @__PURE__ */ new Set(["KR", "KOSPI", "KOSDAQ", "KONEX"]);
+var US_MARKETS = /* @__PURE__ */ new Set(["US", "NASDAQ", "NYSE", "AMEX", "NYSE AMERICAN", "NYSE ARCA", "BATS"]);
+function boundedString(value, max, allowEmpty = false) {
+  if (typeof value !== "string" || value.length > max || /[\u0000-\u001f\u007f]/.test(value)) {
+    throw new Error("Invalid search metadata");
+  }
+  const result = value.trim();
+  if (!allowEmpty && !result) throw new Error("Invalid search metadata");
+  return result;
+}
+function normalizeSearchResults(payload) {
+  if (!Array.isArray(payload) || payload.length > MAX_RESULTS) {
+    throw new Error("Invalid search response");
+  }
+  const byKey = /* @__PURE__ */ new Map();
+  let unsupportedCount = 0;
+  for (const value of payload) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("Invalid search row");
+    }
+    const row = value;
+    const ticker = boundedString(row.ticker, 16).toUpperCase();
+    const name = boundedString(row.name, 160);
+    const listing = boundedString(row.market, 32).toUpperCase();
+    const koreanName = row.name_kr === void 0 ? "" : boundedString(row.name_kr, 160, true);
+    if (row.etf !== void 0 && typeof row.etf !== "boolean") {
+      throw new Error("Invalid ETF metadata");
+    }
+    const market = KR_MARKETS.has(listing) ? "KR" : US_MARKETS.has(listing) ? "US" : null;
+    if (!market) {
+      unsupportedCount++;
+      continue;
+    }
+    if (!(market === "KR" ? /^\d{6}$/ : /^[A-Z][A-Z0-9.-]{0,15}$/).test(ticker)) {
+      throw new Error("Invalid search ticker");
+    }
+    const item = { ticker, name: market === "US" ? koreanName || name : name, market };
+    if (row.etf === true) item.etf = true;
+    const key = `${market}:${ticker}`;
+    const previous = byKey.get(key);
+    if (previous && (previous.name !== item.name || previous.etf !== item.etf)) {
+      throw new Error("Ambiguous duplicate search ticker");
+    }
+    if (!previous) byKey.set(key, item);
+  }
+  return { stocks: [...byKey.values()], unsupportedCount };
+}
+async function readSearchPayload(response, signal) {
+  if (!response.ok || response.redirected) throw new Error("Search request failed");
+  const declaredLength = response.headers.get("content-length");
+  if (declaredLength !== null && (!/^\d+$/.test(declaredLength) || Number(declaredLength) > MAX_BODY_BYTES)) {
+    throw new Error("Search response exceeds size limit");
+  }
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("Missing search response body");
+  const cancel = () => {
+    void reader.cancel().catch(() => {
+    });
+  };
+  signal.addEventListener("abort", cancel, { once: true });
+  const chunks = [];
+  let size = 0;
+  let complete = false;
+  try {
+    signal.throwIfAborted();
+    while (true) {
+      const { done, value } = await reader.read();
+      signal.throwIfAborted();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_BODY_BYTES) throw new Error("Search response exceeds size limit");
+      chunks.push(value);
+    }
+    complete = true;
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  } finally {
+    signal.removeEventListener("abort", cancel);
+    if (!complete) cancel();
+    reader.releaseLock();
+  }
+}
+async function fetchPortfolioStockSearch(query, options = {}) {
+  if (typeof query !== "string") throw new Error("Invalid search query");
+  const q = query.trim().slice(0, 60);
+  if (!q) return { stocks: [], unsupportedCount: 0 };
+  const { fetcher = globalThis.fetch, signal, api = "/api/search" } = options;
+  if (!/^\/[A-Za-z0-9/_-]+$/.test(api) || api.startsWith("//")) throw new Error("Invalid search endpoint");
+  signal?.throwIfAborted();
+  const controller = new AbortController();
+  const abortFromCaller = () => controller.abort(signal?.reason);
+  signal?.addEventListener("abort", abortFromCaller, { once: true });
+  let onAbort = () => {
+  };
+  const aborted2 = new Promise((_, reject) => {
+    onAbort = () => reject(controller.signal.reason);
+    controller.signal.addEventListener("abort", onAbort, { once: true });
+  });
+  const timer = setTimeout(() => controller.abort(new DOMException("Search timed out", "TimeoutError")), 5e3);
+  const request = async () => {
+    const params = new URLSearchParams({ q, market: "all", limit: String(MAX_RESULTS) });
+    const response = await fetcher(`${api}?${params}`, {
+      method: "GET",
+      credentials: "omit",
+      redirect: "error",
+      signal: controller.signal
+    });
+    controller.signal.throwIfAborted();
+    const payload = await readSearchPayload(response, controller.signal);
+    controller.signal.throwIfAborted();
+    return normalizeSearchResults(payload);
+  };
+  try {
+    return await Promise.race([request(), aborted2]);
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", abortFromCaller);
+    controller.signal.removeEventListener("abort", onAbort);
+  }
+}
+
 // framer-components/public-probe/PortfolioPrototypeHost.ts
 var plain = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 var point = (v) => plain(v) && Number.isFinite(v.x) && Number.isFinite(v.y);
@@ -2048,7 +2213,8 @@ function prototypeMemberModel(state) {
       market: n.kind === "stock" ? stocks.get(n.code)?.market : void 0,
       held: n.kind === "stock" ? stocks.get(n.code)?.held ?? false : void 0,
       watched: n.kind === "stock" ? stocks.get(n.code)?.watched ?? false : void 0,
-      reason: n.kind === "stock" ? stocks.get(n.code)?.held ? "보유종목에 연결된 자료를 확인하세요." : "관심종목이에요. 실제 보유 수량이나 평가금액에는 포함하지 않아요." : graph?.documents.find((d) => d.id === n.id)?.reason,
+      explore: n.kind === "stock" ? stocks.get(n.code)?.exploring ?? false : false,
+      reason: n.kind === "stock" ? stocks.get(n.code)?.held ? "보유종목에 연결된 자료를 확인하세요." : stocks.get(n.code)?.watched ? "관심종목이에요. 실제 보유 수량이나 평가금액에는 포함하지 않아요." : "이번 화면에서 탐색 중이에요. 보유·관심목록에 등록하지 않았으며, 다시 접속하면 검색해서 추가해야 해요." : graph?.documents.find((d) => d.id === n.id)?.reason,
       source: n.kind === "event" ? graph?.documents.find((d) => d.id === n.id)?.source : "내 포트폴리오",
       asOf: n.kind === "event" ? graph?.documents.find((d) => d.id === n.id)?.asOf : void 0,
       evidence: n.kind === "event" ? graph?.documents.find((d) => d.id === n.id)?.evidence : []
@@ -2071,11 +2237,59 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
   const account = options.account || (() => readMapSession()?.userId || null);
   let owner = null, generation = 0, port = null, disposed = false, key = "", current = workspace.getState();
   let waiting = false, reloadPending = false, frameNonce = "";
+  let hydrated = false, focusRevision = 0;
+  let searchRequest = null, searchRevision = 0;
+  let searchStocks = /* @__PURE__ */ new Map();
+  let exploration = null;
+  const focusWindowKey = (state) => JSON.stringify([
+    state.selectedTickers,
+    state.graph?.companies.map((row) => [row.id, row.ticker, row.market])
+  ]);
+  let pendingFocus = null;
+  const clearReturnFocus = () => {
+    focusRevision++;
+    pendingFocus = null;
+  };
+  const flushReturnFocus = () => {
+    if (!pendingFocus?.requested) return;
+    const pending = pendingFocus, state = workspace.getState();
+    if (disposed || pending.owner !== account() || pending.owner !== owner || state.phase !== "ready" || focusWindowKey(state) !== pending.windowKey || !state.selectedTickers.includes(pending.ticker)) {
+      clearReturnFocus();
+      return;
+    }
+    const company = state.graph?.companies.find((row) => row.ticker === pending.ticker);
+    if (!company) {
+      clearReturnFocus();
+      return;
+    }
+    if (!port || !hydrated) return;
+    pendingFocus = null;
+    port.postMessage({ type: "focus-stock", id: company.id });
+  };
+  const prepareReturnFocus = () => {
+    clearReturnFocus();
+    const member = account(), revision2 = focusRevision;
+    return (ticker) => {
+      const state = workspace.getState();
+      if (disposed || revision2 !== focusRevision || !member || member !== account() || member !== owner || state.phase !== "ready" || !state.selectedTickers.includes(ticker) || !state.graph?.companies.some((row) => row.ticker === ticker)) return;
+      focusRevision++;
+      pendingFocus = { owner: member, windowKey: focusWindowKey(state), ticker, requested: false };
+    };
+  };
+  const returnToMap = () => {
+    if (pendingFocus) pendingFocus.requested = true;
+    flushReturnFocus();
+  };
   const close = () => {
     generation++;
+    searchRevision++;
+    searchRequest?.abort();
+    searchStocks.clear();
+    exploration = null;
     port?.close();
     port = null;
     waiting = false;
+    hydrated = false;
   };
   const status = () => {
     const p = current.privateState;
@@ -2087,15 +2301,51 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
     });
   };
   const ready = (event) => {
-    if (disposed || !waiting || event.source !== frame.contentWindow || event.origin !== "null" || event.data?.type !== "alphanest-member-ready" || event.data.nonce !== frameNonce) return;
+    if (disposed || !waiting || !owner || owner !== account() || current.phase !== "ready" || event.source !== frame.contentWindow || event.origin !== "null" || event.data?.type !== "alphanest-member-ready" || event.data.nonce !== frameNonce) return;
     waiting = false;
     const channel = new MessageChannel(), version = generation, member = owner;
     port = channel.port1;
     port.onmessage = async (event2) => {
       if (disposed || version !== generation || !member || member !== account()) return;
       const state = workspace.getState(), command = event2.data;
-      if (state.phase !== "ready" || !plain(command)) return;
-      if (command.type === "edit") {
+      if (!plain(command)) return;
+      if (command.type === "hydrated") {
+        hydrated = true;
+        flushReturnFocus();
+        return;
+      }
+      if (state.phase !== "ready") return;
+      if (command.type === "search" && typeof command.query === "string" && command.query.length <= 60 && Number.isSafeInteger(command.request)) {
+        searchRequest?.abort();
+        searchRequest = new AbortController();
+        searchStocks.clear();
+        const request = ++searchRevision, signal = searchRequest.signal;
+        try {
+          const result = await (options.searchLoader || fetchPortfolioStockSearch)(command.query, { signal });
+          if (disposed || version !== generation || request !== searchRevision || member !== account() || signal.aborted) return;
+          searchStocks = new Map(result.stocks.map((stock) => [stock.ticker, stock]));
+          port?.postMessage({ type: "search-results", request: command.request, ...result });
+        } catch {
+          if (!disposed && version === generation && request === searchRevision && member === account() && !signal.aborted)
+            port?.postMessage({ type: "search-results", request: command.request, error: "검색 자료를 불러오지 못했어요. 다시 입력해 주세요." });
+        }
+      } else if (command.type === "explore" && typeof command.ticker === "string" && !exploration) {
+        const stock = searchStocks.get(command.ticker);
+        if (!stock) {
+          port?.postMessage({ type: "explore-result", error: "검색 결과가 바뀌었어요. 다시 검색해 주세요." });
+          return;
+        }
+        exploration = { ticker: stock.ticker, version };
+        try {
+          const success = await workspace.exploreStock(stock);
+          if (!disposed && version === generation && member === account())
+            port?.postMessage({ type: "explore-result", ...success ? {} : { error: "추가하지 못했어요. 기존 지도는 유지했어요." } });
+        } catch (error) {
+          if (!disposed && version === generation && member === account()) port?.postMessage({ type: "explore-result", error: error instanceof Error && error.message.includes("30") ? "한 화면에는 30종목까지 표시할 수 있어요." : "추가하지 못했어요. 기존 지도는 유지했어요." });
+        } finally {
+          if (exploration?.version === version) exploration = null;
+        }
+      } else if (command.type === "edit") {
         const next = mergePrototypeDraft(state, command.draft);
         if (next) workspace.editLayout("main", () => next);
       } else if (command.type === "save") await workspace.save();
@@ -2130,6 +2380,8 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
   const unsubscribe = workspace.subscribe((state) => {
     current = state;
     const nextOwner = account();
+    if (owner !== nextOwner || state.phase === "signed-out") clearReturnFocus();
+    else if (pendingFocus && (state.phase !== "ready" || focusWindowKey(state) !== pendingFocus.windowKey)) pendingFocus = null;
     if (state.phase === "loading" && nextOwner && owner === nextOwner && key) {
       port?.postMessage({ type: "status", writable: false, saving: false, message: "보유종목과 자료를 갱신 중이에요" });
       return;
@@ -2152,6 +2404,12 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
     }
     const nextKey = JSON.stringify([nextOwner, state.graph, workspaceStocks(state), !!state.privateState.document]);
     if (nextKey !== key) {
+      if (exploration?.version === generation && owner === nextOwner && port && hydrated && state.selectedTickers.includes(exploration.ticker)) {
+        key = nextKey;
+        port.postMessage({ type: "graph-update", model: prototypeMemberModel(state), ticker: exploration.ticker });
+        status();
+        return;
+      }
       close();
       owner = nextOwner;
       key = nextKey;
@@ -2163,10 +2421,14 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
         url.hash = frameNonce;
         frame.src = url.href;
       } else frame.srcdoc = template.replace("'__ALPHANEST_FRAME_NONCE__'", JSON.stringify(frameNonce));
-    } else status();
+    } else {
+      status();
+      if (waiting) loaded();
+    }
   });
-  return () => {
+  const cleanup = () => {
     disposed = true;
+    clearReturnFocus();
     close();
     unsubscribe();
     window.removeEventListener("message", ready);
@@ -2174,6 +2436,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
     if (templateURL) frame.src = "about:blank";
     else frame.srcdoc = "";
   };
+  return Object.assign(cleanup, { prepareReturnFocus, clearReturnFocus, returnToMap });
 }
 
 // framer-components/public-probe/PortfolioHoldingsPanel.tsx
@@ -2637,7 +2900,7 @@ function PortfolioHoldingsPanel({ state, visible, onBack, onConfirm, onConfirmCs
   } }, /* @__PURE__ */ React3.createElement("h3", null, form.id ? "보유 기록 수정" : "보유종목 추가"), /* @__PURE__ */ React3.createElement("p", null, "입력값은 변경 내용을 확인한 뒤 저장돼요."), /* @__PURE__ */ React3.createElement("fieldset", { disabled: busy || !known, style: { border: 0, padding: 0, margin: "12px 0 0" } }, /* @__PURE__ */ React3.createElement("div", { className: "an-nest-grid" }, /* @__PURE__ */ React3.createElement("label", null, "시장", /* @__PURE__ */ React3.createElement("select", { value: form.market, disabled: !!form.id, onChange: (e) => change("market", e.target.value) }, /* @__PURE__ */ React3.createElement("option", { value: "KR" }, "국내 · KRW"), /* @__PURE__ */ React3.createElement("option", { value: "US" }, "미국 · USD"))), /* @__PURE__ */ React3.createElement("label", null, "종목코드", /* @__PURE__ */ React3.createElement("input", { value: form.ticker, disabled: !!form.id, onChange: (e) => change("ticker", e.target.value), placeholder: form.market === "KR" ? "005930" : "AAPL" })), /* @__PURE__ */ React3.createElement("label", null, "이름", /* @__PURE__ */ React3.createElement("input", { value: form.name, onChange: (e) => change("name", e.target.value) })), /* @__PURE__ */ React3.createElement("label", null, "수량", /* @__PURE__ */ React3.createElement("input", { inputMode: "decimal", value: form.shares, onChange: (e) => change("shares", e.target.value) })), /* @__PURE__ */ React3.createElement("label", null, "평균 매수가 · ", form.market === "KR" ? "KRW" : "USD", /* @__PURE__ */ React3.createElement("input", { inputMode: "decimal", value: form.avg_cost, onChange: (e) => change("avg_cost", e.target.value) })), /* @__PURE__ */ React3.createElement("label", null, "보유 메모", /* @__PURE__ */ React3.createElement("textarea", { value: form.memo, onChange: (e) => change("memo", e.target.value) }))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "submit" }, "변경 내용 확인"), /* @__PURE__ */ React3.createElement("button", { type: "button", onClick: () => {
     setForm(null);
     setPreview(null);
-  } }, "입력 취소")))) : null, preview ? /* @__PURE__ */ React3.createElement("section", { className: "an-nest-preview", "aria-label": "보유 변경 미리보기" }, /* @__PURE__ */ React3.createElement("h3", null, preview.kind === "remove" ? "이 보유 기록을 삭제할까요?" : "이 내용으로 저장할까요?"), /* @__PURE__ */ React3.createElement("p", null, preview.kind === "remove" ? "목록의 보유 기록만 삭제해요. 실제 매도나 거래 기록 추가가 아니며 지도 메모도 삭제하지 않아요." : "현재 기록과 비교해주세요. 다른 화면에서 동시에 수정하지 않는 것이 좋아요."), /* @__PURE__ */ React3.createElement("dl", null, /* @__PURE__ */ React3.createElement("dt", null, "종목"), /* @__PURE__ */ React3.createElement("dd", null, preview.after?.name || preview.before?.name, " · ", preview.after?.ticker || preview.before?.ticker), (preview.kind === "remove" ? ["shares", "avg_cost", "memo"] : preview.changedFields).map((key) => /* @__PURE__ */ React3.createElement(React3.Fragment, { key }, /* @__PURE__ */ React3.createElement("dt", null, labels[key]), /* @__PURE__ */ React3.createElement("dd", null, String(preview.before?.[key] ?? "없음"), " → ", String(preview.after?.[key] ?? "삭제"))))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !known, onClick: confirm }, busy ? "확인 중…" : preview.kind === "remove" ? "확인 후 보유 기록 삭제" : "확인 후 보유 기록 저장"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy, onClick: () => setPreview(null) }, "돌아가서 수정"))) : null, !known ? /* @__PURE__ */ React3.createElement("p", { role: "status" }, state.phase === "error" ? "목록을 불러오지 못했어요. 보유 기록이 없다는 뜻은 아니에요." : "보유목록을 확인하고 있어요.") : /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("ul", { className: "an-nest-rows" }, state.holdings.map((h) => /* @__PURE__ */ React3.createElement("li", { key: h.ticker }, /* @__PURE__ */ React3.createElement("div", null, /* @__PURE__ */ React3.createElement("strong", null, h.name), /* @__PURE__ */ React3.createElement("small", null, h.ticker, " · ", h.market, " · ", state.selectedTickers.includes(h.ticker) ? "현재 지도에 표시" : "지도 표시 범위 밖"), /* @__PURE__ */ React3.createElement("small", null, "수량 ", h.duplicate ? "중복 확인 필요" : formatHoldingQuantity(h.shares), " · 평균 매수가 ", formatHoldingAverageCost(h))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => edit(h), "aria-label": h.name + " 수정" }, "수정"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => prepare(h), "aria-label": h.name + " 삭제" }, "삭제"))))), !state.holdings.length ? /* @__PURE__ */ React3.createElement("p", null, "등록한 보유종목이 없어요. 종목 추가로 시작하세요.") : null, state.unsupportedCount ? /* @__PURE__ */ React3.createElement("p", null, "이 지도에서 지원하지 않는 보유 항목 ", state.unsupportedCount, "개는 별도로 유지돼요.") : null, state.watchlistError ? /* @__PURE__ */ React3.createElement("p", { role: "status" }, "관심종목을 불러오지 못했어요. 목록 다시 불러오기로 재시도할 수 있어요.") : state.watchlist?.length ? /* @__PURE__ */ React3.createElement("details", null, /* @__PURE__ */ React3.createElement("summary", null, "관심종목 ", state.watchlist.length, "개"), /* @__PURE__ */ React3.createElement("p", null, "관심종목은 보유 수량·평균 매수가에 포함하지 않아요."), /* @__PURE__ */ React3.createElement("ul", { className: "an-nest-rows" }, state.watchlist.map((stock) => /* @__PURE__ */ React3.createElement("li", { key: stock.market + ":" + stock.ticker }, /* @__PURE__ */ React3.createElement("div", null, /* @__PURE__ */ React3.createElement("strong", null, stock.name), /* @__PURE__ */ React3.createElement("small", null, stock.ticker, " · ", stock.market, " · ", state.holdings.some((h) => h.ticker === stock.ticker && h.market === stock.market) ? "보유·관심" : "관심만", " · ", state.selectedTickers.includes(stock.ticker) ? "현재 지도에 표시" : "지도 표시 범위 밖")))))) : null, state.watchlistUnsupportedCount ? /* @__PURE__ */ React3.createElement("p", null, "지원하지 않는 관심 항목 ", state.watchlistUnsupportedCount, "개는 원래 목록에 유지돼요.") : null));
+  } }, "입력 취소")))) : null, preview ? /* @__PURE__ */ React3.createElement("section", { className: "an-nest-preview", "aria-label": "보유 변경 미리보기" }, /* @__PURE__ */ React3.createElement("h3", null, preview.kind === "remove" ? "이 보유 기록을 삭제할까요?" : "이 내용으로 저장할까요?"), /* @__PURE__ */ React3.createElement("p", null, preview.kind === "remove" ? "목록의 보유 기록만 삭제해요. 실제 매도나 거래 기록 추가가 아니며 지도 메모도 삭제하지 않아요." : "현재 기록과 비교해주세요. 다른 화면에서 동시에 수정하지 않는 것이 좋아요."), /* @__PURE__ */ React3.createElement("dl", null, /* @__PURE__ */ React3.createElement("dt", null, "종목"), /* @__PURE__ */ React3.createElement("dd", null, preview.after?.name || preview.before?.name, " · ", preview.after?.ticker || preview.before?.ticker), (preview.kind === "remove" ? ["shares", "avg_cost", "memo"] : preview.changedFields).map((key) => /* @__PURE__ */ React3.createElement(React3.Fragment, { key }, /* @__PURE__ */ React3.createElement("dt", null, labels[key]), /* @__PURE__ */ React3.createElement("dd", null, String(preview.before?.[key] ?? "없음"), " → ", String(preview.after?.[key] ?? "삭제"))))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !known, onClick: confirm }, busy ? "확인 중…" : preview.kind === "remove" ? "확인 후 보유 기록 삭제" : "확인 후 보유 기록 저장"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy, onClick: () => setPreview(null) }, "돌아가서 수정"))) : null, !known ? /* @__PURE__ */ React3.createElement("p", { role: "status" }, state.phase === "error" ? "목록을 불러오지 못했어요. 보유 기록이 없다는 뜻은 아니에요." : "보유목록을 확인하고 있어요.") : /* @__PURE__ */ React3.createElement(React3.Fragment, null, state.holdings.length ? /* @__PURE__ */ React3.createElement("p", null, "현재 가격 미연결 · 평가금액·손익 계산 보류. 입력한 평균 매수가는 현재 시세가 아니에요.") : null, /* @__PURE__ */ React3.createElement("ul", { className: "an-nest-rows" }, state.holdings.map((h) => /* @__PURE__ */ React3.createElement("li", { key: h.ticker }, /* @__PURE__ */ React3.createElement("div", null, /* @__PURE__ */ React3.createElement("strong", null, h.name), /* @__PURE__ */ React3.createElement("small", null, h.ticker, " · ", h.market, " · ", state.selectedTickers.includes(h.ticker) ? "현재 지도에 표시" : "지도 표시 범위 밖"), /* @__PURE__ */ React3.createElement("small", null, "수량 ", h.duplicate ? "중복 확인 필요" : formatHoldingQuantity(h.shares), " · 평균 매수가 ", formatHoldingAverageCost(h))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => edit(h), "aria-label": h.name + " 수정" }, "수정"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => prepare(h), "aria-label": h.name + " 삭제" }, "삭제"))))), !state.holdings.length ? /* @__PURE__ */ React3.createElement("p", null, "등록한 보유종목이 없어요. 종목 추가로 시작하세요.") : null, state.unsupportedCount ? /* @__PURE__ */ React3.createElement("p", null, "이 지도에서 지원하지 않는 보유 항목 ", state.unsupportedCount, "개는 별도로 유지돼요.") : null, state.watchlistError ? /* @__PURE__ */ React3.createElement("p", { role: "status" }, "관심종목을 불러오지 못했어요. 목록 다시 불러오기로 재시도할 수 있어요.") : state.watchlist?.length ? /* @__PURE__ */ React3.createElement("details", null, /* @__PURE__ */ React3.createElement("summary", null, "관심종목 ", state.watchlist.length, "개"), /* @__PURE__ */ React3.createElement("p", null, "관심종목은 보유 수량·평균 매수가에 포함하지 않아요."), /* @__PURE__ */ React3.createElement("ul", { className: "an-nest-rows" }, state.watchlist.map((stock) => /* @__PURE__ */ React3.createElement("li", { key: stock.market + ":" + stock.ticker }, /* @__PURE__ */ React3.createElement("div", null, /* @__PURE__ */ React3.createElement("strong", null, stock.name), /* @__PURE__ */ React3.createElement("small", null, stock.ticker, " · ", stock.market, " · ", state.holdings.some((h) => h.ticker === stock.ticker && h.market === stock.market) ? "보유·관심" : "관심만", " · ", state.selectedTickers.includes(stock.ticker) ? "현재 지도에 표시" : "지도 표시 범위 밖")))))) : null, state.watchlistUnsupportedCount ? /* @__PURE__ */ React3.createElement("p", null, "지원하지 않는 관심 항목 ", state.watchlistUnsupportedCount, "개는 원래 목록에 유지돼요.") : null));
 }
 
 // framer-components/public-probe/PortfolioHoldingsEditor.ts
@@ -2842,6 +3105,7 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
   const frame = React4.useRef(null);
   const controller = React4.useRef(null);
   const editor = React4.useRef(null);
+  const bridge = React4.useRef(null);
   const [state, setState] = React4.useState(null);
   const [source, setSource] = React4.useState(null);
   const [view, setView] = React4.useState("map");
@@ -2856,6 +3120,7 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       setState(value);
       if (value.phase !== "ready") setSource(null);
       if (value.phase === "signed-out") {
+        bridge.current?.clearReturnFocus();
         holdingsEditor.dispose();
         holdingsEditor = createPortfolioHoldingsEditor();
         editor.current = holdingsEditor;
@@ -2865,6 +3130,7 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       }
     });
     const unmount = mountMemberPrototype(frame.current, template, workspace, { openSource: setSource, openHoldings: () => setView("holdings"), templateURL });
+    bridge.current = unmount;
     const unbind = workspace.bindAuth(window);
     void workspace.open();
     return () => {
@@ -2875,6 +3141,7 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       workspace.dispose();
       controller.current = null;
       editor.current = null;
+      bridge.current = null;
     };
   }, [template, templateURL]);
   const [selected, setSelected] = React4.useState([]);
@@ -2909,9 +3176,13 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       key: memberEpoch,
       state,
       visible: view === "holdings",
-      onBack: () => setView("map"),
+      onBack: () => {
+        setView("map");
+        bridge.current?.returnToMap();
+      },
       onReload: () => controller.current?.open() || Promise.resolve(false),
       onConfirmCsv: (previews) => {
+        bridge.current?.clearReturnFocus();
         const currentEditor = editor.current, workspace = controller.current;
         if (!currentEditor || !workspace) return Promise.reject(Error("session-unavailable"));
         return saveConfirmedHoldingCsv(previews, {
@@ -2923,10 +3194,12 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       onConfirm: async (preview) => {
         const currentEditor = editor.current, workspace = controller.current;
         if (!currentEditor || !workspace) throw Error("session-unavailable");
-        await currentEditor.confirm(preview);
+        const completeFocus = bridge.current?.prepareReturnFocus();
+        const result = await currentEditor.confirm(preview);
         if (editor.current !== currentEditor || controller.current !== workspace) throw Error("session-changed");
         const refreshed = await workspace.open();
         if (editor.current !== currentEditor || controller.current !== workspace) throw Error("session-changed");
+        if (refreshed && result.kind === "saved") completeFocus?.(result.row.ticker);
         return { refreshed };
       }
     }
