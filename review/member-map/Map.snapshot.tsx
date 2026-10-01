@@ -580,12 +580,12 @@ async function buildPortfolioMapGraph(maps, closeInput) {
       for (const evidence of items) {
         const raw = evidence.url || "";
         if (!identities.has(raw)) identities.set(raw, portfolioDocumentIdentity(raw));
-        const identity = await identities.get(raw);
-        if (!identity) continue;
+        const identity2 = await identities.get(raw);
+        if (!identity2) continue;
         linkedItems++;
-        const document = documentsById.get(identity.id) || { ...identity, evidence: [] };
+        const document = documentsById.get(identity2.id) || { ...identity2, evidence: [] };
         document.evidence.push(evidence);
-        documentsById.set(identity.id, document);
+        documentsById.set(identity2.id, document);
       }
       const problem = upstreamStates.some((state2) => state2 === "error" || state2 === "unsupported") || messages.some((message) => /불러오지 못|실패|제공 범위.*확인/.test(message));
       const state = !sections.length ? "unknown" : problem ? items.length ? "partial" : "unavailable" : !items.length ? "empty" : !linkedItems ? "unknown" : linkedItems < items.length ? "partial" : "available";
@@ -902,11 +902,118 @@ function editMapLayout(document, mapKey, change) {
   return result;
 }
 
+// framer-components/public-probe/PortfolioWatchlist.ts
+var record5 = (value) => !!value && typeof value === "object" && !Array.isArray(value);
+var identity = (value) => typeof value === "string" && !!value.trim() && value === value.trim();
+function normalizeMapWatchlist(payload, ownerId) {
+  if (!identity(ownerId)) throw new Error("invalid-watchlist-owner");
+  if (!Array.isArray(payload)) throw new Error("invalid-watchlist-response");
+  if (payload.length > 100) throw new Error("watchlist-response-limit");
+  const groups = /* @__PURE__ */ new Set(), stocks = /* @__PURE__ */ new Map(), markets = /* @__PURE__ */ new Map();
+  let totalItems = 0, unsupportedCount = 0;
+  for (const group of payload) {
+    if (!record5(group) || !identity(group.id) || !Array.isArray(group.items)) throw new Error("invalid-watchlist-response");
+    if (group.user_id !== ownerId) throw new Error("watchlist-owner-mismatch");
+    if (groups.has(group.id)) throw new Error("duplicate-watchlist-group");
+    groups.add(group.id);
+    totalItems += group.items.length;
+    if (totalItems > 3e3) throw new Error("watchlist-response-limit");
+    for (const item of group.items) {
+      if (!record5(item) || typeof item.ticker !== "string" || typeof item.market !== "string" || item.name != null && typeof item.name !== "string") throw new Error("invalid-watchlist-response");
+      if (item.group_id !== group.id) throw new Error("watchlist-group-mismatch");
+      const ticker = item.ticker.trim().toUpperCase(), market = item.market.trim().toUpperCase();
+      if (ticker && (market === "KR" || market === "US")) {
+        const prior = markets.get(ticker);
+        if (prior && prior !== market) throw new Error("ambiguous-watchlist-market");
+        markets.set(ticker, market);
+      }
+      const supported = market === "KR" ? /^\d{6}$/.test(ticker) : market === "US" && /^[A-Z][A-Z0-9.-]{0,15}$/.test(ticker);
+      if (!supported || item.type === "commodity") {
+        unsupportedCount++;
+        continue;
+      }
+      const key = `${market}:${ticker}`;
+      if (!stocks.has(key)) stocks.set(key, {
+        ticker,
+        market,
+        name: typeof item.name === "string" && item.name.trim() ? item.name.trim() : ticker
+      });
+    }
+  }
+  return { stocks: [...stocks.values()], unsupportedCount };
+}
+function aborted() {
+  const error = new Error("watchlist-aborted");
+  error.name = "AbortError";
+  return error;
+}
+function abortable(pending, signal) {
+  return new Promise((resolve, reject) => {
+    const cancel = () => reject(aborted());
+    signal.addEventListener("abort", cancel, { once: true });
+    pending.then(
+      (value) => {
+        signal.removeEventListener("abort", cancel);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener("abort", cancel);
+        reject(error);
+      }
+    );
+    if (signal.aborted) {
+      signal.removeEventListener("abort", cancel);
+      cancel();
+    }
+  });
+}
+async function fetchMapWatchlist(options) {
+  const { api, getSession, ownerId, signal } = options;
+  const current = () => {
+    if (signal.aborted) throw aborted();
+    if (!identity(ownerId)) throw new Error("invalid-watchlist-owner");
+    const session = getSession();
+    if (!session || typeof session.token !== "string" || !session.token.trim()) throw new Error("authentication-required");
+    if (session.userId !== ownerId) throw new Error("session-changed");
+    return session;
+  };
+  const token = current().token, fetcher = options.fetcher || fetch;
+  const request = (requestToken) => fetcher(api.replace(/\/+$/, "") + "/api/watchgroups", {
+    method: "GET",
+    headers: { Authorization: "Bearer " + requestToken },
+    signal,
+    cache: "no-store",
+    credentials: "omit",
+    redirect: "error"
+  });
+  try {
+    let response = await abortable(request(token), signal);
+    const refreshedToken = current().token;
+    if (response.status === 401 && refreshedToken !== token) {
+      response = await abortable(request(refreshedToken), signal);
+      current();
+    }
+    if (!response.ok) throw new Error(response.status === 401 ? "authentication-required" : "watchlist-unavailable");
+    const payload = await abortable(response.json(), signal);
+    current();
+    return normalizeMapWatchlist(payload, ownerId);
+  } catch (error) {
+    current();
+    throw error;
+  }
+}
+
 // framer-components/public-probe/PortfolioMapWorkspace.tsx
 var API = "https://project-yw131.vercel.app";
 var clone = (value) => JSON.parse(JSON.stringify(value));
 var sameAccount = (a, b) => a?.userId === b?.userId;
-var empty = (privateState) => ({ phase: "signed-out", holdings: [], unsupportedCount: 0, selectedTickers: [], graph: null, privateState, error: null });
+var empty = (privateState) => ({ phase: "signed-out", holdings: [], watchlist: [], watchlistError: null, watchlistUnsupportedCount: 0, unsupportedCount: 0, selectedTickers: [], graph: null, privateState, error: null });
+function workspaceStocks(state) {
+  const watched = new Set((state.watchlist || []).map((row) => `${row.market}:${row.ticker}`));
+  const stocks = new Map(state.holdings.map((row) => [row.ticker, { ticker: row.ticker, name: row.name, market: row.market, held: true, watched: watched.has(`${row.market}:${row.ticker}`) }]));
+  for (const row of state.watchlist || []) if (!stocks.has(row.ticker)) stocks.set(row.ticker, { ...row, held: false, watched: true });
+  return [...stocks.values()];
+}
 var finitePositive = (value) => {
   if (typeof value !== "number" && typeof value !== "string") return null;
   if (typeof value === "string" && !value.trim()) return null;
@@ -952,6 +1059,7 @@ function createPortfolioMapWorkspace(options = {}) {
   let disposed = false;
   const store = createMemberMapStore({ getSession, fetcher: (input, init) => disposed ? Promise.reject(new Error("workspace-disposed")) : fetcher(input, init) });
   let state = empty(store.getState()), account = null, generation = 0;
+  let automaticSelection = true;
   let pending = null;
   const listeners = /* @__PURE__ */ new Set();
   const authCleanups = /* @__PURE__ */ new Set();
@@ -969,6 +1077,7 @@ function createPortfolioMapWorkspace(options = {}) {
     generation += 1;
     pending?.abort();
     pending = null;
+    automaticSelection = true;
     state = empty({ phase: "signed-out", document: null, revision: null, dirty: false, error: null });
     if (notify) emit();
   };
@@ -996,10 +1105,11 @@ function createPortfolioMapWorkspace(options = {}) {
     state = { ...state, privateState };
     emit();
   });
-  const showTickers = async (tickers) => {
+  const showTickers = async (tickers, fromOpen = false) => {
     if (!account || !valid(generation)) return false;
     const codes = [...new Set(tickers.map((ticker) => ticker.trim().toUpperCase()))];
-    if (codes.length > 30 || codes.some((code) => !state.holdings.some((row) => row.ticker === code))) throw new Error("choose-up-to-30-holdings");
+    if (codes.length > 30 || codes.some((code) => !workspaceStocks(state).some((row) => row.ticker === code))) throw new Error("choose-up-to-30-holdings");
+    if (!fromOpen) automaticSelection = false;
     pending?.abort();
     pending = new AbortController();
     const signal = pending.signal, version = ++generation;
@@ -1041,10 +1151,16 @@ function createPortfolioMapWorkspace(options = {}) {
     pending = controller;
     const timer = setTimeout(() => controller.abort(), 15e3);
     timers.add(timer);
+    const watchController = new AbortController();
+    const cancelWatch = () => watchController.abort();
+    controller.signal.addEventListener("abort", cancelWatch, { once: true });
+    const watchTimer = options.includeWatchlist ? setTimeout(cancelWatch, 5e3) : null;
+    if (watchTimer) timers.add(watchTimer);
     state = { ...state, phase: "loading", error: null };
     emit();
     try {
       if (!valid(version) || controller.signal.aborted) return false;
+      const watchResult = options.includeWatchlist ? fetchMapWatchlist({ api: API, getSession, ownerId: next.userId, fetcher, signal: watchController.signal }).then((value) => ({ ...value, error: null }), (error) => ({ stocks: [], unsupportedCount: 0, error: error instanceof Error ? error.message : "watchlist-unavailable" })) : Promise.resolve({ stocks: [], unsupportedCount: 0, error: null });
       const requestSession = getSession();
       if (!requestSession || !sameAccount(next, requestSession) || !valid(version) || controller.signal.aborted) return false;
       const requestHoldings = (token) => fetcher(API + "/api/holdings", {
@@ -1064,27 +1180,36 @@ function createPortfolioMapWorkspace(options = {}) {
       if (!response.ok) throw new Error(response.status === 401 ? "authentication-required" : "holdings-unavailable");
       const result = normalizeMapHoldings(await response.json());
       if (!valid(version) || controller.signal.aborted) return false;
-      const previous = state.selectedTickers.filter((code) => result.holdings.some((row) => row.ticker === code));
-      state = { ...state, ...result };
-      if (result.holdings.length > 30 && !previous.length) {
+      const watch = await watchResult;
+      if (!valid(version) || controller.signal.aborted) return false;
+      state = { ...state, ...result, watchlist: watch.stocks, watchlistError: watch.error, watchlistUnsupportedCount: watch.unsupportedCount };
+      const stocks = workspaceStocks(state);
+      const previous = state.selectedTickers.filter((code) => stocks.some((row) => row.ticker === code));
+      if (stocks.length > 30 && (automaticSelection || !previous.length)) {
         state = { ...state, phase: "choose-stocks", graph: null, selectedTickers: [] };
         emit();
         await restore;
         return valid(version);
       }
-      const success = await showTickers(previous.length ? previous : result.holdings.map((row) => row.ticker));
+      const success = await showTickers(!automaticSelection && previous.length ? previous : stocks.map((row) => row.ticker), true);
       const graphVersion = generation;
       await restore;
       return success && valid(graphVersion) && sameAccount(next, getSession());
     } catch (error) {
       if (!valid(version)) return false;
-      state = { ...state, phase: "error", holdings: [], graph: null, error: error instanceof Error ? error.message : "holdings-unavailable" };
+      state = { ...state, phase: "error", holdings: [], watchlist: [], graph: null, error: error instanceof Error ? error.message : "holdings-unavailable" };
       emit();
       await restore;
       return false;
     } finally {
       clearTimeout(timer);
       timers.delete(timer);
+      if (watchTimer) {
+        clearTimeout(watchTimer);
+        timers.delete(watchTimer);
+      }
+      controller.signal.removeEventListener("abort", cancelWatch);
+      watchController.abort();
     }
   };
   return {
@@ -1313,9 +1438,9 @@ var EVENT_KEYS = ["id", "title", "date", "status", "participants", "sourceIds", 
 var ENTITY_KEYS = ["ticker", "market"];
 var PARTICIPANT_KEYS = ["ticker", "market", "role", "sourceIds"];
 var failure = (reason) => ({ ok: false, reason });
-var record5 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
+var record6 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
 function exactRecord(value, keys) {
-  const item = record5(value);
+  const item = record6(value);
   if (!item) return null;
   const actual = Object.keys(item);
   return actual.length === keys.length && actual.every((key) => keys.includes(key)) ? item : null;
@@ -1739,7 +1864,7 @@ var position = (index, count) => ({
 });
 function projectReviewedPrototype(state) {
   if (state.phase !== "ready" || !state.graph) return emptyReviewedPrototype();
-  const holdingsByTicker = new Map(state.holdings.map((holding) => [holding.ticker, holding]));
+  const holdingsByTicker = new Map(workspaceStocks(state).map((holding) => [holding.ticker, holding]));
   const companiesByEntity = /* @__PURE__ */ new Map();
   const holdings = state.graph.companies.flatMap((company) => {
     const holding = holdingsByTicker.get(company.ticker);
@@ -1752,9 +1877,9 @@ function projectReviewedPrototype(state) {
   const recordsMap = {};
   const total = facts.relationships.length + facts.events.length;
   facts.relationships.forEach((fact, index) => {
-    const mode = "relationships", record6 = reviewedRecord(mode, fact);
-    const nodeId = record6.id, evidence = sourceEvidence(fact.sources), source = firstSource(fact.sources);
-    recordsMap[record6.id] = recordFor(mode, fact, record6);
+    const mode = "relationships", record7 = reviewedRecord(mode, fact);
+    const nodeId = record7.id, evidence = sourceEvidence(fact.sources), source = firstSource(fact.sources);
+    recordsMap[record7.id] = recordFor(mode, fact, record7);
     nodes.push({
       id: nodeId,
       kind: "reviewed-relationship",
@@ -1768,19 +1893,19 @@ function projectReviewedPrototype(state) {
       asOf: fact.asOf,
       evidence,
       relationshipKind: fact.label,
-      recordId: record6.id,
-      read_revision: record6.read_revision,
+      recordId: record7.id,
+      read_revision: record7.read_revision,
       ...position(index, total)
     });
     for (const endpoint of [fact.from, fact.to]) {
       const companyId = companiesByEntity.get(entityKey2(endpoint));
-      if (companyId) edges.push(edgeFor("relationships", fact, record6, nodeId, companyId, endpoint, fact.label, evidence, source));
+      if (companyId) edges.push(edgeFor("relationships", fact, record7, nodeId, companyId, endpoint, fact.label, evidence, source));
     }
   });
   facts.events.forEach((fact, index) => {
-    const mode = "events", record6 = reviewedRecord(mode, fact);
-    const nodeId = record6.id, evidence = sourceEvidence(fact.sources), source = firstSource(fact.sources);
-    recordsMap[record6.id] = recordFor(mode, fact, record6);
+    const mode = "events", record7 = reviewedRecord(mode, fact);
+    const nodeId = record7.id, evidence = sourceEvidence(fact.sources), source = firstSource(fact.sources);
+    recordsMap[record7.id] = recordFor(mode, fact, record7);
     nodes.push({
       id: nodeId,
       kind: "reviewed-event",
@@ -1794,19 +1919,19 @@ function projectReviewedPrototype(state) {
       asOf: fact.date,
       evidence,
       relationshipKind: null,
-      recordId: record6.id,
-      read_revision: record6.read_revision,
+      recordId: record7.id,
+      read_revision: record7.read_revision,
       ...position(facts.relationships.length + index, total)
     });
     const participants = new Map(fact.participants.map((participant) => [entityKey2(participant), participant]));
     for (const holding of fact.matchedHoldings) {
       const companyId = companiesByEntity.get(entityKey2(holding)), participant = participants.get(entityKey2(holding));
-      if (companyId && participant) edges.push(edgeFor("events", fact, record6, nodeId, companyId, holding, participant.role, evidence, source));
+      if (companyId && participant) edges.push(edgeFor("events", fact, record7, nodeId, companyId, holding, participant.role, evidence, source));
     }
   });
   return { nodes, edges, recordsMap, facts };
 }
-function edgeFor(mode, fact, record6, nodeId, companyId, endpoint, reason, evidence, source) {
+function edgeFor(mode, fact, record7, nodeId, companyId, endpoint, reason, evidence, source) {
   const isRelationship = mode === "relationships";
   return {
     id: `reviewed-link:${fact.id}:${entityKey2(endpoint)}`,
@@ -1818,15 +1943,15 @@ function edgeFor(mode, fact, record6, nodeId, companyId, endpoint, reason, evide
     asOf: isRelationship ? fact.asOf : fact.date,
     evidence,
     relationshipKind: isRelationship ? fact.label : null,
-    recordId: record6.id,
-    read_revision: record6.read_revision,
+    recordId: record7.id,
+    read_revision: record7.read_revision,
     influence: "unknown"
   };
 }
-function recordFor(mode, fact, record6) {
+function recordFor(mode, fact, record7) {
   const isRelationship = mode === "relationships";
   return {
-    ...record6,
+    ...record7,
     mode,
     factId: fact.id,
     asOf: isRelationship ? fact.asOf : fact.date,
@@ -1896,6 +2021,7 @@ function mergePrototypeDraft(state, value) {
 function prototypeMemberModel(state) {
   if (state.phase !== "ready" || !state.graph) return { nodes: [], edges: [], notes: {}, marks: {}, writable: false };
   const projected = projectWorkspaceToPrototype(state), graph = state.graph, reviewed = projectReviewedPrototype(state);
+  const stocks = new Map(workspaceStocks(state).map((stock) => [stock.ticker, stock]));
   const layout = state.privateState.document?.layouts.find((l) => l.map_key === "main");
   const positions = new Map(layout?.positions.map((p) => [p.node_id, p]));
   const evidence = (rows2) => rows2.map((s) => ({ url: s.sourceURL, source: s.publisher, asOf: s.publishedAt, explanation: s.statement }));
@@ -1919,8 +2045,10 @@ function prototypeMemberModel(state) {
       priority: 2,
       recordKind: n.kind === "event" ? "document" : "company",
       changeStatus: changes[n.id],
-      market: n.kind === "stock" ? graph?.companies.find((c) => c.id === n.id)?.market : void 0,
-      reason: n.kind === "stock" ? "보유종목에 연결된 자료를 확인하세요." : graph?.documents.find((d) => d.id === n.id)?.reason,
+      market: n.kind === "stock" ? stocks.get(n.code)?.market : void 0,
+      held: n.kind === "stock" ? stocks.get(n.code)?.held ?? false : void 0,
+      watched: n.kind === "stock" ? stocks.get(n.code)?.watched ?? false : void 0,
+      reason: n.kind === "stock" ? stocks.get(n.code)?.held ? "보유종목에 연결된 자료를 확인하세요." : "관심종목이에요. 실제 보유 수량이나 평가금액에는 포함하지 않아요." : graph?.documents.find((d) => d.id === n.id)?.reason,
       source: n.kind === "event" ? graph?.documents.find((d) => d.id === n.id)?.source : "내 포트폴리오",
       asOf: n.kind === "event" ? graph?.documents.find((d) => d.id === n.id)?.asOf : void 0,
       evidence: n.kind === "event" ? graph?.documents.find((d) => d.id === n.id)?.evidence : []
@@ -1976,7 +2104,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
         const reviewed = projectReviewedPrototype(state);
         const urls = /* @__PURE__ */ new Set([
           ...state.graph?.documents.flatMap((d) => [d.url, ...d.evidence.flatMap((e) => [e.url, ...e.sources.map((s) => s.url)])]) || [],
-          ...Object.values(reviewed.recordsMap).flatMap((record6) => record6.sourceURLs)
+          ...Object.values(reviewed.recordsMap).flatMap((record7) => record7.sourceURLs)
         ]);
         try {
           const url = new URL(command.url);
@@ -2022,7 +2150,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
       key = "";
       reloadPending = false;
     }
-    const nextKey = JSON.stringify([nextOwner, state.graph, !!state.privateState.document]);
+    const nextKey = JSON.stringify([nextOwner, state.graph, workspaceStocks(state), !!state.privateState.document]);
     if (nextKey !== key) {
       close();
       owner = nextOwner;
@@ -2084,9 +2212,9 @@ var textField = (value, field) => {
   if (typeof value !== "string") throw new Error(`invalid-${field}`);
   return value;
 };
-var copy2 = (record6) => ({ ...record6 });
+var copy2 = (record7) => ({ ...record7 });
 function targetById(records, id) {
-  const matches = records.filter((record6) => record6.id === id);
+  const matches = records.filter((record7) => record7.id === id);
   if (!matches.length) throw new Error("holding-not-found");
   if (matches.length !== 1) throw new Error("duplicate-holding-id");
   if (matches[0].duplicate === true) throw new Error("duplicate-holding-record");
@@ -2132,8 +2260,8 @@ function previewHoldingChange(records, change) {
 }
 function previewAdd(records, change) {
   const apiMarket = apiMarketFor(change.market), market = holdingMarketFor(apiMarket), ticker = tickerFor(change.ticker, apiMarket);
-  const sameTicker = records.filter((record6) => record6.ticker.trim().toUpperCase() === ticker);
-  if (sameTicker.some((record6) => record6.duplicate === true)) throw new Error("duplicate-holding-record");
+  const sameTicker = records.filter((record7) => record7.ticker.trim().toUpperCase() === ticker);
+  if (sameTicker.some((record7) => record7.duplicate === true)) throw new Error("duplicate-holding-record");
   if (sameTicker.length) {
     throw new Error("holding-ticker-requires-edit");
   }
@@ -2262,7 +2390,7 @@ function buildHoldingCsvPreview(text5, memberHoldings) {
       if (!columns.includes(required)) errors.push({ rowNumber: header.line, code: `csv-missing-${required}-header` });
     }
   }
-  const existingTickers = new Set(memberHoldings.map((record6) => record6.ticker.trim().toUpperCase()));
+  const existingTickers = new Set(memberHoldings.map((record7) => record7.ticker.trim().toUpperCase()));
   const rows2 = parsed.rows.slice(1).map((row) => ({ rowNumber: row.line, cells: row.cells, errors: row.errors.slice(), ticker: null, kind: "error", preview: null }));
   if (header && !rows2.length && !errors.length) errors.push({ rowNumber: header.line + 1, code: "csv-no-data" });
   const tickerIndex = columns.indexOf("ticker");
@@ -2294,14 +2422,14 @@ function buildHoldingCsvPreview(text5, memberHoldings) {
       if (input.currency !== void 0 && input.currency.trim().toUpperCase() !== (after.market === "KR" ? "KRW" : "USD")) {
         throw new Error("csv-currency-mismatch");
       }
-      const matches = memberHoldings.filter((record6) => record6.ticker.trim().toUpperCase() === after.ticker);
+      const matches = memberHoldings.filter((record7) => record7.ticker.trim().toUpperCase() === after.ticker);
       if (!matches.length) {
         row.kind = "add";
         row.preview = candidate;
         continue;
       }
       const before = matches[0];
-      if (matches.length !== 1 || before.duplicate || !before.id?.trim() || before.id !== before.id.trim() || memberHoldings.filter((record6) => record6.id === before.id).length !== 1) throw new Error("csv-ambiguous-existing-identity");
+      if (matches.length !== 1 || before.duplicate || !before.id?.trim() || before.id !== before.id.trim() || memberHoldings.filter((record7) => record7.id === before.id).length !== 1) throw new Error("csv-ambiguous-existing-identity");
       if (before.market !== after.market) throw new Error("csv-existing-market-conflict");
       const change = { kind: "edit", id: before.id };
       if (before.shares !== after.shares) change.shares = after.shares;
@@ -2509,7 +2637,7 @@ function PortfolioHoldingsPanel({ state, visible, onBack, onConfirm, onConfirmCs
   } }, /* @__PURE__ */ React3.createElement("h3", null, form.id ? "보유 기록 수정" : "보유종목 추가"), /* @__PURE__ */ React3.createElement("p", null, "입력값은 변경 내용을 확인한 뒤 저장돼요."), /* @__PURE__ */ React3.createElement("fieldset", { disabled: busy || !known, style: { border: 0, padding: 0, margin: "12px 0 0" } }, /* @__PURE__ */ React3.createElement("div", { className: "an-nest-grid" }, /* @__PURE__ */ React3.createElement("label", null, "시장", /* @__PURE__ */ React3.createElement("select", { value: form.market, disabled: !!form.id, onChange: (e) => change("market", e.target.value) }, /* @__PURE__ */ React3.createElement("option", { value: "KR" }, "국내 · KRW"), /* @__PURE__ */ React3.createElement("option", { value: "US" }, "미국 · USD"))), /* @__PURE__ */ React3.createElement("label", null, "종목코드", /* @__PURE__ */ React3.createElement("input", { value: form.ticker, disabled: !!form.id, onChange: (e) => change("ticker", e.target.value), placeholder: form.market === "KR" ? "005930" : "AAPL" })), /* @__PURE__ */ React3.createElement("label", null, "이름", /* @__PURE__ */ React3.createElement("input", { value: form.name, onChange: (e) => change("name", e.target.value) })), /* @__PURE__ */ React3.createElement("label", null, "수량", /* @__PURE__ */ React3.createElement("input", { inputMode: "decimal", value: form.shares, onChange: (e) => change("shares", e.target.value) })), /* @__PURE__ */ React3.createElement("label", null, "평균 매수가 · ", form.market === "KR" ? "KRW" : "USD", /* @__PURE__ */ React3.createElement("input", { inputMode: "decimal", value: form.avg_cost, onChange: (e) => change("avg_cost", e.target.value) })), /* @__PURE__ */ React3.createElement("label", null, "보유 메모", /* @__PURE__ */ React3.createElement("textarea", { value: form.memo, onChange: (e) => change("memo", e.target.value) }))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "submit" }, "변경 내용 확인"), /* @__PURE__ */ React3.createElement("button", { type: "button", onClick: () => {
     setForm(null);
     setPreview(null);
-  } }, "입력 취소")))) : null, preview ? /* @__PURE__ */ React3.createElement("section", { className: "an-nest-preview", "aria-label": "보유 변경 미리보기" }, /* @__PURE__ */ React3.createElement("h3", null, preview.kind === "remove" ? "이 보유 기록을 삭제할까요?" : "이 내용으로 저장할까요?"), /* @__PURE__ */ React3.createElement("p", null, preview.kind === "remove" ? "목록의 보유 기록만 삭제해요. 실제 매도나 거래 기록 추가가 아니며 지도 메모도 삭제하지 않아요." : "현재 기록과 비교해주세요. 다른 화면에서 동시에 수정하지 않는 것이 좋아요."), /* @__PURE__ */ React3.createElement("dl", null, /* @__PURE__ */ React3.createElement("dt", null, "종목"), /* @__PURE__ */ React3.createElement("dd", null, preview.after?.name || preview.before?.name, " · ", preview.after?.ticker || preview.before?.ticker), (preview.kind === "remove" ? ["shares", "avg_cost", "memo"] : preview.changedFields).map((key) => /* @__PURE__ */ React3.createElement(React3.Fragment, { key }, /* @__PURE__ */ React3.createElement("dt", null, labels[key]), /* @__PURE__ */ React3.createElement("dd", null, String(preview.before?.[key] ?? "없음"), " → ", String(preview.after?.[key] ?? "삭제"))))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !known, onClick: confirm }, busy ? "확인 중…" : preview.kind === "remove" ? "확인 후 보유 기록 삭제" : "확인 후 보유 기록 저장"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy, onClick: () => setPreview(null) }, "돌아가서 수정"))) : null, !known ? /* @__PURE__ */ React3.createElement("p", { role: "status" }, state.phase === "error" ? "목록을 불러오지 못했어요. 보유 기록이 없다는 뜻은 아니에요." : "보유목록을 확인하고 있어요.") : /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("ul", { className: "an-nest-rows" }, state.holdings.map((h) => /* @__PURE__ */ React3.createElement("li", { key: h.ticker }, /* @__PURE__ */ React3.createElement("div", null, /* @__PURE__ */ React3.createElement("strong", null, h.name), /* @__PURE__ */ React3.createElement("small", null, h.ticker, " · ", h.market, " · ", state.selectedTickers.includes(h.ticker) ? "현재 지도에 표시" : "지도 표시 범위 밖"), /* @__PURE__ */ React3.createElement("small", null, "수량 ", h.duplicate ? "중복 확인 필요" : formatHoldingQuantity(h.shares), " · 평균 매수가 ", formatHoldingAverageCost(h))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => edit(h), "aria-label": h.name + " 수정" }, "수정"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => prepare(h), "aria-label": h.name + " 삭제" }, "삭제"))))), !state.holdings.length ? /* @__PURE__ */ React3.createElement("p", null, "등록한 보유종목이 없어요. 종목 추가로 시작하세요.") : null, state.unsupportedCount ? /* @__PURE__ */ React3.createElement("p", null, "이 지도에서 지원하지 않는 보유 항목 ", state.unsupportedCount, "개는 별도로 유지돼요.") : null));
+  } }, "입력 취소")))) : null, preview ? /* @__PURE__ */ React3.createElement("section", { className: "an-nest-preview", "aria-label": "보유 변경 미리보기" }, /* @__PURE__ */ React3.createElement("h3", null, preview.kind === "remove" ? "이 보유 기록을 삭제할까요?" : "이 내용으로 저장할까요?"), /* @__PURE__ */ React3.createElement("p", null, preview.kind === "remove" ? "목록의 보유 기록만 삭제해요. 실제 매도나 거래 기록 추가가 아니며 지도 메모도 삭제하지 않아요." : "현재 기록과 비교해주세요. 다른 화면에서 동시에 수정하지 않는 것이 좋아요."), /* @__PURE__ */ React3.createElement("dl", null, /* @__PURE__ */ React3.createElement("dt", null, "종목"), /* @__PURE__ */ React3.createElement("dd", null, preview.after?.name || preview.before?.name, " · ", preview.after?.ticker || preview.before?.ticker), (preview.kind === "remove" ? ["shares", "avg_cost", "memo"] : preview.changedFields).map((key) => /* @__PURE__ */ React3.createElement(React3.Fragment, { key }, /* @__PURE__ */ React3.createElement("dt", null, labels[key]), /* @__PURE__ */ React3.createElement("dd", null, String(preview.before?.[key] ?? "없음"), " → ", String(preview.after?.[key] ?? "삭제"))))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !known, onClick: confirm }, busy ? "확인 중…" : preview.kind === "remove" ? "확인 후 보유 기록 삭제" : "확인 후 보유 기록 저장"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy, onClick: () => setPreview(null) }, "돌아가서 수정"))) : null, !known ? /* @__PURE__ */ React3.createElement("p", { role: "status" }, state.phase === "error" ? "목록을 불러오지 못했어요. 보유 기록이 없다는 뜻은 아니에요." : "보유목록을 확인하고 있어요.") : /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("ul", { className: "an-nest-rows" }, state.holdings.map((h) => /* @__PURE__ */ React3.createElement("li", { key: h.ticker }, /* @__PURE__ */ React3.createElement("div", null, /* @__PURE__ */ React3.createElement("strong", null, h.name), /* @__PURE__ */ React3.createElement("small", null, h.ticker, " · ", h.market, " · ", state.selectedTickers.includes(h.ticker) ? "현재 지도에 표시" : "지도 표시 범위 밖"), /* @__PURE__ */ React3.createElement("small", null, "수량 ", h.duplicate ? "중복 확인 필요" : formatHoldingQuantity(h.shares), " · 평균 매수가 ", formatHoldingAverageCost(h))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => edit(h), "aria-label": h.name + " 수정" }, "수정"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => prepare(h), "aria-label": h.name + " 삭제" }, "삭제"))))), !state.holdings.length ? /* @__PURE__ */ React3.createElement("p", null, "등록한 보유종목이 없어요. 종목 추가로 시작하세요.") : null, state.unsupportedCount ? /* @__PURE__ */ React3.createElement("p", null, "이 지도에서 지원하지 않는 보유 항목 ", state.unsupportedCount, "개는 별도로 유지돼요.") : null, state.watchlistError ? /* @__PURE__ */ React3.createElement("p", { role: "status" }, "관심종목을 불러오지 못했어요. 목록 다시 불러오기로 재시도할 수 있어요.") : state.watchlist?.length ? /* @__PURE__ */ React3.createElement("details", null, /* @__PURE__ */ React3.createElement("summary", null, "관심종목 ", state.watchlist.length, "개"), /* @__PURE__ */ React3.createElement("p", null, "관심종목은 보유 수량·평균 매수가에 포함하지 않아요."), /* @__PURE__ */ React3.createElement("ul", { className: "an-nest-rows" }, state.watchlist.map((stock) => /* @__PURE__ */ React3.createElement("li", { key: stock.market + ":" + stock.ticker }, /* @__PURE__ */ React3.createElement("div", null, /* @__PURE__ */ React3.createElement("strong", null, stock.name), /* @__PURE__ */ React3.createElement("small", null, stock.ticker, " · ", stock.market, " · ", state.holdings.some((h) => h.ticker === stock.ticker && h.market === stock.market) ? "보유·관심" : "관심만", " · ", state.selectedTickers.includes(stock.ticker) ? "현재 지도에 표시" : "지도 표시 범위 밖")))))) : null, state.watchlistUnsupportedCount ? /* @__PURE__ */ React3.createElement("p", null, "지원하지 않는 관심 항목 ", state.watchlistUnsupportedCount, "개는 원래 목록에 유지돼요.") : null));
 }
 
 // framer-components/public-probe/PortfolioHoldingsEditor.ts
@@ -2720,7 +2848,7 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
   const [memberEpoch, setMemberEpoch] = React4.useState(0);
   React4.useEffect(() => {
     if (!frame.current) return;
-    const workspace = createPortfolioMapWorkspace();
+    const workspace = createPortfolioMapWorkspace({ includeWatchlist: true });
     let holdingsEditor = createPortfolioHoldingsEditor();
     editor.current = holdingsEditor;
     controller.current = workspace;
@@ -2750,7 +2878,7 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
     };
   }, [template, templateURL]);
   const [selected, setSelected] = React4.useState([]);
-  return /* @__PURE__ */ React4.createElement("section", { "aria-label": "내 포트폴리오 관계지도", style: { position: "relative", width: "100%", minWidth: 0 } }, !state || state.phase === "loading" || state.phase === "signed-out" ? /* @__PURE__ */ React4.createElement("p", { role: "status" }, state?.phase === "signed-out" ? "로그인 후 지도 자료를 불러옵니다." : "보유종목과 지도 자료를 불러오는 중이에요.") : null, state?.phase === "choose-stocks" ? /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("p", null, "지도에 함께 표시할 종목을 최대 30개 골라주세요. 둥지의 보유 목록은 바뀌지 않아요."), state.holdings.map((h) => /* @__PURE__ */ React4.createElement("label", { key: h.ticker }, /* @__PURE__ */ React4.createElement(
+  return /* @__PURE__ */ React4.createElement("section", { "aria-label": "내 포트폴리오 관계지도", style: { position: "relative", width: "100%", minWidth: 0 } }, !state || state.phase === "loading" || state.phase === "signed-out" ? /* @__PURE__ */ React4.createElement("p", { role: "status" }, state?.phase === "signed-out" ? "로그인 후 지도 자료를 불러옵니다." : "보유종목과 지도 자료를 불러오는 중이에요.") : null, state?.phase === "choose-stocks" ? /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("p", null, "지도에 함께 표시할 종목을 최대 30개 골라주세요. 둥지의 보유 목록은 바뀌지 않아요."), workspaceStocks(state).map((h) => /* @__PURE__ */ React4.createElement("label", { key: h.ticker }, /* @__PURE__ */ React4.createElement(
     "input",
     {
       type: "checkbox",
@@ -2758,9 +2886,9 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       disabled: !selected.includes(h.ticker) && selected.length >= 30,
       onChange: (e) => setSelected((old) => e.target.checked ? [...old, h.ticker] : old.filter((t) => t !== h.ticker))
     }
-  ), h.name)), /* @__PURE__ */ React4.createElement("button", { type: "button", disabled: !selected.length, onClick: () => {
+  ), h.name, " · ", h.held ? h.watched ? "보유·관심" : "보유" : "관심")), /* @__PURE__ */ React4.createElement("button", { type: "button", disabled: !selected.length, onClick: () => {
     void controller.current?.showTickers(selected);
-  } }, "지도에서 보기"), /* @__PURE__ */ React4.createElement("button", { type: "button", onClick: () => setView("holdings") }, "보유목록")) : null, state?.phase === "error" ? /* @__PURE__ */ React4.createElement("div", { role: "alert" }, "자료를 불러오지 못했어요. 저장한 기록은 그대로예요.", /* @__PURE__ */ React4.createElement("button", { type: "button", onClick: () => {
+  } }, "지도에서 보기"), /* @__PURE__ */ React4.createElement("button", { type: "button", onClick: () => setView("holdings") }, "보유목록")) : null, state?.watchlistError && (state.phase === "ready" || state.phase === "choose-stocks") ? /* @__PURE__ */ React4.createElement("p", { role: "status" }, "관심종목을 불러오지 못했어요. 보유종목은 그대로 볼 수 있어요. 보유목록에서 다시 불러올 수 있어요.") : null, state?.phase === "error" ? /* @__PURE__ */ React4.createElement("div", { role: "alert" }, "자료를 불러오지 못했어요. 저장한 기록은 그대로예요.", /* @__PURE__ */ React4.createElement("button", { type: "button", onClick: () => {
     void controller.current?.open();
   } }, "다시 불러오기")) : null, state?.phase === "ready" && ["error", "conflict"].includes(state.privateState.phase) ? /* @__PURE__ */ React4.createElement("div", { role: "alert" }, state.privateState.phase === "conflict" ? "다른 화면에서 기록이 바뀌었어요. 내 변경은 아직 저장되지 않았어요." : "저장 기록을 확인하지 못했어요. 현재 변경은 유지하고 있어요.", state.privateState.phase === "error" && state.privateState.dirty ? /* @__PURE__ */ React4.createElement("button", { type: "button", onClick: () => {
     void controller.current?.save();
