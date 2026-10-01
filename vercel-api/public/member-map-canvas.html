@@ -2543,7 +2543,7 @@ showPreview=function(anchor,item,isEdge,at){
   caption.textContent=isEdge?'이 종목에 '+(item.impact||'미확인'):'자료 확인';
   source.textContent=(item.asOf||'기준일 미확인')+' · '+(item.source||'내 포트폴리오');
 };
-let memberWritable=!!member.writable,lastDraft='';
+let memberWritable=!!member.writable,memberReset=false,lastDraft='';
 function memberDraft(){return {positions:nodes.map(n=>({id:n.id,x:n.x,y:n.y})),notes:Object.values(state.notes),marks:state.marks};}
 function emitMemberDraft(){
   if(!memberWritable)return;
@@ -2554,7 +2554,7 @@ function emitMemberDraft(){
 save=emitMemberDraft;
 memberSaveButton.onclick=()=>{emitMemberDraft();memberPort.postMessage({type:'save'});};
 memberPort.onmessage=event=>{
-  if(event.data?.type==='reset'){memberWritable=false;root.replaceChildren();memberPort.close();return;}
+  if(event.data?.type==='reset'){memberReset=true;memberWritable=false;root.replaceChildren();memberPort.close();return;}
   if(event.data?.type!=='status')return;
   memberWritable=!!event.data.writable;
   memberSaveButton.disabled=!memberWritable||!!event.data.saving;
@@ -2562,6 +2562,7 @@ memberPort.onmessage=event=>{
 };
 const prototypeRenderMap=renderMap;
 renderMap=function(){
+  if(memberReset)return;
   prototypeRenderMap();
   root.querySelector('#an-counts').textContent='보유 표시 '+holdings.filter(shown).length+'/'+holdings.length+' · 자료 '+nodes.filter(matchesEvent).length;
   const note=root.querySelector('.an-aside-note'),emptyNotice=root.querySelector('#an-empty');
@@ -2573,6 +2574,7 @@ renderMap=function(){
 };
 const prototypeNotePanel=renderNotePanel;
 renderNotePanel=function(){
+  if(memberReset)return;
   prototypeNotePanel();
   detail.querySelector('.an-kicker').textContent='내 메모';
   detail.querySelectorAll('.an-save-note').forEach(el=>el.textContent='변경 후 기록 저장을 눌러주세요.');
@@ -2582,6 +2584,7 @@ renderNotePanel=function(){
 };
 const prototypeDetail=renderDetail;
 renderDetail=function(){
+  if(memberReset)return;
   if(showGuide||state.activeNote||state.noteList){prototypeDetail();return;}
   const node=nodeById[state.selected],edge=edges.find(e=>e.id===state.selected),item=edge||node;
   detail.replaceChildren();root.dataset.detail=item?'open':'closed';detail.dataset.notes='false';

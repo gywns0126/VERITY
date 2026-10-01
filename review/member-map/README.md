@@ -38,6 +38,9 @@ clears the old view. Each new document uses a unique query/hash nonce and a
 load-triggered handshake, preventing stale WindowProxy messages from connecting.
 Five initial loads and the full synthetic edit/add/delete/account-switch flow
 passed after this fix. An empty evidence layer no longer covers a visible stock.
+Late theme/resize callbacks stop after the frame is reset, so a disposed member
+view cannot redraw cleared controls. The keyboard-focus-expanded synthetic flow
+also passes with zero page errors.
 
 The separate React map recreation below is historical and is superseded. The
 current snapshot hosts the actual accepted Sites v36 inner HTML at the same-origin
