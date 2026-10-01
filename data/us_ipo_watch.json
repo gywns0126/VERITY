@@ -1,28 +1,121 @@
 {
  "_meta": {
-  "generated_at": "2026-09-30T19:44:12+09:00",
+  "generated_at": "2026-10-01T20:15:02+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 31,
+  "sessions_scanned": 32,
   "sessions_missed": [],
   "counts": {
-   "filings": 890,
-   "companies": 269,
+   "filings": 921,
+   "companies": 276,
    "by_stage": {
-    "신청": 106,
+    "신청": 110,
     "정정(심사중)": 126,
-    "가격확정": 18,
-    "거래소등록": 19
+    "가격확정": 19,
+    "거래소등록": 21
    },
-   "spac_likely": 33,
-   "has_ticker_now": 214,
-   "priced_secondary_excluded": 12,
-   "foreign_issuer": 88,
+   "spac_likely": 35,
+   "has_ticker_now": 217,
+   "priced_secondary_excluded": 13,
+   "foreign_issuer": 91,
    "priced_parse_ok": 3
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
  },
  "items": [
+  {
+   "cik": "2141406",
+   "name": "Accelevation Holdings Corp.",
+   "forms": {
+    "8-A12B": 1,
+    "CERT": 1,
+    "S-1/A": 2,
+    "S-1": 1
+   },
+   "first_filed": "20260902",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2141406&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3620",
+    "sic_desc": "Electrical Industrial Apparatus",
+    "is_blank_check": false,
+    "ticker": "ACCV",
+    "region": "MIAMISBURG, OH",
+    "state_of_inc": "DE"
+   }
+  },
+  {
+   "cik": "2148436",
+   "name": "Southport Acquisition Corp. II",
+   "forms": {
+    "8-A12B": 1,
+    "CERT": 1,
+    "S-1/A": 3
+   },
+   "first_filed": "20260828",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 3,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2148436&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": null,
+    "region": "GREENWICH, CT",
+    "state_of_inc": "E9"
+   }
+  },
+  {
+   "cik": "2075335",
+   "name": "ROZE AI INC.",
+   "forms": {
+    "F-1": 1,
+    "424B4": 1,
+    "8-A12B": 1,
+    "CERT": 1,
+    "F-1/A": 3
+   },
+   "first_filed": "20260821",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 3,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2075335&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7373",
+    "sic_desc": "Services-Computer Integrated Systems Design",
+    "is_blank_check": false,
+    "ticker": "RZAI",
+    "region": "VANCOUVER",
+    "state_of_inc": "A1"
+   },
+   "pre_existing_reporter": false,
+   "pricing": {
+    "parse_ok": false,
+    "reason": "공모가 문구 없음",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/2075335/000121390026104150/ea0306875-424b4_roze.htm"
+   }
+  },
   {
    "cik": "1802369",
    "name": "ADARx Pharmaceuticals, Inc.",
@@ -61,41 +154,6 @@
     "gross_usd": 446250000,
     "source_url": "https://www.sec.gov/Archives/edgar/data/1802369/000119312526403094/d903461d424b4.htm",
     "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
-   }
-  },
-  {
-   "cik": "2075335",
-   "name": "ROZE AI INC.",
-   "forms": {
-    "424B4": 1,
-    "8-A12B": 1,
-    "CERT": 1,
-    "F-1/A": 3
-   },
-   "first_filed": "20260821",
-   "last_filed": "20260928",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 3,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2075335&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7373",
-    "sic_desc": "Services-Computer Integrated Systems Design",
-    "is_blank_check": false,
-    "ticker": "ROZE",
-    "region": "VANCOUVER",
-    "state_of_inc": "A1"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "공모가 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2075335/000121390026104150/ea0306875-424b4_roze.htm"
    }
   },
   {
@@ -242,7 +300,7 @@
     "sic": "6770",
     "sic_desc": "Blank Checks",
     "is_blank_check": true,
-    "ticker": null,
+    "ticker": "LOVI",
     "region": "MEMPHIS, TN",
     "state_of_inc": "E9"
    },
@@ -642,6 +700,35 @@
    }
   },
   {
+   "cik": "1981662",
+   "name": "NewGenIvf Group Ltd",
+   "forms": {
+    "424B4": 1,
+    "F-1/A": 2,
+    "F-1": 1
+   },
+   "first_filed": "20260820",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 3,
+   "stage_ko": "가격확정",
+   "amend_count": 2,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1981662&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "8090",
+    "sic_desc": "Services-Misc Health & Allied Services, NEC",
+    "is_blank_check": false,
+    "ticker": "NIVF",
+    "region": "BANGKOK, W1",
+    "state_of_inc": "D8"
+   },
+   "pre_existing_reporter": true
+  },
+  {
    "cik": "2048271",
    "name": "WeShop Holdings Ltd",
    "forms": {
@@ -940,7 +1027,7 @@
    "pricing": {
     "parse_ok": false,
     "reason": "공모가 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/1892704/000149315226039415/form424b4.htm"
+    "source_url": "https://www.sec.gov/Archives/edgar/data/1892704/0001493152-26-039415.txt"
    }
   },
   {
@@ -1177,6 +1264,138 @@
     "state_of_inc": "DE"
    },
    "pre_existing_reporter": true
+  },
+  {
+   "cik": "2119287",
+   "name": "GLGHK Ltd",
+   "forms": {
+    "F-1/A": 2,
+    "F-1": 1
+   },
+   "first_filed": "20260901",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2119287&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7900",
+    "sic_desc": "Services-Amusement & Recreation Services",
+    "is_blank_check": false,
+    "ticker": "GLG",
+    "region": "HONG KONG ISLAND",
+    "state_of_inc": "D8"
+   }
+  },
+  {
+   "cik": "1900851",
+   "name": "Ambitious Entertainment, Inc.",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20260930",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1900851&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7812",
+    "sic_desc": "Services-Motion Picture & Video Tape Production",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "LAS VEGAS, NV",
+    "state_of_inc": "NV"
+   }
+  },
+  {
+   "cik": "2115027",
+   "name": "Cryptex Digital Market Cap ETF",
+   "forms": {
+    "S-1/A": 3
+   },
+   "first_filed": "20260824",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 3,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2115027&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6221",
+    "sic_desc": "Commodity Contracts Brokers & Dealers",
+    "is_blank_check": false,
+    "ticker": "BAGZ",
+    "region": "SHERIDAN, WY",
+    "state_of_inc": "DE"
+   }
+  },
+  {
+   "cik": "2140589",
+   "name": "Laris Growth Acquisition Corp.",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20260930",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2140589&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "LARS",
+    "region": "GRAND CAYMAN",
+    "state_of_inc": "E9"
+   }
+  },
+  {
+   "cik": "2131303",
+   "name": "SPACCircle Acquisition Corp.",
+   "forms": {
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260915",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2131303&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "SCQC",
+    "region": "SACRAMENTO, CA",
+    "state_of_inc": "E9"
+   }
   },
   {
    "cik": "1934387",
@@ -1590,16 +1809,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2070237&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7370",
-    "sic_desc": "Services-Computer Programming, Data Processing, Etc.",
-    "is_blank_check": false,
-    "ticker": "SOUD",
-    "region": "BEIJING",
-    "state_of_inc": "E9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2070237&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2073616",
@@ -1616,16 +1826,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2073616&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6199",
-    "sic_desc": "Finance Services",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "BRENTWOOD, TN",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2073616&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2136571",
@@ -1642,16 +1843,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2136571&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7372",
-    "sic_desc": "Services-Prepackaged Software",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "SHERIDAN, WY",
-    "state_of_inc": "WY"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2136571&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1866226",
@@ -1669,16 +1861,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1866226&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "3690",
-    "sic_desc": "Miscellaneous Electrical Machinery, Equipment & Supplies",
-    "is_blank_check": false,
-    "ticker": "EMAT",
-    "region": "MIAMI, FL",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1866226&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1722731",
@@ -1696,16 +1879,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1722731&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7372",
-    "sic_desc": "Services-Prepackaged Software",
-    "is_blank_check": false,
-    "ticker": "FDCT",
-    "region": "IRVINE, CA",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1722731&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "95572",
@@ -1722,16 +1896,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=95572&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "1600",
-    "sic_desc": "Heavy Construction Other Than Bldg Const - Contractors",
-    "is_blank_check": false,
-    "ticker": "BYOP",
-    "region": "ANNAPOLIS, MD",
-    "state_of_inc": "NV"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=95572&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2142855",
@@ -1748,42 +1913,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142855&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6792",
-    "sic_desc": "Oil Royalty Traders",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "ABILENE, TX",
-    "state_of_inc": "TX"
-   }
-  },
-  {
-   "cik": "2148436",
-   "name": "Southport Acquisition Corp. II",
-   "forms": {
-    "S-1/A": 3
-   },
-   "first_filed": "20260828",
-   "last_filed": "20260924",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 3,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2148436&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": null,
-    "region": "GREENWICH, CT",
-    "state_of_inc": "E9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142855&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2018222",
@@ -1958,24 +2088,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1875655&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2141406",
-   "name": "Accelevation Holdings Corp.",
-   "forms": {
-    "S-1/A": 2,
-    "S-1": 1
-   },
-   "first_filed": "20260902",
-   "last_filed": "20260922",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2141406&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1779977",
@@ -2358,24 +2470,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2112634&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2119287",
-   "name": "GLGHK Ltd",
-   "forms": {
-    "F-1/A": 1,
-    "F-1": 1
-   },
-   "first_filed": "20260901",
-   "last_filed": "20260916",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2119287&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2070087",
    "name": "Koei Group Co., Ltd.",
    "forms": {
@@ -2633,23 +2727,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1622345&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2115027",
-   "name": "Cryptex Digital Market Cap ETF",
-   "forms": {
-    "S-1/A": 2
-   },
-   "first_filed": "20260824",
-   "last_filed": "20260911",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2115027&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2105318",
    "name": "Gold Mountain Acquisition Corp.",
    "forms": {
@@ -2665,24 +2742,6 @@
    "is_spac_likely": true,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2105318&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1981662",
-   "name": "NewGenIvf Group Ltd",
-   "forms": {
-    "F-1/A": 2,
-    "F-1": 1
-   },
-   "first_filed": "20260820",
-   "last_filed": "20260910",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1981662&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1972234",
@@ -3560,6 +3619,91 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1991879&type=S-1&dateb=&owner=include&count=20"
   },
   {
+   "cik": "2058584",
+   "name": "DarkIris Inc.",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20260930",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2058584&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2138135",
+   "name": "Primagrove Ltd",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20260930",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2138135&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2083101",
+   "name": "Top Leader Universal Holdings Ltd",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20260930",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2083101&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2142627",
+   "name": "BHAV Acquisition Corp II",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260930",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142627&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1891856",
+   "name": "GEN Restaurant Group, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20260930",
+   "last_filed": "20260930",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1891856&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
    "cik": "1930510",
    "name": "VCI Global Ltd",
    "forms": {
@@ -4255,23 +4399,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2143038&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2131303",
-   "name": "SPACCircle Acquisition Corp.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20260915",
-   "last_filed": "20260915",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2131303&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2095096",
