@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-02T00:57:20+09:00",
+ "as_of": "2026-10-02T07:15:18+09:00",
  "version": "short_sale_trail_v0",
  "n_observations": 7632,
  "window_start": null,
@@ -10,7 +10,7 @@
  },
  "KR": {
   "auto_avoid": {
-   "n_observations": 162,
+   "n_observations": 163,
    "n_tickers": 48,
    "fwd_20d": {
     "n_tickers": 26,
@@ -30,8 +30,8 @@
    }
   },
   "downgrade": {
-   "n_observations": 455,
-   "n_tickers": 83,
+   "n_observations": 461,
+   "n_tickers": 86,
    "fwd_20d": {
     "n_tickers": 51,
     "n_observations": 339,
@@ -50,8 +50,8 @@
    }
   },
   "clean": {
-   "n_observations": 805,
-   "n_tickers": 162,
+   "n_observations": 811,
+   "n_tickers": 165,
    "fwd_20d": {
     "n_tickers": 67,
     "n_observations": 447,
@@ -70,7 +70,7 @@
    }
   },
   "missing": {
-   "n_observations": 1625,
+   "n_observations": 1612,
    "n_tickers": 193,
    "fwd_20d": {
     "n_tickers": 111,
@@ -175,7 +175,7 @@
  "labels": [
   "예비 결과 — auto_avoid 종목 N=26 < 100",
   "US 지표 결측 1927건 — clean 과 분리 집계됨(무혐의 통과 아님)",
-  "KR 지표 결측 1625건 — 수집 이전 기간 포함. clean 과 분리 집계"
+  "KR 지표 결측 1612건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
  "note": "공매도 규칙 사후 수익률 관측 — 임계·강도 재판단의 판정 근거. 점수·집행 입력 0. KR=거래량 비중(흐름) / US=숏인터레스트(포지션) 로 측정 대상이 다르므로 시장 간 수치를 비교하지 말 것. 수익률은 KR 전용(US 일봉 레이크 미도달)."

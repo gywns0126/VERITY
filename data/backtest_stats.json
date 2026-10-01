@@ -84,16 +84,16 @@
         }
       ],
       "observed": {
-        "hit_rate_gross": 25.0,
-        "hit_rate_net": 25.0,
-        "avg_return_gross": 1.01,
-        "avg_return_net": 0.5,
-        "max_return": 10.8,
+        "hit_rate_gross": 37.5,
+        "hit_rate_net": 37.5,
+        "avg_return_gross": 1.73,
+        "avg_return_net": 1.23,
+        "max_return": 13.31,
         "min_return": -4.38,
-        "sharpe": 0.22,
+        "sharpe": 0.32,
         "sample": 8,
-        "hits_gross": 2,
-        "hits_net": 2
+        "hits_gross": 3,
+        "hits_net": 3
       },
       "evaluation_date": "2026-10-02",
       "hit_rate_net": null,
@@ -109,8 +109,8 @@
       "sharpe": null,
       "total_recs": 8,
       "total_recs_with_delisted": 8,
-      "hits": 2,
-      "hits_net": 2,
+      "hits": 3,
+      "hits_net": 3,
       "delisted_count": null,
       "listing_status_checked": false,
       "snapshot_date": "2026-09-25"
@@ -200,9 +200,9 @@
       "name": "PARR",
       "rec_date": "2026-09-25",
       "rec_price": 76.08499908447266,
-      "current_price": 84.30000305175781,
-      "return_pct_gross": 10.8,
-      "return_pct_net": 10.07,
+      "current_price": 86.20999908447266,
+      "return_pct_gross": 13.31,
+      "return_pct_net": 12.58,
       "slippage_pct": 0.7,
       "hit_gross": true,
       "hit_net": true,
@@ -210,7 +210,7 @@
       "recommendation": "BUY",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": 10.8,
+      "return_pct": 13.31,
       "hit": true
     },
     {
@@ -232,6 +232,24 @@
       "hit": true
     },
     {
+      "ticker": "FUL",
+      "name": "H.B. Fuller Company",
+      "rec_date": "2026-09-25",
+      "rec_price": 49.154998779296875,
+      "current_price": 50.22999954223633,
+      "return_pct_gross": 2.19,
+      "return_pct_net": 1.46,
+      "slippage_pct": 0.7,
+      "hit_gross": true,
+      "hit_net": true,
+      "period": "7d",
+      "recommendation": "BUY",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": 2.19,
+      "hit": true
+    },
+    {
       "ticker": "AMZN",
       "name": "Amazon",
       "rec_date": "2026-09-25",
@@ -250,6 +268,24 @@
       "hit": false
     },
     {
+      "ticker": "SHEL",
+      "name": "Shell plc",
+      "rec_date": "2026-09-25",
+      "rec_price": 95.79499816894531,
+      "current_price": 95.61000061035156,
+      "return_pct_gross": -0.19,
+      "return_pct_net": -0.92,
+      "slippage_pct": 0.7,
+      "hit_gross": false,
+      "hit_net": false,
+      "period": "7d",
+      "recommendation": "BUY",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": -0.19,
+      "hit": false
+    },
+    {
       "ticker": "GOOGL",
       "name": "Alphabet",
       "rec_date": "2026-09-25",
@@ -265,42 +301,6 @@
       "brain_score": null,
       "source": "gemini",
       "return_pct": -0.26,
-      "hit": false
-    },
-    {
-      "ticker": "FUL",
-      "name": "H.B. Fuller Company",
-      "rec_date": "2026-09-25",
-      "rec_price": 49.154998779296875,
-      "current_price": 48.869998931884766,
-      "return_pct_gross": -0.58,
-      "return_pct_net": -1.31,
-      "slippage_pct": 0.7,
-      "hit_gross": false,
-      "hit_net": false,
-      "period": "7d",
-      "recommendation": "BUY",
-      "brain_score": null,
-      "source": "gemini",
-      "return_pct": -0.58,
-      "hit": false
-    },
-    {
-      "ticker": "SHEL",
-      "name": "Shell plc",
-      "rec_date": "2026-09-25",
-      "rec_price": 95.79499816894531,
-      "current_price": 95.1050033569336,
-      "return_pct_gross": -0.72,
-      "return_pct_net": -1.45,
-      "slippage_pct": 0.7,
-      "hit_gross": false,
-      "hit_net": false,
-      "period": "7d",
-      "recommendation": "BUY",
-      "brain_score": null,
-      "source": "gemini",
-      "return_pct": -0.72,
       "hit": false
     },
     {
@@ -340,10 +340,10 @@
       "hit": false
     }
   ],
-  "updated_at": "2026-10-02 00:32:41.312571+09:00",
+  "updated_at": "2026-10-02 06:55:29.792629+09:00",
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-10-02 00:32:41.312687+09:00",
+    "applied_at": "2026-10-02 06:55:29.792654+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -353,7 +353,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-10-02 00:32:41.312755+09:00"
+      "fixed_at": "2026-10-02 06:55:29.792656+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
