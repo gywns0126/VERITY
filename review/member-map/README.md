@@ -126,4 +126,20 @@ Static files belong under the API project's existing `vercel-api/public/` output
 
 ## Verify
 
+CSV follow-up (2026-10-01): the same holdings panel now reads UTF-8 CSV locally,
+previews additions/explicit-ID edits, and saves only after confirmation. It does
+not upload the original file, increment quantities, infer companies from names,
+delete omitted holdings, or create trades. Invalid rows block the whole preview.
+Repeated identical imports are no-ops. Sequential saves stop on first failure;
+acknowledged count and an uncertain row are shown separately, without automatic
+retry or rollback. Account identity is pinned across the sequence. Unsupported
+inventory blocks bulk import because its complete identity/count cannot be proven.
+The parser's 30-unique-company add limit does not prevent editing existing larger
+inventories; the consistent file/save cap is 200 rows. Cross-tab writes are not
+atomic: existing fresh preflight checks remain advisory, not database CAS.
+
+Local source parser/save tests20/20 and synthetic original-renderer browser flows
+passed (preview requests0; add/edit; reimport; partial-stop; account change;
+1280/390px light/dark). This is not real-member acceptance or deployment proof.
+
 Check the signed-out page and console first. Once deployed, read back HTML/asset hashes and scoped headers, then have the user complete normal Google sign-in. Verify holdings retrieval, existing map-state retrieval, explicit test edits, save acknowledgement and a fresh page restoration separately. Preserve existing notes/layouts/marks. Do not infer browser acceptance from prior API-runner tests.

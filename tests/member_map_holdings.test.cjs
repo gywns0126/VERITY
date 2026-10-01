@@ -14,13 +14,17 @@ const between = (start, end) => {
 }
 const draft = between("// framer-components/public-probe/PortfolioHoldingsDraft.ts", "// framer-components/public-probe/PortfolioHoldingsList.tsx")
 const editor = between("// framer-components/public-probe/PortfolioHoldingsEditor.ts", "// framer-components/public-probe/PublicPortfolioPrototype.tsx")
+const csv = between("// framer-components/public-probe/PortfolioHoldingsCsv.ts", "// framer-components/public-probe/PortfolioHoldingsCsvPanel.tsx")
 const box = { exports: {} }
 vm.runInNewContext(`
 const __publicField = (target, key, value) => (target[key] = value, value);
 ${draft}
+${csv}
 ${editor}
 exports.createPortfolioHoldingsEditor = createPortfolioHoldingsEditor;
 exports.previewHoldingChange = previewHoldingChange;
+exports.buildHoldingCsvPreview = buildHoldingCsvPreview;
+exports.saveConfirmedHoldingCsv = saveConfirmedHoldingCsv;
 `, { module: box, exports: box.exports, AbortController, setTimeout, clearTimeout, JSON, Map, Set, Number, Object, Array, String, Promise, Error })
 const { createPortfolioHoldingsEditor } = box.exports
 const clone = value => JSON.parse(JSON.stringify(value))
@@ -79,4 +83,27 @@ test("generated snapshot accepts formatted numeric API rows for fresh comparison
     const preview = h.editor.prepare(records, { kind: "edit", id: "holding-1", memo: "after" })
     await h.editor.confirm(preview)
     assert.equal(h.calls.length, 2)
+})
+
+test("generated CSV uses absolute balances, preserves omitted fields, and blocks duplicates", () => {
+    const build = box.exports.buildHoldingCsvPreview
+    const report = build('market,ticker,shares,avg_cost\nUS,AAPL,3,100', records)
+    assert.equal(report.readyForConfirmation, true)
+    assert.deepEqual(clone(report.rows[0].preview.request.body), { id: 'holding-1', shares: 3 })
+    assert.equal(build('market,ticker,shares,avg_cost\nUS,AAPL,2,100', records).counts.unchanged, 1)
+    const bad = build('market,ticker,shares,avg_cost\nUS,AAPL,3,100\nUS,AAPL,4,100', records)
+    assert.equal(bad.readyForConfirmation, false)
+    assert.ok(bad.rows.every(row => row.preview === null))
+})
+
+test("generated CSV batch stops after uncertain response and never writes for a new owner", async () => {
+    const previews = ['AAA', 'BBB', 'CCC'].map(ticker => box.exports.previewHoldingChange([], { kind: 'add', market: 'US', ticker, shares: 1, avg_cost: 10 }))
+    const calls = []
+    const result = await box.exports.saveConfirmedHoldingCsv(previews, { getSession: () => A, isCurrent: () => true, reload: async () => true,
+        editor: { confirm: async preview => { calls.push(preview.after.ticker); if (calls.length === 2) throw Error('write-unacknowledged') } } })
+    assert.equal(result.saved, 1);assert.deepEqual(calls, ['AAA', 'BBB'])
+    let session = A, writes = 0, reloads = 0
+    await assert.rejects(box.exports.saveConfirmedHoldingCsv(previews, { getSession: () => session, isCurrent: () => true, reload: async () => { reloads++; return true },
+        editor: { confirm: async () => { writes++; session = B } } }), /session-changed/)
+    assert.equal(writes, 1);assert.equal(reloads, 0)
 })

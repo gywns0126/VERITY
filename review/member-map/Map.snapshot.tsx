@@ -3,11 +3,11 @@ var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { en
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // output/member-map-integration-20260927/PortfolioMapReview.entry.tsx
-import * as React4 from "react";
+import * as React5 from "react";
 import { addPropertyControls, ControlType, useIsStaticRenderer } from "framer";
 
 // framer-components/public-probe/PublicPortfolioPrototype.tsx
-import * as React3 from "react";
+import * as React4 from "react";
 
 // framer-components/public-probe/StockInfoMapData.tsx
 var SECTION_ORDER = [
@@ -2049,7 +2049,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
 }
 
 // framer-components/public-probe/PortfolioHoldingsPanel.tsx
-import * as React2 from "react";
+import * as React3 from "react";
 
 // framer-components/public-probe/PortfolioHoldingsDraft.ts
 var tickerFor = (value, market) => {
@@ -2168,6 +2168,241 @@ function formatHoldingAverageCost(holding) {
   return holding.market === "KR" ? `${won.format(holding.avg_cost)} KRW` : `${dollar.format(holding.avg_cost)} USD`;
 }
 
+// framer-components/public-probe/PortfolioHoldingsCsvPanel.tsx
+import * as React2 from "react";
+
+// framer-components/public-probe/PortfolioHoldingsCsv.ts
+var HOLDINGS_CSV_LIMITS = Object.freeze({ maxCharacters: 262144, maxRows: 200, memberUnique: 30 });
+var ALIASES = {
+  ticker: ["ticker", "code", "symbol", "stockcode", "종목코드", "티커"],
+  market: ["market", "시장"],
+  shares: ["shares", "quantity", "qty", "수량", "보유수량"],
+  avg_cost: ["avgcost", "averagecost", "평단", "평단가", "평균매수가", "평균매입가"],
+  name: ["name", "stockname", "종목명", "이름"],
+  memo: ["memo", "note", "메모"],
+  currency: ["currency", "통화"]
+};
+var columnFor = (value) => {
+  const normalized = value.trim().toLowerCase().replace(/[\s_-]/g, "");
+  return Object.keys(ALIASES).find((key) => ALIASES[key].includes(normalized));
+};
+function parse(text5) {
+  if (text5.length > HOLDINGS_CSV_LIMITS.maxCharacters) return { rows: [], errors: [{ rowNumber: 1, code: "csv-input-too-large" }] };
+  text5 = text5.replace(/^\uFEFF/, "");
+  const rows2 = [];
+  let line = 1, startLine = 1, cells = [], field = "", errors = [];
+  let quoted = false, closed = false, touched = false;
+  const issue2 = (code) => {
+    if (!errors.includes(code)) errors.push(code);
+  };
+  const endField = () => {
+    cells.push(field);
+    field = "";
+    closed = false;
+  };
+  const endRow = () => {
+    endField();
+    rows2.push({ line: startLine, cells, errors });
+    cells = [];
+    errors = [];
+    touched = false;
+  };
+  for (let i = 0; i < text5.length; i++) {
+    const char = text5[i];
+    if (char === "\0" || char === "�") issue2("csv-invalid-text");
+    if (quoted) {
+      if (char === '"') {
+        if (text5[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          quoted = false;
+          closed = true;
+        }
+      } else {
+        field += char;
+        if (char === "\n" || char === "\r" && text5[i + 1] !== "\n") line++;
+      }
+      continue;
+    }
+    if (char === "\r" || char === "\n") {
+      endRow();
+      if (rows2.length > HOLDINGS_CSV_LIMITS.maxRows + 1) return { rows: [], errors: [{ rowNumber: startLine, code: "csv-too-many-rows" }] };
+      if (char === "\r" && text5[i + 1] === "\n") i++;
+      startLine = ++line;
+      continue;
+    }
+    touched = true;
+    if (char === ",") {
+      endField();
+      continue;
+    }
+    if (char === '"' && !field && !closed) {
+      quoted = true;
+      continue;
+    }
+    if (closed || char === '"') issue2("csv-invalid-quote");
+    field += char;
+  }
+  if (quoted) issue2("csv-unclosed-quote");
+  if (touched || cells.length || field.length) endRow();
+  if (rows2.length > HOLDINGS_CSV_LIMITS.maxRows + 1) return { rows: [], errors: [{ rowNumber: startLine, code: "csv-too-many-rows" }] };
+  return { rows: rows2, errors: [] };
+}
+function buildHoldingCsvPreview(text5, memberHoldings) {
+  const parsed = parse(text5), errors = parsed.errors.slice();
+  const header = parsed.rows[0];
+  const columns = header?.cells.map(columnFor) || [];
+  if (!header && !errors.length) errors.push({ rowNumber: 1, code: "csv-missing-header" });
+  else if (header) {
+    errors.push(...header.errors.map((code) => ({ rowNumber: header.line, code })));
+    if (columns.some((column) => !column)) errors.push({ rowNumber: header.line, code: "csv-unknown-header" });
+    if (new Set(columns).size !== columns.length) errors.push({ rowNumber: header.line, code: "csv-duplicate-header" });
+    for (const required of ["ticker", "market", "shares", "avg_cost"]) {
+      if (!columns.includes(required)) errors.push({ rowNumber: header.line, code: `csv-missing-${required}-header` });
+    }
+  }
+  const existingTickers = new Set(memberHoldings.map((record6) => record6.ticker.trim().toUpperCase()));
+  const rows2 = parsed.rows.slice(1).map((row) => ({ rowNumber: row.line, cells: row.cells, errors: row.errors.slice(), ticker: null, kind: "error", preview: null }));
+  if (header && !rows2.length && !errors.length) errors.push({ rowNumber: header.line + 1, code: "csv-no-data" });
+  const tickerIndex = columns.indexOf("ticker");
+  const occurrences = /* @__PURE__ */ new Map();
+  for (const row of rows2) {
+    row.ticker = tickerIndex >= 0 ? row.cells[tickerIndex]?.trim().toUpperCase() || null : null;
+    if (row.ticker) occurrences.set(row.ticker, (occurrences.get(row.ticker) || 0) + 1);
+  }
+  for (const row of rows2) {
+    if (errors.length) row.errors.push("csv-invalid-file");
+    if (row.cells.length !== columns.length) row.errors.push("csv-column-count");
+    if (row.ticker && (occurrences.get(row.ticker) || 0) > 1) row.errors.push("csv-duplicate-ticker");
+    if (row.errors.length) continue;
+    const input = {};
+    columns.forEach((column, index) => {
+      if (column) input[column] = row.cells[index];
+    });
+    try {
+      const candidate = previewHoldingChange([], {
+        kind: "add",
+        ticker: input.ticker,
+        market: input.market,
+        shares: input.shares,
+        avg_cost: input.avg_cost,
+        name: input.name,
+        memo: input.memo
+      });
+      const after = candidate.after;
+      if (input.currency !== void 0 && input.currency.trim().toUpperCase() !== (after.market === "KR" ? "KRW" : "USD")) {
+        throw new Error("csv-currency-mismatch");
+      }
+      const matches = memberHoldings.filter((record6) => record6.ticker.trim().toUpperCase() === after.ticker);
+      if (!matches.length) {
+        row.kind = "add";
+        row.preview = candidate;
+        continue;
+      }
+      const before = matches[0];
+      if (matches.length !== 1 || before.duplicate || !before.id?.trim() || before.id !== before.id.trim() || memberHoldings.filter((record6) => record6.id === before.id).length !== 1) throw new Error("csv-ambiguous-existing-identity");
+      if (before.market !== after.market) throw new Error("csv-existing-market-conflict");
+      const change = { kind: "edit", id: before.id };
+      if (before.shares !== after.shares) change.shares = after.shares;
+      if (before.avg_cost !== after.avg_cost) change.avg_cost = after.avg_cost;
+      if (input.name !== void 0 && before.name !== after.name) change.name = after.name;
+      if (input.memo !== void 0 && (before.memo ?? "") !== after.memo) change.memo = after.memo;
+      if (Object.keys(change).length === 2) {
+        row.kind = "unchanged";
+        continue;
+      }
+      row.preview = previewHoldingChange(memberHoldings, change);
+      row.kind = "edit";
+    } catch (error) {
+      row.errors.push(error instanceof Error ? error.message : "csv-invalid-row");
+    }
+  }
+  const additions = rows2.filter((row) => row.kind === "add");
+  const projectedUnique = existingTickers.size + additions.length;
+  if (projectedUnique > HOLDINGS_CSV_LIMITS.memberUnique) for (const row of additions) {
+    row.kind = "error";
+    row.preview = null;
+    row.errors.push("csv-member-limit");
+  }
+  const counts = { add: 0, edit: 0, unchanged: 0, error: 0, existingUnique: existingTickers.size, projectedUnique };
+  for (const row of rows2) counts[row.kind]++;
+  if (errors.length || counts.error) for (const row of rows2) row.preview = null;
+  return {
+    rows: rows2,
+    fatalErrors: errors,
+    counts,
+    requiresConfirmation: true,
+    readyForConfirmation: !errors.length && !counts.error && counts.add + counts.edit > 0
+  };
+}
+
+// framer-components/public-probe/PortfolioHoldingsCsvPanel.tsx
+var fields2 = { ticker: "종목코드", market: "시장", name: "이름", shares: "수량", avg_cost: "평균 매수가", memo: "메모" };
+function issue(code) {
+  if (/duplicate-ticker/.test(code)) return "파일 안에 같은 종목이 두 번 있어요. 한 행으로 정리해주세요.";
+  if (/ambiguous|duplicate-holding/.test(code)) return "기존 보유 기록을 하나로 구분할 수 없어요. 목록을 먼저 확인해주세요.";
+  if (/member-limit/.test(code)) return "기존 보유와 합쳐 30종목을 넘어요. 추가할 종목을 줄여주세요.";
+  if (/currency|market/.test(code)) return "시장은 KR 또는 US, 통화는 각각 KRW 또는 USD인지 확인해주세요.";
+  if (/shares|avg_cost/.test(code) && !/header/.test(code)) return "수량·평균 매수가를 0보다 큰 숫자로 입력해주세요.";
+  if (/ticker/.test(code) && !/header/.test(code)) return "종목코드를 확인해주세요. 국내 코드는 앞자리 0까지 6자리로 적어주세요.";
+  if (/header/.test(code)) return "첫 줄의 항목 이름을 아래 예시와 맞춰주세요. 시장·종목코드·수량·평균 매수가는 필수예요.";
+  if (/too-large|too-many/.test(code)) return "파일이 너무 커요. 200행 이하의 필요한 보유 기록만 넣어주세요.";
+  if (/no-data/.test(code)) return "항목 이름 아래에 보유 기록을 넣어주세요.";
+  if (/quote|column-count/.test(code)) return "쉼표·따옴표와 각 행의 항목 수를 확인해주세요.";
+  return "파일 내용을 읽을 수 없어요. UTF-8 CSV로 저장해 다시 선택해주세요.";
+}
+function PortfolioHoldingsCsvPanel({ holdings, unsupportedCount, busy, onBusy, onClose, onConfirm }) {
+  const [text5, setText] = React2.useState(null);
+  const [error, setError] = React2.useState("");
+  const [result, setResult] = React2.useState(null);
+  const [submitted, setSubmitted] = React2.useState(null);
+  const generation = React2.useRef(0);
+  React2.useEffect(() => () => {
+    generation.current++;
+  }, []);
+  const computed = React2.useMemo(() => text5 === null ? null : buildHoldingCsvPreview(text5, holdings), [text5, holdings]);
+  const report = submitted || computed;
+  const load = async (file) => {
+    const current = ++generation.current;
+    setText(null);
+    setError("");
+    setResult(null);
+    setSubmitted(null);
+    if (!file) return;
+    onBusy(true);
+    try {
+      if (file.size > HOLDINGS_CSV_LIMITS.maxCharacters * 3) throw Error("csv-input-too-large");
+      const content = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer());
+      if (generation.current === current) setText(content);
+    } catch (failure2) {
+      if (generation.current === current) setError(issue(failure2 instanceof Error ? failure2.message : "csv-invalid-text"));
+    } finally {
+      if (generation.current === current) onBusy(false);
+    }
+  };
+  const confirm = async () => {
+    if (!report?.readyForConfirmation || busy || submitted || unsupportedCount) return;
+    const current = generation.current;
+    const previews = report.rows.flatMap((row) => row.preview ? [row.preview] : []);
+    setSubmitted(report);
+    setError("");
+    onBusy(true);
+    try {
+      const value = await onConfirm(previews);
+      if (generation.current === current) setResult(value);
+    } catch {
+      if (generation.current === current) setError("저장 결과를 확정하지 못했어요. 다시 저장하지 말고 목록을 다시 불러와 확인해주세요.");
+    } finally {
+      if (generation.current === current) onBusy(false);
+    }
+  };
+  return /* @__PURE__ */ React2.createElement("section", { className: "an-nest-preview", "aria-label": "CSV 보유 기록 가져오기", style: { marginTop: 16 } }, /* @__PURE__ */ React2.createElement("h3", null, "파일로 한 번에 넣기"), /* @__PURE__ */ React2.createElement("p", null, "엑셀에서 UTF-8 CSV로 저장해주세요. 파일은 이 브라우저에서만 읽으며 원본을 서버에 보내지 않아요."), /* @__PURE__ */ React2.createElement("p", null, "현재 보유 수량으로 바꿔요. 기존 수량에 더하거나 거래 기록으로 등록하지 않아요. 파일에 없는 종목은 그대로 유지해요."), /* @__PURE__ */ React2.createElement("details", null, /* @__PURE__ */ React2.createElement("summary", null, "파일 형식과 예시"), /* @__PURE__ */ React2.createElement("pre", { style: { whiteSpace: "pre-wrap", overflowWrap: "anywhere", font: "inherit" } }, "시장,종목코드,수량,평균 매수가,이름,메모", "\n", "KR,005930,2,70000,삼성전자,장기 보유", "\n", "US,AAPL,1,180,Apple,"), /* @__PURE__ */ React2.createElement("p", null, "이름·메모·통화 열은 선택이에요. 기존 기록에서 빠진 선택 열은 유지하고, 빈칸으로 넣은 이름·메모는 비워요. 종목코드로 찾으며 이름으로 추측하지 않아요.")), /* @__PURE__ */ React2.createElement("label", { style: { marginTop: 12 } }, "CSV 파일", /* @__PURE__ */ React2.createElement("input", { type: "file", accept: ".csv,text/csv", disabled: busy, onChange: (e) => {
+    void load(e.target.files?.[0]);
+    e.target.value = "";
+  } })), unsupportedCount ? /* @__PURE__ */ React2.createElement("p", { role: "alert" }, "지원하지 않는 기존 보유 항목 ", unsupportedCount, "개가 있어 전체 중복·한도를 확인할 수 없어요. 파일 저장은 보류하고 목록에서 항목별로 확인해주세요.") : null, error ? /* @__PURE__ */ React2.createElement("p", { role: "alert" }, error) : null, report ? /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("p", { role: "status" }, "추가 ", report.counts.add, " · 수정 ", report.counts.edit, " · 변경 없음 ", report.counts.unchanged, " · 오류 ", report.counts.error), report.fatalErrors.map((entry, i) => /* @__PURE__ */ React2.createElement("p", { role: "alert", key: i }, entry.rowNumber, "행: ", issue(entry.code))), /* @__PURE__ */ React2.createElement("ul", { className: "an-nest-rows" }, report.rows.map((row) => /* @__PURE__ */ React2.createElement("li", { key: row.rowNumber }, /* @__PURE__ */ React2.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React2.createElement("strong", null, row.rowNumber, "행 · ", row.ticker || "종목 확인 필요", " · ", { add: "추가", edit: "수정", unchanged: "변경 없음", error: "오류" }[row.kind]), row.errors.map((code, i) => /* @__PURE__ */ React2.createElement("p", { key: i }, issue(code))), row.preview ? /* @__PURE__ */ React2.createElement("dl", null, row.preview.changedFields.map((key) => /* @__PURE__ */ React2.createElement(React2.Fragment, { key }, /* @__PURE__ */ React2.createElement("dt", null, fields2[key]), /* @__PURE__ */ React2.createElement("dd", null, String(row.preview.before?.[key] ?? "없음"), " → ", String(row.preview.after?.[key] ?? "없음"))))) : null)))), !submitted ? /* @__PURE__ */ React2.createElement("p", null, "오류가 있으면 저장하지 않아요. 확인 후 한 항목씩 저장하며, 도중에 실패하면 그 지점에서 멈춰요.") : null, result ? /* @__PURE__ */ React2.createElement("p", { role: "status" }, result.total, "개 변경 중 ", result.saved, "개 저장을 확인했어요.", result.error ? ` ${result.saved + 1}번째 항목에서 멈췄어요. 이 항목은 저장됐을 수도 있으니 목록에서 확인해주세요. 뒤의 항목은 요청하지 않았어요.` : "", !result.refreshed ? " 새 목록 조회에 실패했어요. 목록 다시 불러오기를 눌러주세요." : "", " 다시 가져올 때는 새 목록을 기준으로 변경 내용을 다시 확인해요.") : null) : null, /* @__PURE__ */ React2.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React2.createElement("button", { type: "button", disabled: busy || !!submitted || !!unsupportedCount || !report?.readyForConfirmation, onClick: confirm }, busy ? "확인 중…" : "변경 확인 후 파일 내용 저장"), /* @__PURE__ */ React2.createElement("button", { type: "button", disabled: busy, onClick: onClose }, "파일 닫기")));
+}
+
 // framer-components/public-probe/PortfolioHoldingsPanel.tsx
 var blank = () => ({ ticker: "", market: "KR", name: "", shares: "", avg_cost: "", memo: "" });
 var CSS = `
@@ -2175,6 +2410,7 @@ var CSS = `
 .an-nest *{box-sizing:border-box}.an-nest h2,.an-nest h3,.an-nest p{margin:0}.an-nest h2{font-size:20px;font-weight:800}.an-nest h3{font-size:15px;font-weight:700}.an-nest p,.an-nest small{color:var(--muted)}.an-nest header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}.an-nest button{font:inherit;color:var(--ink);background:var(--soft);border:0;border-radius:8px;padding:6px 10px;min-height:32px;cursor:pointer;transition:background 160ms}.an-nest button:disabled{opacity:.5;cursor:default}.an-nest :is(button,input,select,textarea):focus-visible{outline:0;background:var(--focus)}.an-nest input,.an-nest select,.an-nest textarea{display:block;width:100%;font:inherit;color:var(--ink);background:var(--soft);border:0;border-radius:8px;padding:8px;min-height:36px}.an-nest textarea{resize:vertical;min-height:72px}.an-nest label{display:grid;gap:4px;color:var(--muted)}.an-nest-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.an-nest-form,.an-nest-preview{padding:16px;border-radius:16px;background:var(--soft);margin-bottom:16px}.an-nest-form input,.an-nest-form select,.an-nest-form textarea{background:var(--panel)}.an-nest-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.an-nest-rows{display:grid;gap:8px;list-style:none;padding:0;margin:16px 0}.an-nest-rows li{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--soft);padding:12px;border-radius:12px}.an-nest-rows strong{font-weight:600;overflow-wrap:anywhere}.an-nest-rows small{display:block}.an-nest-rows .an-nest-actions{margin:0;flex-shrink:0}.an-nest-preview dl{margin:8px 0;display:grid;grid-template-columns:100px minmax(0,1fr);gap:6px}.an-nest-preview dt{color:var(--muted)}.an-nest-preview dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}.an-nest [role=alert]{padding:10px 0;color:var(--ink)}
 @media(hover:hover){.an-nest button:not(:disabled):hover{background:var(--hover)}}@media(pointer:coarse){.an-nest button,.an-nest input,.an-nest select{min-height:44px}}@media(max-width:600px){.an-nest{padding:12px}.an-nest-grid{grid-template-columns:1fr}.an-nest-rows li{align-items:flex-start;flex-direction:column}.an-nest-preview dl{grid-template-columns:74px minmax(0,1fr)}}@media(prefers-reduced-motion:reduce){.an-nest button{transition:none}}
 .an-nest-grid label{align-content:start}
+.an-nest summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;padding:6px 8px;border-radius:8px;min-height:32px}.an-nest summary::-webkit-details-marker{display:none}.an-nest summary::before{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);flex-shrink:0}.an-nest details[open]>summary::before{transform:rotate(45deg)}.an-nest summary:focus-visible{outline:0;background:var(--focus)}@media(hover:hover){.an-nest summary:hover{background:var(--hover)}}@media(pointer:coarse){.an-nest summary{min-height:44px}}
 `;
 var labels = { ticker: "종목코드", market: "시장", name: "이름", shares: "수량", avg_cost: "평균 매수가", memo: "메모" };
 function errorText(error) {
@@ -2188,12 +2424,13 @@ function errorText(error) {
   if (/no-holding-changes/.test(code)) return "변경한 내용이 없어요.";
   return "저장 여부를 확인하지 못했어요. 입력은 남겨두었어요. 다시 저장하기 전에 목록을 확인해주세요.";
 }
-function PortfolioHoldingsPanel({ state, visible, onBack, onConfirm, onReload }) {
-  const [form, setForm] = React2.useState(null);
-  const [preview, setPreview] = React2.useState(null);
-  const [busy, setBusy] = React2.useState(false);
-  const [message, setMessage] = React2.useState("");
-  const [error, setError] = React2.useState("");
+function PortfolioHoldingsPanel({ state, visible, onBack, onConfirm, onConfirmCsv, onReload }) {
+  const [form, setForm] = React3.useState(null);
+  const [preview, setPreview] = React3.useState(null);
+  const [busy, setBusy] = React3.useState(false);
+  const [message, setMessage] = React3.useState("");
+  const [error, setError] = React3.useState("");
+  const [csvOpen, setCsvOpen] = React3.useState(false);
   const known = state.phase === "ready" || state.phase === "choose-stocks";
   const change = (key, value) => {
     setForm((old) => old ? { ...old, [key]: value } : old);
@@ -2201,6 +2438,7 @@ function PortfolioHoldingsPanel({ state, visible, onBack, onConfirm, onReload })
     setError("");
   };
   const edit = (holding) => {
+    setCsvOpen(false);
     setForm({ id: holding.id, ticker: holding.ticker, market: holding.market, name: holding.name, shares: holding.shares?.toString() || "", avg_cost: holding.avg_cost?.toString() || "", memo: holding.memo || "" });
     setPreview(null);
     setError("");
@@ -2210,15 +2448,17 @@ function PortfolioHoldingsPanel({ state, visible, onBack, onConfirm, onReload })
     setError("");
     setMessage("");
     try {
-      if (remove) setPreview(previewHoldingChange(state.holdings, { kind: "remove", id: remove.id }));
-      else if (form) {
+      if (remove) {
+        setCsvOpen(false);
+        setPreview(previewHoldingChange(state.holdings, { kind: "remove", id: remove.id }));
+      } else if (form) {
         if (!form.id) setPreview(previewHoldingChange(state.holdings, { kind: "add", ...form }));
         else {
           const original = state.holdings.find((h) => h.id === form.id);
           if (!original) throw Error("holding-not-found");
-          const fields2 = {};
-          for (const key of ["name", "shares", "avg_cost", "memo"]) if (form[key] !== String(original[key] ?? "")) fields2[key] = form[key];
-          setPreview(previewHoldingChange(state.holdings, { kind: "edit", id: form.id, ...fields2 }));
+          const fields3 = {};
+          for (const key of ["name", "shares", "avg_cost", "memo"]) if (form[key] !== String(original[key] ?? "")) fields3[key] = form[key];
+          setPreview(previewHoldingChange(state.holdings, { kind: "edit", id: form.id, ...fields3 }));
         }
       }
     } catch (e) {
@@ -2241,12 +2481,19 @@ function PortfolioHoldingsPanel({ state, visible, onBack, onConfirm, onReload })
       setBusy(false);
     }
   };
-  return /* @__PURE__ */ React2.createElement("section", { className: "an-nest", "aria-label": "둥지 보유종목 관리", hidden: !visible, style: { position: "absolute", inset: 0, overflow: "auto", zIndex: 1 } }, /* @__PURE__ */ React2.createElement("style", null, CSS), /* @__PURE__ */ React2.createElement("header", null, /* @__PURE__ */ React2.createElement("div", null, /* @__PURE__ */ React2.createElement("h2", null, "둥지 보유목록"), /* @__PURE__ */ React2.createElement("p", null, "종목 관리와 지도 메모는 따로 저장해요.")), /* @__PURE__ */ React2.createElement("button", { type: "button", disabled: busy, onClick: onBack }, "지도로 돌아가기")), /* @__PURE__ */ React2.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React2.createElement("button", { type: "button", disabled: !known || busy, onClick: () => {
+  return /* @__PURE__ */ React3.createElement("section", { className: "an-nest", "aria-label": "둥지 보유종목 관리", hidden: !visible, style: { position: "absolute", inset: 0, overflow: "auto", zIndex: 1 } }, /* @__PURE__ */ React3.createElement("style", null, CSS), /* @__PURE__ */ React3.createElement("header", null, /* @__PURE__ */ React3.createElement("div", null, /* @__PURE__ */ React3.createElement("h2", null, "둥지 보유목록"), /* @__PURE__ */ React3.createElement("p", null, "종목 관리와 지도 메모는 따로 저장해요.")), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy, onClick: onBack }, "지도로 돌아가기")), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: !known || busy, onClick: () => {
+    setCsvOpen(false);
     setForm(blank());
     setPreview(null);
     setError("");
     setMessage("");
-  } }, "종목 추가"), /* @__PURE__ */ React2.createElement("button", { type: "button", disabled: busy, onClick: async () => {
+  } }, "종목 추가"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: !known || busy, onClick: () => {
+    setCsvOpen(true);
+    setForm(null);
+    setPreview(null);
+    setError("");
+    setMessage("");
+  } }, "파일로 넣기"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy, onClick: async () => {
     setBusy(true);
     setError("");
     try {
@@ -2256,13 +2503,13 @@ function PortfolioHoldingsPanel({ state, visible, onBack, onConfirm, onReload })
     } finally {
       setBusy(false);
     }
-  } }, "목록 다시 불러오기")), message ? /* @__PURE__ */ React2.createElement("p", { role: "status" }, message) : null, error ? /* @__PURE__ */ React2.createElement("p", { role: "alert" }, error) : null, form ? /* @__PURE__ */ React2.createElement("form", { className: "an-nest-form", onSubmit: (e) => {
+  } }, "목록 다시 불러오기")), message ? /* @__PURE__ */ React3.createElement("p", { role: "status" }, message) : null, error ? /* @__PURE__ */ React3.createElement("p", { role: "alert" }, error) : null, csvOpen ? /* @__PURE__ */ React3.createElement(PortfolioHoldingsCsvPanel, { holdings: state.holdings, unsupportedCount: state.unsupportedCount, busy: busy || !known, onBusy: setBusy, onClose: () => setCsvOpen(false), onConfirm: onConfirmCsv }) : null, form ? /* @__PURE__ */ React3.createElement("form", { className: "an-nest-form", onSubmit: (e) => {
     e.preventDefault();
     prepare();
-  } }, /* @__PURE__ */ React2.createElement("h3", null, form.id ? "보유 기록 수정" : "보유종목 추가"), /* @__PURE__ */ React2.createElement("p", null, "입력값은 변경 내용을 확인한 뒤 저장돼요."), /* @__PURE__ */ React2.createElement("fieldset", { disabled: busy || !known, style: { border: 0, padding: 0, margin: "12px 0 0" } }, /* @__PURE__ */ React2.createElement("div", { className: "an-nest-grid" }, /* @__PURE__ */ React2.createElement("label", null, "시장", /* @__PURE__ */ React2.createElement("select", { value: form.market, disabled: !!form.id, onChange: (e) => change("market", e.target.value) }, /* @__PURE__ */ React2.createElement("option", { value: "KR" }, "국내 · KRW"), /* @__PURE__ */ React2.createElement("option", { value: "US" }, "미국 · USD"))), /* @__PURE__ */ React2.createElement("label", null, "종목코드", /* @__PURE__ */ React2.createElement("input", { value: form.ticker, disabled: !!form.id, onChange: (e) => change("ticker", e.target.value), placeholder: form.market === "KR" ? "005930" : "AAPL" })), /* @__PURE__ */ React2.createElement("label", null, "이름", /* @__PURE__ */ React2.createElement("input", { value: form.name, onChange: (e) => change("name", e.target.value) })), /* @__PURE__ */ React2.createElement("label", null, "수량", /* @__PURE__ */ React2.createElement("input", { inputMode: "decimal", value: form.shares, onChange: (e) => change("shares", e.target.value) })), /* @__PURE__ */ React2.createElement("label", null, "평균 매수가 · ", form.market === "KR" ? "KRW" : "USD", /* @__PURE__ */ React2.createElement("input", { inputMode: "decimal", value: form.avg_cost, onChange: (e) => change("avg_cost", e.target.value) })), /* @__PURE__ */ React2.createElement("label", null, "보유 메모", /* @__PURE__ */ React2.createElement("textarea", { value: form.memo, onChange: (e) => change("memo", e.target.value) }))), /* @__PURE__ */ React2.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React2.createElement("button", { type: "submit" }, "변경 내용 확인"), /* @__PURE__ */ React2.createElement("button", { type: "button", onClick: () => {
+  } }, /* @__PURE__ */ React3.createElement("h3", null, form.id ? "보유 기록 수정" : "보유종목 추가"), /* @__PURE__ */ React3.createElement("p", null, "입력값은 변경 내용을 확인한 뒤 저장돼요."), /* @__PURE__ */ React3.createElement("fieldset", { disabled: busy || !known, style: { border: 0, padding: 0, margin: "12px 0 0" } }, /* @__PURE__ */ React3.createElement("div", { className: "an-nest-grid" }, /* @__PURE__ */ React3.createElement("label", null, "시장", /* @__PURE__ */ React3.createElement("select", { value: form.market, disabled: !!form.id, onChange: (e) => change("market", e.target.value) }, /* @__PURE__ */ React3.createElement("option", { value: "KR" }, "국내 · KRW"), /* @__PURE__ */ React3.createElement("option", { value: "US" }, "미국 · USD"))), /* @__PURE__ */ React3.createElement("label", null, "종목코드", /* @__PURE__ */ React3.createElement("input", { value: form.ticker, disabled: !!form.id, onChange: (e) => change("ticker", e.target.value), placeholder: form.market === "KR" ? "005930" : "AAPL" })), /* @__PURE__ */ React3.createElement("label", null, "이름", /* @__PURE__ */ React3.createElement("input", { value: form.name, onChange: (e) => change("name", e.target.value) })), /* @__PURE__ */ React3.createElement("label", null, "수량", /* @__PURE__ */ React3.createElement("input", { inputMode: "decimal", value: form.shares, onChange: (e) => change("shares", e.target.value) })), /* @__PURE__ */ React3.createElement("label", null, "평균 매수가 · ", form.market === "KR" ? "KRW" : "USD", /* @__PURE__ */ React3.createElement("input", { inputMode: "decimal", value: form.avg_cost, onChange: (e) => change("avg_cost", e.target.value) })), /* @__PURE__ */ React3.createElement("label", null, "보유 메모", /* @__PURE__ */ React3.createElement("textarea", { value: form.memo, onChange: (e) => change("memo", e.target.value) }))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "submit" }, "변경 내용 확인"), /* @__PURE__ */ React3.createElement("button", { type: "button", onClick: () => {
     setForm(null);
     setPreview(null);
-  } }, "입력 취소")))) : null, preview ? /* @__PURE__ */ React2.createElement("section", { className: "an-nest-preview", "aria-label": "보유 변경 미리보기" }, /* @__PURE__ */ React2.createElement("h3", null, preview.kind === "remove" ? "이 보유 기록을 삭제할까요?" : "이 내용으로 저장할까요?"), /* @__PURE__ */ React2.createElement("p", null, preview.kind === "remove" ? "목록의 보유 기록만 삭제해요. 실제 매도나 거래 기록 추가가 아니며 지도 메모도 삭제하지 않아요." : "현재 기록과 비교해주세요. 다른 화면에서 동시에 수정하지 않는 것이 좋아요."), /* @__PURE__ */ React2.createElement("dl", null, /* @__PURE__ */ React2.createElement("dt", null, "종목"), /* @__PURE__ */ React2.createElement("dd", null, preview.after?.name || preview.before?.name, " · ", preview.after?.ticker || preview.before?.ticker), (preview.kind === "remove" ? ["shares", "avg_cost", "memo"] : preview.changedFields).map((key) => /* @__PURE__ */ React2.createElement(React2.Fragment, { key }, /* @__PURE__ */ React2.createElement("dt", null, labels[key]), /* @__PURE__ */ React2.createElement("dd", null, String(preview.before?.[key] ?? "없음"), " → ", String(preview.after?.[key] ?? "삭제"))))), /* @__PURE__ */ React2.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React2.createElement("button", { type: "button", disabled: busy || !known, onClick: confirm }, busy ? "확인 중…" : preview.kind === "remove" ? "확인 후 보유 기록 삭제" : "확인 후 보유 기록 저장"), /* @__PURE__ */ React2.createElement("button", { type: "button", disabled: busy, onClick: () => setPreview(null) }, "돌아가서 수정"))) : null, !known ? /* @__PURE__ */ React2.createElement("p", { role: "status" }, state.phase === "error" ? "목록을 불러오지 못했어요. 보유 기록이 없다는 뜻은 아니에요." : "보유목록을 확인하고 있어요.") : /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("ul", { className: "an-nest-rows" }, state.holdings.map((h) => /* @__PURE__ */ React2.createElement("li", { key: h.ticker }, /* @__PURE__ */ React2.createElement("div", null, /* @__PURE__ */ React2.createElement("strong", null, h.name), /* @__PURE__ */ React2.createElement("small", null, h.ticker, " · ", h.market, " · ", state.selectedTickers.includes(h.ticker) ? "현재 지도에 표시" : "지도 표시 범위 밖"), /* @__PURE__ */ React2.createElement("small", null, "수량 ", h.duplicate ? "중복 확인 필요" : formatHoldingQuantity(h.shares), " · 평균 매수가 ", formatHoldingAverageCost(h))), /* @__PURE__ */ React2.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React2.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => edit(h), "aria-label": h.name + " 수정" }, "수정"), /* @__PURE__ */ React2.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => prepare(h), "aria-label": h.name + " 삭제" }, "삭제"))))), !state.holdings.length ? /* @__PURE__ */ React2.createElement("p", null, "등록한 보유종목이 없어요. 종목 추가로 시작하세요.") : null, state.unsupportedCount ? /* @__PURE__ */ React2.createElement("p", null, "이 지도에서 지원하지 않는 보유 항목 ", state.unsupportedCount, "개는 별도로 유지돼요.") : null));
+  } }, "입력 취소")))) : null, preview ? /* @__PURE__ */ React3.createElement("section", { className: "an-nest-preview", "aria-label": "보유 변경 미리보기" }, /* @__PURE__ */ React3.createElement("h3", null, preview.kind === "remove" ? "이 보유 기록을 삭제할까요?" : "이 내용으로 저장할까요?"), /* @__PURE__ */ React3.createElement("p", null, preview.kind === "remove" ? "목록의 보유 기록만 삭제해요. 실제 매도나 거래 기록 추가가 아니며 지도 메모도 삭제하지 않아요." : "현재 기록과 비교해주세요. 다른 화면에서 동시에 수정하지 않는 것이 좋아요."), /* @__PURE__ */ React3.createElement("dl", null, /* @__PURE__ */ React3.createElement("dt", null, "종목"), /* @__PURE__ */ React3.createElement("dd", null, preview.after?.name || preview.before?.name, " · ", preview.after?.ticker || preview.before?.ticker), (preview.kind === "remove" ? ["shares", "avg_cost", "memo"] : preview.changedFields).map((key) => /* @__PURE__ */ React3.createElement(React3.Fragment, { key }, /* @__PURE__ */ React3.createElement("dt", null, labels[key]), /* @__PURE__ */ React3.createElement("dd", null, String(preview.before?.[key] ?? "없음"), " → ", String(preview.after?.[key] ?? "삭제"))))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !known, onClick: confirm }, busy ? "확인 중…" : preview.kind === "remove" ? "확인 후 보유 기록 삭제" : "확인 후 보유 기록 저장"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy, onClick: () => setPreview(null) }, "돌아가서 수정"))) : null, !known ? /* @__PURE__ */ React3.createElement("p", { role: "status" }, state.phase === "error" ? "목록을 불러오지 못했어요. 보유 기록이 없다는 뜻은 아니에요." : "보유목록을 확인하고 있어요.") : /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("ul", { className: "an-nest-rows" }, state.holdings.map((h) => /* @__PURE__ */ React3.createElement("li", { key: h.ticker }, /* @__PURE__ */ React3.createElement("div", null, /* @__PURE__ */ React3.createElement("strong", null, h.name), /* @__PURE__ */ React3.createElement("small", null, h.ticker, " · ", h.market, " · ", state.selectedTickers.includes(h.ticker) ? "현재 지도에 표시" : "지도 표시 범위 밖"), /* @__PURE__ */ React3.createElement("small", null, "수량 ", h.duplicate ? "중복 확인 필요" : formatHoldingQuantity(h.shares), " · 평균 매수가 ", formatHoldingAverageCost(h))), /* @__PURE__ */ React3.createElement("div", { className: "an-nest-actions" }, /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => edit(h), "aria-label": h.name + " 수정" }, "수정"), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: busy || !h.id || h.duplicate, onClick: () => prepare(h), "aria-label": h.name + " 삭제" }, "삭제"))))), !state.holdings.length ? /* @__PURE__ */ React3.createElement("p", null, "등록한 보유종목이 없어요. 종목 추가로 시작하세요.") : null, state.unsupportedCount ? /* @__PURE__ */ React3.createElement("p", null, "이 지도에서 지원하지 않는 보유 항목 ", state.unsupportedCount, "개는 별도로 유지돼요.") : null));
 }
 
 // framer-components/public-probe/PortfolioHoldingsEditor.ts
@@ -2349,10 +2596,10 @@ function canonicalPreview(fresh, preview) {
     if (preview.after !== null || preview.changedFields.length) fail("invalid-preview");
     return previewHoldingChange([targets[0]], { kind: "remove", id: before.id });
   }
-  const after = preview.after, fields2 = editFields(preview);
+  const after = preview.after, fields3 = editFields(preview);
   if (!after || after.id !== before.id || after.ticker !== before.ticker || after.market !== before.market) fail("invalid-preview");
   const change = { kind: "edit", id: before.id };
-  fields2.forEach((field) => {
+  fields3.forEach((field) => {
     change[field] = after[field];
   });
   return previewHoldingChange([targets[0]], change);
@@ -2433,16 +2680,45 @@ function createPortfolioHoldingsEditor(options = {}) {
   };
 }
 
+// framer-components/public-probe/PortfolioHoldingsCsvSave.ts
+async function saveConfirmedHoldingCsv(previews, options) {
+  if (!previews.length || previews.length > HOLDINGS_CSV_LIMITS.maxRows || previews.some((p) => !p.after || p.kind === "remove") || new Set(previews.map((p) => p.after.ticker)).size !== previews.length) throw Error("invalid-csv-preview");
+  const changes = JSON.parse(JSON.stringify(previews));
+  const getSession = options.getSession || readMapSession, account = getSession();
+  if (!account) throw Error("authentication-required");
+  const current = () => options.isCurrent() && getSession()?.userId === account.userId;
+  let saved = 0, error = null;
+  for (const preview of changes) {
+    if (!current()) throw Error("session-changed");
+    try {
+      await options.editor.confirm(preview);
+      saved++;
+    } catch (failure2) {
+      error = failure2 instanceof Error ? failure2.message : "write-failed";
+      break;
+    }
+    if (!current()) throw Error("session-changed");
+  }
+  if (!current()) throw Error("session-changed");
+  let refreshed = false;
+  try {
+    refreshed = await options.reload();
+  } catch {
+  }
+  if (!current()) throw Error("session-changed");
+  return { saved, total: changes.length, refreshed, error };
+}
+
 // framer-components/public-probe/PublicPortfolioPrototype.tsx
 function PublicPortfolioPrototype({ template = "", templateURL }) {
-  const frame = React3.useRef(null);
-  const controller = React3.useRef(null);
-  const editor = React3.useRef(null);
-  const [state, setState] = React3.useState(null);
-  const [source, setSource] = React3.useState(null);
-  const [view, setView] = React3.useState("map");
-  const [memberEpoch, setMemberEpoch] = React3.useState(0);
-  React3.useEffect(() => {
+  const frame = React4.useRef(null);
+  const controller = React4.useRef(null);
+  const editor = React4.useRef(null);
+  const [state, setState] = React4.useState(null);
+  const [source, setSource] = React4.useState(null);
+  const [view, setView] = React4.useState("map");
+  const [memberEpoch, setMemberEpoch] = React4.useState(0);
+  React4.useEffect(() => {
     if (!frame.current) return;
     const workspace = createPortfolioMapWorkspace();
     let holdingsEditor = createPortfolioHoldingsEditor();
@@ -2473,8 +2749,8 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       editor.current = null;
     };
   }, [template, templateURL]);
-  const [selected, setSelected] = React3.useState([]);
-  return /* @__PURE__ */ React3.createElement("section", { "aria-label": "내 포트폴리오 관계지도", style: { position: "relative", width: "100%", minWidth: 0 } }, !state || state.phase === "loading" || state.phase === "signed-out" ? /* @__PURE__ */ React3.createElement("p", { role: "status" }, state?.phase === "signed-out" ? "로그인 후 지도 자료를 불러옵니다." : "보유종목과 지도 자료를 불러오는 중이에요.") : null, state?.phase === "choose-stocks" ? /* @__PURE__ */ React3.createElement("div", null, /* @__PURE__ */ React3.createElement("p", null, "지도에 함께 표시할 종목을 최대 30개 골라주세요. 둥지의 보유 목록은 바뀌지 않아요."), state.holdings.map((h) => /* @__PURE__ */ React3.createElement("label", { key: h.ticker }, /* @__PURE__ */ React3.createElement(
+  const [selected, setSelected] = React4.useState([]);
+  return /* @__PURE__ */ React4.createElement("section", { "aria-label": "내 포트폴리오 관계지도", style: { position: "relative", width: "100%", minWidth: 0 } }, !state || state.phase === "loading" || state.phase === "signed-out" ? /* @__PURE__ */ React4.createElement("p", { role: "status" }, state?.phase === "signed-out" ? "로그인 후 지도 자료를 불러옵니다." : "보유종목과 지도 자료를 불러오는 중이에요.") : null, state?.phase === "choose-stocks" ? /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("p", null, "지도에 함께 표시할 종목을 최대 30개 골라주세요. 둥지의 보유 목록은 바뀌지 않아요."), state.holdings.map((h) => /* @__PURE__ */ React4.createElement("label", { key: h.ticker }, /* @__PURE__ */ React4.createElement(
     "input",
     {
       type: "checkbox",
@@ -2482,15 +2758,15 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       disabled: !selected.includes(h.ticker) && selected.length >= 30,
       onChange: (e) => setSelected((old) => e.target.checked ? [...old, h.ticker] : old.filter((t) => t !== h.ticker))
     }
-  ), h.name)), /* @__PURE__ */ React3.createElement("button", { type: "button", disabled: !selected.length, onClick: () => {
+  ), h.name)), /* @__PURE__ */ React4.createElement("button", { type: "button", disabled: !selected.length, onClick: () => {
     void controller.current?.showTickers(selected);
-  } }, "지도에서 보기"), /* @__PURE__ */ React3.createElement("button", { type: "button", onClick: () => setView("holdings") }, "보유목록")) : null, state?.phase === "error" ? /* @__PURE__ */ React3.createElement("div", { role: "alert" }, "자료를 불러오지 못했어요. 저장한 기록은 그대로예요.", /* @__PURE__ */ React3.createElement("button", { type: "button", onClick: () => {
+  } }, "지도에서 보기"), /* @__PURE__ */ React4.createElement("button", { type: "button", onClick: () => setView("holdings") }, "보유목록")) : null, state?.phase === "error" ? /* @__PURE__ */ React4.createElement("div", { role: "alert" }, "자료를 불러오지 못했어요. 저장한 기록은 그대로예요.", /* @__PURE__ */ React4.createElement("button", { type: "button", onClick: () => {
     void controller.current?.open();
-  } }, "다시 불러오기")) : null, state?.phase === "ready" && ["error", "conflict"].includes(state.privateState.phase) ? /* @__PURE__ */ React3.createElement("div", { role: "alert" }, state.privateState.phase === "conflict" ? "다른 화면에서 기록이 바뀌었어요. 내 변경은 아직 저장되지 않았어요." : "저장 기록을 확인하지 못했어요. 현재 변경은 유지하고 있어요.", state.privateState.phase === "error" && state.privateState.dirty ? /* @__PURE__ */ React3.createElement("button", { type: "button", onClick: () => {
+  } }, "다시 불러오기")) : null, state?.phase === "ready" && ["error", "conflict"].includes(state.privateState.phase) ? /* @__PURE__ */ React4.createElement("div", { role: "alert" }, state.privateState.phase === "conflict" ? "다른 화면에서 기록이 바뀌었어요. 내 변경은 아직 저장되지 않았어요." : "저장 기록을 확인하지 못했어요. 현재 변경은 유지하고 있어요.", state.privateState.phase === "error" && state.privateState.dirty ? /* @__PURE__ */ React4.createElement("button", { type: "button", onClick: () => {
     void controller.current?.save();
-  } }, "저장 다시 시도") : null, /* @__PURE__ */ React3.createElement("button", { type: "button", onClick: () => {
+  } }, "저장 다시 시도") : null, /* @__PURE__ */ React4.createElement("button", { type: "button", onClick: () => {
     if (!state.privateState.dirty || window.confirm("현재 미저장 변경을 버리고 저장된 기록을 다시 불러올까요?")) void controller.current?.reloadSaved(state.privateState.dirty);
-  } }, "저장 기록 다시 불러오기")) : null, source ? /* @__PURE__ */ React3.createElement("div", { role: "status" }, /* @__PURE__ */ React3.createElement("a", { href: source, target: "_blank", rel: "noopener noreferrer" }, "선택한 원문 열기"), /* @__PURE__ */ React3.createElement("button", { type: "button", onClick: () => setSource(null) }, "닫기")) : null, /* @__PURE__ */ React3.createElement(
+  } }, "저장 기록 다시 불러오기")) : null, source ? /* @__PURE__ */ React4.createElement("div", { role: "status" }, /* @__PURE__ */ React4.createElement("a", { href: source, target: "_blank", rel: "noopener noreferrer" }, "선택한 원문 열기"), /* @__PURE__ */ React4.createElement("button", { type: "button", onClick: () => setSource(null) }, "닫기")) : null, /* @__PURE__ */ React4.createElement(
     "iframe",
     {
       ref: frame,
@@ -2499,7 +2775,7 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       referrerPolicy: "no-referrer",
       style: { display: "block", visibility: view === "map" ? "visible" : "hidden", width: "100%", height: "max(680px, calc(100dvh - 40px))", border: 0 }
     }
-  ), state && state.phase !== "signed-out" ? /* @__PURE__ */ React3.createElement(
+  ), state && state.phase !== "signed-out" ? /* @__PURE__ */ React4.createElement(
     PortfolioHoldingsPanel,
     {
       key: memberEpoch,
@@ -2507,6 +2783,15 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       visible: view === "holdings",
       onBack: () => setView("map"),
       onReload: () => controller.current?.open() || Promise.resolve(false),
+      onConfirmCsv: (previews) => {
+        const currentEditor = editor.current, workspace = controller.current;
+        if (!currentEditor || !workspace) return Promise.reject(Error("session-unavailable"));
+        return saveConfirmedHoldingCsv(previews, {
+          editor: currentEditor,
+          isCurrent: () => editor.current === currentEditor && controller.current === workspace,
+          reload: () => workspace.open()
+        });
+      },
       onConfirm: async (preview) => {
         const currentEditor = editor.current, workspace = controller.current;
         if (!currentEditor || !workspace) throw Error("session-unavailable");
@@ -2523,7 +2808,7 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
 // output/member-map-integration-20260927/PortfolioMapReview.entry.tsx
 function PublicPortfolioMapReview({ minHeight = 820, style }) {
   const isStatic = useIsStaticRenderer();
-  return /* @__PURE__ */ React4.createElement("div", { style: { ...style, position: "relative", width: "100%", minHeight, boxSizing: "border-box" } }, isStatic ? /* @__PURE__ */ React4.createElement("section", { "aria-label": "회원 지도 검수용" }, /* @__PURE__ */ React4.createElement("h2", null, "회원 지도 검수용"), /* @__PURE__ */ React4.createElement("p", null, "실제 미리보기에서 로그인 후 보유종목과 저장 기록을 불러옵니다. 공개 사이트는 바꾸지 않습니다.")) : /* @__PURE__ */ React4.createElement(PublicPortfolioPrototype, { templateURL: "/member-map-canvas" }));
+  return /* @__PURE__ */ React5.createElement("div", { style: { ...style, position: "relative", width: "100%", minHeight, boxSizing: "border-box" } }, isStatic ? /* @__PURE__ */ React5.createElement("section", { "aria-label": "회원 지도 검수용" }, /* @__PURE__ */ React5.createElement("h2", null, "회원 지도 검수용"), /* @__PURE__ */ React5.createElement("p", null, "실제 미리보기에서 로그인 후 보유종목과 저장 기록을 불러옵니다. 공개 사이트는 바꾸지 않습니다.")) : /* @__PURE__ */ React5.createElement(PublicPortfolioPrototype, { templateURL: "/member-map-canvas" }));
 }
 addPropertyControls(PublicPortfolioMapReview, {
   minHeight: { type: ControlType.Number, title: "최소 높이", defaultValue: 820, min: 480, max: 1200, step: 20 }
