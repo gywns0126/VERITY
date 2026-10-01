@@ -3,6 +3,42 @@
 Temporary integration surface: `https://project-yw131.vercel.app/member-map-review`.
 This is not a replacement for the accepted Sites v36 design and is not a Framer Publish.
 
+## Current renderer — accepted HTML integration (2026-10-01)
+
+The separate React map recreation below is historical and is superseded. The
+current snapshot hosts the actual accepted Sites v36 inner HTML at the same-origin
+`/member-map-canvas` path, not a restyled map. Its original source SHA-256 is
+`c6e1847ea2f4d07368d4e10bc2a3cbb08ec07eeadb05a48827664d333c7c207c`.
+The original stylesheet blocks and CSP are preserved by the template builder;
+the iframe stays `sandbox="allow-scripts"`. React owns only the existing
+authenticated Workspace and the parent-side validated MessageChannel bridge.
+The outer review keeps `script-src 'self'` and permits only same-origin frames;
+the canvas response adds `frame-ancestors 'self'; sandbox allow-scripts` while
+preserving its original meta CSP. This avoids inherited `srcdoc` restrictions
+without enabling inline scripts on the authenticated parent.
+Credentials never enter the iframe. Demo graph inputs are replaced with the
+current member's holdings, source documents and bounded reviewed registry facts.
+
+Personal positions, notes and read/important/later/irrelevant marks use the
+existing private store and explicit Save. Legacy reviewed connection IDs are
+preserved for attached notes. No new holdings writes or access permissions are
+introduced. Source documents are not automatically labelled common events;
+investment impact and connection strength remain unassessed. Synthetic browser
+checks and source tests do not establish authenticated live acceptance.
+
+The review snapshot is generated from
+`output/member-map-integration-20260927/PortfolioMapReview.entry.tsx` with
+esbuild ESM/classic JSX, React/ReactDOM/Framer external and UTF-8.
+`scripts/member-map/prototype-template.cjs` produces `vercel-api/public/member-map-canvas.html` from the
+accepted artifact and `review/member-map/prototype-member-runtime.js`.
+This change does not edit or republish that original Sites artifact.
+
+Local checks: 25 focused source tests and 11 delivery snapshot tests pass. An
+isolated browser with synthetic holdings and external network blocked loaded
+the separate canvas over local HTTP using the delivery CSP, then passed note
+save/reconnect, reviewed event read mark, explicit saved-record reload and
+logout clearing. These are not real-member or production acceptance claims.
+
 ## Boundaries
 
 - Existing AlphaNest Google/email sign-in; no new provider, test identity creation, or session transfer.
@@ -26,6 +62,10 @@ Prior source validation: 47/47 focused renderer, reviewed-state and fresh-contro
 ## Holdings token-rotation recovery — 2026-09-30
 
 The map reads the current same-member session immediately before requesting holdings. After a 401 it retries once only if the normal authentication flow has already produced a different token for that same member. Both attempts share the original 15-second timeout. Logout, account changes, disposal and superseding requests prevent stale results or retries. An unchanged token or a second 401 remains an explicit error; this does not refresh credentials, poll for a future refresh or change shared authentication. The prior live first-load failure was not traced to a captured token race, so synthetic regression coverage alone does not establish its original cause or complete resolution.
+
+## Design-first shell alignment — 2026-09-30
+
+The user moved accepted-design alignment ahead of OHLC integration; no quote work is included. This increment restores the wide-screen item rail, central map and right detail panel, consolidates the header, uses neutral inactive controls and lighter body typography, and removes the duplicate review notice above the signed-in workspace (it remains inside the account panel). The rail shows actual current map items, not fabricated new events, and a second click clears selection. Existing map controls, member persistence, authentication, source evidence and holdings are unchanged. Below 1100px the rail hides, and below 760px details stack after the map. Root UI tests 40/40 and strict TypeScript passed; synthetic browser checks covered 30 holdings, desktop/dark selection, keyboard focus and 390px overflow. Local visual checks do not prove deployment or real-member acceptance.
 
 ## Earlier compact design provenance (historical)
 

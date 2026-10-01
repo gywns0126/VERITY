@@ -22,13 +22,13 @@ function Review() {
     }, [])
     return <>
         <header className="review-bar">
-            <strong>ALPHANEST <span>회원 저장 연결 검수</span></strong>
+            <strong><i aria-hidden="true">α</i> ALPHANEST <span>회원 검수</span></strong>
             {signedIn ? <button type="button" aria-expanded={accountOpen} onClick={() => setAccountOpen(value => !value)}>
                 계정
             </button> : <span>로그인 필요</span>}
         </header>
-        <p className="review-boundary">연동 검수용 화면이에요. 확정한 지도 디자인은 별도로 유지하며, 여기서 보유종목은 변경하지 않아요.</p>
         <section className="review-auth" hidden={signedIn && !accountOpen} aria-label="알파네스트 로그인">
+            <p className="review-boundary">회원 검수용 작업판입니다. 여기서 기존 보유종목은 변경하지 않아요.</p>
             <AlphaNestAuth supabaseUrl={__PUBLIC_AUTH__.url} supabaseAnonKey={__PUBLIC_AUTH__.anon}
                 redirectUrl={RETURN_URL} afterLoginPath="/member-map-review" dark={false}
                 termsUrl="https://www.alphanest.kr/policy" privacyUrl="https://www.alphanest.kr/policy" />
