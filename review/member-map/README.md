@@ -5,6 +5,25 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 
 ## Current renderer — accepted HTML integration (2026-10-01)
 
+### Local follow-up: AMD/Oracle evidence and frame remount
+
+Separate from the pending PR437 candidate: the reviewed registry now contains
+9 primary documents, 4 relationships and 3 historical events. AMD/Oracle's
+2025-06-12 MI355X cloud-offering announcement is supported by Oracle's release
+and the Oracle paragraph in AMD's same-day event release. Other event participants
+are not joined. Current delivery, purchase amounts and stock-price impact are
+not inferred. Existing five saved-record revisions remain unchanged.
+
+The original-renderer local browser check exposed a teardown/remount race:
+an old about:blank navigation could replace the next canvas. Cleanup now hides
+the retired frame immediately and clears it only if no replacement document has
+claimed it by the next microtask. The old channel/subscriptions still close.
+Local HTTP with delivery CSP and external network blocked verified the new
+event's two original-source buttons, drag, note save/reconnect, event read/save,
+explicit saved-record reload, logout clearing and390px overflow0; page errors0.
+Authentication and storage were synthetic, not real-member acceptance. This
+follow-up has not been pushed, preview-deployed or merged.
+
 ### Search exploration and list return
 
 This candidate reuses the existing same-origin public `/api/search` endpoint.

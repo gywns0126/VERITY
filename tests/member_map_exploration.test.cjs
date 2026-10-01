@@ -8,7 +8,7 @@ const start = source.indexOf('// framer-components/public-probe/MemberMapState.t
 const end = source.indexOf('// framer-components/public-probe/PortfolioHoldingsPanel.tsx', start)
 assert.ok(start >= 0 && end > start)
 const context = { AbortController, URL, URLSearchParams, Response, TextDecoder, DOMException, setTimeout, clearTimeout }
-vm.runInNewContext(source.slice(start, end) + '\nglobalThis.api={createPortfolioMapWorkspace,normalizeSearchResults,fetchPortfolioStockSearch,prototypeMemberModel}', context)
+vm.runInNewContext(source.slice(start, end) + '\nglobalThis.api={createPortfolioMapWorkspace,normalizeSearchResults,fetchPortfolioStockSearch,prototypeMemberModel,mountMemberPrototype}', context)
 const { createPortfolioMapWorkspace, normalizeSearchResults, fetchPortfolioStockSearch, prototypeMemberModel } = context.api
 const clone = value => JSON.parse(JSON.stringify(value))
 const A = { userId: '11111111-1111-4111-8111-111111111111', token: 'synthetic-a' }
@@ -63,6 +63,35 @@ test('delivered exploration joins a verified common event without changing holdi
     assert.ok(event);assert.equal(event.name, 'NVIDIA·Intel 제품 공동개발 발표');assert.equal(event.evidence.length, 2)
     assert.equal(model.edges.filter(e => e.from === event.id).length, 2)
     assert.deepEqual(clone(after.privateState), clone(before.privateState))
+})
+
+test('delivered AMD and Oracle exploration projects only their dated shared announcement', async t => {
+    const h = harness(t);await h.workspace.open()
+    assert.equal(await h.workspace.exploreStock({ ticker: 'AMD', name: 'AMD', market: 'US' }), true)
+    assert.equal(prototypeMemberModel(h.workspace.getState()).nodes.some(n => n.recordKind === 'event'), false)
+    assert.equal(await h.workspace.exploreStock({ ticker: 'ORCL', name: 'Oracle', market: 'US' }), true)
+    const state = h.workspace.getState(), model = prototypeMemberModel(state)
+    const event = model.nodes.find(n => n.id === 'reviewed:events:event:amd-orcl-mi355x-cloud-20250612')
+    assert.ok(event);assert.equal(event.name, 'AMD·Oracle MI355X 클라우드 제공 계획 발표')
+    assert.equal(event.evidence.length, 2)
+    assert.deepEqual(clone(model.edges.filter(e => e.from === event.id).map(e => e.to).sort()), ['company:AMD', 'company:ORCL'])
+    assert.equal(state.holdings.length, 1);assert.equal(state.holdings[0].ticker, 'NVDA')
+    assert.ok(h.calls.every(c => (c.init.method || 'GET') === 'GET'))
+})
+
+test('delivered teardown never clears the next document during a synchronous remount', async () => {
+    context.window = { location: {href:'https://fixture.test/review',origin:'https://fixture.test'},addEventListener(){},removeEventListener(){} }
+    context.crypto = {randomUUID:()=> 'test-nonce'}
+    const state = { phase:'ready',graph:graph(['AMD','ORCL']),holdings:[],selectedTickers:['AMD','ORCL'],privateState:{phase:'ready',document:null} }
+    const workspace = {getState:()=>state,subscribe:fn=>{fn(state);return ()=>{}}}
+    for (const replacement of [false,true]) {
+        const frame = {style:{},setAttribute(){},removeAttribute(){},addEventListener(){},removeEventListener(){}}
+        const cleanup = context.api.mountMemberPrototype(frame,'',workspace,{account:()=>A.userId,templateURL:'/member-map-canvas'})
+        cleanup();assert.equal(frame.style.opacity,'0')
+        if(replacement)frame.src='https://fixture.test/member-map-canvas?next'
+        await Promise.resolve()
+        assert.equal(frame.src,replacement?'https://fixture.test/member-map-canvas?next':'about:blank')
+    }
 })
 
 test('delivered exploration failure and late owner response leave no foreign graph', async t => {

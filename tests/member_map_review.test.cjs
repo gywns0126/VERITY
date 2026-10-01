@@ -72,7 +72,7 @@ test("HBM evidence matches the mixed-market pair without changing existing saved
     vm.runInNewContext(source.slice(start, end) + "\nglobalThis.facts = h => buildReviewedPortfolioFacts(h, portfolioReviewedRegistry)", context)
     const pair = [{ ticker: "000660", market: "KR" }, { ticker: "TSM", market: "US" }]
     const result = context.facts(pair)
-    assert.equal(result.coverage.sources.reviewed, 7)
+    assert.equal(result.coverage.sources.reviewed, 9)
     assert.equal(result.relationships.length, 1)
     assert.equal(result.events.length, 1)
     assert.equal(result.events[0].id, "event:skh-tsmc-hbm4-mou-20240419")
