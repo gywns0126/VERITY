@@ -44,8 +44,15 @@ also passes with zero page errors.
 
 The separate React map recreation below is historical and is superseded. The
 current snapshot hosts the actual accepted Sites v36 inner HTML at the same-origin
-`/member-map-canvas` path, not a restyled map. Its original source SHA-256 is
+`/member-map-canvas` path, not a restyled map. The v36 baseline source SHA-256 was
 `c6e1847ea2f4d07368d4e10bc2a3cbb08ec07eeadb05a48827664d333c7c207c`.
+The user-requested blank-click selection fix updates the local source to
+`924660b70439ba40cfd9d3c134c34c4270c1dcd745cac135ed94960237856a52`.
+One stationary blank click/tap clears selection and restores the overview camera;
+positions, notes, marks and filters remain. Marquee, modifier selection, Space-pan
+and pointer cancellation retain their previous roles. Local checks passed16/16,
+plus isolated Chrome4/4 mouse/touch scenarios at1280/390px with3/30 stocks and
+zero browser errors. These are synthetic local checks, not signed-in acceptance.
 The original stylesheet blocks and CSP are preserved by the template builder;
 the iframe stays `sandbox="allow-scripts"`. React owns only the existing
 authenticated Workspace and the parent-side validated MessageChannel bridge.
@@ -58,8 +65,9 @@ current member's holdings, source documents and bounded reviewed registry facts.
 
 Personal positions, notes and read/important/later/irrelevant marks use the
 existing private store and explicit Save. Legacy reviewed connection IDs are
-preserved for attached notes. No new holdings writes or access permissions are
-introduced. Source documents are not automatically labelled common events;
+preserved for attached notes. Map interactions never mutate holdings; only the
+separately confirmed Nest editor can do so. No access permissions are changed.
+Source documents are not automatically labelled common events;
 investment impact and connection strength remain unassessed. Synthetic browser
 checks and source tests do not establish authenticated live acceptance.
 
@@ -68,7 +76,7 @@ The review snapshot is generated from
 esbuild ESM/classic JSX, React/ReactDOM/Framer external and UTF-8.
 `scripts/member-map/prototype-template.cjs` produces `vercel-api/public/member-map-canvas.html` from the
 accepted artifact and `review/member-map/prototype-member-runtime.js`.
-This change does not edit or republish that original Sites artifact.
+The selection fix also updates the local original HTML; public Sites is not republished.
 
 Local checks: 25 focused source tests and 11 delivery snapshot tests pass. An
 isolated browser with synthetic holdings and external network blocked loaded
@@ -80,7 +88,7 @@ logout clearing. These are not real-member or production acceptance claims.
 
 - Existing AlphaNest Google/email sign-in; no new provider, test identity creation, or session transfer.
 - The review shell is publicly downloadable; holdings and map records require the existing member JWT and owner checks. `noindex` is not an access control.
-- Holdings are read-only in this client. Map positions, notes and marks are drafts until explicit save; existing revision-conflict and account-switch protections are unchanged.
+- Map interactions do not mutate holdings. The Nest editor and CSV import require preview and explicit confirmation through the existing holdings API. Map positions, notes and marks remain drafts until explicit save; existing revision-conflict and account-switch protections are unchanged.
 - `Map.snapshot.tsx` is a generated projection of the tested local `PortfolioMapReview.entry.tsx` and its real-controller module graph. It supersedes the earlier two-section visual-only projection. Existing auth, member-state transport, document sources, quote normalizer and API routes are unchanged. This standalone snapshot has not been saved back into Framer.
 - `Auth.snapshot.tsx` was fresh-read from `k5Rb6uP` on 2026-09-29 KST; it matches the local mirror after whitespace normalization. It is reused, not pushed back to Framer. Only normal browser login creates the session.
 - PublicAuth remains mounted when its account panel is hidden so refresh/listeners survive. The map is not mounted while signed out.
