@@ -52,7 +52,7 @@ function workspaceRuntime() {
 function prototypeHostRuntime() {
     const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
     const start = source.indexOf("// framer-components/public-probe/PortfolioMapData.tsx")
-    const end = source.indexOf("// framer-components/public-probe/PublicPortfolioPrototype.tsx", start)
+    const end = marker(source, start, ["// framer-components/public-probe/PortfolioHoldingsPanel.tsx", "// framer-components/public-probe/PublicPortfolioPrototype.tsx"])
     assert.ok(start >= 0 && end > start, "review snapshot contains the prototype host modules before the React body")
     const context = { AbortController, JSON, Number, Set, Map, URL, clearTimeout, setTimeout }
     vm.runInNewContext(`${source.slice(start, end)}

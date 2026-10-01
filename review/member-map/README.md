@@ -5,6 +5,40 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 
 ## Current renderer — accepted HTML integration (2026-10-01)
 
+### Nest editor increment
+
+The accepted map now opens its shared holdings list with `보유목록`. Merely
+switching views preserves the iframe, camera and unsaved map notes. Adding,
+editing or deleting a holding requires a before/after preview and a separate
+confirm action. Input/preview causes no request. Confirm freshly reads holdings,
+refuses a stale target or an existing-ticker POST upsert, then sends one explicit
+mutation. It never infers a sale, trade record or holding deletion from hiding a
+map node. Only changed editable fields are sent; omitted names, costs and memos
+are preserved, including blank stored names. Unsupported assets stay intact.
+
+Requests remain on the existing authenticated holdings API. Logout/account
+switch discards the old form and editor; no old-member response refreshes a new
+member's workspace. Failure leaves same-member input available. After success,
+the shared workspace reloads without discarding unsaved map records. The fresh
+read is not an atomic cross-tab compare-and-swap; concurrent editing can still
+race the existing API and is not advertised as conflict-proof.
+
+Local synthetic browser acceptance: preview makes zero requests, partial PATCH,
+failed-input retention, explicit add/delete, map/list layout continuity, map-note
+save after holdings reload, and account switch. Light/dark at 1280px and390px
+passed overflow/hover-size checks. Actual private member acceptance is separate;
+these checks performed no real holdings write. This increment changes no auth,
+API, database permissions, Framer Publish or Sites artifact.
+
+The browser run exposed intermittent blank maps: the frame attribute held the
+new canvas URL but its document stayed on a queued srcdoc/about:blank navigation.
+URL-mode refresh no longer queues intermediate blank documents. Same-member
+loading preserves the canvas; an account reset immediately hides/inerts and
+clears the old view. Each new document uses a unique query/hash nonce and a
+load-triggered handshake, preventing stale WindowProxy messages from connecting.
+Five initial loads and the full synthetic edit/add/delete/account-switch flow
+passed after this fix. An empty evidence layer no longer covers a visible stock.
+
 The separate React map recreation below is historical and is superseded. The
 current snapshot hosts the actual accepted Sites v36 inner HTML at the same-origin
 `/member-map-canvas` path, not a restyled map. Its original source SHA-256 is

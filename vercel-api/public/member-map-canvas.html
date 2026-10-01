@@ -1808,16 +1808,18 @@ html>body{padding:0}</style>
   </div><div class="an-live" id="an-live" aria-live="polite"></div>
   <script>
     (async function(){
+      const memberFrameNonce = location.hash.slice(1) || '__ALPHANEST_FRAME_NONCE__';
       const connection = await new Promise(resolve => {
         const receive = event => {
-          if(event.source !== parent || event.data?.type !== 'alphanest-member-connect' || event.ports.length !== 1) return;
+          if(event.source !== parent || event.data?.nonce !== memberFrameNonce) return;
+          if(event.data.type === 'alphanest-member-start') { parent.postMessage({type:'alphanest-member-ready',nonce:memberFrameNonce}, '*');return; }
+          if(event.data.type !== 'alphanest-member-connect' || event.ports.length !== 1) return;
           window.removeEventListener('message', receive);
           const port = event.ports[0];
           port.onmessage = event => { if(event.data?.type === 'init') { port.onmessage = null; resolve({port, model:event.data.model}); } };
           port.start();
         };
         window.addEventListener('message', receive);
-        parent.postMessage({type:'alphanest-member-ready'}, '*');
       });
       const member = connection.model, memberPort = connection.port;
       const root=document.getElementById('an-map-design');
@@ -2507,6 +2509,10 @@ const memberSaveButton=document.createElement('button');
 memberSaveButton.type='button';memberSaveButton.className='an-tool';memberSaveButton.textContent='기록 저장';
 const memberSaveStatus=document.createElement('span');memberSaveStatus.role='status';memberSaveStatus.className='an-save-note';
 adjustTools.append(memberSaveButton,memberSaveStatus);
+const memberHoldingsButton=document.createElement('button');
+memberHoldingsButton.type='button';memberHoldingsButton.className='an-tool';memberHoldingsButton.textContent='보유목록';
+memberHoldingsButton.onclick=()=>memberPort.postMessage({type:'holdings'});
+adjustTools.prepend(memberHoldingsButton);
 scenarioSelect.closest('label')?.remove();
 scenarioSelect.disabled=true;
 noteSequence=Date.now();
@@ -2548,6 +2554,7 @@ function emitMemberDraft(){
 save=emitMemberDraft;
 memberSaveButton.onclick=()=>{emitMemberDraft();memberPort.postMessage({type:'save'});};
 memberPort.onmessage=event=>{
+  if(event.data?.type==='reset'){memberWritable=false;root.replaceChildren();memberPort.close();return;}
   if(event.data?.type!=='status')return;
   memberWritable=!!event.data.writable;
   memberSaveButton.disabled=!memberWritable||!!event.data.saving;
@@ -2557,7 +2564,12 @@ const prototypeRenderMap=renderMap;
 renderMap=function(){
   prototypeRenderMap();
   root.querySelector('#an-counts').textContent='보유 표시 '+holdings.filter(shown).length+'/'+holdings.length+' · 자료 '+nodes.filter(matchesEvent).length;
-  root.querySelector('.an-aside-note').textContent='보유 '+holdings.length+'종목 · 수집 자료 '+nodes.filter(n=>n.kind==='event').length+'건';
+  const note=root.querySelector('.an-aside-note'),emptyNotice=root.querySelector('#an-empty');
+  note.textContent='보유 '+holdings.length+'종목 · 수집 자료 '+nodes.filter(n=>n.kind==='event').length+'건';
+  // An empty evidence layer is not an empty portfolio. Never cover its stock controls.
+  if(!emptyNotice.hidden&&holdings.some(shown)){
+    emptyNotice.hidden=true;note.textContent+=' · '+emptyNotice.textContent;
+  }
 };
 const prototypeNotePanel=renderNotePanel;
 renderNotePanel=function(){
