@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-10-01T11:08:53.841581+09:00",
+  "generated_at": "2026-10-01T17:58:15.320680+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 341310,
+    "code_lines_tsx_py": 340660,
     "python_modules": 1121,
     "tsx_components": 144,
     "json_data_files": 2381,
@@ -11,7 +11,7 @@
     "workflows": 80,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 8366
+    "git_tracked_files": 8369
   },
   "subsystems": {
     "ingest": {
@@ -743,13 +743,13 @@
     "validation": {
       "label": "검증",
       "n_trading_days": 93,
-      "n_calendar_days": 136,
+      "n_calendar_days": 137,
       "next_milestone": {
         "next_n": 100,
         "days_remaining": 7,
         "label": "예비 결과 (binomial 95% CI ±10%p)"
       },
-      "as_of": "2026-09-30T14:46:34+09:00"
+      "as_of": "2026-10-01T15:14:02+09:00"
     }
   },
   "python_by_dir": {
@@ -761,10 +761,10 @@
     ".github": 6
   },
   "funnel": {
-    "investable_real": 2702,
+    "investable_real": 2700,
     "cap": 5000,
     "stages": [
-      2702,
+      2700,
       300,
       100,
       25
@@ -775,7 +775,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2702 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2700 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
@@ -783,7 +783,7 @@
       "warn": 1,
       "alert": 0
     },
-    "infra_as_of": "2026-09-30T11:45:56+09:00",
+    "infra_as_of": "2026-10-01T11:52:36+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
