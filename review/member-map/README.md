@@ -5,6 +5,38 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 
 ## Current renderer — accepted HTML integration (2026-10-01)
 
+### Search exploration and list return
+
+This candidate reuses the existing same-origin public `/api/search` endpoint.
+Only public symbol/name/market/ETF metadata is sent to the sandbox, with bounded
+results, cancellation and a parent-side current-result allowlist. It does not
+expand CSP, auth, API or database permissions. Coverage is the existing search
+catalogue, not every listed/unlisted company or a new financial-data source.
+
+The accepted search/add/PC-drag controls now add a stock to the current graph,
+not the holdings or watch list. Exploration membership is session-local and
+labelled accordingly; private membership persistence is not claimed. Graph
+loading is atomic: failure keeps the ready map and current edits. Success
+updates the same iframe and retains existing world positions and notes, while
+adding/removing returned evidence nodes and links. Shared counts include visible
+held, watched and exploratory stocks. Source documents remain distinct from
+manually reviewed common events, and missing evidence does not prove no relation.
+
+The Nest return action focuses the single successfully edited stock after the
+refreshed frame acknowledges hydration. It does not unhide a filtered stock,
+replace the selection window or toggle an already selected stock off. Holdings
+also state explicitly that current prices are disconnected and valuation/profit
+calculations are deferred; average cost is not a quote.
+
+Source regressions, strict TypeScript and 28 generated snapshot checks passed.
+Synthetic isolated Chrome checked real pointer addition, evidence node insertion/
+replacement and stale-edge cleanup, existing world positions/notes, unchanged
+holding writes, account cleanup and 1280/390px light/dark search. Adding NVDA and
+INTC showed the existing dated reviewed common event with two source buttons;
+its read mark and an off-window prior mark were saved in the synthetic store.
+These checks are not authenticated production acceptance or a live save/reconnect.
+They do not change the original Sites artifact or Framer.
+
 ### Read-only interest stocks
 
 The standalone candidate opts into the existing authenticated `/api/watchgroups`
