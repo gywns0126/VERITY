@@ -170,7 +170,9 @@ test("workspace ignores a holdings response after the active owner changes", asy
 test("design shell retains real-item rail, neutral controls and guarded state", () => {
     const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
     assert.match(source, /지도 항목 목록/)
-    assert.match(source, /grid-template-columns:220px minmax\(0,1fr\) 300px/)
+    assert.match(source, /grid-template-columns:164px minmax\(0,1fr\) 228px;align-items:stretch/)
+    assert.ok(source.includes('"ppm-map-column"'))
+    assert.ok(source.includes('"선택 해제"'))
     assert.match(source, /font:400 13px\/1\.55/)
     assert.match(source, /previous\?\.kind === "document" && previous\.id === item\.id \? null/)
     assert.match(source, /ppm-reviewed-date/)
