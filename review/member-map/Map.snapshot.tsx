@@ -1691,7 +1691,7 @@ function buildReviewedPortfolioFacts(holdings, registry) {
 // framer-components/public-probe/PortfolioReviewedRegistry.tsx
 var portfolioReviewedRegistry = {
   schemaVersion: 1,
-  reviewedAt: "2026-09-29",
+  reviewedAt: "2026-10-01",
   sources: [
     {
       id: "nvda-intc-nvidia",
@@ -1741,6 +1741,20 @@ var portfolioReviewedRegistry = {
       publishedAt: "2023-09-28",
       url: "https://pr.tsmc.com/english/news/3070",
       statement: "TSMC는 SK하이닉스를 HBM3·HBM3e 협력 메모리 파트너로 명시했다. 본문 행사일은 미국 현지 2023-09-27, 사이트 발행일은 09-28이다. 2024년 HBM4 양해각서와는 별도 발표다."
+    },
+    {
+      id: "amd-orcl-mi355x-oracle",
+      publisher: "Oracle",
+      publishedAt: "2025-06-12",
+      url: "https://www.oracle.com/news/announcement/oracle-and-amd-collaborate-to-help-customers-deliver-breakthrough-performance-for-large-scale-ai-and-agentic-workloads-2025-06-12/",
+      statement: "Oracle은 AMD와 함께 MI355X GPU를 OCI 클라우드에서 제공할 계획을 발표했다. 당시 제공 계획이며, 현재 설치 수량이나 실제 구매 금액을 확인하는 자료는 아니다."
+    },
+    {
+      id: "amd-orcl-mi355x-amd",
+      publisher: "AMD",
+      publishedAt: "2025-06-12",
+      url: "https://ir.amd.com/news-events/press-releases/detail/1255/amd-unveils-vision-for-an-open-ai-ecosystem-detailing-new-silicon-software-and-systems-at-advancing-ai-2025",
+      statement: "AMD의 같은 날 행사 발표 중 Oracle 항목에서도 OCI가 MI355X GPU 기반 클라우드를 제공할 계획이라고 설명한다. 다른 참여사의 발표는 이 사건에 합치지 않았다."
     }
   ],
   relationships: [
@@ -1779,6 +1793,18 @@ var portfolioReviewedRegistry = {
       review: "manual-primary-source-comparison",
       impact: "unknown",
       limitations: "양사의 서로 다른 시점 원문으로 HBM 협력 관계를 확인했다. 2023년 파트너 발표와 2024년 HBM4 협력 계획은 별도 사건이다. 현재 양산·공급량·매출·주가 영향은 확인하지 않았다."
+    },
+    {
+      id: "relation:amd-orcl-mi355x-cloud-20250612",
+      from: { ticker: "AMD", market: "US" },
+      to: { ticker: "ORCL", market: "US" },
+      label: "GPU 기반 클라우드 제공 계획",
+      asOf: "2025-06-12",
+      status: "historical-announcement",
+      sourceIds: ["amd-orcl-mi355x-oracle", "amd-orcl-mi355x-amd"],
+      review: "manual-primary-source-comparison",
+      impact: "unknown",
+      limitations: "AMD 제품을 Oracle 클라우드에서 제공한다는 당시 계획을 양사 원문으로 확인했다. 현재 공급량·구매 금액·매출 비중·주가 영향은 확인하지 않았다."
     }
   ],
   events: [
@@ -1807,6 +1833,20 @@ var portfolioReviewedRegistry = {
         { ticker: "TSM", market: "US", role: "제어 칩 공정·칩 결합 기술 협력 계획", sourceIds: ["skh-tsmc-hbm4-ko", "skh-tsmc-hbm4-en"] }
       ],
       mergeBasis: "같은 SK하이닉스 발표의 한국어·영어본에서 참여 기업·발표일·협력 대상이 일치해 사건 하나로 묶었다. 독립된 두 기관의 확인은 아니다. 2023년 TSMC 파트너 발표는 합치지 않았다. 당시 계획이며 현재 양산 성과는 확인하지 않았다.",
+      review: "manual-primary-source-comparison",
+      impact: "unknown"
+    },
+    {
+      id: "event:amd-orcl-mi355x-cloud-20250612",
+      title: "AMD·Oracle MI355X 클라우드 제공 계획 발표",
+      date: "2025-06-12",
+      status: "historical-announcement",
+      sourceIds: ["amd-orcl-mi355x-oracle", "amd-orcl-mi355x-amd"],
+      participants: [
+        { ticker: "AMD", market: "US", role: "클라우드에 사용할 MI355X GPU 개발사", sourceIds: ["amd-orcl-mi355x-oracle", "amd-orcl-mi355x-amd"] },
+        { ticker: "ORCL", market: "US", role: "MI355X 기반 OCI 클라우드 제공 계획", sourceIds: ["amd-orcl-mi355x-oracle", "amd-orcl-mi355x-amd"] }
+      ],
+      mergeBasis: "2025-06-12 양사 발표의 기업·GPU 제품·클라우드 제공 계획이 일치해 이 발표만 하나로 묶었다. AMD 행사 발표의 다른 기업·제품 계획은 제외했다. 두 당사자의 발표이며 독립적인 이행 검증은 아니다.",
       review: "manual-primary-source-comparison",
       impact: "unknown"
     }
@@ -2427,14 +2467,21 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
     }
   });
   const cleanup = () => {
+    const retiredSource = templateURL ? frame.src : frame.srcdoc;
+    frame.style.opacity = "0";
+    frame.setAttribute("aria-hidden", "true");
+    frame.setAttribute("inert", "");
     disposed = true;
     clearReturnFocus();
     close();
     unsubscribe();
     window.removeEventListener("message", ready);
     frame.removeEventListener("load", loaded);
-    if (templateURL) frame.src = "about:blank";
-    else frame.srcdoc = "";
+    Promise.resolve().then(() => {
+      if ((templateURL ? frame.src : frame.srcdoc) !== retiredSource) return;
+      if (templateURL) frame.src = "about:blank";
+      else frame.srcdoc = "";
+    });
   };
   return Object.assign(cleanup, { prepareReturnFocus, clearReturnFocus, returnToMap });
 }
