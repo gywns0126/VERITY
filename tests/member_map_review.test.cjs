@@ -8,11 +8,17 @@ const { createHash } = require("node:crypto")
 const root = path.resolve(__dirname, "..")
 const review = (...parts) => path.join(root, ...parts)
 const USER = "11111111-1111-4111-8111-111111111111"
+const clone = value => JSON.parse(JSON.stringify(value))
+const marker = (source, start, candidates) => {
+    const offsets = candidates.map(value => ({ value, index: source.indexOf(value, start) })).filter(item => item.index >= 0)
+    assert.ok(offsets.length, `review snapshot contains one of: ${candidates.join(", ")}`)
+    return offsets.sort((left, right) => left.index - right.index)[0].index
+}
 
 function memberMapStore() {
     const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
     const start = source.indexOf('var ENDPOINT = "https://project-yw131.vercel.app/api/member_map_state";')
-    const end = source.indexOf("// framer-components/public-probe/PortfolioMapWorkspace.tsx", start)
+    const end = marker(source, start, ["// framer-components/public-probe/PortfolioPrototypeHost.ts", "// framer-components/public-probe/PortfolioMapWorkspace.tsx"])
     assert.ok(start >= 0 && end > start, "review snapshot contains the member-store segment")
     const context = { AbortController, JSON, Number, Set, clearTimeout, setTimeout }
     vm.runInNewContext(`${source.slice(start, end)}\nglobalThis.makeStore = createMemberMapStore`, context)
@@ -24,23 +30,34 @@ function reviewedRuntime() {
     const stateStart = source.indexOf("// framer-components/public-probe/MemberMapState.tsx")
     const stateEnd = source.indexOf("// framer-components/public-probe/PortfolioMapWorkspace.tsx", stateStart)
     const reviewedStart = source.indexOf("// framer-components/public-probe/PortfolioReviewedState.tsx")
-    const reviewedEnd = source.indexOf("// framer-components/public-probe/PublicPortfolioMap.tsx", reviewedStart)
+    const reviewedEnd = marker(source, reviewedStart, ["// framer-components/public-probe/PortfolioPrototypeHost.ts", "// framer-components/public-probe/PublicPortfolioMap.tsx"])
     assert.ok(stateStart >= 0 && stateEnd > stateStart, "review snapshot contains member state")
     assert.ok(reviewedStart >= 0 && reviewedEnd > reviewedStart, "review snapshot contains reviewed state")
     const context = { AbortController, JSON, Number, Set, clearTimeout, setTimeout }
     vm.runInNewContext(`${source.slice(stateStart, stateEnd)}\n${source.slice(reviewedStart, reviewedEnd)}\n` +
-        "globalThis.reviewedRuntime = { createMemberMapStore, mapReadState, reviewedRecord, withReviewedMark }", context)
+        "globalThis.reviewedRuntime = { createMemberMapStore, mapReadState, reviewedRecord }", context)
     return context.reviewedRuntime
 }
 
 function workspaceRuntime() {
     const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
     const start = source.indexOf("// framer-components/public-probe/MemberMapState.tsx")
-    const end = source.indexOf("// framer-components/public-probe/PortfolioMapCanvas.tsx", start)
+    const end = marker(source, start, ["// framer-components/public-probe/PortfolioPrototypeHost.ts", "// framer-components/public-probe/PortfolioMapCanvas.tsx"])
     assert.ok(start >= 0 && end > start, "review snapshot contains the workspace runtime")
     const context = { AbortController, JSON, Number, Set, Map, clearTimeout, setTimeout }
     vm.runInNewContext(`${source.slice(start, end)}\nglobalThis.makeWorkspace = createPortfolioMapWorkspace`, context)
     return context.makeWorkspace
+}
+
+function prototypeHostRuntime() {
+    const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
+    const start = source.indexOf("// framer-components/public-probe/PortfolioMapData.tsx")
+    const end = source.indexOf("// framer-components/public-probe/PublicPortfolioPrototype.tsx", start)
+    assert.ok(start >= 0 && end > start, "review snapshot contains the prototype host modules before the React body")
+    const context = { AbortController, JSON, Number, Set, Map, URL, clearTimeout, setTimeout }
+    vm.runInNewContext(`${source.slice(start, end)}
+globalThis.prototypeHostRuntime = { createMemberMapStore, mergePrototypeDraft, prototypeMemberModel, validMapDocument }`, context)
+    return context.prototypeHostRuntime
 }
 
 const document = () => ({ layouts: [{ map_key: "main", positions: [], notes: [], marks: {} }] })
@@ -49,7 +66,7 @@ const response = (revision, value) => ({ ok: true, json: async () => ({ revision
 test("HBM evidence matches the mixed-market pair without changing existing saved fingerprints", () => {
     const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
     const start = source.indexOf("// framer-components/public-probe/PortfolioReviewedFacts.tsx")
-    const end = source.indexOf("// framer-components/public-probe/PortfolioReviewedView.tsx", start)
+    const end = marker(source, start, ["// framer-components/public-probe/PortfolioPrototypeReviewed.ts", "// framer-components/public-probe/PortfolioPrototypeHost.ts", "// framer-components/public-probe/PortfolioReviewedView.tsx"])
     assert.ok(start >= 0 && end > start)
     const context = { URL }
     vm.runInNewContext(source.slice(start, end) + "\nglobalThis.facts = h => buildReviewedPortfolioFacts(h, portfolioReviewedRegistry)", context)
@@ -167,20 +184,19 @@ test("workspace ignores a holdings response after the active owner changes", asy
     workspace.dispose()
 })
 
-test("design shell retains real-item rail, neutral controls and guarded state", () => {
+test("prototype shell retains guarded member state and parent-only host wiring", () => {
     const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
-    assert.match(source, /지도 항목 목록/)
-    assert.match(source, /grid-template-columns:164px minmax\(0,1fr\) 228px;align-items:stretch/)
-    assert.ok(source.includes('"ppm-map-column"'))
-    assert.ok(source.includes('"선택 해제"'))
-    assert.match(source, /font:400 13px\/1\.55/)
-    assert.match(source, /previous\?\.kind === "document" && previous\.id === item\.id \? null/)
-    assert.match(source, /ppm-reviewed-date/)
+    assert.match(source, /function PublicPortfolioPrototype\(/)
+    assert.match(source, /function mountMemberPrototype\(/)
+    assert.match(source, /sandbox/, "prototype host sets an iframe sandbox")
+    assert.match(source, /allow-scripts/, "prototype sandbox allows scripts only")
+    assert.match(source, /type: "init", model: prototypeMemberModel\(current\)/)
+    assert.doesNotMatch(source, /type: "init"[^\n]*(token|access_token|Authorization)/i)
     const entry = fs.readFileSync(review("review/member-map/entry.tsx"), "utf8")
     assert.ok(entry.indexOf('className="review-boundary"') > entry.indexOf('className="review-auth"'))
 })
 
-test("review shell stays same-origin, provider-free, and without an iframe", () => {
+test("review auth shell stays same-origin and the map frame keeps its isolated policy", () => {
     const entry = fs.readFileSync(review("review/member-map/entry.tsx"), "utf8")
     const shim = fs.readFileSync(review("review/member-map/framer-shim.ts"), "utf8")
     const build = fs.readFileSync(review("review/member-map/build.cjs"), "utf8")
@@ -195,6 +211,15 @@ test("review shell stays same-origin, provider-free, and without an iframe", () 
     const headers = config.headers.find(row => row.source === "/member-map-review(.*)")?.headers || []
     assert.equal(headers.some(row => row.key === "Access-Control-Allow-Origin"), false)
     assert.match(headers.find(row => row.key === "Content-Security-Policy")?.value || "", /connect-src 'self' https:\/\/lykqebdcurreppowulsl\.supabase\.co/)
+    const policy = headers.find(row => row.key === "Content-Security-Policy").value
+    assert.match(policy, /script-src 'self';/)
+    assert.match(policy, /frame-src 'self';/)
+    const canvas = config.headers.find(row => row.source === "/member-map-canvas(.*)").headers
+    assert.equal(canvas.find(row => row.key === "Content-Security-Policy").value, "frame-ancestors 'self'; sandbox allow-scripts")
+    const html = fs.readFileSync(review("vercel-api/public/member-map-canvas.html"), "utf8")
+    assert.match(html, /connect-src blob: data:; frame-src 'none'/)
+    assert.match(html, /alphanest-member-ready/)
+    assert.doesNotMatch(html, /EX01~EX06|SUPABASE_ANON_KEY|access_token|Authorization:/)
 })
 
 test("review HTML and referenced assets are inside Vercel's existing public output", () => {
@@ -212,7 +237,7 @@ test("review HTML and referenced assets are inside Vercel's existing public outp
 })
 
 test("reviewed facts use the member map store without copying primary-source text into saved state", async () => {
-    const { createMemberMapStore, mapReadState, reviewedRecord, withReviewedMark } = reviewedRuntime()
+    const { createMemberMapStore, mapReadState, reviewedRecord } = reviewedRuntime()
     const fact = {
         id: "relation:test",
         from: { ticker: "NVDA", market: "US" },
@@ -242,9 +267,10 @@ test("reviewed facts use the member map store without copying primary-source tex
     const record = reviewedRecord("relationships", fact)
     assert.equal(record.id, "reviewed:relationships:relation:test")
     assert.ok(Number.isSafeInteger(record.read_revision) && record.read_revision > 0)
-    assert.equal(store.update(value => ({ layouts: [withReviewedMark(value.layouts[0], "relationships", fact, {
-        read: true, important: true, disposition: "later",
-    })] })), true)
+    assert.equal(store.update(value => ({ layouts: [{ ...value.layouts[0], marks: {
+        ...value.layouts[0].marks,
+        [record.id]: { read_revision: record.read_revision, important: true, disposition: "later" },
+    } }] })), true)
     assert.equal(await store.save(), true)
 
     const body = JSON.parse(calls[1].body)
@@ -264,14 +290,77 @@ test("review snapshot uses the actual workspace and reviewed-state graph while a
     const digest = value => createHash("sha256").update(value).digest("hex")
     const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
     const modules = ["PortfolioMapData", "MemberMapState", "PortfolioMapWorkspace", "PortfolioReviewedFacts",
-        "PortfolioReviewedRegistry", "PortfolioReviewedView", "PortfolioReviewedState", "PublicPortfolioMap"]
-    for (const name of modules) assert.match(source, new RegExp(`// framer-components/public-probe/${name}\\.tsx`), name)
+        "PortfolioReviewedRegistry", "PortfolioReviewedState", "PortfolioPrototypeAdapter", "PortfolioPrototypeReviewed", "PortfolioPrototypeHost"]
+    for (const name of modules) assert.match(source, new RegExp(`// framer-components/public-probe/${name}\\.(?:tsx|ts)`), name)
     assert.match(source, /\/\/ output\/member-map-integration-20260927\/PortfolioMapReview\.entry\.tsx/)
-    assert.match(source, /selectedFact && viewMode !== "documents" \? reviewedRecord\(viewMode, selectedFact\)/)
-    assert.match(source, /else if \(selectedFact && viewMode !== "documents"\) edit\(\(value\) => withReviewedMark\(value, viewMode, selectedFact, change\)\)/)
+    assert.match(source, /projectReviewedPrototype\(state\)/)
+    assert.match(source, /mergePrototypeDraft\(state, command\.draft\)/)
     assert.match(source, /workspace = createPortfolioMapWorkspace\(\)/)
-    assert.match(source, /createElement\(PublicPortfolioMap, null\)/)
+    assert.match(source, /createElement\(PublicPortfolioPrototype(?:,|\))/)
     assert.doesNotMatch(source, /TestWorkspace/)
     assert.equal(digest(fs.readFileSync(review("review/member-map/Auth.snapshot.tsx"))),
         "3a2d96eeadb1e349a9f42af115d16497d6a154fb6cb0e0b490c90f697eacd2d4")
+})
+
+test("prototype host merges real 000660+TSM reviewed state, saves, and recreates it without losing marks or notes", async () => {
+    const runtime = prototypeHostRuntime()
+    const graph = {
+        companies: [
+            { id: "company-skh", ticker: "000660", name: "SK하이닉스", market: "KR" },
+            { id: "company-tsm", ticker: "TSM", name: "TSMC", market: "US" },
+        ],
+        documents: [], links: [], commonItems: [],
+    }
+    const holdings = [
+        { ticker: "000660", market: "KR", shares: 1, avg_cost: 1, duplicate: false },
+        { ticker: "TSM", market: "US", shares: 1, avg_cost: 1, duplicate: false },
+    ]
+    const baseDocument = { layouts: [{ map_key: "main", positions: [], notes: [
+        { note_id: "note-existing", anchor: null, x: 11, y: 22, text: "기존 메모", done: false },
+    ], marks: {} }] }
+    const workspaceState = privateState => ({ phase: "ready", holdings, unsupportedCount: 0, selectedTickers: ["000660", "TSM"], graph,
+        privateState, error: null })
+    const seedModel = runtime.prototypeMemberModel(workspaceState({ phase: "ready", document: baseDocument, revision: 2, dirty: false, error: null }))
+    const reviewedEvent = seedModel.nodes.find(node => node.recordKind === "event")
+    assert.ok(reviewedEvent, "real reviewed event is projected")
+    assert.match(reviewedEvent.id, /^reviewed:events:/)
+    assert.ok(Number.isSafeInteger(reviewedEvent.read_revision) && reviewedEvent.read_revision > 0)
+    baseDocument.layouts[0].marks[reviewedEvent.id] = { read_revision: reviewedEvent.read_revision, important: true, disposition: "later" }
+
+    let stored = clone(baseDocument), storedRevision = 2
+    const calls = []
+    const Store = runtime.createMemberMapStore
+    const makeStore = () => Store({ getSession: () => ({ userId: USER, token: "prototype-token" }), fetcher: async (_url, init) => {
+        calls.push(init)
+        if (init.method === "GET") return response(storedRevision, stored)
+        stored = JSON.parse(init.body).document
+        storedRevision = 3
+        return response(storedRevision, stored)
+    } })
+    const store = makeStore()
+    assert.equal(await store.load(), true)
+    const current = workspaceState(store.getState())
+    const model = runtime.prototypeMemberModel(current)
+    assert.equal(model.marks[reviewedEvent.id].read, true)
+    const merged = runtime.mergePrototypeDraft(current, {
+        positions: [{ id: reviewedEvent.id, x: .75, y: .25 }],
+        notes: [{ id: "note-existing", target: "", x: .511, y: .532, text: "기존 메모", done: false }],
+        marks: {},
+    })
+    assert.ok(merged)
+    assert.equal(runtime.validMapDocument({ layouts: [merged] }), true)
+    assert.deepEqual(JSON.parse(JSON.stringify(merged.marks[reviewedEvent.id])), { read_revision: reviewedEvent.read_revision, important: true, disposition: "later" })
+    assert.equal(merged.notes[0].text, "기존 메모")
+    assert.equal(store.update(() => ({ layouts: [merged] })), true)
+    assert.equal(await store.save(), true)
+    store.dispose()
+
+    const recreated = makeStore()
+    assert.equal(await recreated.load(), true)
+    const restored = recreated.getState().document.layouts[0]
+    assert.deepEqual(JSON.parse(JSON.stringify(restored.marks[reviewedEvent.id])), { read_revision: reviewedEvent.read_revision, important: true, disposition: "later" })
+    assert.equal(restored.notes[0].text, "기존 메모")
+    assert.equal(recreated.getState().revision, 3)
+    assert.equal(calls.length, 3)
+    recreated.dispose()
 })

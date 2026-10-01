@@ -3,6 +3,42 @@
 Temporary integration surface: `https://project-yw131.vercel.app/member-map-review`.
 This is not a replacement for the accepted Sites v36 design and is not a Framer Publish.
 
+## Current renderer — accepted HTML integration (2026-10-01)
+
+The separate React map recreation below is historical and is superseded. The
+current snapshot hosts the actual accepted Sites v36 inner HTML at the same-origin
+`/member-map-canvas` path, not a restyled map. Its original source SHA-256 is
+`c6e1847ea2f4d07368d4e10bc2a3cbb08ec07eeadb05a48827664d333c7c207c`.
+The original stylesheet blocks and CSP are preserved by the template builder;
+the iframe stays `sandbox="allow-scripts"`. React owns only the existing
+authenticated Workspace and the parent-side validated MessageChannel bridge.
+The outer review keeps `script-src 'self'` and permits only same-origin frames;
+the canvas response adds `frame-ancestors 'self'; sandbox allow-scripts` while
+preserving its original meta CSP. This avoids inherited `srcdoc` restrictions
+without enabling inline scripts on the authenticated parent.
+Credentials never enter the iframe. Demo graph inputs are replaced with the
+current member's holdings, source documents and bounded reviewed registry facts.
+
+Personal positions, notes and read/important/later/irrelevant marks use the
+existing private store and explicit Save. Legacy reviewed connection IDs are
+preserved for attached notes. No new holdings writes or access permissions are
+introduced. Source documents are not automatically labelled common events;
+investment impact and connection strength remain unassessed. Synthetic browser
+checks and source tests do not establish authenticated live acceptance.
+
+The review snapshot is generated from
+`output/member-map-integration-20260927/PortfolioMapReview.entry.tsx` with
+esbuild ESM/classic JSX, React/ReactDOM/Framer external and UTF-8.
+`scripts/member-map/prototype-template.cjs` produces `vercel-api/public/member-map-canvas.html` from the
+accepted artifact and `review/member-map/prototype-member-runtime.js`.
+This change does not edit or republish that original Sites artifact.
+
+Local checks: 25 focused source tests and 11 delivery snapshot tests pass. An
+isolated browser with synthetic holdings and external network blocked loaded
+the separate canvas over local HTTP using the delivery CSP, then passed note
+save/reconnect, reviewed event read mark, explicit saved-record reload and
+logout clearing. These are not real-member or production acceptance claims.
+
 ## Boundaries
 
 - Existing AlphaNest Google/email sign-in; no new provider, test identity creation, or session transfer.
