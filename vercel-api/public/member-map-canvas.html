@@ -1808,16 +1808,18 @@ html>body{padding:0}</style>
   </div><div class="an-live" id="an-live" aria-live="polite"></div>
   <script>
     (async function(){
+      const memberFrameNonce = location.hash.slice(1) || '__ALPHANEST_FRAME_NONCE__';
       const connection = await new Promise(resolve => {
         const receive = event => {
-          if(event.source !== parent || event.data?.type !== 'alphanest-member-connect' || event.ports.length !== 1) return;
+          if(event.source !== parent || event.data?.nonce !== memberFrameNonce) return;
+          if(event.data.type === 'alphanest-member-start') { parent.postMessage({type:'alphanest-member-ready',nonce:memberFrameNonce}, '*');return; }
+          if(event.data.type !== 'alphanest-member-connect' || event.ports.length !== 1) return;
           window.removeEventListener('message', receive);
           const port = event.ports[0];
           port.onmessage = event => { if(event.data?.type === 'init') { port.onmessage = null; resolve({port, model:event.data.model}); } };
           port.start();
         };
         window.addEventListener('message', receive);
-        parent.postMessage({type:'alphanest-member-ready'}, '*');
       });
       const member = connection.model, memberPort = connection.port;
       const root=document.getElementById('an-map-design');
@@ -2488,12 +2490,12 @@ html>body{padding:0}</style>
         if(e.button===0&&!spaceHeld&&e.pointerType!=='touch'){
           closePreview();e.preventDefault();e.stopPropagation();space.focus({preventScroll:true});const rect=space.getBoundingClientRect(),start={x:e.clientX,y:e.clientY},before=new Set(selectedItems),base=e.shiftKey?new Set(selectedItems):new Set(),items=movableItems().map(entry=>({...entry,rect:entry.el.getBoundingClientRect()}));let moved=false,ended=false;space.setPointerCapture(e.pointerId);space.classList.add('selecting');
           function move(v){if(v.pointerId!==e.pointerId)return;if(Math.abs(v.clientX-start.x)+Math.abs(v.clientY-start.y)>4)moved=true;if(!moved)return;const left=Math.max(rect.left,Math.min(start.x,v.clientX)),top=Math.max(rect.top,Math.min(start.y,v.clientY)),right=Math.min(rect.right,Math.max(start.x,v.clientX)),bottom=Math.min(rect.bottom,Math.max(start.y,v.clientY));marquee.hidden=false;Object.assign(marquee.style,{left:(left-rect.left)+'px',top:(top-rect.top)+'px',width:Math.max(0,right-left)+'px',height:Math.max(0,bottom-top)+'px'});selectedItems.clear();base.forEach(id=>selectedItems.add(id));items.forEach(entry=>{const r=entry.rect;if(r.right>left&&r.left<right&&r.bottom>top&&r.top<bottom)selectedItems.add(entry.id);});renderSelection();}
-          function end(v,cancelled=false){if(ended||v&&v.pointerId!==e.pointerId)return;ended=true;space.removeEventListener('pointermove',move);space.removeEventListener('pointerup',end);space.removeEventListener('pointercancel',cancel);space.removeEventListener('lostpointercapture',cancel);if(space.hasPointerCapture(e.pointerId))space.releasePointerCapture(e.pointerId);cancelGesture=null;space.classList.remove('selecting');marquee.hidden=true;if(cancelled||!moved){selectedItems.clear();(cancelled?before:base).forEach(id=>selectedItems.add(id));}renderSelection();suppressClick=true;setTimeout(()=>{suppressClick=false;},0);}
+          function end(v,cancelled=false){if(ended||v&&v.pointerId!==e.pointerId)return;ended=true;space.removeEventListener('pointermove',move);space.removeEventListener('pointerup',end);space.removeEventListener('pointercancel',cancel);space.removeEventListener('lostpointercapture',cancel);if(space.hasPointerCapture(e.pointerId))space.releasePointerCapture(e.pointerId);cancelGesture=null;space.classList.remove('selecting');marquee.hidden=true;if(cancelled||!moved){selectedItems.clear();(cancelled?before:base).forEach(id=>selectedItems.add(id));}if(!cancelled&&!moved&&!e.shiftKey&&!e.ctrlKey&&!e.metaKey&&!e.altKey)select('');renderSelection();suppressClick=true;setTimeout(()=>{suppressClick=false;},0);}
           function cancel(v){end(v,true);}cancelGesture=()=>cancel();space.addEventListener('pointermove',move);space.addEventListener('pointerup',end);space.addEventListener('pointercancel',cancel);space.addEventListener('lostpointercapture',cancel);return;
         }
-        closePreview();e.preventDefault();e.stopPropagation();const initial={x:e.clientX,y:e.clientY,px:state.panX,py:state.panY};space.setPointerCapture(e.pointerId);space.classList.add('panning');
-        function move(v){state.panX=initial.px+v.clientX-initial.x;state.panY=initial.py+v.clientY-initial.y;renderMap();if(Math.abs(v.clientX-initial.x)+Math.abs(v.clientY-initial.y)>4)observeTour('move');}
-        function end(v){space.removeEventListener('pointermove',move);space.removeEventListener('pointerup',end);space.removeEventListener('pointercancel',end);if(space.hasPointerCapture(v.pointerId))space.releasePointerCapture(v.pointerId);space.classList.remove('panning');suppressClick=true;setTimeout(function(){suppressClick=false;},0);saveZoomSoon();}
+        closePreview();e.preventDefault();e.stopPropagation();const initial={x:e.clientX,y:e.clientY,px:state.panX,py:state.panY};let moved=false;space.setPointerCapture(e.pointerId);space.classList.add('panning');
+        function move(v){if(v.pointerId!==e.pointerId)return;state.panX=initial.px+v.clientX-initial.x;state.panY=initial.py+v.clientY-initial.y;renderMap();if(Math.abs(v.clientX-initial.x)+Math.abs(v.clientY-initial.y)>4){moved=true;observeTour('move');}}
+        function end(v){if(v.pointerId!==e.pointerId)return;space.removeEventListener('pointermove',move);space.removeEventListener('pointerup',end);space.removeEventListener('pointercancel',end);if(space.hasPointerCapture(v.pointerId))space.releasePointerCapture(v.pointerId);space.classList.remove('panning');if(v.type==='pointerup'&&e.pointerType==='touch'&&!moved&&!spaceHeld)select('');suppressClick=true;setTimeout(function(){suppressClick=false;},0);saveZoomSoon();}
         space.addEventListener('pointermove',move);space.addEventListener('pointerup',end);space.addEventListener('pointercancel',end);
       },true);
       space.addEventListener('click',function(e){if(suppressClick||spaceHeld){e.preventDefault();e.stopPropagation();}},true);
@@ -2507,6 +2509,10 @@ const memberSaveButton=document.createElement('button');
 memberSaveButton.type='button';memberSaveButton.className='an-tool';memberSaveButton.textContent='기록 저장';
 const memberSaveStatus=document.createElement('span');memberSaveStatus.role='status';memberSaveStatus.className='an-save-note';
 adjustTools.append(memberSaveButton,memberSaveStatus);
+const memberHoldingsButton=document.createElement('button');
+memberHoldingsButton.type='button';memberHoldingsButton.className='an-tool';memberHoldingsButton.textContent='보유목록';
+memberHoldingsButton.onclick=()=>memberPort.postMessage({type:'holdings'});
+adjustTools.prepend(memberHoldingsButton);
 scenarioSelect.closest('label')?.remove();
 scenarioSelect.disabled=true;
 noteSequence=Date.now();
@@ -2537,7 +2543,7 @@ showPreview=function(anchor,item,isEdge,at){
   caption.textContent=isEdge?'이 종목에 '+(item.impact||'미확인'):'자료 확인';
   source.textContent=(item.asOf||'기준일 미확인')+' · '+(item.source||'내 포트폴리오');
 };
-let memberWritable=!!member.writable,lastDraft='';
+let memberWritable=!!member.writable,memberReset=false,lastDraft='';
 function memberDraft(){return {positions:nodes.map(n=>({id:n.id,x:n.x,y:n.y})),notes:Object.values(state.notes),marks:state.marks};}
 function emitMemberDraft(){
   if(!memberWritable)return;
@@ -2548,6 +2554,7 @@ function emitMemberDraft(){
 save=emitMemberDraft;
 memberSaveButton.onclick=()=>{emitMemberDraft();memberPort.postMessage({type:'save'});};
 memberPort.onmessage=event=>{
+  if(event.data?.type==='reset'){memberReset=true;memberWritable=false;root.replaceChildren();memberPort.close();return;}
   if(event.data?.type!=='status')return;
   memberWritable=!!event.data.writable;
   memberSaveButton.disabled=!memberWritable||!!event.data.saving;
@@ -2555,12 +2562,19 @@ memberPort.onmessage=event=>{
 };
 const prototypeRenderMap=renderMap;
 renderMap=function(){
+  if(memberReset)return;
   prototypeRenderMap();
   root.querySelector('#an-counts').textContent='보유 표시 '+holdings.filter(shown).length+'/'+holdings.length+' · 자료 '+nodes.filter(matchesEvent).length;
-  root.querySelector('.an-aside-note').textContent='보유 '+holdings.length+'종목 · 수집 자료 '+nodes.filter(n=>n.kind==='event').length+'건';
+  const note=root.querySelector('.an-aside-note'),emptyNotice=root.querySelector('#an-empty');
+  note.textContent='보유 '+holdings.length+'종목 · 수집 자료 '+nodes.filter(n=>n.kind==='event').length+'건';
+  // An empty evidence layer is not an empty portfolio. Never cover its stock controls.
+  if(!emptyNotice.hidden&&holdings.some(shown)){
+    emptyNotice.hidden=true;note.textContent+=' · '+emptyNotice.textContent;
+  }
 };
 const prototypeNotePanel=renderNotePanel;
 renderNotePanel=function(){
+  if(memberReset)return;
   prototypeNotePanel();
   detail.querySelector('.an-kicker').textContent='내 메모';
   detail.querySelectorAll('.an-save-note').forEach(el=>el.textContent='변경 후 기록 저장을 눌러주세요.');
@@ -2570,6 +2584,7 @@ renderNotePanel=function(){
 };
 const prototypeDetail=renderDetail;
 renderDetail=function(){
+  if(memberReset)return;
   if(showGuide||state.activeNote||state.noteList){prototypeDetail();return;}
   const node=nodeById[state.selected],edge=edges.find(e=>e.id===state.selected),item=edge||node;
   detail.replaceChildren();root.dataset.detail=item?'open':'closed';detail.dataset.notes='false';

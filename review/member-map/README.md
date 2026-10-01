@@ -5,10 +5,54 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 
 ## Current renderer — accepted HTML integration (2026-10-01)
 
+### Nest editor increment
+
+The accepted map now opens its shared holdings list with `보유목록`. Merely
+switching views preserves the iframe, camera and unsaved map notes. Adding,
+editing or deleting a holding requires a before/after preview and a separate
+confirm action. Input/preview causes no request. Confirm freshly reads holdings,
+refuses a stale target or an existing-ticker POST upsert, then sends one explicit
+mutation. It never infers a sale, trade record or holding deletion from hiding a
+map node. Only changed editable fields are sent; omitted names, costs and memos
+are preserved, including blank stored names. Unsupported assets stay intact.
+
+Requests remain on the existing authenticated holdings API. Logout/account
+switch discards the old form and editor; no old-member response refreshes a new
+member's workspace. Failure leaves same-member input available. After success,
+the shared workspace reloads without discarding unsaved map records. The fresh
+read is not an atomic cross-tab compare-and-swap; concurrent editing can still
+race the existing API and is not advertised as conflict-proof.
+
+Local synthetic browser acceptance: preview makes zero requests, partial PATCH,
+failed-input retention, explicit add/delete, map/list layout continuity, map-note
+save after holdings reload, and account switch. Light/dark at 1280px and390px
+passed overflow/hover-size checks. Actual private member acceptance is separate;
+these checks performed no real holdings write. This increment changes no auth,
+API, database permissions, Framer Publish or Sites artifact.
+
+The browser run exposed intermittent blank maps: the frame attribute held the
+new canvas URL but its document stayed on a queued srcdoc/about:blank navigation.
+URL-mode refresh no longer queues intermediate blank documents. Same-member
+loading preserves the canvas; an account reset immediately hides/inerts and
+clears the old view. Each new document uses a unique query/hash nonce and a
+load-triggered handshake, preventing stale WindowProxy messages from connecting.
+Five initial loads and the full synthetic edit/add/delete/account-switch flow
+passed after this fix. An empty evidence layer no longer covers a visible stock.
+Late theme/resize callbacks stop after the frame is reset, so a disposed member
+view cannot redraw cleared controls. The keyboard-focus-expanded synthetic flow
+also passes with zero page errors.
+
 The separate React map recreation below is historical and is superseded. The
 current snapshot hosts the actual accepted Sites v36 inner HTML at the same-origin
-`/member-map-canvas` path, not a restyled map. Its original source SHA-256 is
+`/member-map-canvas` path, not a restyled map. The v36 baseline source SHA-256 was
 `c6e1847ea2f4d07368d4e10bc2a3cbb08ec07eeadb05a48827664d333c7c207c`.
+The user-requested blank-click selection fix updates the local source to
+`924660b70439ba40cfd9d3c134c34c4270c1dcd745cac135ed94960237856a52`.
+One stationary blank click/tap clears selection and restores the overview camera;
+positions, notes, marks and filters remain. Marquee, modifier selection, Space-pan
+and pointer cancellation retain their previous roles. Local checks passed16/16,
+plus isolated Chrome4/4 mouse/touch scenarios at1280/390px with3/30 stocks and
+zero browser errors. These are synthetic local checks, not signed-in acceptance.
 The original stylesheet blocks and CSP are preserved by the template builder;
 the iframe stays `sandbox="allow-scripts"`. React owns only the existing
 authenticated Workspace and the parent-side validated MessageChannel bridge.
@@ -21,8 +65,9 @@ current member's holdings, source documents and bounded reviewed registry facts.
 
 Personal positions, notes and read/important/later/irrelevant marks use the
 existing private store and explicit Save. Legacy reviewed connection IDs are
-preserved for attached notes. No new holdings writes or access permissions are
-introduced. Source documents are not automatically labelled common events;
+preserved for attached notes. Map interactions never mutate holdings; only the
+separately confirmed Nest editor can do so. No access permissions are changed.
+Source documents are not automatically labelled common events;
 investment impact and connection strength remain unassessed. Synthetic browser
 checks and source tests do not establish authenticated live acceptance.
 
@@ -31,7 +76,7 @@ The review snapshot is generated from
 esbuild ESM/classic JSX, React/ReactDOM/Framer external and UTF-8.
 `scripts/member-map/prototype-template.cjs` produces `vercel-api/public/member-map-canvas.html` from the
 accepted artifact and `review/member-map/prototype-member-runtime.js`.
-This change does not edit or republish that original Sites artifact.
+The selection fix also updates the local original HTML; public Sites is not republished.
 
 Local checks: 25 focused source tests and 11 delivery snapshot tests pass. An
 isolated browser with synthetic holdings and external network blocked loaded
@@ -43,7 +88,7 @@ logout clearing. These are not real-member or production acceptance claims.
 
 - Existing AlphaNest Google/email sign-in; no new provider, test identity creation, or session transfer.
 - The review shell is publicly downloadable; holdings and map records require the existing member JWT and owner checks. `noindex` is not an access control.
-- Holdings are read-only in this client. Map positions, notes and marks are drafts until explicit save; existing revision-conflict and account-switch protections are unchanged.
+- Map interactions do not mutate holdings. The Nest editor and CSV import require preview and explicit confirmation through the existing holdings API. Map positions, notes and marks remain drafts until explicit save; existing revision-conflict and account-switch protections are unchanged.
 - `Map.snapshot.tsx` is a generated projection of the tested local `PortfolioMapReview.entry.tsx` and its real-controller module graph. It supersedes the earlier two-section visual-only projection. Existing auth, member-state transport, document sources, quote normalizer and API routes are unchanged. This standalone snapshot has not been saved back into Framer.
 - `Auth.snapshot.tsx` was fresh-read from `k5Rb6uP` on 2026-09-29 KST; it matches the local mirror after whitespace normalization. It is reused, not pushed back to Framer. Only normal browser login creates the session.
 - PublicAuth remains mounted when its account panel is hidden so refresh/listeners survive. The map is not mounted while signed out.
@@ -88,5 +133,21 @@ The path supplies already-installed esbuild/React and existing `.env` public Sup
 Static files belong under the API project's existing `vercel-api/public/` output directory. `public/member-map-review.html` is served at `/member-map-review` with the existing `cleanUrls` setting; its script and stylesheet live under `public/member-map-review/`. Do not place them beside `vercel.json`: the existing `public` directory means those root-level files are not served.
 
 ## Verify
+
+CSV follow-up (2026-10-01): the same holdings panel now reads UTF-8 CSV locally,
+previews additions/explicit-ID edits, and saves only after confirmation. It does
+not upload the original file, increment quantities, infer companies from names,
+delete omitted holdings, or create trades. Invalid rows block the whole preview.
+Repeated identical imports are no-ops. Sequential saves stop on first failure;
+acknowledged count and an uncertain row are shown separately, without automatic
+retry or rollback. Account identity is pinned across the sequence. Unsupported
+inventory blocks bulk import because its complete identity/count cannot be proven.
+The parser's 30-unique-company add limit does not prevent editing existing larger
+inventories; the consistent file/save cap is 200 rows. Cross-tab writes are not
+atomic: existing fresh preflight checks remain advisory, not database CAS.
+
+Local source parser/save tests20/20 and synthetic original-renderer browser flows
+passed (preview requests0; add/edit; reimport; partial-stop; account change;
+1280/390px light/dark). This is not real-member acceptance or deployment proof.
 
 Check the signed-out page and console first. Once deployed, read back HTML/asset hashes and scoped headers, then have the user complete normal Google sign-in. Verify holdings retrieval, existing map-state retrieval, explicit test edits, save acknowledgement and a fresh page restoration separately. Preserve existing notes/layouts/marks. Do not infer browser acceptance from prior API-runner tests.
