@@ -5,6 +5,32 @@ This is not a replacement for the accepted Sites v36 design and is not a Framer 
 
 ## Current renderer — accepted HTML integration (2026-10-01)
 
+### Read-only interest stocks
+
+The standalone candidate opts into the existing authenticated `/api/watchgroups`
+GET. Its actual response is an array of owner-scoped groups with nested items.
+The client checks both owner and group identity, normalizes supported KR/US
+symbols and deduplicates the display universe. Interest-only stocks remain
+separate from holdings: they have no inventory quantity, average cost, edit or
+delete action. The folded list and map distinguish held, watched and both.
+The existing holdings editor/CSV still receives only actual holdings.
+
+At most 30 stocks are shown together; larger unions require an explicit display
+selection without changing the member's lists. A failed interest-list read
+shows an error while leaving holdings usable. Recovery adds newly available
+stocks to an automatic selection but preserves an explicit user selection.
+Account changes discard late responses. The request uses a bounded abort and
+never writes watch groups or holdings. Existing reviewed relations/events can
+include watched companies without changing saved evidence fingerprints.
+
+Local source checks passed 75/75 plus strict TypeScript; generated delivery
+snapshot checks passed 23/23 across `member_map_review`, `member_map_holdings`
+and `member_map_watchlist.test.cjs`. Synthetic Chrome covered
+held/watched deduplication, watched evidence and labels, failure/recovery,
+account cleanup and the prior holdings/CSV/map-note flows in light/dark at
+1280/390px. These checks do not establish live member isolation or authenticated
+save/reconnect. No API, DB, auth, Framer or Sites changes accompany this increment.
+
 ### Nest editor increment
 
 The accepted map now opens its shared holdings list with `보유목록`. Merely

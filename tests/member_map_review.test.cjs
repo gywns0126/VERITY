@@ -295,7 +295,7 @@ test("review snapshot uses the actual workspace and reviewed-state graph while a
     assert.match(source, /\/\/ output\/member-map-integration-20260927\/PortfolioMapReview\.entry\.tsx/)
     assert.match(source, /projectReviewedPrototype\(state\)/)
     assert.match(source, /mergePrototypeDraft\(state, command\.draft\)/)
-    assert.match(source, /workspace = createPortfolioMapWorkspace\(\)/)
+    assert.match(source, /workspace = createPortfolioMapWorkspace\(\{ includeWatchlist: true \}\)/)
     assert.match(source, /createElement\(PublicPortfolioPrototype(?:,|\))/)
     assert.doesNotMatch(source, /TestWorkspace/)
     assert.equal(digest(fs.readFileSync(review("review/member-map/Auth.snapshot.tsx"))),
