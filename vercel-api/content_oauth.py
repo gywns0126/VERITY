@@ -18,6 +18,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 from content_mcp import ServiceError, _json_request
 
 SCOPE = "content:read"
+REFRESH_MAX_SECONDS = 365 * 24 * 60 * 60
 CLIENT_ID = "alphanest-content-chatgpt"
 REDIRECT = "https://chatgpt.com/connector_platform_oauth_redirect"
 CLAUDE_ID = "alphanest-content-claude"
@@ -208,7 +209,7 @@ def process(method, path, headers, body):
 <style>body{font:17px/1.7 system-ui;margin:40px auto;padding:24px;max-width:520px;color:#202530;background:#f7f8fa}main{background:white;padding:28px;border-radius:20px}input,button{box-sizing:border-box;font:inherit;padding:12px;margin-top:12px;width:100%%}button{cursor:pointer}small{color:#596474}</style>
 <main><h1>알파네스트 콘텐츠 연결</h1><p>%s에 공개 공시·교육용 자료 조회를 허용합니다.</p>
 <p>개인 보유종목·계정 정보·관리자 권한은 포함하지 않습니다. 매매와 자동 게시도 할 수 없습니다.</p>
-<p><small>허용 권한: content:read · 접근 토큰은 최대 1시간, 자동 갱신 연결은 최대 30일입니다. 초대코드 만료·취소 시 더 일찍 종료됩니다.</small></p>
+<p><small>허용 권한: content:read · 접근 토큰은 최대 1시간, 새로 승인한 자동 갱신 연결은 최대 365일입니다. 초대코드 만료·취소 시 더 일찍 종료됩니다. 기존 연결의 만료일은 유지됩니다.</small></p>
 <p><small>토큰을 갱신해도 최초 연결 만료일은 연장되지 않습니다. 만료 후에는 유효한 초대코드로 다시 승인해야 합니다.</small></p>
 <form method="post" action="/api/content_oauth?op=authorize">
 <input type="hidden" name="consent" value="%s">
@@ -284,7 +285,7 @@ def process(method, path, headers, body):
     expires = result.get("expires_in")
     refresh_expires = result.get("refresh_expires_in")
     if (result.get("status") != "allowed" or type(expires) is not int or not 0 < expires <= 3600
-            or type(refresh_expires) is not int or not expires <= refresh_expires <= 2592000):
+            or type(refresh_expires) is not int or not expires <= refresh_expires <= REFRESH_MAX_SECONDS):
         raise ServiceError(400, "invalid_grant")
     return 200, {"access_token": token, "token_type": "Bearer", "expires_in": expires, "scope": SCOPE,
                  "refresh_token": refresh, "refresh_expires_in": refresh_expires}, {}

@@ -549,7 +549,7 @@ def test_consent_names_actual_client_and_discloses_invite_capped_lifetime(clock,
     assert status == 200
     assert ("ChatGPT" if client_id == CHATGPT else "Perplexity") in page
     assert ("Perplexity" if client_id == CHATGPT else "ChatGPT") not in page
-    assert re.search(r"최대\s*30\s*일", page)
+    assert re.search(r"최대\s*365\s*일", page)
     # Check the disclosure rather than deriving its wording from implementation.
     paragraphs = re.findall(r"<p\b[^>]*>(.*?)</p>", page, re.S)
     assert any("초대" in p and "만료" in p for p in paragraphs)
@@ -660,7 +660,7 @@ def test_both_grants_fail_closed_on_each_invalid_lifetime(local_only, grant, fie
     if invalid == "missing":
         del reply[field]
     elif invalid == "over-cap":
-        reply[field] += 1
+        reply[field] = (3600 if field == "expires_in" else 31536000) + 1
     else:
         reply[field] = invalid
     local_only.side_effect = None
