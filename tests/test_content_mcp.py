@@ -74,7 +74,7 @@ def test_header_rejections(headers, expected):
 
 
 @pytest.mark.parametrize("origin", [None, "https://chatgpt.com", "https://chat.openai.com",
-                                    "https://www.perplexity.ai"])
+                                    "https://www.perplexity.ai", "https://claude.ai", "https://claude.com"])
 def test_registered_origins_still_require_authorization_before_content(origin):
     headers = {**HEADERS, **({"Origin": origin} if origin else {})}
     authorize = Mock(return_value=None)
@@ -90,7 +90,8 @@ def test_registered_origins_still_require_authorization_before_content(origin):
 
 
 @pytest.mark.parametrize("origin", ["https://perplexity.ai", "https://www.perplexity.ai/",
-    "https://www.perplexity.ai.evil.example", "http://www.perplexity.ai", "null", ""])
+    "https://www.perplexity.ai.evil.example", "http://www.perplexity.ai", "null", "",
+    "https://claude.ai.evil.example", "http://claude.ai", "https://claude.com/", "http://localhost:8765"])
 def test_perplexity_origin_variants_fail_before_auth_or_content(origin):
     authorize, feed = Mock(), Mock()
     with pytest.raises(m.ServiceError) as error:
