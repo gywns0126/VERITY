@@ -1,10 +1,8 @@
 {
-  "collected_at": "2026-10-02T06:24:15.036178+00:00",
+  "collected_at": "2026-10-02T13:01:22.195640+00:00",
   "schema_version": 1,
-  "severity": "RED",
-  "severity_reasons": [
-    "data delivery RED: P0 stale 1건"
-  ],
+  "severity": "GREEN",
+  "severity_reasons": [],
   "n_verification_days": 46,
   "n_milestones": {
     "to_50": 4,
@@ -39,22 +37,22 @@
   },
   "pre_registration_pending": [],
   "alert_volume_24h": {
-    "sent": 10,
-    "dedupe_skip": 18,
+    "sent": 7,
+    "dedupe_skip": 16,
     "quiet_skip": 17,
-    "fp_repeat_max": 14
+    "fp_repeat_max": 16
   },
   "auto_action_blocked": [],
   "_inputs_snapshot": {
     "kis_lock_commits_24h": 1,
-    "fred_age_h": 0.41,
+    "fred_age_h": 0.54,
     "fred_24h_failure_rate": 0.0,
     "core_sources_ok": true,
-    "delivery_status": "red",
+    "delivery_status": "amber",
     "publish_verify_ok": true,
     "publish_verify_failed": 0,
-    "runtime_mode": "full_us",
-    "ramp_up_stage": 5000,
+    "runtime_mode": "quick",
+    "ramp_up_stage": 0,
     "brain_anomaly_24h": 0,
     "vams_days_since_reset": 138,
     "validation_sample": null
