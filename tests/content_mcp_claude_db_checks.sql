@@ -1,7 +1,7 @@
 -- LOCAL disposable PostgreSQL only. Run as migration owner, after migrations
--- 2026092602, 2026092701 and 2026100201, with psql -X -v ON_ERROR_STOP=1 -f FILE.
+-- 2026092602, 2026092701, 2026100201 and 2026100202, with psql -X -v ON_ERROR_STOP=1 -f FILE.
 -- Also run content_mcp_oauth_db_checks.sql and content_mcp_refresh_db_checks.sql
--- unchanged for legacy behavior, table/RPC grants, capacity and quota coverage.
+-- for legacy behavior, table/RPC grants, capacity and quota coverage.
 -- Fixtures roll back. On error, ROLLBACK before reusing the connection.
 -- Migration failure options (separate disposable databases): remove an RPC,
 -- add an overload, change either RPC body/SECURITY DEFINER/search_path/grants,
@@ -11,6 +11,7 @@ begin;
 set local statement_timeout = '30s';
 set local lock_timeout = '3s';
 set local search_path = '';
+set local timezone = 'UTC';
 create temporary table pg_temp.claude_qa (checks integer not null default 0) on commit drop;
 revoke all on pg_temp.claude_qa from public, anon, authenticated, service_role;
 insert into pg_temp.claude_qa default values;
@@ -36,7 +37,7 @@ begin
     select array_agg(md5(run_id || n::text) || md5(n::text || run_id) order by n)
         into h from pg_catalog.generate_series(1,10) n;
     insert into public.content_mcp_invites(invite_hash,label,expires_at)
-        values(h[1],'claude-sql-check',started + interval '45 days');
+        values(h[1],'claude-sql-check',started + interval '400 days');
     -- Generic issuer deliberately remains generic. Invalid but syntactically
     -- well-formed callbacks are persisted, proving the refresh guard is needed.
     r := public.content_mcp_issue_code(h[1],h[2],client,
@@ -57,11 +58,11 @@ begin
         return;
     end if;
     select expires_at into original_expiry from public.content_mcp_refresh_families where family_hash=h[4];
-    perform pg_temp.claude_assert(original_expiry between started + interval '30 days'
-        and clock_timestamp() + interval '30 days'
+    perform pg_temp.claude_assert(original_expiry between started + interval '365 days'
+        and clock_timestamp() + interval '365 days'
         and (r->>'expires_in')::integer between 1 and 3600
-        and (r->>'refresh_expires_in')::integer between 2591900 and 2592000,
-        'one hour access and absolute thirty day family');
+        and (r->>'refresh_expires_in')::integer between 31535900 and 31536000,
+        'one hour access and absolute 365 day family');
     r := public.content_mcp_exchange_code_refresh(h[2],client,callback,resource,
         'content:read',repeat('A',43),h[5],h[6]);
     perform pg_temp.claude_assert(r->>'status'='denied','code replay');

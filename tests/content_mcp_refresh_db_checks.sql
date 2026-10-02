@@ -1,4 +1,4 @@
--- Run as migration owner after BOTH content OAuth migrations. Local/SQL-editor
+-- Run as migration owner after content OAuth migrations through 2026100202. Local
 -- functional checks only; no raw credentials, network, extensions, or COMMIT.
 -- Run whole file; on assertion error explicitly ROLLBACK if the client stops.
 -- Concurrency boundary: this one-connection transaction cannot prove races.
@@ -9,6 +9,7 @@ begin;
 set local statement_timeout = '30s';
 set local lock_timeout = '3s';
 set local search_path = '';
+set local timezone = 'UTC';
 create temporary table pg_temp.refresh_qa_result (checks integer not null default 0, marker text) on commit drop;
 alter table pg_temp.refresh_qa_result enable row level security;
 revoke all on pg_temp.refresh_qa_result from public, anon, authenticated, service_role;
@@ -106,7 +107,9 @@ begin
         and not exists(select 1 from public.content_mcp_refresh_hashes where refresh_hash=any(h))
         and not exists(select 1 from public.content_mcp_refresh_families where family_hash=any(h)), 'fixture collision check');
     insert into public.content_mcp_invites(invite_hash,label,expires_at)
-        select h[n],'refresh-qa-'||n::text,clock_timestamp()+interval '45 days' from pg_catalog.generate_series(1,6) n;
+        select h[n],'refresh-qa-'||n::text,clock_timestamp()
+            + case when n=1 then interval '400 days' else interval '45 days' end
+            from pg_catalog.generate_series(1,6) n;
 
     perform pg_temp.refresh_status(pg_temp.refresh_issue(h[1],h[10]),'allowed','issue');
     -- Old generic issuer stays unchanged; the new wrapper independently rejects
@@ -129,7 +132,7 @@ begin
     r:=pg_temp.refresh_exchange(h[10],h[20],h[30]);
     perform pg_temp.refresh_status(r,'allowed','initial exchange');
     perform pg_temp.refresh_assert((r->>'expires_in')::integer between 1 and 3600
-        and (r->>'refresh_expires_in')::integer between 2591900 and 2592000,'access and 30-day TTL');
+        and (r->>'refresh_expires_in')::integer between 31535900 and 31536000,'access and 365-day TTL');
     select expires_at into original_expiry from public.content_mcp_refresh_families where family_hash=h[30];
     perform pg_temp.refresh_status(pg_temp.refresh_exchange(h[10],h[21],h[31]),'denied','code replay');
     perform pg_temp.refresh_status(pg_temp.refresh_rotate(h[30],h[21],h[31],'alphanest-content-chatgpt'),'denied','other registered client');
@@ -209,7 +212,7 @@ begin
     perform pg_temp.refresh_status(pg_temp.refresh_rotate(h[95],h[106],h[96]),'limited','shared daily quota');
     update public.content_mcp_invites set day_start=clock_timestamp()-interval '2 days' where invite_hash=h[4];
     perform pg_temp.refresh_status(pg_temp.refresh_rotate(h[95],h[106],h[96]),'allowed','quota reset permits rotation');
-    update public.content_mcp_refresh_families set rotation_count=1000 where family_hash=h[90];
+    update public.content_mcp_refresh_families set rotation_count=20000 where family_hash=h[90];
     perform pg_temp.refresh_status(pg_temp.refresh_rotate(h[96],h[107],h[97]),'limited','lifetime rotation cap');
     update public.content_mcp_refresh_families set rotation_count=6,expires_at=clock_timestamp()-interval '1 second' where family_hash=h[90];
     perform pg_temp.refresh_status(pg_temp.refresh_rotate(h[96],h[107],h[97]),'denied','family expiry');
