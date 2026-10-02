@@ -1,11 +1,10 @@
 {
  "_meta": {
-  "generated_at": "2026-10-02T09:27:30.114457+09:00",
+  "generated_at": "2026-10-02T15:35:29.269132+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
+ "status": "amber",
  "reasons": [
-  "P0 stale 1건",
   "비P0 stale 1건"
  ],
  "publish_guard": {
@@ -13,10 +12,10 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-10-02T09:27:30.056884+09:00",
+  "generated_at": "2026-10-02T15:35:29.208253+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 0,
+  "max_cdn_age_s": 22080,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -37,7 +36,7 @@
      "PBR": 73.7
     },
     "total": 5080,
-    "cdn_age_s": 0,
+    "cdn_age_s": 22080,
     "error": null
    },
    {
@@ -48,7 +47,7 @@
      "PBR": 75.3
     },
     "total": 3851,
-    "cdn_age_s": 0,
+    "cdn_age_s": 22079,
     "error": null
    },
    {
@@ -62,7 +61,7 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-10-02T07:03:49.702373+09:00",
+  "generated_at": "2026-10-02T10:32:24.417292+09:00",
   "kr_total": 2534,
   "us_total": 5080,
   "core_fill_pct": {
@@ -76,15 +75,15 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-10-02T09:27:19.707635+09:00",
+  "generated_at": "2026-10-02T15:35:20.482913+09:00",
   "summary": {
-   "fresh": 60,
-   "stale": 2,
+   "fresh": 61,
+   "stale": 1,
    "closed": 0,
    "discontinued": 3,
    "p0": {
     "total": 7,
-    "fresh": 6,
+    "fresh": 7,
     "closed": 0,
     "active": 7
    },
@@ -101,13 +100,7 @@
     "active": 35
    }
   },
-  "stale_p0": [
-   {
-    "id": "dart_catalyst_alerts",
-    "label": "DART 공시 알림",
-    "age_min": 154.4
-   }
-  ],
+  "stale_p0": [],
   "stale_other": [
    "ipo_watch"
   ]
