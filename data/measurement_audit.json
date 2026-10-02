@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-02T16:22:46+09:00",
+ "as_of": "2026-10-03T00:37:27+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -47,30 +47,9 @@
      ]
     },
     {
-     "key": "kis_credit_balance",
-     "modules": [
-      "red_flags.py"
-     ]
-    },
-    {
-     "key": "kis_financial_ratio",
-     "modules": [
-      "fact.py",
-      "graham.py",
-      "moat.py",
-      "red_flags.py"
-     ]
-    },
-    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
-     ]
-    },
-    {
-     "key": "kis_short_sale",
-     "modules": [
-      "red_flags.py"
      ]
     },
     {
@@ -90,7 +69,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "39/39",
+     "coverage": "41/41",
      "via": [
       "current_price",
       "price"
@@ -100,23 +79,8 @@
      ]
     },
     {
-     "key": "dart_financials",
-     "coverage": "10/39",
-     "via": [
-      "dart_report_date",
-      "dart_source"
-     ],
-     "modules": [
-      "fact.py",
-      "moat.py",
-      "quality.py",
-      "red_flags.py",
-      "value_guards.py"
-     ]
-    },
-    {
      "key": "operating_income",
-     "coverage": "32/39",
+     "coverage": "20/41",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -127,7 +91,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "39/39",
+     "coverage": "41/41",
      "via": [
       "fscore_deltas"
      ],
@@ -136,18 +100,8 @@
      ]
     },
     {
-     "key": "quant_factors",
-     "coverage": "39/39",
-     "via": [
-      "multi_factor.quant_factors"
-     ],
-     "modules": [
-      "fact.py"
-     ]
-    },
-    {
      "key": "sub_sector",
-     "coverage": "39/39",
+     "coverage": "41/41",
      "via": [
       "industry"
      ],
@@ -157,7 +111,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "32/39",
+     "coverage": "20/41",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -171,25 +125,25 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 14,
+     "events_scanned": 16,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
      ]
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 9종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 6종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 9,
+   "holdings_checked": 11,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 135,
+   "snapshots": 136,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
@@ -205,9 +159,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 17,
-   "days_without_any_cap_pct": 12.6,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.5%). cap 없는 날 17/135일",
+   "days_without_any_cap": 19,
+   "days_without_any_cap_pct": 14.0,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.5%). cap 없는 날 19/136일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -218,7 +172,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 14,
-   "stock_days": 7529,
+   "stock_days": 7542,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -279,27 +233,27 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 9,
+   "holdings_checked": 11,
    "coverage": {
     "sector": {
-     "filled": 9,
-     "total": 9,
+     "filled": 11,
+     "total": 11,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 9,
-     "total": 9,
+     "filled": 11,
+     "total": 11,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 9,
-     "total": 9,
+     "filled": 11,
+     "total": 11,
      "guard": "팩터 쏠림 차단"
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 25,
-    "scored": 25,
+    "with_pct": 26,
+    "scored": 26,
     "ok": true
    },
    "dead_guards": [],
@@ -307,7 +261,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 9,
+   "holdings_checked": 11,
    "no_profit_exit": [],
    "ladder_broken": [
     {
@@ -333,9 +287,17 @@
       "target_1": 1,
       "target_2": 0
      }
+    },
+    {
+     "name": "현대모비스",
+     "qty": 2.0,
+     "splittable": {
+      "target_1": 1,
+      "target_2": 0
+     }
     }
    ],
-   "detail": "확정 경로 정합 (사다리 불능 3건 — 고가주 잔존분)"
+   "detail": "확정 경로 정합 (사다리 불능 4건 — 고가주 잔존분)"
   },
   "as_of_staleness": {
    "ok": true,
