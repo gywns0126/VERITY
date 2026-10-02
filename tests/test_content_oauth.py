@@ -517,8 +517,10 @@ def test_adapter_consent_headers_allow_exact_callback(clock, local_only, stage, 
     assert len(policies) == 1
     directives = [part.strip().split() for part in policies[0].split(";") if part.strip()]
     actions = [parts[1:] for parts in directives if parts[0] == "form-action"]
-    assert len(actions) == 1 and len(actions[0]) == 3
-    assert set(actions[0]) == {"'self'", CHATGPT_REDIRECT, PERPLEXITY_REDIRECT}
+    assert len(actions) == 1 and len(actions[0]) == 7
+    assert set(actions[0]) == {"'self'", CHATGPT_REDIRECT, PERPLEXITY_REDIRECT,
+        "https://claude.ai/api/mcp/auth_callback", "https://claude.com/api/mcp/auth_callback",
+        "http://localhost:*/callback", "http://127.0.0.1:*/callback"}
     handler.send_header.assert_any_call("Cache-Control", "no-store")
     if stage == "deny":
         location = next(call.args[1] for call in sent if call.args[0] == "Location")
@@ -530,7 +532,7 @@ def test_adapter_consent_headers_allow_exact_callback(clock, local_only, stage, 
 
 def test_fixed_client_registry_keeps_chatgpt_aliases():
     assert m.CLIENT_ID == CHATGPT and m.REDIRECT == CHATGPT_REDIRECT
-    assert set(m.CLIENTS) == {CHATGPT, PERPLEXITY}
+    assert set(m.CLIENTS) == {CHATGPT, PERPLEXITY, "alphanest-content-claude"}
     for client_id, callback in CLIENT_CASES:
         client = m.CLIENTS[client_id]
         assert set(client) == {"name", "redirect_uri", "origins"}

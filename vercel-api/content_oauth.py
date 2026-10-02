@@ -20,6 +20,9 @@ from content_mcp import ServiceError, _json_request
 SCOPE = "content:read"
 CLIENT_ID = "alphanest-content-chatgpt"
 REDIRECT = "https://chatgpt.com/connector_platform_oauth_redirect"
+CLAUDE_ID = "alphanest-content-claude"
+CLAUDE_REDIRECTS = ("https://claude.ai/api/mcp/auth_callback",
+                    "https://claude.com/api/mcp/auth_callback")
 CLIENTS = {
     CLIENT_ID: {"name": "ChatGPT", "redirect_uri": REDIRECT,
                 "origins": ("https://chatgpt.com", "https://chat.openai.com")},
@@ -27,12 +30,33 @@ CLIENTS = {
         "name": "Perplexity",
         "redirect_uri": "https://www.perplexity.ai/rest/connections/oauth_callback",
         "origins": ("https://www.perplexity.ai",)},
+    CLAUDE_ID: {"name": "Claude", "redirect_uri": CLAUDE_REDIRECTS[0],
+                "origins": ("https://claude.ai", "https://claude.com")},
 }
 # Construct exclusively from static registration, never from a request parameter.
 CONSENT_CSP = ("default-src 'none'; style-src 'unsafe-inline'; form-action 'self' "
                + " ".join(client["redirect_uri"] for client in CLIENTS.values())
+               + " " + CLAUDE_REDIRECTS[1]
+               + " http://localhost:*/callback http://127.0.0.1:*/callback"
                + "; frame-ancestors 'none'; base-uri 'none'")
 COOKIE = "__Host-ancontent-consent"
+
+
+def valid_redirect(client_id, redirect_uri):
+    """Exact web callbacks; only Claude may use canonical loopback ports.
+
+    This registration exception never relaxes the DB's exact code-to-URI binding.
+    Reject URL parser normalization, userinfo, query, fragment and path variants.
+    """
+    client = CLIENTS.get(client_id)
+    if client is None or not isinstance(redirect_uri, str):
+        return False
+    if client_id != CLAUDE_ID:
+        return redirect_uri == client["redirect_uri"]
+    if redirect_uri in CLAUDE_REDIRECTS:
+        return True
+    match = re.fullmatch(r"http://(?:localhost|127\.0\.0\.1):([1-9][0-9]{0,4})/callback", redirect_uri)
+    return bool(match and int(match[1]) <= 65535)
 
 
 def config():
@@ -100,7 +124,7 @@ def validated_authorization(params, cfg):
                 "state", "code_challenge", "code_challenge_method"}
     client = CLIENTS.get(params.get("client_id"))
     if (set(params) - {"ui_locales"} != required or client is None
-            or params["redirect_uri"] != client["redirect_uri"] or params["response_type"] != "code"
+            or not valid_redirect(params["client_id"], params["redirect_uri"]) or params["response_type"] != "code"
             or params["resource"] != cfg["resource"] or params["scope"] != SCOPE
             or params["code_challenge_method"] != "S256"
             or not re.fullmatch(r"[A-Za-z0-9_-]{43}", params["code_challenge"])
@@ -185,6 +209,7 @@ def process(method, path, headers, body):
 <main><h1>알파네스트 콘텐츠 연결</h1><p>%s에 공개 공시·교육용 자료 조회를 허용합니다.</p>
 <p>개인 보유종목·계정 정보·관리자 권한은 포함하지 않습니다. 매매와 자동 게시도 할 수 없습니다.</p>
 <p><small>허용 권한: content:read · 접근 토큰은 최대 1시간, 자동 갱신 연결은 최대 30일입니다. 초대코드 만료·취소 시 더 일찍 종료됩니다.</small></p>
+<p><small>토큰을 갱신해도 최초 연결 만료일은 연장되지 않습니다. 만료 후에는 유효한 초대코드로 다시 승인해야 합니다.</small></p>
 <form method="post" action="/api/content_oauth?op=authorize">
 <input type="hidden" name="consent" value="%s">
 <label>전달받은 콘텐츠 전용 초대코드<input type="password" name="invite" maxlength="53" autocomplete="off" spellcheck="false"></label>
@@ -234,7 +259,7 @@ def process(method, path, headers, body):
     refresh = "anrefresh_" + secrets.token_urlsafe(32)
     if data.get("grant_type") == "authorization_code":
         required = {"grant_type", "code", "client_id", "redirect_uri", "resource", "code_verifier"}
-        if (set(data) - {"scope"} != required or data["redirect_uri"] != client["redirect_uri"]
+        if (set(data) - {"scope"} != required or not valid_redirect(data["client_id"], data["redirect_uri"])
                 or not re.fullmatch(r"ancode_[A-Za-z0-9_-]{43}", data["code"])
                 or not re.fullmatch(r"[A-Za-z0-9._~-]{43,128}", data["code_verifier"])):
             raise ServiceError(400, "invalid_grant")
