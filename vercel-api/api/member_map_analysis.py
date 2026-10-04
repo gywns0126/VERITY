@@ -125,7 +125,7 @@ def analyze_request(request):
     if payload is None or set(payload) != {"positions"}:
         return 400, response_headers, {"error": "invalid_request"}
     try:
-        validate_positions(payload["positions"])
+        validated_positions = validate_positions(payload["positions"])
     except Exception:
         return 400, response_headers, {"error": "invalid_positions"}
 
@@ -139,11 +139,26 @@ def analyze_request(request):
         return 503, response_headers, {"error": "public_sources_unavailable"}
     documents, public_bundle_revision = validated_sources
 
+    price_positions = [
+        {"ticker": position["ticker"], "market": position["market"]}
+        for position in validated_positions
+    ]
+    try:
+        from api.portfolio_core.portfolio_price_fetch import fetch_public_prices
+
+        price_documents = fetch_public_prices(price_positions)
+        if type(price_documents) is not dict:
+            raise ValueError("invalid public price result")
+    except Exception:
+        _LOGGER.warning("member map analysis price refresh failed [price_source_unavailable]")
+        price_documents = {}
+
     try:
         result = analyze_portfolio(
             payload["positions"],
             documents,
             public_bundle_revision=public_bundle_revision,
+            price_documents=price_documents,
         )
         if type(result) is not dict or result.get("schema") != "alphaconsole-portfolio-v1":
             raise ValueError("invalid analysis result")

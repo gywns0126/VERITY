@@ -72,6 +72,11 @@ def _download_source_once(filename):
     """One bounded attempt. Retry never changes URL, headers or validation."""
     url = PUBLIC_SOURCE_URLS[filename]
     limit = PUBLIC_SOURCE_MAX_BYTES[filename]
+    return _read_public_document(url, limit)
+
+
+def _read_public_document(url, limit):
+    """Shared transport for code-owned public URLs, never caller supplied URLs."""
     opener = urllib.request.build_opener(
         urllib.request.ProxyHandler({}),
         _NoRedirect(),

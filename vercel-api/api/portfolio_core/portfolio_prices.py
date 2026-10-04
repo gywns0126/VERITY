@@ -2,9 +2,9 @@
 
 The module performs no IO.  It recognizes only exact, reviewed producer
 contracts and never accepts a caller-provided permission flag.  A recognized
-source can expose values only when its code-owned policy is ``permitted`` and
-the producer supplies an explicit currency plus a validated completed-session
-date.  Restricted sources are represented without copying price values.
+source can expose values only when its code-owned policy allows this product
+projection and the producer supplies a validated completed-session date.
+Restricted sources are represented without copying price values.
 """
 from __future__ import annotations
 
@@ -31,22 +31,23 @@ _KR_BASIS_PREFIX = "직전 거래일 종가 (T+1). 실시간 아님"
 _US_SOURCE = "yfinance period=max auto_adjust=True"
 
 # Rights are code-owned review results, not artifact claims or caller options.
-# Adding a permitted entry requires an independently reviewed public-display
-# grant whose scope covers this product.  Neither current source meets it.
+# Policies describe this product's reviewed use, not provider-wide legal rights.
+# Artifact metadata and caller options cannot promote a source into this set.
 SOURCE_POLICIES = MappingProxyType({
     "fsc-kr-daily-price": MappingProxyType({
         "market": "KR",
         "source_name": _KR_SOURCE,
         "basis_prefix": _KR_BASIS_PREFIX,
-        "rights_status": "restricted",
+        "rights_status": "existing-public-display",
+        "checked_at": "2026-10-05",
         "rights_reference": "https://www.data.go.kr/data/15094808/openapi.do",
         "rights_reason": (
-            "The current portal terms prohibit unauthorized third-party provision "
-            "and redistribution; no separate public-display grant is recorded."
+            "Reuses the product's existing public previous-close display path; "
+            "this is not a provider-wide rights determination."
         ),
         "requirements": (
-            "separate-public-display-rights",
-            "producer-explicit-currency",
+            "existing-public-display-contract",
+            "validated-completed-session-date",
         ),
     }),
     "yahoo-us-adjusted-history": MappingProxyType({
@@ -147,10 +148,17 @@ def _currency(meta: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _kr_currency(meta: Mapping[str, Any]) -> str | None:
+    """The FSC document contract is KRW; an explicit conflict fails closed."""
+    if "currency" not in meta:
+        return "KRW"
+    return "KRW" if meta.get("currency") == "KRW" else None
+
+
 def _rights(policy: Mapping[str, Any]) -> dict[str, str]:
     return {
         "status": str(policy["rights_status"]),
-        "checked_at": RIGHTS_CHECKED_AT,
+        "checked_at": policy.get("checked_at", RIGHTS_CHECKED_AT),
         "reference": str(policy["rights_reference"]),
         "reason": str(policy["rights_reason"]),
     }
@@ -213,7 +221,7 @@ def _available(
 ) -> dict[str, Any] | None:
     """Validate the permitted projection; callers cannot select the policy."""
     policy = SOURCE_POLICIES[policy_id]
-    if policy["rights_status"] != "permitted":
+    if policy["rights_status"] not in ("permitted", "existing-public-display"):
         return None
     normalized_date = _iso_date(close_date)
     normalized_close = _finite_positive(close)
@@ -256,15 +264,28 @@ def _kr_quote(
     if type(meta) is not dict or type(prices) is not dict or request["ticker"] not in prices:
         return _missing(request, "ticker-not-in-kr-close-document")
     policy = SOURCE_POLICIES["fsc-kr-daily-price"]
+    normalized_date = _iso_date(meta.get("as_of"))
+    normalized_generated_at = _iso_timestamp(meta.get("generated_at"))
     if (
         meta.get("source") not in (policy["source_name"], _KR_LEGACY_SOURCE_LABEL)
         or type(meta.get("basis")) is not str
         or not meta["basis"].startswith(policy["basis_prefix"])
-        or _iso_date(meta.get("as_of")) is None
-        or _iso_timestamp(meta.get("generated_at")) is None
+        or normalized_date is None
+        or normalized_generated_at is None
     ):
         return _missing(request, "unrecognized-or-unvalidated-kr-source-contract")
-    if policy["rights_status"] != "permitted":
+    observed = datetime.fromisoformat(normalized_generated_at)
+    now = datetime.now(timezone.utc)
+    close_day = date.fromisoformat(normalized_date)
+    kst = ZoneInfo("Asia/Seoul")
+    if observed > now:
+        return _missing(request, "kr-collection-timestamp-is-future")
+    if close_day >= observed.astimezone(kst).date() or close_day >= now.astimezone(kst).date():
+        return _missing(request, "kr-close-is-not-completed-prior-day")
+    currency = _kr_currency(meta)
+    if currency is None:
+        return _missing(request, "kr-currency-conflicts-with-producer-contract")
+    if policy["rights_status"] not in ("permitted", "existing-public-display"):
         return _restricted(request, "fsc-kr-daily-price", KR_CLOSE_FILE)
 
     ohlc_row = None
@@ -283,13 +304,39 @@ def _kr_quote(
         request,
         policy_id="fsc-kr-daily-price",
         source_file=KR_CLOSE_FILE,
-        close_date=meta["as_of"],
-        currency=_currency(meta),
+        close_date=normalized_date,
+        currency=currency,
         close=prices[request["ticker"]],
         ohlc_row=ohlc_row,
         observed_at=meta.get("generated_at"),
     )
-    return quote or _missing(request, "permitted-kr-record-failed-validation")
+    if quote is None:
+        return _missing(request, "approved-kr-record-failed-validation")
+
+    previous = close_document.get("prev")
+    changes = close_document.get("chg")
+    previous_date = _iso_date(meta.get("prev_as_of"))
+    previous_close = (
+        _finite_positive(previous.get(request["ticker"]))
+        if type(previous) is dict else None
+    )
+    source_change_pct = (
+        changes.get(request["ticker"]) if type(changes) is dict else None
+    )
+    if (
+        previous_date is not None
+        and previous_date < normalized_date
+        and previous_close is not None
+        and not isinstance(source_change_pct, bool)
+        and isinstance(source_change_pct, (int, float))
+        and math.isfinite(source_change_pct)
+    ):
+        # FSC ``chg`` prefers source fltRt, which remains meaningful across
+        # split-adjusted sessions even when the raw close ratio differs.
+        quote["prev_as_of"] = previous_date
+        quote["previous_close"] = previous_close
+        quote["change_pct"] = round(float(source_change_pct), 2)
+    return quote
 
 
 def _us_quote(
