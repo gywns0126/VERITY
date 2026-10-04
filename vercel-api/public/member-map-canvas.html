@@ -1776,7 +1776,7 @@ html>body{padding:0}</style>
     @media(pointer:coarse) { #an-map-design .an-tool-menu summary,#an-map-design .an-control-panel select { min-height:44px; } }
 
   </style>
-  <header class="an-head"><div class="an-brand"><b>α</b> ALPHANEST</div><h1 class="an-title">내 종목 작업판</h1><span class="an-demo">가상 회사·사건으로 만든 디자인 시안</span><button type="button" class="an-tool cursor-interaction" id="an-guide" aria-haspopup="dialog">사용 가이드</button></header>
+  <header class="an-head"><div class="an-brand"><svg width="22" height="22" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle;margin-right:4px" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M140.963 525.5C140.963 739 314.963 876.5 499.963 876.5C684.963 876.5 860.463 739 860.463 525.5" stroke="#3A4268" stroke-width="150" stroke-linecap="round"/><path d="M714.618 431.5C714.618 601 627.618 720 499.618 720C375.906 720 282.118 587 286.618 431.5C286.618 265.815 397.618 122 500.618 122C603.618 122 714.618 262 714.618 431.5Z" fill="#6B51EA"/></svg> ALPHANEST</div><h1 class="an-title">내 종목 작업판</h1><span class="an-demo">가상 회사·사건으로 만든 디자인 시안</span><button type="button" class="an-tool cursor-interaction" id="an-guide" aria-haspopup="dialog">사용 가이드</button></header>
   <dialog class="an-intro" id="an-intro" aria-labelledby="an-intro-title" aria-describedby="an-intro-summary">
     <div class="an-intro-head"><span>처음 오셨나요? · 사용 가이드</span><button type="button" class="an-intro-close" id="an-intro-close" aria-label="사용 가이드 닫기">×</button></div>
     <h2 id="an-intro-title" tabindex="-1" autofocus>내 종목의 연결을 한눈에</h2>
@@ -1832,7 +1832,7 @@ html>body{padding:0}</style>
       const holdings=nodes.filter(n=>n.kind==='stock'),searchCatalog=[];
       const priorityNames={1:'참고',2:'주목',3:'우선 확인'},strengthNames={0:'미평가',1:'낮음',2:'중간',3:'높음'};
       const edgeEls=new Map(),selectedItems=new Set();let showGuide=false;
-      const intro=root.querySelector('#an-intro');let introSeen=false;
+      const intro=root.querySelector('#an-intro');let introSeen=member.introHidden===true;
       const changeStatus=Object.fromEntries(nodes.map(n=>[n.id,n.changeStatus||'기존']));
       const sourceNames={news:'뉴스',filing:'공시',business:'사업 자료',other:'기타 자료',government:'정부 발표',prices:'가격 데이터'};
       const topicNames={contract:'계약·공시 변경',supply:'고객사·공급망',policy:'정책·규제',commodity:'원자재'};
@@ -1953,7 +1953,7 @@ html>body{padding:0}</style>
       function renderSearch(){
         const q=searchInput.value.trim().toLocaleLowerCase(),catalog=nodes.filter(n=>n.kind==='stock'&&(baseScenario(n)||n.explore)),matched=catalog.filter(n=>(n.name+' '+(n.ticker||n.id)).toLocaleLowerCase().includes(q));
         searchResults.replaceChildren();searchPanel.querySelector('#an-search-status').textContent=matched.length?'검색 결과 '+matched.length+'개':'보유종목에서 찾지 못했어요. 종목 이름이나 코드를 확인해주세요.';
-        matched.forEach(n=>{const row=document.createElement('div');row.className='an-search-row';row.dataset.result=n.id;const logo=document.createElement('span');logo.className='an-logo';logo.setAttribute('aria-hidden','true');logo.textContent=n.logo;const flag=document.createElement('span');flag.className='an-flag';flag.textContent=n.market==='KR'?'🇰🇷':n.market==='US'?'🇺🇸':'';logo.appendChild(flag);const info=document.createElement('span');info.className='an-result-text';const name=document.createElement('strong'),meta=document.createElement('small');name.textContent=n.name;meta.textContent=(n.ticker||n.code||'보유종목')+' · '+(inScenario(n)?'작업판에 있음':boardDraft[state.scenario].hidden.includes(n.id)?'지도에서 숨김':'탐색 가능')+(demoRegistration[n.id]?' · '+membership(n):'');info.append(name,meta);const add=document.createElement('button');add.type='button';add.className='an-tool';add.textContent=inScenario(n)?'찾기':'+ 추가';add.setAttribute('aria-label',n.name+(inScenario(n)?' 작업판에서 찾기':' 작업판에 추가'));add.onclick=()=>addBoardNode(n);row.append(logo,info,add);row.onpointerdown=e=>beginSearchDrag(e,n,row);searchResults.appendChild(row);});
+        matched.forEach(n=>{const row=document.createElement('div');row.className='an-search-row';row.dataset.result=n.id;const logo=document.createElement('span');logo.className='an-logo';logo.setAttribute('aria-hidden','true');logo.textContent=n.logo;const flag=document.createElement('span');flag.className='an-flag';logo.appendChild(flag);const info=document.createElement('span');info.className='an-result-text';const name=document.createElement('strong'),meta=document.createElement('small');name.textContent=n.name;meta.textContent=(n.ticker||n.code||'보유종목')+' · '+(inScenario(n)?'작업판에 있음':boardDraft[state.scenario].hidden.includes(n.id)?'지도에서 숨김':'탐색 가능')+(demoRegistration[n.id]?' · '+membership(n):'');info.append(name,meta);const add=document.createElement('button');add.type='button';add.className='an-tool';add.textContent=inScenario(n)?'찾기':'+ 추가';add.setAttribute('aria-label',n.name+(inScenario(n)?' 작업판에서 찾기':' 작업판에 추가'));add.onclick=()=>addBoardNode(n);row.append(logo,info,add);row.onpointerdown=e=>beginSearchDrag(e,n,row);searchResults.appendChild(row);});
       }
       function beginSearchDrag(e,n,row){
         if(e.button!==0||e.pointerType==='touch'||e.target.closest('button')||cancelGesture)return;
@@ -2034,11 +2034,11 @@ html>body{padding:0}</style>
       function clearFocus(){state.focusId='';focusOffsets.clear();focusOrigins.clear();if(focusCamera){Object.assign(state,focusCamera);focusCamera=null;}}
       function focusStock(id,rebuild=false){
         if(state.focusId===id&&!rebuild)return;
-        if(state.focusId!==id){focusOrigins.clear();nodes.forEach(n=>focusOrigins.set(n.id,{x:n.x,y:n.y}));}
+        if(state.focusId!==id){focusOrigins.clear();nodes.forEach(n=>{if(!initialPositions.has(n.id))initialPositions.set(n.id,{x:n.x,y:n.y});const origin=(state.scenario==='stress'?stressPositions:initialPositions).get(n.id)||initialPositions.get(n.id);focusOrigins.set(n.id,{x:origin.x,y:origin.y});});}
         if(!focusCamera)focusCamera={zoom:state.zoom,panX:state.panX,panY:state.panY};state.focusId=id;focusOffsets.clear();
         const linked=nodes.filter(n=>n.kind==='event'&&visibleEdgeForStock(n.id,id)),placed=new Set([id]);
         function place(key,x,y){const origin=focusOrigins.get(key)||nodeById[key];focusOffsets.set(key,{x:.5+x/WORLD_WIDTH-origin.x,y:.5+y/WORLD_HEIGHT-origin.y});placed.add(key);}
-        // Reflow against the focus-entry coordinates, retaining manual movement and undo deltas.
+        // Keep a stable layout origin across re-selection; manual movement and undo remain in node coordinates.
         if(space.clientWidth<560){place(id,0,-120);linked.forEach((event,i)=>place(event.id,linked.length===1?0:(i%2?90:-90),-10+Math.floor(i/2)*100));return;}
         place(id,-280,0);let row=0;const groups=linked.map(event=>{const peers=edges.filter(e=>visibleEdge(e)&&(e.from===event.id||e.to===event.id)).flatMap(e=>[e.from,e.to]).filter(key=>key!==event.id&&!placed.has(key));const unique=[...new Set(peers)];unique.forEach(key=>placed.add(key));const height=Math.max(110,Math.ceil(unique.length/3)*48+20),group={event,peers:unique,top:row,height};row+=height;return group;});
         groups.forEach(g=>{const cy=g.top+g.height/2-row/2;place(g.event.id,-60,cy);g.peers.forEach((key,i)=>place(key,135+(i%3)*112,g.top+20+Math.floor(i/3)*48-row/2));});
@@ -2364,7 +2364,7 @@ html>body{padding:0}</style>
         renderMap();renderDetail();if(newFocus)fitNodes('nearby');detail.scrollTop=0;
         root.querySelector('#an-live').textContent=deselect?'선택을 해제하고 이전 지도 보기로 돌아왔어요.':state.focusId?nodeById[state.focusId].name+' 주변을 크게 표시했어요. 전체 지도에서 원래 배치로 돌아갈 수 있어요.':id?'선택한 항목의 연결과 설명을 표시했어요.':'전체 연결을 표시했어요.';save();
       }
-      function appendMemberNode(n){const button=document.createElement('button');button.type='button';button.className='an-node '+(n.kind==='event'?'event':'');button.dataset.node=n.id;button.dataset.topic=n.topic||'holding';button.setAttribute('aria-label',n.name+' · 다시 눌러 선택 해제 · 드래그 및 방향키로 이동');button.innerHTML=(n.kind==='event'?'<i class="an-dot" aria-hidden="true"></i>':'<span class="an-logo" aria-hidden="true">'+escaped(n.logo)+'<span class="an-flag">🇰🇷</span></span>')+'<span><strong>'+escaped(n.name)+'</strong><small>'+escaped(n.code)+'</small></span>';button.onclick=function(e){if(suppressClick){suppressClick=false;return;}if(e.shiftKey){toggleSelection(n.id);return;}select(n.id,true);};button.onkeydown=e=>moveWithKeys(e,n.id);button.onpointerdown=e=>beginMove(e,n.id,button);bindPreview(button,n,false);nodesEl.appendChild(button);}
+      function appendMemberNode(n){const button=document.createElement('button');button.type='button';button.className='an-node '+(n.kind==='event'?'event':'');button.dataset.node=n.id;button.dataset.topic=n.topic||'holding';button.setAttribute('aria-label',n.name+' · 다시 눌러 선택 해제 · 드래그 및 방향키로 이동');button.innerHTML=(n.kind==='event'?'<i class="an-dot" aria-hidden="true"></i>':'<span class="an-logo" aria-hidden="true">'+escaped(n.logo)+'<span class="an-flag"></span></span>')+'<span><strong>'+escaped(n.name)+'</strong><small>'+escaped(n.code)+'</small></span>';button.onclick=function(e){if(suppressClick){suppressClick=false;return;}if(e.shiftKey){toggleSelection(n.id);return;}select(n.id,true);};button.onkeydown=e=>moveWithKeys(e,n.id);button.onpointerdown=e=>beginMove(e,n.id,button);bindPreview(button,n,false);nodesEl.appendChild(button);}
       nodes.forEach(appendMemberNode);
       nodes.filter(n=>n.kind==='event').forEach(n=>{const badge=document.createElement('span');badge.className='an-note-badge';nodesEl.querySelector('[data-node="'+n.id+'"] > span:last-child').appendChild(badge);});
       const inbox=root.querySelector('.an-inbox');
@@ -2442,11 +2442,11 @@ html>body{padding:0}</style>
       root.querySelector('#an-intro-tour').onclick=()=>intro.close('tour');
       intro.addEventListener('keydown',function(e){
         if(e.key!=='Tab')return;
-        const buttons=intro.querySelectorAll('button'),first=buttons[0],last=buttons[buttons.length-1];
+        const buttons=intro.querySelectorAll('button,input[type="checkbox"]'),first=buttons[0],last=buttons[buttons.length-1];
         if(e.shiftKey&&(document.activeElement===first||document.activeElement===root.querySelector('#an-intro-title'))){e.preventDefault();last.focus();}
         else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
       });
-      intro.addEventListener('close',function(){introSeen=true;save();if(intro.returnValue==='tour'){startTour();return;}if(intro.returnValue==='rules'){state.activeNote='';state.noteList=false;showGuide=true;renderDetail();detail.scrollTop=0;detail.querySelector('h2').focus();}else root.querySelector('#an-guide').focus({preventScroll:true});});
+      intro.addEventListener('close',function(){introSeen=true;if(intro.returnValue==='tour'){startTour();return;}if(intro.returnValue==='rules'){state.activeNote='';state.noteList=false;showGuide=true;renderDetail();detail.scrollTop=0;detail.querySelector('h2').focus();}else root.querySelector('#an-guide').focus({preventScroll:true});});
       root.querySelector('#an-fit').onclick=function(){fitNodes(state.focusId?'nearby':false);observeTour('fit');};
       root.querySelector('#an-reset-layout').onclick=function(){
         if(cancelGesture)return;clearFocus();const before=layoutSnapshot();
@@ -2504,12 +2504,45 @@ html>body{padding:0}</style>
       let pendingMapResize=false;
       function applyMapResize(){if(nodeMoveActive){pendingMapResize=true;return;}pendingMapResize=false;closePreview();if(cancelGesture)cancelGesture();const narrow=space.clientWidth<560;if(state.focusId&&narrow!==narrowFocusLayout)focusStock(state.focusId,true);narrowFocusLayout=narrow;renderMap();if(state.focusId)fitNodes('nearby');}
       new ResizeObserver(applyMapResize).observe(space);
+/* circle-flags: https://github.com/HatScripts/circle-flags
+MIT License
+
+Copyright (c) 2026 HatScripts
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 // Runs inside the original prototype closure. No credentials, fetch, or browser storage.
 // Keep interaction/geometry code in the accepted template; replace only fixture data/copy.
 const memberSaveButton=document.createElement('button');
 memberSaveButton.type='button';memberSaveButton.className='an-tool';memberSaveButton.textContent='기록 저장';
 const memberSaveStatus=document.createElement('span');memberSaveStatus.role='status';memberSaveStatus.className='an-save-note';
 adjustTools.append(memberSaveButton,memberSaveStatus);
+const memberRefreshButton=document.createElement('button');
+memberRefreshButton.type='button';memberRefreshButton.className='an-tool';memberRefreshButton.hidden=true;
+memberRefreshButton.title='로컬에 준비된 공개자료 확인 · 새 자료는 눌러 반영';
+memberRefreshButton.textContent='자료 확인';
+let memberRefreshPhase='idle';
+memberRefreshButton.onclick=()=>{
+  if(pendingExplore||cancelGesture||memberRefreshPhase==='checking')return;
+  emitMemberDraft();memberPort.postMessage({type:memberRefreshPhase==='available'?'apply-data':'refresh-data'});
+};
+adjustTools.append(memberRefreshButton);
 const memberHoldingsButton=document.createElement('button');
 memberHoldingsButton.type='button';memberHoldingsButton.className='an-tool';memberHoldingsButton.textContent='보유목록';
 memberHoldingsButton.onclick=()=>memberPort.postMessage({type:'holdings'});
@@ -2518,26 +2551,93 @@ scenarioSelect.closest('label')?.remove();
 scenarioSelect.disabled=true;
 noteSequence=Date.now();
 root.querySelector('.an-inbox h3').textContent='내 종목 자료';
-root.querySelector('.an-demo').textContent='내 포트폴리오 · 회원별 비공개 기록';
-Object.assign(sourceNames,{relationships:'확인된 관계',events:'공통 사건',business:'사업 자료',other:'기타 자료'});
-for(const [value,label] of Object.entries({relationships:'확인된 관계',events:'공통 사건',business:'사업 자료',other:'기타 자료'})){
+let memberCoverageNotice=member.coverageNotice||'내 포트폴리오 · 회원별 비공개 기록';
+let memberVisit=member.visit||null,memberVisitPersisted=true;
+root.querySelector('.an-demo').textContent=memberCoverageNotice;
+Object.assign(sourceNames,{relationships:'확인된 관계',events:'공통 사건',candidates:'관계 후보',business:'사업 자료',other:'기타 자료',fx:'환율',commodity:'원자재',calendar:'발표 일정'});
+for(const [value,label] of Object.entries({relationships:'확인된 관계',events:'공통 사건',candidates:'관계 후보',business:'사업 자료',other:'기타 자료',fx:'환율',commodity:'원자재',calendar:'발표 일정'})){
   const option=document.createElement('option');option.value=value;option.textContent=label;root.querySelector('#an-source-filter').append(option);
+}
+Object.assign(topicNames,{macro:'환율·거시',general:'시장 뉴스'});
+for(const [value,label] of Object.entries({macro:'환율·거시',general:'시장 뉴스'})){
+  const option=document.createElement('option');option.value=value;option.textContent=label;root.querySelector('#an-topic-filter').append(option);
 }
 // The real workspace's counts cover visible held, watched AND exploratory stocks.
 // The prototype's baseScenario-only count excluded newly added search results.
 eventHoldings=n=>[...new Set(edges.filter(e=>inScenario(e)&&e.from===n.id&&nodeById[e.to]?.kind==='stock'&&inScenario(nodeById[e.to])).map(e=>e.to))];
 const prototypeMatchesEvent=matchesEvent;
 matchesEvent=n=>prototypeMatchesEvent(n)&&(state.view!=='shared'||n.recordKind==='event');
-nodes.filter(n=>n.kind==='stock').forEach(n=>{const flag=nodesEl.querySelector('[data-node="'+n.id+'"] .an-flag');if(flag)flag.textContent=n.market==='KR'?'🇰🇷':n.market==='US'?'🇺🇸':'';});
+// Existing card dimensions stay unchanged. Flags describe LISTING market, not domicile.
+const memberLogos=new Map();
+// Use the site's existing circle-flags assets. Never substitute emoji flags.
+const memberFlags={"KR":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PG1hc2sgaWQ9ImEiPjxjaXJjbGUgY3g9IjI1NiIgY3k9IjI1NiIgcj0iMjU2IiBmaWxsPSIjZmZmIi8+PC9tYXNrPjxnIG1hc2s9InVybCgjYSkiPjxwYXRoIGZpbGw9IiNlZWUiIGQ9Ik0wIDBoNTEydjUxMkgwWiIvPjxwYXRoIGZpbGw9IiMzMzMiIGQ9Im0zNTAgMzM1IDI0LTI0IDE2IDE2LTI0IDIzem0tMzkgMzkgMjQtMjQgMTUgMTYtMjMgMjR6bTg3IDggMjMtMjQgMTYgMTYtMjQgMjR6bS00MCAzOSAyNC0yMyAxNiAxNS0yNCAyNFptMTYtNjMgMjQtMjMgMTUgMTUtMjMgMjR6bS0zOSA0MCAyMy0yNCAxNiAxNi0yNCAyM3ptNjMtMjIxLTYzLTYzIDE1LTE1IDY0IDYzem0tNjMtMTUtMjQtMjQgMTYtMTYgMjMgMjR6bTM5IDM5LTI0LTI0IDE2LTE1IDI0IDIzem04LTg3LTI0LTIzIDE2LTE2IDI0IDI0Wm0zOSA0MC0yMy0yNCAxNS0xNiAyNCAyNFpNOTEgMzU4bDYzIDYzLTE2IDE2LTYzLTYzem02MyAxNiAyMyAyNC0xNSAxNS0yNC0yM3ptLTQwLTM5IDI0IDIzLTE2IDE2LTIzLTI0em0yNC0yNCA2MyA2My0xNiAxNi02My02M3ptMTYtMjIwLTYzIDYzLTE2LTE2IDYzLTYzem0yMyAyMy02MyA2My0xNS0xNiA2My02M3ptMjQgMjQtNjMgNjMtMTYtMTYgNjMtNjN6Ii8+PHBhdGggZmlsbD0iI2Q4MDAyNyIgZD0iTTMxOSAzMTkgMTkzIDE5M2E4OSA4OSAwIDEgMSAxMjYgMTI2eiIvPjxwYXRoIGZpbGw9IiMwMDUyYjQiIGQ9Ik0zMTkgMzE5YTg5IDg5IDAgMSAxLTEyNi0xMjZ6Ii8+PGNpcmNsZSBjeD0iMjI0LjUiIGN5PSIyMjQuNSIgcj0iNDQuNSIgZmlsbD0iI2Q4MDAyNyIvPjxjaXJjbGUgY3g9IjI4Ny41IiBjeT0iMjg3LjUiIHI9IjQ0LjUiIGZpbGw9IiMwMDUyYjQiLz48L2c+PC9zdmc+Cg==","US":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PG1hc2sgaWQ9ImEiPjxjaXJjbGUgY3g9IjI1NiIgY3k9IjI1NiIgcj0iMjU2IiBmaWxsPSIjZmZmIi8+PC9tYXNrPjxnIG1hc2s9InVybCgjYSkiPjxwYXRoIGZpbGw9IiNlZWUiIGQ9Ik0yNTYgMGgyNTZ2NjRsLTMyIDMyIDMyIDMydjY0bC0zMiAzMiAzMiAzMnY2NGwtMzIgMzIgMzIgMzJ2NjRsLTI1NiAzMkwwIDQ0OHYtNjRsMzItMzItMzItMzJ2LTY0eiIvPjxwYXRoIGZpbGw9IiNkODAwMjciIGQ9Ik0yMjQgNjRoMjg4djY0SDIyNFptMCAxMjhoMjg4djY0SDI1NlpNMCAzMjBoNTEydjY0SDBabTAgMTI4aDUxMnY2NEgwWiIvPjxwYXRoIGZpbGw9IiMwMDUyYjQiIGQ9Ik0wIDBoMjU2djI1NkgwWiIvPjxwYXRoIGZpbGw9IiNlZWUiIGQ9Im0xODcgMjQzIDU3LTQxaC03MGw1NyA0MS0yMi02N3ptLTgxIDAgNTctNDFIOTNsNTcgNDEtMjItNjd6bS04MSAwIDU3LTQxSDEybDU3IDQxLTIyLTY3em0xNjItODEgNTctNDFoLTcwbDU3IDQxLTIyLTY3em0tODEgMCA1Ny00MUg5M2w1NyA0MS0yMi02N3ptLTgxIDAgNTctNDFIMTJsNTcgNDEtMjItNjdabTE2Mi04MiA1Ny00MWgtNzBsNTcgNDEtMjItNjdabS04MSAwIDU3LTQxSDkzbDU3IDQxLTIyLTY3em0tODEgMCA1Ny00MUgxMmw1NyA0MS0yMi02N1oiLz48L2c+PC9zdmc+Cg=="};
+const listingLabel=n=>n.market==='KR'?'한국 상장':n.market==='US'?'미국 상장':'상장시장 미확인';
+function decorateMemberLogo(logo,n){
+  if(!logo)return;
+  const dataURL=memberLogos.get(n.market+':'+n.ticker),flag=document.createElement('span');
+  flag.className='an-flag';flag.title=listingLabel(n);
+  Object.assign(flag.style,{width:'15px',height:'15px',right:'-5px',bottom:'-5px',border:'2px solid var(--an-panel)',borderRadius:'50%',background:'var(--an-panel)',overflow:'hidden',display:'grid',placeItems:'center',fontSize:'8px'});
+  if(memberFlags[n.market]){
+    const icon=document.createElement('img');icon.src=memberFlags[n.market];icon.alt='';icon.draggable=false;
+    Object.assign(icon.style,{width:'100%',height:'100%',display:'block',borderRadius:'50%',pointerEvents:'none'});
+    icon.onerror=()=>flag.replaceChildren(document.createTextNode(n.market));flag.append(icon);
+  }else flag.hidden=true;
+  logo.title=listingLabel(n);logo.replaceChildren();
+  if(dataURL){
+    const img=document.createElement('img');img.src=dataURL;img.alt='';img.draggable=false;
+    Object.assign(img.style,{width:'100%',height:'100%',objectFit:'contain',borderRadius:'inherit',display:'block',pointerEvents:'none'});
+    img.onerror=()=>{img.replaceWith(document.createTextNode(n.logo||n.ticker?.slice(0,2)||''));};logo.append(img);
+  }else logo.append(document.createTextNode(n.logo||n.ticker?.slice(0,2)||''));
+  logo.append(flag);
+}
+function decorateMemberStock(n){
+  const button=[...nodesEl.children].find(el=>el.dataset.node===n.id);
+  if(!button)return;
+  decorateMemberLogo(button.querySelector('.an-logo'),n);
+  button.setAttribute('aria-label',n.name+' · '+listingLabel(n));
+}
+nodes.filter(n=>n.kind==='stock').forEach(decorateMemberStock);
 root.querySelector('#an-empty').textContent='이 필터에 표시할 자료가 없어요. 아직 수집되지 않은 자료가 있을 수 있어요.';
 root.querySelector('.an-intro-notice').textContent='내 보유·관심종목과 수집된 자료를 연결해요. 지도에서 숨겨도 둥지의 보유 기록은 바뀌지 않아요. 메모·배치를 바꾼 뒤 기록 저장을 눌러주세요.';
 root.querySelector('.an-intro-steps li:last-child p').textContent='종목 검색으로 보유·관심종목을 찾아 작업판에서 표시하거나 숨겨보세요. 실제 보유 목록은 변경하지 않아요.';
+// Keep the accepted dialog; only organize its footer and add a device preference.
+const introActions=intro.querySelector('.an-intro-actions'),introHint=intro.querySelector('.an-intro-hint');
+const introPreference=document.createElement('label'),introCheckbox=document.createElement('input');
+introPreference.className='an-intro-preference';introCheckbox.type='checkbox';introCheckbox.id='an-intro-hide';
+introCheckbox.checked=member.introHidden===true;
+introPreference.append(introCheckbox,document.createTextNode('다시 보지 않기'));
+introActions.after(introPreference);
+introActions.insertBefore(root.querySelector('#an-intro-tour'),root.querySelector('#an-intro-start'));
+introHint.textContent='이 브라우저에만 적용돼요. 우상단 ‘사용 가이드’에서 다시 볼 수 있어요.';
+introHint.setAttribute('role','status');
+introCheckbox.onchange=()=>{
+  memberPort.postMessage({type:'intro-preference',hidden:introCheckbox.checked});
+  if(introCheckbox.checked)intro.close();
+};
+const introStyle=document.createElement('style');introStyle.textContent=`
+#an-map-design .an-intro-preference{display:flex;align-items:center;gap:8px;min-height:44px;width:max-content;max-width:100%;margin:12px auto 0;padding:0 8px;border-radius:9px;font-size:13px;font-weight:600;color:var(--an-sub);cursor:pointer;transition:background-color 160ms}
+#an-map-design .an-intro-preference input{appearance:none;display:grid;place-items:center;flex:none;width:16px;height:16px;margin:0;padding:0;border:0;border-radius:4px;box-shadow:none;background:light-dark(#e9edf2,#303945);color:#fff;cursor:pointer}
+#an-map-design .an-intro-preference input::after{content:'';width:8px;height:4px;border:solid currentColor;border-width:0 0 2px 2px;transform:translateY(-1px) rotate(-45deg);opacity:0}
+#an-map-design .an-intro-preference input:checked{background:var(--an-accent)}
+#an-map-design .an-intro-preference input:checked::after{opacity:1}
+#an-map-design .an-intro-preference:has(input:focus-visible){background:light-dark(#e9edf2,#303945)}
+#an-map-design .an-intro-preference input:focus-visible{outline:none}
+#an-map-design .an-intro .an-intro-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+#an-map-design .an-intro .an-intro-actions button{display:flex;align-items:center;justify-content:center;min-width:0;min-height:44px;margin:0!important;padding:10px 8px;font-weight:700;line-height:1.5;transition:background-color 160ms}
+#an-map-design .an-intro .an-intro-actions :is(.an-intro-rules,.an-guide-tour){width:100%;background:light-dark(#f8f9fb,#1d242c);color:var(--an-sub)}
+#an-map-design .an-intro .an-intro-actions .an-intro-start{grid-column:1/-1;margin:0;width:100%}
+#an-map-design .an-intro .an-intro-actions button:focus-visible{outline:none;background:light-dark(#e9edf2,#303945);color:var(--an-text)}
+@media(hover:hover){#an-map-design .an-intro-preference:hover,#an-map-design .an-intro .an-intro-actions :is(.an-intro-rules,.an-guide-tour):hover{background:light-dark(#f1f3f5,#252c35)}}
+@media(prefers-reduced-motion:reduce){#an-map-design .an-intro-preference,#an-map-design .an-intro .an-intro-actions button{transition:none}}
+`;document.head.append(introStyle);
 searchPanel.querySelector('strong').textContent='종목 검색·추가';
 searchPanel.querySelector('p').textContent='국내·미국 종목과 ETF를 검색해요. 추가는 이번 화면의 탐색이며 보유·관심 등록이 아니에요.';
 searchPanel.setAttribute('aria-label','종목 검색·추가');
 searchPanel.querySelector('label').textContent='종목 이름 또는 코드';
 root.querySelector('.an-intro-steps li:last-child p').textContent='종목을 검색해 추가하거나 PC에서 끌어놓으세요. 탐색 종목은 이번 화면에서만 유지되며 보유·관심목록은 바뀌지 않아요.';
 boardDraft.basic.added=nodes.filter(n=>n.explore).map(n=>n.id);
+const memberLocalView=!!member.localView;
+if(memberLocalView)boardDraft.basic.hidden=member.localView.hiddenStockIds.filter(id=>nodeById[id]?.kind==='stock');
 membership=n=>n.explore?'탐색 중':n.held===false?'관심종목':n.watched?'보유·관심':'보유종목';
 // Search uses the parent-only public endpoint. No catalogue, token or network in the frame.
 let memberSearchRows=[],memberSearchRequest=0,memberSearchQuery=null,memberSearchTimer=null,memberSearchMessage='',pendingExplore=null;
@@ -2547,11 +2647,10 @@ function renderMemberSearch(){
   searchResults.replaceChildren();
   for(const n of rows){
     const row=document.createElement('div');row.className='an-search-row';row.dataset.result=n.id;
-    const logo=document.createElement('span');logo.className='an-logo';logo.textContent=n.logo;logo.setAttribute('aria-hidden','true');
-    const flag=document.createElement('span');flag.className='an-flag';flag.textContent=n.market==='KR'?'🇰🇷':'🇺🇸';logo.append(flag);
+    const logo=document.createElement('span');logo.className='an-logo';logo.setAttribute('aria-hidden','true');decorateMemberLogo(logo,n);
     const info=document.createElement('span');info.className='an-result-text';
     const name=document.createElement('strong'),meta=document.createElement('small');name.textContent=n.name;
-    const present=!!nodeById[n.id]&&inScenario(n);meta.textContent=n.ticker+' · '+(n.etf?'ETF · ':'')+(present?'작업판에 있음':'탐색 추가');info.append(name,meta);
+    const present=!!nodeById[n.id]&&inScenario(n);meta.textContent=n.ticker+' · '+listingLabel(n)+' · '+(n.etf?'ETF · ':'')+(present?'작업판에 있음':'탐색 추가');info.append(name,meta);
     const button=document.createElement('button');button.type='button';button.className='an-tool';button.textContent=present?'찾기':'+ 추가';button.disabled=!!pendingExplore;button.setAttribute('aria-label',n.name+(present?' 작업판에서 찾기':' 작업판에 추가'));button.onclick=()=>addBoardNode(n);
     row.append(logo,info,button);row.onpointerdown=e=>{if(!pendingExplore)beginSearchDrag(e,n,row);};searchResults.append(row);
   }
@@ -2568,8 +2667,16 @@ renderSearch=function(){
 };
 searchInput.oninput=renderSearch;
 const prototypeAddBoardNode=addBoardNode;
+function revealMemberStock(n,at){
+  // A click means reveal/focus, not relocate. Keep the current or restored model
+  // position; only an explicit drag/drop supplies a new placement.
+  const wasVisible=inScenario(n);
+  if(!at){const b=boardDraft[state.scenario];b.hidden=b.hidden.filter(id=>id!==n.id);if(n.explore&&!b.added.includes(n.id))b.added.push(n.id);}
+  prototypeAddBoardNode(n,at);
+  if(!at&&!wasVisible){renderSearch();observeTour('add');}
+}
 addBoardNode=function(n,at){
-  if(nodeById[n.id]){prototypeAddBoardNode(n,at);return;}
+  if(nodeById[n.id]){revealMemberStock(n,at);return;}
   if(pendingExplore)return;
   if(holdings.length>=30){sayBoard('한 화면에는 30종목까지 표시할 수 있어요.');return;}
   emitMemberDraft();pendingExplore={ticker:n.ticker,at};renderMemberSearch();
@@ -2584,6 +2691,12 @@ renderStockActions=function(n){
 };
 function updateMemberGraph(model,ticker){
   if(cancelGesture)cancelGesture();closePreview();
+  // News grouping changes the display identity, not the user's saved annotations.
+  const groupedSelection=model.nodes.find(n=>n.legacyIds?.includes(state.selected));
+  if(groupedSelection)state.selected=groupedSelection.id;
+  for(const [id,note] of Object.entries(model.notes||{}))if(state.notes[id])state.notes[id].target=note.target;
+  memberCoverageNotice=model.coverageNotice||'내 포트폴리오 · 회원별 비공개 기록';root.querySelector('.an-demo').textContent=memberCoverageNotice;
+  memberVisit=model.visit||null;
   const ids=new Set(model.nodes.map(n=>n.id)),edgeIds=new Set(model.edges.map(e=>e.id));
   for(const n of nodes)if(!ids.has(n.id)){[...nodesEl.children].find(el=>el.dataset.node===n.id)?.remove();selectedItems.delete(n.id);}
   for(const [id,pair] of edgeEls)if(!edgeIds.has(id)){pair.group.remove();edgeEls.delete(id);}
@@ -2595,7 +2708,7 @@ function updateMemberGraph(model,ticker){
   for(const n of nodes){
     changeStatus[n.id]=n.changeStatus||'기존';const button=[...nodesEl.children].find(el=>el.dataset.node===n.id);
     button.querySelector('strong').textContent=n.name;button.querySelector('small').textContent=n.code;
-    const flag=button.querySelector('.an-flag');if(flag)flag.textContent=n.market==='KR'?'🇰🇷':n.market==='US'?'🇺🇸':'';
+    if(n.kind==='stock')decorateMemberStock(n);
     if(n.kind==='event'&&!button.querySelector('.an-note-badge')){const badge=document.createElement('span');badge.className='an-note-badge';button.querySelector('span:last-child').append(badge);}
   }
   inbox.querySelectorAll('[data-select]').forEach(el=>el.remove());
@@ -2603,7 +2716,7 @@ function updateMemberGraph(model,ticker){
   if(state.selected&&!ids.has(state.selected)&&!edgeIds.has(state.selected))state.selected='';
   const added=nodes.find(n=>n.kind==='stock'&&n.ticker===ticker),at=pendingExplore?.at;
   pendingExplore=null;
-  if(added){prototypeAddBoardNode(added,at);sayBoard(added.name+'를 탐색에 추가했어요. 이번 화면에서만 유지되며 보유·관심목록은 그대로예요.');}
+  if(added){revealMemberStock(added,at);sayBoard(added.name+'를 탐색에 추가했어요. 이번 화면에서만 유지되며 보유·관심목록은 그대로예요.');}
   else {renderMap();renderDetail();}
   emitMemberDraft();renderMemberSearch();
 }
@@ -2615,28 +2728,57 @@ showPreview=function(anchor,item,isEdge,at){
   prototypePreview(anchor,item,isEdge,at);
   if(preview.hidden)return;
   const caption=preview.querySelector('small'),source=preview.querySelector('small:last-child');
-  caption.textContent=isEdge?'이 종목에 '+(item.impact||'미확인'):'자료 확인';
+  caption.textContent=isEdge?'이 종목에 '+(item.impact||'미확인'):item.proofLabel||'자료 확인';
   source.textContent=(item.asOf||'기준일 미확인')+' · '+(item.source||'내 포트폴리오');
 };
-let memberWritable=!!member.writable,memberReset=false,lastDraft='';
-function memberDraft(){return {positions:nodes.map(n=>({id:n.id,x:n.x,y:n.y})),notes:Object.values(state.notes),marks:state.marks};}
-function emitMemberDraft(){
-  if(!memberWritable)return;
+let memberWritable=!!member.writable,memberReset=false,lastDraft='',memberStockList=false;
+let memberOriginGeneration=Number.isSafeInteger(member.originGeneration)&&member.originGeneration>0?member.originGeneration:null,memberApplyingGraph=false;
+const memberOriginStamp=()=>memberOriginGeneration===null?{}:{originGeneration:memberOriginGeneration};
+function memberDraft(){return {positions:nodes.map(n=>({id:n.id,x:n.x,y:n.y})),notes:Object.values(state.notes),marks:state.marks,
+  ...(memberLocalView?{hiddenStockIds:boardDraft[state.scenario].hidden.filter(id=>nodeById[id]?.kind==='stock')}: {})};}
+function emitMemberDraft(force=false){
+  if(!memberWritable||memberApplyingGraph)return;
   const draft=memberDraft(),encoded=JSON.stringify(draft);
-  if(encoded===lastDraft)return;
-  lastDraft=encoded;memberPort.postMessage({type:'edit',draft});
+  if(!force&&encoded===lastDraft)return;
+  lastDraft=encoded;memberPort.postMessage({type:'edit',draft,...memberOriginStamp()});
 }
 save=emitMemberDraft;
-memberSaveButton.onclick=()=>{emitMemberDraft();memberPort.postMessage({type:'save'});};
+memberSaveButton.onclick=()=>{if(memberApplyingGraph)return;emitMemberDraft(true);memberPort.postMessage({type:'save',...memberOriginStamp()});};
 memberPort.onmessage=event=>{
   if(event.data?.type==='reset'){memberReset=true;memberWritable=false;clearTimeout(memberSearchTimer);root.replaceChildren();memberPort.close();return;}
   if(memberReset)return;
+  if(event.data?.type==='visit-status'){
+    memberVisitPersisted=event.data.persisted===true;renderMap();return;
+  }
+  if(event.data?.type==='intro-preference'){
+    introCheckbox.checked=event.data.hidden===true;
+    introHint.textContent=event.data.persisted?'이 브라우저에만 적용돼요. 우상단 ‘사용 가이드’에서 다시 볼 수 있어요.':'브라우저가 설정 저장을 막고 있어요. 다음 방문에는 가이드가 다시 표시될 수 있어요.';
+    return;
+  }
+  if(event.data?.type==='logo-update'){
+    const {identity,dataURL}=event.data;
+    if(typeof identity!=='string'||typeof dataURL!=='string'||dataURL.length>175000||!/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(dataURL))return;
+    memberLogos.set(identity,dataURL);
+    nodes.filter(n=>n.kind==='stock'&&n.market+':'+n.ticker===identity).forEach(decorateMemberStock);
+    // Do not rebuild search rows during a drag or keyboard focus.
+    for(const row of searchResults.children){const n=[...nodes,...memberSearchRows].find(n=>n.id===row.dataset.result);if(n&&n.market+':'+n.ticker===identity)decorateMemberLogo(row.querySelector('.an-logo'),n);}
+    return;
+  }
+  if(event.data?.type==='stock-list'){emitMemberDraft();closePreview();memberStockList=true;renderDetail();return;}
   if(event.data?.type==='search-results'){
     if(event.data.request!==memberSearchRequest)return;
     memberSearchRows=(event.data.stocks||[]).map(s=>({...s,id:'search:'+s.ticker,kind:'stock',explore:true,logo:s.ticker.slice(0,2)}));
     memberSearchMessage=event.data.error||(event.data.unsupportedCount?'지원하지 않는 검색 항목 '+event.data.unsupportedCount+'개는 제외했어요.':'');renderMemberSearch();return;
   }
-  if(event.data?.type==='graph-update'){updateMemberGraph(event.data.model,event.data.ticker);return;}
+  if(event.data?.type==='graph-update'){
+    if(memberOriginGeneration===null){updateMemberGraph(event.data.model,event.data.ticker);return;}
+    const next=event.data.model?.originGeneration;
+    if(!Number.isSafeInteger(next)||next<=memberOriginGeneration)return;
+    memberApplyingGraph=true;
+    try{updateMemberGraph(event.data.model,event.data.ticker);memberOriginGeneration=next;}
+    finally{memberApplyingGraph=false;}
+    memberPort.postMessage({type:'graph-applied',...memberOriginStamp()});emitMemberDraft(true);return;
+  }
   if(event.data?.type==='explore-result'){pendingExplore=null;if(event.data.error)sayBoard(event.data.error);renderMemberSearch();return;}
   if(event.data?.type==='focus-stock'){
     const n=nodeById[event.data.id],button=n&&[...nodesEl.children].find(el=>el.dataset.node===n.id);
@@ -2649,6 +2791,12 @@ memberPort.onmessage=event=>{
   memberWritable=!!event.data.writable;
   memberSaveButton.disabled=!memberWritable||!!event.data.saving;
   memberSaveStatus.textContent=event.data.message||'';
+  const refresh=event.data.dataRefresh;
+  memberRefreshButton.hidden=!refresh;
+  memberRefreshPhase=refresh?.phase||'idle';
+  memberRefreshButton.disabled=memberRefreshPhase==='checking'||(memberRefreshPhase==='available'&&!memberWritable);
+  memberRefreshButton.textContent=memberRefreshPhase==='checking'?'확인 중…':memberRefreshPhase==='available'?'새 자료 반영':memberRefreshPhase==='error'?'자료 확인 재시도':'자료 확인';
+  memberRefreshButton.title=memberRefreshPhase==='error'?'자료 확인 실패 · 기존 지도 유지':memberRefreshPhase==='available'?'새 자료를 반영해도 메모와 배치는 유지해요':refresh?.checked?'로컬 공개자료 확인 완료 · 최신 원문 수집을 뜻하지 않아요':'로컬에 준비된 공개자료 확인 · 새 자료는 눌러 반영';
 };
 const prototypeRenderMap=renderMap;
 renderMap=function(){
@@ -2659,7 +2807,14 @@ renderMap=function(){
   nodes.filter(n=>n.kind==='event').forEach(n=>{const badge=nodesEl.querySelector('[data-node="'+n.id+'"] .an-note-badge');if(badge)badge.textContent=connectionText(n);});
   root.querySelector('#an-counts').textContent='종목 표시 '+holdings.filter(shown).length+'/'+holdings.length+' · 자료 '+nodes.filter(matchesEvent).length;
   const note=root.querySelector('.an-aside-note'),emptyNotice=root.querySelector('#an-empty');
+  if(memberVisit){
+    const firstVisit=!memberVisit.previousAt;
+    emptyNotice.textContent=state.view==='changed'?(memberVisit.error|| (firstVisit?'이전 방문 기록이 없어요. 이번에 표시한 자료를 기준으로 다음 방문부터 달라진 내용을 보여줘요.':'지난 방문 이후 새로 연결되거나 내용이 바뀐 자료가 없어요. 수집 누락이나 사건 종료를 뜻하지 않아요.')):'이 필터에 표시할 자료가 없어요. 아직 수집되지 않은 자료가 있을 수 있어요.';
+    if(state.view==='changed')filterStatus.textContent=[state.filter==='all'?'':sourceNames[state.filter],state.topic==='all'?'':topicNames[state.topic],firstVisit?'이전 방문 기준 없음':'지난 방문 이후 달라진 자료'].filter(Boolean).join(' / ');
+  }
   note.textContent='보유 '+holdings.filter(n=>n.held!==false).length+'종목 · 관심만 '+holdings.filter(n=>n.held===false&&!n.explore).length+'종목 · 탐색 '+holdings.filter(n=>n.explore).length+'종목 · 수집 자료 '+nodes.filter(n=>n.kind==='event').length+'건';
+  if(memberVisit?.error)note.textContent+=' · '+memberVisit.error;
+  else if(!memberVisitPersisted)note.textContent+=' · 이번 방문 기준을 저장하지 못했어요. 이전 기준은 유지했어요.';
   // An empty evidence layer is not an empty portfolio. Never cover its stock controls.
   if(!emptyNotice.hidden&&holdings.some(shown)){
     emptyNotice.hidden=true;note.textContent+=' · '+emptyNotice.textContent;
@@ -2676,36 +2831,124 @@ renderNotePanel=function(){
   if(input){const previous=input.oninput;input.oninput=event=>{previous.call(input,event);detail.querySelector('#an-note-save').textContent='변경 후 기록 저장을 눌러주세요.';emitMemberDraft();};}
 };
 const prototypeDetail=renderDetail;
+const memberDetailSections=[['finance','재무'],['valuation','가치 지표'],['holders','주주·자본'],['risks','확인할 위험']];
+function appendMemberText(parent,tag,content,className){
+  const el=document.createElement(tag);el.textContent=content==null?'':String(content);if(className)el.className=className;parent.append(el);return el;
+}
+function appendMemberSource(parent,source){
+  const row=document.createElement('div');row.className='an-evidence';
+  appendMemberText(row,'p',[source.title,source.source||'출처 미제공',source.asOf||'기준일 미제공'].filter(Boolean).join(' · '));
+  if(typeof source.url==='string'&&!/[\u0000-\u001f\u007f]/.test(source.url)){
+    try{const decoded=decodeURIComponent(source.url),url=new URL(source.url);if(!/[\u0000-\u001f\u007f]/.test(decoded)&&url.protocol==='https:'&&!url.username&&!url.password){const button=appendMemberText(row,'button','원문 열기','an-source');button.type='button';button.onclick=()=>memberPort.postMessage({type:'source',url:url.href});}}
+    catch{}
+  }
+  parent.append(row);
+}
+function appendMemberQuote(parent,quote){
+  const panel=document.createElement('details');panel.className='an-evidence';
+  const summary=document.createElement('summary');
+  const available=quote?.state==='available'&&typeof quote.price==='number'&&Number.isFinite(quote.price)&&quote.price>0&&typeof quote.priceDate==='string'&&quote.priceDate;
+  if(!available){
+    const reason=quote?.state==='unavailable'&&quote.reason?' · '+quote.reason:quote?.state==='available'?' · 확인된 종가 필드가 부족합니다.':'';
+    summary.textContent='종가 정보 미제공'+reason;panel.append(summary);parent.append(panel);return;
+  }
+  const currency=typeof quote.currency==='string'&&quote.currency?quote.currency:'단위 미제공';
+  const change=typeof quote.changePct==='number'&&Number.isFinite(quote.changePct)?(quote.changePct>0?'+':'')+quote.changePct.toFixed(2)+'%':quote.changePct===null?'등락률 미제공':'등락률 확인 불가';
+  summary.textContent='종가 '+String(quote.price)+' '+currency+' · '+quote.priceDate+' · '+change;panel.append(summary);
+  const body=document.createElement('div');body.className='an-stock-actions';
+  appendMemberText(body,'p',[quote.source||'출처 미제공',quote.basis||'가격 기준 미제공'].join(' · '),'an-save-note');
+  const ohlc=quote.ohlc;
+  if(ohlc&&ohlc.date===quote.priceDate&&['open','high','low','close'].every(key=>typeof ohlc[key]==='number'&&Number.isFinite(ohlc[key])&&ohlc[key]>0)&&ohlc.close===quote.price&&ohlc.high>=Math.max(ohlc.open,ohlc.low,ohlc.close)&&ohlc.low<=Math.min(ohlc.open,ohlc.high,ohlc.close)){
+    for(const [key,label] of [['open','시가'],['high','최고가'],['low','최저가'],['close','종가']])appendMemberText(body,'p',label+' · '+ohlc[key].toLocaleString('ko-KR')+' '+currency,'an-save-note');
+  }else appendMemberText(body,'p','시가·최고가·최저가 자료 미제공','an-save-note');
+  if(quote.freshness==='older')appendMemberText(body,'p','이전 기준일 자료'+(quote.expectedDate?' · 확인된 마지막 거래일 '+quote.expectedDate:''));
+  else if(quote.freshness==='unknown')appendMemberText(body,'p','최신 거래일 여부 미확인');
+  panel.append(body);parent.append(panel);
+}
+function appendMemberSection(parent,section,id,fallbackTitle){
+  const panel=document.createElement('details');panel.className='an-evidence';
+  const summary=document.createElement('summary'),items=Array.isArray(section?.items)?section.items:[];
+  summary.textContent=(section?.title||fallbackTitle)+' · '+items.length+'개 항목';panel.append(summary);
+  const body=document.createElement('div');body.className='an-stock-actions';
+  if(!section)appendMemberText(body,'p','자료 미제공 · 수집 여부를 확인할 수 없습니다.','an-save-note');
+  else if(section.state==='error')appendMemberText(body,'p','자료를 온전히 불러오지 못했습니다.'+(section.message?'\n'+section.message:''),'an-save-note');
+  else if(section.state==='unsupported')appendMemberText(body,'p','현재 제공 범위를 확인할 수 없습니다.'+(section.message?'\n'+section.message:''),'an-save-note');
+  else if(section.message)appendMemberText(body,'p',section.message,'an-save-note');
+  else if(!items.length)appendMemberText(body,'p','제공된 항목이 비어 있습니다. 수집 실패나 해당 사실이 없다는 뜻은 아닙니다.','an-save-note');
+  for(const item of items){
+    const card=document.createElement('div');card.className='an-evidence';
+    appendMemberText(card,'strong',item.title||'제목 미제공');
+    if(id==='risks'&&item.kind==='question')appendMemberText(card,'small','확인 질문','an-save-note');
+    if(item.value!==undefined){const value=appendMemberText(card,'p',item.value);if(item.unit!==undefined)appendMemberText(value,'small',' · '+item.unit,'an-save-note');}
+    if(item.explanation)appendMemberText(card,'p',item.explanation);
+    for(const row of Array.isArray(item.rows)?item.rows:[])appendMemberText(card,'p',String(row.label||'')+' · '+String(row.value??''),'an-save-note');
+    for(const point of Array.isArray(item.chart)?item.chart:[])appendMemberText(card,'p',String(point.label||'')+' · '+String(point.value??'')+' · '+(item.unit===undefined?'단위 미제공':String(item.unit)),'an-save-note');
+    appendMemberSource(card,{source:item.source,asOf:item.asOf,url:item.url});
+    for(const source of Array.isArray(item.sources)?item.sources:[])appendMemberSource(card,source);
+    body.append(card);
+  }
+  panel.append(body);parent.append(panel);
+}
+const memberSelect=select;
+select=function(...args){memberStockList=false;return memberSelect(...args);};
 renderDetail=function(){
   if(memberReset)return;
+  if(memberStockList){
+    detail.replaceChildren();root.dataset.detail='open';detail.dataset.notes='false';
+    const head=appendMemberText(detail,'div','','an-detail-head');head.innerHTML=closeButton();
+    const back=()=>{memberStockList=false;renderDetail();};head.querySelector('button').onclick=back;
+    appendMemberText(detail,'span','이번 작업판 · '+holdings.length+'종목','an-kicker');
+    appendMemberText(detail,'h2','작업판 종목');
+    appendMemberText(detail,'p','목록에서 종목을 선택하면 지도와 연결 자료로 돌아가요. 실제 보유·관심목록은 바뀌지 않아요.','an-save-note');
+    for(const n of holdings){
+      const row=document.createElement('div');row.className='an-evidence';
+      const button=appendMemberText(row,'button',n.name,'an-connection');button.type='button';
+      const visible=shown(n),hidden=boardDraft[state.scenario].hidden.includes(n.id);
+      button.disabled=!visible;button.setAttribute('aria-label',n.name+' 지도에서 보기');
+      button.onclick=()=>{memberStockList=false;if(state.selected===n.id&&!showGuide&&!state.activeNote&&!state.noteList)renderDetail();else select(n.id,true);};
+      appendMemberText(row,'p',[n.ticker,n.market,membership(n),hidden?'작업판에서 숨김':!visible?'현재 필터에서 숨김':'표시 중'].filter(Boolean).join(' · '),'an-save-note');
+      const count=new Set(edges.filter(e=>e.from===n.id||e.to===n.id).map(e=>e.from===n.id?e.to:e.from)).size;
+      appendMemberText(row,'small','연결된 항목 '+count+'개','an-save-note');detail.append(row);
+    }
+    const button=appendMemberText(detail,'button','지도로 돌아가기','an-tool');button.type='button';button.onclick=back;
+    return;
+  }
   if(showGuide||state.activeNote||state.noteList){prototypeDetail();return;}
   const node=nodeById[state.selected],edge=edges.find(e=>e.id===state.selected),item=edge||node;
   detail.replaceChildren();root.dataset.detail=item?'open':'closed';detail.dataset.notes='false';
   function text(tag,content,className){const el=document.createElement(tag);el.textContent=content||'';if(className)el.className=className;detail.append(el);return el;}
   if(!item){text('span','포트폴리오 한눈에','an-kicker');text('h2','어디가 연결됐을까?');text('p','종목이나 자료를 선택하면 연결 이유와 출처를 볼 수 있어요.');const add=text('button','+ 자유 메모','an-note-open');add.type='button';add.onclick=()=>createNote('');return;}
   const head=text('div','','an-detail-head');head.innerHTML=closeButton();head.querySelector('button').onclick=()=>select('',true);
-  text('span',edge?relationType(edge):node.kind==='stock'?membership(node):node.recordKind==='event'?'검토 완료 공통 사건':node.recordKind==='relationship'?'검토 완료 관계':'수집 자료','an-kicker');
+  text('span',edge?relationType(edge):node.kind==='stock'?membership(node):node.proofLabel|| (node.recordKind==='event'?'검토 완료 공통 사건':node.recordKind==='relationship'?'검토 완료 관계':'수집 자료'),'an-kicker');
   text('h2',edge?nodeById[edge.from].name+' ↔ '+nodeById[edge.to].name:node.name);
+  const marketNode=edge?nodeById[edge.from]:node;
+  if(marketNode?.recordKind==='market-context'&&marketNode.layer!=='news')text('p',marketNode.code);
   text('p',item.reason||'연결된 자료에서 근거를 확인하세요.');
   if(node?.kind==='stock'&&!edges.some(e=>e.from===node.id||e.to===node.id))text('p','이 화면에 연결할 근거 자료를 아직 확보하지 못했어요. 실제 관계가 없다는 뜻은 아니에요.');
   if(edge)text('p','이 종목에 '+(edge.impact||'미확인')+' · '+(edge.impactReason||'주가나 실적 영향을 판단할 근거는 확인되지 않았어요.'));
   text('h4','근거');
-  text('p',(item.asOf||'기준일 미확인')+' · '+(item.source||'내 포트폴리오'),'an-save-note');
-  for(const source of item.evidence||[]){
-    const row=text('div','','an-evidence');const p=document.createElement('p');p.textContent=source.explanation||source.title||'';row.append(p);
+  const detailSources=(item.evidence||[]).flatMap(source=>[source,...(Array.isArray(source.sources)?source.sources.filter(s=>s.url!==source.url):[])]);
+  text('p',(item.asOf||(detailSources.some(source=>source.asOf)?'자료별 기준일 아래 표시':'기준일 미확인'))+' · '+(item.source||'내 포트폴리오'),'an-save-note');
+  for(const source of detailSources){
+    const row=text('div','','an-evidence');const p=document.createElement('p');p.textContent=source.explanation||source.title||'';if(p.textContent.includes('\n'))p.style.whiteSpace='pre-line';row.append(p);
+    if(source.asOf){const stamp=document.createElement('p');stamp.className='an-save-note';stamp.textContent='자료 기준일 '+source.asOf;row.append(stamp);}
     try{const url=new URL(source.url);if(url.protocol!=='https:'||url.username||url.password)continue;const b=document.createElement('button');b.className='an-source';b.type='button';b.textContent=source.source||'원문 열기';b.onclick=()=>memberPort.postMessage({type:'source',url:url.href});row.append(b);}catch{}
   }
   const doc=node?.kind==='event'?node:edge?nodeById[edge.from]:null;
   if(doc){
     const marked=state.marks[doc.id]||(state.marks[doc.id]={});
     for(const [key,label] of [['read','읽음'],['important','중요'],['later','나중에 보기'],['irrelevant','무관']]){
-      const b=text('button',label,'an-tool');b.type='button';b.setAttribute('aria-pressed',String(!!marked[key]));b.onclick=()=>{marked[key]=!marked[key];if(key==='read'){marked.readTouched=true;changeStatus[doc.id]=marked.read?'확인':'미확인';}if(key==='later'&&marked[key])marked.irrelevant=false;if(key==='irrelevant'&&marked[key])marked.later=false;emitMemberDraft();renderMap();renderDetail();};
+      const b=text('button',label,'an-tool');b.type='button';b.setAttribute('aria-pressed',String(!!marked[key]));b.onclick=()=>{marked[key]=!marked[key];if(key==='read'){marked.readTouched=true;if(!memberVisit)changeStatus[doc.id]=marked.read?'확인':'미확인';}if(key==='later'&&marked[key])marked.irrelevant=false;if(key==='irrelevant'&&marked[key])marked.later=false;emitMemberDraft();renderMap();renderDetail();};
     }
   }
   const related=edge?[edge.from,edge.to]:[...new Set(edges.filter(e=>e.from===node.id||e.to===node.id).flatMap(e=>[e.from,e.to]).filter(id=>id!==node.id))];
   if(related.length)text('h4','연결된 항목');
   for(const id of related){const b=text('button',nodeById[id].name,'an-connection');b.type='button';b.onclick=()=>select(id,true);}
-  if(node?.kind==='stock')renderStockActions(node);
+  if(node?.kind==='stock'){
+    text('h4','종목 자세히');appendMemberQuote(detail,node.closeQuote);
+    for(const [id,title] of memberDetailSections)appendMemberSection(detail,Array.isArray(node.sections)?node.sections.find(section=>section?.id===id):undefined,id,title);
+    renderStockActions(node);
+  }
   const note=text('button','✎ 메모 남기기','an-note-open');note.type='button';note.onclick=()=>createNote(item.id);
 };
 // Preserve existing interactions. Capture edits at their end, never during remote hydration.
@@ -2718,7 +2961,164 @@ lastDraft=JSON.stringify(memberDraft());
 memberSaveButton.disabled=!memberWritable;
 memberSaveStatus.textContent=memberWritable?'회원별 비공개 기록':'저장 기록을 확인 중이에요';
 // Init is consumed by the bootstrap before this handler exists. Acknowledge only now.
-memberPort.postMessage({type:'hydrated'});
+memberPort.postMessage({type:'hydrated',...memberOriginStamp()});
+
+// Display-only grouping. Never add synthetic records to nodes, edges or saved drafts.
+// Categories use supplied record kinds/layers; no inferred events from similar titles.
+const memberGroupLayer=document.createElement('div');memberGroupLayer.id='an-member-groups';space.append(memberGroupLayer);
+const memberGroupLines=document.createElementNS('http://www.w3.org/2000/svg','g');memberGroupLines.setAttribute('aria-hidden','true');linesEl.before(memberGroupLines);
+const memberGroups=new Map(),memberOpenGroups=new Map();
+const memberLayoutBases=new Map(Object.entries(member.layoutBases||{}));
+let memberVisible=new Set(),memberEligible=[],memberReveal='',memberGroupContext='',memberLayoutKey='',memberHoveredGroup='';
+const ungroupedShown=shown,ungroupedRenderMap=renderMap,ungroupedSelect=select;
+function memberGroupKey(n){return n.recordKind==='event'?'events':n.layer==='candidates'?'candidates':n.layer==='relationships'?'relationships':n.layer||'other';}
+const memberGroupNames={filing:'공시',news:'뉴스',business:'사업 자료',candidates:'관계 후보',relationships:'확인된 관계',events:'공통 사건',government:'정부 발표',prices:'가격 자료',other:'기타 자료',fx:'환율',commodity:'원자재',calendar:'발표 일정'};
+function memberScope(){
+  const stocks=holdings.filter(ungroupedShown),stockIds=new Set(stocks.map(n=>n.id));
+  const candidates=nodes.filter(n=>n.kind==='event'&&matchesEvent(n));
+  const scoped=state.focusId?candidates.filter(n=>edges.some(e=>inScenario(e)&&((e.from===n.id&&e.to===state.focusId)||(e.to===n.id&&e.from===state.focusId)))):candidates;
+  return {stocks:state.focusId?stocks.filter(n=>n.id===state.focusId):stocks,records:scoped,stockIds};
+}
+function makeMemberGroup(key){
+  const button=document.createElement('button');button.type='button';button.className='an-node';button.dataset.group=key;
+  const body=document.createElement('span'),title=document.createElement('strong'),count=document.createElement('small'),hint=document.createElement('span');hint.className='an-note-badge';body.append(title,count,hint);button.append(body);
+  // Reuse the accepted card surface and type; only constrain summary width.
+  button.style.maxWidth='280px';button.style.whiteSpace='normal';button.style.cursor='pointer';
+  const more=document.createElement('button');more.type='button';more.className='an-tool';more.dataset.groupMore=key;more.style.position='absolute';
+  const group={key,button,title,count,hint,more,records:[],stockIds:[],x:.5,y:.5,width:280,height:90};
+  button.onpointerenter=button.onfocus=()=>{memberHoveredGroup=key;drawMemberGroups();};
+  button.onpointerleave=button.onblur=()=>{memberHoveredGroup='';drawMemberGroups();};
+  button.onclick=()=>{if(cancelGesture)return;closePreview();memberReveal='';if(memberOpenGroups.has(key))memberOpenGroups.delete(key);else memberOpenGroups.set(key,6);renderMap();};
+  more.onclick=()=>{closePreview();memberOpenGroups.set(key,(memberOpenGroups.get(key)||6)+6);renderMap();};
+  memberGroupLayer.append(button,more);memberGroups.set(key,group);return group;
+}
+function prepareMemberGroups(){
+  if(state.focusId&&!ungroupedShown(nodeById[state.focusId]))clearFocus();
+  const context=[state.focusId,state.filter,state.topic,state.view].join('|');
+  if(context!==memberGroupContext){memberReveal=nodeById[state.selected]?.kind==='event'||edges.some(e=>e.id===state.selected)?state.selected:'';memberGroupContext=context;}
+  const scope=memberScope(),buckets=new Map();memberEligible=scope.records;
+  for(const n of scope.records){const key=memberGroupKey(n);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(n);}
+  memberVisible=new Set(scope.stocks.map(n=>n.id));
+  for(const group of memberGroups.values()){group.button.hidden=true;group.more.hidden=true;group.records=[];}
+  for(const [key,records] of buckets){
+    const group=memberGroups.get(key)||makeMemberGroup(key);group.records=records;group.button.hidden=false;
+    group.stockIds=[...new Set(records.flatMap(n=>eventHoldings(n)).filter(id=>scope.stockIds.has(id)))];
+    const open=memberOpenGroups.has(key),limit=memberOpenGroups.get(key)||0;
+    records.slice(0,limit).forEach(n=>memberVisible.add(n.id));
+    // An explicit source/edge selection can reveal one record without expanding the entire group.
+    const selectedEdge=edges.find(e=>e.id===memberReveal),revealIds=selectedEdge?[selectedEdge.from,selectedEdge.to]:[memberReveal];
+    records.filter(n=>revealIds.includes(n.id)).forEach(n=>memberVisible.add(n.id));
+    group.title.textContent=memberGroupNames[key]||'기타 자료';
+    group.count.textContent=records.length+'건 · 연결 '+group.stockIds.length+'종목';group.count.hidden=false;
+    group.hint.textContent=key==='candidates'?'원문 확인 필요 · '+(open?'접기':'펼치기'):key==='events'?'검토된 사건 · '+(open?'접기':'펼치기'):'자료 묶음 · '+(open?'접기':'펼치기');
+    group.button.setAttribute('aria-expanded',String(open));group.button.setAttribute('aria-label',group.title.textContent+' '+records.length+'건 '+(open?'접기':'펼치기'));
+    group.more.hidden=!open||limit>=records.length;group.more.textContent=Math.min(limit,records.length)+'/'+records.length+'건 · 더 보기';
+  }
+  // Preserve all source IDs and marks; grouping affects only presentation.
+  const visibleNodes=nodes.filter(n=>memberVisible.has(n.id));
+  const key=[context,space.clientWidth<560,...visibleNodes.map(n=>n.id),...buckets.keys()].join('|');
+  if(key!==memberLayoutKey){
+    memberLayoutKey=key;focusOffsets.clear();const narrow=space.clientWidth<560;
+    function place(n,x,y){const origin=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;focusOffsets.set(n.id,{x:.5+x/WORLD_WIDTH-origin.x,y:.5+y/WORLD_HEIGHT-origin.y});}
+    const stocks=scope.stocks,stockStep=110,stockCols=narrow?1:Math.min(4,Math.max(1,Math.ceil(stocks.length/8))),stockRows=Math.ceil(stocks.length/stockCols);
+    const stockWidth=Math.max(130,...stocks.map(n=>nodesEl.querySelector('[data-node="'+n.id+'"]')?.offsetWidth||130))+70;
+    stocks.forEach((n,i)=>place(n,narrow?0:-270-(stockCols-1-i%stockCols)*stockWidth,(Math.floor(i/stockCols)-(stockRows-1)/2)*stockStep));
+    let y=narrow?stockRows*stockStep/2+110:0;
+    const active=[...memberGroups.values()].filter(g=>g.records.length),positions=[];
+    for(const g of active){
+      const children=g.records.filter(n=>memberVisible.has(n.id));
+      const heights=children.map(n=>nodesEl.querySelector('[data-node="'+n.id+'"]')?.offsetHeight||100);
+      const stepY=Math.max(100,...heights)+60;
+      const height=Math.max(150,140+children.length*stepY+(g.more.hidden?0:60));
+      positions.push({g,y,children,stepY});g.width=g.button.offsetWidth||240;g.height=g.button.offsetHeight||90;y+=height;
+    }
+    // Anchor the collapsed stack: expansion reserves space below this group,
+    // without recentering every group or changing the user's camera/coordinates.
+    const shift=narrow?0:active.length*150/2;
+    for(const {g,y:top,children,stepY} of positions){
+      g.x=.5+(narrow?0:100)/WORLD_WIDTH;g.y=.5+(top-shift)/WORLD_HEIGHT;
+      // Expand under the header, not off the right edge of the visible canvas.
+      children.forEach((n,i)=>place(n,narrow?0:100,top-shift+140+i*stepY));
+      g.morePoint={x:g.x,y:g.y+(140+children.length*stepY)/WORLD_HEIGHT};
+    }
+  }
+}
+shown=function(n){return !!n&&ungroupedShown(n)&&(n.kind==='stock'||memberVisible.has(n.id));};
+// Neighborhood is the visible subset, never a promotion of candidates into facts.
+focusNeighborhood=function(id){return new Set([id,...memberEligible.filter(n=>memberVisible.has(n.id)).map(n=>n.id)]);};
+focusStock=function(id){if(state.focusId===id)return;if(!focusCamera)focusCamera={zoom:state.zoom,panX:state.panX,panY:state.panY};state.focusId=id;memberLayoutKey='';};
+const originalClearFocus=clearFocus;
+clearFocus=function(){originalClearFocus();memberLayoutKey='';};
+select=function(id,toggle=false){
+  const n=nodeById[id];if(n?.kind==='stock'&&state.focusId!==id)memberReveal='';
+  else if(n?.kind==='event'||edges.some(e=>e.id===id))memberReveal=id;
+  prepareMemberGroups();ungroupedSelect(id,toggle);
+};
+function drawMemberGroups(){
+  memberGroupLines.replaceChildren();
+  for(const g of memberGroups.values()){
+    if(!g.records.length)continue;
+    const p=point(g),scale=Math.max(.82,Math.min(1.1,state.zoom));g.button.style.left=p.x+'px';g.button.style.top=p.y+'px';g.button.style.transform='translate(-50%,-50%) scale('+scale+')';
+    if(!g.more.hidden){const m=point(g.morePoint);g.more.style.left=m.x+'px';g.more.style.top=m.y+'px';g.more.style.transform='translate(-50%,-50%)';}
+    const showConnections=holdings.filter(ungroupedShown).length<=12||state.focusId||memberHoveredGroup===g.key;
+    for(const id of showConnections?g.stockIds:[]){if(state.focusId&&state.focusId!==id)continue;const n=nodeById[id];if(!n||!ungroupedShown(n))continue;const q=point(n),path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M '+p.x+' '+p.y+' L '+q.x+' '+q.y);path.setAttribute('class','an-edge');path.style.setProperty('--edge-width','1.4px');memberGroupLines.append(path);}
+  }
+  // Don't flood the map with all source link labels at overview zoom.
+  if(!state.selected)labelsEl.replaceChildren();
+  else for(const label of labelsEl.children){const a=label.getBoundingClientRect();if([...memberGroups.values()].some(g=>{if(!g.records.length)return false;const b=g.button.getBoundingClientRect();return a.left<b.right+6&&a.right>b.left-6&&a.top<b.bottom+6&&a.bottom>b.top-6;}))label.hidden=true;}
+  root.querySelector('#an-counts').textContent='종목 '+holdings.filter(ungroupedShown).length+'/'+holdings.length+' · 자료 '+memberEligible.length+'건 · 펼침 '+memberEligible.filter(n=>memberVisible.has(n.id)).length+'건';
+  root.querySelector('.an-foot > span:last-of-type').textContent='묶음에 올려 연결 보기 · 눌러 펼치기 · 종목 선택 시 주변 보기 · 묶음 선은 영향 크기가 아니에요';
+  // Keep the existing source controls, grouped into collapsible native lists.
+  const signature=memberEligible.map(n=>n.id).join('|');
+  if(inbox.dataset.groupSignature!==signature){
+    inbox.dataset.groupSignature=signature;
+    const buttons=new Map([...inbox.querySelectorAll('[data-select]')].map(b=>[b.dataset.select,b]));
+    inbox.querySelectorAll('[data-member-list]').forEach(el=>{el.querySelectorAll('[data-select]').forEach(b=>inbox.append(b));el.remove();});
+    for(const g of memberGroups.values()){if(!g.records.length)continue;const list=document.createElement('details'),summary=document.createElement('summary');list.dataset.memberList=g.key;list.className='an-evidence';summary.textContent=memberGroupNames[g.key]+' '+g.records.length+'건';list.append(summary);for(const n of g.records){const b=buttons.get(n.id);if(b)list.append(b);}inbox.insertBefore(list,inbox.querySelector('.an-aside-note'));}
+  }
+  inbox.querySelectorAll('[data-select]').forEach(b=>{b.hidden=!memberEligible.some(n=>n.id===b.dataset.select);});
+}
+renderMap=function(){if(memberReset)return;prepareMemberGroups();ungroupedRenderMap();drawMemberGroups();};
+// Explicitly approved spacing/fit change; keep accepted card sizing and camera controls.
+fitNodes=function(selectionOnly){
+  closePreview();renderMap();
+  const items=[...nodes.filter(n=>memberVisible.has(n.id)).map(n=>({n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')})),...[...memberGroups.values()].filter(g=>g.records.length).map(g=>({n:g,el:g.button,group:true})),...Object.values(state.notes).filter(n=>!n.target&&noteVisible(n)&&noteEls.get(n.id)).map(n=>({n,el:noteEls.get(n.id),group:true}))];
+  if(!items.length)return;
+  const w=space.clientWidth,h=Math.max(180,space.clientHeight-(innerWidth<=700&&root.dataset.detail==='open'?Math.max(0,space.getBoundingClientRect().bottom-detail.getBoundingClientRect().top):0));
+  let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
+  for(const {n,el,group} of items){const p=group?n:viewPosition(n),x=(p.x-.5)*WORLD_WIDTH,y=(p.y-.5)*WORLD_HEIGHT;left=Math.min(left,x-(el.offsetWidth||240)/2);right=Math.max(right,x+(el.offsetWidth||240)/2);top=Math.min(top,y-(el.offsetHeight||90)/2);bottom=Math.max(bottom,y+(el.offsetHeight||90)/2);}
+  state.zoom=Math.max(.55,Math.min(1.1,(w-64)/(right-left||1),(h-64)/(bottom-top||1)));state.panX=-(left+right)/2*state.zoom;state.panY=-(top+bottom)/2*state.zoom-(space.clientHeight-h)/2;renderMap();saveZoomSoon();
+};
+const groupingUpdate=updateMemberGraph;
+updateMemberGraph=function(model,ticker){
+  if(cancelGesture)cancelGesture();
+  const ids=new Set(model.nodes.map(n=>n.id)),history=[...moveHistory.past,...moveHistory.future];
+  const retained=new Set(history.flatMap(entry=>[...Object.keys(entry.before),...Object.keys(entry.after)]));
+  for(const id of memberLayoutBases.keys())if(!ids.has(id)&&!retained.has(id))memberLayoutBases.delete(id);
+  // The fallback origin depends on graph size. Rebase stored coordinates and
+  // undo entries together so the user's manual delta survives a fresh page,
+  // whose origins are recomputed from the expanded graph. No storage schema change.
+  for(const [id,base] of Object.entries(model.layoutBases||{})){
+    const prior=memberLayoutBases.get(id),node=nodeById[id];
+    if(prior){
+      const dx=base.x-prior.x,dy=base.y-prior.y;
+      if(dx||dy){
+        if(node){node.x+=dx;node.y+=dy;}
+        // Local snapshots are rebased by the parent before hydration, including
+        // records absent from the previous display. Native member input is not.
+        else if(!memberLocalView){const returning=model.nodes.find(n=>n.id===id);if(returning){returning.x+=dx;returning.y+=dy;}}
+        const shift=p=>({x:p.x+dx,y:p.y+dy});
+        if(initialPositions.has(id))initialPositions.set(id,shift(initialPositions.get(id)));
+        for(const entry of history){
+          if(entry.before[id])entry.before[id]=shift(entry.before[id]);
+          if(entry.after[id])entry.after[id]=shift(entry.after[id]);
+        }
+      }
+    }
+    memberLayoutBases.set(id,base);
+  }
+  memberLayoutKey='';inbox.dataset.groupSignature='';groupingUpdate(model,ticker);
+};
 
       renderMap();renderDetail();
       if(!hasSavedCamera){requestAnimationFrame(function(){fitNodes(false);});}
