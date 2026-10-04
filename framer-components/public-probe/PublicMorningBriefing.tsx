@@ -1,6 +1,6 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import PublicStockSearch from "https://framer.com/m/PublicStockSearch-iqt9J1.js"
-import PublicSessionBriefing from "https://framer.com/m/PublicSessionBriefing-i83Vev.js"
+import PublicSessionBriefing from "https://framer.com/m/PublicSessionBriefing-i83Vev.js@hiYv6CVZPcDhQIHckyHx"
 import {
     useCallback,
     useEffect,
