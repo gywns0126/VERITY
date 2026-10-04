@@ -604,7 +604,7 @@ const HOME_OVERVIEW_CSS = `
 .an-home-overview{--ho-ink:var(--an-mbr-ink,#191f28);--ho-sub:var(--an-mbr-sub,#4e5968);--ho-muted:var(--an-mbr-faint,#6b7684);--ho-card:var(--an-mbr-card,#fff);--ho-line:var(--an-mbr-line,#f2f3f5);--ho-accent:var(--an-mbr-vg,#6c5ce7);color:var(--ho-ink);width:100%;min-width:0;font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;container-type:inline-size}
 .an-home-overview{box-sizing:border-box;max-width:100%;overflow-wrap:anywhere;scroll-margin-top:84px}#home-filing-example{scroll-margin-top:84px}.an-home-overview *{box-sizing:border-box}.an-home-overview a{color:inherit;text-decoration:none}.an-home-overview a:focus-visible{outline:2px solid var(--ho-accent);outline-offset:4px;border-radius:5px}
 .an-home-intro-main{min-width:0;margin-bottom:28px}.an-home-intro-main .an-home-hero{padding-bottom:0}
-.an-home-hero{padding:16px 4px 22px}.an-home-hero h1{font-size:clamp(24px,3.4cqi,30px);line-height:1.35;letter-spacing:-1px;margin:0 0 8px;font-weight:750;word-break:keep-all}.an-home-hero p{margin:0;color:var(--ho-sub);font-size:14px;line-height:1.65;word-break:keep-all}
+.an-home-hero{padding:16px 4px 22px}.an-home-hero h2{font-size:16px;line-height:1.5;letter-spacing:-.4px;margin:0 0 8px;font-weight:800;word-break:keep-all}.an-home-hero p{margin:0;color:var(--ho-sub);font-size:14px;line-height:1.65;word-break:keep-all}
 .an-home-search{position:relative;display:block;height:56px;margin-top:20px;border:0;border-radius:14px;background:var(--ho-card);box-shadow:0 3px 15px rgba(20,25,40,.035)}.an-home-search:focus-within{outline:none;box-shadow:0 3px 15px rgba(20,25,40,.035)}.an-home-search input{font-size:16px!important;font-weight:600!important;padding:0!important;background:transparent!important;color:var(--ho-ink)!important;box-shadow:none!important;border:0!important}.an-home-search>div,.an-home-search div:has(>input){border-radius:14px!important;background:transparent!important;box-shadow:none!important}.an-home-search input::placeholder{color:var(--ho-muted);opacity:1}
 .an-home-search:focus-within div:has(>input)>span{border-color:var(--ho-accent)!important}.an-home-search:focus-within div:has(>input)>span>span{background:var(--ho-accent)!important}
 .an-home-search-prompt{display:none;position:absolute;left:35px;right:14px;top:50%;transform:translateY(-50%);height:24px;overflow:hidden;pointer-events:none;color:var(--ho-muted);font-size:16px;font-weight:600;line-height:24px}
@@ -623,7 +623,7 @@ body[data-framer-theme="dark"] .an-home-card,html[data-an-theme="dark"] .an-home
 .an-home-list{list-style:none;padding:0;margin:0;display:grid;gap:12px}.an-home-list li+li{padding-top:12px;border-top:1px solid var(--ho-line)}.an-home-ticker{font-weight:650;min-width:0;overflow-wrap:anywhere}.an-home-source{font-size:11px;color:var(--ho-muted)!important;white-space:nowrap}.an-home-filing{font-size:12px;line-height:1.55;color:var(--ho-sub);margin-top:4px;word-break:keep-all}.an-home-code{font-size:10px;color:var(--ho-muted);margin-left:4px}
 .an-home-company-row{align-items:center}.an-home-company-link{display:flex;align-items:center;gap:10px;flex:1;min-width:0}.an-home-company-logo{position:relative;display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:11px;overflow:hidden;background:var(--ho-line);color:var(--ho-sub);font-size:15px;font-weight:700}.an-home-company-logo img{position:absolute;inset:0;width:36px;height:36px;object-fit:contain;border-radius:11px;background:var(--ho-card)}.an-home-company-mark{position:relative;display:inline-flex;flex:0 0 36px;width:36px;height:36px}.an-home-company-flag{position:absolute;right:-3px;bottom:-3px;z-index:1;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border:1.5px solid var(--ho-card);border-radius:50%;background:var(--ho-card);color:var(--ho-sub);font-size:7px;font-weight:800;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,.15);overflow:hidden}.an-home-company-flag img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}.an-home-company-copy{display:grid;gap:4px;min-width:0}.an-home-company-name{line-height:1.45}.an-home-company-filing{display:block;margin:0;font-weight:500}
 .an-home-amount{font-size:12px;font-weight:650}.an-home-bar{height:10px;background:var(--ho-line);border-radius:4px;margin-top:8px;overflow:hidden}.an-home-bar i{display:block;height:100%;background:var(--ho-accent);border-radius:4px}.an-home-foot{margin-top:auto;padding-top:14px;font-size:10px;line-height:1.6;color:var(--ho-muted);overflow-wrap:anywhere}.an-home-foot a{text-decoration:underline;text-underline-offset:2px}.an-home-empty{padding:8px 0 16px;font-size:12px;color:var(--ho-muted);line-height:1.6}
-.an-home-overview{font-weight:600}.an-home-hero h1,.an-home-heading h2,.an-home-card h3{font-weight:800}.an-home-kicker,.an-home-ticker,.an-home-amount{font-weight:700}.an-home-company-filing{font-weight:600}.an-home-event-date{display:block;margin-top:7px;color:var(--ho-muted);font-size:10px;font-weight:600}.an-home-card .an-home-event-check{margin:4px 0 0;font-size:11px;font-weight:600;line-height:1.6}
+.an-home-overview{font-weight:600}.an-home-hero h2,.an-home-heading h2,.an-home-card h3{font-weight:800}.an-home-kicker,.an-home-ticker,.an-home-amount{font-weight:700}.an-home-company-filing{font-weight:600}.an-home-event-date{display:block;margin-top:7px;color:var(--ho-muted);font-size:10px;font-weight:600}.an-home-card .an-home-event-check{margin:4px 0 0;font-size:11px;font-weight:600;line-height:1.6}
 @container (max-width:720px){.an-home-grid{grid-template-columns:1fr}.an-home-card{padding:16px}.an-home-hero{padding-top:10px}.an-home-heading span{font-size:10px}.an-home-search{margin-top:16px}.an-home-list{gap:10px}}
 `
 
@@ -679,7 +679,7 @@ function PublicHomeSearch({ brief = null, importantFeed, stockPath = "/stock", d
             <style>{HOME_OVERVIEW_CSS}</style>
             <div className="an-home-intro-main">
                 <div className="an-home-hero">
-                    <h1>기업의 변화를 근거와 함께 살펴보세요</h1>
+                    <h2>궁금한 기업을 찾아보세요</h2>
                     <p>실적·공시·수급의 변화를 출처와 함께 확인하세요.</p>
                     <label
                         className="an-home-search"
@@ -1788,9 +1788,11 @@ export default function PublicMorningBriefing(props: Props) {
     return (
         <div ref={rootRef} style={shell}>
             <style>{AN_PALETTE}</style>
-            {/* Timeline first; preserve search identity and the existing search → holdings → public changes order. */}
-            <PublicSessionBriefing dark={dark} holdingsTickers={sessionPersonalizationState === "holdings" ? sessionHoldingsTickers : undefined} personalizationState={sessionPersonalizationState} />
-            <PublicHomeSearch brief={brief} importantFeed={importantFeed} stockPath={stockPath || "/stock"} dark={dark} />
+            {/* One home headline; timeline and search share the opening flow. Preserve existing search and holdings behavior. */}
+            <div className="an-home-opening" style={{ display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
+                <PublicSessionBriefing dark={dark} holdingsTickers={sessionPersonalizationState === "holdings" ? sessionHoldingsTickers : undefined} personalizationState={sessionPersonalizationState} />
+                <PublicHomeSearch brief={brief} importantFeed={importantFeed} stockPath={stockPath || "/stock"} dark={dark} />
+            </div>
 
             {/* ── ① 내 자산 카드 ── */}
             {!authReady ? (
