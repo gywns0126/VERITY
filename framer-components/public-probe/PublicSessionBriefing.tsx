@@ -4,7 +4,7 @@
 // Expanded detail follows its reading card in DOM order; CSS places it below the row on desktop.
 import * as React from "react"
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
-import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import { addPropertyControls, ControlType } from "framer"
 
 type Phase = "pre" | "open" | "post" | "closed"
 type TradingStatus = "open" | "closed" | "unknown"
@@ -115,7 +115,6 @@ export function serverEpoch(date: string | null, age: string | null, roundTrip: 
 function useInternetTime() {
     const [epoch, setEpoch] = useState<number | null>(null), anchor = useRef<{ epoch: number; monotonic: number } | null>(null)
     useEffect(() => {
-        if (RenderTarget.current() === RenderTarget.canvas) return
         let disposed = false, busy = false
         const controller = new AbortController()
         const tick = () => { const a = anchor.current; setEpoch(a && performance.now() - a.monotonic < 15 * 60000 ? a.epoch + performance.now() - a.monotonic : null) }
@@ -182,7 +181,6 @@ export default function PublicSessionBriefing({ dark = false, archiveBaseUrl = B
     const day = storedDay?.date === chosenDate ? storedDay : null
     useEffect(() => { const refresh = () => { if (!document.hidden) setRevision(n => n + 1) }; const id = setInterval(refresh, 300000); window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh); return () => { clearInterval(id); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh) } }, [])
     useEffect(() => {
-        if (RenderTarget.current() === RenderTarget.canvas) { setIndexPending(false); return }
         let alive = true
         const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10000)
         fetch(`${base}/index.json`, { signal: controller.signal, credentials: "omit", cache: "no-cache" }).then(r => { if (!r.ok) throw Error("index"); return r.json() }).then(normalizeIndex).then(value => { if (alive) { setIndex(value); setIndexFailed(false) } }).catch(() => { if (alive) setIndexFailed(true) }).finally(() => { clearTimeout(timeout); if (alive) setIndexPending(false) })
