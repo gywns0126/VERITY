@@ -1,5 +1,6 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import PublicStockSearch from "https://framer.com/m/PublicStockSearch-iqt9J1.js"
+import PublicSessionBriefing from "https://framer.com/m/PublicSessionBriefing-i83Vev.js"
 import {
     useCallback,
     useEffect,
@@ -1708,6 +1709,18 @@ export default function PublicMorningBriefing(props: Props) {
     }, [rows, closes, isDemo, fxRate])
 
     const noLogin = authReady && !onCanvas && isDemo
+    // Pass only tickers in memory; loading/error and canvas samples are never empty holdings.
+    const sessionHoldingsTickers = useMemo(() => {
+        if (!authReady || loading || holdingsFailed || isDemo || onCanvas) return []
+        return Array.from(new Set(rows.map(row => typeof row?.ticker === "string" ? row.ticker.trim().toUpperCase() : "")
+            .filter(ticker => /^[A-Z0-9][A-Z0-9.-]{0,14}$/.test(ticker))))
+    }, [authReady, loading, holdingsFailed, isDemo, onCanvas, rows])
+    const sessionPersonalizationState = !authReady ? "loading"
+        : noLogin || onCanvas ? "market"
+        : loading ? "loading"
+        : holdingsFailed ? "error"
+        : sessionHoldingsTickers.length > 0 ? "holdings"
+        : rows.length > 0 ? "error" : "market"
     const upC = (v: number) => (v >= 0 ? C.up : C.down)
     const arrow = (v: number) => (v > 0 ? "▲" : v < 0 ? "▼" : "·")
     const narrow = w > 0 && w < 420
@@ -1775,7 +1788,8 @@ export default function PublicMorningBriefing(props: Props) {
     return (
         <div ref={rootRef} style={shell}>
             <style>{AN_PALETTE}</style>
-            {/* Preserve order and stable search identity: search → holdings → public changes. */}
+            {/* Timeline first; preserve search identity and the existing search → holdings → public changes order. */}
+            <PublicSessionBriefing dark={dark} holdingsTickers={sessionPersonalizationState === "holdings" ? sessionHoldingsTickers : undefined} personalizationState={sessionPersonalizationState} />
             <PublicHomeSearch brief={brief} importantFeed={importantFeed} stockPath={stockPath || "/stock"} dark={dark} />
 
             {/* ── ① 내 자산 카드 ── */}
