@@ -1,4 +1,6 @@
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import PublicStockSearch from "https://framer.com/m/PublicStockSearch-iqt9J1.js"
+import PublicSessionBriefing from "https://framer.com/m/PublicSessionBriefing-i83Vev.js"
 import {
     useCallback,
     useEffect,
@@ -18,7 +20,8 @@ import {
  *   · 탭 복귀(visibilitychange/focus) + 5분 폴링 재조회.
  *   · KR 지수·섹터는 금융위 공공데이터 T+1 이라 오늘 종가가 아니다 → 섹션 부제에
  *     "MM.DD 종가 기준" 을 찍어 오늘 것으로 오독하지 않게 한다.
- *   구성 = 제호(카드 밖) + [① 내 자산 카드] + [② 시장 브리핑 카드] — 형제 카드 2장.
+ *   2026-09-29 구성: 검색·첫 안내 → 내 보유 요약·소식 → 시장·공시·수급 → 고유 브리핑 접힘.
+ *   NOW와 내장 거장·편집 소식은 제거. 별도 홈 컴포넌트를 다시 중복 삽입하지 않는다.
  *   🚨 2026-07-11 PM: 사파리 창/신문 제호 목업 제거 — 토스식 플랫 카드, 정보 가독성 우선.
  *      기존 PublicDailyBriefing(s1NvKbN) 데이터 로직(1면 배너·섹션·mover·접힘·cache-fallback) 이식,
  *      연출(스트림 애니·창 크롬·마스트헤드)만 제거. s1NvKbN 인스턴스는 홈에서 제거(코드파일 보존).
@@ -42,11 +45,11 @@ import {
  *     KR 한정 → 증감 집계 = 국내 커버 종목만(US·미커버 = 총액엔 포함, 증감 제외).
  *   미로그인(라이브) = 컴팩트 CTA 한 줄. 캔버스 = SAMPLE 미리보기.
  *
- * ② 시장 브리핑 — daily_briefing.json (빌더 미착수 → 라이브 404 시 "준비 중" 한 줄, SAMPLE 은 캔버스 전용).
- *   1면 recap(지수 레벨+등락%, 금융위 공공데이터) + 섹션(아이템·mover 등락색·"+N건" 접힘).
+ * ② 시장 브리핑 — daily_briefing.json. SAMPLE 은 캔버스 전용.
+ *   recap·주요 공시·수급은 overview에서 한 번, 미국 공시·내부자·예상 일정만 추가 접힘.
  *   sessionStorage cache-fallback. 종목 클릭 → stockPath?q=.
- *   상단 중요 소식 = urgent_alerts.json 중 최신 3건. 자동 순환 없이 한 번에 노출하고,
- *   DART 원문 URL이 확인된 항목만 연결한다. 산출물이 72시간 넘게 갱신되지 않으면 섹션을 숨긴다.
+ *   urgent_alerts.json은 제목 보강·확인 우선 표시와 overview에 없는 추가 중요 공시 최대 3건에 재사용.
+ *   출처·생성시각·신선도·정정 검사에 실패하면 확인 우선 표시를 숨긴다.
  *
  * RULE 6 = LLM 0 (결정론 조립). RULE 7 = 사실만 (점수·추천·매매의견 0), 면책 푸터.
  * KR 등락색 관례 = 상승 빨강 / 하락 파랑. 테마 = body[data-framer-theme] 자가감지. 반응형 = ResizeObserver.
@@ -114,16 +117,1006 @@ const BRIEF_URL =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/daily_briefing.json"
 const IMPORTANT_URL =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/urgent_alerts.json"
+// Preserve: search first, no login gate, no synthetic live data or additional feed fetch.
+// Data contract: api/builders/daily_briefing_builder.py -> daily_briefing.json.
+const UNIVERSE =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
+// Preserve source titles/dates separately from DART categories; never manufacture an event or amount.
+type HomeItem = {
+    ticker?: string
+    name?: string
+    text?: string
+    title?: string
+    label?: string
+    date?: string
+    is_correction?: boolean
+    url?: string
+}
+type HomeSection = {
+    title?: string
+    note?: string
+    as_of?: string
+    recap?: Record<string, unknown>
+    items?: HomeItem[]
+}
+type HomeBrief = {
+    generated_at?: string
+    recap_as_of?: string
+    sections?: HomeSection[]
+}
+type HomeOverviewProps = {
+    brief?: HomeBrief | null
+    importantFeed?: any
+    failed?: boolean
+    stockPath?: string
+    urgencyNow?: number
+}
+
+type HomeSearchProps = Pick<HomeOverviewProps, "brief" | "importantFeed" | "stockPath"> & { dark?: boolean }
+
+// Keep priority rules aligned with PublicDisclosureFeed; never infer an action deadline.
+type HomeUrgencyDisclosure = {
+    ticker: string
+    title: string
+    date: string
+    source_url: string
+    is_correction?: boolean
+    stamp: string
+}
+function disclosureReceipt(source: string): string {
+    try {
+        const url = new URL(source)
+        const receipts = url.searchParams.getAll("rcpNo")
+        if (
+            url.protocol !== "https:" ||
+            url.hostname !== "dart.fss.or.kr" ||
+            url.port ||
+            url.username ||
+            url.password ||
+            url.hash ||
+            url.pathname !== "/dsaf001/main.do"
+        )
+            return ""
+        if (
+            Array.from(url.searchParams.keys()).some(
+                (key) => key !== "rcpNo"
+            ) ||
+            receipts.length !== 1
+        )
+            return ""
+        return /^\d{14}$/.test(receipts[0]) ? receipts[0] : ""
+    } catch {
+        return ""
+    }
+}
+/**
+ * 확인 우선순위 v1: KST 오늘 접수 + 24h 이내 생성 피드 + 정확한 공시 유형만.
+ * 현재 거래정지/상장폐지 상태를 판정하지 않는다. 정정·철회·해제 및 같은 유형의
+ * 후속 공시가 수신되면 보수적으로 숨긴다. 접수일을 청약 마감일로 사용하지 말 것.
+ */
+function urgentDisclosure(
+    d: HomeUrgencyDisclosure,
+    siblings: HomeUrgencyDisclosure[],
+    stamp: string,
+    now: number
+): string {
+    if (
+        !Number.isFinite(now) ||
+        now <= 0 ||
+        !/T.*(?:Z|[+-]\d{2}:\d{2})$/.test(stamp)
+    )
+        return ""
+    const generatedAt = Date.parse(stamp)
+    if (
+        !Number.isFinite(generatedAt) ||
+        generatedAt > now ||
+        now - generatedAt > 24 * 60 * 60 * 1000
+    )
+        return ""
+    const today = new Date(now + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const receipt = disclosureReceipt(d.source_url)
+    if (
+        d.date !== today ||
+        !receipt ||
+        receipt.slice(0, 8) !== today.replace(/-/g, "")
+    )
+        return ""
+    const title = (d.title || "").replace(/\s/g, "")
+    if (
+        d.is_correction ||
+        /정정|철회|취하|취소|해제|해소|종결|기각|부인|미해당|미발생|예고|우려|조회공시/.test(
+            title
+        )
+    )
+        return ""
+    // Exact report names only; mentions in a lawsuit, explanation or periodic report do not qualify.
+    const rules: [RegExp, RegExp, string][] = [
+        [
+            /^(?:주권)?매매거래정지(?:\([^()]*\))?$/,
+            /거래정지|거래재개/,
+            "거래정지 공시 · 사유와 적용 시각 확인",
+        ],
+        [
+            /^(?:주요사항보고서\()?부도발생\)?$/,
+            /부도/,
+            "부도 발생 공시 · 지급 상황 확인",
+        ],
+        [
+            /^(?:주요사항보고서\()?회생절차개시신청\)?$/,
+            /회생/,
+            "회생 신청 공시 · 신청 내용과 진행 단계 확인",
+        ],
+        [
+            /^(?:주요사항보고서\()?파산신청\)?$/,
+            /파산/,
+            "파산 신청 공시 · 신청 주체와 내용 확인",
+        ],
+        [
+            /^상장폐지결정(?:\([^()]*\))?$/,
+            /상장폐지/,
+            "상장폐지 결정 공시 · 사유와 후속 일정 확인",
+        ],
+    ]
+    const rule = rules.find(([pattern]) => pattern.test(title))
+    if (!rule) return ""
+    // The feed is capped, so absence of a follow-up is not proof of current exchange status.
+    if (
+        siblings.some((other) => {
+            if (
+                other === d ||
+                !rule[1].test((other.title || "").replace(/\s/g, ""))
+            )
+                return false
+            if (other.date < d.date) return false
+            if (
+                other.is_correction ||
+                /정정|철회|취하|취소|해제|해소|종결|기각|부인/.test(
+                    other.title || ""
+                )
+            )
+                return true
+            const otherReceipt = disclosureReceipt(other.source_url)
+            return (
+                other.date > d.date || !otherReceipt || otherReceipt > receipt
+            )
+        })
+    )
+        return ""
+    return rule[2]
+}
+
+function homeUrgentReason(
+    item: HomeItem,
+    brief: HomeBrief | null | undefined,
+    feed: any,
+    now: number
+): string {
+    const receipt = disclosureReceipt(String(item.url || ""))
+    if (!receipt || !/^\d{6}$/.test(String(item.ticker || ""))) return ""
+    const rows: HomeUrgencyDisclosure[] = []
+    for (const section of Array.isArray(brief?.sections)
+        ? brief.sections
+        : []) {
+        if (section?.title !== "최근 주요 공시") continue
+        for (const row of Array.isArray(section.items) ? section.items : []) {
+            if (!row?.ticker || row.ticker !== item.ticker) continue
+            rows.push({
+                ticker: row.ticker,
+                title: String(row.title || row.text || ""),
+                date: String(row.date || ""),
+                source_url: String(row.url || ""),
+                is_correction: row.is_correction,
+                stamp: String(brief?.generated_at || ""),
+            })
+        }
+    }
+    for (const row of Array.isArray(feed?.alerts) ? feed.alerts : []) {
+        if (row?.type !== "disclosure" || row.ticker !== item.ticker) continue
+        rows.push({
+            ticker: row.ticker,
+            title: String(row.headline || ""),
+            date: String(row.date || ""),
+            source_url: String(row.source_url || ""),
+            is_correction: row.is_correction,
+            stamp: String(feed?._meta?.generated_at || ""),
+        })
+    }
+    // Match the displayed fact to its own source timestamp. A newer second feed cannot refresh it.
+    const title = String(item.title || item.text || "").replace(/\s/g, "")
+    const matches = rows.filter(
+        (row) => disclosureReceipt(row.source_url) === receipt
+    )
+    if (
+        matches.some(
+            (row) => row.is_correction || (row.date && row.date !== item.date)
+        )
+    )
+        return ""
+    for (const row of matches) {
+        if (row.title.replace(/\s/g, "") !== title || row.date !== item.date)
+            continue
+        const reason = urgentDisclosure(row, rows, row.stamp, now)
+        if (reason) return reason
+    }
+    return ""
+}
+function HomeUrgencySticker({ reason }: { reason: string }) {
+    if (!reason) return null
+    return (
+        <div
+            data-home-urgency
+            style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 6,
+                margin: "6px 0",
+                lineHeight: 1.5,
+            }}
+        >
+            <span
+                style={{
+                    color: "#fff",
+                    background: "#c92a3a",
+                    borderRadius: 7,
+                    padding: "3px 7px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                }}
+            >
+                즉시 확인
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 600 }}>{reason}</span>
+            <span
+                style={{ flexBasis: "100%", fontSize: 10.5, fontWeight: 600 }}
+            >
+                확인 우선 표시 · 매매 신호 아님 · 최신 정정·진행 상태는 원문
+                확인
+            </span>
+        </div>
+    )
+}
+
+function homeCompanyLogoSrc(ticker?: string): string {
+    const code = String(ticker || "").trim()
+    // Match the existing site's company-logo provider; these DART rows are domestic issuers.
+    return /^\d{6}$/.test(code)
+        ? `https://static.toss.im/png-icons/securities/icn-sec-fill-${code}.png`
+        : ""
+}
+function HomeCompanyLogo({ ticker, name, showFlag = true }: { ticker?: string; name?: string; showFlag?: boolean }) {
+    const src = homeCompanyLogoSrc(ticker)
+    const [failedSrc, setFailedSrc] = useState("")
+    const [flagFailed, setFlagFailed] = useState(false)
+    const isKoreanListing = /^\d{6}$/.test(String(ticker || "").trim())
+    return (
+        <span className="an-home-company-mark">
+            <span className="an-home-company-logo" aria-hidden="true">
+                <span>
+                    {String(name || ticker || "?")
+                        .trim()
+                        .slice(0, 1) || "?"}
+                </span>
+                {src && failedSrc !== src ? (
+                    <img
+                        src={src}
+                        alt=""
+                        width={36}
+                        height={36}
+                        loading="lazy"
+                        decoding="async"
+                        onError={() => setFailedSrc(src)}
+                    />
+                ) : null}
+            </span>
+            {showFlag && isKoreanListing ? (
+                <span className="an-home-company-flag" role="img" aria-label="한국 상장 종목">
+                    {flagFailed ? "KR" : (
+                        <img
+                            src={FLAG_BASE + "kr.svg"}
+                            alt=""
+                            width={16}
+                            height={16}
+                            loading="lazy"
+                            decoding="async"
+                            onError={() => setFlagFailed(true)}
+                        />
+                    )}
+                </span>
+            ) : null}
+        </span>
+    )
+}
+
+function finiteValue(value: unknown): number | null {
+    return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+function receiptUrl(value: unknown): string | null {
+    try {
+        const url = new URL(String(value || ""))
+        return url.protocol === "https:" &&
+            url.hostname === "dart.fss.or.kr" &&
+            url.pathname === "/dsaf001/main.do" &&
+            /^\d{14}$/.test(url.searchParams.get("rcpNo") || "")
+            ? url.href
+            : null
+    } catch {
+        return null
+    }
+}
+function flowAmount(text?: string): number | null {
+    // Accept only the existing producer's explicit estimate; never infer an amount from other prose.
+    const match =
+        /^외인·기관 동반 순매수 · 추정 ((?:\d{1,3}(?:,\d{3})+|\d+))억원$/.exec(
+            text || ""
+        )
+    return match ? Number(match[1].replace(/,/g, "")) : null
+}
+function homeFilingFacts(item: HomeItem) {
+    const text = String(item.title || item.text || "").trim()
+    const generic =
+        /^(?:주요사항보고|발행공시|지분공시|거래소공시|공시|공시 제목 미제공)$/.test(
+            text
+        )
+    const title = text && !generic ? text : "공시 제목 미제공 · 원문 확인"
+    const rawDate = String(item.date || "")
+    const stamp = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+        ? Date.parse(rawDate + "T00:00:00Z")
+        : NaN
+    const date =
+        Number.isFinite(stamp) &&
+        new Date(stamp).toISOString().slice(0, 10) === rawDate
+            ? rawDate
+            : "접수일 미제공"
+    // Questions to check in the source, not claims that a contract or financing succeeded.
+    const check = /공급계약|단일판매/.test(title)
+        ? "원문에서 계약금액·매출 대비 비중·기간 확인"
+        : /전환사채|신주인수권|증자/.test(title)
+          ? "원문에서 조달금액·발행조건·주식 수 변화 확인"
+          : /자기주식/.test(title)
+            ? "원문에서 취득·처분 규모와 실제 이행 여부 확인"
+            : /배당/.test(title)
+              ? "원문에서 주당 배당금·기준일·지급일 확인"
+              : /합병|분할|양수|양도/.test(title)
+                ? "원문에서 거래조건·일정·승인 여부 확인"
+                : "원문에서 발표 내용·핵심 수치·정정 여부 확인"
+    return {
+        title,
+        date,
+        check,
+        correction:
+            item.is_correction === true || /\[[^\]]*정정[^\]]*\]/.test(title),
+    }
+}
+function homeSnapshot(
+    brief?: HomeBrief | null,
+    importantFeed?: any,
+    now = Date.now()
+) {
+    const sections = Array.isArray(brief?.sections)
+        ? brief.sections.filter(Boolean)
+        : []
+    const market = sections.find((s) => s.recap && typeof s.recap === "object")
+    const company = sections.find((s) => s.title === "최근 주요 공시")
+    const flow = sections.find((s) => s.title === "외인·기관 동반 순매수")
+    const items = (section?: HomeSection) =>
+        Array.isArray(section?.items)
+            ? section.items.filter((i) => i && i.ticker)
+            : []
+    const generated = Date.parse(
+        String(importantFeed?._meta?.generated_at || "")
+    )
+    const alerts =
+        Number.isFinite(generated) &&
+        generated <= now + 300_000 &&
+        now - generated <= IMPORTANT_MAX_AGE_MS &&
+        Array.isArray(importantFeed?.alerts)
+            ? importantFeed.alerts
+            : []
+    const filings = items(company)
+        .filter((i) => receiptUrl(i.url))
+        .map((item) => {
+            // Reuse the already received feed only when BOTH issuer and exact receipt match.
+            const match = alerts.find(
+                (a: any) =>
+                    a?.type === "disclosure" &&
+                    a.ticker === item.ticker &&
+                    receiptUrl(a.source_url) === receiptUrl(item.url)
+            )
+            return match
+                ? {
+                      ...item,
+                      title: item.title || match.headline,
+                      date: item.date || match.date,
+                  }
+                : item
+        })
+    const flows = items(flow)
+    const rawDate = String(market?.as_of || brief?.recap_as_of || "")
+    const marketDate = /^\d{8}$/.test(rawDate)
+        ? `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6)}`
+        : "기준일 미제공"
+    return { market, company, flow, filings, flows, marketDate }
+}
+function updatedAt(value?: string) {
+    if (!value || !/[Zz]|[+-]\d{2}:\d{2}$/.test(value))
+        return "업데이트 시각 미제공"
+    const date = new Date(value)
+    if (!Number.isFinite(date.getTime())) return "업데이트 시각 미제공"
+    return (
+        "업데이트 " +
+        new Intl.DateTimeFormat("ko-KR", {
+            timeZone: "Asia/Seoul",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hourCycle: "h23",
+        }).format(date) +
+        " KST"
+    )
+}
+// Preserve: onboarding uses the received filing, never a hardcoded recommendation or sample price.
+function homeReadingExample(brief?: HomeBrief | null, now = Date.now()) {
+    const generated = brief?.generated_at || ""
+    const builtAt = /(?:Z|[+-]\d{2}:\d{2})$/i.test(generated)
+        ? Date.parse(generated)
+        : NaN
+    if (
+        !Number.isFinite(now) ||
+        !Number.isFinite(builtAt) ||
+        now - builtAt > IMPORTANT_MAX_AGE_MS ||
+        builtAt > now + 300_000
+    )
+        return null
+    const data = homeSnapshot(brief)
+    const item = data.filings.find((item) => {
+        if (!/^\d{6}$/.test(item.ticker || "")) return false
+        const receipt = new URL(receiptUrl(item.url)!).searchParams.get(
+            "rcpNo"
+        )!
+        const day = `${receipt.slice(0, 4)}-${receipt.slice(4, 6)}-${receipt.slice(6, 8)}`
+        const utcDay = Date.parse(`${day}T00:00:00Z`)
+        if (
+            !Number.isFinite(utcDay) ||
+            new Date(utcDay).toISOString().slice(0, 10) !== day
+        )
+            return false
+        const startKst = utcDay - 9 * 60 * 60 * 1000
+        // DART gives a receipt day here, not an intraday timestamp. Bound age from that KST day's end.
+        return (
+            startKst <= now &&
+            now - (startKst + 24 * 60 * 60 * 1000 - 1) <= IMPORTANT_MAX_AGE_MS
+        )
+    })
+    return item
+        ? {
+              item,
+              source: receiptUrl(item.url)!,
+              note: data.company?.note || "공시 기준일 미제공",
+          }
+        : null
+}
+// Preserve (2026-09-19): stable home search fill, no focus underline; empty, idle prompts slide upward.
+const HOME_OVERVIEW_CSS = `
+.an-home-overview{--ho-ink:var(--an-mbr-ink,#191f28);--ho-sub:var(--an-mbr-sub,#4e5968);--ho-muted:var(--an-mbr-faint,#6b7684);--ho-card:var(--an-mbr-card,#fff);--ho-line:var(--an-mbr-line,#f2f3f5);--ho-accent:var(--an-mbr-vg,#6c5ce7);color:var(--ho-ink);width:100%;min-width:0;font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;container-type:inline-size}
+.an-home-overview{box-sizing:border-box;max-width:100%;overflow-wrap:anywhere;scroll-margin-top:84px}#home-filing-example{scroll-margin-top:84px}.an-home-overview *{box-sizing:border-box}.an-home-overview a{color:inherit;text-decoration:none}.an-home-overview a:focus-visible{outline:2px solid var(--ho-accent);outline-offset:4px;border-radius:5px}
+.an-home-intro-main{min-width:0;margin-bottom:28px}.an-home-intro-main .an-home-hero{padding-bottom:0}
+.an-home-hero{padding:16px 4px 22px}.an-home-hero h1{font-size:clamp(24px,3.4cqi,30px);line-height:1.35;letter-spacing:-1px;margin:0 0 8px;font-weight:750;word-break:keep-all}.an-home-hero p{margin:0;color:var(--ho-sub);font-size:14px;line-height:1.65;word-break:keep-all}
+.an-home-search{position:relative;display:block;height:56px;margin-top:20px;border:0;border-radius:14px;background:var(--ho-card);box-shadow:0 3px 15px rgba(20,25,40,.035)}.an-home-search:focus-within{outline:none;box-shadow:0 3px 15px rgba(20,25,40,.035)}.an-home-search input{font-size:16px!important;font-weight:600!important;padding:0!important;background:transparent!important;color:var(--ho-ink)!important;box-shadow:none!important;border:0!important}.an-home-search>div,.an-home-search div:has(>input){border-radius:14px!important;background:transparent!important;box-shadow:none!important}.an-home-search input::placeholder{color:var(--ho-muted);opacity:1}
+.an-home-search:focus-within div:has(>input)>span{border-color:var(--ho-accent)!important}.an-home-search:focus-within div:has(>input)>span>span{background:var(--ho-accent)!important}
+.an-home-search-prompt{display:none;position:absolute;left:35px;right:14px;top:50%;transform:translateY(-50%);height:24px;overflow:hidden;pointer-events:none;color:var(--ho-muted);font-size:16px;font-weight:600;line-height:24px}
+.an-home-search-track{display:block;animation:anHomeSearchFlip 12s cubic-bezier(.22,.68,0,1) infinite;animation-play-state:paused}.an-home-search-track>span{display:block;height:24px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+@keyframes anHomeSearchFlip{0%,30%{transform:translateY(0)}33.333%,63.333%{transform:translateY(-24px)}66.667%,96.667%{transform:translateY(-48px)}100%{transform:translateY(-72px)}}
+@supports selector(:has(input)){.an-home-search:has(input:placeholder-shown):not(:focus-within) .an-home-search-prompt{display:block}.an-home-search:not(:focus-within) input::placeholder{color:transparent}.an-home-search[data-search-motion="running"]:has(input:placeholder-shown):not(:focus-within) .an-home-search-track{animation-play-state:running}.an-home-search:hover .an-home-search-track{animation-play-state:paused!important}}
+@media(prefers-reduced-motion:reduce){.an-home-search-track{animation:none!important;transform:none!important}}
+.an-home-helper{font-size:12px!important;margin-top:9px!important}.an-home-sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.an-home-start{display:flex;flex-direction:column;align-items:stretch;gap:12px;margin-top:18px;font-size:13px;font-weight:600}.an-home-start>a{align-self:flex-end;max-width:100%;color:var(--ho-sub);font-weight:700;text-decoration:underline;text-underline-offset:3px;line-height:1.6}.an-home-example{width:100%;min-width:0;border:0!important;outline:0!important;border-radius:14px;background:var(--ho-card);box-shadow:0 2px 12px rgba(20,25,40,.025)}.an-home-example:focus-within{border:0!important;outline:0!important}.an-home-example>summary{cursor:pointer;display:flex;align-items:center;justify-content:flex-start;gap:7px;color:var(--ho-accent);font-weight:700;width:100%;max-width:100%;min-height:48px;padding:12px 16px!important;line-height:1.6;list-style:none;border:0!important;outline:0!important;box-shadow:none!important;border-radius:14px}.an-home-example>summary::-webkit-details-marker{display:none}.an-home-example>summary::marker{content:""}.an-home-example>summary:focus,.an-home-example>summary:focus-visible{border:0!important;outline:0!important;box-shadow:none!important}.an-home-example>summary::after{content:none!important;display:none!important}.an-home-example-summary-label{flex:1;min-width:0}.an-home-example-arrow{display:block;flex:0 0 14px;width:14px;height:14px;transition:transform .16s ease;transform:rotate(0deg)}.an-home-example[open] .an-home-example-arrow{transform:rotate(90deg)}.an-home-example[open]>summary{border-radius:14px 14px 0 0}.an-home-example-body{padding:0 16px 18px;border-radius:0 0 14px 14px;line-height:1.7}.an-home-example-body strong{font-weight:800}.an-home-example-body p{font-size:13px;margin:8px 0}.an-home-example-body ol{display:grid;gap:7px;margin:14px 0;padding-left:22px;color:var(--ho-sub)}.an-home-example-links{display:flex;gap:12px 18px;flex-wrap:wrap;padding-top:2px}.an-home-example-links a{font-weight:700;color:var(--ho-accent);text-decoration:underline;text-underline-offset:3px}.an-home-example-body small{display:block;color:var(--ho-muted);font-size:11px;margin-top:12px;overflow-wrap:anywhere}
+.an-home-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:0 4px;margin:0 0 12px}.an-home-heading h2{font-size:18px;letter-spacing:-.5px;margin:0}.an-home-heading span{font-size:11px;color:var(--ho-muted)}
+.an-home-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.an-home-card{min-width:0;display:flex;flex-direction:column;padding:18px;border:0;border-radius:18px;background:var(--ho-card);box-shadow:0 3px 16px rgba(20,25,40,.025)}
+body[data-framer-theme="dark"] .an-home-card,html[data-an-theme="dark"] .an-home-card{box-shadow:none}
+.an-home-kicker{font-size:11px;color:var(--ho-muted);font-weight:650;letter-spacing:.3px}.an-home-card h3{font-size:16px;line-height:1.5;letter-spacing:-.4px;margin:5px 0 14px;word-break:keep-all}.an-home-card p{font-size:12px;line-height:1.65;margin:10px 0;color:var(--ho-sub);word-break:keep-all}
+.an-home-card h3 a:hover,.an-home-ticker:hover,.an-home-source:hover{text-decoration:underline;text-underline-offset:3px}.an-home-row{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;font-size:13px}.an-home-row strong,.an-home-amount{font-variant-numeric:tabular-nums;white-space:nowrap}.an-home-price{display:block;font-size:11px;color:var(--ho-muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.an-home-index{margin-bottom:20px}.an-home-zero{height:12px;border-radius:4px;background:var(--ho-line);position:relative;margin-top:8px;overflow:hidden}.an-home-zero:after{content:'';position:absolute;left:50%;top:0;height:100%;width:1px;background:var(--ho-muted);opacity:.4}.an-home-zero i{position:absolute;height:100%;border-radius:4px}
+.an-home-list{list-style:none;padding:0;margin:0;display:grid;gap:12px}.an-home-list li+li{padding-top:12px;border-top:1px solid var(--ho-line)}.an-home-ticker{font-weight:650;min-width:0;overflow-wrap:anywhere}.an-home-source{font-size:11px;color:var(--ho-muted)!important;white-space:nowrap}.an-home-filing{font-size:12px;line-height:1.55;color:var(--ho-sub);margin-top:4px;word-break:keep-all}.an-home-code{font-size:10px;color:var(--ho-muted);margin-left:4px}
+.an-home-company-row{align-items:center}.an-home-company-link{display:flex;align-items:center;gap:10px;flex:1;min-width:0}.an-home-company-logo{position:relative;display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:11px;overflow:hidden;background:var(--ho-line);color:var(--ho-sub);font-size:15px;font-weight:700}.an-home-company-logo img{position:absolute;inset:0;width:36px;height:36px;object-fit:contain;border-radius:11px;background:var(--ho-card)}.an-home-company-mark{position:relative;display:inline-flex;flex:0 0 36px;width:36px;height:36px}.an-home-company-flag{position:absolute;right:-3px;bottom:-3px;z-index:1;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border:1.5px solid var(--ho-card);border-radius:50%;background:var(--ho-card);color:var(--ho-sub);font-size:7px;font-weight:800;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,.15);overflow:hidden}.an-home-company-flag img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}.an-home-company-copy{display:grid;gap:4px;min-width:0}.an-home-company-name{line-height:1.45}.an-home-company-filing{display:block;margin:0;font-weight:500}
+.an-home-amount{font-size:12px;font-weight:650}.an-home-bar{height:10px;background:var(--ho-line);border-radius:4px;margin-top:8px;overflow:hidden}.an-home-bar i{display:block;height:100%;background:var(--ho-accent);border-radius:4px}.an-home-foot{margin-top:auto;padding-top:14px;font-size:10px;line-height:1.6;color:var(--ho-muted);overflow-wrap:anywhere}.an-home-foot a{text-decoration:underline;text-underline-offset:2px}.an-home-empty{padding:8px 0 16px;font-size:12px;color:var(--ho-muted);line-height:1.6}
+.an-home-overview{font-weight:600}.an-home-hero h1,.an-home-heading h2,.an-home-card h3{font-weight:800}.an-home-kicker,.an-home-ticker,.an-home-amount{font-weight:700}.an-home-company-filing{font-weight:600}.an-home-event-date{display:block;margin-top:7px;color:var(--ho-muted);font-size:10px;font-weight:600}.an-home-card .an-home-event-check{margin:4px 0 0;font-size:11px;font-weight:600;line-height:1.6}
+@container (max-width:720px){.an-home-grid{grid-template-columns:1fr}.an-home-card{padding:16px}.an-home-hero{padding-top:10px}.an-home-heading span{font-size:10px}.an-home-search{margin-top:16px}.an-home-list{gap:10px}}
+`
+
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight auto
+ */
+function PublicHomeSearch({ brief = null, importantFeed, stockPath = "/stock", dark = false }: HomeSearchProps) {
+    const searchRef = useRef<HTMLLabelElement>(null)
+    useEffect(() => {
+        const el = searchRef.current
+        const target = RenderTarget.current()
+        if (
+            !el ||
+            typeof document === "undefined" ||
+            target === RenderTarget.canvas ||
+            target === RenderTarget.export ||
+            target === RenderTarget.thumbnail
+        )
+            return
+        let visible = false
+        const syncMotion = () => {
+            el.dataset.searchMotion =
+                visible && document.visibilityState === "visible"
+                    ? "running"
+                    : "paused"
+        }
+        const observer =
+            typeof IntersectionObserver !== "undefined"
+                ? new IntersectionObserver(([entry]) => {
+                      visible = !!entry?.isIntersecting
+                      syncMotion()
+                  })
+                : null
+        if (observer) observer.observe(el)
+        else {
+            visible = true
+            syncMotion()
+        }
+        document.addEventListener("visibilitychange", syncMotion)
+        return () => {
+            observer?.disconnect()
+            document.removeEventListener("visibilitychange", syncMotion)
+            el.dataset.searchMotion = "paused"
+        }
+    }, [])
+    const data = homeSnapshot(brief, importantFeed)
+    const example = homeReadingExample(brief)
+    const stockHref = (ticker?: string) =>
+        `${(stockPath || "/stock").replace(/\/+$/, "")}?q=${encodeURIComponent(ticker || "")}`
+    return (
+        <section id="home-search" className="an-home-overview" aria-label="종목 검색과 첫 안내">
+            <style>{HOME_OVERVIEW_CSS}</style>
+            <div className="an-home-intro-main">
+                <div className="an-home-hero">
+                    <h1>기업의 변화를 근거와 함께 살펴보세요</h1>
+                    <p>실적·공시·수급의 변화를 출처와 함께 확인하세요.</p>
+                    <label
+                        className="an-home-search"
+                        ref={searchRef}
+                        style={{ background: "var(--an-mbr-card, #fff)" }}
+                    >
+                        <span className="an-home-sr">
+                            종목 이름이나 코드 검색
+                        </span>
+                        <PublicStockSearch
+                            placeholder="궁금한 종목 이름이나 코드를 입력하세요"
+                            stockPath={stockPath}
+                            stockUrl={UNIVERSE}
+                            usStockUrl=""
+                            dark={dark}
+                            reportStyle={false}
+                            fieldBackground="transparent"
+                        />
+                        <span
+                            className="an-home-search-prompt"
+                            aria-hidden="true"
+                        >
+                            <span className="an-home-search-track">
+                                <span>오늘은 어떤 종목을 검색해볼까?</span>
+                                <span>어떤 종목이 달라졌을까?</span>
+                                <span>궁금한 기업의 소식을 찾아보세요</span>
+                                <span>오늘은 어떤 종목을 검색해볼까?</span>
+                            </span>
+                        </span>
+                    </label>
+                    <p className="an-home-helper">
+                        로그인 없이 검색할 수 있어요. 이름·종목코드·미국 티커로
+                        찾아보세요.
+                    </p>
+                    <div className="an-home-start">
+                        {example ? (
+                            <details id="home-filing-example" className="an-home-example">
+                                <summary>
+                                    <span className="an-home-example-summary-label">처음이라면 · 실제 공시로 읽어보기</span>
+                                    <svg
+                                        className="an-home-example-arrow"
+                                        viewBox="0 0 16 16"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M5.75 3.5 10.25 8l-4.5 4.5"
+                                            stroke="currentColor"
+                                            strokeWidth="1.8"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                </summary>
+                                <div className="an-home-example-body">
+                                    <strong>
+                                        {example.item.name ||
+                                            example.item.ticker}
+                                    </strong>
+                                    <span className="an-home-code">
+                                        {example.item.ticker}
+                                    </span>
+                                    <p>
+                                        {
+                                            homeFilingFacts(
+                                                data.filings.find(
+                                                    (item) =>
+                                                        item.url ===
+                                                        example.item.url
+                                                ) || example.item
+                                            ).title
+                                        }
+                                    </p>
+                                    <ol>
+                                        <li>
+                                            기업 리포트에서 사업과 실적의
+                                            기준일을 확인해요.
+                                        </li>
+                                        <li>
+                                            DART 원문에서 무엇을 알렸는지,
+                                            정정된 내용이 있는지 확인해요.
+                                        </li>
+                                        <li>
+                                            내 생각과 공시에 적힌 사실을
+                                            구분하고, 다음에 확인할 질문을
+                                            남겨요.
+                                        </li>
+                                    </ol>
+                                    <nav
+                                        className="an-home-example-links"
+                                        aria-label="공시 예시 읽기"
+                                    >
+                                        <a
+                                            href={stockHref(
+                                                example.item.ticker
+                                            )}
+                                        >
+                                            기업 리포트 보기 →
+                                        </a>
+                                        <a
+                                            href={example.source}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            DART 원문 ↗
+                                        </a>
+                                    </nav>
+                                    <small>
+                                        {example.note}
+                                        <br />
+                                        수신 국내 공시 중 읽기 예시 1건이에요.
+                                        추천 종목이나 수익 전망이 아닙니다.
+                                    </small>
+                                </div>
+                            </details>
+                        ) : (
+                            <details id="home-filing-example" className="an-home-example">
+                                <summary>
+                                    <span className="an-home-example-summary-label">처음이라면 · 공시 읽는 순서</span>
+                                    <svg
+                                        className="an-home-example-arrow"
+                                        viewBox="0 0 16 16"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M5.75 3.5 10.25 8l-4.5 4.5"
+                                            stroke="currentColor"
+                                            strokeWidth="1.8"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                </summary>
+                                <div className="an-home-example-body">
+                                    <p>지금은 읽기 예시로 사용할 최신 공시를 확인하지 못했어요. 종목을 검색한 뒤 기업 리포트의 기준일, 공시 원문과 정정 여부를 차례로 확인하세요.</p>
+                                    <a href="#home-search">종목 검색으로 이동 →</a>
+                                </div>
+                            </details>
+                        )}
+                        <a href="/nest">내 보유종목 이어보기 →</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    )
+}
+
+function PublicHomeOverview({ brief = null, importantFeed, failed = false, stockPath = "/stock", urgencyNow = 0 }: HomeOverviewProps) {
+    const data = homeSnapshot(brief, importantFeed)
+    const stockHref = (ticker?: string) =>
+        `${(stockPath || "/stock").replace(/\/+$/, "")}?q=${encodeURIComponent(ticker || "")}`
+    const indexRows = [
+        {
+            name: "코스피",
+            change: finiteValue(data.market?.recap?.kospi),
+            level: finiteValue(data.market?.recap?.kospi_close),
+        },
+        {
+            name: "코스닥",
+            change: finiteValue(data.market?.recap?.kosdaq),
+            level: finiteValue(data.market?.recap?.kosdaq_close),
+        },
+    ]
+    const scale = Math.max(1, ...indexRows.map((i) => Math.abs(i.change ?? 0)))
+    const flowRows = data.flows.slice(0, 3)
+    const maxAmount = Math.max(
+        1,
+        ...flowRows.map((i) => flowAmount(i.text) ?? 0)
+    )
+    const empty = !brief
+        ? failed
+            ? "자료를 불러오지 못했어요. 종목 검색은 계속 이용할 수 있어요."
+            : "자료를 확인하고 있어요."
+        : "이번 자료에 제공된 항목이 없어요."
+    return (
+        <section id="home-changes" className="an-home-overview" aria-label="최근 시장·공시·수급 변화">
+            <div className="an-home-heading">
+                <h2>최근 시장·공시·수급 변화</h2>
+                <span>{updatedAt(brief?.generated_at)}</span>
+            </div>
+            <div className="an-home-grid">
+                <article className="an-home-card">
+                    <span className="an-home-kicker">시장 · 국내 지수</span>
+                    <h3>
+                        <a href="/market">시장은 어느 쪽으로 움직였을까? →</a>
+                    </h3>
+                    {data.market ? (
+                        <>
+                            {indexRows.map((row) => (
+                                <div className="an-home-index" key={row.name}>
+                                    <div className="an-home-row">
+                                        <span>
+                                            {row.name}
+                                            <span className="an-home-price">
+                                                {row.level === null
+                                                    ? "지수값 미제공"
+                                                    : row.level.toLocaleString(
+                                                          "ko-KR",
+                                                          {
+                                                              maximumFractionDigits: 2,
+                                                          }
+                                                      ) + " pt"}
+                                            </span>
+                                        </span>
+                                        <strong
+                                            style={{
+                                                color:
+                                                    row.change === null ||
+                                                    row.change === 0
+                                                        ? "var(--ho-sub)"
+                                                        : row.change > 0
+                                                          ? "#f04452"
+                                                          : "#3182f6",
+                                            }}
+                                        >
+                                            {row.change === null
+                                                ? "등락 미제공"
+                                                : `${row.change > 0 ? "+" : ""}${row.change.toFixed(2)}%`}
+                                        </strong>
+                                    </div>
+                                    <div
+                                        className="an-home-zero"
+                                        aria-hidden="true"
+                                    >
+                                        <i
+                                            style={{
+                                                left:
+                                                    row.change !== null &&
+                                                    row.change < 0
+                                                        ? `${50 - (Math.abs(row.change) / scale) * 50}%`
+                                                        : "50%",
+                                                width: `${(Math.abs(row.change ?? 0) / scale) * 50}%`,
+                                                background:
+                                                    (row.change ?? 0) > 0
+                                                        ? "#f04452"
+                                                        : "#3182f6",
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                            {typeof data.market.recap?.headline === "string" ? (
+                                <p>{data.market.recap.headline}</p>
+                            ) : null}
+                        </>
+                    ) : (
+                        <div className="an-home-empty">{empty}</div>
+                    )}
+                    <footer className="an-home-foot">
+                        {data.marketDate} 종가 · 실시간 시세 아님
+                        <br />
+                        금융위원회 공공데이터 · 막대 중앙은 0%
+                        <br />
+                        <a href="/market">시장 자료와 출처 확인 →</a>
+                    </footer>
+                </article>
+                <article className="an-home-card">
+                    <span className="an-home-kicker">
+                        기업 · 최근 주요 공시
+                    </span>
+                    <h3>
+                        <a href="/disclosure">기업이 방금 알려줬어요! →</a>
+                    </h3>
+                    {data.filings.length ? (
+                        <ul className="an-home-list">
+                            {data.filings.slice(0, 3).map((item, i) => {
+                                const fact = homeFilingFacts(item)
+                                return (
+                                    <li key={`${item.ticker}-${i}`}>
+                                        <div className="an-home-row an-home-company-row">
+                                            <a
+                                                className="an-home-ticker an-home-company-link"
+                                                href={stockHref(item.ticker)}
+                                            >
+                                                <HomeCompanyLogo
+                                                    key={item.ticker}
+                                                    ticker={item.ticker}
+                                                    name={item.name}
+                                                />
+                                                <span className="an-home-company-copy">
+                                                    <span className="an-home-company-name">
+                                                        {item.name ||
+                                                            item.ticker}
+                                                    </span>
+                                                    <span className="an-home-filing an-home-company-filing">
+                                                        {fact.title}
+                                                    </span>
+                                                </span>
+                                            </a>
+                                            <a
+                                                className="an-home-source"
+                                                href={receiptUrl(item.url)!}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                aria-label={`${item.name || item.ticker} ${fact.title} DART 원문`}
+                                            >
+                                                원문 ↗
+                                            </a>
+                                        </div>
+                                        <HomeUrgencySticker
+                                            reason={homeUrgentReason(
+                                                item,
+                                                brief,
+                                                importantFeed,
+                                                urgencyNow
+                                            )}
+                                        />
+                                        <small className="an-home-event-date">
+                                            {fact.date}
+                                            {fact.date !== "접수일 미제공"
+                                                ? " 접수"
+                                                : ""}
+                                            {fact.correction
+                                                ? " · 정정 공시"
+                                                : ""}
+                                        </small>
+                                        <p className="an-home-event-check">
+                                            {fact.check}
+                                        </p>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    ) : (
+                        <div className="an-home-empty">{empty}</div>
+                    )}
+                    <footer className="an-home-foot">
+                        {data.company?.note || "공시 기준일 미제공"}
+                        <br />
+                        {data.filings.length
+                            ? `원문 연결 ${data.filings.length}건 중 ${Math.min(3, data.filings.length)}건 표시`
+                            : "원문이 확인되는 공시만 표시해요."}
+                    </footer>
+                </article>
+                <article className="an-home-card">
+                    <span className="an-home-kicker">수급 · 외국인·기관</span>
+                    <h3>
+                        <a href="/market">외국인·기관이 가장 많이 산 종목은? →</a>
+                    </h3>
+                    {flowRows.length ? (
+                        <ul className="an-home-list">
+                            {flowRows.map((item, i) => {
+                                const amount = flowAmount(item.text)
+                                return (
+                                    <li key={`${item.ticker}-${i}`}>
+                                        <div className="an-home-row an-home-company-row">
+                                            <a
+                                                className="an-home-ticker an-home-company-link"
+                                                href={stockHref(item.ticker)}
+                                            >
+                                                <HomeCompanyLogo
+                                                    key={item.ticker}
+                                                    ticker={item.ticker}
+                                                    name={item.name}
+                                                    showFlag={false}
+                                                />
+                                                <span className="an-home-company-copy">
+                                                    <span className="an-home-company-name">
+                                                        {item.name || item.ticker}
+                                                    </span>
+                                                </span>
+                                            </a>
+                                            {amount !== null ? (
+                                                <span className="an-home-amount">
+                                                    {amount.toLocaleString(
+                                                        "ko-KR"
+                                                    )}
+                                                    억원
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                        {amount !== null ? (
+                                            <div
+                                                className="an-home-bar"
+                                                aria-hidden="true"
+                                            >
+                                                <i
+                                                    style={{
+                                                        width: `${(amount / maxAmount) * 100}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="an-home-filing">
+                                                {item.text || "금액 미제공"}
+                                            </div>
+                                        )}
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    ) : (
+                        <div className="an-home-empty">{empty}</div>
+                    )}
+                    <footer className="an-home-foot">
+                        {data.flow?.note || "수급 기준일 미제공"}
+                        <br />
+                        {data.flow
+                            ? `추정 합산 순매수금액 · 수신 ${data.flows.length}종목 중 ${flowRows.length}종목`
+                            : "자료 미제공은 순매수 0을 의미하지 않아요."}
+                        <br />
+                        <a href="/market">수급 자료와 출처 확인 →</a>
+                    </footer>
+                </article>
+            </div>
+        </section>
+    )
+}
+
+// Preserve important feed receipts omitted by the overview's actual three-row preview.
+function homeAdditionalImportant(brief: HomeBrief | null | undefined, feed: any, now = Date.now()): any[] {
+    const stamp = String(feed?._meta?.generated_at || "")
+    const generated = /T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(stamp) ? Date.parse(stamp) : NaN
+    if (!Number.isFinite(now) || now <= 0 || !Number.isFinite(generated) || generated > now || now - generated > IMPORTANT_MAX_AGE_MS || !Array.isArray(feed?.alerts)) return []
+    const seen = new Set(homeSnapshot(brief, feed, now).filings.slice(0, 3).map(item => disclosureReceipt(String(item.url || ""))).filter(Boolean))
+    const items: any[] = []
+    for (const alert of feed.alerts) {
+        const receipt = disclosureReceipt(String(alert?.source_url || ""))
+        if (!receipt || seen.has(receipt) || typeof alert?.headline !== "string" || !alert.headline.trim()) continue
+        seen.add(receipt)
+        items.push({ ...alert, title: alert.headline, url: alert.source_url })
+        if (items.length === 3) break
+    }
+    return items
+}
+
+function homeBriefingSections(brief?: HomeBrief | null): HomeSection[] {
+    const uniqueTitles = new Set(["밤사이 미국 공시", "최근 7일 내부자 변동", "이번 주 실적 공시 예상"])
+    return (Array.isArray(brief?.sections) ? brief.sections : [])
+        .filter(section => section && uniqueTitles.has(section.title || ""))
+        .map(section => ({ ...section, items: Array.isArray(section.items) ? section.items.filter(Boolean) : [] }))
+        .filter(section => section.items.length > 0)
+}
+
 const PER_SECTION = 3 // 섹션당 기본 노출, 초과 = "+N건" 접힘
-const IMPORTANT_LIMIT = 3
 const IMPORTANT_MAX_AGE_MS = 72 * 60 * 60 * 1000
-const SITE_UPDATE_VERSION = "2026-09-01-home-pulse-v1"
-const SITE_UPDATE_READ_KEY = "alphanest_site_update_read"
-const SITE_UPDATES = [
-    { title: "보유·관심종목 로딩 개선", text: "데이터 확인 전 빈 상태가 먼저 보이던 문제를 개선했습니다.", href: "/nest" },
-    { title: "페이지별 읽기 가이드", text: "시장·공시·보유 화면에서 먼저 확인할 순서를 안내합니다.", href: "/market" },
-    { title: "종목 변화 센터", text: "가격·사업·고용·자본조달 변화를 기준일과 함께 확인할 수 있습니다.", href: "/stock" },
-] as const
 
 interface Props {
     apiBase: string
@@ -311,22 +1304,6 @@ function FlagIcon(props: { code: string; size?: number }) {
     )
 }
 
-function dartSourceUrl(value: any): string {
-    try {
-        const url = new URL(String(value || ""))
-        return url.protocol === "https:" && url.hostname === "dart.fss.or.kr"
-            ? url.href
-            : ""
-    } catch {
-        return ""
-    }
-}
-
-function shortDate(value: any): string {
-    const text = String(value || "")
-    return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text.slice(5).replace("-", ".") : text
-}
-
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -361,11 +1338,10 @@ export default function PublicMorningBriefing(props: Props) {
     const [w, setW] = useState(0)
 
     // ① 내 자산 상태
-    const [rows, setRows] = useState<any[]>(SAMPLE_HOLD)
+    const [rows, setRows] = useState<any[]>(onCanvas ? SAMPLE_HOLD : [])
     // 🚨 2026-08-22 — "내 보유 종목 소식". 회원별 서버 발행이 아니라 **전역 색인 1개**를
     //   받아 브라우저가 위 rows(보유) 와 교차한다. 인증·보유목록은 위 /api/holdings 재사용.
-    //   🚨 겹침 0이면 **섹션 자체를 렌더하지 않는다** — 빈 섹션이 매일 뜨는 걸 막는 것이
-    //   이 설계의 핵심이다(전용 섹션 신설을 처음에 반대했던 이유이고, 그 절충안이다).
+    //   보유 기반만 표시한다. 관심종목 연동으로 설명하지 않는다. 빈 결과·수신 실패를 구분한다.
     //   RULE 6 = LLM 0(결정론적 교차) · RULE 7 = 공시 제목 원문 + 지분율, 점수·추천 0.
     const [nestIdx, setNestIdx] = useState<Record<string, any> | null>(null)
     const [npsMap, setNpsMap] = useState<Record<string, number> | null>(null)
@@ -374,9 +1350,15 @@ export default function PublicMorningBriefing(props: Props) {
     >({})
     const [closeDate, setCloseDate] = useState<string>("") // 종가 기준일(kr_close_latest _meta.as_of, 전 종목 공통) — "전일" 대신 실제 날짜 표기
     const [isDemo, setIsDemo] = useState(true)
-    const [loading, setLoading] = useState<boolean>(() =>
-        onCanvas ? false : !!getToken()
-    )
+    // SSR/첫 렌더는 중립 상태: 인증 확인 전에 비회원 CTA나 예시 자산을 노출하지 않는다.
+    const [authReady, setAuthReady] = useState(onCanvas)
+    const [loading, setLoading] = useState(!onCanvas)
+    const [holdingsFailed, setHoldingsFailed] = useState(false)
+    const holdingsRequest = useRef(0)
+    const [newsSettled, setNewsSettled] = useState(false)
+    const [newsFailed, setNewsFailed] = useState(false)
+    const [newsStamp, setNewsStamp] = useState("")
+    const [npsStamp, setNpsStamp] = useState("")
     const [fxRate, setFxRate] = useState<number>(FX_FALLBACK) // 실시간 usd_krw(price_pulse). 폴백=FX_FALLBACK.
 
     // ② 시장 브리핑 상태
@@ -386,28 +1368,35 @@ export default function PublicMorningBriefing(props: Props) {
     )
     const [briefFailed, setBriefFailed] = useState(false)
     const [openSec, setOpenSec] = useState<Record<string, boolean>>({})
-    const [, setNowTick] = useState(0) // 경과 시간 표시 갱신용 60초 틱
+    const [nowTick, setNowTick] = useState(0) // 경과 시간 표시 갱신용 60초 틱
+    const [briefFresh, setBriefFresh] = useState(false)
+    const [importantFresh, setImportantFresh] = useState(false)
+    const urgencyNow =
+        !onCanvas && nowTick > 0 && briefFresh && importantFresh
+            ? Date.now()
+            : 0
     const [reloadTick, setReloadTick] = useState(0) // 탭 복귀·5분 폴링 재조회 트리거
-    const [pulseIndex, setPulseIndex] = useState(0)
-    const [pulsePaused, setPulsePaused] = useState(false)
-    const [reduceMotion, setReduceMotion] = useState(false)
-    const [updatesOpen, setUpdatesOpen] = useState(false)
-    const [updatesUnread, setUpdatesUnread] = useState(false)
 
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
 
-    // 반응형 폭
+    // Measure the same border box before/after responsive padding; ignore hidden/invalid sizes.
     useEffect(() => {
-        if (typeof ResizeObserver === "undefined" || !rootRef.current) return
-        const ro = new ResizeObserver((entries) => {
-            for (const e of entries) setW(e.contentRect.width)
+        const el = rootRef.current
+        if (!el) return
+        const measure = (width: number) => {
+            if (Number.isFinite(width) && width > 0) setW(prev => prev === width ? prev : width)
+        }
+        measure(el.offsetWidth)
+        if (typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver(entries => {
+            for (const entry of entries) measure(entry.borderBoxSize?.[0]?.inlineSize ?? el.offsetWidth)
         })
-        ro.observe(rootRef.current)
+        try { ro.observe(el, { box: "border-box" }) } catch { ro.observe(el) }
         return () => ro.disconnect()
     }, [])
 
     // 테마 자가감지
-    // 보유 ∩ 색인 = 내 종목 소식. 🚨 겹침 0이면 아래에서 섹션을 통째로 안 그린다.
+    // 보유 ∩ 수신 색인 = 내 종목 소식. 데이터가 없음을 업데이트 0건으로 단정하지 않는다.
     const myNews = useMemo(() => {
         if (!nestIdx || !Array.isArray(rows) || !rows.length) return []
         const out: any[] = []
@@ -433,7 +1422,7 @@ export default function PublicMorningBriefing(props: Props) {
     // 내 종목 소식 재료 — 티커 색인(최근 3일 공시) + 국민연금 대량보유. 각 1회.
     // 🚨 원본 피드(us_disclosure_feed 4.1MB + KR 862KB)를 직접 받지 않는다 — 서버에서
     //   최근 3일·종목당 3건으로 압축한 색인(178KB)을 쓴다.
-    // 🚨 국민연금 원천 = 5% 이상 대량보유 공시. 색인에 없다 = "5% 미만" 이지 미보유가 아니다.
+    // 국민연금 원천 = 수신 대량보유 공시. 색인 미등재를 미보유나 특정 지분율로 단정하지 않는다.
     useEffect(() => {
         if (onCanvas) return
         let alive = true
@@ -442,9 +1431,14 @@ export default function PublicMorningBriefing(props: Props) {
         )
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                if (alive && d && d.tickers) setNestIdx(d.tickers)
+                if (!alive) return
+                if (d && d.tickers && typeof d.tickers === "object" && !Array.isArray(d.tickers)) {
+                    setNestIdx(d.tickers)
+                    setNewsStamp(String(d._meta?.generated_at || ""))
+                } else setNewsFailed(true)
             })
-            .catch(() => {})
+            .catch(() => { if (alive) setNewsFailed(true) })
+            .finally(() => { if (alive) setNewsSettled(true) })
         fetch(
             "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nps_holdings.json"
         )
@@ -460,6 +1454,7 @@ export default function PublicMorningBriefing(props: Props) {
                         m[tk] = Math.max(m[tk] || 0, p)
                 }
                 setNpsMap(m)
+                setNpsStamp(String(d.generated_at || ""))
             })
             .catch(() => {})
         return () => {
@@ -467,35 +1462,34 @@ export default function PublicMorningBriefing(props: Props) {
         }
     }, [onCanvas])
 
-    // 보유종목 로드 (/api/holdings)
+    // Preserve auth changes and fail closed on stale responses from a previous account.
     const loadHoldings = useCallback(() => {
         if (onCanvas) return
+        const request = ++holdingsRequest.current
         const token = getToken()
+        setAuthReady(true)
+        setHoldingsFailed(false)
+        setRows([])
         if (!token) {
             setIsDemo(true)
-            setRows(SAMPLE_HOLD)
             setLoading(false)
             return
         }
-        // 🚨 토큰 있으면 즉시 로그인 상태 확정 (isDemo=false) — API 실패해도 "로그인하면…" CTA 뜨는 사고 방지(2026-07-14). SAMPLE 즉시 비움.
         setIsDemo(false)
-        setRows([])
         setLoading(true)
+        const current = () => request === holdingsRequest.current && token === getToken()
         fetch(base + "/api/holdings", {
             headers: { Authorization: "Bearer " + token },
         })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                setRows(
-                    Array.isArray(d)
-                        ? d
-                        : d && Array.isArray(d.holdings)
-                          ? d.holdings
-                          : []
-                )
+            .then(r => { if (!r.ok) throw new Error("holdings unavailable"); return r.json() })
+            .then(d => {
+                if (!current()) return
+                const items = Array.isArray(d) ? d : d?.holdings
+                if (!Array.isArray(items)) throw new Error("invalid holdings")
+                setRows(items)
             })
-            .catch(() => setRows([]))
-            .finally(() => setLoading(false))
+            .catch(() => { if (current()) { setRows([]); setHoldingsFailed(true) } })
+            .finally(() => { if (current()) setLoading(false) })
     }, [base, onCanvas])
     // 마운트 + 로그인/로그아웃(verity_auth_change · 다른 탭 storage) 재평가 → 로그인 상태 자동 전환 (HoldingsTab 동기, 2026-07-14).
     // 🚨 홈 마운트가 세션 기록보다 앞서거나 홈에서 로그인 시, 리스너 없으면 데모/CTA 상태에 남음 (본 버그 root cause — HoldingsTab 은 리스너 보유로 정상, MorningBriefing 만 누락).
@@ -506,6 +1500,7 @@ export default function PublicMorningBriefing(props: Props) {
         window.addEventListener("verity_auth_change", onAuth)
         window.addEventListener("storage", onAuth)
         return () => {
+            holdingsRequest.current++
             window.removeEventListener("verity_auth_change", onAuth)
             window.removeEventListener("storage", onAuth)
         }
@@ -581,6 +1576,7 @@ export default function PublicMorningBriefing(props: Props) {
         if (onCanvas) return
         let alive = true
         const fallback = () => {
+            if (alive) setBriefFresh(false)
             try {
                 const c = sessionStorage.getItem("daily_briefing")
                 if (alive && c) {
@@ -597,6 +1593,7 @@ export default function PublicMorningBriefing(props: Props) {
             .then((d) => {
                 if (!alive) return
                 if (d && Array.isArray(d.sections)) {
+                    setBriefFresh(true)
                     setBrief(d)
                     try {
                         sessionStorage.setItem(
@@ -631,9 +1628,13 @@ export default function PublicMorningBriefing(props: Props) {
         fetch(importantUrl || IMPORTANT_URL)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                if (alive && d && Array.isArray(d.alerts)) setImportantFeed(d)
+                if (!alive) return
+                setImportantFresh(Boolean(d && Array.isArray(d.alerts)))
+                if (d && Array.isArray(d.alerts)) setImportantFeed(d)
             })
-            .catch(() => {})
+            .catch(() => {
+                if (alive) setImportantFresh(false)
+            })
         return () => {
             alive = false
         }
@@ -644,23 +1645,9 @@ export default function PublicMorningBriefing(props: Props) {
     //   경과 시간 표시가 1분 단위로 늙어 보이게 60초 틱만 유지.
     useEffect(() => {
         if (onCanvas) return
+        setNowTick((t) => t + 1)
         const id = setInterval(() => setNowTick((t) => t + 1), 60000)
         return () => clearInterval(id)
-    }, [onCanvas])
-
-    // 제품 업데이트는 버전당 한 번만 자동으로 펼친다. 닫은 뒤에는 상단 버튼으로 다시 볼 수 있다.
-    useEffect(() => {
-        if (onCanvas || typeof window === "undefined") return
-        let seen = ""
-        try { seen = localStorage.getItem(SITE_UPDATE_READ_KEY) || "" } catch {}
-        const unread = seen !== SITE_UPDATE_VERSION
-        setUpdatesUnread(unread)
-        setUpdatesOpen(unread)
-        const media = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)")
-        const syncMotion = () => setReduceMotion(!!media?.matches)
-        syncMotion()
-        media?.addEventListener?.("change", syncMotion)
-        return () => media?.removeEventListener?.("change", syncMotion)
     }, [onCanvas])
 
     // ── 내 자산 계산 ──
@@ -721,7 +1708,19 @@ export default function PublicMorningBriefing(props: Props) {
         }
     }, [rows, closes, isDemo, fxRate])
 
-    const noLogin = !onCanvas && isDemo
+    const noLogin = authReady && !onCanvas && isDemo
+    // Pass only tickers in memory; loading/error and canvas samples are never empty holdings.
+    const sessionHoldingsTickers = useMemo(() => {
+        if (!authReady || loading || holdingsFailed || isDemo || onCanvas) return []
+        return Array.from(new Set(rows.map(row => typeof row?.ticker === "string" ? row.ticker.trim().toUpperCase() : "")
+            .filter(ticker => /^[A-Z0-9][A-Z0-9.-]{0,14}$/.test(ticker))))
+    }, [authReady, loading, holdingsFailed, isDemo, onCanvas, rows])
+    const sessionPersonalizationState = !authReady ? "loading"
+        : noLogin || onCanvas ? "market"
+        : loading ? "loading"
+        : holdingsFailed ? "error"
+        : sessionHoldingsTickers.length > 0 ? "holdings"
+        : rows.length > 0 ? "error" : "market"
     const upC = (v: number) => (v >= 0 ? C.up : C.down)
     const arrow = (v: number) => (v > 0 ? "▲" : v < 0 ? "▼" : "·")
     const narrow = w > 0 && w < 420
@@ -729,10 +1728,6 @@ export default function PublicMorningBriefing(props: Props) {
     const goHoldings = () => {
         if (typeof window === "undefined") return
         window.location.href = (holdingsUrl || "/holdings").replace(/\/+$/, "")
-    }
-    const goLogin = () => {
-        if (typeof window === "undefined" || !loginUrl) return
-        window.location.href = loginUrl
     }
     const goStockTk = (tk: string, us?: boolean) => {
         if (typeof window === "undefined" || !tk) return
@@ -742,147 +1737,17 @@ export default function PublicMorningBriefing(props: Props) {
         window.location.href = path + "?q=" + encodeURIComponent(tk)
     }
 
-    // ── 브리핑 렌더 준비 (기존 로직 이식) ──
-    const pctColor = (v: number) => (v > 0 ? C.up : v < 0 ? C.down : C.sub)
-    const fmtPct = (v: number) =>
-        (v > 0 ? "+" : "") + Number(v).toFixed(2) + "%"
-    const fmtLevel = (v: any) =>
-        typeof v === "number" && isFinite(v)
-            ? v.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-              })
-            : ""
-    // mover 행 — "+13.2% · 같은 날 공시: …" 앞 % 만 등락색 분리
-    const moverText = (t: string) => {
-        const cut = t.indexOf(" · ")
-        if (cut < 0)
-            return <span style={{ color: C.sub, fontWeight: 600 }}>{t}</span>
-        const pct = t.slice(0, cut)
-        const rest = t.slice(cut)
-        const col =
-            pct.indexOf("+") === 0
-                ? C.up
-                : pct.indexOf("-") === 0 || pct.indexOf("−") === 0
-                  ? C.down
-                  : C.sub
-        return (
-            <span style={{ minWidth: 0 }}>
-                <span
-                    style={{
-                        color: col,
-                        fontWeight: 800,
-                        fontVariantNumeric: "tabular-nums",
-                    }}
-                >
-                    {pct}
-                </span>
-                <span style={{ color: C.sub, fontWeight: 600 }}>{rest}</span>
-            </span>
-        )
-    }
-    const secs: any[] = (brief && brief.sections) || []
-    const banner =
-        secs.length && secs[0].recap && typeof secs[0].recap.kospi === "number"
-            ? secs[0].recap
-            : null
-    // 발행 시각 = JSON publish_at(고정 조간 07:30) 우선, 없으면 generated_at(실 빌드시각) 폴백. "07:30" 하드코딩 폐기 — gh cron 지연 부정확 방지(2026-07-14).
-    const pubHM = (iso: any) => {
-        const m = String(iso || "").match(/T(\d{2}:\d{2})/)
-        return m ? m[1] : ""
-    }
-    const pubTime = brief
-        ? pubHM(brief.publish_at) || pubHM(brief.generated_at)
-        : ""
-    // embargo — publish_at(고정 발행시각) 전에는 ② 시장 브리핑을 노출하지 않고 "발행 예정" 표시. 클라 시계로 그 시각에 교체.
-    // 🚨 embargo 폐기 (2026-07-28) — 아침 한 번이 아니라 상시. 항상 false.
-    const embargoed = false
-    // 신선도 = "몇 분 전 갱신". 고정 발행 시각 표기는 상시 갱신과 맞지 않는다.
-    const agoText = (iso: any) => {
-        const t = Date.parse(String(iso || ""))
-        if (!isFinite(t)) return ""
-        const mins = Math.floor((Date.now() - t) / 60000)
-        if (mins < 1) return "방금 갱신"
-        if (mins < 60) return mins + "분 전 갱신"
-        const hrs = Math.floor(mins / 60)
-        if (hrs < 24) return hrs + "시간 전 갱신"
-        return Math.floor(hrs / 24) + "일 전 갱신"
-    }
-    const SESSL: Record<string, string> = {
-        장전: "장 시작 전",
-        장중: "장중",
-        장마감: "장 마감",
-        휴장: "휴장",
-    }
-    const dateLine = brief
-        ? [
-              brief.session ? SESSL[String(brief.session)] || "" : "",
-              agoText(brief.generated_at),
-          ]
-              .filter(Boolean)
-              .join(" · ")
-        : "수시 갱신"
-
-    // 생산자가 정한 순서를 그대로 사용한다. 원문 링크가 없거나 피드가 72시간 넘게 멈추면 미노출.
-    const importantNews: any[] = (() => {
-        if (!importantFeed || !Array.isArray(importantFeed.alerts)) return []
-        const generated = Date.parse(String(importantFeed?._meta?.generated_at || ""))
-        if (
-            !onCanvas &&
-            (!isFinite(generated) || Date.now() - generated > IMPORTANT_MAX_AGE_MS)
-        )
-            return []
-        return importantFeed.alerts
-            .filter(
-                (item: any) =>
-                    item &&
-                    String(item.headline || "").trim() &&
-                    dartSourceUrl(item.source_url)
-            )
-            .slice(0, IMPORTANT_LIMIT)
-    })()
-
-    // 기존 브리핑 응답만 재사용한다. 별도 API·Blob 요청을 추가하지 않는다.
-    const pulseItems = useMemo(() => {
-        const items: Array<{ text: string; href?: string }> = []
-        if (brief) {
-            const factCount = ((brief.sections || []) as any[]).reduce(
-                (sum, section) => sum + (Array.isArray(section?.items) ? section.items.length : 0),
-                0
-            )
-            if (factCount > 0) items.push({ text: `시장 브리핑 반영 사실 ${factCount}건 · ${dateLine}` })
-            if (banner?.date) items.push({ text: `시장 지수·업종 ${banner.date} 종가 기준`, href: "/market" })
-        }
-        if (!isDemo && myNews.length > 0) items.push({ text: `내 보유 종목 새 소식 ${myNews.length}종목 · 최근 3일`, href: "/nest" })
-        items.push({ text: `새 기능 ${SITE_UPDATES.length}건 · 업데이트 내용 보기` })
-        return items
-    }, [brief, banner?.date, dateLine, isDemo, myNews.length])
-
-    useEffect(() => {
-        if (pulseIndex >= pulseItems.length) setPulseIndex(0)
-    }, [pulseIndex, pulseItems.length])
-
-    useEffect(() => {
-        if (onCanvas || reduceMotion || pulsePaused || pulseItems.length < 2) return
-        const id = setInterval(() => setPulseIndex((index) => (index + 1) % pulseItems.length), 7000)
-        return () => clearInterval(id)
-    }, [onCanvas, pulseItems.length, pulsePaused, reduceMotion])
-
-    const markUpdatesRead = () => {
-        try { localStorage.setItem(SITE_UPDATE_READ_KEY, SITE_UPDATE_VERSION) } catch {}
-        setUpdatesUnread(false)
-    }
-
-    const toggleUpdates = () => {
-        const next = !updatesOpen
-        setUpdatesOpen(next)
-        if (next || updatesUnread) markUpdatesRead()
-    }
+    // These are the unique briefing sections; market/DART/flow already live in the overview.
+    const secs = homeBriefingSections(brief)
+    const additionalImportant = homeAdditionalImportant(brief, importantFeed)
 
     // 카드 밖 제호 + 형제 카드 2장 (개인 / 시장). 중첩 카드 회피.
     const shell: CSSProperties = {
         fontFamily: FONT,
         width: "100%",
+        minWidth: 0,
+        maxWidth: "100%",
+        overflowWrap: "anywhere",
         boxSizing: "border-box",
         color: C.ink,
         display: "flex",
@@ -891,6 +1756,8 @@ export default function PublicMorningBriefing(props: Props) {
         padding: "8px clamp(14px, 2vw, 20px) 20px",
     }
     const card: CSSProperties = {
+        minWidth: 0,
+        maxWidth: "100%",
         background: C.card,
         borderRadius: 16,
         padding: narrow ? "14px 14px" : "18px 18px",
@@ -918,101 +1785,25 @@ export default function PublicMorningBriefing(props: Props) {
         fontWeight: 600,
         color: C.faint,
     }
-    const idxLabel: CSSProperties = {
-        fontSize: 11.5,
-        fontWeight: 700,
-        color: C.faint,
-        letterSpacing: "0.4px",
-    }
-
     return (
         <div ref={rootRef} style={shell}>
             <style>{AN_PALETTE}</style>
-            {/* 제호 — 카드 밖 (카드 2장을 하나의 채널로 묶는 역할) */}
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    gap: 8,
-                    padding: "0 4px",
-                }}
-            >
-                <span
-                    style={{
-                        fontSize: 18,
-                        fontWeight: 800,
-                        letterSpacing: "-0.4px",
-                    }}
-                >
-                    시장 브리핑
-                </span>
-                <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: C.faint, whiteSpace: "nowrap" }}>{dateLine}</span>
-                    <button
-                        type="button"
-                        onClick={toggleUpdates}
-                        aria-expanded={updatesOpen}
-                        aria-controls="site-update-panel"
-                        style={{ border: "none", borderRadius: 999, padding: "5px 8px", background: updatesUnread ? C.vg : C.vgS, color: updatesUnread ? C.onAccent : C.vg, fontFamily: FONT, fontSize: 10.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
-                    >
-                        업데이트 {updatesUnread ? "NEW" : SITE_UPDATES.length}
-                    </button>
-                </div>
-            </div>
-
-            {/* 데이터 활동 스트립 — 브리핑에 이미 내려온 사실만 순환. 연속 전광판·추가 요청 없음. */}
-            <div
-                role="status"
-                aria-live="polite"
-                onMouseEnter={() => setPulsePaused(true)}
-                onMouseLeave={() => setPulsePaused(false)}
-                style={{ minHeight: 36, display: "flex", alignItems: "center", gap: 9, background: C.card, borderRadius: 12, padding: "8px 11px", boxSizing: "border-box", overflow: "hidden" }}
-            >
-                <span style={{ flexShrink: 0, color: C.vg, background: C.vgS, borderRadius: 999, padding: "3px 7px", fontSize: 9.5, fontWeight: 850, letterSpacing: "0.3px" }}>NOW</span>
-                <button
-                    type="button"
-                    onClick={() => {
-                        const item = pulseItems[pulseIndex]
-                        if (item?.href && typeof window !== "undefined") window.location.href = item.href
-                        else if (!updatesOpen) toggleUpdates()
-                    }}
-                    style={{ minWidth: 0, flex: 1, border: "none", padding: 0, background: "transparent", color: C.sub, fontFamily: FONT, fontSize: 11.5, fontWeight: 700, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer" }}
-                >
-                    {pulseItems[pulseIndex]?.text || "AlphaNest 데이터 확인 중"}
-                </button>
-                {pulseItems.length > 1 && (
-                    <span aria-hidden="true" style={{ flexShrink: 0, color: C.faint, fontSize: 9.5, fontVariantNumeric: "tabular-nums" }}>{pulseIndex + 1}/{pulseItems.length}</span>
-                )}
-            </div>
-
-            {updatesOpen && (
-                <section id="site-update-panel" aria-label="AlphaNest 업데이트" style={{ ...card, padding: narrow ? "14px" : "16px 18px" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                        <div>
-                            <div style={{ color: C.vg, fontSize: 10.5, fontWeight: 850 }}>ALPHANEST UPDATE</div>
-                            <div style={{ marginTop: 3, color: C.ink, fontSize: 15, fontWeight: 800 }}>이번에 달라진 점</div>
-                        </div>
-                        <button type="button" onClick={() => { setUpdatesOpen(false); markUpdatesRead() }} style={{ border: "none", background: C.bg, color: C.sub, borderRadius: 999, padding: "6px 9px", fontFamily: FONT, fontSize: 10.5, fontWeight: 800, cursor: "pointer" }}>닫기</button>
-                    </div>
-                    <div style={{ marginTop: 11, display: "grid", gap: 7 }}>
-                        {SITE_UPDATES.map((update) => (
-                            <a key={update.title} href={update.href} style={{ display: "block", padding: "10px 11px", borderRadius: 11, background: C.bg, color: C.ink, textDecoration: "none" }}>
-                                <div style={{ fontSize: 12.5, fontWeight: 800 }}>{update.title}</div>
-                                <div style={{ marginTop: 3, color: C.faint, fontSize: 10.5, fontWeight: 600, lineHeight: 1.5 }}>{update.text}</div>
-                            </a>
-                        ))}
-                    </div>
-                    <div style={{ marginTop: 9, color: C.faint, fontSize: 10, fontWeight: 600 }}>2026.09.01 · 새 버전일 때 한 번만 자동으로 열립니다.</div>
-                </section>
-            )}
+            {/* Timeline first; preserve search identity and the existing search → holdings → public changes order. */}
+            <PublicSessionBriefing dark={dark} holdingsTickers={sessionPersonalizationState === "holdings" ? sessionHoldingsTickers : undefined} personalizationState={sessionPersonalizationState} />
+            <PublicHomeSearch brief={brief} importantFeed={importantFeed} stockPath={stockPath || "/stock"} dark={dark} />
 
             {/* ── ① 내 자산 카드 ── */}
-            {noLogin ? (
-                <div
-                    onClick={goLogin}
-                    role="button"
-                    style={{ ...cta, background: C.vgS }}
+            {!authReady ? (
+                <div role="status" style={{ ...card, color: C.faint, fontSize: 12, fontWeight: 600 }}>내 자산 연결 상태 확인 중…</div>
+            ) : noLogin ? (
+                <a
+                    href={loginUrl || "/login"}
+                    style={{
+                        ...cta,
+                        padding: "10px 4px",
+                        background: "transparent",
+                        textDecoration: "none",
+                    }}
                 >
                     <div
                         style={{
@@ -1022,8 +1813,7 @@ export default function PublicMorningBriefing(props: Props) {
                             lineHeight: 1.5,
                         }}
                     >
-                        <span style={{ color: C.vg }}>내 자산</span> —
-                        로그인하면 보유종목 증감을 여기서 바로 볼 수 있어요
+                        로그인하면 내 보유종목과 자산 변화를 이어볼 수 있어요.
                     </div>
                     <span
                         style={{
@@ -1035,7 +1825,7 @@ export default function PublicMorningBriefing(props: Props) {
                     >
                         로그인 →
                     </span>
-                </div>
+                </a>
             ) : loading ? (
                 <div
                     style={{
@@ -1048,6 +1838,8 @@ export default function PublicMorningBriefing(props: Props) {
                 >
                     내 자산 불러오는 중…
                 </div>
+            ) : holdingsFailed ? (
+                <div role="status" style={{ ...card, color: C.faint, fontSize: 12, fontWeight: 600 }}>보유종목을 불러오지 못했습니다. <a href={holdingsUrl || "/holdings"} style={{ color: C.vg }}>내 자산에서 확인 →</a></div>
             ) : asset.count === 0 ? (
                 <div onClick={goHoldings} role="button" style={cta}>
                     <div
@@ -1254,531 +2046,152 @@ export default function PublicMorningBriefing(props: Props) {
                 </div>
             )}
 
-            {/* ── ② 시장 브리핑 카드 ── */}
-            <div style={card}>
-                {!brief ? (
-                    <div
-                        style={{
-                            fontSize: 12.5,
-                            color: C.faint,
-                            fontWeight: 600,
-                        }}
-                    >
-                        {briefFailed
-                            ? "시장 브리핑 준비 중 — 곧 다시 채워져요"
-                            : "시장 브리핑 수신 중…"}
-                    </div>
-                ) : embargoed ? (
-                    <div
-                        style={{
-                            fontSize: 12.5,
-                            color: C.faint,
-                            fontWeight: 600,
-                            lineHeight: 1.6,
-                        }}
-                    >
-                        오늘 시장 브리핑은{" "}
-                        <span style={{ color: C.ink, fontWeight: 800 }}>
-                            {pubTime || "07:30"}
-                        </span>{" "}
-                        에 발행돼요
-                    </div>
-                ) : (
-                    <div>
-                        {/* 중요 소식 — 정지형 목록. 움직임·자동 넘김 없이 최대 3건을 동시에 보여준다. */}
-                        {importantNews.length > 0 && (
-                            <section
-                                aria-label="중요 소식"
-                                style={{
-                                    marginBottom: 18,
-                                    paddingBottom: 16,
-                                    borderBottom: `1px solid ${C.line}`,
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "baseline",
-                                        justifyContent: "space-between",
-                                        gap: 8,
-                                        flexWrap: "wrap",
-                                    }}
-                                >
-                                    <span
+                            {authReady && !loading && !holdingsFailed && !isDemo && myNews.length > 0 && (
+                                <section aria-label="내 보유종목 소식" style={{ ...card, marginBottom: 8 }}>
+                                    <div
                                         style={{
                                             fontSize: 11.5,
-                                            fontWeight: 850,
-                                            color: C.warn,
-                                            letterSpacing: "0.5px",
-                                        }}
-                                    >
-                                        중요 소식
-                                    </span>
-                                    <span style={secNote}>
-                                        DART 원문 · {agoText(importantFeed?._meta?.generated_at)}
-                                    </span>
-                                </div>
-                                <div
-                                    style={{
-                                        marginTop: 9,
-                                        display: "flex",
-                                        flexDirection: "column",
-                                    }}
-                                >
-                                    {importantNews.map((item: any, index: number) => {
-                                        const href = dartSourceUrl(item.source_url)
-                                        const sourceLabel =
-                                            item.type === "disclosure"
-                                                ? item.label || "공시"
-                                                : "임원·주요주주"
-                                        return (
-                                            <a
-                                                key={`${item.ticker || item.name}-${item.date}-${index}`}
-                                                href={href}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                style={{
-                                                    display: "block",
-                                                    padding: index === 0 ? "0 0 10px" : "10px 0",
-                                                    borderTop:
-                                                        index === 0
-                                                            ? "none"
-                                                            : `1px solid ${C.line}`,
-                                                    color: "inherit",
-                                                    textDecoration: "none",
-                                                }}
-                                            >
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        alignItems: "baseline",
-                                                        gap: 7,
-                                                        minWidth: 0,
-                                                        lineHeight: 1.45,
-                                                    }}
-                                                >
-                                                    <span
-                                                        style={{
-                                                            flexShrink: 0,
-                                                            fontSize: 12.5,
-                                                            fontWeight: 800,
-                                                            color: C.ink,
-                                                        }}
-                                                    >
-                                                        {item.name || item.ticker}
-                                                    </span>
-                                                    <span
-                                                        style={{
-                                                            minWidth: 0,
-                                                            fontSize: 12.5,
-                                                            fontWeight: 650,
-                                                            color: C.sub,
-                                                        }}
-                                                    >
-                                                        {item.headline}
-                                                    </span>
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        marginTop: 3,
-                                                        fontSize: 10.5,
-                                                        fontWeight: 650,
-                                                        color: C.faint,
-                                                    }}
-                                                >
-                                                    {sourceLabel} · {shortDate(item.date)} · 원문 보기 ↗
-                                                </div>
-                                            </a>
-                                        )
-                                    })}
-                                </div>
-                            </section>
-                        )}
-
-                        {/* 1면 배너 — 지수 레벨 + 큰 등락% + 흐름 한 줄. 구분선은 아래 섹션이 각자 소유 */}
-                        {banner && (
-                            <div>
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        gap: narrow ? 20 : 28,
-                                        alignItems: "flex-end",
-                                        flexWrap: "wrap",
-                                    }}
-                                >
-                                    {[
-                                        [
-                                            "코스피",
-                                            banner.kospi,
-                                            banner.kospi_close,
-                                        ],
-                                        [
-                                            "코스닥",
-                                            banner.kosdaq,
-                                            banner.kosdaq_close,
-                                        ],
-                                    ].map(([lb, pct, lv]: any) => (
-                                        <div key={lb}>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "baseline",
-                                                    gap: 6,
-                                                }}
-                                            >
-                                                <span style={idxLabel}>
-                                                    {lb}
-                                                </span>
-                                                {fmtLevel(lv) && (
-                                                    <span
-                                                        style={{
-                                                            fontSize: 11.5,
-                                                            fontWeight: 600,
-                                                            color: C.faint,
-                                                            fontVariantNumeric:
-                                                                "tabular-nums",
-                                                        }}
-                                                    >
-                                                        {fmtLevel(lv)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div
-                                                style={{
-                                                    marginTop: 2,
-                                                    fontSize: narrow ? 22 : 25,
-                                                    fontWeight: 800,
-                                                    letterSpacing: "-0.7px",
-                                                    color: pctColor(pct),
-                                                    fontVariantNumeric:
-                                                        "tabular-nums",
-                                                    lineHeight: 1.1,
-                                                }}
-                                            >
-                                                {fmtPct(pct)}
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div
-                                        style={{
-                                            marginLeft: "auto",
-                                            alignSelf: "flex-start",
-                                            fontSize: 10.5,
-                                            fontWeight: 600,
-                                            color: C.faint,
-                                            whiteSpace: "nowrap",
-                                        }}
-                                    >
-                                        {banner.date} 종가
-                                        {Number(brief.warnings_n) > 0
-                                            ? " · 시장경보 " + brief.warnings_n
-                                            : ""}
-                                    </div>
-                                </div>
-                                {banner.headline && (
-                                    <div
-                                        style={{
-                                            marginTop: 9,
-                                            fontSize: narrow ? 14 : 15,
                                             fontWeight: 800,
-                                            letterSpacing: "-0.2px",
-                                            color: C.ink,
-                                            lineHeight: 1.45,
+                                            color: C.sub,
+                                            letterSpacing: "0.3px",
+                                            marginBottom: 10,
                                         }}
                                     >
-                                        {banner.headline}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* 내 종목 소식 — 🚨 겹침 0이면 렌더 안 함(빈 섹션 방지).
-                            데모/캔버스에서도 안 그린다(가짜 개인화 방지). */}
-                        {!isDemo && myNews.length > 0 && (
-                            <div style={{ marginBottom: 32 }}>
-                                <div
-                                    style={{
-                                        fontSize: 11.5,
-                                        fontWeight: 800,
-                                        color: C.sub,
-                                        letterSpacing: "0.3px",
-                                        marginBottom: 10,
-                                    }}
-                                >
-                                    내 보유 종목 소식
-                                    <span
-                                        style={{
-                                            color: C.faint,
-                                            fontWeight: 700,
-                                            marginLeft: 6,
-                                        }}
-                                    >
-                                        {myNews.length}종목 · 최근 3일 공시
-                                    </span>
-                                </div>
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        gap: 7,
-                                    }}
-                                >
-                                    {myNews.map((m: any) => (
-                                        <div key={m.ticker}>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: 6,
-                                                    flexWrap: "wrap",
-                                                }}
-                                            >
-                                                <span
-                                                    style={{
-                                                        fontSize: 13.5,
-                                                        fontWeight: 700,
-                                                        color: C.ink,
-                                                    }}
-                                                >
-                                                    {m.name}
-                                                </span>
-                                                {m.nps != null && (
-                                                    <span
-                                                        style={{
-                                                            fontSize: 10.5,
-                                                            fontWeight: 700,
-                                                            color: C.sub,
-                                                            background: C.line,
-                                                            borderRadius: 999,
-                                                            padding: "2px 7px",
-                                                        }}
-                                                        title="국민연금 5% 이상 대량보유 공시 기준"
-                                                    >
-                                                        국민연금{" "}
-                                                        {m.nps.toFixed(2)}%
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {m.ev.map((e: any, i: number) => (
-                                                <div
-                                                    key={i}
-                                                    style={{
-                                                        fontSize: 11.5,
-                                                        color: C.sub,
-                                                        fontWeight: 600,
-                                                        marginTop: 2,
-                                                        lineHeight: 1.45,
-                                                    }}
-                                                >
-                                                    {String(e.d || "").slice(5)}{" "}
-                                                    · {String(e.t || "")}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 섹션들 */}
-                        {secs.map((s: any, si: number) => {
-                            const isBannerSec = si === 0 && !!banner
-                            const allItems: any[] = (s.items || []).filter(
-                                (it: any) =>
-                                    !isBannerSec ||
-                                    (it.name !== "지수" && it.name !== "흐름")
-                            )
-                            const open = !!openSec[s.title]
-                            const items = open
-                                ? allItems
-                                : allItems.slice(0, PER_SECTION)
-                            const extra = allItems.length - PER_SECTION
-                            const firstMover = items.findIndex(
-                                (it: any) => it.mover
-                            )
-                            if (!allItems.length && !isBannerSec) return null
-                            // 섹션 경계 = hairline + 여백 16/16 (사이 32 : 안 7 ≈ 4.5배). 첫 섹션이 카드 최상단이면 선 없음.
-                            const divided = !(si === 0 && !banner)
-                            return (
-                                <div
-                                    key={si}
-                                    style={{
-                                        marginTop: divided ? 16 : 0,
-                                        paddingTop: divided ? 16 : 0,
-                                        borderTop: divided
-                                            ? `1px solid ${C.line}`
-                                            : "none",
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "baseline",
-                                            gap: 8,
-                                            flexWrap: "wrap",
-                                        }}
-                                    >
-                                        <span style={secTitle}>{s.title}</span>
-                                        <span style={secNote}>
-                                            {isBannerSec
-                                                ? (s.as_of
-                                                      ? String(s.as_of).slice(
-                                                            4,
-                                                            6
-                                                        ) +
-                                                        "." +
-                                                        String(s.as_of).slice(
-                                                            6,
-                                                            8
-                                                        ) +
-                                                        " 종가 기준 · "
-                                                      : "") +
-                                                  "섹터 · 거래대금 · 같은 날 공시"
-                                                : s.note}
+                                        내 보유 종목 소식
+                                        <span
+                                            style={{
+                                                color: C.faint,
+                                                fontWeight: 700,
+                                                marginLeft: 6,
+                                            }}
+                                        >
+                                            {myNews.length}종목 · 수신 공시·국민연금 공시 기준
                                         </span>
                                     </div>
                                     <div
                                         style={{
-                                            marginTop: 8,
                                             display: "flex",
                                             flexDirection: "column",
                                             gap: 7,
                                         }}
                                     >
-                                        {items.map((it: any, i: number) => (
-                                            <div key={i}>
-                                                {isBannerSec &&
-                                                    it.mover &&
-                                                    i === firstMover && (
-                                                        <div
-                                                            style={{
-                                                                fontSize: 10.5,
-                                                                fontWeight: 700,
-                                                                color: C.faint,
-                                                                letterSpacing:
-                                                                    "0.3px",
-                                                                margin: "6px 0 7px",
-                                                                paddingTop: 9,
-                                                                borderTop: `1px dashed ${C.line}`,
-                                                            }}
-                                                        >
-                                                            같은 날 공시와 함께
-                                                            움직인 종목
-                                                        </div>
-                                                    )}
+                                        {myNews.map((m: any) => (
+                                            <div key={m.ticker}>
                                                 <div
                                                     style={{
                                                         display: "flex",
-                                                        gap: 8,
-                                                        alignItems: "baseline",
-                                                        fontSize: narrow
-                                                            ? 12.5
-                                                            : 13,
-                                                        lineHeight: 1.5,
+                                                        alignItems: "center",
+                                                        gap: 6,
+                                                        flexWrap: "wrap",
                                                     }}
                                                 >
-                                                    {/* 종목명 = ink 700 + 흐린 밑줄. 보라는 액션 전용 (섹션 제목과의 위계 역전 방지) */}
                                                     <span
-                                                        onClick={() =>
-                                                            goStockTk(
-                                                                String(
-                                                                    it.ticker ||
-                                                                        ""
-                                                                )
-                                                            )
-                                                        }
                                                         style={{
-                                                            flexShrink: 0,
+                                                            fontSize: 13.5,
                                                             fontWeight: 700,
-                                                            color: it.ticker
-                                                                ? C.ink
-                                                                : C.faint,
-                                                            cursor: it.ticker
-                                                                ? "pointer"
-                                                                : "default",
-                                                            textDecoration:
-                                                                it.ticker
-                                                                    ? "underline"
-                                                                    : "none",
-                                                            textDecorationColor:
-                                                                C.line,
-                                                            textUnderlineOffset: 3,
+                                                            color: C.ink,
                                                         }}
                                                     >
-                                                        {it.name || it.ticker}
+                                                        {m.name}
                                                     </span>
-                                                    {it.mover && it.text ? (
-                                                        moverText(
-                                                            String(it.text)
-                                                        )
-                                                    ) : (
+                                                    {m.nps != null && (
                                                         <span
                                                             style={{
+                                                                fontSize: 10.5,
+                                                                fontWeight: 700,
                                                                 color: C.sub,
-                                                                fontWeight: 600,
-                                                                minWidth: 0,
+                                                                background:
+                                                                    C.line,
+                                                                borderRadius: 999,
+                                                                padding:
+                                                                    "2px 7px",
                                                             }}
+                                                            title="국민연금 5% 이상 대량보유 공시 기준"
                                                         >
-                                                            {it.text ||
-                                                                (it.date
-                                                                    ? "예상일 " +
-                                                                      String(
-                                                                          it.date
-                                                                      ).slice(5)
-                                                                    : "")}
+                                                            국민연금{" "}
+                                                            {m.nps.toFixed(2)}%
                                                         </span>
                                                     )}
                                                 </div>
+                                                {m.ev.map(
+                                                    (e: any, i: number) => (
+                                                        <div
+                                                            key={i}
+                                                            style={{
+                                                                fontSize: 11.5,
+                                                                color: C.sub,
+                                                                fontWeight: 600,
+                                                                marginTop: 2,
+                                                                lineHeight: 1.45,
+                                                            }}
+                                                        >
+                                                            {String(
+                                                                e.d || ""
+                                                            ).slice(5)}{" "}
+                                                            ·{" "}
+                                                            {String(e.t || "")}
+                                                        </div>
+                                                    )
+                                                )}
                                             </div>
                                         ))}
                                     </div>
-                                    {extra > 0 && (
-                                        <button
-                                            onClick={() =>
-                                                setOpenSec((o) => ({
-                                                    ...o,
-                                                    [s.title]: !open,
-                                                }))
-                                            }
-                                            style={{
-                                                border: "none",
-                                                background: "transparent",
-                                                cursor: "pointer",
-                                                fontFamily: FONT,
-                                                fontSize: 11.5,
-                                                fontWeight: 700,
-                                                color: C.vg,
-                                                padding: "7px 0 0",
-                                            }}
-                                        >
-                                            {open
-                                                ? "접기"
-                                                : "+" + extra + "건 더보기"}
-                                        </button>
-                                    )}
-                                </div>
-                            )
-                        })}
+                                    <div style={{ ...secNote, marginTop: 10 }}>
+                                        DART·SEC 공시 색인 · {updatedAt(newsStamp)}
+                                        <br />국민연금 대량보유 공시 자료 · {updatedAt(npsStamp)} · 생성시각과 개별 공시 기준일은 다를 수 있어요.
+                                    </div>
+                                </section>
+                            )}
 
-                        {/* 면책 푸터 */}
-                        <div
-                            style={{
-                                fontSize: 10,
-                                color: C.faint,
-                                fontWeight: 600,
-                                marginTop: 16,
-                                paddingTop: 11,
-                                borderTop: `1px solid ${C.line}`,
-                                lineHeight: 1.5,
-                                letterSpacing: "0.2px",
-                            }}
-                        >
-                            {brief.disclaimer ||
-                                "전부 공시·수집 사실 · 점수·추천 아님"}
-                        </div>
-                    </div>
-                )}
-            </div>
+
+            {authReady && !loading && !holdingsFailed && !isDemo && asset.count > 0 && myNews.length === 0 ? (
+                <p role="status" style={{ ...secNote, margin: "4px 4px 12px", lineHeight: 1.6 }}>
+                    {!newsSettled ? "보유종목 소식을 확인하고 있어요." : newsFailed ? "보유종목 소식을 불러오지 못했습니다." : "수신 자료에서 보유종목의 새 공시가 확인되지 않았어요. 모든 소식이 없다는 뜻은 아닙니다."}
+                    {newsSettled && !newsFailed ? <span> · {updatedAt(newsStamp)}</span> : null}
+                </p>
+            ) : null}
+            <PublicHomeOverview brief={brief} importantFeed={importantFeed} failed={briefFailed} stockPath={stockPath || "/stock"} urgencyNow={urgencyNow} />
+
+            <details style={card} data-home-briefing>
+                <summary style={{ cursor: "pointer", color: C.ink, fontSize: 13, fontWeight: 700 }}>
+                    중요 공시·미국 공시·예상 일정 더 보기
+                </summary>
+                <div style={{ paddingTop: 14 }}>
+                    <p style={secNote}>{updatedAt(brief?.generated_at)} · 항목별 기준일 확인</p>
+                    {additionalImportant.length > 0 ? (
+                        <section aria-label="추가 중요 공시" style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+                            <h3 style={{ ...secTitle, margin: "0 0 5px" }}>추가 중요 공시</h3>
+                            <div style={secNote}>DART 원문 · {updatedAt(importantFeed?._meta?.generated_at)}</div>
+                            {additionalImportant.map(item => (
+                                <div key={item.url} style={{ marginTop: 10, fontSize: 12, lineHeight: 1.6 }}>
+                                    <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: C.ink, textDecoration: "none" }}>
+                                        <span style={{ fontWeight: 700 }}>{item.name || item.ticker} · {item.title}</span>
+                                        <span style={{ ...secNote, display: "block" }}>{item.date || "접수일 미제공"} · 원문 보기 ↗</span>
+                                    </a>
+                                    <HomeUrgencySticker reason={item.type === "disclosure" ? homeUrgentReason(item, brief, importantFeed, urgencyNow) : ""} />
+                                </div>
+                            ))}
+                        </section>
+                    ) : null}
+                    {!brief ? <p style={secNote}>{briefFailed ? "시장 브리핑을 불러오지 못했습니다." : "시장 브리핑 수신 중…"}</p>
+                        : secs.length === 0 ? (additionalImportant.length === 0 ? <p style={secNote}>이번 자료에 제공된 추가 항목이 없습니다.</p> : null)
+                        : secs.map((section: HomeSection) => {
+                            const allItems = section.items || []
+                            const open = !!openSec[section.title!]
+                            const items = open ? allItems : allItems.slice(0, PER_SECTION)
+                            return <section key={section.title} style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+                                <h3 style={{ ...secTitle, margin: "0 0 5px" }}>{section.title}</h3>
+                                <div style={secNote}>{section.note || "출처·기준일 미제공"}</div>
+                                {items.map((item, index) => <div key={index} style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, fontSize: 12, lineHeight: 1.6 }}>
+                                    {item.ticker ? <a href={`${(/^[A-Za-z]/.test(item.ticker) ? _usPath(usStockPath, stockPath) : stockPath || "/stock").replace(/\/+$/, "")}?q=${encodeURIComponent(item.ticker)}`} style={{ color: C.ink, fontWeight: 700, textUnderlineOffset: 3 }}>{item.name || item.ticker}</a> : <span style={{ color: C.ink, fontWeight: 700 }}>{item.name}</span>}
+                                    <span style={{ minWidth: 0, color: C.sub, fontWeight: 600 }}>{item.text || ""}{item.date ? ` · ${section.title === "이번 주 실적 공시 예상" ? "예상일 " : ""}${item.date}` : ""}</span>
+                                </div>)}
+                                {allItems.length > PER_SECTION ? <button type="button" onClick={() => setOpenSec(prev => ({ ...prev, [section.title!]: !open }))} style={{ border: 0, background: "transparent", color: C.vg, fontFamily: FONT, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "8px 0" }}>{open ? "접기" : `+${allItems.length - PER_SECTION}건 더보기`}</button> : null}
+                            </section>
+                        })}
+                    <p style={{ ...secNote, marginTop: 14 }}>{brief?.disclaimer || "공시·수집 사실 · 점수·추천 아님"}</p>
+                </div>
+            </details>
         </div>
     )
 }
