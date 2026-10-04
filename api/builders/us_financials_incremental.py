@@ -7,7 +7,7 @@
 
 파이프라인:
   1. state(data/metadata/us_fin_incremental_state.json) 이후 영업일들의 master.idx fetch (lookback ≤7일)
-  2. form ∈ {10-K,10-Q,10-K/A,10-Q/A} 행 → CIK → 유니버스 ticker 매핑
+  2. form ∈ {10-K,10-Q,20-F,40-F 및 수정본} 행 → CIK → 유니버스 ticker 매핑
   3. run 캡(기본 60종목) 내 us_financials_builder --ticker 재수집 (부분 실행 = _summary 병합 가드 완비)
   4. 성공 시 state 전진. 리포트 재빌드는 워크플로 후속 step (빌더 재사용)
 
@@ -38,7 +38,7 @@ SUMMARY_PATHS = [
     os.path.join(_DATA, "us_financials", "_summary_smallcap.json"),
 ]
 SEC_USER_AGENT = "VERITY gywns0126@gmail.com"
-TARGET_FORMS = {"10-K", "10-Q", "10-K/A", "10-Q/A"}
+TARGET_FORMS = {"10-K", "10-Q", "10-K/A", "10-Q/A", "20-F", "20-F/A", "40-F", "40-F/A"}
 LOOKBACK_MAX_DAYS = 7      # state 유실/장기 중단 시 폭주 방지
 DEFAULT_CAP = 60           # run 당 재수집 종목 상한 (어닝 피크 방어 — 잔여는 다음 run이 이어감)
 IDX_TIMEOUT = 20
@@ -70,9 +70,9 @@ def _save_state(st: Dict[str, Any]) -> None:
     os.replace(tmp, STATE_PATH)
 
 
-def _universe_cik_map() -> Dict[int, str]:
-    """유니버스 CIK → ticker (sp1500 + smallcap _summary rows)."""
-    out: Dict[int, str] = {}
+def _universe_cik_map() -> Dict[int, List[str]]:
+    """유니버스 CIK → 클래스별 tickers (sp1500 + smallcap _summary rows)."""
+    out: Dict[int, List[str]] = {}
     for p in SUMMARY_PATHS:
         try:
             with open(p, encoding="utf-8") as f:
@@ -84,14 +84,17 @@ def _universe_cik_map() -> Dict[int, str]:
             if cik is None or not tk:
                 continue
             try:
-                out[int(cik)] = str(tk)
+                tickers = out.setdefault(int(cik), [])
+                ticker = str(tk)
+                if ticker not in tickers:
+                    tickers.append(ticker)
             except (TypeError, ValueError):
                 continue
     return out
 
 
 def _fetch_day_filers(d: date) -> Optional[List[Tuple[int, str]]]:
-    """해당 일 master.idx → [(CIK, form)] (10-K/10-Q). 인덱스 미발행(주말·휴장·미완성) = None."""
+    """해당 일 master.idx → [(CIK, form)] (10-K/Q·20-F·40-F 및 수정본). 미발행 = None."""
     try:
         r = requests.get(_idx_url(d), headers={"User-Agent": SEC_USER_AGENT}, timeout=IDX_TIMEOUT)
     except requests.RequestException as e:
@@ -167,9 +170,11 @@ def main() -> int:
                 # 영업일인데 인덱스 부재 = 휴장 or 일시 오류 — 오류 가능성 있으므로 state 전진 중단
                 print(f"[us_fin_incr] {d} 인덱스 없음 — 해당 일 이후 보류", file=sys.stderr)
                 break
-            hit = sorted({cik_map[c] for c, _f in filers if c in cik_map})
-            pattern_hits.extend((cik_map[c], f, d.isoformat()) for c, f in filers if c in cik_map)
-            print(f"[us_fin_incr] {d}: 10-K/Q 제출 {len(filers)} 건, 유니버스 교집합 {len(hit)}", file=sys.stderr)
+            # Fetch the daily index once, then fan out each issuer to its share classes.
+            hit = sorted({tk for c, _f in filers if c in cik_map for tk in cik_map[c]})
+            pattern_hits.extend((tk, f, d.isoformat())
+                                for c, f in filers if c in cik_map for tk in cik_map[c])
+            print(f"[us_fin_incr] {d}: 재무 제출 {len(filers)} 건, 유니버스 교집합 {len(hit)}", file=sys.stderr)
             day_new = [t for t in hit if t not in tickers]
             tickers.extend(day_new)
             time.sleep(THROTTLE_SEC)

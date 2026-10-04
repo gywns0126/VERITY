@@ -185,3 +185,81 @@ def test_universe_is_single_source():
     """유니버스 정의가 두 곳에 갈리면 축마다 커버리지가 어긋난다."""
     src = open(bulk.__file__, encoding="utf-8").read()
     assert "from api.collectors.us_chart_history import load_universe" in src
+
+@pytest.mark.parametrize("limit,failure,use_sic_index", [
+    (0, None, False), (0, None, True), (1, None, False),
+    (0, "exception", False), (0, "error", False),
+])
+def test_collect_preserves_duplicate_cik_classes(tmp_path, monkeypatch, limit, failure, use_sic_index):
+    cik = 1652044
+    payload = {"cik": cik, "facts": {}}
+    zp = _zip_with(cik, payload, tmp_path / "b.zip")
+    out = tmp_path / "out"
+    meta_path = tmp_path / "meta.json"
+    monkeypatch.setattr(bulk, "OUT_DIR", str(out))
+    monkeypatch.setattr(bulk, "META_PATH", str(meta_path))
+    monkeypatch.setattr(bulk, "load_universe", lambda: ["GOOG", "GOOGL"])
+    monkeypatch.setattr(bulk, "load_ticker_cik", lambda: {"GOOG": cik, "GOOGL": cik})
+    reads, sic_calls, builds = [], [], []
+    original_read = zipfile.ZipFile.read
+
+    def read_once(archive, member, *args, **kwargs):
+        reads.append(member)
+        return original_read(archive, member, *args, **kwargs)
+
+    def sic_once(value):
+        sic_calls.append(value)
+        return (7370, "Services")
+
+    def build(ticker, value, *, facts, sic_pair):
+        assert value == cik and facts == payload and sic_pair == (7370, "Services")
+        builds.append((ticker, facts))
+        if ticker == "GOOG" and failure == "exception":
+            raise ValueError("class failed")
+        if ticker == "GOOG" and failure == "error":
+            return {"ticker": ticker, "_error": "class failed"}
+        return {"ticker": ticker, "meta": {"cik": value}, "series_annual": {}}
+
+    monkeypatch.setattr(zipfile.ZipFile, "read", read_once)
+    monkeypatch.setattr(bulk, "fetch_sic", sic_once)
+    monkeypatch.setattr(usf, "build_ticker_snapshot", build)
+    index = {cik: (7370, "Services")} if use_sic_index else None
+    result = bulk.collect(zp, limit=limit, sic_index=index)
+    requested = ["GOOG"] if limit else ["GOOG", "GOOGL"]
+    expected = [ticker for ticker in requested if not (ticker == "GOOG" and failure)]
+    assert [ticker for ticker, _ in builds] == requested
+    assert all(facts is builds[0][1] for _, facts in builds)
+    assert reads == [f"CIK{cik:010d}.json"]
+    assert sic_calls == ([] if use_sic_index else [cik])
+    assert sorted(path.stem for path in out.glob("*.json")) == expected
+    for ticker in expected:
+        assert json.loads((out / f"{ticker}.json").read_text())["ticker"] == ticker
+    assert result["fetched_now"] == result["have"] == len(expected)
+    assert result["errors"] == int(failure is not None)
+    assert result["no_facts"] == result["no_cik"] == 0
+    meta = json.loads(meta_path.read_text())
+    assert meta["errors"] == result["errors"]
+    if failure:
+        assert len(meta["error_sample"]) == 1 and meta["error_sample"][0].startswith("GOOG:")
+
+
+@pytest.mark.parametrize("missing", [True, False])
+def test_collect_counts_missing_or_invalid_facts_per_class(tmp_path, monkeypatch, missing):
+    cik = 1652044
+    zp = tmp_path / "b.zip"
+    with zipfile.ZipFile(zp, "w") as archive:
+        if not missing:
+            archive.writestr(f"CIK{cik:010d}.json", "invalid json")
+    monkeypatch.setattr(bulk, "OUT_DIR", str(tmp_path / "out"))
+    monkeypatch.setattr(bulk, "META_PATH", str(tmp_path / "meta.json"))
+    monkeypatch.setattr(bulk, "load_universe", lambda: ["GOOG", "GOOGL"])
+    monkeypatch.setattr(bulk, "load_ticker_cik", lambda: {"GOOG": cik, "GOOGL": cik})
+
+    def unexpected(*args, **kwargs):
+        pytest.fail("Missing facts must not fetch SIC or build a snapshot")
+
+    monkeypatch.setattr(bulk, "fetch_sic", unexpected)
+    monkeypatch.setattr(usf, "build_ticker_snapshot", unexpected)
+    result = bulk.collect(str(zp))
+    assert result["no_facts"] == 2
+    assert result["fetched_now"] == result["have"] == result["errors"] == 0

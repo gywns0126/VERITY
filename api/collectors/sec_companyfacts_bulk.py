@@ -226,22 +226,28 @@ def collect(zip_path: str, limit: int = 0, refresh: bool = False,
         todo = todo[:limit]
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    want_cik = {tmap[t.upper()]: t for t in todo}
+    # One issuer can have several requested share classes; preserve every ticker.
+    want_cik: Dict[int, List[str]] = {}
+    for ticker in todo:
+        want_cik.setdefault(tmap[ticker.upper()], []).append(ticker)
     ok, no_facts, errs = 0, [], []
+    i = 0
     inline_attempted = inline_ok = inline_failed = 0
     t0 = time.time()
 
     with zipfile.ZipFile(zip_path) as z:
         names = {n for n in z.namelist() if n.startswith("CIK") and n.endswith(".json")}
-        for i, (cik, ticker) in enumerate(sorted(want_cik.items()), 1):
+        for cik, tickers in sorted(want_cik.items()):
             member = f"CIK{cik:010d}.json"
             if member not in names:
-                no_facts.append(ticker)
+                no_facts.extend(tickers)
+                i += len(tickers)
                 continue
             try:
                 facts = json.loads(z.read(member).decode("utf-8", "replace"))
             except Exception:  # noqa: BLE001
-                no_facts.append(ticker)
+                no_facts.extend(tickers)
+                i += len(tickers)
                 continue
             if skip_sic:
                 sic_pair = (None, None)
@@ -283,24 +289,27 @@ def collect(zip_path: str, limit: int = 0, refresh: bool = False,
                             "fallback_error": type(e).__name__,
                         })
                     time.sleep(SIC_SLEEP)
-            try:
-                snap = usf.build_ticker_snapshot(ticker, cik, facts=facts, sic_pair=sic_pair)
-            except Exception as e:  # noqa: BLE001
-                errs.append(f"{ticker}: {type(e).__name__}")
-                continue
-            if "_error" in snap:
-                errs.append(f"{ticker}: {snap['_error']}")
-                continue
-            snap.setdefault("meta", {})["latest_financial_filing"] = latest_filing
-            snap["meta"]["latest_filing_sync"] = inline_state
-            tmp = os.path.join(OUT_DIR, f"{ticker}.json.tmp")
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(snap, f, ensure_ascii=False, indent=2)
-            os.replace(tmp, os.path.join(OUT_DIR, f"{ticker}.json"))
-            ok += 1
-            if i % 200 == 0:
-                print(f"[bulk] {i}/{len(want_cik)} · ok {ok} · {time.time() - t0:.0f}s",
-                      file=sys.stderr, flush=True)
+            # Reuse facts/SIC/inline overlay once per CIK; count each ticker separately.
+            for ticker in tickers:
+                i += 1
+                try:
+                    snap = usf.build_ticker_snapshot(ticker, cik, facts=facts, sic_pair=sic_pair)
+                except Exception as e:  # noqa: BLE001
+                    errs.append(f"{ticker}: {type(e).__name__}")
+                    continue
+                if "_error" in snap:
+                    errs.append(f"{ticker}: {snap['_error']}")
+                    continue
+                snap.setdefault("meta", {})["latest_financial_filing"] = latest_filing
+                snap["meta"]["latest_filing_sync"] = inline_state
+                tmp = os.path.join(OUT_DIR, f"{ticker}.json.tmp")
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump(snap, f, ensure_ascii=False, indent=2)
+                os.replace(tmp, os.path.join(OUT_DIR, f"{ticker}.json"))
+                ok += 1
+                if i % 200 == 0:
+                    print(f"[bulk] {i}/{len(todo)} · ok {ok} · {time.time() - t0:.0f}s",
+                          file=sys.stderr, flush=True)
 
     total = _existing()
     meta = {

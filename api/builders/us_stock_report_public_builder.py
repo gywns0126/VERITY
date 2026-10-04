@@ -12,10 +12,13 @@ public-safe JSON. 스키마 = KR stock_report_public.json 동일 → PublicStock
 from __future__ import annotations
 
 import json
+import math
 import os
+import re
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import urlsplit
 
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -362,7 +365,8 @@ def _latest_annual(series: Any) -> Optional[float]:
 
 # 통화 심볼 — 비USD 보고(외국 상장) 재무 표시용 (2026-07-09). 미등록 통화는 코드 프리픽스.
 _CCY_SYM = {"USD": "$", "CAD": "C$", "AUD": "A$", "EUR": "€", "GBP": "£", "JPY": "¥",
-            "HKD": "HK$", "CNY": "¥", "CHF": "CHF ", "ILS": "₪", "SGD": "S$", "NZD": "NZ$", "BRL": "R$"}
+            "HKD": "HK$", "CNY": "¥", "CHF": "CHF ", "ILS": "₪", "SGD": "S$", "NZD": "NZ$", "BRL": "R$",
+            "TWD": "NT$", "MXN": "MX$", "ARS": "AR$"}
 
 
 def _ccy_sym(ccy: Any) -> str:
@@ -388,6 +392,41 @@ def _money_compact_signed(v: Any, ccy: Any = "USD") -> str | None:
     return s
 
 
+def _native_financials_iso(fin: Any, currency: Any = None) -> Any:
+    """Display-only guard for the USD parser; never rewrite source fields or headers."""
+    if not isinstance(fin, dict):
+        return fin
+    ccy = str(fin.get("currency") or currency or "USD").upper()
+    if ccy == "USD" or ccy not in _CCY_SYM:
+        return fin
+    symbol = _ccy_sym(ccy)
+
+    def display(value):
+        if not isinstance(value, str):
+            return value
+        for sign in ("", "-", "+"):
+            prefix = sign + symbol
+            if value.startswith(prefix):
+                return sign + ccy + " " + value[len(prefix):]
+        return value
+
+    result = dict(fin)
+    if isinstance(fin.get("values"), dict):
+        result["values"] = {k: display(v) for k, v in fin["values"].items()}
+    if isinstance(fin.get("groups"), list):
+        result["groups"] = []
+        for group in fin["groups"]:
+            if not isinstance(group, dict):
+                result["groups"].append(group)
+                continue
+            copied = dict(group)
+            if isinstance(group.get("rows"), list):
+                copied["rows"] = [{**row, "v": display(row.get("v"))} if isinstance(row, dict) and "v" in row
+                                  else row for row in group["rows"]]
+            result["groups"].append(copied)
+    return result
+
+
 _COMPACT_CACHE = None
 
 
@@ -395,11 +434,78 @@ def _compact_store() -> Dict[str, Any]:
     """us_fin_annual_compact 커밋 폴백 (모듈 1회 로드). CI per-ticker 부재 시 PER/PBR·fin_series 소스."""
     global _COMPACT_CACHE
     if _COMPACT_CACHE is None:
-        try:
-            _COMPACT_CACHE = (json.load(open(FIN_COMPACT_PATH, encoding="utf-8")) or {}).get("stocks") or {}
-        except (OSError, json.JSONDecodeError):
-            _COMPACT_CACHE = {}
+        _COMPACT_CACHE = _read_compact_inputs()
     return _COMPACT_CACHE
+
+
+def _read_compact_inputs() -> Dict[str, Any]:
+    """Read-only targeted seed; never replace a newer or different-currency pack."""
+    def stocks(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                result = (json.load(f) or {}).get("stocks") or {}
+            return result if isinstance(result, dict) else {}
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    current = stocks(FIN_COMPACT_PATH)
+    for ticker, seed in stocks(GURU_SUPPLEMENT_PATH).items():
+        if not isinstance(seed, dict):
+            continue
+        existing = current.get(ticker)
+        existing = existing if isinstance(existing, dict) else {}
+        entry = {**seed, **existing}
+        if _prefer_seed_financial_pack(existing, seed):
+            for key in ("fs", "fin", "fl"):
+                entry[key] = seed.get(key)
+        else:
+            for key in ("fs", "fin", "fl"):
+                if key in existing:
+                    entry[key] = existing[key]
+                else:
+                    entry.pop(key, None)
+        for key in ("row", "meta", "supplement", "disclosures", "data_coverage"):
+            if key in seed:
+                entry[key] = seed[key]
+        current[ticker] = entry
+    return current
+
+
+def _prefer_seed_financial_pack(current: Dict[str, Any], seed: Dict[str, Any]) -> bool:
+    """Period-end first, distinct annual history second, with one matching currency."""
+    def describe(pack):
+        fs = pack.get("fs") if isinstance(pack.get("fs"), list) else []
+        fin = pack.get("fin") if isinstance(pack.get("fin"), dict) else {}
+        currencies, periods, years = set(), [], set()
+        for point in fs:
+            if not isinstance(point, dict) or isinstance(point.get("year"), bool):
+                continue
+            year = point.get("year")
+            if not isinstance(year, int) or not 1000 <= year <= 9999:
+                continue
+            currencies.add(str(point.get("currency") or "USD").upper())
+            years.add(year)
+            ends = [point.get("period_end")]
+            sources = point.get("metric_sources") or {}
+            if isinstance(sources, dict):
+                ends.extend(s.get("period_end") for s in sources.values() if isinstance(s, dict))
+            valid_ends = [e for e in ends if isinstance(e, str)
+                          and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", e) and e[:4] == str(year)]
+            periods.append(max(valid_ends, default=str(year)))
+        if fin:
+            currencies.add(str(fin.get("currency") or "USD").upper())
+            period = fin.get("period_end") or fin.get("period")
+            if isinstance(period, str) and re.fullmatch(r"[0-9]{4}(?:-[0-9]{2}-[0-9]{2})?", period):
+                periods.append(period)
+        return max(periods, default=""), len(years), currencies
+
+    current_end, current_depth, current_ccy = describe(current)
+    seed_end, seed_depth, seed_ccy = describe(seed)
+    if not seed_end or len(seed_ccy) != 1 or not seed_ccy.issubset(_CCY_SYM):
+        return False
+    if current_ccy and current_ccy != seed_ccy:
+        return False
+    return (seed_end, seed_depth) > (current_end, current_depth)
 
 
 def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
@@ -428,6 +534,7 @@ EARN_PATTERN_PATH = os.path.join(_ROOT, "data", "us_earnings_pattern.json")
 # 연간 재무 압축본 (커밋됨) — CI 재빌드에서 per-ticker 캐시(gitignore) 부재 시 폴백 소스.
 # 🚨 2026-07-04·07-09 실사고 재발 방지: 캐시 있으면 계산+압축본 갱신, 없으면 압축본 사용.
 FIN_COMPACT_PATH = os.path.join(_ROOT, "data", "us_fin_annual_compact.json")
+GURU_SUPPLEMENT_PATH = os.path.join(_ROOT, "data", "us_guru_financials_supplement.json")
 
 
 def _earnings_window(filings: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -457,9 +564,9 @@ def _earnings_window(filings: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
             "basis": "과거 10-Q/K 제출 패턴 · 자체계산 (확정 공시 시 갱신)"}
 
 
-def _annual_by_year(series: Any) -> Dict[int, float]:
-    """series_annual[key] → {연도(end 기준): val} — 연도 중복 시 최신 end 우선."""
-    out: Dict[int, Tuple[str, float]] = {}
+def _annual_selection(series: Any) -> Dict[int, Tuple[float, Dict[str, Any]]]:
+    """Keep the selected source row with its value; equal end dates retain the first row."""
+    out: Dict[int, Tuple[str, float, Dict[str, Any]]] = {}
     if not isinstance(series, list):
         return {}
     for e in series:
@@ -474,8 +581,79 @@ def _annual_by_year(series: Any) -> Dict[int, float]:
             continue
         y = int(end[:4])
         if y not in out or end > out[y][0]:
-            out[y] = (end, v)
-    return {y: v for y, (_, v) in out.items()}
+            out[y] = (end, v, e)
+    return {y: (v, row) for y, (_, v, row) in out.items()}
+
+
+def _annual_by_year(series: Any) -> Dict[int, float]:
+    """series_annual[key] → {연도(end 기준): val} — 연도 중복 시 최신 end 우선."""
+    return {y: value for y, (value, _) in _annual_selection(series).items()}
+
+
+# Direct tags emitted by us_financials.extract_metric_series for these three metrics.
+# Composite DERIVED_* values lack single-tag source proof and keep their legacy value only.
+_ANNUAL_METRIC_TAGS = {
+    "revenue": {"Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax", "SalesRevenueNet",
+                "RevenueFromContractWithCustomerIncludingAssessedTax", "RevenuesNetOfInterestExpense"},
+    "op": {"OperatingIncomeLoss"},
+    "net": {"NetIncomeLoss", "ProfitLoss"},
+}
+_ANNUAL_SOURCE_FORMS = {"10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"}
+_IFRS_ANNUAL_METRIC_TAGS = {
+    "revenue": {"Revenue", "RevenueFromContractsWithCustomers"},
+    "op": {"ProfitLossFromOperatingActivities"},
+    "net": {"ProfitLossAttributableToOwnersOfParent", "ProfitLoss"},
+}
+
+
+def _source_cik(value: Any) -> Optional[str]:
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        return None
+    text = str(value)
+    return text.zfill(10) if re.fullmatch(r"[0-9]{1,10}", text) and int(text) > 0 else None
+
+
+def _annual_metric_source(doc: Dict[str, Any], ticker: str, metric: str,
+                          value: float, row: Dict[str, Any], currency: str) -> Optional[Dict[str, Any]]:
+    """Optional closed provenance, never a fallback to a different row or an inferred unit."""
+    meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
+    cik = _source_cik(meta.get("cik"))
+    if not cik or doc.get("ticker") != ticker or isinstance(row.get("val"), bool) or not math.isfinite(value):
+        return None
+    if any("cik" in source and _source_cik(source["cik"]) != cik for source in (doc, row)):
+        return None
+    if "ticker" in row and row["ticker"] != ticker:
+        return None
+    accession, form, end, tag = (row.get(key) for key in ("accn", "form", "end", "tag"))
+    if not isinstance(accession, str) or not re.fullmatch(r"[0-9]{10}-[0-9]{2}-[0-9]{6}", accession):
+        return None
+    if int(accession[:10]) == 0 or int(accession[-6:]) == 0:
+        return None
+    if not isinstance(form, str) or form not in _ANNUAL_SOURCE_FORMS:
+        return None
+    namespace = row.get("namespace", meta.get("namespace", "us-gaap"))
+    if "namespace" in row and "namespace" in meta and row["namespace"] != meta["namespace"]:
+        return None
+    tags = (_IFRS_ANNUAL_METRIC_TAGS if namespace == "ifrs-full" else
+            _ANNUAL_METRIC_TAGS if namespace == "us-gaap" else {})
+    if not isinstance(tag, str) or tag not in tags.get(metric, set()):
+        return None
+    if ("is_annual" in row and row["is_annual"] is not True) or ("fp" in row and row["fp"] != "FY"):
+        return None
+    if not isinstance(end, str) or not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", end):
+        return None
+    try:
+        date.fromisoformat(end)
+    except ValueError:
+        return None
+    # Verification refers to the unchanged point.currency. Explicit conflicts or
+    # unsupported units do not turn the legacy USD default into verified currency.
+    units = [source[key] for source, key in ((row, "unit"), (row, "currency"), (meta, "currency")) if key in source]
+    currency_verified = bool(units) and all(isinstance(unit, str) and unit.upper() in _CCY_SYM
+                                           and unit.upper() == currency for unit in units)
+    return {"cik": cik, "accession": accession, "form": form, "period_end": end, "tag": tag,
+            "source_url": f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accession.replace('-', '')}/{accession}-index.htm",
+            "currency_verified": currency_verified}
 
 
 def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], Optional[Dict[str, Any]]]:
@@ -493,9 +671,10 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
         return None, None
     sa = doc.get("series_annual") or {}
     ccy = str((doc.get("meta") or {}).get("currency") or "USD").upper()  # 보고 통화(USD/CAD 등)
-    rev_y = _annual_by_year(sa.get("revenue"))
-    op_y = _annual_by_year(sa.get("operating_income"))
-    net_y = _annual_by_year(sa.get("net_income"))
+    selected = {metric: _annual_selection(sa.get(key)) for metric, key in
+                (("revenue", "revenue"), ("op", "operating_income"), ("net", "net_income"))}
+    rev_y, op_y, net_y = ({y: value for y, (value, _) in selected[metric].items()}
+                         for metric in ("revenue", "op", "net"))
 
     years = sorted(set(rev_y) | set(op_y) | set(net_y))[-12:]
     fin_series = [
@@ -503,6 +682,16 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
         for y in years
         if rev_y.get(y) is not None or op_y.get(y) is not None or net_y.get(y) is not None
     ]
+    for point in fin_series:
+        sources = {}
+        for metric, rows in selected.items():
+            if point["year"] in rows:
+                value, row = rows[point["year"]]
+                source = _annual_metric_source(doc, ticker, metric, value, row, ccy)
+                if source:
+                    sources[metric] = source
+        if sources:
+            point["metric_sources"] = sources
     if len(fin_series) < 2:
         fin_series = None  # 컴포넌트 게이트(>=2) 정합 — 미달 시 섹션 생략
 
@@ -520,7 +709,14 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
             s = _money_compact_signed(v, ccy) if signed else _money_compact(v, ccy)
             return {"k": k, "v": s} if s else None
 
-        annual_label = "연간 10-K" if ccy == "USD" else "연간 40-F/20-F"  # 외국 상장 = 외국 연차 폼
+        forms = sorted({row.get("form") for rows in selected.values() if y in rows
+                        for _, row in [rows[y]] if isinstance(row.get("form"), str)
+                        and row["form"] in _ANNUAL_SOURCE_FORMS})
+        annual_label = "연간 " + "/".join(forms) if forms else "연간 (제출 양식 미확인)"
+        if (not forms and "namespace" not in (doc.get("meta") or {})
+                and all(not row.get("form") and "namespace" not in row
+                        for rows in selected.values() if y in rows for _, row in [rows[y]])):
+            annual_label = "연간 10-K" if ccy == "USD" else "연간 40-F/20-F"  # Legacy untyped cache only.
         pl_rows = [r for r in [
             _row("매출", rev),
             _row("매출총이익", gp, signed=True),
@@ -551,6 +747,139 @@ def _load_us_annual_pack(ticker: str) -> Tuple[Optional[List[Dict[str, Any]]], O
                 financials["currency"] = ccy  # 프론트 통화 라벨(단위: CAD 등)
 
     return fin_series, financials
+
+
+def _targeted_compact_rows(rows: List[Dict[str, Any]], compact: Dict[str, Any]
+                           ) -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+    """Only explicit compact.row targets missing from the summary join its universe."""
+    result = list(rows)
+    seen = {str(r.get("ticker") or "").upper() for r in rows}
+    metas = {}
+    for ticker, entry in compact.items():
+        if not isinstance(entry, dict) or not isinstance(entry.get("row"), dict):
+            continue
+        row = entry["row"]
+        if not ticker or row.get("ticker") != ticker:
+            continue
+        metas[ticker] = dict(entry["meta"]) if isinstance(entry.get("meta"), dict) else {}
+        if ticker.upper() in seen:
+            continue
+        result.append(dict(row))
+        seen.add(ticker.upper())
+    return result, metas
+
+
+def _overlay_annual_supplement(fs: Any, fin: Any, supplement: Any, currency: Any = None
+                               ) -> Tuple[Any, Any]:
+    """Official-IR manual annuals, raw native units; newer years only, never SEC proof.
+
+    Contract: {source_url, period_end, currency, source_label, fs:[{year,
+    currency, revenue, op, net, manual_source?:{source_url,page,original_unit,
+    multiplier,net_basis,verified_at,...}}]}. Source details are allowlisted.
+    Existing years and currency conflicts are untouched. No unit conversion or USD fl.
+    """
+    if not isinstance(supplement, dict):
+        return fs, fin
+    ccy = supplement.get("currency")
+    if not isinstance(ccy, str) or ccy not in _CCY_SYM:
+        return fs, fin
+
+    def valid_date(value):
+        if not isinstance(value, str) or not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+            return False
+        try:
+            date.fromisoformat(value)
+            return True
+        except ValueError:
+            return False
+
+    def valid_url(value):
+        if not isinstance(value, str):
+            return False
+        try:
+            url = urlsplit(value)
+            return url.scheme == "https" and bool(url.hostname) and not url.username and not url.password
+        except ValueError:
+            return False
+
+    label, url, end = (supplement.get(k) for k in ("source_label", "source_url", "period_end"))
+    if not isinstance(label, str) or not label.strip() or not valid_url(url) or not valid_date(end):
+        return fs, fin
+    base = fs if isinstance(fs, list) else []
+    base_fin = fin if isinstance(fin, dict) else {}
+    currencies = [p.get("currency", "USD") for p in base]
+    if base_fin:
+        currencies.append(base_fin.get("currency", "USD"))
+    if currency is not None:
+        currencies.append(currency)
+    if not currencies or any(not isinstance(c, str) or c.upper() != ccy for c in currencies):
+        return fs, fin
+    years = [p.get("year") for p in base if isinstance(p.get("year"), int)]
+    if str(base_fin.get("period", "")).isdigit():
+        years.append(int(base_fin["period"]))
+    cutoff = max(years, default=0)
+    additions = {}
+    points = supplement.get("fs")
+    for point in points if isinstance(points, list) else []:
+        if not isinstance(point, dict):
+            continue
+        year = point.get("year")
+        if (isinstance(year, bool) or not isinstance(year, int) or not 1000 <= year <= int(end[:4])
+                or year <= cutoff or point.get("currency") != ccy or year in additions):
+            continue
+        point_end = point.get("period_end", str(year) + end[4:])
+        if not valid_date(point_end) or point_end[:4] != str(year) or point_end > end:
+            continue
+        values = {}
+        for metric in ("revenue", "op", "net"):
+            value = point.get(metric)
+            if value is None:
+                values[metric] = None
+            elif isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
+                values[metric] = value
+            else:
+                break
+        else:
+            if all(v is None for v in values.values()):
+                continue
+            extra = point.get("manual_source") or {}
+            if not isinstance(extra, dict) or not valid_url(extra.get("source_url", url)):
+                continue
+            if "document_date" in extra and not valid_date(extra["document_date"]):
+                continue
+            if any(k in extra and not isinstance(extra[k], str) for k in ("basis", "unit")):
+                continue
+            source = {"source_url": extra.get("source_url", url), "source_label": label,
+                      "period_end": point_end, "document_period_end": end}
+            text_keys = ("basis", "document_date", "unit", "table", "original_unit", "net_basis", "verified_at")
+            source.update({k: extra[k] for k in text_keys if isinstance(extra.get(k), str)})
+            for key in ("page", "currency_basis_page", "operating_income_page"):
+                value = extra.get(key)
+                if isinstance(value, (str, int)) and not isinstance(value, bool):
+                    source[key] = value
+            multiplier = extra.get("multiplier")
+            if (isinstance(multiplier, (int, float)) and not isinstance(multiplier, bool)
+                    and math.isfinite(multiplier) and multiplier > 0):
+                source["multiplier"] = multiplier  # Audit metadata only; input already scaled.
+            if valid_url(extra.get("operating_income_source_url")):
+                source["operating_income_source_url"] = extra["operating_income_source_url"]
+            additions[year] = {"year": year, "currency": ccy, **values, "manual_source": source}
+    if not additions:
+        return fs, fin
+    merged = sorted(base + list(additions.values()), key=lambda p: p["year"])[-12:]
+    latest = additions[max(additions)]
+    display = [("매출", latest["revenue"]), ("영업이익", latest["op"]), ("순이익", latest["net"])]
+    display_rows = [{"k": k, "v": _money_compact_signed(v, ccy)} for k, v in display if v is not None]
+    # Zero is a reported annual value, not missing; the legacy formatter omits it.
+    for row in display_rows:
+        if row["v"] is None:
+            row["v"] = _ccy_sym(ccy) + "0"
+    source = latest["manual_source"]
+    manual_fin = {"period": str(latest["year"]), "currency": ccy,
+                  "values": {r["k"]: r["v"] for r in display_rows if r["k"] != "영업이익"},
+                  "groups": [{"title": "손익계산서 (공식 IR 연간 · 수동 보충)", "rows": display_rows}],
+                  "source_label": label, "source_url": source["source_url"], "manual_source": dict(source)}
+    return merged if len(merged) >= 2 else None, manual_fin
 
 
 def _prefer_richer_annual_pack(
@@ -822,6 +1151,10 @@ def main() -> int:
         with open(summary_path, "r", encoding="utf-8") as f:
             summary = json.load(f)
         rows = summary.get("rows") or []
+        _compact = _read_compact_inputs()
+        global _COMPACT_CACHE
+        _COMPACT_CACHE = _compact
+        rows, targeted_meta = _targeted_compact_rows(rows, _compact)
         # per-ticker 파일에서 meta(sic_description) 보강
         meta_by_ticker: Dict[str, Dict[str, Any]] = {}
         for r in rows:
@@ -833,7 +1166,7 @@ def main() -> int:
                 with open(p, "r", encoding="utf-8") as pf:
                     meta_by_ticker[tk] = (json.load(pf) or {}).get("meta") or {}
             except (OSError, json.JSONDecodeError):
-                meta_by_ticker[tk] = {}
+                meta_by_ticker[tk] = targeted_meta.get(tk, {})
 
         caps = _load_universe_caps()   # header 시총·거래대금 (universe 캐시)
         sic_ko = _load_sic_ko()    # SIC 영문업종 → 한글 (정적 맵)
@@ -845,6 +1178,18 @@ def main() -> int:
         stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps, sic_ko, name_ko,
                               _load_fin_latest(r.get("ticker")), us_cons, holdings)
                   for r in rows if r.get("ticker")]
+        for stock in stocks:
+            entry = _compact.get(stock["ticker"]) or {}
+            seed_meta = entry.get("meta") if isinstance(entry.get("meta"), dict) else {}
+            coverage = entry.get("data_coverage")
+            if isinstance(coverage, dict):
+                stock["data_coverage"] = dict(coverage)
+            if seed_meta.get("historical_ticker") is True:
+                stock.setdefault("data_coverage", {})["historical_ticker"] = True
+                note = seed_meta.get("historical_ticker_note")
+                if isinstance(note, str) and note:
+                    stock["data_coverage"]["note"] = note
+                stock["business"] = "과거 티커 · " + (stock["business"] or "과거 공시·재무 자료")
         # 동종업계 비교(peer) — 2-pass: 섹터 중앙값 산정 → 종목별 부착. KR stock_report 정합.
         # 계층: 설명 단위(정밀) → N<5 시 SIC 2자리 대분류 폴백 (2026-07-04 peer 조사 — 미부착 483 전부 N<5 컷).
         medians = _us_sector_medians(stocks)
@@ -891,16 +1236,16 @@ def main() -> int:
                     s["disclosures"] = ds[:8]
                     n_disc += 1
             print(f"[us_stock_report] disclosures 부착 {n_disc}/{len(stocks)} 종목 (us_disclosure_feed)", file=sys.stderr)
+        for stock in stocks:
+            if not stock["disclosures"]:
+                ds = (_compact.get(stock["ticker"]) or {}).get("disclosures")
+                if isinstance(ds, list):
+                    stock["disclosures"] = ds[:8]
         # 연간 재무추이(fin_series)·재무요약(financials) — series_annual(10-K) 주입 (0%→95%, 커버리지 스프린트)
         # 🚨 소스 계층: per-ticker 캐시(신선) → us_fin_annual_compact(커밋 폴백). 캐시 계산분은 압축본에 저장(자가 유지).
         #   per-ticker 캐시는 gitignore(CI 부재) → 압축본 폴백 없으면 CI 재빌드 시 재무 전량 유실(2026-07-04·07-09 실사고).
-        try:
-            with open(FIN_COMPACT_PATH, encoding="utf-8") as _f:
-                _compact = (json.load(_f) or {}).get("stocks") or {}
-        except (OSError, json.JSONDecodeError):
-            _compact = {}
         _existing_packs = _load_existing_public_annual_packs(output_path)
-        n_fs = n_from_cache = 0
+        n_fs = n_native_fs = n_from_cache = 0
         for s in stocks:
             tk = str(s.get("ticker") or "")
             cached = _compact.get(tk) or {}
@@ -909,20 +1254,35 @@ def main() -> int:
                 cached.get("fs"), cached.get("fin"), existing.get("fs"), existing.get("fin")
             )
             fresh_fs, fresh_fin = _load_us_annual_pack(tk)
-            fs, fin = _prefer_richer_annual_pack(
-                fresh_fs, fresh_fin, base_fs, base_fin
-            )
+            fs, fin = _prefer_richer_annual_pack(fresh_fs, fresh_fin, base_fs, base_fin)
+            # Explicit recovery targets also prefer a newer verified native pack.
+            if isinstance(cached.get("row"), dict) and _prefer_seed_financial_pack(
+                    {"fs": fresh_fs, "fin": fresh_fin}, cached):
+                fs, fin = cached.get("fs"), cached.get("fin")
             if fresh_fs or fresh_fin:
                 n_from_cache += 1
             if fs or fin:
                 _cache_p = os.path.join(_ROOT, "data", "us_financials", f"{tk}.json")
                 fl = _load_fin_latest(tk) if os.path.exists(_cache_p) else cached.get("fl")
-                _compact[tk] = {"fs": fs, "fin": fin, "fl": fl or None}  # fl = PER/PBR 입력(압축본 자가유지)
+                _compact[tk] = {**cached, "fs": fs, "fin": fin, "fl": fl or None}
+            fs, fin = _overlay_annual_supplement(fs, fin, (_compact.get(tk) or {}).get("supplement"),
+                                                (meta_by_ticker.get(tk) or {}).get("currency"))
+            if (_compact.get(tk) or {}).get("supplement"):
+                _compact[tk].update(fs=fs, fin=fin)
+            entry_meta = (_compact.get(tk) or {}).get("meta") or {}
+            native_chart_pending = isinstance(entry_meta, dict) and entry_meta.get("native_chart_pending") is True
+            if native_chart_pending:
+                s.setdefault("data_coverage", {})["annual_chart_pending"] = True
             if fs:
-                s["fin_series"] = fs
-                n_fs += 1
+                if native_chart_pending:
+                    s["fin_series_native"] = fs  # Preserve native annuals without feeding USD-only FinTrend.
+                    s.pop("fin_series", None)
+                    n_native_fs += 1
+                else:
+                    s["fin_series"] = fs
+                    n_fs += 1
             if fin:
-                s["financials"] = fin
+                s["financials"] = _native_financials_iso(fin, entry_meta.get("currency")) if native_chart_pending else fin
         try:
             with open(FIN_COMPACT_PATH, "w", encoding="utf-8") as _f:
                 json.dump({"_meta": {"generated_at": _now_kst().isoformat(),
@@ -932,6 +1292,8 @@ def main() -> int:
             print(f"[us_stock_report] 압축본 저장 실패: {_e}", file=sys.stderr)
         print(f"[us_stock_report] fin_series 부착 {n_fs}/{len(stocks)} 종목 "
               f"(캐시 {n_from_cache} · 폴백 {n_fs - n_from_cache if n_fs >= n_from_cache else 0})", file=sys.stderr)
+        if n_native_fs:
+            print(f"[us_stock_report] native 연간자료 보존 {n_native_fs}종목 · 차트 보류", file=sys.stderr)
         # 어닝 캘린더 — EDGAR 제출 패턴 자체계산 (us_earnings_pattern.json: 초기 backfill + incremental 일일 유지)
         try:
             with open(EARN_PATTERN_PATH, encoding="utf-8") as f:
@@ -973,7 +1335,7 @@ def main() -> int:
             return sum([_f(fa.get("PER")), _f(fa.get("PBR")),
                         _f(s.get("financials")), _f(s.get("peer")),
                         _f(s.get("ownership")), _f(s.get("disclosures")),
-                        _f(s.get("fin_series")), _f(fa.get("매출성장")),
+                        _f(s.get("fin_series")), _f(s.get("fin_series_native")), _f(fa.get("매출성장")),
                         _f(fa.get("매출성장(분기YoY)"))])
 
         _before = len(stocks)

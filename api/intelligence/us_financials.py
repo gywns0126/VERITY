@@ -90,6 +90,29 @@ TAG_ALIASES: Dict[str, List[str]] = {
     "operating_lease_rou": ["OperatingLeaseRightOfUseAsset"],
 }
 
+# Canonical IFRS concepts only. Unmapped metrics remain empty; do not infer
+# debt from all financial liabilities or net property from gross-cost concepts.
+IFRS_TAG_ALIASES: Dict[str, List[str]] = {
+    "revenue": ["Revenue", "RevenueFromContractsWithCustomers"],
+    "gross_profit": ["GrossProfit"],
+    "operating_income": ["ProfitLossFromOperatingActivities"],
+    "pretax_income": ["ProfitLossBeforeTax"],
+    "net_income": ["ProfitLossAttributableToOwnersOfParent", "ProfitLoss"],
+    "cash": ["CashAndCashEquivalents"],
+    "stockholders_equity": ["EquityAttributableToOwnersOfParent", "Equity"],
+    "long_term_debt": ["LongtermBorrowings"],
+    "operating_cash_flow": ["CashFlowsFromUsedInOperatingActivities"],
+    "capex": ["PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities"],
+    "total_assets": ["Assets"],
+    "current_assets": ["CurrentAssets"],
+    "current_liabilities": ["CurrentLiabilities"],
+    "total_liabilities": ["Liabilities"],
+    "retained_earnings": ["RetainedEarnings"],
+    "diluted_shares": ["AdjustedWeightedAverageShares"],
+    # IFRS EPS is ordinarily per ordinary share. Companyfacts does not establish
+    # the ADR share basis, even for USD/shares, so eps_diluted stays unavailable.
+}
+
 # v0.3 (5/20) — 금융 sector revenue alias 우선순위 override.
 # 결함: 기본 alias 순서는 RevenueFromContractWithCustomer(비이자 계약수익 일부) 가
 #   RevenuesNetOfInterestExpense(은행/핀테크 총수익) 보다 앞 → SOFI revenue 0.62B 과소계상
@@ -231,10 +254,70 @@ def _classify_period(
 _CURRENCY_PROBE_TAGS = ["Assets", "Revenues", "NetIncomeLoss", "StockholdersEquity", "Liabilities"]
 
 
+def _financial_namespace(facts: Dict[str, Any]) -> str:
+    namespaces = facts.get("facts") or {}
+    if not namespaces.get("us-gaap"):
+        return "ifrs-full"
+    if not namespaces.get("ifrs-full"):
+        return "us-gaap"
+
+    def core_coverage(namespace: str, aliases: Dict[str, List[str]]) -> Tuple[str, int]:
+        ends: Dict[str, set] = {}
+        for metric in ("revenue", "net_income", "stockholders_equity", "total_assets", "operating_cash_flow"):
+            for tag in aliases[metric]:
+                for unit, rows in (namespaces[namespace].get(tag, {}).get("units") or {}).items():
+                    if len(unit) != 3 or not unit.isalpha() or not unit.isupper():
+                        continue
+                    for row in rows:
+                        end = row.get("end", "")
+                        period = _classify_period(row.get("start") or end, end,
+                                                 row.get("form", ""), row.get("fp", ""),
+                                                 row.get("fy"), metric in INSTANT_METRICS)
+                        if period is not None and row.get("val") is not None:
+                            ends.setdefault(end, set()).add(metric)
+        latest = max(ends, default="")
+        return latest, len(ends.get(latest, set()))
+
+    # Incidental or obsolete US-GAAP facts must not hide current IFRS financials.
+    # A tie retains the legacy US-GAAP choice; namespaces are never merged.
+    if core_coverage("ifrs-full", IFRS_TAG_ALIASES) > core_coverage("us-gaap", TAG_ALIASES):
+        return "ifrs-full"
+    return "us-gaap"
+
+
 def _detect_currency(facts: Dict[str, Any]) -> str:
-    """회사 보고 통화 감지 — 주요 화폐 태그 units 에서 USD 우선, 없으면 최다 비USD 통화.
-    🚨 비USD 보고(CAD 등) 외국 상장 종목 재무 추출 위함 (2026-07-09). USD-only 추출이 캐나다 등
-    외국 상장사(NOA=CAD 등) 재무를 통째 드롭 → 소형주 리포트 groups 결손 원인."""
+    """Select reporting currency from current coverage and fact counts.
+
+    Convenience USD translations must not displace the native reporting series.
+    Only supported annual/quarterly facts participate, never incidental 6-K rows.
+    """
+    namespace = _financial_namespace(facts)
+    concepts = (facts.get("facts") or {}).get(namespace) or {}
+    aliases = IFRS_TAG_ALIASES if namespace == "ifrs-full" else TAG_ALIASES
+    counts: Dict[str, int] = {}
+    ends: Dict[str, Dict[str, set]] = {}
+    for metric in ("total_assets", "revenue", "net_income", "stockholders_equity", "total_liabilities"):
+        for tag in aliases[metric]:
+            for unit, rows in (concepts.get(tag, {}).get("units") or {}).items():
+                if len(unit) != 3 or not unit.isalpha() or not unit.isupper():
+                    continue
+                for row in rows:
+                    end = row.get("end", "")
+                    period = _classify_period(row.get("start") or end, end,
+                                              row.get("form", ""), row.get("fp", ""),
+                                              row.get("fy"), metric in INSTANT_METRICS)
+                    if period is None or row.get("val") is None:
+                        continue
+                    counts[unit] = counts.get(unit, 0) + 1
+                    ends.setdefault(unit, {}).setdefault(end, set()).add(metric)
+    if counts:
+        latest = max(end for periods in ends.values() for end in periods)
+        return max(counts, key=lambda unit: (len(ends[unit].get(latest, set())), counts[unit]))
+
+    if namespace == "ifrs-full":
+        return "USD"
+    # Preserve legacy metadata detection if no supported periods exist (e.g.
+    # CNI's CAD 6-K facts). This fallback never admits those facts into a series.
     us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
     from collections import Counter
     ccy: Counter = Counter()
@@ -260,33 +343,37 @@ def extract_metric_series(
     RevenueFromContractWithCustomerExcludingAssessedTax — ASC 606 도입).
     First-match 만 사용 시 시계열 잘림 (5/20 발견 — MSFT revenue 2010 종결 결함).
 
-    dedupe key: (end, fp, form). 충돌 시 accn (restatement) 최신 우선.
+    dedupe key: (end, form). 충돌 시 accn (restatement) 최신 우선.
     """
-    us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
-    tag_aliases = aliases or TAG_ALIASES.get(metric_key) or []
+    namespace = _financial_namespace(facts)
+    concepts = (facts.get("facts") or {}).get(namespace) or {}
+    if namespace == "ifrs-full":
+        # The financial revenue override names US-GAAP tags, not IFRS tags.
+        if aliases is None or aliases == FINANCIAL_REVENUE_ALIASES:
+            tag_aliases = IFRS_TAG_ALIASES.get(metric_key) or []
+        else:
+            tag_aliases = aliases
+        if metric_key == "eps_diluted":
+            return []  # Ordinary-share vs ADR basis is not established.
+    else:
+        tag_aliases = aliases or TAG_ALIASES.get(metric_key) or []
     is_instant = metric_key in INSTANT_METRICS
 
     seen: Dict[Tuple[str, str], Dict[str, Any]] = {}
     matched_tags: List[str] = []
     for tag in tag_aliases:
-        if tag not in us_gaap:
+        if tag not in concepts:
             continue
         matched_tags.append(tag)
-        units = us_gaap[tag].get("units") or {}
-        if currency in units:                     # 보고 통화 우선 (USD 또는 감지된 CAD 등)
-            unit = currency
-            unit_rows = units[currency]
-        elif "USD" in units:
-            unit = "USD"
-            unit_rows = units["USD"]
-        elif "USD/shares" in units:
+        units = concepts[tag].get("units") or {}
+        unit = "shares" if metric_key == "diluted_shares" else currency
+        if metric_key == "eps_diluted":
+            if currency != "USD":
+                return []
             unit = "USD/shares"
-            unit_rows = units["USD/shares"]
-        elif "shares" in units:
-            unit = "shares"
-            unit_rows = units["shares"]  # v0.4 — diluted_shares (F-Score F7 신주 발행)
-        else:
+        if unit not in units:
             continue
+        unit_rows = units[unit]
         for r in unit_rows:
             end = r.get("end")
             if not end:
@@ -308,6 +395,8 @@ def extract_metric_series(
             # 충돌: accn 최신 우선. 같은 accn 이면 alias 우선순위 (앞쪽 tag 우선).
             if existing is None:
                 pick = True
+            elif namespace == "ifrs-full" and tag != existing.get("tag"):
+                pick = False  # Owners-of-parent concept wins; fallback fills gaps only.
             elif prefer_total and tag != existing.get("tag"):
                 # 🚨 revenue 전용 — 다른 태그 = 부분/세그먼트 vs 총액. 1.5x+ 큰 값(총액) 우선.
                 #   GIS: Revenues $2.19B(세그먼트) vs RevenueFromContract $18.1B(총액) → 총액 채택.
@@ -334,6 +423,10 @@ def extract_metric_series(
                     "tag": tag,
                     "unit": unit,
                 }
+                if namespace == "ifrs-full":
+                    seen[key].update(namespace=namespace, unit=unit,
+                                     currency=None if unit == "shares" else currency,
+                                     fy=_parse_iso(period.end_date).year)
     return sorted(seen.values(), key=lambda x: x["end"])
 
 
@@ -432,6 +525,8 @@ def fetch_all_metrics(
     meta["sic_description"] = sic_desc
     meta["is_financial"] = is_fin
     meta["currency"] = ccy
+    if _financial_namespace(facts) == "ifrs-full":
+        meta["namespace"] = "ifrs-full"
     return {
         "meta": meta,
         "metrics": out_metrics,
@@ -656,6 +751,8 @@ def compute_derived(
     is_financial: SIC 6000-6499 (은행/증권/보험). FCF gating 용.
     """
     out: Dict[str, Any] = {}
+    ext = external or {}
+    financial_currency = ext.get("financial_currency", "USD")
 
     # Latest annual
     rev_a = _latest_n(metrics.get("revenue", []), 2, annual=True)
@@ -706,11 +803,14 @@ def compute_derived(
     # 현금흐름, capex trivial). null + reason 으로 명시 (5/20 JPM -$147.8B / SOFI -$3.7B 왜곡 해소).
     ocf = _latest_annual_val("operating_cash_flow")
     capex = _latest_annual_val("capex")
+    fcf_key = "fcf_usd" if financial_currency == "USD" else "fcf"
     if is_financial:
-        out["fcf_usd"] = None
+        out[fcf_key] = None
         out["fcf_na_reason"] = "financial_sector"
     elif ocf is not None:
-        out["fcf_usd"] = ocf - (capex or 0)
+        out[fcf_key] = ocf - (capex or 0)
+    if financial_currency != "USD" and fcf_key in out:
+        out["fcf_currency"] = financial_currency
 
     # Debt-to-Equity
     ltd = _latest_annual_val("long_term_debt")
@@ -723,7 +823,6 @@ def compute_derived(
         out["roe_pct"] = round(ni_v / eq * 100, 2)
 
     # v0.4 — Altman Z (US). 제조업+market_cap → 원본 Z, 그 외 → Z'' 장부가.
-    ext = external or {}
     _ta = _latest_annual_val("total_assets")
     _tl = _latest_annual_val("total_liabilities")
     # 총부채 = 총자산 − 자기자본 (회계 항등식). 보고 Liabilities 태그 미보고(TMO/DIS) 또는
@@ -742,7 +841,9 @@ def compute_derived(
         "stockholders_equity": eq,
         "total_liabilities": _tl,
         "revenue": rev_v,
-    }, is_financial=is_financial, market_cap=ext.get("market_cap"), sic=ext.get("sic"))
+    }, is_financial=is_financial,
+        market_cap=ext.get("market_cap") if financial_currency == "USD" else None,
+        sic=ext.get("sic"))
 
     # v0.4 — Piotroski F-Score (US-GAAP, 시계열 2년).
     out["fscore"] = compute_fscore_us(metrics, is_financial=is_financial)
@@ -786,6 +887,9 @@ def build_ticker_snapshot(
     metrics = raw["metrics"]
     meta = raw["meta"]
     external = {"market_cap": market_cap, "div_yield": div_yield, "sic": meta.get("sic")}
+    if meta.get("namespace") == "ifrs-full":
+        # Keep native FCF labelled and USD market equity out of native-currency Z.
+        external["financial_currency"] = meta["currency"]
     out: Dict[str, Any] = {
         "ticker": ticker,
         "meta": meta,
