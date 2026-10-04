@@ -14,7 +14,8 @@
 
 출력: data/daily_briefing.json (채널 중립 구조체 — 후일 발송 렌더러 재사용)
       + data/daily_briefing_history.jsonl append (v1 diff 용)
-🚨 RULE 4: 신규 산출 2파일 = cron git add data/ (broad) 로 커버. publish-data allowlist 등재 필수.
+      + data/briefing_days/ 날짜별 원본 관측과 세션 비교 (기존 과거 본문 합성 없음)
+🚨 RULE 4: cron의 명시 경로 commit + publish-data의 공개 허용 목록을 함께 유지한다.
 """
 from __future__ import annotations
 
@@ -24,6 +25,8 @@ import re
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
+
+from api.builders.briefing_timeline import record_briefing, session_phase, trading_day
 
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -70,6 +73,7 @@ def _sec_us_filings(names: Dict[str, str]) -> Dict[str, Any]:
     return {
         "title": "밤사이 미국 공시",
         "items": [{"ticker": t, "name": names.get(t, t), "text": "10-K/Q 재무 공시 제출 → 재무 반영 완료"} for t in tks],
+        "as_of": st.get("last_processed") or "",
         "note": f"SEC EDGAR 일일 인덱스 감지분 (기준 {st.get('last_processed') or '—'})",
     }
 
@@ -168,6 +172,7 @@ def _sec_insider(names: Dict[str, str], today: datetime) -> Dict[str, Any]:
     for r in rows[:6]:
         side = "매수" if r["change"] > 0 else "매도"
         items.append({"ticker": r["ticker"], "name": r["name"],
+                      "as_of": r["date"], "values": {"shares_change": r["change"]},
                       "text": f"{r['person']} · {abs(r['change']):,.0f}주 {side} ({r['date'][5:]})"})
     return {"title": "최근 7일 내부자 변동", "items": items, "note": "DART 임원·주요주주 보고 사실 · 증감 주식수 기준"}
 
@@ -195,9 +200,10 @@ def _sec_flow(names: Dict[str, str]) -> Dict[str, Any]:
             rows.append({"ticker": str(tk), "amt": (fn + inn) * close})
     rows.sort(key=lambda x: x["amt"], reverse=True)
     items = [{"ticker": r["ticker"], "name": names.get(r["ticker"], r["ticker"]),
+              "values": {"estimated_net_krw": r["amt"]},
               "text": f"외인·기관 동반 순매수 · 추정 {r['amt'] / 1e8:,.0f}억원"} for r in rows[:5]]
     d = f"{latest[5:]}" if latest else "—"
-    return {"title": "외인·기관 동반 순매수", "items": items,
+    return {"title": "외인·기관 동반 순매수", "items": items, "as_of": latest,
             "note": f"거래일 {d} · 추정금액 = 순매수주수×종가 (자체계산)"}
 
 
@@ -298,7 +304,9 @@ def _sec_market_recap(names: Dict[str, str]) -> Dict[str, Any]:
             headline = f"종목 상승 {n_up:,} · 하락 {n_down:,} — 방향이 갈린 날이었어요"
 
     items: List[Dict[str, Any]] = [
-        {"name": "지수", "text": f"코스피 {ks_chg:+.2f}% · 코스닥 {kq_chg:+.2f}%"},
+        {"name": "지수", "text": f"코스피 {ks_chg:+.2f}% · 코스닥 {kq_chg:+.2f}%",
+         "values": {"kospi_pct": ks_chg, "kosdaq_pct": kq_chg,
+                    "kospi_close": ks[-1][1], "kosdaq_close": kq[-1][1]}},
     ]
     if headline:
         items.append({"name": "흐름", "text": headline})
@@ -329,19 +337,10 @@ def _sec_market_recap(names: Dict[str, str]) -> Dict[str, Any]:
 
 
 def _session(now: datetime) -> str:
-    """장 상태 — 사용자가 아무 때나 들어와도 "지금이 어느 국면인지" 를 먼저 알게 한다.
-
-    KRX 정규장 09:00~15:30. 휴장일 판정은 여기서 하지 않는다(공휴일 캘린더 의존 회피) —
-    주말만 걸러내고, 평일 공휴일은 "장 마감" 으로 보이는 편이 틀린 "장중" 보다 안전하다.
-    """
-    if now.weekday() >= 5:
-        return "휴장"
-    hm = now.hour * 60 + now.minute
-    if hm < 9 * 60:
-        return "장전"
-    if hm < 15 * 60 + 30:
-        return "장중"
-    return "장마감"
+    """Verified scheduled sessions only; unknown calendars remain explicit."""
+    local = now.astimezone(KST)
+    phase = session_phase(local, trading_day(local.date()))
+    return {"pre": "장전", "open": "장중", "post": "장마감", "closed": "휴장", "unknown": "일정 확인 필요"}[phase]
 
 
 def main() -> int:
@@ -359,6 +358,8 @@ def main() -> int:
             _sec_insider(names, now),
             _sec_flow(names),
         ]
+        for category, section in zip(("market_recap", "us_filings", "earnings", "disclosures", "insider", "flow"), sections):
+            section["id"] = category
         sections = [s for s in sections if s.get("items")]  # 빈 섹션 숨김 (정직 — 채우기용 잡음 금지)
         out = {
             "date": now.strftime("%Y-%m-%d"),
@@ -371,12 +372,14 @@ def main() -> int:
             "session": _session(now),
             # 시장 recap 이 어느 날 종가인지 — 금융위 공공데이터는 T+1 이라 오늘 종가가 아니다.
             # 컴포넌트가 이 값으로 "직전 거래일 MM.DD 종가 기준" 을 정확히 찍는다(PM 혼동 지점).
-            "recap_as_of": next((s2.get("as_of") for s2 in sections if s2.get("as_of")), ""),
+            "recap_as_of": next((s2.get("as_of") for s2 in sections if s2.get("id") == "market_recap"), ""),
             "weekday": ["월", "화", "수", "목", "금", "토", "일"][now.weekday()],
             "warnings_n": len(warnings),
             "sections": sections,
             "disclaimer": "전부 공시·수집 사실과 자체계산 예상 창 · 점수·추천·매매의견 아님",
         }
+        # Preserve this actual run before updating the compatibility latest file.
+        record_briefing(out)
         with open(OUT_PATH, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False)
         # 🚨 2026-08-21 — 등장 티커를 남긴다. 종전엔 date/n_sections/n_items 카운트뿐이라

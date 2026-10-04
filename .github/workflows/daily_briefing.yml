@@ -11,7 +11,7 @@ name: Daily Briefing (시장 브리핑 — 홈 카드 · 상시 갱신)
 #  5 KIS: 0 (RULE 1 무관)
 #  6 pip: 불요 (stdlib only) — setup-python 만
 #  7 N=2: push 후 dispatch(N=1) + 익 kr_chart_daily 체인/scheduled(N=2) 실 결과 검증 의무 (RULE 8)
-# RULE 4: 산출 daily_briefing.json + daily_briefing_history.jsonl = git add data/ (broad) 커버.
+# RULE 4: latest/history/nest index/briefing_days 산출만 각각 명시 경로로 commit.
 
 on:
   schedule:
@@ -55,16 +55,19 @@ jobs:
       # 🚨 둥지(보유종목) 브리핑용 티커 색인 — 같은 재료(DART/SEC 공시 피드)라 같은 슬롯에서 만든다.
       #   회원별 발행이 아니라 **전역 색인 1개**다. 브라우저가 /api/holdings 로 받은 본인 티커만
       #   골라 렌더하므로 회원 수와 무관하게 blob 캐시 1개로 끝난다.
-      #   RULE 4 = 산출 data/nest_briefing_index.json 은 아래 git add data/ (broad) 가 커버.
+      #   RULE 4 = 산출 data/nest_briefing_index.json은 아래 명시 경로가 커버.
       - name: 둥지 브리핑 색인
         run: python -m api.builders.nest_briefing_index_builder
 
       - name: Commit + push (변경 시만)
-        if: always()
+        if: success()
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/
+          git add -- data/daily_briefing.json
+          git add -- data/daily_briefing_history.jsonl
+          git add -- data/nest_briefing_index.json
+          git add -- data/briefing_days/
           git diff --staged --quiet && { echo "변경 없음"; exit 0; }
           git commit -m "data(alpha-nest): 시장 브리핑 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
           BRANCH="${{ github.ref_name }}"
@@ -81,7 +84,7 @@ jobs:
         # 🚨 2026-07-11 순서 fix — 옛 순서(Publish→Commit)는 publish-data 가 origin/main HEAD
         #   에서 추출하므로 자기 run 산출물이 아직 push 전 = 매번 직전 run 분을 발행(한 사이클
         #   지연, 7/10 v2 가 2시간+ Blob 미도달 실측). commit push 후 publish 로 교체.
-        if: always()
+        if: success()
         continue-on-error: true
         uses: ./.github/actions/publish-data
         with:

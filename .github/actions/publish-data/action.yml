@@ -152,6 +152,15 @@ runs:
           fi
         done
 
+        # ── briefing_days/ (실제 관측 원본·날짜 색인, 회원별 정보 없음) ──
+        # 한 단계 폴더는 기존 Blob uploader가 지원하며 동일 내용은 해시로 skip.
+        # 과거 본문을 재구성하지 않고 builder가 보존한 날짜 파일만 발행한다.
+        mkdir -p _public_dist/briefing_days
+        for f in $(git ls-tree --name-only origin/main:data/briefing_days 2>/dev/null); do
+          [[ "$f" == "index.json" || "$f" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\.json$ ]] || continue
+          git show "origin/main:data/briefing_days/$f" > "_public_dist/briefing_days/$f"
+        done
+
         # ── metadata/ subdir (SystemHealthBar / OperatorCockpitBar 의 source) ──
         # 2026-05-27: cockpit_state.json 추가 (Cockpit Phase 0 산출 SoT, 5분 cron).
         # 2026-06-07: system_map.json 추가 (SystemMap "한눈에 보기" 구조 SoT, cockpit cron 동반 생성).
