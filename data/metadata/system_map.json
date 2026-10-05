@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-10-05T08:35:09.294401+09:00",
+  "generated_at": "2026-10-05T11:24:20.659950+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 344087,
-    "python_modules": 1131,
+    "code_lines_tsx_py": 355028,
+    "python_modules": 1163,
     "tsx_components": 145,
-    "json_data_files": 2390,
-    "json_total_tracked": 2414,
+    "json_data_files": 2392,
+    "json_total_tracked": 2416,
     "workflows": 80,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 8393
+    "git_tracked_files": 8434
   },
   "subsystems": {
     "ingest": {
@@ -106,7 +106,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 67,
+      "count": 76,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -153,6 +153,15 @@
         "api/intelligence/periodic_report.py",
         "api/intelligence/perplexity_realtime.py",
         "api/intelligence/portfolio.py",
+        "api/intelligence/portfolio_company_names.py",
+        "api/intelligence/portfolio_contract_facts.py",
+        "api/intelligence/portfolio_contract_termination.py",
+        "api/intelligence/portfolio_event_lineage.py",
+        "api/intelligence/portfolio_evidence.py",
+        "api/intelligence/portfolio_filing_excerpts.py",
+        "api/intelligence/portfolio_parent_excerpts.py",
+        "api/intelligence/portfolio_public_sources.py",
+        "api/intelligence/portfolio_rate_excerpts.py",
         "api/intelligence/postmortem.py",
         "api/intelligence/postmortem_auto_evolve.py",
         "api/intelligence/prediction_layer.py",
@@ -738,7 +747,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 2390
+      "count": 2392
     },
     "validation": {
       "label": "검증",
@@ -753,10 +762,10 @@
     }
   },
   "python_by_dir": {
-    "api": 457,
-    "tests": 417,
-    "scripts": 160,
-    "vercel-api": 84,
+    "api": 466,
+    "tests": 419,
+    "scripts": 162,
+    "vercel-api": 103,
     "server": 7,
     ".github": 6
   },
