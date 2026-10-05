@@ -93,6 +93,105 @@ jobs:
         # (0건이면 빌더가 exit 1 로 스스로 신고한다).
         run: python -m api.builders.kr_lynch_class_builder
 
+      - name: Build path-free automatic evidence catalog
+        id: automatic_evidence
+        # 일일 자동 재생성은 수신된 로컬 스냅샷의 결정론적 필터링이다.
+        # chain 백필은 미보유 종목만 조회하므로 일일 원문 재검증을 의미하지 않는다.
+        # generatedAt 은 빌드 시각이며 source date는 산출물 내 별도 필드를 유지한다.
+        run: |
+          CAPTURE_FIELDS_PRESENT="$(python3 - data/member_map_auto_evidence.json <<'PY'
+          import json, sys
+          def unique_object(pairs):
+            result = {}
+            for key, value in pairs:
+              if key in result:
+                raise ValueError('duplicate JSON key')
+              result[key] = value
+            return result
+          with open(sys.argv[1], encoding='utf-8') as source:
+            prior = json.load(source, object_pairs_hook=unique_object)
+          if not isinstance(prior, dict):
+            raise ValueError('prior catalog must be an object')
+          fields = ('contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts')
+          print('yes' if any(field in prior for field in fields) else 'no')
+          PY
+          )"
+          PRIOR_CAPTURE_ARGS=()
+          if [ "$CAPTURE_FIELDS_PRESENT" = yes ]; then
+            PRIOR_CAPTURE_ARGS=(--prior-captures data/member_map_auto_evidence.json)
+          fi
+          node scripts/member-map/build-public-source-filter.cjs \
+            --generated-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            "${PRIOR_CAPTURE_ARGS[@]}" \
+            --output data/member_map_auto_evidence.json
+
+          CONTRACT_CAPTURE_ROOT="$(mktemp -d "$RUNNER_TEMP/member-map-contract.XXXXXX")"
+          TERMINATION_CAPTURE_ROOT="$(mktemp -d "$RUNNER_TEMP/member-map-termination.XXXXXX")"
+          CONTRACT_CAPTURE_DIR="$CONTRACT_CAPTURE_ROOT/capture"
+          TERMINATION_CAPTURE_DIR="$TERMINATION_CAPTURE_ROOT/capture"
+          printf 'CONTRACT_CAPTURE_DIR=%s\n' "$CONTRACT_CAPTURE_DIR" >> "$GITHUB_ENV"
+          printf 'TERMINATION_CAPTURE_DIR=%s\n' "$TERMINATION_CAPTURE_DIR" >> "$GITHUB_ENV"
+          python3 scripts/member-map/capture-contract-facts.py \
+            --source-dir data --output-dir "$CONTRACT_CAPTURE_DIR" \
+            --filing-type contract --limit 6 --fetch-public --apply-local
+          CONTRACT_SOURCE_ACCESS_STOP="$(python3 - "$CONTRACT_CAPTURE_DIR/manifest.json" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding='utf-8') as source:
+            manifest = json.load(source)
+          print('true' if manifest.get('stopped') == 'source-access-or-rate-limit' else 'false')
+          PY
+          )"
+          if [ "$CONTRACT_SOURCE_ACCESS_STOP" != true ]; then
+            python3 scripts/member-map/capture-contract-facts.py \
+              --source-dir data --output-dir "$TERMINATION_CAPTURE_DIR" \
+              --filing-type termination --limit 6 --fetch-public --apply-local
+          fi
+          python3 - "$CONTRACT_CAPTURE_DIR/manifest.json" "$TERMINATION_CAPTURE_DIR/manifest.json" \
+            "$GITHUB_OUTPUT" "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json, os, sys
+          manifests = []
+          rows = []
+          for expected_type, filename in zip(('contract', 'termination'), sys.argv[1:3]):
+            if not os.path.exists(filename):
+              if expected_type != 'termination' or not manifests or not manifests[0]:
+                raise FileNotFoundError(filename)
+              rows.append((expected_type, ('n/a', 'n/a', 0, 0, 'n/a'), 'not-attempted-after-contract-source-stop'))
+              continue
+            with open(filename, encoding='utf-8') as source:
+              manifest = json.load(source)
+            if manifest.get('schema') != 'local-public-contract-capture-v1' or manifest.get('filing_type') != expected_type:
+              raise ValueError('capture manifest contract mismatch')
+            counts = {key: manifest.get(key) for key in ('available', 'selected', 'attempted', 'parsed', 'not_attempted')}
+            if any(not isinstance(value, int) or value < 0 for value in counts.values()):
+              raise ValueError('capture manifest counts invalid')
+            stopped = manifest.get('stopped') == 'source-access-or-rate-limit'
+            partial = stopped or counts['parsed'] < counts['selected'] or counts['not_attempted'] > 0
+            state = 'source-access-or-rate-limit' if stopped else 'partial' if partial else 'selected-set-parsed'
+            line = f"{expected_type}: scope=selected-up-to-limit available={counts['available']} selected={counts['selected']} attempted={counts['attempted']} parsed={counts['parsed']} not_attempted={counts['not_attempted']} state={state}"
+            print(line, flush=True)
+            manifests.append(stopped)
+            rows.append((expected_type, (counts['available'], counts['selected'], counts['attempted'], counts['parsed'], counts['not_attempted']), state))
+          with open(sys.argv[3], 'a', encoding='utf-8') as output:
+            output.write(f"source_access_stop={'true' if any(manifests) else 'false'}\n")
+          with open(sys.argv[4], 'a', encoding='utf-8') as summary:
+            summary.write('\n'.join((
+              '| Filing type | Available | Selected | Attempted | Parsed | Not attempted | State |',
+              '|---|---:|---:|---:|---:|---:|---|',
+            )) + '\n')
+            for expected_type, counts, state in rows:
+              summary.write(f"| {expected_type} | {counts[0]} | {counts[1]} | {counts[2]} | {counts[3]} | {counts[4]} | {state} |\n")
+          PY
+
+      - name: Upload public capture manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-capture-manifests-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.CONTRACT_CAPTURE_DIR }}/manifest.json
+            ${{ env.TERMINATION_CAPTURE_DIR }}/manifest.json
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Commit
         run: |
           git config user.name "AI Stock Bot"
@@ -105,6 +204,7 @@ jobs:
                    data/kr_major_shareholders.json \
                    data/dart_cb_bw_cache.json \
                    data/chain_snippets.json \
+                   data/member_map_auto_evidence.json \
                    data/kr_lynch_class.json; do
             git add "$f" 2>/dev/null || echo "::notice::$f 없음(이번 run 미산출)"
           done
@@ -115,4 +215,23 @@ jobs:
             if git pull --rebase --autostash -X theirs origin main && git push origin main; then exit 0; fi
             sleep $(( i * 7 + RANDOM % 15 ))
           done
-          echo "::warning::push 실패 — 다음 run 에서 누적 재시도"
+          echo "::error::push 실패 — 공개 카탈로그 발행을 중단합니다"
+          exit 1
+
+      - name: Fail stopped public capture after preserving successful source rows
+        if: steps.automatic_evidence.outputs.source_access_stop == 'true'
+        run: |
+          echo "::error::Public source access or rate-limit stop; successful parsed rows were retained, but publication must not proceed."
+          exit 1
+
+      - name: Publish verified public evidence catalog
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: |
+          if [ -z "${BLOB_READ_WRITE_TOKEN:-}" ]; then
+            echo "::error::Catalog publishing credential is unavailable."
+            exit 1
+          fi
+          PUBLISH_DEPS_DIR="$(mktemp -d "$RUNNER_TEMP/member-map-publish-deps.XXXXXX")"
+          npm install --prefix "$PUBLISH_DEPS_DIR" --no-save --package-lock=false @vercel/blob@2.4.1
+          NODE_PATH="$PUBLISH_DEPS_DIR/node_modules" node scripts/member-map/upload-public-source-filter.cjs data/member_map_auto_evidence.json
