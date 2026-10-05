@@ -1802,7 +1802,7 @@ html>body{padding:0}</style>
     <section class="an-map" aria-label="종목과 사건의 연결 지도">
       <div class="an-tools"><div class="an-filters"><label class="an-filter">자료<select id="an-source-filter" aria-label="자료 종류"><option value="all">전체 자료</option><option value="news">뉴스</option><option value="filing">공시</option><option value="government">정부 발표</option><option value="prices">가격 데이터</option></select></label><label class="an-filter">주제<select id="an-topic-filter" aria-label="사건 주제"><option value="all">전체 주제</option><option value="contract">계약·공시 변경</option><option value="supply">고객사·공급망</option><option value="policy">정책·규제</option><option value="commodity">원자재</option></select></label></div><div class="an-zoom"><button type="button" class="cursor-interaction" data-zoom="-1" aria-label="축소">−</button><output id="an-zoom-value">100%</output><button type="button" class="cursor-interaction" data-zoom="1" aria-label="확대">+</button><button type="button" class="an-tool cursor-interaction" id="an-fit">한눈에</button><button type="button" class="an-tool cursor-interaction" id="an-reset-layout" title="위치와 배율만 초기화 · 필터와 메모는 유지">배치 초기화</button></div></div>
       <div class="an-space" id="an-space"><svg class="an-grid" aria-hidden="true"><path id="an-grid-fine"/><path id="an-grid-coarse"/></svg><svg aria-label="종목과 자료의 연결" role="group"><title>내 종목과 자료의 연결</title><g id="an-lines"></g></svg><div id="an-labels"></div><div id="an-nodes"></div><div class="an-empty" id="an-empty" hidden role="status">이 자료·주제 조합에 맞는 가상 사건이 없어요.<br>필터를 전체로 바꿔보세요.</div></div>
-      <div class="an-foot"><span class="an-key"><i></i>자료에 명시된 연결</span><span>영향·강도는 별도 확인</span><span>선에 올리거나 탭해 영향 확인 · 휠·두 손가락 이동 · ⌘/Ctrl+휠·핀치 확대축소 · Space+드래그</span></div>
+      <div class="an-foot"><span class="an-key"><i></i>직접 · 자료에 명시</span><span class="an-key"><i class="dashed"></i>간접·참고 연결</span><span>색: 주제 · 움직임: 연결 경로 · 굵기: 연결 정도(미평가는 기본 굵기)</span><span>선에 올리거나 탭해 영향 확인 · 휠·두 손가락 이동 · ⌘/Ctrl+휠·핀치 확대축소 · Space+드래그</span></div>
     </section>
     <aside class="an-detail" id="an-detail" aria-label="선택한 항목 자세히 보기"></aside>
   </div><div class="an-live" id="an-live" aria-live="polite"></div>
@@ -1841,7 +1841,7 @@ html>body{padding:0}</style>
       const state={selected:'',focusId:'',filter:'all',topic:'all',zoom:1,panX:0,panY:0,marks:member.marks||{},notes:member.notes||{},scenario:'basic',view:'all',noteList:false,activeNote:''};
       function arrangeStress(){} // Test-only scenario is not part of the member data path.
       const escaped=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-      const relationType=e=>e.type==='direct'?'직접':e.type==='indirect'?'간접':e.type==='documented'?'자료에 명시':'자료 연결';
+      const relationType=e=>e.type==='direct'?'직접':e.type==='indirect'?'간접':e.type==='documented'?'직접 · 자료에 명시':'참고 연결';
       const focusOffsets=new Map(),focusOrigins=new Map();
       const clusterZones=document.createElementNS('http://www.w3.org/2000/svg','g');clusterZones.setAttribute('aria-hidden','true');clusterZones.id='an-clusters';linesEl.before(clusterZones);
       // Sandbox demo only: never writes to AlphaNest holdings, accounts or trade records.
@@ -1859,7 +1859,7 @@ html>body{padding:0}</style>
       const workbar=document.createElement('div');workbar.className='an-workbar';workbar.innerHTML='<select id="an-scenario" aria-label="테스트 종목 수"><option value="basic">가상 3종목</option><option value="stress">가상 30종목</option></select><select id="an-view" aria-label="사건 보기"><option value="all">모든 사건</option><option value="changed">달라진 사건</option><option value="shared">공통 사건</option></select><button type="button" id="an-notes-open" class="an-tool">메모 <span id="an-note-count">0</span></button><output id="an-counts"></output>';space.before(workbar);
       const toast=document.createElement('div');toast.className='an-toast';toast.hidden=true;toast.innerHTML='<span>메모를 삭제했어요.</span><button type="button" id="an-note-undo">되돌리기</button><button type="button" aria-label="알림 닫기" id="an-toast-close">×</button>';root.querySelector('.an-body').appendChild(toast);
       let hasSavedCamera=false;
-      const MIN_ZOOM=.25,MAX_ZOOM=4;
+      const MIN_ZOOM=.08,MAX_ZOOM=4;
       let zoomSaveTimer,nativeGesture=null;
       let spaceHeld=false,mapHovered=false;
       let suppressClick=false,nodePointerActive=false;
@@ -1885,7 +1885,7 @@ html>body{padding:0}</style>
         caption.textContent=relation?'이 종목에 '+relation.impact:priorityNames[item.priority]+' · 가상 표시 예시';
         title.textContent=relation?nodeById[relation.from].name+' ↔ '+nodeById[relation.to].name:item.name;body.textContent=relation?relation.impactReason:item.reason;
         source.textContent='가상 기준일 2026.09.08 · '+(relation?relationSource(relation):item.kind==='event'?sourceNames[item.layer]:'포트폴리오 예시');
-        title.textContent=relation?relation.verb+' · '+relationType(relation)+' · '+strengthNames[relation.strength]:item.name;
+        title.textContent=relation?relation.verb+' · '+relationType(relation)+' · '+memberConnectionLabel(relation):item.name;
         preview.append(caption,title,body,source);preview.classList.remove('compact');preview.hidden=false;
         // Cards and badges use their top edge; a bare line uses the hovered point.
         const bounds=anchor.getBoundingClientRect(),mapBounds=space.getBoundingClientRect();let r=bounds;
@@ -1994,7 +1994,7 @@ html>body{padding:0}</style>
       registrationDialog.addEventListener('keydown',e=>{if(e.key==='Tab'){const items=[...registrationDialog.querySelectorAll('button,input')],first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 
       function groupedOverview(){return state.scenario==='stress'&&!state.focusId&&!state.selected;}
-      function nodeScale(n,zoom=state.zoom){const min=state.focusId?.98:groupedOverview()&&n.kind==='event'?(space.clientWidth<600?.86:.98):state.scenario==='stress'?.72:.82;return Math.max(min,Math.min(state.focusId?1.08:1.25,zoom))*({1:.94,2:1,3:1.10}[n.priority]);}
+      function nodeScale(n,zoom=state.zoom){return Math.max(MIN_ZOOM,Math.min(1.25,zoom))*({1:.94,2:1,3:1.10}[n.priority]||1);}
       function restore(saved){if(!saved)return;const m=saved.modelContent||{},p=saved.privateContent||{};if(nodeById[m.selected]||edges.some(e=>e.id===m.selected)||m.selected==='')state.selected=m.selected;if(m.filter==='all'||Object.hasOwn(sourceNames,m.filter))state.filter=m.filter;if(m.topic==='all'||Object.hasOwn(topicNames,m.topic))state.topic=m.topic;const selectedNode=nodeById[state.selected],selectedEdge=edges.find(e=>e.id===state.selected);if((selectedNode&&!shown(selectedNode))||(selectedEdge&&!visibleEdge(selectedEdge)))state.selected='';if(!state.focusId&&p.layoutVersion===2&&Number.isFinite(p.zoom)){hasSavedCamera=true;state.zoom=Math.max(MIN_ZOOM,Math.min(MAX_ZOOM,p.zoom));if(Number.isFinite(p.panX))state.panX=p.panX;if(Number.isFinite(p.panY))state.panY=p.panY;}if(p.marks&&typeof p.marks==='object')state.marks=p.marks;}
       restore(window.openai&&window.openai.widgetState);
       function save(){const camera=focusCamera||state;if(window.openai&&window.openai.setWidgetState)window.openai.setWidgetState({modelContent:{selected:state.selected,filter:state.filter,topic:state.topic},privateContent:{layoutVersion:2,zoom:camera.zoom,panX:camera.panX,panY:camera.panY,marks:state.marks,introVersion:introSeen?1:0}}).catch(function(){});}
@@ -2120,7 +2120,7 @@ html>body{padding:0}</style>
         feedbackDialog.querySelector('.an-close').onclick=()=>feedbackDialog.close();
         feedbackDialog.querySelector('#an-feedback-prepare').onclick=()=>{
           if(!reason.value.trim()){status.textContent='이상한 점을 한 줄 적어주세요.';reason.focus();return;}
-          copy.value=['알파네스트 지도 시안 · 연결 의견','연결: '+nodeById[edge.from].name+' ↔ '+nodeById[edge.to].name,'관계: '+edge.verb+' / '+(edge.type==='direct'?'직접':'간접')+' / 연결 정도 '+strengthNames[edge.strength],'근거 상태: '+evidenceStatus(edge),'출처: '+relationSource(edge),'가상 기준일: 2026.09.08','관계 ID: '+edge.id,'의견: '+reason.value.trim()].join('\n');
+          copy.value=['알파네스트 지도 시안 · 연결 의견','연결: '+nodeById[edge.from].name+' ↔ '+nodeById[edge.to].name,'관계: '+edge.verb+' / '+(edge.type==='direct'?'직접':'간접')+' / 연결 정도 '+memberConnectionLabel(edge),'근거 상태: '+evidenceStatus(edge),'출처: '+relationSource(edge),'가상 기준일: 2026.09.08','관계 ID: '+edge.id,'의견: '+reason.value.trim()].join('\n');
           result.hidden=false;status.textContent='의견을 만들었어요. 복사해 전달할 수 있어요. 아직 접수된 것은 아니에요.';
         };
         feedbackDialog.querySelector('#an-feedback-copy-button').onclick=()=>{
@@ -2172,13 +2172,13 @@ html>body{padding:0}</style>
         labelsEl.replaceChildren();
         edges.forEach(function(e){
           let pair=edgeEls.get(e.id);
-          if(!pair){const group=document.createElementNS('http://www.w3.org/2000/svg','g'),path=document.createElementNS('http://www.w3.org/2000/svg','path'),flow=document.createElementNS('http://www.w3.org/2000/svg','path'),hit=document.createElementNS('http://www.w3.org/2000/svg','path');flow.setAttribute('class','an-flow');flow.setAttribute('d','M -3 -3.5 L 2 0 L -3 3.5');const rim=flow.cloneNode();rim.classList.add('an-flow-rim');[rim,flow].forEach(el=>el.setAttribute('aria-hidden','true'));hit.setAttribute('class','an-edge-hit');hit.setAttribute('tabindex','0');hit.setAttribute('role','button');hit.dataset.edge=e.id;hit.setAttribute('aria-label',nodeById[e.from].name+' ↔ '+nodeById[e.to].name+' · '+relationType(e)+' 관련 · 관련도 '+strengthNames[e.strength]+' · 이 종목에 '+e.impact+' · 선택하여 설명 보기');hit.addEventListener('click',()=>select(e.id));hit.addEventListener('keydown',v=>{if(v.key==='Enter'||v.key===' '){v.preventDefault();select(e.id);}});bindPreview(hit,e,true);group.append(path,rim,flow,hit);linesEl.append(group);pair={group,path,rim,flow,hit};edgeEls.set(e.id,pair);}
+          if(!pair){const group=document.createElementNS('http://www.w3.org/2000/svg','g'),path=document.createElementNS('http://www.w3.org/2000/svg','path'),flow=document.createElementNS('http://www.w3.org/2000/svg','path'),hit=document.createElementNS('http://www.w3.org/2000/svg','path');flow.setAttribute('class','an-flow');flow.setAttribute('d','M -3 -3.5 L 2 0 L -3 3.5');const rim=flow.cloneNode();rim.classList.add('an-flow-rim');[rim,flow].forEach(el=>el.setAttribute('aria-hidden','true'));hit.setAttribute('class','an-edge-hit');hit.setAttribute('tabindex','0');hit.setAttribute('role','button');hit.dataset.edge=e.id;hit.setAttribute('aria-label',nodeById[e.from].name+' ↔ '+nodeById[e.to].name+' · '+relationType(e)+' 관련 · 관련도 '+memberConnectionLabel(e)+' · 이 종목에 '+e.impact+' · 선택하여 설명 보기');hit.addEventListener('click',()=>select(e.id));hit.addEventListener('keydown',v=>{if(v.key==='Enter'||v.key===' '){v.preventDefault();select(e.id);}});bindPreview(hit,e,true);group.append(path,rim,flow,hit);linesEl.append(group);pair={group,path,rim,flow,hit};edgeEls.set(e.id,pair);}
           const visible=visibleEdge(e)&&(!state.focusId||focus.has(e.from)&&focus.has(e.to));pair.group.style.display=visible?'':'none';if(!visible)return;
           const a=point(nodeById[e.from]),b=point(nodeById[e.to]),active=state.focusId?focus.has(e.from)&&focus.has(e.to):state.selected===e.id||e.from===state.selected||e.to===state.selected,d='M '+a.x+' '+a.y+' Q '+((a.x+b.x)/2+16)+' '+((a.y+b.y)/2)+' '+b.x+' '+b.y;
           pair.group.dataset.topic=nodeById[e.from].topic||nodeById[e.to].topic||'holding';pair.path.setAttribute('d',d);[pair.rim,pair.flow].forEach(el=>{el.style.offsetPath='path("'+d+'")';});pair.hit.setAttribute('d',d);pair.hit.setAttribute('aria-pressed',String(state.selected===e.id));pair.path.dataset.edge=e.id;pair.group.style.setProperty('--edge-width',({0:1.4,1:1.4,2:2.4,3:3.6}[e.strength])+'px');
-          pair.path.setAttribute('class','an-edge '+(e.type==='indirect'?'indirect ':'')+(active?'active':'')+(!active&&state.selected?' dim':''));
+          pair.path.setAttribute('class','an-edge '+(e.type==='direct'||e.type==='documented'?'':'indirect ')+(active?'active':'')+(!active&&state.selected?' dim':''));
           const animate=!!e.recent&&(active||!state.selected&&!state.focusId);pair.rim.classList.toggle('play',animate);pair.flow.classList.toggle('play',animate);
-          if((active||!state.selected)&&!groupedOverview()&&(!state.focusId||e.from===state.focusId||e.to===state.focusId||state.selected===e.id)){const label=document.createElement('button');label.type='button';label.dataset.edgeLabel=e.id;label.dataset.topic=pair.group.dataset.topic;label.className='an-edge-label cursor-interaction';label.style.visibility='hidden';const name=document.createElement('span'),degree=document.createElement('span');name.className='an-edge-name';name.textContent=e.verb;degree.className='an-edge-degree';degree.textContent=relationType(e)+' · '+strengthNames[e.strength];label.append(name,degree);label.setAttribute('aria-label',nodeById[e.from].name+' ↔ '+nodeById[e.to].name+' · '+e.verb+' · '+relationType(e)+' 관련 · 관련도 '+strengthNames[e.strength]+' · 이 종목에 '+e.impact+' · 탭하여 설명 보기');label.setAttribute('aria-pressed',String(state.selected===e.id));label.onclick=function(){select(e.id);};bindPreview(label,e,true);labelsEl.appendChild(label);}
+          if((active||!state.selected)&&!groupedOverview()&&(!state.focusId||e.from===state.focusId||e.to===state.focusId||state.selected===e.id)){const label=document.createElement('button');label.type='button';label.dataset.edgeLabel=e.id;label.dataset.topic=pair.group.dataset.topic;label.className='an-edge-label cursor-interaction';label.style.visibility='hidden';const name=document.createElement('span'),degree=document.createElement('span');name.className='an-edge-name';name.textContent=e.verb;degree.className='an-edge-degree';degree.textContent=relationType(e)+' · '+memberConnectionLabel(e);label.append(name,degree);label.setAttribute('aria-label',nodeById[e.from].name+' ↔ '+nodeById[e.to].name+' · '+e.verb+' · '+relationType(e)+' 관련 · 관련도 '+memberConnectionLabel(e)+' · 이 종목에 '+e.impact+' · 탭하여 설명 보기');label.setAttribute('aria-pressed',String(state.selected===e.id));label.onclick=function(){select(e.id);};bindPreview(label,e,true);labelsEl.appendChild(label);}
         });
         root.querySelector('#an-source-filter').value=state.filter;root.querySelector('#an-topic-filter').value=state.topic;
         root.querySelectorAll('[data-select]').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.select===state.selected));const n=nodeById[b.dataset.select];b.hidden=!shown(n);const s=b.querySelector('small');if(s)s.textContent=changeStatus[n.id]+' · 보유 '+eventHoldings(n).length+'종목 연결';});
@@ -2320,7 +2320,7 @@ html>body{padding:0}</style>
         }
         const reason=document.createElement('div');reason.className='an-guide-row an-why';
         const reasonTitle=document.createElement('strong'),reasonText=document.createElement('span');
-        reasonTitle.textContent=edge?'관련도 '+strengthNames[edge.strength]+' · 가상 표시':priorityNames[n.priority]+' · 표시 이유';
+        reasonTitle.textContent=edge?'관련도 '+memberConnectionLabel(edge)+' · 가상 표시':priorityNames[n.priority]+' · 표시 이유';
         reasonText.textContent=edge?'연결 정도이며 근거의 확실성이나 주가 상승 가능성을 뜻하지 않아요.':n.kind==='event'?n.name+'에 가상 보유 '+eventHoldings(n).length+'종목이 연결돼 있어요. 연결 종목 수는 영향 크기나 예상 손실을 뜻하지 않아요.':n.reason;reason.append(reasonTitle,reasonText);if(!n?.explore)detail.querySelector('p').after(reason);
         if(n?.kind==='stock')renderStockActions(n);
         if(n?.explore){const sourceButton=detail.querySelector('#an-source');sourceButton.hidden=true;sourceButton.previousElementSibling.hidden=true;}
@@ -2504,6 +2504,58 @@ html>body{padding:0}</style>
       let pendingMapResize=false;
       function applyMapResize(){if(nodeMoveActive){pendingMapResize=true;return;}pendingMapResize=false;closePreview();if(cancelGesture)cancelGesture();const narrow=space.clientWidth<560;if(state.focusId&&narrow!==narrowFocusLayout)focusStock(state.focusId,true);narrowFocusLayout=narrow;renderMap();if(state.focusId)fitNodes('nearby');}
       new ResizeObserver(applyMapResize).observe(space);
+// Product criteria v1. Source: research-plan-20261003/plan.md sections 4, 5E/F.
+// Explain supplied evidence; do not manufacture a graded score or rejudge sources here.
+function memberOwnershipMeasure(edge){
+  const m=edge?.measure;
+  if(edge?.confirmation!=='confirmed'||m?.kind!=='reported-ownership'||typeof m.value!=='number'||!Number.isFinite(m.value)||m.value<=0||m.value>100||m.asOf!==edge.asOf||!/^\d{4}-\d{2}-\d{2}$/.test(m.asOf)||!['trmend_posesn_stock_qota_rt','trmend_blce_qota_rt'].includes(m.sourceField))return null;
+  return m;
+}
+function memberConnectionLabel(edge){
+  const m=memberOwnershipMeasure(edge);
+  return m?'지분 '+m.value+'%':({0:'미평가',1:'낮음',2:'중간',3:'높음'})[edge?.strength]||'미평가';
+}
+function memberContractPeriod(edge){
+  const m=edge?.measure,validDay=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v;
+  if(edge?.confirmation!=='confirmed'||m?.kind!=='reported-contract-period'||![m.start,m.end,m.asOf].every(validDay)||m.start>m.end||!validDay(edge.asOf)||m.asOf>edge.asOf||!Array.isArray(edge.evidence)||!edge.evidence.some(s=>s?.url===m.sourceUrl&&/^https:\/\/dart\.fss\.or\.kr\/dsaf001\/main\.do\?rcpNo=\d{14}$/.test(s.url)))return null;
+  return m;
+}
+function memberRelationshipCriteria(edge,sourceNode){
+  const e=edge||{},direct=e.type==='direct'||e.type==='documented';
+  const confirmed=e.confirmation==='confirmed';
+  const supported=Array.isArray(e.evidence)&&e.evidence.some(s=>s&&typeof s.url==='string'&&s.url.startsWith('https://')&&typeof(s.explanation||s.title)==='string'&&String(s.explanation||s.title).trim());
+  const dated=typeof e.asOf==='string'&&!!e.asOf.trim();
+  const documentOnly=sourceNode?.recordKind==='document';
+  const verified=!documentOnly&&confirmed&&supported&&dated;
+  const direction=documentOnly?'종목과 자료 연결':direct?'직접 연결':e.type==='indirect'?'간접 연결':'참고 연결';
+  const level=({1:'낮음',2:'중간',3:'높음'})[e.strength];
+  const measure=verified?memberOwnershipMeasure(e):null;
+  const period=verified?memberContractPeriod(e):null;
+  const scenarios=Array.isArray(e.assessment?.scenarios)?e.assessment.scenarios.filter(row=>row&&typeof row==='object'&&!Array.isArray(row)):[];
+  return {
+    version:'근거 분리 기준 v1',
+    rows:[
+      {label:'연결 방식',value:direction,reason:e.verb||'관계 유형 미제공'},
+      {label:'근거 확인',value:documentOnly?'자료 포함 확인 · 사업 관계 미확정':verified?'보고 시점 근거 확인':e.confirmation==='candidate'?'검토할 후보':'추가 확인 필요',reason:documentOnly?'종목 조회에 포함된 자료예요. 공동 언급만으로 공급·계약·지분 관계를 확정하지 않아요.':verified?'원문과 기준일이 있는 연결이에요. 현재도 유효한지는 별도 확인해요.':!supported?'연결을 뒷받침하는 원문 정보가 부족해요.':!dated?'연결의 기준일이 부족해요.':'문서에 등장한다는 사실만으로 사업 관계를 확정하지 않아요.'},
+      {label:'연결 정도',value:measure?'공시 지분 '+measure.value+'%':level?level+' · 기존 평가':'미평가',reason:measure?measure.asOf+' 결산기준 · '+(measure.shareClass||'주식 종류 미제공')+'. 원문 표의 보고 지분율이며 관련도 점수·의결권 비율·현재 보유율로 환산하지 않아요.':level?'입력 자료의 등급이에요. 이 화면에서 새 점수를 계산하지 않아요.':'지분율·매출 의존도·계약 규모의 분모와 기간, 유형별 평가 근거가 필요해요. 문서 수나 직접 연결만으로 높게 매기지 않아요.'},
+      ...(period?[{label:'보고된 계약기간',value:period.start+' ~ '+period.end,reason:period.asOf+' 보고·정정 기준. 원문에 적힌 기간이며 현재 유효성·이행 여부나 연결 정도를 뜻하지 않아요. 해지·후속 정정은 근거 이력에서 따로 확인해요.'}]:[]),
+      {label:'영향 해석',value:scenarios.length?'조건부 사업 경로':e.impact&&e.impact!=='미확인'?e.impact:'미확인',reason:scenarios.length?'사업 경로의 조건과 반대 요인을 함께 확인해요. 현재 순영향이나 주가 예측이 아니에요.':e.impactReason||'연결의 존재와 실적·주가 영향은 별개예요.'}
+    ]
+  };
+}
+function appendMemberCriteria(parent,edge,sourceNode){
+  const criteria=memberRelationshipCriteria(edge,sourceNode),panel=document.createElement('details');panel.className='an-evidence';panel.dataset.relationshipCriteria='v1';
+  appendMemberText(panel,'summary','알파네스트 판단 기준 · '+criteria.version);
+  for(const row of criteria.rows){
+    const section=document.createElement('div');section.className='an-stock-actions';
+    appendMemberText(section,'strong',row.label+' · '+row.value);
+    appendMemberText(section,'p',row.reason,'an-save-note');panel.append(section);
+  }
+  appendMemberText(panel,'p','관계는 원문의 당사자와 역할을 확인해요. 공통 사건은 같은 사건에 참여했다는 근거로 묶고, 환율·원자재·정책은 해당 회사의 사업 노출 경로가 있을 때 연결해요. 정정·부인·종료된 내용은 현재 사실과 구분해요.','an-save-note');
+  appendMemberText(panel,'p','선의 종류는 연결 방식, 굵기는 연결 정도, 색은 주제를 나타내요. 움직임은 연결 경로이며 상승 확률이 아니에요.','an-save-note');
+  parent.append(panel);
+}
+
 /* circle-flags: https://github.com/HatScripts/circle-flags
 MIT License
 
@@ -2597,6 +2649,52 @@ function decorateMemberStock(n){
   button.setAttribute('aria-label',n.name+' · '+listingLabel(n));
 }
 nodes.filter(n=>n.kind==='stock').forEach(decorateMemberStock);
+// Compact, source-preserving cards: full titles remain in the accessible name,
+// hover and detail panel. Symbols describe record kinds, never inferred impact.
+const memberCategoryPaths={
+  news:'M4 4h16v16H4z M7 8h10 M7 12h4 M14 12h3 M7 16h10',
+  filing:'M6 3h8l4 4v14H6z M14 3v5h4 M9 12h6 M9 16h6',
+  business:'M4 21V7h10v14 M14 11h6v10 M7 10h4 M7 14h4 M7 18h4 M2 21h20',
+  fx:'M4 8h15l-4-4 M20 16H5l4 4',
+  commodity:'M12 3l8 5v9l-8 4-8-4V8z M4 8l8 5 8-5 M12 13v8',
+  calendar:'M4 5h16v16H4z M8 3v4 M16 3v4 M4 10h16',
+  policy:'M3 9l9-6 9 6z M6 11v7 M12 11v7 M18 11v7 M3 21h18',
+  events:'M5 12h14 M12 5v14 M5 5h2v2H5z M17 17h2v2h-2z',
+  relationships:'M9 8H7a4 4 0 000 8h3 M15 8h2a4 4 0 010 8h-3 M8 12h8',
+  candidates:'M9 8H7a4 4 0 000 8h2 M15 8h2a4 4 0 010 8h-2 M11 12h2',
+  other:'M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5'
+};
+function memberCategoryIcon(key){
+  const icon=document.createElementNS('http://www.w3.org/2000/svg','svg'),path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');icon.classList.add('an-category-icon');
+  for(const [k,v] of Object.entries({d:memberCategoryPaths[key]||memberCategoryPaths.other,fill:'none',stroke:'currentColor','stroke-width':'1.7','stroke-linecap':'round','stroke-linejoin':'round'}))path.setAttribute(k,v);
+  icon.append(path);return icon;
+}
+function decorateMemberRecord(n){
+  if(n.kind!=='event')return;
+  const button=[...nodesEl.children].find(el=>el.dataset.node===n.id);if(!button)return;
+  const key=n.recordKind==='event'?'events':n.layer==='government'?'policy':n.layer;
+  const prior=button.querySelector('.an-dot,.an-category-icon');if(prior)prior.replaceWith(memberCategoryIcon(key));
+  button.setAttribute('aria-label',n.name+' · 눌러 원문 제목과 근거 보기');
+}
+const memberCardStyle=document.createElement('style');memberCardStyle.textContent=`
+#an-map-design .an-node.event{width:300px;max-width:300px;align-items:flex-start}
+#an-map-design .an-node.event>span:last-child{min-width:0;flex:1}
+#an-map-design #an-nodes .an-node.event strong{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+#an-map-design .an-node:not(.event):not([data-group]){max-width:260px}
+#an-map-design .an-node:not(.event):not([data-group])>span:last-child{min-width:0}
+#an-map-design .an-node:not(.event):not([data-group]) strong{overflow:hidden;text-overflow:ellipsis}
+#an-map-design .an-category-icon{width:22px;height:22px;flex:none;color:var(--an-sub);margin-top:1px}
+#an-map-design[data-map-detail=compact] #an-nodes .an-node.event small{visibility:hidden}
+#an-map-design[data-map-detail=compact] #an-nodes .an-node.event .an-note-badge{display:block}
+#an-map-design[data-map-detail=overview] #an-nodes .an-node.event>span:last-child{visibility:hidden}
+#an-map-design[data-map-detail=overview] #an-member-groups .an-note-badge{visibility:hidden}
+#an-map-design[data-map-detail=overview] .an-edge-label{visibility:hidden}
+#an-map-design .an-relation-summary{display:block;color:var(--an-sub);font-size:12px;font-weight:600;line-height:1.55;margin-top:5px;white-space:normal}
+#an-map-design .an-connection.an-related-card{display:block;width:100%;text-align:left;white-space:normal}
+@media(max-width:700px){#an-map-design .an-node.event{width:230px;max-width:230px}}
+`;document.head.append(memberCardStyle);
+nodes.forEach(decorateMemberRecord);
 root.querySelector('#an-empty').textContent='이 필터에 표시할 자료가 없어요. 아직 수집되지 않은 자료가 있을 수 있어요.';
 root.querySelector('.an-intro-notice').textContent='내 보유·관심종목과 수집된 자료를 연결해요. 지도에서 숨겨도 둥지의 보유 기록은 바뀌지 않아요. 메모·배치를 바꾼 뒤 기록 저장을 눌러주세요.';
 root.querySelector('.an-intro-steps li:last-child p').textContent='종목 검색으로 보유·관심종목을 찾아 작업판에서 표시하거나 숨겨보세요. 실제 보유 목록은 변경하지 않아요.';
@@ -2642,7 +2740,7 @@ membership=n=>n.explore?'탐색 중':n.held===false?'관심종목':n.watched?'�
 // Search uses the parent-only public endpoint. No catalogue, token or network in the frame.
 let memberSearchRows=[],memberSearchRequest=0,memberSearchQuery=null,memberSearchTimer=null,memberSearchMessage='',pendingExplore=null;
 function renderMemberSearch(){
-  const q=searchInput.value.trim().toLocaleLowerCase(),local=nodes.filter(n=>n.kind==='stock'&&(n.name+' '+n.ticker).toLocaleLowerCase().includes(q));
+  const q=searchInput.value.trim().toLocaleLowerCase(),local=nodes.filter(n=>n.kind==='stock'&&(n.name+' '+(n.formalName||'')+' '+n.ticker).toLocaleLowerCase().includes(q));
   const seen=new Set(local.map(n=>n.ticker)),rows=[...local,...memberSearchRows.filter(n=>!seen.has(n.ticker))].slice(0,12);
   searchResults.replaceChildren();
   for(const n of rows){
@@ -2709,6 +2807,7 @@ function updateMemberGraph(model,ticker){
     changeStatus[n.id]=n.changeStatus||'기존';const button=[...nodesEl.children].find(el=>el.dataset.node===n.id);
     button.querySelector('strong').textContent=n.name;button.querySelector('small').textContent=n.code;
     if(n.kind==='stock')decorateMemberStock(n);
+    else decorateMemberRecord(n);
     if(n.kind==='event'&&!button.querySelector('.an-note-badge')){const badge=document.createElement('span');badge.className='an-note-badge';button.querySelector('span:last-child').append(badge);}
   }
   inbox.querySelectorAll('[data-select]').forEach(el=>el.remove());
@@ -2771,13 +2870,18 @@ memberPort.onmessage=event=>{
     memberSearchMessage=event.data.error||(event.data.unsupportedCount?'지원하지 않는 검색 항목 '+event.data.unsupportedCount+'개는 제외했어요.':'');renderMemberSearch();return;
   }
   if(event.data?.type==='graph-update'){
-    if(memberOriginGeneration===null){updateMemberGraph(event.data.model,event.data.ticker);return;}
+    if(memberOriginGeneration===null){
+      memberApplyingGraph=true;
+      try{updateMemberGraph(event.data.model,event.data.ticker);lastDraft=JSON.stringify(memberDraft());}
+      finally{memberApplyingGraph=false;}
+      return;
+    }
     const next=event.data.model?.originGeneration;
     if(!Number.isSafeInteger(next)||next<=memberOriginGeneration)return;
     memberApplyingGraph=true;
-    try{updateMemberGraph(event.data.model,event.data.ticker);memberOriginGeneration=next;}
+    try{updateMemberGraph(event.data.model,event.data.ticker);memberOriginGeneration=next;lastDraft=JSON.stringify(memberDraft());}
     finally{memberApplyingGraph=false;}
-    memberPort.postMessage({type:'graph-applied',...memberOriginStamp()});emitMemberDraft(true);return;
+    memberPort.postMessage({type:'graph-applied',...memberOriginStamp()});return;
   }
   if(event.data?.type==='explore-result'){pendingExplore=null;if(event.data.error)sayBoard(event.data.error);renderMemberSearch();return;}
   if(event.data?.type==='focus-stock'){
@@ -2801,10 +2905,16 @@ memberPort.onmessage=event=>{
 const prototypeRenderMap=renderMap;
 renderMap=function(){
   if(memberReset)return;
+  root.dataset.mapDetail=state.zoom<.3?'overview':state.zoom<.65?'compact':'detail';
   prototypeRenderMap();
   const connectionText=n=>(changeStatus[n.id]||'미확인')+' · '+eventHoldings(n).length+'종목 연결';
   root.querySelectorAll('[data-select]').forEach(button=>{const n=nodeById[button.dataset.select],small=button.querySelector('small');if(n&&small)small.textContent=connectionText(n);});
-  nodes.filter(n=>n.kind==='event').forEach(n=>{const badge=nodesEl.querySelector('[data-node="'+n.id+'"] .an-note-badge');if(badge)badge.textContent=connectionText(n);});
+  nodes.filter(n=>n.kind==='event').forEach(n=>{
+    const badge=nodesEl.querySelector('[data-node="'+n.id+'"] .an-note-badge');if(!badge)return;
+    const linked=eventHoldings(n).map(id=>nodeById[id]?.name).filter(Boolean);
+    badge.textContent=linked.length?linked.slice(0,2).join(' · ')+(linked.length>2?' 외 '+(linked.length-2)+'종목':'')+' 연결':'연결 종목 미확인';
+    badge.title=linked.join(' · ');
+  });
   root.querySelector('#an-counts').textContent='종목 표시 '+holdings.filter(shown).length+'/'+holdings.length+' · 자료 '+nodes.filter(matchesEvent).length;
   const note=root.querySelector('.an-aside-note'),emptyNotice=root.querySelector('#an-empty');
   if(memberVisit){
@@ -2865,6 +2975,28 @@ function appendMemberQuote(parent,quote){
   else if(quote.freshness==='unknown')appendMemberText(body,'p','최신 거래일 여부 미확인');
   panel.append(body);parent.append(panel);
 }
+function appendMemberAssessment(parent,assessment){
+  const scenarios=Array.isArray(assessment?.scenarios)?assessment.scenarios.filter(row=>row&&typeof row==='object'&&!Array.isArray(row)):[];
+  if(!scenarios.length)return;
+  const panel=document.createElement('details');panel.className='an-evidence';
+  appendMemberText(panel,'summary','조건부 사업 경로');
+  const body=document.createElement('div');body.className='an-stock-actions';
+  const value=(field,fallback)=>typeof field==='string'&&field.trim()?field:fallback;
+  if(scenarios.length>1)appendMemberText(body,'p',value(assessment.scenarioSummary,'상반된 사업 경로 함께 존재'),'an-save-note');
+  for(const scenario of scenarios){
+    const card=document.createElement('div');card.className='an-evidence';
+    const actualPrice=scenario.channel==='원재료 매입 비용'?'실제 매입가격':scenario.channel==='제품 판매 단가'?'실제 판매가격':'해당 채널 실제 가격';
+    appendMemberText(card,'strong',value(scenario.channel,'사업 경로'));
+    appendMemberText(card,'p','조건 · '+value(scenario.condition,'조건 미제공'));
+    appendMemberText(card,'p',actualPrice+' 상승 · '+value(scenario.rise,'자료 미제공'));
+    appendMemberText(card,'p',actualPrice+' 하락 · '+value(scenario.fall,'자료 미제공'));
+    appendMemberText(card,'p','원문 · '+value(scenario.quote,'인용 미제공'));
+    appendMemberText(card,'p','기준일 · '+value(scenario.asOf,'기준일 미제공'),'an-save-note');
+    body.append(card);
+  }
+  appendMemberText(body,'p',value(assessment.limitation,'현재 노출과 영향은 미확인입니다.'),'an-save-note');
+  panel.append(body);parent.append(panel);
+}
 function appendMemberSection(parent,section,id,fallbackTitle){
   const panel=document.createElement('details');panel.className='an-evidence';
   const summary=document.createElement('summary'),items=Array.isArray(section?.items)?section.items:[];
@@ -2921,11 +3053,14 @@ renderDetail=function(){
   const head=text('div','','an-detail-head');head.innerHTML=closeButton();head.querySelector('button').onclick=()=>select('',true);
   text('span',edge?relationType(edge):node.kind==='stock'?membership(node):node.proofLabel|| (node.recordKind==='event'?'검토 완료 공통 사건':node.recordKind==='relationship'?'검토 완료 관계':'수집 자료'),'an-kicker');
   text('h2',edge?nodeById[edge.from].name+' ↔ '+nodeById[edge.to].name:node.name);
+  if(node?.kind==='stock'&&node.formalName&&node.formalName!==node.name)text('p',node.formalName,'an-save-note');
   const marketNode=edge?nodeById[edge.from]:node;
   if(marketNode?.recordKind==='market-context'&&marketNode.layer!=='news')text('p',marketNode.code);
   text('p',item.reason||'연결된 자료에서 근거를 확인하세요.');
   if(node?.kind==='stock'&&!edges.some(e=>e.from===node.id||e.to===node.id))text('p','이 화면에 연결할 근거 자료를 아직 확보하지 못했어요. 실제 관계가 없다는 뜻은 아니에요.');
   if(edge)text('p','이 종목에 '+(edge.impact||'미확인')+' · '+(edge.impactReason||'주가나 실적 영향을 판단할 근거는 확인되지 않았어요.'));
+  if(edge)appendMemberAssessment(detail,edge.assessment);
+  if(edge)appendMemberCriteria(detail,edge,nodeById[edge.from]);
   text('h4','근거');
   const detailSources=(item.evidence||[]).flatMap(source=>[source,...(Array.isArray(source.sources)?source.sources.filter(s=>s.url!==source.url):[])]);
   text('p',(item.asOf||(detailSources.some(source=>source.asOf)?'자료별 기준일 아래 표시':'기준일 미확인'))+' · '+(item.source||'내 포트폴리오'),'an-save-note');
@@ -2942,8 +3077,35 @@ renderDetail=function(){
     }
   }
   const related=edge?[edge.from,edge.to]:[...new Set(edges.filter(e=>e.from===node.id||e.to===node.id).flatMap(e=>[e.from,e.to]).filter(id=>id!==node.id))];
-  if(related.length)text('h4','연결된 항목');
-  for(const id of related){const b=text('button',nodeById[id].name,'an-connection');b.type='button';b.onclick=()=>select(id,true);}
+  if(related.length)text('h4','어떻게 연결됐나요?');
+  const relatedSections=new Map();
+  if(node?.kind==='stock'){
+    for(const id of related){
+      const target=nodeById[id];if(!target)continue;
+      const verified=target.recordKind==='event'||target.recordKind==='relationship'&&target.layer==='relationships';
+      const key=verified?target.recordKind:target.layer||'other';
+      if(!relatedSections.has(key)){
+        const section=document.createElement('details'),summary=document.createElement('summary');section.className='an-evidence';
+        section.open=verified;section.append(summary);detail.append(section);
+        relatedSections.set(key,{section,summary,count:0,title:verified?(key==='event'?'공통 사건':'확인된 관계'):(sourceNames[key]||'기타 자료')+' · 참고 자료'});
+      }
+      const group=relatedSections.get(key);group.count++;group.summary.textContent=group.title+' '+group.count+'건';
+    }
+  }
+  for(const id of related){
+    const target=nodeById[id];if(!target)continue;
+    const relation=edge||edges.find(e=>(e.from===node.id&&e.to===id)||(e.to===node.id&&e.from===id));
+    const b=text('button','','an-connection an-related-card');b.type='button';
+    appendMemberText(b,'strong',target.name);
+    const label=relation?.verb||relationType(relation||{});
+    appendMemberText(b,'span',label+' · '+(relation?.confirmation==='confirmed'?'근거 확인':'추가 확인 필요'),'an-relation-summary');
+    appendMemberText(b,'span',relation?.reason||'연결 이유를 아직 확인하지 못했어요.','an-relation-summary');
+    b.onclick=()=>select(edge?id:relation?.id||id,true);
+    if(node?.kind==='stock'){
+      const key=target.recordKind==='event'||target.recordKind==='relationship'&&target.layer==='relationships'?target.recordKind:target.layer||'other';
+      relatedSections.get(key).section.append(b);
+    }
+  }
   if(node?.kind==='stock'){
     text('h4','종목 자세히');appendMemberQuote(detail,node.closeQuote);
     for(const [id,title] of memberDetailSections)appendMemberSection(detail,Array.isArray(node.sections)?node.sections.find(section=>section?.id===id):undefined,id,title);
@@ -2967,30 +3129,48 @@ memberPort.postMessage({type:'hydrated',...memberOriginStamp()});
 // Categories use supplied record kinds/layers; no inferred events from similar titles.
 const memberGroupLayer=document.createElement('div');memberGroupLayer.id='an-member-groups';space.append(memberGroupLayer);
 const memberGroupLines=document.createElementNS('http://www.w3.org/2000/svg','g');memberGroupLines.setAttribute('aria-hidden','true');linesEl.before(memberGroupLines);
-const memberGroups=new Map(),memberOpenGroups=new Map();
+const memberGroups=new Map(),memberOpenGroups=new Map(),memberGroupManual=new Set();
 const memberLayoutBases=new Map(Object.entries(member.layoutBases||{}));
-let memberVisible=new Set(),memberEligible=[],memberReveal='',memberGroupContext='',memberLayoutKey='',memberHoveredGroup='';
+let memberVisible=new Set(),memberEligible=[],memberReveal='',memberGroupContext='',memberLayoutKey='',memberHoveredGroup='',memberFocusGroupId='',memberOverviewOpen=null;
 const ungroupedShown=shown,ungroupedRenderMap=renderMap,ungroupedSelect=select;
 function memberGroupKey(n){return n.recordKind==='event'?'events':n.layer==='candidates'?'candidates':n.layer==='relationships'?'relationships':n.layer||'other';}
 const memberGroupNames={filing:'공시',news:'뉴스',business:'사업 자료',candidates:'관계 후보',relationships:'확인된 관계',events:'공통 사건',government:'정부 발표',prices:'가격 자료',other:'기타 자료',fx:'환율',commodity:'원자재',calendar:'발표 일정'};
 function memberScope(){
-  const stocks=holdings.filter(ungroupedShown),stockIds=new Set(stocks.map(n=>n.id));
+  const stocks=holdings.filter(ungroupedShown),allStockIds=new Set(stocks.map(n=>n.id));
   const candidates=nodes.filter(n=>n.kind==='event'&&matchesEvent(n));
-  const scoped=state.focusId?candidates.filter(n=>edges.some(e=>inScenario(e)&&((e.from===n.id&&e.to===state.focusId)||(e.to===n.id&&e.from===state.focusId)))):candidates;
-  return {stocks:state.focusId?stocks.filter(n=>n.id===state.focusId):stocks,records:scoped,stockIds};
+  const directlyLinked=n=>edges.some(e=>inScenario(e)&&((e.from===n.id&&e.to===state.focusId)||(e.to===n.id&&e.from===state.focusId)));
+  const scoped=state.focusId?candidates.filter(directlyLinked):candidates;
+  const stockIds=new Set(state.focusId?[state.focusId]:allStockIds);
+  if(state.focusId){
+    // Only verified event/relationship records can add peers; raw-source co-mentions never do.
+    for(const record of scoped.filter(n=>n.recordKind==='event'||n.layer==='relationships')){
+      for(const id of eventHoldings(record))if(allStockIds.has(id))stockIds.add(id);
+      for(const edge of edges)if(inScenario(edge)&&(edge.from===record.id||edge.to===record.id)){
+        const peer=edge.from===record.id?edge.to:edge.from;
+        if(allStockIds.has(peer))stockIds.add(peer);
+      }
+    }
+  }
+  return {stocks:state.focusId?stocks.filter(n=>stockIds.has(n.id)):stocks,records:scoped,stockIds};
 }
 function makeMemberGroup(key){
   const button=document.createElement('button');button.type='button';button.className='an-node';button.dataset.group=key;
-  const body=document.createElement('span'),title=document.createElement('strong'),count=document.createElement('small'),hint=document.createElement('span');hint.className='an-note-badge';body.append(title,count,hint);button.append(body);
+  const body=document.createElement('span'),title=document.createElement('strong'),count=document.createElement('small'),hint=document.createElement('span');hint.className='an-note-badge';body.append(title,count,hint);button.append(memberCategoryIcon(key==='government'?'policy':key),body);
   // Reuse the accepted card surface and type; only constrain summary width.
   button.style.maxWidth='280px';button.style.whiteSpace='normal';button.style.cursor='pointer';
   const more=document.createElement('button');more.type='button';more.className='an-tool';more.dataset.groupMore=key;more.style.position='absolute';
   const group={key,button,title,count,hint,more,records:[],stockIds:[],x:.5,y:.5,width:280,height:90};
   button.onpointerenter=button.onfocus=()=>{memberHoveredGroup=key;drawMemberGroups();};
   button.onpointerleave=button.onblur=()=>{memberHoveredGroup='';drawMemberGroups();};
-  button.onclick=()=>{if(cancelGesture)return;closePreview();memberReveal='';if(memberOpenGroups.has(key))memberOpenGroups.delete(key);else memberOpenGroups.set(key,6);renderMap();};
+  button.onclick=()=>{if(cancelGesture)return;closePreview();memberGroupManual.add(key);memberReveal='';if(memberOpenGroups.has(key))memberOpenGroups.delete(key);else memberOpenGroups.set(key,6);renderMap();};
   more.onclick=()=>{closePreview();memberOpenGroups.set(key,(memberOpenGroups.get(key)||6)+6);renderMap();};
   memberGroupLayer.append(button,more);memberGroups.set(key,group);return group;
+}
+function memberCardSize(n){
+  const el=nodesEl.querySelector('[data-node="'+n.id+'"]');if(!el)return {width:240,height:90};
+  const wasHidden=el.hidden,visibility=el.style.visibility;
+  try{if(wasHidden){el.hidden=false;el.style.visibility='hidden';}return {width:el.offsetWidth||240,height:Math.max(el.offsetHeight||0,n.kind==='stock'?90:120)};}
+  finally{if(wasHidden){el.hidden=true;el.style.visibility=visibility;}}
 }
 function prepareMemberGroups(){
   if(state.focusId&&!ungroupedShown(nodeById[state.focusId]))clearFocus();
@@ -2998,11 +3178,18 @@ function prepareMemberGroups(){
   if(context!==memberGroupContext){memberReveal=nodeById[state.selected]?.kind==='event'||edges.some(e=>e.id===state.selected)?state.selected:'';memberGroupContext=context;}
   const scope=memberScope(),buckets=new Map();memberEligible=scope.records;
   for(const n of scope.records){const key=memberGroupKey(n);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(n);}
+  if(state.focusId&&memberFocusGroupId!==state.focusId){
+    memberFocusGroupId=state.focusId;
+    for(const key of ['events','relationships'])if(buckets.has(key)&&!memberGroupManual.has(key))memberOpenGroups.set(key,6);
+  }
   memberVisible=new Set(scope.stocks.map(n=>n.id));
   for(const group of memberGroups.values()){group.button.hidden=true;group.more.hidden=true;group.records=[];}
   for(const [key,records] of buckets){
     const group=memberGroups.get(key)||makeMemberGroup(key);group.records=records;group.button.hidden=false;
-    group.stockIds=[...new Set(records.flatMap(n=>eventHoldings(n)).filter(id=>scope.stockIds.has(id)))];
+    group.stockIds=[...new Set(records.flatMap(n=>[
+      ...eventHoldings(n),
+      ...edges.filter(e=>inScenario(e)&&(e.from===n.id||e.to===n.id)).map(e=>e.from===n.id?e.to:e.from)
+    ]).filter(id=>scope.stockIds.has(id)))];
     const open=memberOpenGroups.has(key),limit=memberOpenGroups.get(key)||0;
     records.slice(0,limit).forEach(n=>memberVisible.add(n.id));
     // An explicit source/edge selection can reveal one record without expanding the entire group.
@@ -3016,39 +3203,62 @@ function prepareMemberGroups(){
   }
   // Preserve all source IDs and marks; grouping affects only presentation.
   const visibleNodes=nodes.filter(n=>memberVisible.has(n.id));
-  const key=[context,space.clientWidth<560,...visibleNodes.map(n=>n.id),...buckets.keys()].join('|');
+  // Layout follows data/context only. Camera zoom never changes saved or display offsets.
+  const narrow=space.clientWidth<560;
+  const key=[context,narrow,...visibleNodes.map(n=>n.id),...buckets.keys()].join('|');
   if(key!==memberLayoutKey){
-    memberLayoutKey=key;focusOffsets.clear();const narrow=space.clientWidth<560;
+    memberLayoutKey=key;focusOffsets.clear();
     function place(n,x,y){const origin=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;focusOffsets.set(n.id,{x:.5+x/WORLD_WIDTH-origin.x,y:.5+y/WORLD_HEIGHT-origin.y});}
-    const stocks=scope.stocks,stockStep=110,stockCols=narrow?1:Math.min(4,Math.max(1,Math.ceil(stocks.length/8))),stockRows=Math.ceil(stocks.length/stockCols);
-    const stockWidth=Math.max(130,...stocks.map(n=>nodesEl.querySelector('[data-node="'+n.id+'"]')?.offsetWidth||130))+70;
-    stocks.forEach((n,i)=>place(n,narrow?0:-270-(stockCols-1-i%stockCols)*stockWidth,(Math.floor(i/stockCols)-(stockRows-1)/2)*stockStep));
-    let y=narrow?stockRows*stockStep/2+110:0;
-    const active=[...memberGroups.values()].filter(g=>g.records.length),positions=[];
-    for(const g of active){
-      const children=g.records.filter(n=>memberVisible.has(n.id));
-      const heights=children.map(n=>nodesEl.querySelector('[data-node="'+n.id+'"]')?.offsetHeight||100);
-      const stepY=Math.max(100,...heights)+60;
-      const height=Math.max(150,140+children.length*stepY+(g.more.hidden?0:60));
-      positions.push({g,y,children,stepY});g.width=g.button.offsetWidth||240;g.height=g.button.offsetHeight||90;y+=height;
-    }
-    // Anchor the collapsed stack: expansion reserves space below this group,
-    // without recentering every group or changing the user's camera/coordinates.
-    const shift=narrow?0:active.length*150/2;
-    for(const {g,y:top,children,stepY} of positions){
-      g.x=.5+(narrow?0:100)/WORLD_WIDTH;g.y=.5+(top-shift)/WORLD_HEIGHT;
-      // Expand under the header, not off the right edge of the visible canvas.
-      children.forEach((n,i)=>place(n,narrow?0:100,top-shift+140+i*stepY));
-      g.morePoint={x:g.x,y:g.y+(140+children.length*stepY)/WORLD_HEIGHT};
-    }
+    const stocks=scope.stocks,stockCols=narrow?1:Math.min(4,Math.max(1,Math.ceil(Math.sqrt(stocks.length))));
+    const stockSizes=stocks.map(memberCardSize),maxPriorityScale=1.1,stockColWidths=Array.from({length:stockCols},(_,col)=>Math.max(0,...stockSizes.filter((_,i)=>i%stockCols===col).map(s=>s.width*maxPriorityScale)));
+    const stockRowHeights=Array.from({length:Math.ceil(stocks.length/stockCols)},(_,row)=>Math.max(0,...stockSizes.slice(row*stockCols,(row+1)*stockCols).map(s=>s.height*maxPriorityScale)));
+    const stockGapX=56,stockGapY=44,stockWidth=stockColWidths.reduce((a,b)=>a+b,0)+Math.max(0,stockCols-1)*stockGapX;
+    let stockY=-((stockRowHeights.reduce((a,b)=>a+b,0)+Math.max(0,stockRowHeights.length-1)*stockGapY)/2);
+    stocks.forEach((n,i)=>{
+      const row=Math.floor(i/stockCols),col=i%stockCols;
+      const x=-180-stockWidth+stockColWidths.slice(0,col).reduce((a,b)=>a+b,0)+col*stockGapX+stockColWidths[col]/2;
+      place(n,x,stockY+stockRowHeights.slice(0,row).reduce((a,b)=>a+b,0)+row*stockGapY+stockRowHeights[row]/2);
+    });
+
+    // Reserve space only for visible records. Collapsed categories occupy their header alone.
+    const childCols=narrow?2:3,childGapX=48,childGapY=42,headerGap=30,moreGap=12;
+    const active=[...memberGroups.values()].filter(g=>g.records.length).map(g=>{
+      const visibleChildren=g.records.filter(n=>memberVisible.has(n.id)),sizes=visibleChildren.map(memberCardSize);
+      const colWidths=Array.from({length:childCols},(_,col)=>Math.max(0,...sizes.filter((_,i)=>i%childCols===col).map(s=>s.width)));
+      const rowHeights=Array.from({length:Math.ceil(visibleChildren.length/childCols)},(_,row)=>Math.max(0,...sizes.slice(row*childCols,(row+1)*childCols).map(s=>s.height)));
+      const headerWidth=g.button.offsetWidth||240,headerHeight=g.button.offsetHeight||90;
+      const childWidth=colWidths.reduce((a,b)=>a+b,0)+Math.max(0,childCols-1)*childGapX;
+      const contentHeight=visibleChildren.length?headerGap+rowHeights.reduce((a,b)=>a+b,0)+Math.max(0,rowHeights.length-1)*childGapY:0;
+      const moreHeight=!g.more.hidden?(g.more.offsetHeight||32)+moreGap:0;
+      const tileWidth=Math.max(headerWidth,childWidth),tileHeight=headerHeight+contentHeight+moreHeight;
+      return {g,visibleChildren,sizes,colWidths,rowHeights,headerWidth,headerHeight,tileWidth,tileHeight,contentHeight};
+    });
+    const gridCols=narrow?1:2,gridGapX=112,gridGapY=104,gridRows=Math.ceil(active.length/gridCols);
+    const gridColWidths=Array.from({length:gridCols},(_,col)=>Math.max(0,...active.filter((_,i)=>i%gridCols===col).map(tile=>tile.tileWidth)));
+    const gridRowHeights=Array.from({length:gridRows},(_,row)=>Math.max(0,...active.slice(row*gridCols,(row+1)*gridCols).map(tile=>tile.tileHeight)));
+    const gridTop=-Math.min(400,WORLD_HEIGHT*.28);
+    const gridLeft=220;
+    active.forEach((tile,index)=>{
+      const {g,visibleChildren,sizes,colWidths,rowHeights,headerHeight,tileWidth,tileHeight,contentHeight}=tile,row=Math.floor(index/gridCols),col=index%gridCols;
+      const left=gridLeft+gridColWidths.slice(0,col).reduce((a,b)=>a+b,0)+col*gridGapX+(gridColWidths[col]-tileWidth)/2;
+      const top=gridTop+gridRowHeights.slice(0,row).reduce((a,b)=>a+b,0)+row*gridGapY;
+      g.x=.5+(left+tileWidth/2)/WORLD_WIDTH;g.y=.5+(top+headerHeight/2)/WORLD_HEIGHT;g.width=tileWidth;g.height=tileHeight;
+      visibleChildren.forEach((n,i)=>{
+        const childRow=Math.floor(i/childCols),childCol=i%childCols,size=sizes[i];
+        const childX=left+colWidths.slice(0,childCol).reduce((a,b)=>a+b,0)+childCol*childGapX+colWidths[childCol]/2;
+        const childY=top+headerHeight+headerGap+rowHeights.slice(0,childRow).reduce((a,b)=>a+b,0)+childRow*childGapY+rowHeights[childRow]/2;
+        place(n,childX,childY);
+      });
+      g.morePoint={x:g.x,y:.5+(top+headerHeight+contentHeight+moreGap+(g.more.offsetHeight||32)/2)/WORLD_HEIGHT};
+    });
   }
 }
 shown=function(n){return !!n&&ungroupedShown(n)&&(n.kind==='stock'||memberVisible.has(n.id));};
 // Neighborhood is the visible subset, never a promotion of candidates into facts.
-focusNeighborhood=function(id){return new Set([id,...memberEligible.filter(n=>memberVisible.has(n.id)).map(n=>n.id)]);};
-focusStock=function(id){if(state.focusId===id)return;if(!focusCamera)focusCamera={zoom:state.zoom,panX:state.panX,panY:state.panY};state.focusId=id;memberLayoutKey='';};
+focusNeighborhood=function(id){const scope=memberScope();return new Set([...scope.stocks.map(n=>n.id),...memberEligible.filter(n=>memberVisible.has(n.id)).map(n=>n.id)]);};
+focusStock=function(id,rebuild=false){if(state.focusId===id&&!rebuild)return;if(!state.focusId){memberOverviewOpen=new Map(memberOpenGroups);for(const key of memberOpenGroups.keys())if(key!=='events'&&key!=='relationships')memberOpenGroups.delete(key);}if(!focusCamera)focusCamera={zoom:state.zoom,panX:state.panX,panY:state.panY};state.focusId=id;memberLayoutKey='';};
 const originalClearFocus=clearFocus;
-clearFocus=function(){originalClearFocus();memberLayoutKey='';};
+clearFocus=function(){originalClearFocus();if(memberOverviewOpen){memberOpenGroups.clear();for(const [key,value] of memberOverviewOpen)memberOpenGroups.set(key,value);memberOverviewOpen=null;}memberFocusGroupId='';memberLayoutKey='';};
 select=function(id,toggle=false){
   const n=nodeById[id];if(n?.kind==='stock'&&state.focusId!==id)memberReveal='';
   else if(n?.kind==='event'||edges.some(e=>e.id===id))memberReveal=id;
@@ -3058,13 +3268,13 @@ function drawMemberGroups(){
   memberGroupLines.replaceChildren();
   for(const g of memberGroups.values()){
     if(!g.records.length)continue;
-    const p=point(g),scale=Math.max(.82,Math.min(1.1,state.zoom));g.button.style.left=p.x+'px';g.button.style.top=p.y+'px';g.button.style.transform='translate(-50%,-50%) scale('+scale+')';
-    if(!g.more.hidden){const m=point(g.morePoint);g.more.style.left=m.x+'px';g.more.style.top=m.y+'px';g.more.style.transform='translate(-50%,-50%)';}
-    const showConnections=holdings.filter(ungroupedShown).length<=12||state.focusId||memberHoveredGroup===g.key;
-    for(const id of showConnections?g.stockIds:[]){if(state.focusId&&state.focusId!==id)continue;const n=nodeById[id];if(!n||!ungroupedShown(n))continue;const q=point(n),path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M '+p.x+' '+p.y+' L '+q.x+' '+q.y);path.setAttribute('class','an-edge');path.style.setProperty('--edge-width','1.4px');memberGroupLines.append(path);}
+    const p=point(g),scale=Math.min(1.1,state.zoom);g.button.style.left=p.x+'px';g.button.style.top=p.y+'px';g.button.style.transform='translate(-50%,-50%) scale('+scale+')';
+    if(!g.more.hidden){const m=point(g.morePoint);g.more.style.left=m.x+'px';g.more.style.top=m.y+'px';g.more.style.transform='translate(-50%,-50%) scale('+scale+')';}
+    const showConnections=state.focusId||memberHoveredGroup===g.key;
+    for(const id of showConnections?g.stockIds:[]){if(state.focusId&&!memberScope().stockIds.has(id))continue;const n=nodeById[id];if(!n||!ungroupedShown(n))continue;const q=point(n),path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M '+p.x+' '+p.y+' L '+q.x+' '+q.y);path.setAttribute('class','an-edge');path.style.setProperty('--edge-width','1.4px');memberGroupLines.append(path);}
   }
   // Don't flood the map with all source link labels at overview zoom.
-  if(!state.selected)labelsEl.replaceChildren();
+  if(!state.selected||state.zoom<.65)labelsEl.replaceChildren();
   else for(const label of labelsEl.children){const a=label.getBoundingClientRect();if([...memberGroups.values()].some(g=>{if(!g.records.length)return false;const b=g.button.getBoundingClientRect();return a.left<b.right+6&&a.right>b.left-6&&a.top<b.bottom+6&&a.bottom>b.top-6;}))label.hidden=true;}
   root.querySelector('#an-counts').textContent='종목 '+holdings.filter(ungroupedShown).length+'/'+holdings.length+' · 자료 '+memberEligible.length+'건 · 펼침 '+memberEligible.filter(n=>memberVisible.has(n.id)).length+'건';
   root.querySelector('.an-foot > span:last-of-type').textContent='묶음에 올려 연결 보기 · 눌러 펼치기 · 종목 선택 시 주변 보기 · 묶음 선은 영향 크기가 아니에요';
@@ -3082,12 +3292,24 @@ renderMap=function(){if(memberReset)return;prepareMemberGroups();ungroupedRender
 // Explicitly approved spacing/fit change; keep accepted card sizing and camera controls.
 fitNodes=function(selectionOnly){
   closePreview();renderMap();
-  const items=[...nodes.filter(n=>memberVisible.has(n.id)).map(n=>({n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')})),...[...memberGroups.values()].filter(g=>g.records.length).map(g=>({n:g,el:g.button,group:true})),...Object.values(state.notes).filter(n=>!n.target&&noteVisible(n)&&noteEls.get(n.id)).map(n=>({n,el:noteEls.get(n.id),group:true}))];
+  const edge=edges.find(e=>e.id===state.selected),ids=selectionOnly==='nearby'?[...focusNeighborhood(state.focusId)]:edge?[edge.from,edge.to]:[state.selected];
+  const selected=new Set(selectionOnly==='nearby'?ids:selectedItems.size?[...selectedItems]:ids);
+  const items=[...nodes.filter(n=>memberVisible.has(n.id)&&(!selectionOnly||selected.has(n.id))).map(n=>({n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')})),
+    ...[...memberGroups.values()].filter(g=>g.records.length&&(!selectionOnly||g.records.some(n=>memberVisible.has(n.id)&&selected.has(n.id)))).map(n=>({n,el:n.button,kind:'tile'})),
+    ...Object.values(state.notes).filter(n=>!n.target&&noteVisible(n)&&noteEls.get(n.id)&&(!selectionOnly||selectedItems.has(n.id))).map(n=>({n,el:noteEls.get(n.id),kind:'note'}))];
   if(!items.length)return;
   const w=space.clientWidth,h=Math.max(180,space.clientHeight-(innerWidth<=700&&root.dataset.detail==='open'?Math.max(0,space.getBoundingClientRect().bottom-detail.getBoundingClientRect().top):0));
-  let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
-  for(const {n,el,group} of items){const p=group?n:viewPosition(n),x=(p.x-.5)*WORLD_WIDTH,y=(p.y-.5)*WORLD_HEIGHT;left=Math.min(left,x-(el.offsetWidth||240)/2);right=Math.max(right,x+(el.offsetWidth||240)/2);top=Math.min(top,y-(el.offsetHeight||90)/2);bottom=Math.max(bottom,y+(el.offsetHeight||90)/2);}
-  state.zoom=Math.max(.55,Math.min(1.1,(w-64)/(right-left||1),(h-64)/(bottom-top||1)));state.panX=-(left+right)/2*state.zoom;state.panY=-(top+bottom)/2*state.zoom-(space.clientHeight-h)/2;renderMap();saveZoomSoon();
+  function bounds(zoom){let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
+    for(const {n,el,kind} of items){
+      const p=kind?n:viewPosition(n),x=(p.x-.5)*WORLD_WIDTH*zoom,y=(p.y-.5)*WORLD_HEIGHT*zoom;
+      const scale=kind==='tile'?Math.min(1.1,zoom):kind==='note'?1:nodeScale(n,zoom);
+      const width=(el.offsetWidth||(kind==='note'?150:240))*scale,height=(el.offsetHeight||(kind==='note'?54:90))*scale;
+      left=Math.min(left,x-width/2);right=Math.max(right,x+width/2);top=Math.min(top,y-height/2);bottom=Math.max(bottom,y+height/2);
+    }
+    return {left,right,top,bottom};
+  }
+  let low=.08,high=1.1;for(let i=0;i<20;i++){const mid=(low+high)/2,b=bounds(mid);if(b.right-b.left<=Math.max(1,w-64)&&b.bottom-b.top<=Math.max(1,h-64))low=mid;else high=mid;}
+  state.zoom=low;const b=bounds(low);state.panX=-(b.left+b.right)/2;state.panY=-(b.top+b.bottom)/2-(space.clientHeight-h)/2;renderMap();saveZoomSoon();
 };
 const groupingUpdate=updateMemberGraph;
 updateMemberGraph=function(model,ticker){
