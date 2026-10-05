@@ -45,6 +45,20 @@ SLA = os.path.join(ROOT, "data", "freshness_sla.json")
 CONTRACTS = os.path.join(ROOT, "data", "contracts")
 CODE_DIRS = ["api", "scripts", "server", "vercel-api", ".github"]
 NON_ARTIFACT_DATA_PATHS = {"data/package.json"}
+SPECIAL_PUBLIC_ARTIFACTS = {
+    "member_map_auto_evidence.json": {
+        "publishers": (
+            (".github/actions/publish-data/action.yml",
+             "scripts/member-map/publish-source-filter.cjs"),
+            (".github/workflows/kr_company_facts_backfill.yml",
+             "scripts/member-map/upload-public-source-filter.cjs"),
+        ),
+        "producers": [
+            "scripts/member-map/build-public-source-filter.cjs",
+            "scripts/member-map/capture-contract-facts.py",
+        ],
+    },
+}
 
 
 def _read(p: str) -> str:
@@ -74,7 +88,8 @@ def in_scope() -> list[str]:
 def publish_names() -> set[str]:
     """발행 액션의 `for f in …` 목록에서 파일명 추출 (주석 줄 제외)."""
     names, in_loop = set(), False
-    for line in _read(ACTION).splitlines():
+    action = _read(ACTION)
+    for line in action.splitlines():
         s = line.strip()
         if s.startswith("#"):
             continue
@@ -86,6 +101,15 @@ def publish_names() -> set[str]:
             names |= set(re.findall(r"[\w.-]+\.jsonl?(?![\w.])", s))
             if not s.endswith("\\"):
                 in_loop = False
+    for name, contract in SPECIAL_PUBLIC_ARTIFACTS.items():
+        for relative_path, marker in contract["publishers"]:
+            try:
+                publisher = _read(os.path.join(ROOT, relative_path))
+            except OSError:
+                continue
+            if f"data/{name}" in publisher and marker in publisher:
+                names.add(name)
+                break
     return names
 
 
@@ -160,6 +184,9 @@ def code_corpus() -> dict[str, str]:
 
 def find_producers(basename: str, corpus: dict[str, str]) -> list[str]:
     """이름을 언급하면서 쓰기 정황(open w / json.dump / to_csv)이 있는 모듈 — 후보다, 확정 아님."""
+    special = SPECIAL_PUBLIC_ARTIFACTS.get(basename)
+    if special is not None:
+        return list(special["producers"])
     out = []
     for path, s in corpus.items():
         if basename not in s:

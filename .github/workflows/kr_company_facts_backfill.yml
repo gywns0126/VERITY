@@ -234,5 +234,4 @@ jobs:
           fi
           PUBLISH_DEPS_DIR="$(mktemp -d "$RUNNER_TEMP/member-map-publish-deps.XXXXXX")"
           npm install --prefix "$PUBLISH_DEPS_DIR" --no-save --package-lock=false @vercel/blob@2.4.1
-          NODE_PATH="$PUBLISH_DEPS_DIR/node_modules" \
-            node scripts/member-map/upload-public-source-filter.cjs data/member_map_auto_evidence.json
+          NODE_PATH="$PUBLISH_DEPS_DIR/node_modules" node scripts/member-map/upload-public-source-filter.cjs data/member_map_auto_evidence.json
