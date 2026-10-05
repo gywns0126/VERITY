@@ -9,6 +9,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const childProcess = require('node:child_process');
+const { isDeepStrictEqual } = require('node:util');
 const { randomUUID } = require('node:crypto');
 const { buildAutomaticFilter } = require('./build-source-filter.cjs');
 
@@ -120,15 +121,102 @@ function hasReceiptBearingStructuredSource(catalog) {
     && typeof row.receiptNo === 'string' && /^[0-9]{14}$/.test(row.receiptNo));
 }
 
+function relationEvidenceKey(row) {
+  return JSON.stringify([
+    row.type, row.explicitRole, row.from, row.to, row.role,
+    Object.prototype.hasOwnProperty.call(row, 'reportedOwnershipPct') ? row.reportedOwnershipPct : null,
+  ]);
+}
+
+function restoreCurrentStructuredProvenance(base, priorCaptures) {
+  const structuredSources = new Map(Object.entries(priorCaptures.sources || {}).filter(([id, row]) => row
+    && row.id === id && row.kind === 'dart-structured-relation'
+    && typeof row.receiptNo === 'string' && /^[0-9]{14}$/.test(row.receiptNo)));
+  const priorRelations = new Map();
+  for (const [id, row] of Object.entries(priorCaptures.relations || {})) {
+    if (!row || row.id !== id || !structuredSources.has(row.sourceId)) continue;
+    if (row.verification !== 'candidate-source-row-receipt' || row.explicitRole !== true
+        || !row.sourceRow || typeof row.sourceRow !== 'object' || Array.isArray(row.sourceRow)) {
+      throw Error('Invalid enriched public catalog: structured provenance contract');
+    }
+    const source = structuredSources.get(row.sourceId);
+    const fields = row.sourceRow.fields;
+    const issuer = row.type === 'reported-major-shareholder-entry' ? row.to : row.from;
+    if (!fields || fields.rcept_no !== source.receiptNo || fields.corp_code !== source.corpCode
+        || fields.stlm_dt !== source.settlementDate || source.documentIssuer !== issuer) {
+      throw Error('Invalid enriched public catalog: structured provenance binding');
+    }
+    const key = relationEvidenceKey(row);
+    if (priorRelations.has(key)) throw Error('Invalid enriched public catalog: ambiguous structured provenance');
+    priorRelations.set(key, row);
+  }
+
+  const enriched = JSON.parse(JSON.stringify(base));
+  const replacedSourceIds = new Set();
+  const restored = [];
+  for (const [baseId, baseRelation] of Object.entries(enriched.relations || {})) {
+    if (!baseRelation || baseRelation.verification !== 'candidate-unverified-no-document-receipt') continue;
+    const priorRelation = priorRelations.get(relationEvidenceKey(baseRelation));
+    if (!priorRelation) continue;
+    const priorSource = structuredSources.get(priorRelation.sourceId);
+    for (const ticker of [priorRelation.from, priorRelation.to]) {
+      const baseIndex = enriched.tickerIndex && enriched.tickerIndex[ticker];
+      const priorIndex = priorCaptures.tickerIndex && priorCaptures.tickerIndex[ticker];
+      if (!baseIndex || !priorIndex || !priorIndex.sourceCandidates.includes(priorRelation.sourceId)
+          || !priorIndex.relationCandidates.includes(priorRelation.id)) {
+        throw Error('Invalid enriched public catalog: structured provenance binding');
+      }
+    }
+    const existingSource = enriched.sources[priorRelation.sourceId];
+    if (existingSource && !isDeepStrictEqual(existingSource, priorSource)) {
+      throw Error('Invalid enriched public catalog: structured provenance collision');
+    }
+    const existingRelation = enriched.relations[priorRelation.id];
+    if (existingRelation && !isDeepStrictEqual(existingRelation, priorRelation)) {
+      throw Error('Invalid enriched public catalog: structured provenance collision');
+    }
+    enriched.sources[priorRelation.sourceId] = JSON.parse(JSON.stringify(priorSource));
+    delete enriched.relations[baseId];
+    enriched.relations[priorRelation.id] = JSON.parse(JSON.stringify(priorRelation));
+    replacedSourceIds.add(baseRelation.sourceId);
+    restored.push({ baseId, priorRelation });
+  }
+
+  const referencedSources = new Set([
+    ...Object.values(enriched.events || {}).map(row => row && row.sourceId),
+    ...Object.values(enriched.relations || {}).map(row => row && row.sourceId),
+  ].filter(Boolean));
+  for (const sourceId of replacedSourceIds) {
+    if (!referencedSources.has(sourceId)) delete enriched.sources[sourceId];
+  }
+  for (const row of Object.values(enriched.tickerIndex || {})) {
+    row.sourceCandidates = row.sourceCandidates.filter(id => enriched.sources[id]);
+    row.relationCandidates = row.relationCandidates.filter(id => enriched.relations[id]);
+  }
+  for (const { priorRelation } of restored) {
+    for (const ticker of [priorRelation.from, priorRelation.to]) {
+      const row = enriched.tickerIndex[ticker];
+      if (!row.sourceCandidates.includes(priorRelation.sourceId)) row.sourceCandidates.push(priorRelation.sourceId);
+      if (!row.relationCandidates.includes(priorRelation.id)) row.relationCandidates.push(priorRelation.id);
+      row.sourceCandidates.sort();
+      row.relationCandidates.sort();
+    }
+  }
+  return enriched;
+}
+
 function mergePriorCaptures(base, priorCaptures) {
   validatePublicCatalog(base);
   validateDeliveryCatalog(priorCaptures);
   const present = CAPTURE_FIELDS.filter(field => Object.prototype.hasOwnProperty.call(priorCaptures, field));
   if (present.length === 0) throw Error('Invalid enriched public catalog: prior captures missing');
-  if (hasReceiptBearingStructuredSource(priorCaptures) && !hasReceiptBearingStructuredSource(base)) {
+  const priorHasStructuredSources = hasReceiptBearingStructuredSource(priorCaptures);
+  const enrichedBase = priorHasStructuredSources && !hasReceiptBearingStructuredSource(base)
+    ? restoreCurrentStructuredProvenance(base, priorCaptures) : base;
+  if (priorHasStructuredSources && !hasReceiptBearingStructuredSource(enrichedBase)) {
     throw Error('Invalid enriched public catalog: structured source family downgrade');
   }
-  const enriched = { ...base };
+  const enriched = { ...enrichedBase };
   for (const field of present) enriched[field] = JSON.parse(JSON.stringify(priorCaptures[field]));
   return validateDeliveryCatalog(enriched);
 }
