@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-07T00:37:17+09:00",
+ "as_of": "2026-10-07T07:17:37+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -62,25 +62,21 @@
    "thin_keys": [
     {
      "key": "kis_financial_ratio",
-     "coverage": "1/73"
-    },
-    {
-     "key": "kis_short_sale",
-     "coverage": "1/73"
-    },
-    {
-     "key": "sec_risk_flags",
-     "coverage": "1/73"
+     "coverage": "1/39"
     },
     {
      "key": "kis_credit_balance",
-     "coverage": "1/73"
+     "coverage": "1/39"
+    },
+    {
+     "key": "kis_short_sale",
+     "coverage": "1/39"
     }
    ],
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "73/73",
+     "coverage": "39/39",
      "via": [
       "current_price",
       "price"
@@ -91,7 +87,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "43/73",
+     "coverage": "30/39",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -102,7 +98,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "73/73",
+     "coverage": "39/39",
      "via": [
       "fscore_deltas"
      ],
@@ -112,7 +108,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "73/73",
+     "coverage": "39/39",
      "via": [
       "industry"
      ],
@@ -122,7 +118,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "43/73",
+     "coverage": "30/39",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -132,7 +128,17 @@
      ]
     }
    ],
-   "evaluated_zero": [],
+   "evaluated_zero": [
+    {
+     "key": "sec_risk_flags",
+     "source": "portfolio.sec_risk_scan.ok",
+     "events_scanned": 15,
+     "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
+     "modules": [
+      "red_flags.py"
+     ]
+    }
+   ],
    "detail": "레코드에 한 번도 없는 키 5종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
@@ -249,8 +255,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 57,
-    "scored": 57,
+    "with_pct": 23,
+    "scored": 23,
     "ok": true
    },
    "dead_guards": [],
