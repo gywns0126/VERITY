@@ -345,22 +345,9 @@ def _us_peer(s: Dict[str, Any], medians: Dict[str, Dict[str, Any]],
 
 
 def _latest_annual(series: Any) -> Optional[float]:
-    """series_annual[key] (list of {end,fy,val}) → 가장 최근 end(동률 시 최신 fy)의 val. 없으면 None."""
-    if not isinstance(series, list) or not series:
-        return None
-    best = None
-    for e in series:
-        if not isinstance(e, dict) or e.get("val") is None:
-            continue
-        key = (str(e.get("end") or ""), int(e.get("fy") or 0))
-        if best is None or key > best[0]:
-            best = (key, e.get("val"))
-    if best is None:
-        return None
-    try:
-        return float(best[1])
-    except (TypeError, ValueError):
-        return None
+    """Use the same period-end and tie selection as the annual display pack."""
+    selected = _annual_selection(series)
+    return selected[max(selected)][0] if selected else None
 
 
 # 통화 심볼 — 비USD 보고(외국 상장) 재무 표시용 (2026-07-09). 미등록 통화는 코드 프리픽스.
@@ -524,10 +511,27 @@ def _load_fin_latest(ticker: str) -> Dict[str, Optional[float]]:
         return {}
     sa = doc.get("series_annual") or {}
     der = doc.get("derived") or {}
-    return {"net_income": _latest_annual(sa.get("net_income")),
-            "equity": _latest_annual(sa.get("stockholders_equity")),
-            "eps_diluted": _latest_annual(sa.get("eps_diluted")),
-            "fcf_usd": der.get("fcf_usd")}
+    selected = {key: _annual_selection(sa.get(key)) for key in
+                ("revenue", "operating_income", "net_income", "stockholders_equity",
+                 "eps_diluted", "operating_cash_flow", "capex")}
+    years = set(selected["revenue"]) | set(selected["operating_income"]) | set(selected["net_income"])
+    year = max(years) if years else None
+    end = max((row[1].get("end", "") for key in ("revenue", "operating_income", "net_income")
+               if (row := selected[key].get(year))), default="")
+
+    def at_period(key):
+        point = selected[key].get(year)
+        return point[0] if point and point[1].get("end") == end else None
+
+    ocf, capex = at_period("operating_cash_flow"), at_period("capex")
+    fcf = der.get("fcf_usd")
+    if (ocf is None or capex is None or not isinstance(fcf, (int, float))
+            or isinstance(fcf, bool) or not math.isfinite(fcf)
+            or not math.isclose(fcf, ocf - capex, rel_tol=1e-12, abs_tol=0.01)):
+        fcf = None  # Derived FCF has no period metadata; certify it against its exact inputs.
+    return {"net_income": at_period("net_income"),
+            "equity": at_period("stockholders_equity"),
+            "eps_diluted": at_period("eps_diluted"), "fcf_usd": fcf}
 
 
 EARN_PATTERN_PATH = os.path.join(_ROOT, "data", "us_earnings_pattern.json")
@@ -888,17 +892,36 @@ def _prefer_richer_annual_pack(
     cached_fs: Any,
     cached_fin: Any,
 ) -> Tuple[Any, Any]:
-    """부분 캐시가 압축본보다 빈약하면 직전 공개 재무를 보존한다.
+    """Choose one coherent source: latest period first, distinct history second.
 
-    로컬·CI per-ticker 캐시는 종목별로 완전성이 다르다. 단순 덮어쓰기는 새 값이라는
-    이유만으로 더 긴 연간 시계열을 지울 수 있으므로, 시계열은 관측 연도 수가 많은 쪽,
-    재무 요약은 새 값이 실제로 있을 때만 새 값을 선택한다.
+    More rows are not evidence of fresher annuals. Never pair an older chart
+    with a newer table, or mix currencies when retaining prior annuals.
     """
-    fresh_n = len(fresh_fs) if isinstance(fresh_fs, list) else 0
-    cached_n = len(cached_fs) if isinstance(cached_fs, list) else 0
-    chosen_fs = fresh_fs if fresh_n >= cached_n and fresh_n > 0 else cached_fs
-    chosen_fin = fresh_fin if isinstance(fresh_fin, dict) and fresh_fin else cached_fin
-    return chosen_fs, chosen_fin
+    fresh = {"fs": fresh_fs, "fin": fresh_fin}
+    cached = {"fs": cached_fs, "fin": cached_fin}
+    if not fresh_fs and not fresh_fin:
+        return cached_fs, cached_fin
+    if _prefer_seed_financial_pack(fresh, cached):
+        return cached_fs, cached_fin
+    return fresh_fs, fresh_fin
+
+
+def _resolve_us_annual_pack(ticker: str, cached: Dict[str, Any],
+                            existing: Dict[str, Any]) -> Dict[str, Any]:
+    """Bind chart, table and valuation inputs to the same selected source."""
+    base_fs, base_fin = _prefer_richer_annual_pack(
+        cached.get("fs"), cached.get("fin"), existing.get("fs"), existing.get("fin"))
+    fresh_fs, fresh_fin = _load_us_annual_pack(ticker)
+    fs, fin = _prefer_richer_annual_pack(fresh_fs, fresh_fin, base_fs, base_fin)
+    if (fresh_fs or fresh_fin) and fs is fresh_fs and fin is fresh_fin:
+        fl, source = _load_fin_latest(ticker), "per_ticker"
+    elif fs is cached.get("fs") and fin is cached.get("fin"):
+        fl, source = cached.get("fl"), "compact"
+    else:
+        # Prior public reports do not carry raw EPS/equity/FCF. Older valuation
+        # inputs must not masquerade as inputs to their newer annual table.
+        fl, source = None, "prior_public"
+    return {"fs": fs, "fin": fin, "fl": fl or None, "source": source}
 
 
 def _load_existing_public_annual_packs(path: str) -> Dict[str, Dict[str, Any]]:
@@ -1173,10 +1196,14 @@ def main() -> int:
         name_ko = _load_name_ko()  # 주요사 ticker → 한글명
         us_cons = _load_us_consensus()  # yfinance 애널리스트 컨센서스(외부 집계 사실)
         holdings = _load_major_holdings()  # SEC 13D/G 요약 (ownership 배선, 2026-08-18)
+        _existing_packs = _load_existing_public_annual_packs(output_path)
+        _annual_packs = {r["ticker"]: _resolve_us_annual_pack(
+            r["ticker"], _compact.get(r["ticker"]) or {}, _existing_packs.get(r["ticker"]) or {})
+            for r in rows if r.get("ticker")}
         print(f"[us_report] name_ko {len(name_ko)}건 · 13D/G {len(holdings)}종목 조인",
               file=sys.stderr)
         stocks = [build_stock(r, meta_by_ticker.get(r.get("ticker"), {}), caps, sic_ko, name_ko,
-                              _load_fin_latest(r.get("ticker")), us_cons, holdings)
+                              _annual_packs[r["ticker"]]["fl"], us_cons, holdings)
                   for r in rows if r.get("ticker")]
         for stock in stocks:
             entry = _compact.get(stock["ticker"]) or {}
@@ -1244,26 +1271,15 @@ def main() -> int:
         # 연간 재무추이(fin_series)·재무요약(financials) — series_annual(10-K) 주입 (0%→95%, 커버리지 스프린트)
         # 🚨 소스 계층: per-ticker 캐시(신선) → us_fin_annual_compact(커밋 폴백). 캐시 계산분은 압축본에 저장(자가 유지).
         #   per-ticker 캐시는 gitignore(CI 부재) → 압축본 폴백 없으면 CI 재빌드 시 재무 전량 유실(2026-07-04·07-09 실사고).
-        _existing_packs = _load_existing_public_annual_packs(output_path)
         n_fs = n_native_fs = n_from_cache = 0
         for s in stocks:
             tk = str(s.get("ticker") or "")
             cached = _compact.get(tk) or {}
-            existing = _existing_packs.get(tk) or {}
-            base_fs, base_fin = _prefer_richer_annual_pack(
-                cached.get("fs"), cached.get("fin"), existing.get("fs"), existing.get("fin")
-            )
-            fresh_fs, fresh_fin = _load_us_annual_pack(tk)
-            fs, fin = _prefer_richer_annual_pack(fresh_fs, fresh_fin, base_fs, base_fin)
-            # Explicit recovery targets also prefer a newer verified native pack.
-            if isinstance(cached.get("row"), dict) and _prefer_seed_financial_pack(
-                    {"fs": fresh_fs, "fin": fresh_fin}, cached):
-                fs, fin = cached.get("fs"), cached.get("fin")
-            if fresh_fs or fresh_fin:
+            pack = _annual_packs[tk]
+            fs, fin, fl = pack["fs"], pack["fin"], pack["fl"]
+            if pack["source"] == "per_ticker":
                 n_from_cache += 1
             if fs or fin:
-                _cache_p = os.path.join(_ROOT, "data", "us_financials", f"{tk}.json")
-                fl = _load_fin_latest(tk) if os.path.exists(_cache_p) else cached.get("fl")
                 _compact[tk] = {**cached, "fs": fs, "fin": fin, "fl": fl or None}
             fs, fin = _overlay_annual_supplement(fs, fin, (_compact.get(tk) or {}).get("supplement"),
                                                 (meta_by_ticker.get(tk) or {}).get("currency"))
@@ -1290,6 +1306,7 @@ def main() -> int:
                                      "count": len(_compact)}, "stocks": _compact}, _f, ensure_ascii=False)
         except OSError as _e:
             print(f"[us_stock_report] 압축본 저장 실패: {_e}", file=sys.stderr)
+            return 1
         print(f"[us_stock_report] fin_series 부착 {n_fs}/{len(stocks)} 종목 "
               f"(캐시 {n_from_cache} · 폴백 {n_fs - n_from_cache if n_fs >= n_from_cache else 0})", file=sys.stderr)
         if n_native_fs:

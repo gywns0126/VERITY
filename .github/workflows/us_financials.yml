@@ -94,7 +94,6 @@ jobs:
 
       - name: 미장 종목 리포트 public-safe 빌드
         # us_financials/_summary → RULE7 allowlist → data/us_stock_report_public.json (PublicStockReport 재사용)
-        continue-on-error: true
         run: python -m api.builders.us_stock_report_public_builder
 
       - name: 미장 분기 비율 추이 public 빌드
@@ -120,12 +119,14 @@ jobs:
           node scripts/us/upload_us_financials_blob.js
 
       - name: Commit data/us_financials/
+        id: persist
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증).
         # [[feedback_data_collection_verification_mandatory]] specific path commit.
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/us_financials/ data/us_stock_report_public.json data/us_quarterly_public.json data/us_market_caps.json data/cache/universe_us.json data/cross_gics_us.json
+          git add data/us_fin_annual_compact.json
           if git diff --staged --quiet; then
             echo "[us_financials] no changes"
             exit 0
@@ -144,14 +145,15 @@ jobs:
             sleep $((i * 5))
           done
           if [ "$PUSHED" != "true" ]; then
-            echo "::warning::push 5회 실패 — 다음 cron 재시도 (publish-data 는 main HEAD 기준 진행)"
+            echo "::error::push 5회 실패 — 새 산출물이 main에 없어 발행 중단"
+            exit 1
           fi
 
       - name: Publish to VERITY-data + Vercel Blob
         # 2026-05-26 확정 — private 전환 sweep 보완 ([[project_us_financials_sec_edgar]]).
         # publish-data action 이 light 산출(us_stock_report/_summary) → VERITY-data + Blob 발행.
         # per-ticker 1500 = 위 직업로드 스텝(Blob)이 담당. endpoint /api/verity/us-financials = Blob 페치.
-        if: always()
+        if: success() && steps.persist.outcome == 'success'
         uses: ./.github/actions/publish-data
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

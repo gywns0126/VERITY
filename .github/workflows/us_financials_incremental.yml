@@ -55,26 +55,21 @@ jobs:
         id: incr
         run: python -m api.builders.us_financials_incremental --cap ${{ github.event.inputs.cap || '60' }}
 
-      - name: 리포트·분기·커버리지 재빌드 (재수집 반영)
+      - name: 리포트 재빌드 (재수집 반영)
+        id: report
         # 재수집 per-ticker 는 이 run 로컬에만 존재(gitignore) — 같은 run 안에서 즉시 소비.
         # fin_series/financials = us_fin_annual_compact.json(커밋 폴백) 로 CI 캐시 부재에도 보존
         # (2026-07-04 실사고 수리 — 이전 주석 '유실 없음' 은 오판이었음, 압축본 도입으로 실제 보장).
+        run: python -m api.builders.us_stock_report_public_builder
+
+      - name: 분기·커버리지 재빌드
         continue-on-error: true
         run: |
-          python -m api.builders.us_stock_report_public_builder
           python -m api.builders.us_quarterly_public_builder
           python -m api.builders.coverage_report_builder
 
-      - name: Publish (VERITY-data + Vercel Blob)
-        continue-on-error: true
-        uses: ./.github/actions/publish-data
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          personal_token: ${{ secrets.VERITY_DATA_PAT }}
-          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
-
       - name: Commit + push (변경 시만)
-        if: always()   # 부분 실패에도 state/데이터 진척 보존
+        id: persist
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
@@ -90,3 +85,12 @@ jobs:
             echo "push attempt $i failed, retry in $((i*10))s"; sleep $((i*10))
           done
           echo "::error::5회 push 실패"; exit 1
+
+      - name: Publish (VERITY-data + Vercel Blob)
+        # publish-data stages origin/main, so commit/push must finish first.
+        if: success() && steps.persist.outcome == 'success'
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}

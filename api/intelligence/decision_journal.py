@@ -32,6 +32,8 @@ verdict 는 폐쇄 집합이다. 산문만 남으면 채점이 불가능하고 �
 """
 from __future__ import annotations
 
+import fcntl
+import hashlib
 import json
 import os
 import sys
@@ -291,13 +293,18 @@ def build_record(
     reasoning_brief: str,
     question: str = "",
     brain_verdict: Optional[str] = None,
+    *,
+    facts_at: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     _validate(verdict, confidence)
     tk = facts.get("ticker")
     if not tk:
         raise JournalError("ticker 없는 판단은 기록하지 않는다 — 채점 대상을 특정할 수 없다.")
 
-    price, price_source, price_key, price_asof = extract_ref_price(facts)
+    if facts_at is not None and (facts_at.tzinfo is None or facts_at.utcoffset() is None):
+        raise JournalError("facts_at requires timezone")
+    price, price_source, price_key, price_asof = extract_ref_price(
+        facts, now=facts_at.astimezone(timezone(timedelta(hours=9))) if facts_at else None)
     missing = facts.get("missing")
     return {
         # 관측 규율 4종 — data/observations/*.jsonl 과 동일 계보
@@ -342,19 +349,64 @@ def record(
     question: str = "",
     brain_verdict: Optional[str] = None,
     path: Optional[str] = None,
+    *,
+    record_id: Optional[str] = None,
+    review: Optional[Dict[str, Any]] = None,
+    facts_at: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     """판단 1건을 append 하고 기록된 레코드를 돌려준다.
 
     🚨 실패는 예외다. 조용히 넘어가면 "기록했다고 믿는 안 된 판단" 이 생기고,
     그건 없는 것보다 나쁘다(#46 계열).
     """
+    if record_id is not None and (not isinstance(record_id, str) or not record_id.strip()):
+        raise JournalError("invalid record_id")
+    if review is not None and (record_id is None or not isinstance(review, dict)):
+        raise JournalError("review requires record_id and object")
     rec = build_record(facts, verdict, confidence, basis_axes,
-                       reasoning_brief, question, brain_verdict)
+                       reasoning_brief, question, brain_verdict, facts_at=facts_at)
+    if facts_at is not None:
+        rec["facts_at"] = facts_at.isoformat()
+    if record_id is not None:
+        request = dict(facts=facts, verdict=verdict, confidence=confidence,
+                       basis_axes=basis_axes, reasoning_brief=reasoning_brief,
+                       question=question, brain_verdict=brain_verdict, review=review,
+                       facts_at=facts_at.isoformat() if facts_at else None)
+        try:
+            body = json.dumps(request, ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":"), allow_nan=False)
+        except (TypeError, ValueError) as e:
+            raise JournalError("invalid journal request") from e
+        rec.update(record_id=record_id, request_digest=hashlib.sha256(body.encode()).hexdigest(),
+                   review=review)
     target = path or JOURNAL_PATH
     try:
-        os.makedirs(os.path.dirname(target), exist_ok=True)
-        with open(target, "a", encoding="utf-8") as f:
+        os.makedirs(os.path.dirname(os.path.abspath(target)), exist_ok=True)
+        with open(target, "a+", encoding="utf-8",
+                  opener=lambda name, flags: os.open(name, flags, 0o600)) as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            if record_id is not None:
+                f.seek(0)
+                existing = None
+                for line in f:
+                    if not line.strip():
+                        continue
+                    try:
+                        row = json.loads(line)
+                    except json.JSONDecodeError as e:
+                        raise JournalError("corrupt journal; idempotency cannot be established") from e
+                    if not isinstance(row, dict):
+                        raise JournalError("corrupt journal row")
+                    if row.get("record_id") == record_id:
+                        if existing is not None or row.get("request_digest") != rec["request_digest"]:
+                            raise JournalError("record_id conflict")
+                        existing = row
+                if existing is not None:
+                    return existing
+            f.seek(0, os.SEEK_END)
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
     except OSError as e:
         raise JournalError(f"판단 기록 실패: {target} — {type(e).__name__}: {e}") from e
     return rec
