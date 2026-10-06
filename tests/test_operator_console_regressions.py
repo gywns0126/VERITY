@@ -35,6 +35,9 @@ def test_macro_uses_current_investor_portfolio_shape():
 
 def test_workspace_owns_the_single_selected_ticker():
     workspace = read("operator-web/app/components/Workspace.tsx")
+    review = read("operator-web/app/components/AnalysisReviewPanel.tsx")
     panel = read("operator-web/app/components/StockFactsPanel.tsx")
-    assert '<StockFactsPanel ticker={ticker} />' in workspace
+    assert '<AnalysisReviewPanel key={ticker} ticker={ticker} />' in workspace
+    assert "AnalysisReviewPanel({ ticker }" in review
+    assert '<StockFactsPanel key={ticker} ticker={ticker} />' in review
     assert "StockFactsPanel({ ticker }" in panel
