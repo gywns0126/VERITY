@@ -54,6 +54,10 @@
     "api/support.py": {
       "maxDuration": 10
     },
+    "api/survey.py": {
+      "maxDuration": 10,
+      "includeFiles": "api/shared_rate_limit.py"
+    },
     "api/order.py": {
       "maxDuration": 30
     },
@@ -194,7 +198,7 @@
       ]
     },
     {
-      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!holdings(?:$|/))(?!trades(?:$|/))(?!thesis(?:$|/))(?!thesis_feed(?:$|/))(?!portfolio_experiments(?:$|/))(?!support(?:$|/))(?!reports(?:$|/))(?!member_map_analysis(?:$|/|\\.py$))(?!member_map_state(?:$|/|\\.py$)).*)",
+      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!holdings(?:$|/))(?!trades(?:$|/))(?!thesis(?:$|/))(?!thesis_feed(?:$|/))(?!portfolio_experiments(?:$|/))(?!support(?:$|/))(?!survey(?:$|/|\\.py$))(?!reports(?:$|/))(?!member_map_analysis(?:$|/|\\.py$))(?!member_map_state(?:$|/|\\.py$)).*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
