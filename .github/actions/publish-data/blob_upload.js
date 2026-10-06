@@ -218,6 +218,23 @@ async function main() {
                 // 2026-05-26 fix — subdir 안의 _summary.json 류 데이터 파일 허용.
                 // root level startsWith("_") 가드는 _manifest.txt 보호 위해 유지.
                 if (SKIP_FILES.has(sub)) continue;
+                if (f === "briefing_days") {
+                    const subPath = path.join(fp, sub);
+                    const subStat = fs.lstatSync(subPath);
+                    const briefingJson = /^(index|[0-9]{4}-[0-9]{2}-[0-9]{2})\.json$/;
+                    if (sub === "us" && subStat.isDirectory()) {
+                        // Explicit US archive only; never recurse into arbitrary directories.
+                        for (const leaf of fs.readdirSync(subPath)) {
+                            const leafPath = path.join(subPath, leaf);
+                            if (briefingJson.test(leaf) && fs.lstatSync(leafPath).isFile()) {
+                                entries.push([leafPath, `briefing_days/us/${leaf}`]);
+                            }
+                        }
+                    } else if (briefingJson.test(sub) && subStat.isFile()) {
+                        entries.push([subPath, `briefing_days/${sub}`]);
+                    }
+                    continue;
+                }
                 entries.push([path.join(fp, sub), `${f}/${sub}`]);
             }
         } else {

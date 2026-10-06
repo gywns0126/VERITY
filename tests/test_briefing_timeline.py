@@ -197,3 +197,161 @@ def test_earnings_expected_date_never_replaces_observation_date():
         assert items[0]["as_of"] == expected_as_of
         assert sections[0]["items"][0]["date"] == "2026-10-08"
         assert source == original
+
+
+def mixed_briefing(at="2026-10-07T00:30:00+09:00"):
+    out = briefing(at)
+    out["sections"] += [
+        {"id": "market_recap", "title": "직전 거래일 시장", "as_of": "20261002",
+         "note": "KR_ONLY_NOTE", "recap": {"kospi": 0.46, "headline": "KR_ONLY_HEADLINE"},
+         "items": [{"name": "지수", "country": "KR", "text": "KR_ONLY_INDEX"},
+                   {"name": "흐름", "text": "KR_ONLY_FLOW"},
+                   {"name": "미국 지수", "country": "US", "text": "US index observation",
+                    "values": {"sp500_close": 100, "sp500_pct": 1, "kospi_pct": 99},
+                    "index_meta": {"sp500": {"source": "fred", "as_of": "2026-10-06T23:02:00+09:00",
+                                              "private": "PRIVATE_SENTINEL"}}}]},
+        {"id": "us_filings", "title": "미국 공시", "as_of": "2026-10-06",
+         "items": [{"ticker": "AAPL", "text": "US filing"},
+                   {"ticker": "005930", "text": "KR_ONLY_FILING"}]},
+        {"id": "earnings", "title": "예상 실적", "items": [
+            {"ticker": "MSFT", "date": "2026-10-08"},
+            {"ticker": "UNKNOWN", "text": "UNKNOWN_TICKER"},
+            {"ticker": "AAPL", "country": "KR", "text": "KR_ONLY_TAG"},
+            {"ticker": "005930", "date": "2026-10-08"}]},
+    ]
+    return out
+
+
+@pytest.mark.parametrize("day", "2026-01-01 2026-01-19 2026-02-16 2026-04-03 2026-05-25 2026-06-19 2026-07-03 2026-09-07 2026-11-26 2026-12-25".split())
+def test_us_verified_holidays_and_contract_leave_kr_calendar_unchanged(day):
+    kr = deepcopy(timeline.calendar_contract())
+    result = timeline.trading_day(date.fromisoformat(day), "US")
+    assert (result["status"], result["reason"]) == ("closed", "holiday")
+    us = timeline.calendar_contract("US")
+    assert us["timezone"] == "America/New_York"
+    assert (us["valid_from"], us["valid_until"]) == ("2026-01-01", "2026-12-31")
+    assert (us["open_minute"], us["close_minute"]) == (570, 960)
+    assert us["early_closes"] == {"2026-11-27": 780, "2026-12-24": 780}
+    assert us["verified_at"] == "2026-10-06"
+    assert us["source_urls"] == [timeline.US_CALENDAR_SOURCE, timeline.US_HOLIDAY_SOURCE]
+    assert timeline.calendar_contract() == kr
+    assert "timezone" not in kr and "early_closes" not in kr
+
+
+@pytest.mark.parametrize("at,phase", [
+    ("2026-03-06T14:29:00+00:00", "pre"), ("2026-03-06T14:30:00+00:00", "open"),
+    ("2026-03-09T13:29:00+00:00", "pre"), ("2026-03-09T13:30:00+00:00", "open"),
+    ("2026-10-30T19:59:00+00:00", "open"), ("2026-10-30T20:00:00+00:00", "post"),
+    ("2026-11-02T14:29:00+00:00", "pre"), ("2026-11-02T14:30:00+00:00", "open"),
+    ("2026-11-02T20:59:00+00:00", "open"), ("2026-11-02T21:00:00+00:00", "post"),
+])
+def test_us_session_uses_new_york_dst(at, phase):
+    now = datetime.fromisoformat(at)
+    calendar = timeline.trading_day(now.astimezone(timeline.US_TZ).date(), "US")
+    assert timeline.session_phase(now, calendar) == phase
+
+
+@pytest.mark.parametrize("day", ["2026-11-27", "2026-12-24"])
+def test_us_early_close_ends_core_session_at_1300(day):
+    calendar = timeline.trading_day(date.fromisoformat(day), "US")
+    assert calendar["status"] == "open" and calendar["close_minute"] == 780
+    assert timeline.session_phase(datetime.fromisoformat(day + "T12:59:00-05:00"), calendar) == "open"
+    assert timeline.session_phase(datetime.fromisoformat(day + "T13:00:00-05:00"), calendar) == "post"
+
+
+@pytest.mark.parametrize("day,status,reason", [
+    ("2025-12-31", "unknown", "outside_verified_range"),
+    ("2027-01-01", "unknown", "outside_verified_range"),
+    ("2026-10-10", "closed", "weekend"),
+])
+def test_us_weekend_and_unknown_range_have_no_false_open_phase(day, status, reason):
+    calendar = timeline.trading_day(date.fromisoformat(day), "US")
+    assert (calendar["status"], calendar["reason"]) == (status, reason)
+    assert timeline.session_phase(datetime.fromisoformat(day + "T12:00:00-05:00"), calendar) == status
+
+
+def test_us_archive_filters_kr_facts_and_preserves_unknown_source_date(tmp_path):
+    out = mixed_briefing()
+    original = deepcopy(out)
+    kr = timeline.record_briefing(out, tmp_path)
+    kr_bytes = (tmp_path / "2026-10-07.json").read_bytes()
+    kr_calendar = read(tmp_path, "index.json")["calendar"]
+    us = timeline.record_us_briefing(out, tmp_path, us_tickers={"MSFT"})
+    snapshot = us["snapshots"][0]
+    assert us["date"] == "2026-10-06" and us["timezone"] == "America/New_York"
+    assert snapshot["generated_at"] == "2026-10-06T11:30:00-04:00"
+    assert snapshot["phase"] == "open" and kr["snapshots"][0]["phase"] == "pre"
+    assert len(snapshot["items"]) == 3
+    assert all(item["country"] == "US" for item in snapshot["items"])
+    recap = snapshot["items"][0]
+    assert recap["as_of"] == "" and snapshot["source_meta"]["recap_as_of"] == ""
+    assert recap["values"] == {"sp500_close": 100, "sp500_pct": 1}
+    assert recap["index_meta"]["sp500"] == {"source": "fred", "as_of": "2026-10-06T23:02:00+09:00",
+                                               "collected_at": "2026-10-06T23:02:00+09:00"}
+    assert snapshot["items"][2]["event_date"] == "2026-10-08"
+    assert snapshot["items"][2]["as_of"] == ""
+    public_text = json.dumps(us)
+    assert "KR_ONLY" not in public_text and "PRIVATE_SENTINEL" not in public_text
+    assert "UNKNOWN_TICKER" not in public_text and "estimated_net_krw" not in public_text
+    assert "recap" not in snapshot["sections"][0] and "as_of" not in snapshot["sections"][0]
+    assert (tmp_path / "2026-10-07.json").read_bytes() == kr_bytes
+    assert read(tmp_path, "index.json")["calendar"] == kr_calendar
+    assert out == original
+    us_bytes = (tmp_path / "us" / "2026-10-06.json").read_bytes()
+    timeline.record_us_briefing(out, tmp_path, us_tickers={"MSFT"})
+    assert (tmp_path / "us" / "2026-10-06.json").read_bytes() == us_bytes
+
+
+def test_us_sealing_uses_ny_midnight_and_never_backfills_kr_days(tmp_path):
+    timeline.record_briefing(briefing("2026-10-04T12:00:00+09:00"), tmp_path)
+    out = mixed_briefing("2026-10-07T00:30:00+09:00")
+    first = timeline.record_us_briefing(out, tmp_path)
+    snapshots = deepcopy(first["snapshots"])
+    later = mixed_briefing("2026-10-09T01:00:00+09:00")
+    timeline.record_us_briefing(later, tmp_path)
+    sealed = read(tmp_path / "us", "2026-10-06.json")
+    assert sealed["snapshots"] == snapshots
+    assert sealed["day_summary"]["status"] == "closed"
+    assert sealed["day_summary"]["cutoff_at"] == "2026-10-07T00:00:00-04:00"
+    assert {entry["date"] for entry in read(tmp_path / "us", "index.json")["days"]} == {"2026-10-06", "2026-10-08"}
+    with pytest.raises(ValueError, match="sealed"):
+        timeline.record_us_briefing(mixed_briefing("2026-10-07T01:00:00+09:00"), tmp_path)
+
+
+def test_us_fall_back_chronology_compares_instants_and_seals_with_next_offset(tmp_path):
+    for at in ("2026-11-01T01:50:00-04:00", "2026-11-01T01:10:00-05:00"):
+        archive = timeline.record_us_briefing(mixed_briefing(at), tmp_path)
+    assert len(archive["snapshots"]) == 2
+    assert read(tmp_path / "us", "index.json")["generated_at"] == "2026-11-01T01:10:00-05:00"
+    with pytest.raises(ValueError, match="out-of-order"):
+        timeline.record_us_briefing(mixed_briefing("2026-11-01T01:20:00-04:00"), tmp_path)
+    timeline.record_us_briefing(mixed_briefing("2026-11-02T10:00:00-05:00"), tmp_path)
+    assert read(tmp_path / "us", "2026-11-01.json")["day_summary"]["cutoff_at"] == "2026-11-02T00:00:00-05:00"
+
+
+def test_us_unknown_and_holiday_snapshots_do_not_create_intraday_cards(tmp_path):
+    closed = timeline.record_us_briefing(mixed_briefing("2026-11-26T12:00:00-05:00"), tmp_path)
+    assert closed["cards"]["closed"] and not any(closed["cards"][p] for p in ("pre", "open", "post"))
+    unknown = timeline.record_us_briefing(mixed_briefing("2027-01-04T12:00:00-05:00"), tmp_path)
+    assert unknown["snapshots"][0]["phase"] == "unknown" and not any(unknown["cards"].values())
+
+
+def test_publish_staging_only_allows_known_kr_us_archive_json(tmp_path):
+    import subprocess
+    action = (Path(__file__).resolve().parents[1] / ".github/actions/publish-data/action.yml").read_text()
+    block = action.split("        # ── briefing_days/", 1)[1].split("        # ── metadata/", 1)[0]
+    command = "\n".join(line[8:] for line in block.splitlines()[1:])
+    fake_git = r'''
+git() {
+  if [[ "$1" == "ls-tree" ]]; then
+    printf '%s\n' index.json 2026-10-06.json private.json notes.txt us nested 2026-10-07.json.bak
+  else
+    printf '{"public":true}\n'
+  fi
+}
+'''
+    subprocess.run(["bash", "-c", "set -e\n" + fake_git + command], cwd=tmp_path, check=True)
+    emitted = {path.relative_to(tmp_path / "_public_dist").as_posix()
+               for path in (tmp_path / "_public_dist").rglob("*.json")}
+    assert emitted == {"briefing_days/index.json", "briefing_days/2026-10-06.json",
+                       "briefing_days/us/index.json", "briefing_days/us/2026-10-06.json"}

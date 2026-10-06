@@ -20,13 +20,14 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-from api.builders.briefing_timeline import record_briefing, session_phase, trading_day
+from api.builders.briefing_timeline import US_TZ, record_briefing, record_us_briefing, session_phase, trading_day
 
 KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,11 +40,17 @@ INSIDER_PATH = os.path.join(_ROOT, "data", "insider_trades.json")
 WARN_PATH = os.path.join(_ROOT, "data", "market_warnings.json")
 FLOW_PATH = os.path.join(_ROOT, "data", "stock_flow_5d.json")
 INDEX_PATH = os.path.join(_ROOT, "data", "kr_index_daily.json")
+MACRO_PATH = os.path.join(_ROOT, "data", "macro_snapshot.json")
 CHART_DIR = os.path.join(_ROOT, "data", "kr_chart_daily")
 HOT_PATH = os.path.join(_ROOT, "data", "hot_stock.json")
 US_STATE_PATH = os.path.join(_ROOT, "data", "metadata", "us_fin_incremental_state.json")
 KR_REPORT_PATH = os.path.join(_ROOT, "data", "stock_report_public.json")
 US_REPORT_PATH = os.path.join(_ROOT, "data", "us_stock_report_public.json")
+
+_US_INDICES = (
+    ("sp500", "S&P 500"), ("nasdaq", "나스닥"),
+    ("dji", "다우"), ("sox", "필라델피아 반도체"),
+)
 
 
 def _load(path: str, default):
@@ -52,6 +59,77 @@ def _load(path: str, default):
             return json.load(f)
     except (OSError, json.JSONDecodeError):
         return default
+
+
+def _source_day(value: Any, today: datetime) -> str:
+    """Validate a supplied US market date; collection time cannot replace it."""
+    raw = str(value or "").strip()
+    if re.fullmatch(r"\d{8}", raw):
+        raw = f"{raw[:4]}-{raw[4:6]}-{raw[6:]}"
+    try:
+        parsed = datetime.strptime(raw, "%Y-%m-%d").date()
+    except ValueError:
+        return ""
+    return parsed.isoformat() if parsed <= today.astimezone(US_TZ).date() else ""
+
+
+def _source_observed_at(value: Any, now: datetime) -> str:
+    raw = str(value or "").strip()
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    if parsed.tzinfo is None or parsed > now.astimezone(parsed.tzinfo):
+        return ""
+    return parsed.isoformat()
+
+
+def _us_market_item(now: datetime) -> Dict[str, Any] | None:
+    """Normalize US index observations, which may include a current daily bar."""
+    doc = _load(MACRO_PATH, {})
+    macro = doc.get("macro") if isinstance(doc, dict) else None
+    if not isinstance(macro, dict):
+        return None
+    values: Dict[str, float] = {}
+    index_meta: Dict[str, Dict[str, str]] = {}
+    labels: List[str] = []
+    supplied_days: List[str] = []
+    for key, label in _US_INDICES:
+        row = macro.get(key)
+        if not isinstance(row, dict) or row.get("status") != "ok":
+            continue
+        value, change = row.get("value"), row.get("change_pct")
+        if (not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value)
+                or value <= 0 or not isinstance(change, (int, float)) or isinstance(change, bool)
+                or not math.isfinite(change)):
+            continue
+        observed_at = _source_observed_at(row.get("as_of"), now)
+        if not observed_at:
+            continue
+        raw_day = row.get("data_date")
+        data_date = _source_day(raw_day, now) if raw_day not in (None, "") else ""
+        if raw_day not in (None, "") and not data_date:
+            continue
+        source = str(row.get("source") or "").strip().lower()
+        if source not in {"fred", "yfinance"}:
+            continue
+        # Legacy *_close keys carry the supplied index value, not proof of a final close.
+        values[f"{key}_close"] = value
+        values[f"{key}_pct"] = change
+        meta = {"source": source, "as_of": observed_at, "collected_at": observed_at}
+        if data_date:
+            meta["data_date"] = data_date
+            supplied_days.append(data_date)
+        index_meta[key] = meta
+        labels.append(f"{label} {change:+.2f}%")
+    if not labels:
+        return None
+    item: Dict[str, Any] = {"name": "미국 지수", "country": "US", "text": " · ".join(labels),
+                            "values": values, "index_meta": index_meta}
+    # A shared supplied data date is independent of the observation's session phase.
+    if len(supplied_days) == len(index_meta) and len(set(supplied_days)) == 1:
+        item["as_of"] = supplied_days[0]
+    return item
 
 
 def _names() -> Dict[str, str]:
@@ -72,7 +150,7 @@ def _sec_us_filings(names: Dict[str, str]) -> Dict[str, Any]:
     tks = [str(t) for t in (st.get("last_run_tickers") or [])][:8]
     return {
         "title": "밤사이 미국 공시",
-        "items": [{"ticker": t, "name": names.get(t, t), "text": "10-K/Q 재무 공시 제출 → 재무 반영 완료"} for t in tks],
+        "items": [{"ticker": t, "country": "US", "name": names.get(t, t), "text": "10-K/Q 재무 공시 제출 → 재무 반영 완료"} for t in tks],
         "as_of": st.get("last_processed") or "",
         "note": f"SEC EDGAR 일일 인덱스 감지분 (기준 {st.get('last_processed') or '—'})",
     }
@@ -90,7 +168,8 @@ def _sec_earnings(names: Dict[str, str], today: datetime) -> Dict[str, Any]:
             for c in (s.get("calendar") or []):
                 d = str(c.get("date") or "")
                 if c.get("kind") == "실적" and lo <= d <= hi:
-                    items.append({"ticker": str(s.get("ticker") or ""), "name": names.get(str(s.get("ticker") or ""), s.get("name")), "date": d})
+                    items.append({"ticker": str(s.get("ticker") or ""), "name": names.get(str(s.get("ticker") or ""), s.get("name")), "date": d,
+                                  "country": "US" if p == US_REPORT_PATH else "KR"})
                     break
     items.sort(key=lambda x: x["date"])
     return {
@@ -207,7 +286,7 @@ def _sec_flow(names: Dict[str, str]) -> Dict[str, Any]:
             "note": f"거래일 {d} · 추정금액 = 순매수주수×종가 (자체계산)"}
 
 
-def _sec_market_recap(names: Dict[str, str]) -> Dict[str, Any]:
+def _sec_market_recap(names: Dict[str, str], now: datetime | None = None) -> Dict[str, Any]:
     """전 거래일 시장 분해 — 지수·종목/섹터 breadth + 급등락×같은날 공시 병기 (PM 2026-07-11 v2).
 
     전부 사실: 지수/섹터 등락(금융위 지수시세정보) · 전 종목 등락 개수(금융위 주식시세) ·
@@ -216,13 +295,16 @@ def _sec_market_recap(names: Dict[str, str]) -> Dict[str, Any]:
     병기 우선순위 = 공시 유형 사전 고정 (I 공급·수주 > B 주요사항 > C 발행 > D 지분) —
     지분공시만 있는 날은 1행 상한 (도배 방지, 사전 고정 규칙 = 편집 판단 0).
     """
+    now = now or datetime.now(KST)
+    us_item = _us_market_item(now)
     idx_doc = _load(INDEX_PATH, {})
     indices = idx_doc.get("indices") or {}
     anchor = str((idx_doc.get("_meta") or {}).get("as_of") or "")
     ks = (indices.get("코스피") or {}).get("c") or []
     kq = (indices.get("코스닥") or {}).get("c") or []
     if not (anchor and ks and kq):
-        return {"title": "직전 거래일 시장", "items": []}
+        return {"title": "직전 거래일 시장", "items": [us_item] if us_item else [],
+                "note": "미국 지수 = macro_snapshot 수집값 · 지수별 기준일·수집시각 별도"}
     ks_chg, kq_chg = ks[-1][2], kq[-1][2]
 
     # 코스피200 섹터 — 파생 변형(비중상한/TOP/테마) 제외한 순수 섹터만
@@ -304,10 +386,13 @@ def _sec_market_recap(names: Dict[str, str]) -> Dict[str, Any]:
             headline = f"종목 상승 {n_up:,} · 하락 {n_down:,} — 방향이 갈린 날이었어요"
 
     items: List[Dict[str, Any]] = [
-        {"name": "지수", "text": f"코스피 {ks_chg:+.2f}% · 코스닥 {kq_chg:+.2f}%",
+        {"name": "지수", "country": "KR", "as_of": anchor,
+         "text": f"코스피 {ks_chg:+.2f}% · 코스닥 {kq_chg:+.2f}%",
          "values": {"kospi_pct": ks_chg, "kosdaq_pct": kq_chg,
                     "kospi_close": ks[-1][1], "kosdaq_close": kq[-1][1]}},
     ]
+    if us_item:
+        items.append(us_item)
     if headline:
         items.append({"name": "흐름", "text": headline})
     if s_down:
@@ -351,7 +436,7 @@ def main() -> int:
         warn_doc = _load(WARN_PATH, {})
         warnings = warn_doc.get("warnings") or {}
         sections = [
-            _sec_market_recap(names),
+            _sec_market_recap(names, now),
             _sec_us_filings(names),
             _sec_earnings(names, now),
             _sec_disclosures(),
@@ -380,6 +465,7 @@ def main() -> int:
         }
         # Preserve this actual run before updating the compatibility latest file.
         record_briefing(out)
+        record_us_briefing(out, us_tickers={tk for tk in names if not re.fullmatch(r"\d{6}", tk)})
         with open(OUT_PATH, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False)
         # 🚨 2026-08-21 — 등장 티커를 남긴다. 종전엔 date/n_sections/n_items 카운트뿐이라

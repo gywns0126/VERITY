@@ -58,6 +58,7 @@ function lifecycle(props = {}, deviceTime = Date.parse('2040-01-01T00:00:00Z')) 
         flush() { for (const fn of effects.splice(0)) fn(); },
         request(suffix) { return requests.findLast(r => !r.done && !r.options.signal?.aborted && r.url.endsWith(suffix)); },
         selectDate(value) { nodes(tree).find(n => n.type === 'select').props.onChange({ target: { value } }); },
+        selectMarket(value) { const group = nodes(tree).find(n => n.props?.className === 'asb-market-switch'); nodes(group).find(n => n.type === 'button' && n.key === value).props.onClick(); },
         expand(phase) { const card = nodes(tree).find(n => n.props?.['data-phase'] === phase); nodes(card).find(n => n.type === 'button').props.onClick(); },
         collapseDetail() { nodes(tree).find(n => n.type === 'button' && n.props['aria-label'] === '상세 기록 접기').props.onClick(); },
         trackChildren() { const track = nodes(tree).find(n => n.props?.className === 'asb-track'); const flat = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(flat) : node.type === React.Fragment ? flat(node.props.children) : [node]; return flat(track?.props.children); },
@@ -334,5 +335,114 @@ test('one detail is adjacent to its reading card; switching and closing preserve
         run.collapseDetail(); const closed = run.render(); assert.doesNotMatch(closed, /class="asb-detail"/);
         assert(run.trackChildren().every(n => n.props['data-expanded'] !== true));
         assert.deepEqual(temporalStates(closed), { pre: 'past', open: 'current', post: 'future' });
+    } finally { run.close(); }
+});
+
+const krIndex = () => fact('kr', '코스피 +1.95% · 코스닥 +4.48%', '2026-10-01', { category: 'market_recap', name: '지수', title: '지수', country: 'KR' });
+const usIndex = () => fact('us', 'S&P500 +0.73% · 나스닥 +1.19%', '', { category: 'market_recap', name: '미국 지수', title: '미국 지수', country: 'US', index_meta: {
+    sp500: { source: 'fred', as_of: '2026-10-04T21:32:23+09:00' },
+    nasdaq: { source: 'fred', as_of: '2026-10-04T21:32:24+09:00' },
+    sox: { source: 'yfinance', as_of: '2026-10-04T21:32:25+09:00', data_date: '2026-10-02' },
+} });
+test('compact summaries keep the KR/US pair and a held company without changing legacy fallback', () => {
+    const held = fact('held-a', '보유 정보 A', date, { ticker: '000660' }), second = fact('held-b', '보유 정보 B', date, { ticker: '000660' });
+    const other = fact('other-company', '다른 기업', date, { ticker: '005930' }), broad = fact('breadth', '시장 흐름', date, { category: 'market_recap', name: '흐름' });
+    const rows = [broad, held, other, second, krIndex(), usIndex()];
+    const original = JSON.stringify(rows);
+    assert.deepEqual(Array.from(mod.compactItems(rows, [], false), i => i.id), ['kr', 'us']);
+    assert.deepEqual(Array.from(mod.compactItems(rows, ['000660'], true), i => i.id), ['held-a', 'kr', 'us']);
+    assert.deepEqual(Array.from(mod.compactItems(rows, ['MSFT'], true), i => i.id), ['kr', 'us']);
+    assert.deepEqual(Array.from(mod.compactItems(rows.slice(0, -1), [], false), i => i.id), ['breadth', 'held-a']);
+    assert.deepEqual(Array.from(mod.compactItems(rows.slice(0, -1), ['000660'], true), i => i.id), ['held-a', 'breadth']);
+    assert.equal(JSON.stringify(rows), original);
+});
+test('country flags recognize the actual index contract and never replace company logos', () => {
+    assert.equal(mod.marketIndexCountry(krIndex()), 'KR'); assert.equal(mod.marketIndexCountry(usIndex()), 'US');
+    assert.equal(mod.marketIndexCountry({ ...krIndex(), country: undefined }), 'KR');
+    for (const item of [fact('news', '미국 뉴스', date, { country: 'US' }), { ...usIndex(), name: '흐름' }, { ...krIndex(), title: '다른 시장 정보' }, { ...krIndex(), country: 'unknown' }, { ...usIndex(), ticker: 'MSFT' }]) assert.equal(mod.marketIndexCountry(item), null);
+    assert.match(html(mod.Fact, { item: krIndex() }), /circle-flags\/flags\/kr\.svg/);
+    assert.match(html(mod.Fact, { item: usIndex() }), /circle-flags\/flags\/us\.svg/);
+    const company = html(mod.Fact, { item: { ...usIndex(), ticker: 'MSFT', name: 'Microsoft' } });
+    assert.match(company, /securities\/icn-sec-fill-MSFT\.png/); assert.doesNotMatch(company, /circle-flags/);
+    for (const [name, cls] of [['올린 쪽', 'rising'], ['내린 쪽', 'falling']]) {
+        const row = html(mod.Fact, { item: fact(name, '섹터 등락 자료', date, { category: 'market_recap', name }) });
+        assert.match(row, new RegExp('asb-direction-' + cls)); assert.doesNotMatch(row, /circle-flags|asb-logo/);
+    }
+});
+test('US collection time is distinct from actual data date on compact and detailed facts', () => {
+    const detailed = html(mod.Fact, { item: usIndex() });
+    assert.match(detailed, /S&amp;P500 · 자료 기준일 미제공 · 수집/);
+    assert.match(detailed, /SOX · 자료 기준 2026-10-02 · 수집/);
+    assert.doesNotMatch(detailed, /종가 기준 2026-10-04|자료 기준 2026-10-04/);
+    const compact = html(mod.Fact, { item: usIndex(), compact: true });
+    assert.match(compact, /미국 지수 자료 · 기준일 일부 미제공/); assert.match(compact, /SOX 2026-10-02/); assert.match(compact, /수집/);
+    const missing = html(mod.Fact, { item: { ...usIndex(), index_meta: undefined } });
+    assert.match(missing, /자료 기준일 미제공/);
+});
+test('KR view separates US records while desktop depth and full detail preserve facts and holdings privacy', async () => {
+    for (const personal of [false, true]) {
+        const record = day(); record.snapshots[0].items.push(krIndex(), fact('held-extra', '보유 기업 추가 공시', date, { ticker: '000660' }));
+        record.snapshots[1].items.push(krIndex(), usIndex(), fact('held-open', '장중 보유 공시', date, { ticker: '000660' }), fact('held-open-extra', '장중 보유 추가 공시', date, { ticker: '000660' }));
+        const run = lifecycle({ holdingsTickers: ['000660'], personalizationState: personal ? 'holdings' : 'market' });
+        try {
+            const output = await boot(run, record, index(), '11:00:00');
+            const pre = output.match(/<article\b[^>]*data-phase="pre"[\s\S]*?<\/article>/)[0], open = output.match(/<article\b[^>]*data-phase="open"[\s\S]*?<\/article>/)[0];
+            assert.doesNotMatch(pre, /미국 지수|S&amp;P500/);
+            assert.match(open, /data-fact-count="4"/); assert.match(open, /국내 지수/); assert.doesNotMatch(open, /미국 지수/);
+            if (personal) assert.match(open, /장중 보유 공시/);
+            run.expand('open'); const detail = run.render().match(/<div class="asb-detail"[\s\S]*?<p class="asb-note">/)[0];
+            for (const text of ['장중 원문 사실', '장중 보유 공시', '장중 보유 추가 공시', '국내 지수']) assert(detail.includes(text), text);
+            assert.doesNotMatch(detail, /미국 지수/);
+            assert.doesNotMatch(JSON.stringify(run.requests.map(r => ({ url: r.url, options: r.options }))), /000660|Authorization|holdings|shares|avg_cost/);
+        } finally { run.close(); }
+    }
+});
+
+const usCalendar = { valid_from: '2026-01-01', valid_until: '2026-12-31', timezone: 'America/New_York', holidays: ['2026-11-26', '2026-12-25'], open_minute: 570, close_minute: 960, early_closes: { '2026-11-27': 780, '2026-12-24': 780 } };
+test('US sessions use New York trading dates, DST and verified early closes', () => {
+    for (const [stamp, phase] of [
+        ['2026-10-06T13:29:59Z', 'pre'], ['2026-10-06T13:30:00Z', 'open'], ['2026-10-06T20:00:00Z', 'post'],
+        ['2026-11-02T14:29:59Z', 'pre'], ['2026-11-02T14:30:00Z', 'open'], ['2026-11-02T21:00:00Z', 'post'],
+        ['2026-11-27T17:59:59Z', 'open'], ['2026-11-27T18:00:00Z', 'post'],
+    ]) assert.equal(mod.activePhase(Date.parse(stamp), 'open', usCalendar), phase, stamp);
+    const crossMidnight = Date.parse('2026-10-06T15:05:00Z');
+    assert.equal(mod.marketDate(crossMidnight, 'America/New_York'), '2026-10-06');
+    assert.equal(mod.kstDate(crossMidnight), '2026-10-07');
+    assert.equal(mod.tradingStatus('2026-11-26', usCalendar), 'closed');
+    assert.equal(mod.tradingStatus('2027-01-04', usCalendar), 'unknown');
+    assert.equal(mod.sessionTimeLabel(Date.parse('2026-11-27T17:00:00Z'), 'open', usCalendar), '장 마감 1시간 전');
+    assert.equal(mod.sessionTimeLabel(Date.parse('2026-10-31T05:00:00Z'), 'closed', usCalendar), '다음 개장 2일 9시간 30분 전');
+});
+test('US normalization preserves source dates and rejects unverified calendar payloads', () => {
+    const record = { ...day(), timezone: 'America/New_York', date: '2026-10-06', snapshots: [{ snapshot_id: 'open-1', phase: 'open', generated_at: '2026-10-06T11:05:00-04:00', items: [usIndex()] }], cards: { open: 'open-1' } };
+    assert.equal(mod.normalizeDay(record, record.date, usCalendar), record);
+    assert.throws(() => mod.normalizeDay(record, record.date, calendar));
+    assert.equal(record.snapshots[0].items[0].index_meta.sox.data_date, '2026-10-02');
+    for (const bad of [{ ...usCalendar, timezone: 'bad-zone' }, { ...usCalendar, early_closes: { '2026-11-27': 500 } }]) assert.throws(() => mod.normalizeIndex(index([], bad)));
+});
+test('each market keeps its own facts and desktop adds depth without changing the mobile summary', () => {
+    const rows = [fact('held', '보유 기업', date, { ticker: '000660' }), fact('other', '다른 기업', date, { ticker: '005930' }), krIndex(), fact('breadth', '시장 흐름', date, { category: 'market_recap' }), usIndex(), fact('us-filing', '미국 공시', date, { category: 'us_filings', ticker: 'MSFT' })];
+    rows.push(fact('held-extra', '보유 기업 추가 공시', date, { ticker: '000660' }));
+    const before = JSON.stringify(rows), kr = mod.marketItems(rows, 'KR'), us = mod.marketItems(rows, 'US');
+    assert.deepEqual(Array.from(us, item => item.id), ['us', 'us-filing']);
+    const packed = mod.cardItems(kr, ['000660'], true);
+    assert.deepEqual(Array.from(packed.summary, item => item.id), ['held', 'kr']);
+    assert.equal(packed.desktop.length, 4); assert.equal(JSON.stringify(rows), before);
+    assert.match(mod.CSS, /@container\(max-width:680px\)\{\.asb-card-body \.asb-desktop-extra\{display:none\}/);
+});
+test('switching markets clears old facts, uses separate archive paths and rejects a KR index in US', async () => {
+    const run = lifecycle({ holdingsTickers: ['000660'], personalizationState: 'holdings' });
+    try {
+        assert.match(await boot(run, day(), index(), '11:00:00'), /매출 120억원/);
+        run.selectMarket('US'); assert.doesNotMatch(run.render(), /매출 120억원/); run.flush();
+        const first = run.request('/us/index.json'); assert(first); first.resolve(index()); await settle(); run.render(); run.flush();
+        assert.match(run.render(), /기록을 불러오지 못했어요/); assert.equal(run.request('/us/2026-10-04.json'), undefined);
+        run.event('focus'); run.render(); run.flush();
+        run.request('/us/index.json').resolve(index(['2026-10-04'], usCalendar)); await settle(); run.render(); run.flush();
+        const us = { schema_version: 1, timezone: 'America/New_York', date: '2026-10-04', trading_day: { status: 'closed' }, snapshots: [{ snapshot_id: 'closed', phase: 'closed', generated_at: '2026-10-04T21:00:00-04:00', items: [usIndex()] }], cards: { closed: 'closed' } };
+        run.request('/us/2026-10-04.json').resolve(us); await settle(); const output = run.render();
+        assert.match(output, /미국 지수|S&amp;P500/); assert.match(output, /미국 거래일 · ET/); assert.doesNotMatch(output, /매출 120억원/);
+        run.selectMarket('KR'); assert.doesNotMatch(run.render(), /S&amp;P500/); run.flush();
+        assert(run.request('/index.json')); assert.doesNotMatch(JSON.stringify(run.requests.map(r => ({ url: r.url, options: r.options }))), /000660|Authorization|holdings|shares|avg_cost/);
     } finally { run.close(); }
 });
