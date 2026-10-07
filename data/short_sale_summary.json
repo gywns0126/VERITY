@@ -1,7 +1,7 @@
 {
- "as_of": "2026-10-07T10:41:33+09:00",
+ "as_of": "2026-10-07T18:41:26+09:00",
  "version": "short_sale_trail_v0",
- "n_observations": 7868,
+ "n_observations": 7869,
  "window_start": null,
  "thresholds_observed": {
   "kr_auto_avoid": 15.0,
@@ -11,7 +11,7 @@
  "KR": {
   "auto_avoid": {
    "n_observations": 167,
-   "n_tickers": 48,
+   "n_tickers": 49,
    "fwd_20d": {
     "n_tickers": 29,
     "n_observations": 117,
@@ -30,8 +30,8 @@
    }
   },
   "downgrade": {
-   "n_observations": 472,
-   "n_tickers": 87,
+   "n_observations": 467,
+   "n_tickers": 84,
    "fwd_20d": {
     "n_tickers": 54,
     "n_observations": 346,
@@ -50,8 +50,8 @@
    }
   },
   "clean": {
-   "n_observations": 841,
-   "n_tickers": 175,
+   "n_observations": 838,
+   "n_tickers": 174,
    "fwd_20d": {
     "n_tickers": 72,
     "n_observations": 469,
@@ -70,8 +70,8 @@
    }
   },
   "missing": {
-   "n_observations": 1652,
-   "n_tickers": 193,
+   "n_observations": 1681,
+   "n_tickers": 218,
    "fwd_20d": {
     "n_tickers": 125,
     "n_observations": 1316,
@@ -112,7 +112,7 @@
    }
   },
   "downgrade": {
-   "n_observations": 30,
+   "n_observations": 27,
    "n_tickers": 18,
    "fwd_20d": {
     "n_tickers": 0,
@@ -132,8 +132,8 @@
    }
   },
   "clean": {
-   "n_observations": 2716,
-   "n_tickers": 439,
+   "n_observations": 2706,
+   "n_tickers": 440,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -152,8 +152,8 @@
    }
   },
   "missing": {
-   "n_observations": 1990,
-   "n_tickers": 296,
+   "n_observations": 1983,
+   "n_tickers": 298,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -174,8 +174,8 @@
  },
  "labels": [
   "예비 결과 — auto_avoid 종목 N=29 < 100",
-  "US 지표 결측 1990건 — clean 과 분리 집계됨(무혐의 통과 아님)",
-  "KR 지표 결측 1652건 — 수집 이전 기간 포함. clean 과 분리 집계"
+  "US 지표 결측 1983건 — clean 과 분리 집계됨(무혐의 통과 아님)",
+  "KR 지표 결측 1681건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
  "note": "공매도 규칙 사후 수익률 관측 — 임계·강도 재판단의 판정 근거. 점수·집행 입력 0. KR=거래량 비중(흐름) / US=숏인터레스트(포지션) 로 측정 대상이 다르므로 시장 간 수치를 비교하지 말 것. 수익률은 KR 전용(US 일봉 레이크 미도달)."
