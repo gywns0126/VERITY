@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-07T07:17:37+09:00",
+ "as_of": "2026-10-07T10:41:43+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -41,9 +41,30 @@
      ]
     },
     {
+     "key": "kis_credit_balance",
+     "modules": [
+      "red_flags.py"
+     ]
+    },
+    {
+     "key": "kis_financial_ratio",
+     "modules": [
+      "fact.py",
+      "graham.py",
+      "moat.py",
+      "red_flags.py"
+     ]
+    },
+    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
+     ]
+    },
+    {
+     "key": "kis_short_sale",
+     "modules": [
+      "red_flags.py"
      ]
     },
     {
@@ -59,20 +80,7 @@
      ]
     }
    ],
-   "thin_keys": [
-    {
-     "key": "kis_financial_ratio",
-     "coverage": "1/39"
-    },
-    {
-     "key": "kis_credit_balance",
-     "coverage": "1/39"
-    },
-    {
-     "key": "kis_short_sale",
-     "coverage": "1/39"
-    }
-   ],
+   "thin_keys": [],
    "fallback_covered": [
     {
      "key": "close",
@@ -132,14 +140,14 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 15,
+     "events_scanned": 13,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
      ]
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 5종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 8종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {

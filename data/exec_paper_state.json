@@ -471,10 +471,10 @@
    "market_clock_state": "preopen_clock"
   }
  },
- "last_date": "2026-10-06",
- "last_price_fingerprint": "b491cef319a0f1d6c743682759f6904929273983dd10122bcc0ec720e0c5c10e",
- "market_sessions": 20,
- "sessions_since_rebalance": 19,
+ "last_date": "2026-10-07",
+ "last_price_fingerprint": "4fd548ebb37715398c1b2543d62af5d7017aeff1de91fca242530b488f883cab",
+ "market_sessions": 21,
+ "sessions_since_rebalance": 20,
  "last_rebalance_date": "2026-09-02",
  "trades": 0,
  "realized_pnl": 0.0,
@@ -659,6 +659,15 @@
    "cost_paid": 0.0,
    "benchmark_date": "20261001",
    "benchmark_close": 6971.35
+  },
+  {
+   "date": "2026-10-07",
+   "equity": 10000000.0,
+   "positions_n": 0,
+   "trades_total": 0,
+   "cost_paid": 0.0,
+   "benchmark_date": "20261002",
+   "benchmark_close": 7003.74
   }
  ],
  "benchmark_start": {
@@ -673,15 +682,17 @@
   "last_date": "2026-09-02",
   "trades": 0
  },
- "target_exposure": 0.0707,
+ "target_exposure": 0.0763,
  "price_snapshot": {
   "source": "portfolio.recommendations.current_price",
-  "as_of": "2026-10-07T06:34:27+09:00",
-  "market_clock_state": "preopen_clock",
-  "holiday_calendar": "not_connected"
+  "as_of": "2026-10-07T09:59:02+09:00",
+  "market_clock_state": "regular_session_clock_holiday_unverified",
+  "holiday_calendar": "not_connected",
+  "fingerprint_source": "analysis_plus_active_live_quotes",
+  "active_live_quotes_n": 2
  },
  "last_denominator": {
-  "kr_candidate_n": 37,
+  "kr_candidate_n": 16,
   "eligible_n": 0,
   "signal_eligible_n": 0,
   "selected_n": 0,
@@ -690,9 +701,7 @@
   "whole_share_only": true,
   "not_selected_by_rank_n": 0,
   "rejected": {
-   "grade_below_watch": 8,
-   "liquidity": 26,
-   "critical_red_flag": 3
+   "liquidity": 16
   }
  },
  "selection_slot_krw": 555556,
@@ -700,13 +709,13 @@
   "candidate_pool_rank_not_full_kr_universe",
   "e2_next_run_fill",
   "e3_1m_proxy",
+  "entry_data_unavailable",
   "fill_live_quote_20260826",
-  "market_clock_not_executable",
-  "waiting_new_market_snapshot"
+  "target_temporarily_ineligible"
  ],
  "benchmark_latest": {
-  "date": "20261001",
-  "close": 6971.35,
+  "date": "20261002",
+  "close": 7003.74,
   "source": "금융위원회 지수시세정보",
   "freshness": "T+1 EOD"
  }
