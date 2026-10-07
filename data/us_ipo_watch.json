@@ -1,22 +1,22 @@
 {
  "_meta": {
-  "generated_at": "2026-10-06T20:30:44+09:00",
+  "generated_at": "2026-10-07T20:21:41+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 30,
+  "sessions_scanned": 31,
   "sessions_missed": [],
   "counts": {
-   "filings": 846,
-   "companies": 255,
+   "filings": 872,
+   "companies": 262,
    "by_stage": {
-    "신청": 104,
+    "신청": 109,
     "정정(심사중)": 121,
     "가격확정": 11,
-    "거래소등록": 19
+    "거래소등록": 21
    },
    "spac_likely": 32,
-   "has_ticker_now": 203,
+   "has_ticker_now": 208,
    "priced_secondary_excluded": 7,
-   "foreign_issuer": 81,
+   "foreign_issuer": 83,
    "priced_parse_ok": 4
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
@@ -27,12 +27,13 @@
    "cik": "2076561",
    "name": "Pine Tree Acquisition Corp.",
    "forms": {
+    "424B4": 1,
     "8-A12B": 1,
     "CERT": 1,
     "S-1/A": 2
    },
    "first_filed": "20260918",
-   "last_filed": "20261005",
+   "last_filed": "20261006",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
@@ -49,6 +50,68 @@
     "ticker": "PAXG",
     "region": "CAYMAN ISLAND",
     "state_of_inc": "E9"
+   },
+   "pre_existing_reporter": false,
+   "pricing": {
+    "parse_ok": false,
+    "reason": "주식수 문구 없음",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/2076561/000147793226006063/ptree_424b4.htm"
+   }
+  },
+  {
+   "cik": "2139097",
+   "name": "TRex Bio, Inc.",
+   "forms": {
+    "8-A12B": 1,
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260918",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2139097&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2836",
+    "sic_desc": "Biological Products, (No Diagnostic Substances)",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "SOUTH SAN FRANCISCO, CA",
+    "state_of_inc": "DE"
+   }
+  },
+  {
+   "cik": "2131813",
+   "name": "newcleo plc",
+   "forms": {
+    "F-1": 1,
+    "8-A12B": 1,
+    "CERT": 1
+   },
+   "first_filed": "20260921",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2131813&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3443",
+    "sic_desc": "Fabricated Plate Work (Boiler Shops)",
+    "is_blank_check": false,
+    "ticker": "NWCL",
+    "region": "LONDON",
+    "state_of_inc": "X0"
    }
   },
   {
@@ -982,6 +1045,111 @@
    }
   },
   {
+   "cik": "2112466",
+   "name": "Silentium Ltd.",
+   "forms": {
+    "F-1/A": 1
+   },
+   "first_filed": "20261006",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2112466&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7372",
+    "sic_desc": "Services-Prepackaged Software",
+    "is_blank_check": false,
+    "ticker": "SIAI",
+    "region": "NESS ZIONA",
+    "state_of_inc": "L3"
+   }
+  },
+  {
+   "cik": "2141983",
+   "name": "Allarity Acquisition Corp.",
+   "forms": {
+    "S-1/A": 2,
+    "S-1": 1
+   },
+   "first_filed": "20260910",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2141983&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "ALLN",
+    "region": "TARPON SPRINGS, FL",
+    "state_of_inc": "E9"
+   }
+  },
+  {
+   "cik": "1604191",
+   "name": "GridAI Technologies Corp.",
+   "forms": {
+    "S-1/A": 2
+   },
+   "first_filed": "20260824",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1604191&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "4931",
+    "sic_desc": "Electric & Other Services Combined",
+    "is_blank_check": false,
+    "ticker": "GRDX",
+    "region": "BOCA RATON, FL",
+    "state_of_inc": "DE"
+   }
+  },
+  {
+   "cik": "720762",
+   "name": "NON INVASIVE MONITORING SYSTEMS INC /FL/",
+   "forms": {
+    "S-1/A": 2
+   },
+   "first_filed": "20260917",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=720762&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3760",
+    "sic_desc": "Guided Missiles & Space Vehicles & Parts",
+    "is_blank_check": false,
+    "ticker": "NIMU",
+    "region": "MIAMI BEACH, FL",
+    "state_of_inc": "FL"
+   }
+  },
+  {
    "cik": "1866226",
    "name": "Evolution Metals & Technologies Corp.",
    "forms": {
@@ -1089,33 +1257,6 @@
    }
   },
   {
-   "cik": "2139097",
-   "name": "TRex Bio, Inc.",
-   "forms": {
-    "S-1/A": 1,
-    "S-1": 1
-   },
-   "first_filed": "20260918",
-   "last_filed": "20261005",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2139097&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2836",
-    "sic_desc": "Biological Products, (No Diagnostic Substances)",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "SOUTH SAN FRANCISCO, CA",
-    "state_of_inc": "DE"
-   }
-  },
-  {
    "cik": "1828673",
    "name": "HCW Biologics Inc.",
    "forms": {
@@ -1140,33 +1281,6 @@
     "ticker": "HCWB",
     "region": "MIRAMAR, FL",
     "state_of_inc": "DE"
-   }
-  },
-  {
-   "cik": "2141983",
-   "name": "Allarity Acquisition Corp.",
-   "forms": {
-    "S-1/A": 1,
-    "S-1": 1
-   },
-   "first_filed": "20260910",
-   "last_filed": "20261002",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2141983&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "ALLN",
-    "region": "TARPON SPRINGS, FL",
-    "state_of_inc": "E9"
    }
   },
   {
@@ -1688,16 +1802,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1468327&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "5990",
-    "sic_desc": "Retail-Retail Stores, NEC",
-    "is_blank_check": false,
-    "ticker": "RENT",
-    "region": "BROOKLYN, NY",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1468327&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1131903",
@@ -1714,16 +1819,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1131903&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7374",
-    "sic_desc": "Services-Computer Processing & Data Preparation",
-    "is_blank_check": false,
-    "ticker": "FCCN",
-    "region": "SEATTLE, WA",
-    "state_of_inc": "NV"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1131903&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1701756",
@@ -1740,16 +1836,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1701756&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "5810",
-    "sic_desc": "Retail-Eating & Drinking Places",
-    "is_blank_check": false,
-    "ticker": "SDOT",
-    "region": "BURLESON, TX",
-    "state_of_inc": "NV"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1701756&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2131124",
@@ -1765,18 +1852,9 @@
    "stage_ko": "정정(심사중)",
    "amend_count": 1,
    "is_foreign_issuer": false,
-   "is_spac_likely": true,
+   "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2131124&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "ELEV",
-    "region": "AVENTURA, FL",
-    "state_of_inc": "E9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2131124&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1378140",
@@ -2400,23 +2478,6 @@
    "is_spac_likely": true,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123380&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "720762",
-   "name": "NON INVASIVE MONITORING SYSTEMS INC /FL/",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260917",
-   "last_filed": "20260917",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=720762&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2112634",
@@ -3224,23 +3285,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2000208&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "1604191",
-   "name": "GridAI Technologies Corp.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260824",
-   "last_filed": "20260824",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1604191&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2091438",
    "name": "Nex Neo Tech Inc.",
    "forms": {
@@ -3343,6 +3387,91 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1991879&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1652935",
+   "name": "ACTUATE THERAPEUTICS, INC.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261006",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1652935&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2033383",
+   "name": "Fusemachines Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261006",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2033383&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1158780",
+   "name": "Pluri Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261006",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1158780&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2151808",
+   "name": "TANG CAPITAL ACQUISITION CORP.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261006",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2151808&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2158471",
+   "name": "Winklevoss Zcash ETF",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261006",
+   "last_filed": "20261006",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2158471&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2118192",
