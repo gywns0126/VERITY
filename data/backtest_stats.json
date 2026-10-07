@@ -130,11 +130,11 @@
       "observed": {
         "hit_rate_gross": 66.7,
         "hit_rate_net": 66.7,
-        "avg_return_gross": 3.3,
-        "avg_return_net": 2.84,
-        "max_return": 13.72,
+        "avg_return_gross": 3.27,
+        "avg_return_net": 2.81,
+        "max_return": 13.28,
         "min_return": -3.06,
-        "sharpe": 0.53,
+        "sharpe": 0.54,
         "sample": 9,
         "hits_gross": 6,
         "hits_net": 6
@@ -201,24 +201,6 @@
   },
   "recommendations": [
     {
-      "ticker": "PARR",
-      "name": "PARR",
-      "rec_date": "2026-09-24",
-      "rec_price": 76.7699966430664,
-      "current_price": 87.30000305175781,
-      "return_pct_gross": 13.72,
-      "return_pct_net": 12.99,
-      "slippage_pct": 0.7,
-      "hit_gross": true,
-      "hit_net": true,
-      "period": "14d",
-      "recommendation": "WATCH",
-      "brain_score": null,
-      "source": "gemini",
-      "return_pct": 13.72,
-      "hit": true
-    },
-    {
       "ticker": "080580",
       "name": "오킨스전자",
       "rec_date": "2026-09-24",
@@ -237,13 +219,13 @@
       "hit": true
     },
     {
-      "ticker": "TXN",
-      "name": "Texas Instruments Incorporated",
+      "ticker": "PARR",
+      "name": "PARR",
       "rec_date": "2026-09-24",
-      "rec_price": 270.6499938964844,
-      "current_price": 285.3700866699219,
-      "return_pct_gross": 5.44,
-      "return_pct_net": 4.71,
+      "rec_price": 76.7699966430664,
+      "current_price": 86.12000274658203,
+      "return_pct_gross": 12.18,
+      "return_pct_net": 11.45,
       "slippage_pct": 0.7,
       "hit_gross": true,
       "hit_net": true,
@@ -251,7 +233,25 @@
       "recommendation": "WATCH",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": 5.44,
+      "return_pct": 12.18,
+      "hit": true
+    },
+    {
+      "ticker": "TXN",
+      "name": "Texas Instruments Incorporated",
+      "rec_date": "2026-09-24",
+      "rec_price": 270.6499938964844,
+      "current_price": 288.9800109863281,
+      "return_pct_gross": 6.77,
+      "return_pct_net": 6.04,
+      "slippage_pct": 0.7,
+      "hit_gross": true,
+      "hit_net": true,
+      "period": "14d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": 6.77,
       "hit": true
     },
     {
@@ -259,9 +259,9 @@
       "name": "Shell plc",
       "rec_date": "2026-09-24",
       "rec_price": 95.5999984741211,
-      "current_price": 96.74500274658203,
-      "return_pct_gross": 1.2,
-      "return_pct_net": 0.47,
+      "current_price": 96.8499984741211,
+      "return_pct_gross": 1.31,
+      "return_pct_net": 0.58,
       "slippage_pct": 0.7,
       "hit_gross": true,
       "hit_net": true,
@@ -269,25 +269,7 @@
       "recommendation": "BUY",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": 1.2,
-      "hit": true
-    },
-    {
-      "ticker": "LLY",
-      "name": "Eli Lilly",
-      "rec_date": "2026-09-24",
-      "rec_price": 1181.8900146484375,
-      "current_price": 1190.8349609375,
-      "return_pct_gross": 0.76,
-      "return_pct_net": 0.43,
-      "slippage_pct": 0.3,
-      "hit_gross": true,
-      "hit_net": true,
-      "period": "14d",
-      "recommendation": "WATCH",
-      "brain_score": null,
-      "source": "gemini",
-      "return_pct": 0.76,
+      "return_pct": 1.31,
       "hit": true
     },
     {
@@ -306,6 +288,24 @@
       "brain_score": null,
       "source": "gemini",
       "return_pct": 0.73,
+      "hit": true
+    },
+    {
+      "ticker": "LLY",
+      "name": "Eli Lilly",
+      "rec_date": "2026-09-24",
+      "rec_price": 1181.8900146484375,
+      "current_price": 1188.719970703125,
+      "return_pct_gross": 0.58,
+      "return_pct_net": 0.25,
+      "slippage_pct": 0.3,
+      "hit_gross": true,
+      "hit_net": true,
+      "period": "14d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": 0.58,
       "hit": true
     },
     {
@@ -363,10 +363,10 @@
       "hit": false
     }
   ],
-  "updated_at": "2026-10-08 00:20:46.872311+09:00",
+  "updated_at": "2026-10-08 07:08:29.163371+09:00",
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-10-08 00:20:46.872418+09:00",
+    "applied_at": "2026-10-08 07:08:29.163394+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -376,7 +376,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-10-08 00:20:46.872422+09:00"
+      "fixed_at": "2026-10-08 07:08:29.163397+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
