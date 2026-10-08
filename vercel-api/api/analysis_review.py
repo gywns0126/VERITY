@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from operator_ask import _authorize, _headers_to_dict, _write
 
 SCHEMA = "analysis-console-v1"
+QUEUE_SCHEMA = "analysis-review-queue-v1"
 OBJECT_PATH = "verity-reports/_operator/analysis_reviews.json"
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -140,6 +141,35 @@ def project(document, ticker, *, now=None):
     return dict(out, state=state, review=selected)
 
 
+def project_queue(document, *, now=None):
+    """Summarize every published item, failing closed if any item is corrupt."""
+    now = now or datetime.now(timezone.utc)
+    counts = dict(awaiting_review=0, review_expired=0, reviewed=0)
+    out = dict(schema=QUEUE_SCHEMA, generated_at=None, total=0, counts=counts, items=[],
+               orders_authorized=False, monitoring_active=False)
+    if document is None:
+        return out
+    if (not isinstance(document, dict) or document.get("schema") != SCHEMA
+            or not isinstance(document.get("items"), dict)):
+        raise ValueError("invalid analysis projection")
+    _instant(document.get("generated_at"))
+    out["generated_at"] = document["generated_at"]
+    for ticker in document["items"]:
+        if not isinstance(ticker, str) or not re.fullmatch(r"[A-Z0-9.^-]{1,20}", ticker):
+            raise ValueError("invalid queue ticker")
+        row = project(document, ticker, now=now)
+        review = row.get("review") or {}
+        summary = {key: row[key] for key in ("ticker", "name", "state", "prepared_at")}
+        summary.update({key: review.get(key) for key in
+                        ("reviewed_at", "valid_until", "verdict", "confidence")})
+        counts[row["state"]] += 1
+        out["items"].append(summary)
+    priority = {"review_expired": 0, "awaiting_review": 1, "reviewed": 2}
+    out["items"].sort(key=lambda row: (priority[row["state"]], _instant(row["prepared_at"]), row["ticker"]))
+    out["total"] = len(out["items"])
+    return out
+
+
 def _download():
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
         raise ValueError("storage not configured")
@@ -169,16 +199,22 @@ class handler(BaseHTTPRequestHandler):
             return _write(self, 401, {"error": "unauthorized", "reason": reason})
         try:
             query = parse_qs(urlparse(self.path).query, keep_blank_values=True, max_num_fields=4)
+            queue = "view" in query
+            if queue and (query["view"] != ["queue"] or set(query) != {"view"}):
+                return _write(self, 400, {"error": "invalid_view"})
             values = query.get("ticker", [])
-            if len(values) != 1 or not re.fullmatch(r"[A-Za-z0-9.^-]{1,20}", values[0]):
+            if not queue and (len(values) != 1 or not re.fullmatch(r"[A-Za-z0-9.^-]{1,20}", values[0])):
                 raise ValueError("invalid ticker")
-            ticker = values[0].upper()
+            ticker = values[0].upper() if not queue else None
         except ValueError:
             return _write(self, 400, {"error": "invalid_ticker"})
         try:
             document = _download()
-            body = (dict(schema=SCHEMA, ticker=ticker, state="not_reviewed", orders_authorized=False,
-                         monitoring_active=False) if document is None else project(document, ticker))
+            if queue:
+                body = project_queue(document)
+            else:
+                body = (dict(schema=SCHEMA, ticker=ticker, state="not_reviewed", orders_authorized=False,
+                             monitoring_active=False) if document is None else project(document, ticker))
         except (requests.RequestException, ValueError, TypeError, KeyError):
             _logger.warning("analysis review unavailable: storage or projection validation failed")
             return _write(self, 503, {"error": "analysis_review_unavailable"})

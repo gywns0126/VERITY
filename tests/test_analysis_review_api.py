@@ -190,3 +190,128 @@ def test_success_normalizes_case_and_does_not_mutate(authenticated, monkeypatch)
     assert request.status == 200 and request.body["ticker"] == "MSFT"
     assert request.response_headers["Cache-Control"] == "no-store"
     assert data == before
+
+
+@pytest.mark.parametrize("query", ["view=queue", "view=unknown&ticker=MSFT"])
+def test_queue_auth_first(monkeypatch, query):
+    monkeypatch.setattr(api, "_authorize", lambda headers: (False, "unauthorized"))
+    download = Mock(side_effect=AssertionError("must not read storage"))
+    monkeypatch.setattr(api, "_download", download)
+    request = Request("/api/analysis_review?" + query)
+    api.handler.do_GET(request)
+    assert request.status == 401
+    assert request.response_headers["Cache-Control"] == "no-store"
+    download.assert_not_called()
+
+
+@pytest.mark.parametrize("query", ["view=", "view=other", "view=queue&view=queue",
+                                    "view=queue&ticker=MSFT", "view=queue&ticker=",
+                                    "view=queue&limit=1"])
+def test_invalid_queue_query_never_downloads(authenticated, monkeypatch, query):
+    download = Mock()
+    monkeypatch.setattr(api, "_download", download)
+    request = Request("/api/analysis_review?" + query)
+    api.handler.do_GET(request)
+    assert request.status == 400
+    assert request.body == {"error": "invalid_view"}
+    assert request.response_headers["Cache-Control"] == "no-store"
+    download.assert_not_called()
+
+
+@pytest.mark.parametrize("missing", [True, False])
+def test_queue_empty_and_missing_storage(authenticated, monkeypatch, missing):
+    data = None if missing else dict(bundle(), items={})
+    monkeypatch.setattr(api, "_download", lambda: data)
+    request = Request("/api/analysis_review?view=queue")
+    api.handler.do_GET(request)
+    assert request.status == 200
+    assert request.body == {
+        "schema": "analysis-review-queue-v1",
+        "generated_at": None if missing else data["generated_at"],
+        "total": 0, "counts": {"awaiting_review": 0, "review_expired": 0, "reviewed": 0},
+        "items": [], "orders_authorized": False, "monitoring_active": False,
+    }
+    assert request.response_headers["Cache-Control"] == "no-store"
+
+
+def test_queue_order_counts_allowlist_and_single_clock(monkeypatch):
+    data = bundle()
+    template = data["items"].pop("MSFT")
+    for ticker in ("Z", "PENDING_B", "OLD", "PENDING_A", "LIVE"):
+        # Tickers use only the same canonical alphabet as the ticker endpoint.
+        ticker = ticker.replace("_", "-")
+        row = deepcopy(template)
+        row.update(ticker=ticker, name=ticker, raw_account="secret")
+        row["review"]["facts"] = {"account": "secret"}
+        if ticker.startswith("PENDING"):
+            row.update(state="awaiting_review", review=None)
+        elif ticker in ("Z", "OLD"):
+            row["review"]["valid_until"] = NOW.isoformat()
+        else:
+            row["state"] = "review_expired"  # Persisted state is not trusted.
+        if ticker == "OLD":
+            row["prepared_at"] = "2026-10-05T10:30:00Z"
+        data["items"][ticker] = row
+    before = deepcopy(data)
+    clock = Mock()
+    clock.now.return_value = NOW
+    clock.fromisoformat = datetime.fromisoformat
+    monkeypatch.setattr(api, "datetime", clock)
+    result = api.project_queue(data)
+    clock.now.assert_called_once_with(timezone.utc)
+    assert [s["ticker"] for s in result["items"]] == ["OLD", "Z", "PENDING-A", "PENDING-B", "LIVE"]
+    assert result["total"] == 5
+    assert result["counts"] == {"awaiting_review": 2, "review_expired": 2, "reviewed": 1}
+    keys = {"ticker", "name", "state", "prepared_at", "reviewed_at", "valid_until", "verdict", "confidence"}
+    assert all(set(row) == keys for row in result["items"])
+    assert all(result["items"][2][key] is None for key in ("reviewed_at", "valid_until", "verdict", "confidence"))
+    assert "secret" not in json.dumps(result)
+    assert data == before
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda d: d.update(schema="bad"),
+    lambda d: d.update(generated_at="bad"),
+    lambda d: d.update(items=[]),
+    lambda d: d["items"].update(BAD={}),
+    lambda d: d["items"].update({"../secret": deepcopy(d["items"]["MSFT"])}),
+    lambda d: d["items"]["MSFT"].update(ticker="AAPL"),
+    lambda d: d["items"]["MSFT"]["review"].update(valid_until="bad"),
+    lambda d: d["items"]["MSFT"]["sources"].update(total=9),
+])
+def test_queue_any_malformed_row_fails_whole_response(authenticated, monkeypatch, mutation):
+    data = bundle()
+    mutation(data)
+    monkeypatch.setattr(api, "_download", lambda: data)
+    request = Request("/api/analysis_review?view=queue")
+    api.handler.do_GET(request)
+    assert request.status == 503
+    assert request.body == {"error": "analysis_review_unavailable"}
+    assert request.response_headers["Cache-Control"] == "no-store"
+
+
+def test_queue_transport_failure_is_not_empty_queue(authenticated, monkeypatch):
+    monkeypatch.setattr(api, "_download", Mock(side_effect=api.requests.Timeout()))
+    request = Request("/api/analysis_review?view=queue")
+    api.handler.do_GET(request)
+    assert request.status == 503
+    assert request.response_headers["Cache-Control"] == "no-store"
+
+
+def test_queue_handler_uses_one_download_and_runtime_expiry(authenticated, monkeypatch):
+    data = bundle()
+    download = Mock(return_value=data)
+    monkeypatch.setattr(api, "_download", download)
+    clock = Mock()
+    clock.now.return_value = datetime(2026, 10, 8, tzinfo=timezone.utc)
+    clock.fromisoformat = datetime.fromisoformat
+    monkeypatch.setattr(api, "datetime", clock)
+    request = Request("/api/analysis_review?view=queue")
+    api.handler.do_GET(request)
+    assert request.status == 200
+    assert request.body["items"][0]["state"] == "review_expired"
+    assert request.body["counts"]["review_expired"] == request.body["total"] == 1
+    assert request.body["schema"] == "analysis-review-queue-v1"
+    assert request.response_headers["Cache-Control"] == "no-store"
+    download.assert_called_once_with()
+    clock.now.assert_called_once_with(timezone.utc)
