@@ -15,7 +15,7 @@ name: kr-company-facts-backfill
 # 자가완주: 매 run 축별 LIMIT 만큼만 채우고 다음 run 이 이어받는다. 미보유 종목만 조회하므로
 #   완주 후 사실상 no-op(신규 상장·사업연도 전환 시 자동 재개). 코너 1,274종 기준 약 1주.
 #
-# 7축 audit: env=DART_API_KEY 만 · push trigger 없음(data/ 커밋뿐 = RULE 2 자동 skip) ·
+# 7축 audit: 수집=DART_API_KEY, 공개 발행=VERCEL_BLOB_TOKEN · push trigger 없음(data/ 커밋뿐 = RULE 2 자동 skip) ·
 #   전용 concurrency group · cron 일1(silent skip 저위험) · KIS 무관(RULE 1) ·
 #   pip requirements.txt(DartScout→stock_data→yfinance 체인) · N=2 = manual + 다음 scheduled.
 #
@@ -112,7 +112,7 @@ jobs:
             prior = json.load(source, object_pairs_hook=unique_object)
           if not isinstance(prior, dict):
             raise ValueError('prior catalog must be an object')
-          fields = ('contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts')
+          fields = ('contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts', 'annual_customer_tables')
           print('yes' if any(field in prior for field in fields) else 'no')
           PY
           )"
@@ -182,6 +182,40 @@ jobs:
               summary.write(f"| {expected_type} | {counts[0]} | {counts[1]} | {counts[2]} | {counts[3]} | {counts[4]} | {state} |\n")
           PY
 
+      - name: Capture bounded annual customer tables
+        id: annual_capture
+        if: steps.automatic_evidence.outputs.source_access_stop != 'true'
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: |
+          ANNUAL_CAPTURE_ROOT="$(mktemp -d "$RUNNER_TEMP/member-map-annual.XXXXXX")"
+          ANNUAL_CAPTURE_DIR="$ANNUAL_CAPTURE_ROOT/capture"
+          printf 'ANNUAL_CAPTURE_DIR=%s\n' "$ANNUAL_CAPTURE_DIR" >> "$GITHUB_ENV"
+          python3 scripts/member-map/capture-annual-customer-tables.py \
+            --source-dir data --output-dir "$ANNUAL_CAPTURE_DIR" \
+            --limit 3 --fetch-public --apply-local
+          python3 - "$ANNUAL_CAPTURE_DIR/manifest.json" "$GITHUB_OUTPUT" "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding='utf-8') as source:
+            manifest = json.load(source)
+          if manifest.get('schema') != 'local-public-annual-customer-capture-v1':
+            raise ValueError('annual capture manifest contract mismatch')
+          counts = {key: manifest.get(key) for key in ('available', 'selected', 'attempted', 'parsed', 'not_attempted', 'public_gets')}
+          if any(type(value) is not int or value < 0 for value in counts.values()):
+            raise ValueError('annual capture counts invalid')
+          if not (counts['parsed'] <= counts['attempted'] <= counts['selected'] <= 3
+                  and counts['selected'] <= counts['available'] and counts['public_gets'] <= 3
+                  and counts['not_attempted'] == counts['selected'] - counts['attempted']):
+            raise ValueError('annual capture count bounds invalid')
+          stopped = manifest.get('stopped') == 'source-access-or-rate-limit'
+          state = 'source-access-or-rate-limit' if stopped else 'partial' if counts['parsed'] < counts['selected'] else 'selected-set-parsed'
+          with open(sys.argv[2], 'a', encoding='utf-8') as output:
+            output.write(f"source_access_stop={'true' if stopped else 'false'}\n")
+          with open(sys.argv[3], 'a', encoding='utf-8') as summary:
+            summary.write(f"\nAnnual tables: {counts}; state={state}. Parsed reports do not imply matched customer relationships.\n")
+          print(f"annual tables: {counts}; state={state}")
+          PY
+
       - name: Upload public capture manifests
         uses: actions/upload-artifact@v4
         with:
@@ -189,6 +223,7 @@ jobs:
           path: |
             ${{ env.CONTRACT_CAPTURE_DIR }}/manifest.json
             ${{ env.TERMINATION_CAPTURE_DIR }}/manifest.json
+            ${{ env.ANNUAL_CAPTURE_DIR }}/manifest.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -205,6 +240,7 @@ jobs:
                    data/dart_cb_bw_cache.json \
                    data/chain_snippets.json \
                    data/member_map_auto_evidence.json \
+                   data/member_map_annual_capture_attempts.json \
                    data/kr_lynch_class.json; do
             git add "$f" 2>/dev/null || echo "::notice::$f 없음(이번 run 미산출)"
           done
@@ -219,7 +255,7 @@ jobs:
           exit 1
 
       - name: Fail stopped public capture after preserving successful source rows
-        if: steps.automatic_evidence.outputs.source_access_stop == 'true'
+        if: steps.automatic_evidence.outputs.source_access_stop == 'true' || steps.annual_capture.outputs.source_access_stop == 'true'
         run: |
           echo "::error::Public source access or rate-limit stop; successful parsed rows were retained, but publication must not proceed."
           exit 1

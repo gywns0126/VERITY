@@ -40,3 +40,40 @@ for (const stop of [false,true]) test('executes actual workflow shell; source st
   assert.match(fs.readFileSync(env.GITHUB_OUTPUT,'utf8'),new RegExp('source_access_stop='+stop));
   assert.match(fs.readFileSync(env.GITHUB_STEP_SUMMARY,'utf8'),stop?/not-attempted-after-contract-source-stop/:/selected-set-parsed/);
 });
+
+const annualStep = yaml.split('      - name: Capture bounded annual customer tables\n')[1].split('\n      - name:')[0];
+const annualScript = annualStep.split('        run: |\n')[1].split('\n').map(line => line.replace(/^          /, '')).join('\n');
+for (const state of ['parsed', 'empty', 'stopped', 'over-budget']) test('executes annual workflow shell; '+state, t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'map-annual-shell-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const env = {...process.env, RUNNER_TEMP: dir, GITHUB_ENV: path.join(dir, 'env'),
+    GITHUB_OUTPUT: path.join(dir, 'out'), GITHUB_STEP_SUMMARY: path.join(dir, 'summary'), CASE_STATE: state};
+  const stub = `python3() {
+    if [ "$1" != scripts/member-map/capture-annual-customer-tables.py ]; then command python3 "$@"; return; fi
+    shift
+    command python3 - "$@" <<'PY'
+import sys, os, json, pathlib
+args = sys.argv[1:]
+assert args[args.index('--limit')+1] == '3'
+assert '--fetch-public' in args and '--apply-local' in args
+out = pathlib.Path(args[args.index('--output-dir')+1]); out.mkdir()
+state = os.environ['CASE_STATE']
+selected = 0 if state == 'empty' else 3
+attempted = 1 if state == 'stopped' else selected
+row = dict(schema='local-public-annual-customer-capture-v1', available=10,
+           selected=selected, attempted=attempted, parsed=0 if state=='stopped' else selected,
+           not_attempted=selected-attempted, public_gets=4 if state=='over-budget' else attempted)
+if state == 'stopped': row['stopped']='source-access-or-rate-limit'
+(out/'manifest.json').write_text(json.dumps(row))
+PY
+  }\n`;
+  const result = cp.spawnSync('bash', ['-euo', 'pipefail', '-c', stub + annualScript], {cwd: dir, env, encoding:'utf8'});
+  if (state === 'over-budget') {
+    assert.notEqual(result.status, 0);
+    assert.equal(fs.existsSync(env.GITHUB_OUTPUT), false);
+  } else {
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(fs.readFileSync(env.GITHUB_OUTPUT, 'utf8'), new RegExp('source_access_stop='+(state==='stopped')));
+    assert.match(fs.readFileSync(env.GITHUB_STEP_SUMMARY, 'utf8'), /Parsed reports do not imply matched customer relationships/);
+  }
+});

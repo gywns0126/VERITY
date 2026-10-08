@@ -32,6 +32,10 @@ from .portfolio_contract_termination import attach_contract_terminations
 from .portfolio_capture_archive import retain_captured_documents
 from .portfolio_filing_excerpts import index_filing_excerpts, attach_parent_relationships
 from .portfolio_business_roles import index_business_roles, attach_business_relationships
+from .portfolio_annual_customer_tables import (
+    attach_annual_customer_table_relationships,
+    index_annual_customer_table_captures,
+)
 
 
 MAX_SYMBOLS = 30  # Analysis window, not a limit on a member's stored holdings.
@@ -61,6 +65,22 @@ class _ProjectedPublicIndexCache:
         catalog, archive = retain_captured_documents(public_documents.get(_AUTOMATIC_EVIDENCE_FILE),
             add_public_company_names(public_documents, projected["companies"]))
         by_id = {row["id"]: row for row in catalog}
+        auto_evidence = public_documents.get(_AUTOMATIC_EVIDENCE_FILE)
+        annual_captures = auto_evidence.get("annual_customer_tables", []) if type(auto_evidence) is dict else []
+        try:
+            annual_customer_tables = index_annual_customer_table_captures(
+                annual_captures, company_catalog=list(by_id.values())
+            )
+        except (TypeError, ValueError, UnicodeError):
+            # The strict evidence projector independently rejects malformed
+            # public artifacts; do not fail unrelated portfolio source joins.
+            annual_customer_tables = {
+                "relations": [], "by_company": [], "sources": [], "holds": [],
+                "coverage": {"input": 0, "captures_accepted": 0, "captures_rejected": 1,
+                             "customer_cells_examined": 0, "candidate_names": 0,
+                             "relationships": 0, "identity_holds": 0,
+                             "rejection_reasons": {"capture-rejected": 1}},
+            }
         return {
             "by_id": by_id,
             "coverage": projected["coverage"],
@@ -71,6 +91,7 @@ class _ProjectedPublicIndexCache:
             "business_materials": _business_material_index(public_documents, by_id),
             "contract_events": index_contract_events(public_documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values())),
             "filing_excerpts": index_filing_excerpts(public_documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values())),
+            "annual_customer_tables": annual_customer_tables,
         }
 
     def get(self, public_documents, revision):
@@ -437,6 +458,9 @@ def _automatic_evidence(public_documents, positions, public_index):
         projection = _add_business_materials(projection, business, positions, public_index["by_id"])
         projection = attach_business_relationships(projection, business["reported_roles"], positions)
         projection = attach_parent_relationships(projection, public_index["filing_excerpts"], positions)
+        projection = attach_annual_customer_table_relationships(
+            projection, public_index["annual_customer_tables"], positions
+        )
         if not _automatic_evidence_text_is_safe(projection):
             raise ValueError("automatic evidence text rejected")
         projection, response_records = _bound_automatic_evidence(projection)

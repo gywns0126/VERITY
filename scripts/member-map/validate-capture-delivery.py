@@ -14,6 +14,7 @@ CAPTURE_FIELDS = {
     "documentFamilies": "validate_family",
     "contract_terminations": "validate_contract_termination",
     "filing_excerpts": "validate_filing_excerpts",
+    "annual_customer_tables": "validate_annual_customer_capture",
 }
 FORBIDDEN_TEXT = (
     "/Users/", "\\Users\\", "/private/", "file://", "project-file:",
@@ -51,11 +52,13 @@ def _validators():
     from api.intelligence.portfolio_event_lineage import validate_family
     from api.intelligence.portfolio_contract_termination import validate_contract_termination
     from api.intelligence.portfolio_filing_excerpts import validate_filing_excerpts
+    from api.intelligence.portfolio_annual_customer_tables import validate_annual_customer_capture
     return {
         "contract_facts": validate_contract_fact,
         "documentFamilies": validate_family,
         "contract_terminations": validate_contract_termination,
         "filing_excerpts": validate_filing_excerpts,
+        "annual_customer_tables": validate_annual_customer_capture,
     }
 
 

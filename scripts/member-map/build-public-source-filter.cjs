@@ -18,7 +18,7 @@ const DEFAULT_OUTPUT = `output/member-map-integration-20260927/${PUBLIC_FILENAME
 const PUBLIC_SCOPE_MODE = 'published-automatic-evidence-catalog';
 const PUBLIC_SCOPE_NOTE = 'Generated from declared received source snapshots; source timestamps are reported separately and are not automatically reverified.';
 const MAX_PUBLIC_BYTES = 8 * 1024 * 1024;
-const CAPTURE_FIELDS = ['contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts'];
+const CAPTURE_FIELDS = ['contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts', 'annual_customer_tables'];
 const CAPTURE_VALIDATOR = path.join(__dirname, 'validate-capture-delivery.py');
 const INPUT_PATHS = {
   universe: 'data/universe_search.json',
