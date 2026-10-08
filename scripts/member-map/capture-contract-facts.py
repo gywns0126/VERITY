@@ -28,6 +28,7 @@ from api.intelligence.portfolio_evidence import _validate_artifact
 from api.intelligence.portfolio_company_names import add_public_company_names
 from api.intelligence.portfolio_contract_termination import parse_contract_termination, validate_contract_termination
 from api.intelligence.portfolio_filing_excerpts import validate_filing_excerpts
+from api.intelligence.portfolio_annual_customer_tables import validate_annual_customer_capture
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -35,7 +36,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError('public-redirect-refused')
 
 
-_CAPTURE_FIELDS = ('contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts')
+_CAPTURE_FIELDS = ('contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts', 'annual_customer_tables')
 _JSON_LIMIT = 8 * 1024 * 1024
 
 
@@ -99,7 +100,7 @@ def _validate_capture_fields(baseline, evidence):
     _validate_artifact(evidence)
     baseline = baseline if isinstance(baseline, dict) else {}
     for field, validator in zip(_CAPTURE_FIELDS,
-                                (validate_contract_fact, validate_family, validate_contract_termination, validate_filing_excerpts)):
+                                (validate_contract_fact, validate_family, validate_contract_termination, validate_filing_excerpts, validate_annual_customer_capture)):
         rows = evidence.get(field, [])
         prior = baseline.get(field, [])
         if not isinstance(rows, list) or not isinstance(prior, list):

@@ -18,6 +18,7 @@ test('daily public catalog refresh preserves validated captures and reports boun
     const failure = step('Fail stopped public capture after preserving successful source rows');
     const publish = step('Publish verified public evidence catalog');
     const manifests = step('Upload public capture manifests');
+    const annual = step('Capture bounded annual customer tables');
 
     const detect = build.indexOf('CAPTURE_FIELDS_PRESENT=');
     const buildCatalog = build.indexOf('node scripts/member-map/build-public-source-filter.cjs');
@@ -45,13 +46,18 @@ test('daily public catalog refresh preserves validated captures and reports boun
     assert.ok(workflow.indexOf('      - name: Commit\n') > workflow.indexOf('      - name: Build path-free automatic evidence catalog\n'));
     assert.ok(workflow.indexOf(failure) > workflow.indexOf(commit));
     assert.match(failure, /if: steps\.automatic_evidence\.outputs\.source_access_stop == 'true'/);
+    assert.match(failure, /steps\.annual_capture\.outputs\.source_access_stop == 'true'/);
     assert.match(failure, /exit 1/);
     assert.match(commit, /::error::push 실패/);
     assert.match(commit, /exit 1/);
+    assert.ok(commit.indexOf('for i in 1 2 3 4 5 6; do') < commit.indexOf('::error::push 실패'));
     assert.match(manifests, /actions\/upload-artifact@v4/);
     assert.match(manifests, /\$\{\{ env\.CONTRACT_CAPTURE_DIR \}\}\/manifest\.json/);
     assert.match(manifests, /\$\{\{ env\.TERMINATION_CAPTURE_DIR \}\}\/manifest\.json/);
+    assert.match(manifests, /\$\{\{ env\.ANNUAL_CAPTURE_DIR \}\}\/manifest\.json/);
     assert.doesNotMatch(manifests, /\.html|raw/i);
+    assert.ok(workflow.indexOf(manifests) > workflow.indexOf(build));
+    assert.ok(workflow.indexOf(manifests) < workflow.indexOf(commit));
     assert.ok(workflow.indexOf(publish) > workflow.indexOf(failure));
     assert.match(publish, /BLOB_READ_WRITE_TOKEN: \$\{\{ secrets\.VERCEL_BLOB_TOKEN \}\}/);
     assert.match(publish, /if \[ -z "\$\{BLOB_READ_WRITE_TOKEN:-\}" \]; then[\s\S]*exit 1/);
@@ -60,4 +66,13 @@ test('daily public catalog refresh preserves validated captures and reports boun
     assert.doesNotMatch(publish, /bulk|delete/i);
     assert.doesNotMatch(workflow, /uses: \.\/\.github\/actions\/publish-data/);
     assert.doesNotMatch(build, /--allow-llm|member portfolio|holdings|private ticker/i);
+    assert.match(build, /'annual_customer_tables'/);
+    assert.ok(workflow.indexOf(annual) > workflow.indexOf(build));
+    assert.ok(workflow.indexOf(annual) < workflow.indexOf(manifests));
+    assert.match(annual, /if: steps\.automatic_evidence\.outputs\.source_access_stop != 'true'/);
+    assert.match(annual, /--limit 3 --fetch-public --apply-local/);
+    assert.match(annual, /DART_API_KEY: \$\{\{ secrets\.DART_API_KEY \}\}/);
+    assert.match(annual, /counts\['public_gets'\] <= 3/);
+    assert.match(commit, /data\/member_map_annual_capture_attempts\.json/);
+    assert.doesNotMatch(annual, /--allow-llm|tokenP|oauth2/);
 });

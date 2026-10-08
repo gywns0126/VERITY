@@ -18,6 +18,8 @@ import re
 import unicodedata
 from typing import Any, Literal, Mapping, Sequence, TypedDict
 
+from .portfolio_annual_customer_tables import validate_annual_customer_capture
+
 
 SUPPORTED_SOURCE_FILES = ("member_map_auto_evidence.json",)
 MAX_PORTFOLIO_SYMBOLS = 30
@@ -288,7 +290,9 @@ def _validate_source(source_id: str, source: Any) -> None:
 
 
 def _validate_artifact(artifact: Any) -> None:
-    if not _plain_mapping(artifact) or set(artifact) - {"documentFamilies", "contract_facts", "contract_terminations", "filing_excerpts"} != _TOP_LEVEL_FIELDS:
+    optional_fields = {"documentFamilies", "contract_facts", "contract_terminations",
+                       "filing_excerpts", "annual_customer_tables"}
+    if not _plain_mapping(artifact) or set(artifact) - optional_fields != _TOP_LEVEL_FIELDS:
         raise PortfolioEvidenceError("automatic evidence contract rejected")
     # Optional lineage is gated independently, never promoted to a relationship.
     if "documentFamilies" in artifact and (type(artifact["documentFamilies"]) is not list
@@ -305,6 +309,15 @@ def _validate_artifact(artifact: Any) -> None:
     if "filing_excerpts" in artifact and (type(artifact["filing_excerpts"]) is not list
                                           or len(artifact["filing_excerpts"]) > 1000):
         raise PortfolioEvidenceError("automatic evidence contract rejected")
+    if "annual_customer_tables" in artifact:
+        captures = artifact["annual_customer_tables"]
+        if type(captures) is not list or len(captures) > 1000:
+            raise PortfolioEvidenceError("automatic evidence contract rejected")
+        try:
+            for capture in captures:
+                validate_annual_customer_capture(capture)
+        except (TypeError, ValueError, UnicodeError):
+            raise PortfolioEvidenceError("automatic evidence contract rejected") from None
     if artifact.get("schemaVersion") != 1:
         raise PortfolioEvidenceError("automatic evidence contract rejected")
     scope = artifact.get("scope")
