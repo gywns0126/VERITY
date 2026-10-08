@@ -37,8 +37,11 @@ def test_macro_uses_current_investor_portfolio_shape():
 def test_workspace_owns_the_single_selected_ticker():
     workspace = read("operator-web/app/components/Workspace.tsx")
     panel = read("operator-web/app/components/AnalysisReviewPanel.tsx")
+    facts = read("operator-web/app/components/StockFactsPanel.tsx")
     assert workspace.count('<AnalysisReviewPanel key={ticker} ticker={ticker} />') == 1
     assert "AnalysisReviewPanel({ ticker }" in panel
+    assert '<StockFactsPanel key={ticker} ticker={ticker} />' in panel
+    assert "StockFactsPanel({ ticker }" in facts
     assert '<TriSynthesisPanel' not in workspace
     assert 'window.addEventListener("verity-ticker", onTicker)' in workspace
 
