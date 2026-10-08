@@ -53,7 +53,7 @@ export default function WatchTable() {
         <div style={{ ...cardStyle(c, RAIL_PAD), fontFamily: FONT, display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                    <span style={{ ...CARD_TITLE, color: c.ink }}>관심 · 최근 검색</span>
+                    <span style={{ ...CARD_TITLE, color: c.ink }}>최근 검색 · 국내 시세</span>
                     <span style={{ width: 5, height: 5, borderRadius: "50%", background: c.green }} />
                 </div>
                 {asof ? <span style={{ fontSize: 10, color: c.faint, ...NUM }}>{asof}</span> : null}

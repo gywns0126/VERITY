@@ -238,12 +238,30 @@ body {
     padding: 6px;
     border-radius: 8px;
 }
+.af-review-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 6px;
+    border: 0;
+    border-top: 1px solid;
+    border-radius: 8px;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
 .af-console-disclosure > summary:focus-visible {
     outline: 3px solid rgba(108, 92, 231, 0.42);
     outline-offset: 2px;
 }
 @media (hover: hover) {
     .af-console-disclosure > summary:hover,
+    .af-review-row:hover,
     .af-portfolio-ticker:hover {
         background: rgba(128, 128, 128, 0.08);
     }

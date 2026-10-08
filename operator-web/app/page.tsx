@@ -30,6 +30,8 @@ import BalanceCard from "./components/BalanceCard"
 import CandidatesDiff from "./components/CandidatesDiff"
 import MultibaggerPanel from "./components/MultibaggerPanel"
 import PersonalPortfolio from "./components/PersonalPortfolio"
+import ReviewQueue from "./components/ReviewQueue"
+import SavedCompanies from "./components/SavedCompanies"
 
 export default function Home() {
     const dark = useDark()
@@ -161,7 +163,9 @@ export default function Home() {
                     </section>
 
                     <aside className="af-rail">
-                        <PanelBoundary name="관심"><WatchTable /></PanelBoundary>
+                        <PanelBoundary name="재검토 목록"><ReviewQueue /></PanelBoundary>
+                        <PanelBoundary name="관심 기업"><SavedCompanies /></PanelBoundary>
+                        <PanelBoundary name="최근 검색"><WatchTable /></PanelBoundary>
                         <details className="af-console-disclosure" style={{ background: c.card, borderRadius: 16, padding: 12 }}>
                             <summary>시장 지표 · 뉴스</summary>
                             <div className="af-console-stack"><MarketStrip explain={explain} /><NewsTicker items={newsItems} /></div>
