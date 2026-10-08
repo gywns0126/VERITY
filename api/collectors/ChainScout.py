@@ -205,12 +205,14 @@ def scout_major_customer_snippets(
     rcept_no, report_nm, rcept_dt = picked
     try:
         raw = fetch_document_archive(rcept_no)
-    except Exception as e:
+    except Exception:
         return {
             "ticker": ticker.split(".")[0],
             "corp_code": corp_code,
             "rcept_no": rcept_no,
-            "error": f"document.xml 실패: {e}",
+            # Request exceptions may embed the URL and its crtfc_key query.
+            # This payload can be persisted; never retain provider error text.
+            "error": "document.xml 요청 실패",
         }
 
     plain = _archive_to_plain_text(raw)
