@@ -74,11 +74,20 @@ def _cors_headers(h):
         from api.cors_helper import resolve_origin  # type: ignore
     except Exception:
         resolve_origin = lambda _o: ""  # noqa: E731
-    origin = resolve_origin(h.headers.get("Origin") or "")
+    request_origin = h.headers.get("Origin") or ""
+    origin = resolve_origin(request_origin)
+    # AlphaConsole's account-shared groups only; do not broaden the shared
+    # allowlist or order API. JWT verification and ownership checks still apply.
+    operator_origin = request_origin == "https://alphanest-psi.vercel.app"
+    methods = "GET, POST, PATCH, DELETE, OPTIONS"
+    if operator_origin:
+        methods = "GET, POST, DELETE, OPTIONS"
+        requested = h.headers.get("Access-Control-Request-Method", "") if h.command == "OPTIONS" else h.command
+        origin = request_origin if requested in {"GET", "POST", "DELETE"} else ""
     if origin:
         h.send_header("Access-Control-Allow-Origin", origin)
         h.send_header("Vary", "Origin")
-    h.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+    h.send_header("Access-Control-Allow-Methods", methods)
     h.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 
