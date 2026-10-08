@@ -206,6 +206,51 @@ body {
     gap: 12px;
     align-items: start;
 }
+/* 개인 콘솔: 판단/포트폴리오를 먼저, 보조 자료는 오른쪽으로. */
+.af-console-home {
+    grid-template-columns: minmax(0, 1fr) 320px;
+}
+.af-console-disclosure > summary {
+    cursor: pointer;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.af-console-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    padding-top: 12px;
+}
+.af-portfolio-ticker {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    min-height: 44px;
+    padding: 6px;
+    border-radius: 8px;
+}
+.af-console-disclosure > summary:focus-visible {
+    outline: 3px solid rgba(108, 92, 231, 0.42);
+    outline-offset: 2px;
+}
+@media (hover: hover) {
+    .af-console-disclosure > summary:hover,
+    .af-portfolio-ticker:hover {
+        background: rgba(128, 128, 128, 0.08);
+    }
+}
+@media (max-width: 1240px) {
+    .af-console-home { grid-template-columns: 1fr; }
+}
 @media (max-width: 640px) {
     .af-duo,
     .af-hero2 {

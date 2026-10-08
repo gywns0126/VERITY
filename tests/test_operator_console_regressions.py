@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,9 +36,42 @@ def test_macro_uses_current_investor_portfolio_shape():
 
 def test_workspace_owns_the_single_selected_ticker():
     workspace = read("operator-web/app/components/Workspace.tsx")
-    review = read("operator-web/app/components/AnalysisReviewPanel.tsx")
-    panel = read("operator-web/app/components/StockFactsPanel.tsx")
-    assert '<AnalysisReviewPanel key={ticker} ticker={ticker} />' in workspace
-    assert "AnalysisReviewPanel({ ticker }" in review
-    assert '<StockFactsPanel key={ticker} ticker={ticker} />' in review
-    assert "StockFactsPanel({ ticker }" in panel
+    panel = read("operator-web/app/components/AnalysisReviewPanel.tsx")
+    facts = read("operator-web/app/components/StockFactsPanel.tsx")
+    assert workspace.count('<AnalysisReviewPanel key={ticker} ticker={ticker} />') == 1
+    assert "AnalysisReviewPanel({ ticker }" in panel
+    assert '<StockFactsPanel key={ticker} ticker={ticker} />' in panel
+    assert "StockFactsPanel({ ticker }" in facts
+    assert '<TriSynthesisPanel' not in workspace
+    assert 'window.addEventListener("verity-ticker", onTicker)' in workspace
+
+
+def test_saved_review_precedes_charts_and_order_ticket():
+    src = read("operator-web/app/components/Workspace.tsx")
+    review = src.index('<AnalysisReviewPanel ')
+    for component in ('<ProChart ', '<TVChart ', '<OrderTicket '):
+        assert review < src.index(component)
+
+
+def test_actual_portfolio_is_separate_from_collapsed_vams_group():
+    src = read("operator-web/app/page.tsx")
+    simulation = re.search(r'<details\b[^>]*data-console-simulation="v1"[^>]*>[\s\S]*?</details>', src)
+    assert simulation is not None
+    group = simulation.group()
+    assert not re.search(r'\bopen(?:\s|=|>)', group.split('>', 1)[0])
+    assert "VAMS 모의 운용 · 실제 계좌와 별개" in group
+    for component in ('<AccountHud ', '<HoldingsTable ', '<Blotter ', '<PicksTable '):
+        assert component in group
+        assert src.count(component) == group.count(component)
+    assert '<PersonalPortfolio />' not in group
+    assert src.index('<PersonalPortfolio />') < simulation.start()
+
+
+def test_personal_portfolio_uses_existing_ticker_selection_button():
+    src = read("operator-web/app/components/PersonalPortfolio.tsx")
+    assert 'import { selectTicker } from "@/lib/types"' in src
+    button = re.search(r'<button\b[^>]*className="af-portfolio-ticker"[\s\S]*?</button>', src)
+    assert button is not None
+    assert 'type="button"' in button.group()
+    assert 'aria-label=' in button.group()
+    assert 'selectTicker(row.ticker, row.name)' in button.group()
