@@ -19,13 +19,13 @@
       "last_update_kst": "2026-10-08T16:01:03.737830+09:00",
       "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 689,
+      "line_count": 693,
       "last_entry": {
-        "ts": "2026-10-07T22:49:33.542976+09:00",
+        "ts": "2026-10-08T16:00:49.461426+09:00",
         "step": "f_sector_diversified",
         "mode": "SHADOW",
-        "input_n": 16,
-        "passed_n": 13
+        "input_n": 100,
+        "passed_n": 25
       }
     },
     {
@@ -39,9 +39,9 @@
       "last_update_kst": "2026-10-08T16:01:03.407826+09:00",
       "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 14062,
+      "line_count": 16817,
       "last_entry": {
-        "ts": "2026-10-07T22:50:37.193516+09:00"
+        "ts": "2026-10-08T16:21:43.131012+09:00"
       }
     },
     {
@@ -97,10 +97,10 @@
       "status": "fresh",
       "diagnostics": {
         "ok": true,
-        "candidates_count": 25,
-        "kr_count": 10,
+        "candidates_count": 45,
+        "kr_count": 30,
         "us_count": 15,
-        "elapsed_s": 113.45,
+        "elapsed_s": 2901.38,
         "used_prev_snapshot": false
       }
     },
@@ -115,13 +115,15 @@
       "last_update_kst": "2026-10-08T16:01:02.903821+09:00",
       "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 1471,
+      "line_count": 1472,
       "last_entry": {
-        "mode": "full_us",
+        "mode": "universe_scan",
         "ramp_up_stage": 5000,
-        "execution_time_seconds": 0.0,
-        "fail_triggers": [],
-        "yfinance_failure_rate": 0.0
+        "execution_time_seconds": 2900.65,
+        "fail_triggers": [
+          "execution_time_50pct_overrun"
+        ],
+        "yfinance_failure_rate": 0.0024
       }
     },
     {
