@@ -227,7 +227,13 @@ export default function Workspace({
                 ) : null}
             </div>
 
-            {/* 종목 인텔리전스 — 점수·팩터·수급·보유 (PM 2026-08-05 "최상급 오퍼레이터 급 정보") */}
+            {/* 저장된 판단을 먼저 표시. 종목 선택·만료·오류 경계는 기존 패널이 소유한다. */}
+            <AnalysisReviewPanel key={ticker} ticker={ticker} />
+
+            <details key={`tools-${ticker}`} className="af-console-disclosure">
+                <summary>종목 상세 · 차트{isKR ? " · 호가 · 주문" : ""}</summary>
+                <div className="af-console-stack">
+            <div style={{ fontSize: 11, color: c.faint }}>기존 산식 신호 · VAMS 모의 보유 (위 저장된 검토와 별개)</div>
             <IntelStrip c={c} ticker={ticker} recs={recs} holdings={holdings} live={typeof live === "number" ? live : null} />
 
             {/* 종목 캔들 — 분/일/주/월 (KIS 실데이터) */}
@@ -312,10 +318,8 @@ export default function Workspace({
                 </div>
             ) : null}
 
-            {/* 저장된 분석 검토 — 현재 사실은 사용자 요청으로 별도 조회 */}
-            <div style={{ borderTop: `1px solid ${c.line}`, paddingTop: 12 }}>
-                <AnalysisReviewPanel key={ticker} ticker={ticker} />
-            </div>
+                </div>
+            </details>
         </div>
     )
 }

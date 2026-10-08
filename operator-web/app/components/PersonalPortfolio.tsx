@@ -5,6 +5,7 @@ import { API_BASE } from "@/lib/api"
 import { authHeaders } from "@/lib/auth"
 import { useDark, palette } from "@/lib/theme"
 import { useDataRefreshEpoch } from "@/lib/useDataRefreshEpoch"
+import { selectTicker } from "@/lib/types"
 
 type Holding = { ticker: string; name: string; reported_shares: number | null; target_shares: number | null; target_krw: number | null; target_pct: number | null }
 type PersonalView = {
@@ -75,7 +76,7 @@ export default function PersonalPortfolio() {
     const monitorOld = !Number.isFinite(monitorTime) || Date.now() - monitorTime > 3_600_000
     return <section data-personal-portfolio="v1" style={{ background: c.card, border: `1px solid ${c.line}`, borderRadius: 14, padding: 16, color: c.ink }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-            <div><strong style={{ fontSize: 16 }}>내 운용안</strong><div style={{ color: c.faint, fontSize: 11, marginTop: 4 }}>{view?.account_label || "개인 포트폴리오"} · {view?.horizon_label || "저장된 판단 확인"}</div></div>
+            <div><strong style={{ fontSize: 16 }}>내 포트폴리오 · 확인 보유와 제안</strong><div style={{ color: c.faint, fontSize: 11, marginTop: 4 }}>{view?.account_label || "개인 포트폴리오"} · {view?.horizon_label || "저장된 판단 확인"}</div></div>
             <button type="button" onClick={() => setRetry(n => n + 1)} style={{ background: "transparent", color: c.ink, border: `1px solid ${c.line}`, borderRadius: 8, padding: "6px 10px", cursor: "pointer", flexShrink: 0 }}>새로고침</button>
         </div>
         {state !== "ok" && <p role="status" style={{ color: c.sub, fontSize: 12 }}>
@@ -88,7 +89,14 @@ export default function PersonalPortfolio() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 390 }}>
                     <thead><tr style={{ color: c.faint, textAlign: "right" }}><th style={{ textAlign: "left", padding: "8px 4px" }}>종목</th><th>확인 보유</th><th>제안 수량 / 금액</th><th>목표 비중</th></tr></thead>
                     <tbody>{view.rows.map(row => <tr key={row.ticker} style={{ borderTop: `1px solid ${c.line}` }}>
-                        <td style={{ padding: "9px 4px" }}>{row.name}<span style={{ color: c.faint, fontSize: 10, marginLeft: 6 }}>{row.ticker}</span></td>
+                        <td style={{ padding: "9px 4px" }}><button type="button" className="af-portfolio-ticker"
+                            aria-label={`${row.name || row.ticker} 분석 보기`}
+                            onClick={() => {
+                                selectTicker(row.ticker, row.name)
+                                document.getElementById("console-analysis")?.scrollIntoView({ block: "start", behavior: "instant" })
+                            }}>
+                            {row.name || row.ticker}<span style={{ color: c.faint, fontSize: 10, marginLeft: 6 }}>{row.ticker}</span>
+                        </button></td>
                         <td style={{ textAlign: "right" }}>{row.reported_shares === null ? "미확인" : `${number(row.reported_shares)}주`}</td>
                         <td style={{ textAlign: "right" }}>{row.target_shares !== null ? `${number(row.target_shares)}주` : amount(row.target_krw)}</td>
                         <td style={{ textAlign: "right" }}>{row.target_pct === null ? "—" : `${row.target_pct.toFixed(1)}%`}</td>

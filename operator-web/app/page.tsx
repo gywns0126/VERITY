@@ -133,42 +133,39 @@ export default function Home() {
             <TopBar active="terminal" />
 
             <div className="af-frame" style={{ maxWidth: 1560, margin: "0 auto", padding: "12px 18px 10px", boxSizing: "border-box" }}>
-                {/* R1 계좌 헤드업 + R2 P0 + R3 시장 — 상단 고정 구역 */}
-                <AccountHud vams={pf?.vams} status={pfStatus} updatedAt={pf?.updated_at} />
-                <P0Line alerts={alerts} holdTickers={holdT} />
-                <MarketStrip explain={explain} />
-                <NewsTicker items={newsItems} />
-
-                {/* 3열 — 각 컬럼 내부 스크롤 (토스식 섹션 고정) */}
-                <div className="af-term">
-                    <aside className="af-rail">
-                        <PanelBoundary name="보유">
-                            <HoldingsTable holdings={holdings} status={pfStatus} />
-                        </PanelBoundary>
-                        <PanelBoundary name="관심">
-                            <WatchTable />
-                        </PanelBoundary>
-                        <PanelBoundary name="실계좌">
-                            <BalanceCard />
-                        </PanelBoundary>
-                    </aside>
-
+                {/* 판단·실제 확인 보유 우선. VAMS는 별도 접힘 구역으로 보존한다. */}
+                <div className="af-term af-console-home">
                     <section className="af-center">
                         <PanelBoundary name="개인 운용안">
                             <PersonalPortfolio />
                         </PanelBoundary>
+                        <div id="console-analysis" style={{ scrollMarginTop: 16 }}>
                         <PanelBoundary name="워크스페이스">
                             <Workspace defaultTicker={holdT.find((t) => /^\d{6}$/.test(t)) || "005930"} names={names} recs={recs} holdings={holdings} />
                         </PanelBoundary>
-                        <PanelBoundary name="블로터">
-                            <Blotter />
-                        </PanelBoundary>
-                        <PanelBoundary name="추천">
-                            <PicksTable recs={recs} status={pfStatus} />
-                        </PanelBoundary>
+                        </div>
+                        <details className="af-console-disclosure" style={{ background: c.card, borderRadius: 16, padding: 12 }}>
+                            <summary>실계좌 조회</summary>
+                            <div className="af-console-stack"><PanelBoundary name="실계좌"><BalanceCard /></PanelBoundary></div>
+                        </details>
+                        <details className="af-console-disclosure" data-console-simulation="v1" style={{ background: c.card, borderRadius: 16, padding: 12 }}>
+                            <summary>VAMS 모의 운용 · 실제 계좌와 별개</summary>
+                            <div className="af-console-stack">
+                                <AccountHud vams={pf?.vams} status={pfStatus} updatedAt={pf?.updated_at} />
+                                <P0Line alerts={alerts} holdTickers={holdT} />
+                                <PanelBoundary name="모의 보유"><HoldingsTable holdings={holdings} status={pfStatus} /></PanelBoundary>
+                                <PanelBoundary name="블로터"><Blotter /></PanelBoundary>
+                                <PanelBoundary name="산식 후보"><PicksTable recs={recs} status={pfStatus} /></PanelBoundary>
+                            </div>
+                        </details>
                     </section>
 
                     <aside className="af-rail">
+                        <PanelBoundary name="관심"><WatchTable /></PanelBoundary>
+                        <details className="af-console-disclosure" style={{ background: c.card, borderRadius: 16, padding: 12 }}>
+                            <summary>시장 지표 · 뉴스</summary>
+                            <div className="af-console-stack"><MarketStrip explain={explain} /><NewsTicker items={newsItems} /></div>
+                        </details>
                         <RailTitle t="거시 — 숲" n="레짐 · 지정학 · 속보" ink={c.ink} faint={c.faint} />
                         <PanelBoundary name="거시">
                             <MacroPanel data={pf} />
