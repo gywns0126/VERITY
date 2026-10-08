@@ -1,17 +1,13 @@
 {
   "available": true,
   "fear_and_greed": {
-    "ok": true,
-    "value": 64,
-    "label": "Greed",
-    "prev_value": 71,
-    "change": -7,
-    "signal": "greed"
+    "ok": false,
+    "error": "HTTPSConnectionPool(host='api.alternative.me', port=443): Max retries exceeded with url: /fng/?limit=2&format=json (Caus"
   },
   "funding_rate": {
     "ok": true,
-    "rate": 6.22325710678e-05,
-    "rate_pct": 0.0062,
+    "rate": 5.61681279404e-05,
+    "rate_pct": 0.0056,
     "prev_rate_pct": null,
     "signal": "neutral",
     "timestamp": "1791504000000",
@@ -19,40 +15,40 @@
   },
   "kimchi_premium": {
     "ok": true,
-    "premium_pct": 2.54,
-    "upbit_krw": 111754000.0,
-    "global_usd": 81113.5,
-    "binance_usd": 81113.5,
-    "usdt_krw": 1343.5699462890625,
+    "premium_pct": 2.41,
+    "upbit_krw": 111714000.0,
+    "global_usd": 81280.6,
+    "binance_usd": 81280.6,
+    "usdt_krw": 1342.0699462890625,
     "signal": "normal",
     "source": "upbit+bybit/okx"
   },
   "btc_nasdaq_corr": {
     "ok": true,
-    "correlation": -0.229,
+    "correlation": -0.233,
     "period_days": 30,
     "signal": "decoupled",
-    "btc_last_price": 81109.9
+    "btc_last_price": 81274.1
   },
   "stablecoin_mcap": {
     "ok": true,
-    "total_mcap_usd": 257470160511.37775,
-    "total_mcap_b": 257.5,
+    "total_mcap_usd": 257414007553.09875,
+    "total_mcap_b": 257.4,
     "usdt_mcap_b": 184.0,
     "usdc_mcap_b": 73.5
   },
-  "ok_count": 5,
+  "ok_count": 4,
   "total": 5,
   "composite": {
-    "score": 54,
+    "score": 50,
     "label": "중립",
     "risk_level": "normal",
     "signals": []
   },
-  "collected_at": "2026-10-09T01:03:11+09:00",
+  "collected_at": "2026-10-09T01:32:36+09:00",
   "schema_version": "v0",
   "diagnostics": {
-    "ok_count": 5,
+    "ok_count": 4,
     "used_prev_snapshot": false
   }
 }
