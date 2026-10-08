@@ -471,10 +471,10 @@
    "market_clock_state": "preopen_clock"
   }
  },
- "last_date": "2026-10-07",
- "last_price_fingerprint": "4fd548ebb37715398c1b2543d62af5d7017aeff1de91fca242530b488f883cab",
- "market_sessions": 21,
- "sessions_since_rebalance": 20,
+ "last_date": "2026-10-08",
+ "last_price_fingerprint": "013b534f7edbc4a08e130e592188ecbca9bd4b570228a052c859e88a25b1a651",
+ "market_sessions": 22,
+ "sessions_since_rebalance": 21,
  "last_rebalance_date": "2026-09-02",
  "trades": 0,
  "realized_pnl": 0.0,
@@ -668,6 +668,15 @@
    "cost_paid": 0.0,
    "benchmark_date": "20261002",
    "benchmark_close": 7003.74
+  },
+  {
+   "date": "2026-10-08",
+   "equity": 10000000.0,
+   "positions_n": 0,
+   "trades_total": 0,
+   "cost_paid": 0.0,
+   "benchmark_date": "20261006",
+   "benchmark_close": 6941.39
   }
  ],
  "benchmark_start": {
@@ -685,12 +694,14 @@
  "target_exposure": 0.0763,
  "price_snapshot": {
   "source": "portfolio.recommendations.current_price",
-  "as_of": "2026-10-08T06:34:38+09:00",
-  "market_clock_state": "preopen_clock",
-  "holiday_calendar": "not_connected"
+  "as_of": "2026-10-08T10:14:51+09:00",
+  "market_clock_state": "regular_session_clock_holiday_unverified",
+  "holiday_calendar": "not_connected",
+  "fingerprint_source": "analysis_plus_active_live_quotes",
+  "active_live_quotes_n": 2
  },
  "last_denominator": {
-  "kr_candidate_n": 16,
+  "kr_candidate_n": 15,
   "eligible_n": 0,
   "signal_eligible_n": 0,
   "selected_n": 0,
@@ -699,7 +710,8 @@
   "whole_share_only": true,
   "not_selected_by_rank_n": 0,
   "rejected": {
-   "liquidity": 16
+   "liquidity": 14,
+   "grade_below_watch": 1
   }
  },
  "selection_slot_krw": 555556,
@@ -707,13 +719,13 @@
   "candidate_pool_rank_not_full_kr_universe",
   "e2_next_run_fill",
   "e3_1m_proxy",
+  "entry_data_unavailable",
   "fill_live_quote_20260826",
-  "market_clock_not_executable",
-  "waiting_new_market_snapshot"
+  "target_temporarily_ineligible"
  ],
  "benchmark_latest": {
-  "date": "20261002",
-  "close": 7003.74,
+  "date": "20261006",
+  "close": 6941.39,
   "source": "금융위원회 지수시세정보",
   "freshness": "T+1 EOD"
  }

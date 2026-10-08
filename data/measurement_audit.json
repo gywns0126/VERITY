@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-08T07:29:51+09:00",
+ "as_of": "2026-10-08T11:06:55+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -14,7 +14,7 @@
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 35,
+   "episodes": 36,
    "phantom_sells": 59,
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
@@ -41,9 +41,30 @@
      ]
     },
     {
+     "key": "kis_credit_balance",
+     "modules": [
+      "red_flags.py"
+     ]
+    },
+    {
+     "key": "kis_financial_ratio",
+     "modules": [
+      "fact.py",
+      "graham.py",
+      "moat.py",
+      "red_flags.py"
+     ]
+    },
+    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
+     ]
+    },
+    {
+     "key": "kis_short_sale",
+     "modules": [
+      "red_flags.py"
      ]
     },
     {
@@ -59,20 +80,7 @@
      ]
     }
    ],
-   "thin_keys": [
-    {
-     "key": "kis_financial_ratio",
-     "coverage": "1/40"
-    },
-    {
-     "key": "kis_short_sale",
-     "coverage": "1/40"
-    },
-    {
-     "key": "kis_credit_balance",
-     "coverage": "1/40"
-    }
-   ],
+   "thin_keys": [],
    "fallback_covered": [
     {
      "key": "close",
@@ -132,19 +140,19 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 16,
+     "events_scanned": 11,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
      ]
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 5종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 8종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -236,21 +244,21 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "coverage": {
     "sector": {
-     "filled": 11,
-     "total": 11,
+     "filled": 10,
+     "total": 10,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 11,
-     "total": 11,
+     "filled": 10,
+     "total": 10,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 11,
-     "total": 11,
+     "filled": 10,
+     "total": 10,
      "guard": "팩터 쏠림 차단"
     }
    },
@@ -264,17 +272,9 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 11,
+   "holdings_checked": 10,
    "no_profit_exit": [],
    "ladder_broken": [
-    {
-     "name": "NAVER",
-     "qty": 2.0,
-     "splittable": {
-      "target_1": 1,
-      "target_2": 0
-     }
-    },
     {
      "name": "LG",
      "qty": 3.0,
@@ -300,7 +300,7 @@
      }
     }
    ],
-   "detail": "확정 경로 정합 (사다리 불능 4건 — 고가주 잔존분)"
+   "detail": "확정 경로 정합 (사다리 불능 3건 — 고가주 잔존분)"
   },
   "as_of_staleness": {
    "ok": true,
