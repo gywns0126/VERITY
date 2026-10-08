@@ -15,7 +15,7 @@
 #   1. env: GITHUB_TOKEN (PR comment) / TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID — 기존 등록
 #   2. push trigger: branches=[main] 으로 한정 (PR branch 무관, RULE 2 무관 — .github/ 외 변경 X)
 #   3. concurrency: rule7-audit 신설, 형제 없음
-#   4. timeout: 5분
+#   4. timeout: 10분
 #   5. secret: 기존 3개 reuse
 #   6. pip: requirements.txt
 #   7. cron-match: KST 09:15 (UTC 00:15) — 정각 X, gh short cron silent skip 회피
@@ -46,7 +46,7 @@ concurrency:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
