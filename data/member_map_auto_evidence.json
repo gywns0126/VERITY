@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-08T01:24:40Z",
+  "generatedAt": "2026-10-08T11:43:04Z",
   "scope": {
     "mode": "published-automatic-evidence-catalog",
     "runtimeFreshness": "not-automatically-reverified",
     "note": "Generated from declared received source snapshots; source timestamps are reported separately and are not automatically reverified."
   },
   "artifactTimestamps": {
-    "universeGeneratedAt": "2026-10-08T07:09:04.238034+09:00",
-    "chainSnippetsUpdatedAt": "2026-10-08T00:14:38.068388+09:00",
-    "groupStructureUpdatedAt": "2026-10-08T00:14:23.268921+09:00"
+    "universeGeneratedAt": "2026-10-08T17:52:08.047978+09:00",
+    "chainSnippetsUpdatedAt": "2026-10-08T17:33:44.062695+09:00",
+    "groupStructureUpdatedAt": "2026-10-08T17:33:20.423804+09:00"
   },
   "sourceDateCoverage": {
     "dartDocumentsWithReceiptDate": 1380,
@@ -20,15 +20,15 @@
   "inputs": {
     "universe": {
       "bytes": 2235258,
-      "sha256": "c1b04b944787a41d9b540c69cadff23be91e54ea5d25d2e581ec4a14ec276649"
+      "sha256": "23d93fb7dca0ffca3a4fd4ab976b0cc0f8c701cb1e82fb92f4b0bc7854c1c123"
     },
     "chainSnippets": {
       "bytes": 4816053,
-      "sha256": "06fa34375501ac0d628359f2066b73eccf466ea69d02a4046594345a788f76cc"
+      "sha256": "5f684528602b570b2e133fdc72a47eb6eb9c978e11f561fd4ea5a292614f95ba"
     },
     "groupStructure": {
-      "bytes": 720722,
-      "sha256": "e7e01b1b999f7b5ffa03c8386e956e424f29532da6e6a7fd947c655f50d30cc4"
+      "bytes": 630820,
+      "sha256": "f253d03b5f9f7cd0ab5c7486ba587da12b08476eba6fa5b1d5915585ad283207"
     }
   },
   "identityCatalog": {
@@ -47,15 +47,16 @@
     "excerptsInput": 7715,
     "excerptsAccepted": 1116,
     "excerptsRejected": 6599,
-    "relationsInput": 1182,
-    "relationsAccepted": 50,
-    "relationsRejected": 1132
+    "relationsInput": 1037,
+    "relationsAccepted": 40,
+    "relationsRejected": 997
   },
   "rejectionReasons": {
     "ambiguous_alias_only": 9,
-    "derived_parent_not_explicit_role": 15,
-    "missing_exact_symbol": 1117,
+    "derived_parent_not_explicit_role": 36,
+    "missing_exact_symbol": 957,
     "no_unique_other_company_mention": 6579,
+    "self_descriptive_ownership_role": 4,
     "unknown_document_issuer": 11
   },
   "tickerIndex": {
@@ -66215,9 +66216,13 @@
         "market": "KR",
         "name": "일동홀딩스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:002720"
+      ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:15c45683"
+      ]
     },
     "KR:000240": {
       "issuer": {
@@ -66253,10 +66258,12 @@
       "sourceCandidates": [
         "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
         "source:group-structure:2026-10-08:KR:000270",
-        "source:group-structure:2026-10-08:KR:012330"
+        "source:group-structure:2026-10-08:KR:012330",
+        "source:group-structure:2026-10-08:KR:115500"
       ],
       "eventCandidates": [],
       "relationCandidates": [
+        "relation:group-structure:3989f24b",
         "relation:group-structure:4239352e",
         "relation:group-structure:56ef7d42",
         "relation:group-structure:66698d77",
@@ -66504,8 +66511,7 @@
         "source:dart:20260323001417",
         "source:dart:20260324000048",
         "source:dart:20260616000254",
-        "source:dart:20260716000549",
-        "source:group-structure:2026-10-08:KR:000660"
+        "source:dart:20260716000549"
       ],
       "eventCandidates": [
         "event:dart:20260312000432:124613-124819:251b940e",
@@ -66557,9 +66563,7 @@
         "event:dart:20260716000549:43156-43361:2f9996cc",
         "event:dart:20260716000549:43173-43378:771b0bd3"
       ],
-      "relationCandidates": [
-        "relation:group-structure:71415de9"
-      ]
+      "relationCandidates": []
     },
     "KR:000670": {
       "issuer": {
@@ -67612,7 +67616,9 @@
         "market": "KR",
         "name": "한일철강"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:002220"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -67866,9 +67872,13 @@
         "market": "KR",
         "name": "국제약품"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:002720"
+      ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:15c45683"
+      ]
     },
     "KR:002760": {
       "issuer": {
@@ -67987,7 +67997,9 @@
         "market": "KR",
         "name": "미원상사"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:002840"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -68443,7 +68455,9 @@
         "market": "KR",
         "name": "한화투자증권"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:003530"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -69419,10 +69433,13 @@
         "name": "동국산업"
       },
       "sourceCandidates": [
-        "source:dart:20260318001458"
+        "source:dart:20260318001458",
+        "source:group-structure:2026-10-08:KR:100130"
       ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:85c47c56"
+      ]
     },
     "KR:005180": {
       "issuer": {
@@ -69939,9 +69956,7 @@
         "source:dart:20260617000470",
         "source:dart:20260702000296",
         "source:dart:20260716000549",
-        "source:dart:20260814002696",
-        "source:group-structure:2026-10-08:KR:009150",
-        "source:group-structure:2026-10-08:KR:018260"
+        "source:dart:20260814002696"
       ],
       "eventCandidates": [
         "event:dart:20260310002871:76515-76721:f55cafd5",
@@ -70168,10 +70183,7 @@
         "event:dart:20260814002696:3512-3718:e0e544b9",
         "event:dart:20260814002696:3515-3718:28768581"
       ],
-      "relationCandidates": [
-        "relation:group-structure:0931c98e",
-        "relation:group-structure:145e5833"
-      ]
+      "relationCandidates": []
     },
     "KR:005935": {
       "issuer": {
@@ -70407,7 +70419,8 @@
         "name": "대원전선"
       },
       "sourceCandidates": [
-        "source:dart:20260319000983"
+        "source:dart:20260319000983",
+        "source:group-structure:2026-10-08:KR:006340"
       ],
       "eventCandidates": [
         "event:dart:20260319000983:173001-173206:ac70f6ae"
@@ -70639,13 +70652,9 @@
         "market": "KR",
         "name": "미래에셋증권"
       },
-      "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:920b5c5d"
-      ]
+      "relationCandidates": []
     },
     "KR:006805": {
       "issuer": {
@@ -71005,9 +71014,13 @@
         "market": "KR",
         "name": "국도화학"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:268280"
+      ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:645a7f54"
+      ]
     },
     "KR:007700": {
       "issuer": {
@@ -71378,8 +71391,7 @@
         "source:dart:20260319000810",
         "source:dart:20260319000859",
         "source:dart:20260323001411",
-        "source:dart:20260716000549",
-        "source:group-structure:2026-10-08:KR:009150"
+        "source:dart:20260716000549"
       ],
       "eventCandidates": [
         "event:dart:20260310003071:13896-14102:0295e365",
@@ -71412,10 +71424,7 @@
         "event:dart:20260716000549:43156-43361:2f9996cc",
         "event:dart:20260716000549:43173-43378:771b0bd3"
       ],
-      "relationCandidates": [
-        "relation:group-structure:145e5833",
-        "relation:group-structure:c58a9167"
-      ]
+      "relationCandidates": []
     },
     "KR:009155": {
       "issuer": {
@@ -71861,8 +71870,7 @@
       "sourceCandidates": [
         "source:dart:20260319000934",
         "source:dart:20260323001550",
-        "source:dart:20260813001726",
-        "source:group-structure:2026-10-08:KR:010130"
+        "source:dart:20260813001726"
       ],
       "eventCandidates": [
         "event:dart:20260319000934:145341-145546:6b8f5ea1",
@@ -71874,9 +71882,7 @@
         "event:dart:20260323001550:113285-113490:5aedd92e",
         "event:dart:20260323001550:113287-113490:9374fdb5"
       ],
-      "relationCandidates": [
-        "relation:group-structure:049cd861"
-      ]
+      "relationCandidates": []
     },
     "KR:010140": {
       "issuer": {
@@ -71890,8 +71896,7 @@
         "source:dart:20260318000939",
         "source:dart:20260319000859",
         "source:dart:20260323001005",
-        "source:dart:20260323001528",
-        "source:group-structure:2026-10-08:KR:009150"
+        "source:dart:20260323001528"
       ],
       "eventCandidates": [
         "event:dart:20260318000642:177137-177342:b641427c",
@@ -71916,9 +71921,7 @@
         "event:dart:20260323001528:35662-35866:f735f615",
         "event:dart:20260323001528:35696-35900:7ef68589"
       ],
-      "relationCandidates": [
-        "relation:group-structure:c58a9167"
-      ]
+      "relationCandidates": []
     },
     "KR:010170": {
       "issuer": {
@@ -74066,8 +74069,7 @@
       },
       "sourceCandidates": [
         "source:dart:20260310002989",
-        "source:dart:20260316000476",
-        "source:group-structure:2026-10-08:KR:018260"
+        "source:dart:20260316000476"
       ],
       "eventCandidates": [
         "event:dart:20260310002989:257191-257396:b4f5c967",
@@ -74084,12 +74086,7 @@
         "event:dart:20260316000476:19339-19542:f80ea329",
         "event:dart:20260316000476:19392-19595:e7b2dbea"
       ],
-      "relationCandidates": [
-        "relation:group-structure:001c2d8a",
-        "relation:group-structure:0931c98e",
-        "relation:group-structure:5306a7e7",
-        "relation:group-structure:746434c1"
-      ]
+      "relationCandidates": []
     },
     "KR:018290": {
       "issuer": {
@@ -75592,9 +75589,7 @@
         "source:dart:20260317000766",
         "source:dart:20260319000635",
         "source:dart:20260407003303",
-        "source:group-structure:2026-10-08:KR:018260",
-        "source:group-structure:2026-10-08:KR:028050",
-        "source:group-structure:2026-10-08:KR:028260"
+        "source:group-structure:2026-10-08:KR:028050"
       ],
       "eventCandidates": [
         "event:dart:20260317000684:16578-16784:df301cfc",
@@ -75613,7 +75608,6 @@
         "event:dart:20260407003303:83416-83620:c27ff67f"
       ],
       "relationCandidates": [
-        "relation:group-structure:001c2d8a",
         "relation:group-structure:1ab80f9d"
       ]
     },
@@ -75651,7 +75645,9 @@
         "market": "KR",
         "name": "케이씨"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:029460"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -75736,8 +75732,7 @@
         "source:dart:20260323001433",
         "source:dart:20260325001192",
         "source:dart:20260605000121",
-        "source:dart:20260702000541",
-        "source:group-structure:2026-10-08:KR:030200"
+        "source:dart:20260702000541"
       ],
       "eventCandidates": [
         "event:dart:20260318000699:20356-20561:73bc18d5",
@@ -75948,7 +75943,9 @@
         "market": "KR",
         "name": "에스에이엠티"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:031330"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -75958,13 +75955,9 @@
         "market": "KR",
         "name": "신세계인터내셔날"
       },
-      "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:bd31c850"
-      ]
+      "relationCandidates": []
     },
     "KR:031440": {
       "issuer": {
@@ -76077,7 +76070,9 @@
         "market": "KR",
         "name": "롯데관광개발"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:032350"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -76349,7 +76344,9 @@
         "market": "KR",
         "name": "엠케이전자"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:033160"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -76575,8 +76572,7 @@
       },
       "sourceCandidates": [
         "source:dart:20260318001422",
-        "source:dart:20260702000296",
-        "source:group-structure:2026-10-08:KR:033780"
+        "source:dart:20260702000296"
       ],
       "eventCandidates": [
         "event:dart:20260702000296:23954-24160:ac0ba6a2",
@@ -76593,7 +76589,9 @@
         "market": "KR",
         "name": "피노"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:033790"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -76888,7 +76886,6 @@
         "name": "NAVER"
       },
       "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
         "source:dart:20260313001171",
         "source:dart:20260318001190",
         "source:dart:20260319001409",
@@ -76906,21 +76903,7 @@
         "event:dart:20260407001978:26967-27170:c68a21bc",
         "event:dart:20260407001978:26975-27178:13e27d1f"
       ],
-      "relationCandidates": [
-        "relation:group-structure:27646edd",
-        "relation:group-structure:29ba372a",
-        "relation:group-structure:3ba2049c",
-        "relation:group-structure:4a300acd",
-        "relation:group-structure:739d0174",
-        "relation:group-structure:7af8bd10",
-        "relation:group-structure:8baad674",
-        "relation:group-structure:8bc844f6",
-        "relation:group-structure:920b5c5d",
-        "relation:group-structure:aab13be7",
-        "relation:group-structure:bd31c850",
-        "relation:group-structure:cd5f2104",
-        "relation:group-structure:ebcdde5c"
-      ]
+      "relationCandidates": []
     },
     "KR:035460": {
       "issuer": {
@@ -78225,13 +78208,9 @@
         "market": "KR",
         "name": "인바디"
       },
-      "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:27646edd"
-      ]
+      "relationCandidates": []
     },
     "KR:041910": {
       "issuer": {
@@ -78292,13 +78271,9 @@
         "market": "KR",
         "name": "카페24"
       },
-      "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:4a300acd"
-      ]
+      "relationCandidates": []
     },
     "KR:042040": {
       "issuer": {
@@ -78957,7 +78932,8 @@
         "name": "우원개발"
       },
       "sourceCandidates": [
-        "source:dart:20260319001259"
+        "source:dart:20260319001259",
+        "source:group-structure:2026-10-08:KR:046940"
       ],
       "eventCandidates": [
         "event:dart:20260319001259:257707-257912:b49eeb1f",
@@ -79698,7 +79674,8 @@
         "source:dart:20260318000412",
         "source:dart:20260318000909",
         "source:dart:20260318001025",
-        "source:dart:20260327001702"
+        "source:dart:20260327001702",
+        "source:group-structure:2026-10-08:KR:115500"
       ],
       "eventCandidates": [
         "event:dart:20260313001195:142015-142220:b473fa51",
@@ -79724,7 +79701,9 @@
         "event:dart:20260318001025:230390-230593:22583f48",
         "event:dart:20260327001702:153689-153894:f990c6d2"
       ],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:1d37f69c"
+      ]
     },
     "KR:051915": {
       "issuer": {
@@ -80124,9 +80103,13 @@
         "market": "KR",
         "name": "프로텍"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:053610"
+      ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:6cd10389"
+      ]
     },
     "KR:053620": {
       "issuer": {
@@ -80722,17 +80705,14 @@
         "name": "엠로"
       },
       "sourceCandidates": [
-        "source:dart:20260716000549",
-        "source:group-structure:2026-10-08:KR:018260"
+        "source:dart:20260716000549"
       ],
       "eventCandidates": [
         "event:dart:20260716000549:43125-43330:b03f3bce",
         "event:dart:20260716000549:43156-43361:2f9996cc",
         "event:dart:20260716000549:43173-43378:771b0bd3"
       ],
-      "relationCandidates": [
-        "relation:group-structure:5306a7e7"
-      ]
+      "relationCandidates": []
     },
     "KR:059090": {
       "issuer": {
@@ -81381,9 +81361,13 @@
         "market": "KR",
         "name": "신성델타테크"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:065350"
+      ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:9e20c2b9"
+      ]
     },
     "KR:065370": {
       "issuer": {
@@ -81924,8 +81908,7 @@
         "name": "멀티캠퍼스"
       },
       "sourceCandidates": [
-        "source:dart:20260316000476",
-        "source:group-structure:2026-10-08:KR:018260"
+        "source:dart:20260316000476"
       ],
       "eventCandidates": [
         "event:dart:20260316000476:19320-19526:55f2a3ec",
@@ -81934,9 +81917,7 @@
         "event:dart:20260316000476:19339-19542:f80ea329",
         "event:dart:20260316000476:19392-19595:e7b2dbea"
       ],
-      "relationCandidates": [
-        "relation:group-structure:746434c1"
-      ]
+      "relationCandidates": []
     },
     "KR:067290": {
       "issuer": {
@@ -82872,9 +82853,13 @@
         "market": "KR",
         "name": "동국알앤에스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:100130"
+      ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:0c2c7dd6"
+      ]
     },
     "KR:076080": {
       "issuer": {
@@ -82961,14 +82946,17 @@
         "name": "유비쿼스홀딩스"
       },
       "sourceCandidates": [
-        "source:dart:20260310002774"
+        "source:dart:20260310002774",
+        "source:group-structure:2026-10-08:KR:053610"
       ],
       "eventCandidates": [
         "event:dart:20260310002774:34115-34318:bd07912b",
         "event:dart:20260310002774:34194-34399:af6956ee",
         "event:dart:20260310002774:35157-35360:dbfef556"
       ],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:6cd10389"
+      ]
     },
     "KR:078130": {
       "issuer": {
@@ -85758,10 +85746,14 @@
         "name": "동국S&C"
       },
       "sourceCandidates": [
-        "source:dart:20260316001236"
+        "source:dart:20260316001236",
+        "source:group-structure:2026-10-08:KR:100130"
       ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:0c2c7dd6",
+        "relation:group-structure:85c47c56"
+      ]
     },
     "KR:100220": {
       "issuer": {
@@ -86031,13 +86023,10 @@
         "name": "우양에이치씨"
       },
       "sourceCandidates": [
-        "source:dart:20260312001152",
-        "source:group-structure:2026-10-08:KR:010130"
+        "source:dart:20260312001152"
       ],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:049cd861"
-      ]
+      "relationCandidates": []
     },
     "KR:102120": {
       "issuer": {
@@ -86795,7 +86784,8 @@
         "name": "한솔아이원스"
       },
       "sourceCandidates": [
-        "source:dart:20260313000415"
+        "source:dart:20260313000415",
+        "source:group-structure:2026-10-08:KR:114810"
       ],
       "eventCandidates": [],
       "relationCandidates": []
@@ -86852,7 +86842,8 @@
         "name": "우리넷"
       },
       "sourceCandidates": [
-        "source:dart:20260323001378"
+        "source:dart:20260323001378",
+        "source:group-structure:2026-10-08:KR:115440"
       ],
       "eventCandidates": [],
       "relationCandidates": []
@@ -86890,10 +86881,15 @@
         "name": "케이씨에스"
       },
       "sourceCandidates": [
-        "source:dart:20260318001267"
+        "source:dart:20260318001267",
+        "source:group-structure:2026-10-08:KR:115500"
       ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:1d37f69c",
+        "relation:group-structure:3989f24b",
+        "relation:group-structure:3d3c8d9d"
+      ]
     },
     "KR:115530": {
       "issuer": {
@@ -86943,7 +86939,9 @@
         "market": "KR",
         "name": "알파칩스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:117670"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -87035,9 +87033,13 @@
         "market": "KR",
         "name": "지엔씨에너지"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:119850"
+      ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:3d7453cf"
+      ]
     },
     "KR:120030": {
       "issuer": {
@@ -87055,7 +87057,9 @@
         "market": "KR",
         "name": "코오롱인더"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:120110"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -87549,7 +87553,9 @@
         "market": "KR",
         "name": "제이에스링크"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:127120"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -88131,7 +88137,6 @@
         "name": "이마트"
       },
       "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
         "source:dart:20260316001238",
         "source:dart:20260316001319",
         "source:dart:20260318000936",
@@ -88164,9 +88169,7 @@
         "event:dart:20260327001423:54377-54583:e8111191",
         "event:dart:20260327001423:54380-54583:7f423ec0"
       ],
-      "relationCandidates": [
-        "relation:group-structure:29ba372a"
-      ]
+      "relationCandidates": []
     },
     "KR:139670": {
       "issuer": {
@@ -88389,7 +88392,9 @@
         "market": "KR",
         "name": "뉴파워프라즈마"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:144960"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -89307,13 +89312,9 @@
         "market": "KR",
         "name": "한진칼"
       },
-      "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:ebcdde5c"
-      ]
+      "relationCandidates": []
     },
     "KR:181710": {
       "issuer": {
@@ -89683,9 +89684,13 @@
         "market": "KR",
         "name": "쿠쿠홀딩스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:192400"
+      ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:b3dcf2d5"
+      ]
     },
     "KR:192410": {
       "issuer": {
@@ -90552,7 +90557,9 @@
         "market": "KR",
         "name": "덕산네오룩스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:213420"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -91716,9 +91723,13 @@
         "market": "KR",
         "name": "피앤씨테크"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:119850"
+      ],
       "eventCandidates": [],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:3d7453cf"
+      ]
     },
     "KR:237820": {
       "issuer": {
@@ -92277,13 +92288,9 @@
         "market": "KR",
         "name": "스튜디오드래곤"
       },
-      "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:cd5f2104"
-      ]
+      "relationCandidates": []
     },
     "KR:253590": {
       "issuer": {
@@ -92955,12 +92962,15 @@
         "name": "미원에스씨"
       },
       "sourceCandidates": [
-        "source:dart:20260318000382"
+        "source:dart:20260318000382",
+        "source:group-structure:2026-10-08:KR:268280"
       ],
       "eventCandidates": [
         "event:dart:20260318000382:141591-141796:98aab49b"
       ],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:645a7f54"
+      ]
     },
     "KR:269620": {
       "issuer": {
@@ -93340,7 +93350,9 @@
         "market": "KR",
         "name": "레이크머티리얼즈"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:281740"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -93419,13 +93431,16 @@
         "name": "쿠쿠홈시스"
       },
       "sourceCandidates": [
-        "source:dart:20260320001099"
+        "source:dart:20260320001099",
+        "source:group-structure:2026-10-08:KR:192400"
       ],
       "eventCandidates": [
         "event:dart:20260320001099:35311-35517:038cc12c",
         "event:dart:20260320001099:35314-35517:93b892ee"
       ],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:b3dcf2d5"
+      ]
     },
     "KR:285130": {
       "issuer": {
@@ -93580,13 +93595,9 @@
         "market": "KR",
         "name": "자이언트스텝"
       },
-      "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:739d0174"
-      ]
+      "relationCandidates": []
     },
     "KR:289930": {
       "issuer": {
@@ -95055,7 +95066,9 @@
         "market": "KR",
         "name": "RF머트리얼즈"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:327260"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -95089,7 +95102,8 @@
         "source:dart:20260320000859",
         "source:dart:20260323000789",
         "source:dart:20260323001157",
-        "source:dart:20260407001497"
+        "source:dart:20260407001497",
+        "source:group-structure:2026-10-08:KR:115500"
       ],
       "eventCandidates": [
         "event:dart:20260323000789:107028-107233:28de55eb",
@@ -95097,7 +95111,9 @@
         "event:dart:20260407001497:12260-12464:3f65d7f6",
         "event:dart:20260407001497:32909-33112:4658ea7b"
       ],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:3d3c8d9d"
+      ]
     },
     "KR:330350": {
       "issuer": {
@@ -95931,13 +95947,10 @@
         "name": "크라우드웍스"
       },
       "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
         "source:dart:20260323001402"
       ],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:8bc844f6"
-      ]
+      "relationCandidates": []
     },
     "KR:355690": {
       "issuer": {
@@ -97378,13 +97391,9 @@
         "market": "KR",
         "name": "SK스퀘어"
       },
-      "sourceCandidates": [
-        "source:group-structure:2026-10-08:KR:000660"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:71415de9"
-      ]
+      "relationCandidates": []
     },
     "KR:402490": {
       "issuer": {
@@ -97653,7 +97662,8 @@
         "name": "신성에스티"
       },
       "sourceCandidates": [
-        "source:dart:20260316001016"
+        "source:dart:20260316001016",
+        "source:group-structure:2026-10-08:KR:065350"
       ],
       "eventCandidates": [
         "event:dart:20260316001016:79190-79395:34ebc11e",
@@ -97662,7 +97672,9 @@
         "event:dart:20260316001016:85255-85461:1e7f92de",
         "event:dart:20260316001016:85258-85461:fc62a734"
       ],
-      "relationCandidates": []
+      "relationCandidates": [
+        "relation:group-structure:9e20c2b9"
+      ]
     },
     "KR:417010": {
       "issuer": {
@@ -98784,7 +98796,9 @@
         "market": "KR",
         "name": "씨어스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:458870"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -99166,13 +99180,9 @@
         "market": "KR",
         "name": "클로봇"
       },
-      "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:8baad674"
-      ]
+      "relationCandidates": []
     },
     "KR:466410": {
       "issuer": {
@@ -99659,12 +99669,10 @@
         "name": "마키나락스"
       },
       "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
         "source:group-structure:2026-10-08:KR:017670"
       ],
       "eventCandidates": [],
       "relationCandidates": [
-        "relation:group-structure:3ba2049c",
         "relation:group-structure:a14174aa"
       ]
     },
@@ -99841,13 +99849,9 @@
         "market": "KR",
         "name": "딜리셔스"
       },
-      "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:7af8bd10"
-      ]
+      "relationCandidates": []
     },
     "KR:483650": {
       "issuer": {
@@ -99952,13 +99956,9 @@
         "market": "KR",
         "name": "노타"
       },
-      "sourceCandidates": [
-        "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31"
-      ],
+      "sourceCandidates": [],
       "eventCandidates": [],
-      "relationCandidates": [
-        "relation:group-structure:aab13be7"
-      ]
+      "relationCandidates": []
     },
     "KR:487360": {
       "issuer": {
@@ -100237,7 +100237,9 @@
         "market": "KR",
         "name": "GS피앤엘"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:group-structure:2026-10-08:KR:499790"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -172251,93 +172253,273 @@
       "documentIssuer": "KR:053800",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260320000868"
     },
-    "source:group-structure:2026-10-08:KR:009150": {
-      "id": "source:group-structure:2026-10-08:KR:009150",
+    "source:group-structure:2026-10-08:KR:100130": {
+      "id": "source:group-structure:2026-10-08:KR:100130",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:29.029719+09:00",
-      "documentIssuer": "KR:009150",
+      "artifactObservedAt": "2026-10-08T17:32:04.241304+09:00",
+      "documentIssuer": "KR:100130",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:group-structure:2026-10-08:KR:010130": {
-      "id": "source:group-structure:2026-10-08:KR:010130",
+    "source:group-structure:2026-10-08:KR:114810": {
+      "id": "source:group-structure:2026-10-08:KR:114810",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:33.464340+09:00",
-      "documentIssuer": "KR:010130",
+      "artifactObservedAt": "2026-10-08T17:32:06.853333+09:00",
+      "documentIssuer": "KR:114810",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:group-structure:2026-10-08:KR:012330": {
-      "id": "source:group-structure:2026-10-08:KR:012330",
+    "source:group-structure:2026-10-08:KR:115440": {
+      "id": "source:group-structure:2026-10-08:KR:115440",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
-      "documentIssuer": "KR:012330",
+      "artifactObservedAt": "2026-10-08T17:32:08.629229+09:00",
+      "documentIssuer": "KR:115440",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:group-structure:2026-10-08:KR:017670": {
-      "id": "source:group-structure:2026-10-08:KR:017670",
+    "source:group-structure:2026-10-08:KR:115500": {
+      "id": "source:group-structure:2026-10-08:KR:115500",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:42.437282+09:00",
-      "documentIssuer": "KR:017670",
+      "artifactObservedAt": "2026-10-08T17:32:10.165779+09:00",
+      "documentIssuer": "KR:115500",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:group-structure:2026-10-08:KR:018260": {
-      "id": "source:group-structure:2026-10-08:KR:018260",
+    "source:group-structure:2026-10-08:KR:117670": {
+      "id": "source:group-structure:2026-10-08:KR:117670",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:45.841608+09:00",
-      "documentIssuer": "KR:018260",
+      "artifactObservedAt": "2026-10-08T17:32:13.957255+09:00",
+      "documentIssuer": "KR:117670",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:group-structure:2026-10-08:KR:028260": {
-      "id": "source:group-structure:2026-10-08:KR:028260",
+    "source:group-structure:2026-10-08:KR:119850": {
+      "id": "source:group-structure:2026-10-08:KR:119850",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:49.283782+09:00",
-      "documentIssuer": "KR:028260",
+      "artifactObservedAt": "2026-10-08T17:32:15.554308+09:00",
+      "documentIssuer": "KR:119850",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:group-structure:2026-10-08:KR:030200": {
-      "id": "source:group-structure:2026-10-08:KR:030200",
+    "source:group-structure:2026-10-08:KR:120110": {
+      "id": "source:group-structure:2026-10-08:KR:120110",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:51.066938+09:00",
-      "documentIssuer": "KR:030200",
+      "artifactObservedAt": "2026-10-08T17:32:17.817928+09:00",
+      "documentIssuer": "KR:120110",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:group-structure:2026-10-08:KR:033780": {
-      "id": "source:group-structure:2026-10-08:KR:033780",
+    "source:group-structure:2026-10-08:KR:127120": {
+      "id": "source:group-structure:2026-10-08:KR:127120",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:52.718992+09:00",
-      "documentIssuer": "KR:033780",
+      "artifactObservedAt": "2026-10-08T17:32:19.608734+09:00",
+      "documentIssuer": "KR:127120",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:group-structure:2026-10-08:KR:000270": {
-      "id": "source:group-structure:2026-10-08:KR:000270",
+    "source:group-structure:2026-10-08:KR:144960": {
+      "id": "source:group-structure:2026-10-08:KR:144960",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:54.366756+09:00",
-      "documentIssuer": "KR:000270",
+      "artifactObservedAt": "2026-10-08T17:32:50.921154+09:00",
+      "documentIssuer": "KR:144960",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:group-structure:2026-10-08:KR:000660": {
-      "id": "source:group-structure:2026-10-08:KR:000660",
+    "source:group-structure:2026-10-08:KR:192400": {
+      "id": "source:group-structure:2026-10-08:KR:192400",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:14:00.137091+09:00",
-      "documentIssuer": "KR:000660",
+      "artifactObservedAt": "2026-10-08T17:32:24.468357+09:00",
+      "documentIssuer": "KR:192400",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:213420": {
+      "id": "source:group-structure:2026-10-08:KR:213420",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:41.536044+09:00",
+      "documentIssuer": "KR:213420",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:268280": {
+      "id": "source:group-structure:2026-10-08:KR:268280",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:45.444580+09:00",
+      "documentIssuer": "KR:268280",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:281740": {
+      "id": "source:group-structure:2026-10-08:KR:281740",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:38.405987+09:00",
+      "documentIssuer": "KR:281740",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:327260": {
+      "id": "source:group-structure:2026-10-08:KR:327260",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:26.772563+09:00",
+      "documentIssuer": "KR:327260",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:458870": {
+      "id": "source:group-structure:2026-10-08:KR:458870",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:22.838254+09:00",
+      "documentIssuer": "KR:458870",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:499790": {
+      "id": "source:group-structure:2026-10-08:KR:499790",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:39.986098+09:00",
+      "documentIssuer": "KR:499790",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:002220": {
+      "id": "source:group-structure:2026-10-08:KR:002220",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:31:57.580890+09:00",
+      "documentIssuer": "KR:002220",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:002720": {
+      "id": "source:group-structure:2026-10-08:KR:002720",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:00.104633+09:00",
+      "documentIssuer": "KR:002720",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:046940": {
+      "id": "source:group-structure:2026-10-08:KR:046940",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:02.650843+09:00",
+      "documentIssuer": "KR:046940",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:006340": {
+      "id": "source:group-structure:2026-10-08:KR:006340",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:21.173746+09:00",
+      "documentIssuer": "KR:006340",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:003530": {
+      "id": "source:group-structure:2026-10-08:KR:003530",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:28.304151+09:00",
+      "documentIssuer": "KR:003530",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:032350": {
+      "id": "source:group-structure:2026-10-08:KR:032350",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:31.015199+09:00",
+      "documentIssuer": "KR:032350",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:065350": {
+      "id": "source:group-structure:2026-10-08:KR:065350",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:32.576798+09:00",
+      "documentIssuer": "KR:065350",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:031330": {
+      "id": "source:group-structure:2026-10-08:KR:031330",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:34.938972+09:00",
+      "documentIssuer": "KR:031330",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:033790": {
+      "id": "source:group-structure:2026-10-08:KR:033790",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:36.781517+09:00",
+      "documentIssuer": "KR:033790",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:053610": {
+      "id": "source:group-structure:2026-10-08:KR:053610",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:43.281481+09:00",
+      "documentIssuer": "KR:053610",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:002840": {
+      "id": "source:group-structure:2026-10-08:KR:002840",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:47.777004+09:00",
+      "documentIssuer": "KR:002840",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:080580": {
+      "id": "source:group-structure:2026-10-08:KR:080580",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:49.364135+09:00",
+      "documentIssuer": "KR:080580",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:029460": {
+      "id": "source:group-structure:2026-10-08:KR:029460",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:52.478268+09:00",
+      "documentIssuer": "KR:029460",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
+    },
+    "source:group-structure:2026-10-08:KR:033160": {
+      "id": "source:group-structure:2026-10-08:KR:033160",
+      "kind": "local-structured-relation-candidate",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:54.769541+09:00",
+      "documentIssuer": "KR:033160",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
@@ -172345,7 +172527,7 @@
       "id": "source:group-structure:2026-10-08:KR:003550",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:14:13.025471+09:00",
+      "artifactObservedAt": "2026-10-08T17:32:56.322104+09:00",
       "documentIssuer": "KR:003550",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
@@ -172354,17 +172536,17 @@
       "id": "source:group-structure:2026-10-08:KR:028050",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:14:15.137954+09:00",
+      "artifactObservedAt": "2026-10-08T17:32:58.770852+09:00",
       "documentIssuer": "KR:028050",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:group-structure:2026-10-08:KR:080580": {
-      "id": "source:group-structure:2026-10-08:KR:080580",
+    "source:group-structure:2026-10-08:KR:000270": {
+      "id": "source:group-structure:2026-10-08:KR:000270",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:14:19.034995+09:00",
-      "documentIssuer": "KR:080580",
+      "artifactObservedAt": "2026-10-08T17:33:02.144930+09:00",
+      "documentIssuer": "KR:000270",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
@@ -172372,38 +172554,28 @@
       "id": "source:group-structure:2026-10-08:KR:068270",
       "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:14:20.598979+09:00",
+      "artifactObservedAt": "2026-10-08T17:33:08.873154+09:00",
       "documentIssuer": "KR:068270",
       "receiptNo": null,
       "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31": {
-      "id": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
-      "kind": "dart-structured-relation",
-      "receiptNo": "20260312001224",
+    "source:group-structure:2026-10-08:KR:012330": {
+      "id": "source:group-structure:2026-10-08:KR:012330",
+      "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "settlementDate": "2025-12-31",
-      "businessYear": "2025",
-      "reportCode": "11011",
-      "corpCode": "00106641",
-      "endpoint": "otrCprInvstmntSttus",
-      "documentIssuer": "KR:000270",
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260312001224"
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
+      "documentIssuer": "KR:012330",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
-    "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31": {
-      "id": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
-      "kind": "dart-structured-relation",
-      "receiptNo": "20260313001021",
+    "source:group-structure:2026-10-08:KR:017670": {
+      "id": "source:group-structure:2026-10-08:KR:017670",
+      "kind": "local-structured-relation-candidate",
       "sourceDate": null,
-      "settlementDate": "2025-12-31",
-      "businessYear": "2025",
-      "reportCode": "11011",
-      "corpCode": "00266961",
-      "endpoint": "otrCprInvstmntSttus",
-      "documentIssuer": "KR:035420",
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260313001021"
+      "artifactObservedAt": "2026-10-08T17:33:16.829296+09:00",
+      "documentIssuer": "KR:017670",
+      "receiptNo": null,
+      "note": "Existing structured rows; no per-document DART receipt in source artifact."
     },
     "source:dart-structured:20260311003927:hyslrSttus:KR:028050:00126308:2025:11011:2025-12-31": {
       "id": "source:dart-structured:20260311003927:hyslrSttus:KR:028050:00126308:2025:11011:2025-12-31",
@@ -172432,6 +172604,20 @@
       "documentIssuer": "KR:028050",
       "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260311003927"
+    },
+    "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31": {
+      "id": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "kind": "dart-structured-relation",
+      "receiptNo": "20260312001224",
+      "sourceDate": null,
+      "settlementDate": "2025-12-31",
+      "businessYear": "2025",
+      "reportCode": "11011",
+      "corpCode": "00106641",
+      "endpoint": "otrCprInvstmntSttus",
+      "documentIssuer": "KR:000270",
+      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260312001224"
     }
   },
   "events": {
@@ -191984,304 +192170,148 @@
     }
   },
   "relations": {
-    "relation:group-structure:145e5833": {
-      "id": "relation:group-structure:145e5833",
+    "relation:group-structure:85c47c56": {
+      "id": "relation:group-structure:85c47c56",
       "type": "reported-major-shareholder-entry",
       "explicitRole": true,
       "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:005930",
-      "to": "KR:009150",
-      "sourceId": "source:group-structure:2026-10-08:KR:009150",
+      "from": "KR:005160",
+      "to": "KR:100130",
+      "sourceId": "source:group-structure:2026-10-08:KR:100130",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:29.029719+09:00",
-      "role": "최대주주 본인",
-      "reportedOwnershipPct": 23.69
-    },
-    "relation:group-structure:c58a9167": {
-      "id": "relation:group-structure:c58a9167",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:009150",
-      "to": "KR:010140",
-      "sourceId": "source:group-structure:2026-10-08:KR:009150",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:29.029719+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 2.1
-    },
-    "relation:group-structure:049cd861": {
-      "id": "relation:group-structure:049cd861",
-      "type": "reported-major-shareholder-entry",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:101970",
-      "to": "KR:010130",
-      "sourceId": "source:group-structure:2026-10-08:KR:010130",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:33.464340+09:00",
-      "role": "계열회사",
-      "reportedOwnershipPct": 1.04
-    },
-    "relation:group-structure:56ef7d42": {
-      "id": "relation:group-structure:56ef7d42",
-      "type": "reported-major-shareholder-entry",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:000270",
-      "to": "KR:012330",
-      "sourceId": "source:group-structure:2026-10-08:KR:012330",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
+      "artifactObservedAt": "2026-10-08T17:32:04.241304+09:00",
       "role": "최대주주",
-      "reportedOwnershipPct": 18.1
+      "reportedOwnershipPct": 49.99
     },
-    "relation:group-structure:a14823c9": {
-      "id": "relation:group-structure:a14823c9",
-      "type": "reported-major-shareholder-entry",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:004020",
-      "to": "KR:012330",
-      "sourceId": "source:group-structure:2026-10-08:KR:012330",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
-      "role": "계열회사",
-      "reportedOwnershipPct": 6.07
-    },
-    "relation:group-structure:a70c8ac9": {
-      "id": "relation:group-structure:a70c8ac9",
-      "type": "reported-major-shareholder-entry",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:086280",
-      "to": "KR:012330",
-      "sourceId": "source:group-structure:2026-10-08:KR:012330",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
-      "role": "계열회사",
-      "reportedOwnershipPct": 0.72
-    },
-    "relation:group-structure:7b14d8a4": {
-      "id": "relation:group-structure:7b14d8a4",
+    "relation:group-structure:0c2c7dd6": {
+      "id": "relation:group-structure:0c2c7dd6",
       "type": "reported-equity-investment",
       "explicitRole": true,
       "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:012330",
-      "to": "KR:005380",
-      "sourceId": "source:group-structure:2026-10-08:KR:012330",
+      "from": "KR:100130",
+      "to": "KR:075970",
+      "sourceId": "source:group-structure:2026-10-08:KR:100130",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
+      "artifactObservedAt": "2026-10-08T17:32:04.241304+09:00",
       "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 22
+      "reportedOwnershipPct": 22.4
     },
-    "relation:group-structure:ab85f678": {
-      "id": "relation:group-structure:ab85f678",
+    "relation:group-structure:3d3c8d9d": {
+      "id": "relation:group-structure:3d3c8d9d",
       "type": "reported-equity-investment",
       "explicitRole": true,
       "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:012330",
-      "to": "KR:307950",
-      "sourceId": "source:group-structure:2026-10-08:KR:012330",
+      "from": "KR:115500",
+      "to": "KR:329180",
+      "sourceId": "source:group-structure:2026-10-08:KR:115500",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 20
-    },
-    "relation:group-structure:0952d996": {
-      "id": "relation:group-structure:0952d996",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:012330",
-      "to": "KR:000720",
-      "sourceId": "source:group-structure:2026-10-08:KR:012330",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 9
-    },
-    "relation:group-structure:30f2b61f": {
-      "id": "relation:group-structure:30f2b61f",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:012330",
-      "to": "KR:001500",
-      "sourceId": "source:group-structure:2026-10-08:KR:012330",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 14
-    },
-    "relation:group-structure:f24c9645": {
-      "id": "relation:group-structure:f24c9645",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:012330",
-      "to": "KR:475040",
-      "sourceId": "source:group-structure:2026-10-08:KR:012330",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 3
-    },
-    "relation:group-structure:cb675528": {
-      "id": "relation:group-structure:cb675528",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:012330",
-      "to": "KR:012630",
-      "sourceId": "source:group-structure:2026-10-08:KR:012330",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
+      "artifactObservedAt": "2026-10-08T17:32:10.165779+09:00",
       "role": "DART 타법인 출자현황 행",
       "reportedOwnershipPct": 0
     },
-    "relation:group-structure:1a5bc653": {
-      "id": "relation:group-structure:1a5bc653",
+    "relation:group-structure:3989f24b": {
+      "id": "relation:group-structure:3989f24b",
       "type": "reported-equity-investment",
       "explicitRole": true,
       "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:012330",
-      "to": "KR:378850",
-      "sourceId": "source:group-structure:2026-10-08:KR:012330",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:35.384292+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 2
-    },
-    "relation:group-structure:9d744a2e": {
-      "id": "relation:group-structure:9d744a2e",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:017670",
-      "to": "KR:086790",
-      "sourceId": "source:group-structure:2026-10-08:KR:017670",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:42.437282+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 3.1
-    },
-    "relation:group-structure:a0164ffa": {
-      "id": "relation:group-structure:a0164ffa",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:017670",
-      "to": "KR:402030",
-      "sourceId": "source:group-structure:2026-10-08:KR:017670",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:42.437282+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 18.8
-    },
-    "relation:group-structure:a14174aa": {
-      "id": "relation:group-structure:a14174aa",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:017670",
-      "to": "KR:477850",
-      "sourceId": "source:group-structure:2026-10-08:KR:017670",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:42.437282+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 7.8
-    },
-    "relation:group-structure:0931c98e": {
-      "id": "relation:group-structure:0931c98e",
-      "type": "reported-major-shareholder-entry",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:005930",
-      "to": "KR:018260",
-      "sourceId": "source:group-structure:2026-10-08:KR:018260",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:45.841608+09:00",
-      "role": "최대주주 본인",
-      "reportedOwnershipPct": 22.58
-    },
-    "relation:group-structure:001c2d8a": {
-      "id": "relation:group-structure:001c2d8a",
-      "type": "reported-major-shareholder-entry",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:028260",
-      "to": "KR:018260",
-      "sourceId": "source:group-structure:2026-10-08:KR:018260",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:45.841608+09:00",
-      "role": "계열회사",
-      "reportedOwnershipPct": 17.08
-    },
-    "relation:group-structure:746434c1": {
-      "id": "relation:group-structure:746434c1",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:018260",
-      "to": "KR:067280",
-      "sourceId": "source:group-structure:2026-10-08:KR:018260",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:45.841608+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 62.4
-    },
-    "relation:group-structure:5306a7e7": {
-      "id": "relation:group-structure:5306a7e7",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:018260",
-      "to": "KR:058970",
-      "sourceId": "source:group-structure:2026-10-08:KR:018260",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:45.841608+09:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 35.48
-    },
-    "relation:group-structure:a658abf1": {
-      "id": "relation:group-structure:a658abf1",
-      "type": "reported-major-shareholder-entry",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:005380",
+      "from": "KR:115500",
       "to": "KR:000270",
-      "sourceId": "source:group-structure:2026-10-08:KR:000270",
+      "sourceId": "source:group-structure:2026-10-08:KR:115500",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:54.366756+09:00",
-      "role": "최대주주",
-      "reportedOwnershipPct": 35.17
-    },
-    "relation:group-structure:9c626490": {
-      "id": "relation:group-structure:9c626490",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:000270",
-      "to": "KR:487580",
-      "sourceId": "source:group-structure:2026-10-08:KR:000270",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:13:54.366756+09:00",
+      "artifactObservedAt": "2026-10-08T17:32:10.165779+09:00",
       "role": "DART 타법인 출자현황 행",
       "reportedOwnershipPct": 0
     },
-    "relation:group-structure:71415de9": {
-      "id": "relation:group-structure:71415de9",
-      "type": "reported-major-shareholder-entry",
+    "relation:group-structure:1d37f69c": {
+      "id": "relation:group-structure:1d37f69c",
+      "type": "reported-equity-investment",
       "explicitRole": true,
       "verification": "candidate-unverified-no-document-receipt",
-      "from": "KR:402340",
-      "to": "KR:000660",
-      "sourceId": "source:group-structure:2026-10-08:KR:000660",
+      "from": "KR:115500",
+      "to": "KR:051910",
+      "sourceId": "source:group-structure:2026-10-08:KR:115500",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:14:00.137091+09:00",
-      "role": "최대주주",
-      "reportedOwnershipPct": 20.07
+      "artifactObservedAt": "2026-10-08T17:32:10.165779+09:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 0
+    },
+    "relation:group-structure:3d7453cf": {
+      "id": "relation:group-structure:3d7453cf",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:119850",
+      "to": "KR:237750",
+      "sourceId": "source:group-structure:2026-10-08:KR:119850",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:15.554308+09:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 5
+    },
+    "relation:group-structure:b3dcf2d5": {
+      "id": "relation:group-structure:b3dcf2d5",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:192400",
+      "to": "KR:284740",
+      "sourceId": "source:group-structure:2026-10-08:KR:192400",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:24.468357+09:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 40.55
+    },
+    "relation:group-structure:645a7f54": {
+      "id": "relation:group-structure:645a7f54",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:268280",
+      "to": "KR:007690",
+      "sourceId": "source:group-structure:2026-10-08:KR:268280",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:45.444580+09:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 0.77
+    },
+    "relation:group-structure:15c45683": {
+      "id": "relation:group-structure:15c45683",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:002720",
+      "to": "KR:000230",
+      "sourceId": "source:group-structure:2026-10-08:KR:002720",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:00.104633+09:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 2.15
+    },
+    "relation:group-structure:9e20c2b9": {
+      "id": "relation:group-structure:9e20c2b9",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:065350",
+      "to": "KR:416180",
+      "sourceId": "source:group-structure:2026-10-08:KR:065350",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:32.576798+09:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 25.91
+    },
+    "relation:group-structure:6cd10389": {
+      "id": "relation:group-structure:6cd10389",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:053610",
+      "to": "KR:078070",
+      "sourceId": "source:group-structure:2026-10-08:KR:053610",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:32:43.281481+09:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 1
     },
     "relation:group-structure:00a79f58": {
       "id": "relation:group-structure:00a79f58",
@@ -192292,7 +192322,7 @@
       "to": "KR:010120",
       "sourceId": "source:group-structure:2026-10-08:KR:003550",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:14:13.025471+09:00",
+      "artifactObservedAt": "2026-10-08T17:32:56.322104+09:00",
       "role": "DART 타법인 출자현황 행",
       "reportedOwnershipPct": 2
     },
@@ -192305,9 +192335,35 @@
       "to": "KR:028050",
       "sourceId": "source:group-structure:2026-10-08:KR:028050",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:14:15.137954+09:00",
+      "artifactObservedAt": "2026-10-08T17:32:58.770852+09:00",
       "role": "계열회사",
       "reportedOwnershipPct": 0.22
+    },
+    "relation:group-structure:a658abf1": {
+      "id": "relation:group-structure:a658abf1",
+      "type": "reported-major-shareholder-entry",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:005380",
+      "to": "KR:000270",
+      "sourceId": "source:group-structure:2026-10-08:KR:000270",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:33:02.144930+09:00",
+      "role": "최대주주",
+      "reportedOwnershipPct": 35.17
+    },
+    "relation:group-structure:9c626490": {
+      "id": "relation:group-structure:9c626490",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:000270",
+      "to": "KR:487580",
+      "sourceId": "source:group-structure:2026-10-08:KR:000270",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:33:02.144930+09:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 0
     },
     "relation:group-structure:5b7527d2": {
       "id": "relation:group-structure:5b7527d2",
@@ -192318,7 +192374,7 @@
       "to": "KR:068760",
       "sourceId": "source:group-structure:2026-10-08:KR:068270",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:14:20.598979+09:00",
+      "artifactObservedAt": "2026-10-08T17:33:08.873154+09:00",
       "role": "DART 타법인 출자현황 행",
       "reportedOwnershipPct": 54.8
     },
@@ -192331,489 +192387,178 @@
       "to": "KR:086040",
       "sourceId": "source:group-structure:2026-10-08:KR:068270",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-08T00:14:20.598979+09:00",
+      "artifactObservedAt": "2026-10-08T17:33:08.873154+09:00",
       "role": "DART 타법인 출자현황 행",
       "reportedOwnershipPct": 10.22
     },
-    "relation:group-structure:4239352e": {
-      "id": "relation:group-structure:4239352e",
-      "type": "reported-equity-investment",
+    "relation:group-structure:56ef7d42": {
+      "id": "relation:group-structure:56ef7d42",
+      "type": "reported-major-shareholder-entry",
       "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
+      "verification": "candidate-unverified-no-document-receipt",
       "from": "KR:000270",
       "to": "KR:012330",
-      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceId": "source:group-structure:2026-10-08:KR:012330",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 18.1,
-      "sourceRow": {
-        "index": 15,
-        "fields": {
-          "rcept_no": "20260312001224",
-          "corp_code": "00106641",
-          "corp_name": "기아",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "현대모비스",
-          "trmend_blce_qota_rt": "18.10"
-        }
-      }
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
+      "role": "최대주주",
+      "reportedOwnershipPct": 18.1
     },
-    "relation:group-structure:66698d77": {
-      "id": "relation:group-structure:66698d77",
+    "relation:group-structure:a14823c9": {
+      "id": "relation:group-structure:a14823c9",
+      "type": "reported-major-shareholder-entry",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:004020",
+      "to": "KR:012330",
+      "sourceId": "source:group-structure:2026-10-08:KR:012330",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
+      "role": "계열회사",
+      "reportedOwnershipPct": 6.07
+    },
+    "relation:group-structure:a70c8ac9": {
+      "id": "relation:group-structure:a70c8ac9",
+      "type": "reported-major-shareholder-entry",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:086280",
+      "to": "KR:012330",
+      "sourceId": "source:group-structure:2026-10-08:KR:012330",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
+      "role": "계열회사",
+      "reportedOwnershipPct": 0.72
+    },
+    "relation:group-structure:7b14d8a4": {
+      "id": "relation:group-structure:7b14d8a4",
       "type": "reported-equity-investment",
       "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:000270",
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:012330",
+      "to": "KR:005380",
+      "sourceId": "source:group-structure:2026-10-08:KR:012330",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 22
+    },
+    "relation:group-structure:ab85f678": {
+      "id": "relation:group-structure:ab85f678",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:012330",
       "to": "KR:307950",
-      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceId": "source:group-structure:2026-10-08:KR:012330",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
       "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 16.24,
-      "sourceRow": {
-        "index": 24,
-        "fields": {
-          "rcept_no": "20260312001224",
-          "corp_code": "00106641",
-          "corp_name": "기아",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "현대오토에버",
-          "trmend_blce_qota_rt": "16.24"
-        }
-      }
+      "reportedOwnershipPct": 20
     },
-    "relation:group-structure:de527a06": {
-      "id": "relation:group-structure:de527a06",
+    "relation:group-structure:0952d996": {
+      "id": "relation:group-structure:0952d996",
       "type": "reported-equity-investment",
       "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:000270",
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:012330",
       "to": "KR:000720",
-      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceId": "source:group-structure:2026-10-08:KR:012330",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
       "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 5.24,
-      "sourceRow": {
-        "index": 17,
-        "fields": {
-          "rcept_no": "20260312001224",
-          "corp_code": "00106641",
-          "corp_name": "기아",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "현대건설",
-          "trmend_blce_qota_rt": "5.24"
-        }
-      }
+      "reportedOwnershipPct": 9
     },
-    "relation:group-structure:73ac9737": {
-      "id": "relation:group-structure:73ac9737",
+    "relation:group-structure:30f2b61f": {
+      "id": "relation:group-structure:30f2b61f",
       "type": "reported-equity-investment",
       "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:000270",
-      "to": "KR:004020",
-      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 17.27,
-      "sourceRow": {
-        "index": 16,
-        "fields": {
-          "rcept_no": "20260312001224",
-          "corp_code": "00106641",
-          "corp_name": "기아",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "현대제철",
-          "trmend_blce_qota_rt": "17.27"
-        }
-      }
-    },
-    "relation:group-structure:f936ba4c": {
-      "id": "relation:group-structure:f936ba4c",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:000270",
-      "to": "KR:011210",
-      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 13.44,
-      "sourceRow": {
-        "index": 68,
-        "fields": {
-          "rcept_no": "20260312001224",
-          "corp_code": "00106641",
-          "corp_name": "기아",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "현대위아",
-          "trmend_blce_qota_rt": "13.44"
-        }
-      }
-    },
-    "relation:group-structure:d5895a27": {
-      "id": "relation:group-structure:d5895a27",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:000270",
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:012330",
       "to": "KR:001500",
-      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceId": "source:group-structure:2026-10-08:KR:012330",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
       "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 3.95,
-      "sourceRow": {
-        "index": 69,
-        "fields": {
-          "rcept_no": "20260312001224",
-          "corp_code": "00106641",
-          "corp_name": "기아",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "현대차증권",
-          "trmend_blce_qota_rt": "3.95"
-        }
-      }
+      "reportedOwnershipPct": 14
     },
-    "relation:group-structure:cf2099ec": {
-      "id": "relation:group-structure:cf2099ec",
+    "relation:group-structure:f24c9645": {
+      "id": "relation:group-structure:f24c9645",
       "type": "reported-equity-investment",
       "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:000270",
-      "to": "KR:353590",
-      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:012330",
+      "to": "KR:475040",
+      "sourceId": "source:group-structure:2026-10-08:KR:012330",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
       "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 5.05,
-      "sourceRow": {
-        "index": 74,
-        "fields": {
-          "rcept_no": "20260312001224",
-          "corp_code": "00106641",
-          "corp_name": "기아",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "오토앤",
-          "trmend_blce_qota_rt": "5.05"
-        }
-      }
+      "reportedOwnershipPct": 3
     },
-    "relation:group-structure:920b5c5d": {
-      "id": "relation:group-structure:920b5c5d",
+    "relation:group-structure:cb675528": {
+      "id": "relation:group-structure:cb675528",
       "type": "reported-equity-investment",
       "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:006800",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:012330",
+      "to": "KR:012630",
+      "sourceId": "source:group-structure:2026-10-08:KR:012330",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
       "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 8.15,
-      "sourceRow": {
-        "index": 0,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "미래에셋증권 ",
-          "trmend_blce_qota_rt": "8.15"
-        }
-      }
+      "reportedOwnershipPct": 0
     },
-    "relation:group-structure:ebcdde5c": {
-      "id": "relation:group-structure:ebcdde5c",
+    "relation:group-structure:1a5bc653": {
+      "id": "relation:group-structure:1a5bc653",
       "type": "reported-equity-investment",
       "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:180640",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:012330",
+      "to": "KR:378850",
+      "sourceId": "source:group-structure:2026-10-08:KR:012330",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "artifactObservedAt": "2026-10-08T17:33:11.767056+09:00",
       "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 0.99,
-      "sourceRow": {
-        "index": 218,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "한진칼 ",
-          "trmend_blce_qota_rt": "0.99"
-        }
-      }
+      "reportedOwnershipPct": 2
     },
-    "relation:group-structure:4a300acd": {
-      "id": "relation:group-structure:4a300acd",
+    "relation:group-structure:9d744a2e": {
+      "id": "relation:group-structure:9d744a2e",
       "type": "reported-equity-investment",
       "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:042000",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:017670",
+      "to": "KR:086790",
+      "sourceId": "source:group-structure:2026-10-08:KR:017670",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "artifactObservedAt": "2026-10-08T17:33:16.829296+09:00",
       "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 13.74,
-      "sourceRow": {
-        "index": 1,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "카페24 ",
-          "trmend_blce_qota_rt": "13.74"
-        }
-      }
+      "reportedOwnershipPct": 3.1
     },
-    "relation:group-structure:27646edd": {
-      "id": "relation:group-structure:27646edd",
+    "relation:group-structure:a0164ffa": {
+      "id": "relation:group-structure:a0164ffa",
       "type": "reported-equity-investment",
       "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:041830",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:017670",
+      "to": "KR:402030",
+      "sourceId": "source:group-structure:2026-10-08:KR:017670",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "artifactObservedAt": "2026-10-08T17:33:16.829296+09:00",
       "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 8.5,
-      "sourceRow": {
-        "index": 188,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "주식회사 인바디 ",
-          "trmend_blce_qota_rt": "8.50"
-        }
-      }
+      "reportedOwnershipPct": 18.8
     },
-    "relation:group-structure:29ba372a": {
-      "id": "relation:group-structure:29ba372a",
+    "relation:group-structure:a14174aa": {
+      "id": "relation:group-structure:a14174aa",
       "type": "reported-equity-investment",
       "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:139480",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 3.08,
-      "sourceRow": {
-        "index": 265,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "이마트 ",
-          "trmend_blce_qota_rt": "3.08"
-        }
-      }
-    },
-    "relation:group-structure:cd5f2104": {
-      "id": "relation:group-structure:cd5f2104",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:253450",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 6.25,
-      "sourceRow": {
-        "index": 243,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "스튜디오드래곤 ",
-          "trmend_blce_qota_rt": "6.25"
-        }
-      }
-    },
-    "relation:group-structure:bd31c850": {
-      "id": "relation:group-structure:bd31c850",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:031430",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 6.85,
-      "sourceRow": {
-        "index": 23,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "신세계인터내셔날 ",
-          "trmend_blce_qota_rt": "6.85"
-        }
-      }
-    },
-    "relation:group-structure:3ba2049c": {
-      "id": "relation:group-structure:3ba2049c",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
+      "verification": "candidate-unverified-no-document-receipt",
+      "from": "KR:017670",
       "to": "KR:477850",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
+      "sourceId": "source:group-structure:2026-10-08:KR:017670",
       "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "artifactObservedAt": "2026-10-08T17:33:16.829296+09:00",
       "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 4.31,
-      "sourceRow": {
-        "index": 49,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "마키나락스 ",
-          "trmend_blce_qota_rt": "4.31"
-        }
-      }
-    },
-    "relation:group-structure:8baad674": {
-      "id": "relation:group-structure:8baad674",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:466100",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 2.02,
-      "sourceRow": {
-        "index": 32,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "클로봇 ",
-          "trmend_blce_qota_rt": "2.02"
-        }
-      }
-    },
-    "relation:group-structure:aab13be7": {
-      "id": "relation:group-structure:aab13be7",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:486990",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 2.15,
-      "sourceRow": {
-        "index": 150,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "노타 ",
-          "trmend_blce_qota_rt": "2.15"
-        }
-      }
-    },
-    "relation:group-structure:7af8bd10": {
-      "id": "relation:group-structure:7af8bd10",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:483350",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 7.29,
-      "sourceRow": {
-        "index": 225,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "딜리셔스 ",
-          "trmend_blce_qota_rt": "7.29"
-        }
-      }
-    },
-    "relation:group-structure:739d0174": {
-      "id": "relation:group-structure:739d0174",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:289220",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 3.62,
-      "sourceRow": {
-        "index": 228,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "자이언트스텝 ",
-          "trmend_blce_qota_rt": "3.62"
-        }
-      }
-    },
-    "relation:group-structure:8bc844f6": {
-      "id": "relation:group-structure:8bc844f6",
-      "type": "reported-equity-investment",
-      "explicitRole": true,
-      "verification": "candidate-source-row-receipt",
-      "from": "KR:035420",
-      "to": "KR:355390",
-      "sourceId": "source:dart-structured:20260313001021:otrCprInvstmntSttus:KR:035420:00266961:2025:11011:2025-12-31",
-      "sourceDate": null,
-      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
-      "role": "DART 타법인 출자현황 행",
-      "reportedOwnershipPct": 1.38,
-      "sourceRow": {
-        "index": 114,
-        "fields": {
-          "rcept_no": "20260313001021",
-          "corp_code": "00266961",
-          "corp_name": "NAVER",
-          "stlm_dt": "2025-12-31",
-          "inv_prm": "크라우드웍스 ",
-          "trmend_blce_qota_rt": "1.38"
-        }
-      }
+      "reportedOwnershipPct": 7.8
     },
     "relation:group-structure:d9e99971": {
       "id": "relation:group-structure:d9e99971",
@@ -192888,6 +192633,174 @@
           "stlm_dt": "2025-12-31",
           "inv_prm": "(주)아이마켓코리아",
           "trmend_blce_qota_rt": "1.0"
+        }
+      }
+    },
+    "relation:group-structure:4239352e": {
+      "id": "relation:group-structure:4239352e",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-source-row-receipt",
+      "from": "KR:000270",
+      "to": "KR:012330",
+      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 18.1,
+      "sourceRow": {
+        "index": 15,
+        "fields": {
+          "rcept_no": "20260312001224",
+          "corp_code": "00106641",
+          "corp_name": "기아",
+          "stlm_dt": "2025-12-31",
+          "inv_prm": "현대모비스",
+          "trmend_blce_qota_rt": "18.10"
+        }
+      }
+    },
+    "relation:group-structure:66698d77": {
+      "id": "relation:group-structure:66698d77",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-source-row-receipt",
+      "from": "KR:000270",
+      "to": "KR:307950",
+      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 16.24,
+      "sourceRow": {
+        "index": 24,
+        "fields": {
+          "rcept_no": "20260312001224",
+          "corp_code": "00106641",
+          "corp_name": "기아",
+          "stlm_dt": "2025-12-31",
+          "inv_prm": "현대오토에버",
+          "trmend_blce_qota_rt": "16.24"
+        }
+      }
+    },
+    "relation:group-structure:73ac9737": {
+      "id": "relation:group-structure:73ac9737",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-source-row-receipt",
+      "from": "KR:000270",
+      "to": "KR:004020",
+      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 17.27,
+      "sourceRow": {
+        "index": 16,
+        "fields": {
+          "rcept_no": "20260312001224",
+          "corp_code": "00106641",
+          "corp_name": "기아",
+          "stlm_dt": "2025-12-31",
+          "inv_prm": "현대제철",
+          "trmend_blce_qota_rt": "17.27"
+        }
+      }
+    },
+    "relation:group-structure:de527a06": {
+      "id": "relation:group-structure:de527a06",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-source-row-receipt",
+      "from": "KR:000270",
+      "to": "KR:000720",
+      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 5.24,
+      "sourceRow": {
+        "index": 17,
+        "fields": {
+          "rcept_no": "20260312001224",
+          "corp_code": "00106641",
+          "corp_name": "기아",
+          "stlm_dt": "2025-12-31",
+          "inv_prm": "현대건설",
+          "trmend_blce_qota_rt": "5.24"
+        }
+      }
+    },
+    "relation:group-structure:f936ba4c": {
+      "id": "relation:group-structure:f936ba4c",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-source-row-receipt",
+      "from": "KR:000270",
+      "to": "KR:011210",
+      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 13.44,
+      "sourceRow": {
+        "index": 68,
+        "fields": {
+          "rcept_no": "20260312001224",
+          "corp_code": "00106641",
+          "corp_name": "기아",
+          "stlm_dt": "2025-12-31",
+          "inv_prm": "현대위아",
+          "trmend_blce_qota_rt": "13.44"
+        }
+      }
+    },
+    "relation:group-structure:d5895a27": {
+      "id": "relation:group-structure:d5895a27",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-source-row-receipt",
+      "from": "KR:000270",
+      "to": "KR:001500",
+      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 3.95,
+      "sourceRow": {
+        "index": 69,
+        "fields": {
+          "rcept_no": "20260312001224",
+          "corp_code": "00106641",
+          "corp_name": "기아",
+          "stlm_dt": "2025-12-31",
+          "inv_prm": "현대차증권",
+          "trmend_blce_qota_rt": "3.95"
+        }
+      }
+    },
+    "relation:group-structure:cf2099ec": {
+      "id": "relation:group-structure:cf2099ec",
+      "type": "reported-equity-investment",
+      "explicitRole": true,
+      "verification": "candidate-source-row-receipt",
+      "from": "KR:000270",
+      "to": "KR:353590",
+      "sourceId": "source:dart-structured:20260312001224:otrCprInvstmntSttus:KR:000270:00106641:2025:11011:2025-12-31",
+      "sourceDate": null,
+      "artifactObservedAt": "2026-10-03T10:58:37.726754+00:00",
+      "role": "DART 타법인 출자현황 행",
+      "reportedOwnershipPct": 5.05,
+      "sourceRow": {
+        "index": 74,
+        "fields": {
+          "rcept_no": "20260312001224",
+          "corp_code": "00106641",
+          "corp_name": "기아",
+          "stlm_dt": "2025-12-31",
+          "inv_prm": "오토앤",
+          "trmend_blce_qota_rt": "5.05"
         }
       }
     }
@@ -198258,6 +198171,434 @@
       "counterparty_company_id": null,
       "verified_common_event": false,
       "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261008900690",
+      "issuer": {
+        "id": "KR:147760",
+        "name": "피엠티"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-08",
+        "source_title": "단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900690",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261008900690&dcmNo=11608392&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-08T11:43:11.066702+00:00",
+        "content_sha256": "230e8040f90075a012bf7487f479262b5d83876495fd73cba6997f6f40eeac3f",
+        "bytes": 9452
+      },
+      "contract": {
+        "type": {
+          "label": "공시 유형",
+          "value": "단일판매ㆍ공급계약체결"
+        },
+        "name": {
+          "label": "1. 판매ㆍ공급계약 내용",
+          "value": "반도체 검사장치 PROBE CARD 공급"
+        },
+        "counterparty": {
+          "label": "3. 계약상대방",
+          "value": "삼성전자(주)"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2026-10-07"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2027-01-10"
+          }
+        },
+        "signed_on": {
+          "label": "8. 계약(수주)일자",
+          "value": "2026-10-07"
+        }
+      },
+      "correction": null,
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261008900650",
+      "issuer": {
+        "id": "KR:057680",
+        "name": "티사이언티픽"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-08",
+        "source_title": "단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900650",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261008900650&dcmNo=11608322&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-08T11:43:11.066702+00:00",
+        "content_sha256": "101f177ebccd4ec78cbc376569d8ec6f5bba1f167f58e396a516d2e3a5b90035",
+        "bytes": 10056
+      },
+      "contract": {
+        "type": {
+          "label": "공시 유형",
+          "value": "단일판매ㆍ공급계약체결"
+        },
+        "name": {
+          "label": "1. 판매ㆍ공급계약 내용",
+          "value": "26년도 품질혁신센터 품질검증(서버) 위탁 용역 계약"
+        },
+        "counterparty": {
+          "label": "3. 계약상대방",
+          "value": "LG유플러스"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2026-10-01"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2027-09-30"
+          }
+        },
+        "signed_on": {
+          "label": "8. 계약(수주)일자",
+          "value": "2026-10-08"
+        }
+      },
+      "correction": null,
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261008900615",
+      "issuer": {
+        "id": "KR:282720",
+        "name": "금양그린파워"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-08",
+        "source_title": "[기재정정]단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900615",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261008900615&dcmNo=11608326&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-08T11:43:11.066702+00:00",
+        "content_sha256": "ea8b7f298e94b2fed0c25b37c3296e1df64347c7e1d982799e2245c463dcfbc1",
+        "bytes": 15298
+      },
+      "contract": {
+        "type": {
+          "label": "공시 유형",
+          "value": "단일판매ㆍ공급계약체결"
+        },
+        "name": {
+          "label": "1. 판매ㆍ공급계약 내용",
+          "value": "샤힌 에틸렌시설 건설공사 PKG1(전기 설치 공사_1공구)"
+        },
+        "counterparty": {
+          "label": "3. 계약상대방",
+          "value": "현대건설(주)"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2024-04-22"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2026-11-30"
+          }
+        },
+        "signed_on": {
+          "label": "8. 계약(수주)일자",
+          "value": "2024-04-15"
+        }
+      },
+      "correction": {
+        "corrected_on": {
+          "label": "정정일자",
+          "value": "2026-10-08"
+        },
+        "related_filing_date": {
+          "label": "2. 정정관련 공시서류제출일",
+          "value": "2026-07-02"
+        },
+        "reason": {
+          "label": "3. 정정사유",
+          "value": "공사변경계약"
+        },
+        "changes": [
+          {
+            "field": "2. 계약내역 - 확정 계약금액(원)",
+            "before": "32,369,100,000",
+            "after": "33,210,700,000"
+          },
+          {
+            "field": "2. 계약내역 - 계약금액(원)",
+            "before": "32,369,100,000",
+            "after": "33,210,700,000"
+          },
+          {
+            "field": "2. 계약내역 - 매출액대비(%)",
+            "before": "12.22",
+            "after": "12.54"
+          }
+        ]
+      },
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261008900575",
+      "issuer": {
+        "id": "KR:440110",
+        "name": "파두"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-08",
+        "source_title": "[기재정정]단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900575",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261008900575&dcmNo=11608269&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-08T11:43:11.066702+00:00",
+        "content_sha256": "47c1e0932a876a8b773c19214f2711046cf91c12f88269c396fc5e554d436585",
+        "bytes": 14890
+      },
+      "contract": {
+        "type": {
+          "label": "공시 유형",
+          "value": "단일판매ㆍ공급계약체결"
+        },
+        "name": {
+          "label": "1. 판매ㆍ공급계약 내용",
+          "value": "기업용 SSD 컨트롤러 공급"
+        },
+        "counterparty": {
+          "label": "3. 계약상대방",
+          "value": "해외 Nand Flash Memory 제조사"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2026-04-10"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2026-10-09"
+          }
+        },
+        "signed_on": {
+          "label": "8. 계약(수주)일자",
+          "value": "2026-04-10"
+        }
+      },
+      "correction": {
+        "corrected_on": {
+          "label": "정정일자",
+          "value": "2026-10-06"
+        },
+        "related_filing_date": {
+          "label": "2. 정정관련 공시서류제출일",
+          "value": "2026-04-13"
+        },
+        "reason": {
+          "label": "3. 정정사유",
+          "value": "계속적 공시유보 신청에 따른 공시유보기한 정정"
+        },
+        "changes": [
+          {
+            "field": "9. 공시유보기한",
+            "before": "2026-10-09",
+            "after": "-"
+          },
+          {
+            "field": "10. 기타 투자판단 참고사항",
+            "before": "- 계약기간 종료일은 제품대금 수령일이며 고객과의 협의를 통해 변경될 수 있습니다.",
+            "after": "- 계약기간 종료일은 제품대금 수령일이며 본 공시서류제출일 현재 제품 대금 수령이 완료되었습니다."
+          }
+        ]
+      },
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261008900573",
+      "issuer": {
+        "id": "KR:440110",
+        "name": "파두"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-08",
+        "source_title": "[기재정정]단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900573",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261008900573&dcmNo=11608265&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-08T11:43:11.066702+00:00",
+        "content_sha256": "942f2e867447e5f649afd44084ecb8c9afa25ddf94eb407a16cf92c6fccc5ba0",
+        "bytes": 13849
+      },
+      "contract": {
+        "type": {
+          "label": "공시 유형",
+          "value": "단일판매ㆍ공급계약체결"
+        },
+        "name": {
+          "label": "1. 판매ㆍ공급계약 내용",
+          "value": "기업용 SSD 컨트롤러 공급"
+        },
+        "counterparty": {
+          "label": "3. 계약상대방",
+          "value": "국내 반도체 제조사"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2026-03-12"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2026-11-23"
+          }
+        },
+        "signed_on": {
+          "label": "8. 계약(수주)일자",
+          "value": "2026-03-12"
+        }
+      },
+      "correction": {
+        "corrected_on": {
+          "label": "정정일자",
+          "value": "2026-10-08"
+        },
+        "related_filing_date": {
+          "label": "2. 정정관련 공시서류제출일",
+          "value": "2026-03-13"
+        },
+        "reason": {
+          "label": "3. 정정사유",
+          "value": "계약기간 종료일 및 공시유보기한 정정"
+        },
+        "changes": [
+          {
+            "field": "5. 계약기간 종료일",
+            "before": "2026-10-17",
+            "after": "2026-11-23"
+          },
+          {
+            "field": "9. 공시유보기한",
+            "before": "2026-10-17",
+            "after": "2026-11-23"
+          }
+        ]
+      },
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261008900539",
+      "issuer": {
+        "id": "KR:189300",
+        "name": "인텔리안테크"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-08",
+        "source_title": "[기재정정]단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900539",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261008900539&dcmNo=11608068&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-08T11:43:11.066702+00:00",
+        "content_sha256": "32c19b219e1b06a0e302c45f410a018d2476bc813cfc15d80d3a5011389eea76",
+        "bytes": 14998
+      },
+      "contract": {
+        "type": {
+          "label": "공시 유형",
+          "value": "단일판매ㆍ공급계약체결"
+        },
+        "name": {
+          "label": "1. 판매ㆍ공급계약 내용",
+          "value": "Ground Gateway Antenna 공급계약"
+        },
+        "counterparty": {
+          "label": "3. 계약상대방",
+          "value": "글로벌 위성통신사업자"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2024-09-23"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2026-10-11"
+          }
+        },
+        "signed_on": {
+          "label": "8. 계약(수주)일자",
+          "value": "2024-09-22"
+        }
+      },
+      "correction": {
+        "corrected_on": {
+          "label": "정정일자",
+          "value": "2026-10-08"
+        },
+        "related_filing_date": {
+          "label": "2. 정정관련 공시서류제출일",
+          "value": "2024-09-23"
+        },
+        "reason": {
+          "label": "3. 정정사유",
+          "value": "계약 종료에 따른 계속적 공시 유보 신청"
+        },
+        "changes": [
+          {
+            "field": "3.계약 상대방",
+            "before": "-",
+            "after": "글로벌 위성통신사업자"
+          },
+          {
+            "field": "9.공시 유보 관련내용 유보기한",
+            "before": "2026-10-11",
+            "after": "-"
+          },
+          {
+            "field": "10. 기타 투자판단에 참고할 사 항",
+            "before": "-",
+            "after": "- 코스닥시장 공시규정 제42조 제3항 단서 및 같은 규정 시행세칙 제 20조 제3항과 제4항에 따라 당사는 계약 상대방의 영업비밀 보호요청에 의해 공시유보기한 이후에도 개략적인 정보만 기재되는 계속적 공시유보를 진행합니다."
+          }
+        ]
+      },
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
     }
   ],
   "documentFamilies": [
@@ -199759,6 +200100,156 @@
           "title": "단일판매ㆍ공급계약체결",
           "published_on": "2026-10-07",
           "amendment": false
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:147760",
+      "issuer_name": "피엠티",
+      "corp_code": "00654175",
+      "receipt_no": "20261008900690",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900690",
+      "observed_at": "2026-10-08T11:43:11.066702+00:00",
+      "content_sha256": "5fa11606fb97864b86d98f653bde25ce16cd1ef7783664d84e9e995546276610",
+      "members": [
+        {
+          "receipt_no": "20261008900690",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-08",
+          "amendment": false
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:057680",
+      "issuer_name": "티사이언티픽",
+      "corp_code": "00372688",
+      "receipt_no": "20261008900650",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900650",
+      "observed_at": "2026-10-08T11:43:11.066702+00:00",
+      "content_sha256": "41e363aa3b29a82346407370da0e5a6bd0a0480978821e8ce8a4c25680f5c7c4",
+      "members": [
+        {
+          "receipt_no": "20261008900650",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-08",
+          "amendment": false
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:282720",
+      "issuer_name": "금양그린파워",
+      "corp_code": "00872656",
+      "receipt_no": "20261008900615",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900615",
+      "observed_at": "2026-10-08T11:43:11.066702+00:00",
+      "content_sha256": "c8a6555a1b5316a2770035a8ee3625b349fdc5b2149153c38142c617e2d38d62",
+      "members": [
+        {
+          "receipt_no": "20260702900719",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-07-02",
+          "amendment": false
+        },
+        {
+          "receipt_no": "20260709900244",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-07-09",
+          "amendment": true
+        },
+        {
+          "receipt_no": "20260806900183",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-08-06",
+          "amendment": true
+        },
+        {
+          "receipt_no": "20260831900829",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-08-31",
+          "amendment": true
+        },
+        {
+          "receipt_no": "20260909900454",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-09-09",
+          "amendment": true
+        },
+        {
+          "receipt_no": "20261008900615",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-08",
+          "amendment": true
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:440110",
+      "issuer_name": "파두",
+      "corp_code": "01292291",
+      "receipt_no": "20261008900575",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900575",
+      "observed_at": "2026-10-08T11:43:11.066702+00:00",
+      "content_sha256": "add30fde591c245845947ab16f5e8483671dc7b15670ca8b8f2975d6688a2b4e",
+      "members": [
+        {
+          "receipt_no": "20260413900118",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-04-13",
+          "amendment": false
+        },
+        {
+          "receipt_no": "20261008900575",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-08",
+          "amendment": true
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:440110",
+      "issuer_name": "파두",
+      "corp_code": "01292291",
+      "receipt_no": "20261008900573",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900573",
+      "observed_at": "2026-10-08T11:43:11.066702+00:00",
+      "content_sha256": "32b760a7341cba4bfd510607d235de3e44cbcb50a20b6199eba42480cd6c91f6",
+      "members": [
+        {
+          "receipt_no": "20260313900181",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-03-13",
+          "amendment": false
+        },
+        {
+          "receipt_no": "20261008900573",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-08",
+          "amendment": true
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:189300",
+      "issuer_name": "인텔리안테크",
+      "corp_code": "00664181",
+      "receipt_no": "20261008900539",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261008900539",
+      "observed_at": "2026-10-08T11:43:11.066702+00:00",
+      "content_sha256": "a709ce557027a4810d25e456f285db2f2bdb2be481b7be962e369a0f9586ba3a",
+      "members": [
+        {
+          "receipt_no": "20240923900104",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2024-09-23",
+          "amendment": false
+        },
+        {
+          "receipt_no": "20261008900539",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-08",
+          "amendment": true
         }
       ]
     }
