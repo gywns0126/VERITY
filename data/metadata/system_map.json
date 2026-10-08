@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-10-08T23:55:26.179340+09:00",
+  "generated_at": "2026-10-09T05:37:26.965776+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 359601,
-    "python_modules": 1182,
+    "code_lines_tsx_py": 362725,
+    "python_modules": 1189,
     "tsx_components": 149,
-    "json_data_files": 2405,
-    "json_total_tracked": 2429,
+    "json_data_files": 2407,
+    "json_total_tracked": 2431,
     "workflows": 80,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 8482
+    "git_tracked_files": 8479
   },
   "subsystems": {
     "ingest": {
@@ -106,7 +106,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 78,
+      "count": 80,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -155,6 +155,8 @@
         "api/intelligence/periodic_report.py",
         "api/intelligence/perplexity_realtime.py",
         "api/intelligence/portfolio.py",
+        "api/intelligence/portfolio_annual_customer_tables.py",
+        "api/intelligence/portfolio_business_roles.py",
         "api/intelligence/portfolio_company_names.py",
         "api/intelligence/portfolio_contract_facts.py",
         "api/intelligence/portfolio_contract_termination.py",
@@ -749,7 +751,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 2405
+      "count": 2407
     },
     "validation": {
       "label": "검증",
@@ -764,10 +766,10 @@
     }
   },
   "python_by_dir": {
-    "api": 468,
-    "tests": 431,
-    "scripts": 164,
-    "vercel-api": 106,
+    "api": 470,
+    "tests": 434,
+    "scripts": 165,
+    "vercel-api": 107,
     "server": 7,
     ".github": 6
   },
