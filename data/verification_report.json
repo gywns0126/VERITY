@@ -3,11 +3,11 @@
     "hit_rate_7d": null,
     "hit_rate_14d": null,
     "hit_rate_30d": null,
-    "sample_7d": 0,
-    "sample_14d": 13,
+    "sample_7d": 10,
+    "sample_14d": 8,
     "sample_30d": 0,
-    "hits_7d": 0,
-    "hits_14d": 11,
+    "hits_7d": 5,
+    "hits_14d": 6,
     "hits_30d": 0,
     "hit_rate_7d_ci95": null,
     "hit_rate_14d_ci95": null,
@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-10-08 17:51:45.537830+09:00",
+    "applied_at": "2026-10-09 00:34:16.069814+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-10-08 17:51:45.537834+09:00"
+      "fixed_at": "2026-10-09 00:34:16.069817+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -45,35 +45,86 @@
   },
   "evaluation_coverage": {
     "7d": {
-      "evaluation_status": "no_recommendations",
-      "cohort_size": 0,
-      "evaluated_count": 0,
-      "unresolved_count": 0,
-      "coverage_pct": null,
-      "unresolved": [],
-      "evaluation_date": "2026-10-08",
-      "snapshot_date": "2026-10-01"
+      "evaluation_status": "partial",
+      "cohort_size": 12,
+      "evaluated_count": 10,
+      "unresolved_count": 2,
+      "coverage_pct": 83.3,
+      "unresolved": [
+        {
+          "ticker": "033780",
+          "name": "KT&G",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "000660",
+          "name": "SK하이닉스",
+          "reason": "missing_evaluation_price"
+        }
+      ],
+      "evaluation_date": "2026-10-09",
+      "snapshot_date": "2026-10-02"
     },
     "14d": {
       "evaluation_status": "partial",
-      "cohort_size": 25,
-      "evaluated_count": 13,
-      "unresolved_count": 12,
-      "coverage_pct": 52.0,
+      "cohort_size": 23,
+      "evaluated_count": 8,
+      "unresolved_count": 15,
+      "coverage_pct": 34.8,
       "unresolved": [
+        {
+          "ticker": "LIVN",
+          "name": "LIVN",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "MDU",
+          "name": "MDU",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "PIPR",
+          "name": "PIPR",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "UFPT",
+          "name": "UFPT",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "VLO",
+          "name": "VLO",
+          "reason": "missing_evaluation_price"
+        },
         {
           "ticker": "081660",
           "name": "미스토홀딩스",
-          "reason": "missing_evaluation_price"
+          "reason": "missing_entry_price"
         },
         {
           "ticker": "082740",
           "name": "한화엔진",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "192400",
+          "name": "쿠쿠홀딩스",
           "reason": "missing_evaluation_price"
         },
         {
-          "ticker": "UBER",
-          "name": "UBER",
+          "ticker": "053610",
+          "name": "프로텍",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "144960",
+          "name": "뉴파워프라즈마",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "029460",
+          "name": "케이씨",
           "reason": "missing_evaluation_price"
         },
         {
@@ -92,38 +143,13 @@
           "reason": "missing_evaluation_price"
         },
         {
-          "ticker": "035420",
-          "name": "NAVER",
+          "ticker": "UBER",
+          "name": "UBER",
           "reason": "missing_evaluation_price"
-        },
-        {
-          "ticker": "INVA",
-          "name": "INVA",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "PPLI",
-          "name": "PPLI",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "TDS",
-          "name": "TDS",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "TDY",
-          "name": "TDY",
-          "reason": "missing_entry_price"
-        },
-        {
-          "ticker": "TROW",
-          "name": "TROW",
-          "reason": "missing_entry_price"
         }
       ],
-      "evaluation_date": "2026-10-08",
-      "snapshot_date": "2026-09-24"
+      "evaluation_date": "2026-10-09",
+      "snapshot_date": "2026-09-25"
     },
     "30d": {
       "evaluation_status": "no_recommendations",
@@ -132,7 +158,7 @@
       "unresolved_count": 0,
       "coverage_pct": null,
       "unresolved": [],
-      "evaluation_date": "2026-10-08",
+      "evaluation_date": "2026-10-09",
       "snapshot_date": "2026-09-08"
     }
   },
@@ -140,15 +166,21 @@
     "healthy": [
       "momentum"
     ],
-    "weakening": [],
+    "weakening": [
+      "mean_reversion"
+    ],
     "decaying": [
-      "mean_reversion",
-      "safety_score",
-      "volatility"
+      "safety_score"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
+    {
+      "factor": "prediction",
+      "multiplier": 0.0,
+      "status": "DEAD",
+      "ic_recent": 0.0
+    },
     {
       "factor": "multi_factor",
       "multiplier": 0.0,
@@ -166,14 +198,8 @@
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
-    },
-    {
-      "factor": "prediction",
-      "multiplier": 0.0,
-      "status": "DEAD",
-      "ic_recent": 0.0
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-10-08 17:51:45.568639+09:00"
+  "generated_at": "2026-10-09 00:34:16.098591+09:00"
 }
