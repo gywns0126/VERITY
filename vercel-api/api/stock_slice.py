@@ -16,6 +16,7 @@ import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -50,6 +51,12 @@ US_SOURCES = {
 
 _TICKER_RE = re.compile(r"^[A-Za-z0-9.\-]{1,12}$")
 _CACHE = {}  # fname -> (epoch, doc)
+# One fetch per source per process, without serializing unrelated KR sources.
+_LOAD_LOCKS = {f: Lock() for m in (KR_SOURCES, US_SOURCES, KR_OPTIONAL_SOURCES)
+               for f in m.values()}
+_VALIDATORS = {}  # fname -> conditional request headers for the cached body
+_RETRY_AFTER = {}  # monotonic deadline; never changes the source observation time
+RETRY_COOLDOWN = 30
 
 
 # 🚨 2026-08-18 — 소스별 TTL. 일괄 30분이 전송량 과금을 키웠다.
@@ -79,19 +86,40 @@ def _ttl_for(fname):
 
 
 def _load(fname):
-    now = time.time()
-    hit = _CACHE.get(fname)
-    if hit and (now - hit[0]) < _ttl_for(fname):
-        return hit[1]
-    try:
-        r = requests.get(f"{BASE}/{fname}", timeout=TIMEOUT)
-        if r.status_code == 200:
-            doc = r.json()
-            _CACHE[fname] = (now, doc)
-            return doc
-    except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
-        _logger.error("stock_slice: %s load 실패: %s", fname, e)
-    return hit[1] if hit else None  # stale fallback
+    with _LOAD_LOCKS[fname]:
+        # Recheck after acquiring the lock: another request may have filled it.
+        hit = _CACHE.get(fname)
+        if hit and (time.time() - hit[0]) < _ttl_for(fname):
+            return hit[1]
+        if time.monotonic() < _RETRY_AFTER.get(fname, 0):
+            return hit[1] if hit else None
+        try:
+            headers = _VALIDATORS.get(fname, {}) if hit else {}
+            r = requests.get(f"{BASE}/{fname}", timeout=TIMEOUT, headers=headers)
+            if r.status_code == 304 and hit:
+                _CACHE[fname] = (time.time(), hit[1])
+                _RETRY_AFTER.pop(fname, None)
+                return hit[1]
+            if r.status_code == 200:
+                doc = r.json()
+                if not isinstance(doc, (dict, list)):
+                    raise ValueError("source JSON must be an object or array")
+                validators = {}
+                for response_key, request_key in (("ETag", "If-None-Match"),
+                                                   ("Last-Modified", "If-Modified-Since")):
+                    value = r.headers.get(response_key)
+                    if isinstance(value, str) and value:
+                        validators[request_key] = value
+                _CACHE[fname] = (time.time(), doc)
+                _VALIDATORS[fname] = validators
+                _RETRY_AFTER.pop(fname, None)
+                return doc
+            _logger.warning("stock_slice: %s HTTP %s", fname, r.status_code)
+        except (requests.RequestException, ValueError) as e:
+            _logger.error("stock_slice: %s load 실패: %s", fname, e)
+        # Retain last-good data and its dates; avoid a retry on every visitor.
+        _RETRY_AFTER[fname] = time.monotonic() + RETRY_COOLDOWN
+        return hit[1] if hit else None
 
 
 def _employment_gate(rec):
@@ -188,7 +216,7 @@ class handler(BaseHTTPRequestHandler):
         if is_kr:
             srcs = {**KR_SOURCES, **KR_OPTIONAL_SOURCES} if include_overview else KR_SOURCES
         else:
-            srcs = US_SOURCES
+            srcs = {"report": US_SOURCES["report"]}
         docs = {}
         with ThreadPoolExecutor(max_workers=len(srcs)) as ex:
             for k, doc in zip(srcs.keys(), ex.map(lambda f: _load(f), srcs.values())):
@@ -212,9 +240,13 @@ class handler(BaseHTTPRequestHandler):
                 out["business_overview"] = _business_overview(docs.get("business_overview"), ticker)
                 out["business_overview_as_of"] = _meta_field(docs.get("business_overview"), "generated_at")
         else:
-            report = _slice(docs.get("report"), ticker) or _slice(docs.get("report_smallcap"), ticker)
+            report_doc = docs.get("report")
+            report = _slice(report_doc, ticker)
+            if not report:
+                report_doc = _load(US_SOURCES["report_smallcap"])
+                report = _slice(report_doc, ticker)
             out["report"] = report
-            out["report_as_of"] = _meta_field(docs.get("report"), "generated_at")
+            out["report_as_of"] = _meta_field(report_doc, "generated_at") if report else None
 
         # report None = 리포트 미보유 종목(유효 공백) — 200 유지, 컴포넌트가 stub 안내.
         self._send(200, out, cache=True)

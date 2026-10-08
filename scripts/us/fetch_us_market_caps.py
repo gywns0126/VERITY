@@ -13,6 +13,8 @@
 산출: data/us_market_caps.json = {schema_version, generated_at, count, market_caps:{TICKER: usd}}.
   멱등 — 이번 run 에서 fail 한 ticker 는 기존 값 보존 (silent data loss 금지,
   [[feedback_data_collection_verification_mandatory]]).
+  market_cap_as_of = 종목별 성공 수집시각(거래소 시세시각 아님); legacy 미상은 null.
+  failed_tickers = 미복구 실패 목록. --retry-only / --stale-days 필터 후 --offset/--limit 적용.
 
 호출 빈도: 월 1회 (us_financials.yml 와 동반).
 """
@@ -20,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -28,7 +31,9 @@ from typing import Any, Dict, List, Optional
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT))  # noqa: E402
 
-from api.collectors.yfinance_safe import yf_ticker, safe_yf_call, get_state_snapshot  # noqa: E402
+from api.collectors.yfinance_safe import (  # noqa: E402
+    yf_ticker, safe_yf_call, get_state_snapshot, _is_rate_limit_error,
+)
 
 KST = timezone(timedelta(hours=9))
 SP1500_PATH = REPO_ROOT / "data" / "us_universe_sp1500.json"
@@ -55,36 +60,64 @@ def load_universe_tickers(path: Path) -> List[str]:
         return list(DEFAULT_US15)
 
 
-def load_existing() -> Dict[str, float]:
-    """기존 산출 → 멱등 merge base (이번 run fail ticker 보존)."""
+def _positive_finite(value: Any) -> Optional[float]:
+    if isinstance(value, bool):
+        return None
+    try:
+        value = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return value if math.isfinite(value) and value > 0 else None
+
+
+def _load_existing_document() -> dict:
+    """Unreadable prior data must not be overwritten by a partial recovery."""
     if not OUTPUT_PATH.exists():
         return {}
+    doc = json.loads(OUTPUT_PATH.read_text(encoding="utf-8"))
+    if not isinstance(doc, dict) or not isinstance(doc.get("market_caps"), dict):
+        raise ValueError("existing market_caps must be an object")
+    return doc
+
+
+def load_existing(document: Optional[dict] = None) -> Dict[str, float]:
+    """기존 유효 시총만 merge base 로 사용; 실패 종목의 last-good 보존."""
+    doc = _load_existing_document() if document is None else document
+    return {str(k).upper(): v for k, raw in doc.get("market_caps", {}).items()
+            if isinstance(raw, (int, float)) and (v := _positive_finite(raw)) is not None}
+
+
+def _is_stale(as_of: Any, now: datetime, days: int) -> bool:
     try:
-        d = json.loads(OUTPUT_PATH.read_text(encoding="utf-8"))
-        mc = d.get("market_caps") or {}
-        return {str(k).upper(): float(v) for k, v in mc.items()
-                if isinstance(v, (int, float)) and v == v and v > 0}
-    except Exception as e:  # noqa: BLE001
-        print(f"[us_market_caps] 기존 파일 parse 실패(무시): {e!r}", file=sys.stderr)
-        return {}
+        stamp = datetime.fromisoformat(as_of)
+        if stamp.tzinfo is None or stamp > now:
+            return True
+        return now - stamp >= timedelta(days=days)
+    except (TypeError, ValueError):
+        return True  # Legacy generated_at does not date each retained value.
 
 
 def fetch_market_cap(ticker: str) -> Optional[float]:
-    """yfinance fast_info.market_cap (raw USD). rate-limit safe. fail=None."""
+    """FastInfo then info.marketCap; no shares×price estimate or extra retry loop.
+
+    Each safe_yf_call attempt tries each source at most once. Rate limits propagate
+    to the existing bounded retry/backoff wrapper instead of triggering a fallback.
+    """
     def _call() -> Optional[float]:
-        # FastInfo: .market_cap 속성(snake) 정상. .get("market_cap")=None(내부키 marketCap)이라
-        # 속성 접근 우선, 실패 시 marketCap 키 fallback.
-        fi = yf_ticker(ticker).fast_info
-        mc = getattr(fi, "market_cap", None)
-        if mc is None:
-            try:
-                mc = fi["marketCap"]
-            except (KeyError, TypeError):
-                mc = None
-        if mc is None:
-            return None
-        v = float(mc)
-        return v if (v == v and v > 0) else None
+        stock = yf_ticker(ticker)
+        try:
+            fi = stock.fast_info
+            mc = fi.get("marketCap") if isinstance(fi, dict) else fi.market_cap
+            value = _positive_finite(mc)
+            if value is not None:
+                return value
+        except Exception as e:  # noqa: BLE001 — malformed FastInfo, e.g. currentTradingPeriod
+            if _is_rate_limit_error(e):
+                raise
+        # Reading the camelCase FastInfo alias again would repeat the same failing
+        # history/metadata access. Use the independent quote field instead.
+        info = stock.info
+        return _positive_finite(info.get("marketCap")) if isinstance(info, dict) else None
 
     # rate limit 외 예외(개별 ticker delisted 등)는 fail 처리 (전체 중단 방지).
     try:
@@ -101,33 +134,65 @@ def main() -> int:
     parser.add_argument("--ticker", help="단일 ticker (manual test).")
     parser.add_argument("--universe", choices=["sp1500", "combined"], default="sp1500",
                         help="sp1500=S&P 1500 / combined=Polygon CS active ∪ sp1500(소형주 트랙).")
+    recovery = parser.add_mutually_exclusive_group()
+    recovery.add_argument("--retry-only", action="store_true",
+                          help="현재 유니버스 중 결손 또는 기록된 실패 종목만 조회.")
+    recovery.add_argument("--stale-days", type=int,
+                          help="결손·기록된 실패·수집시각 미상 또는 N일 이상 지난 종목만 조회.")
     args = parser.parse_args()
+    if args.limit < 0 or args.offset < 0 or (args.stale_days is not None and args.stale_days < 0):
+        parser.error("limit, offset and stale-days must be non-negative")
+
+    try:
+        existing = _load_existing_document()
+        merged = load_existing(existing)
+    except (OSError, ValueError) as e:
+        print(f"[us_market_caps] 기존 파일 읽기 실패 — 보존 후 중단: {e!r}", file=sys.stderr)
+        return 1
+    # Per-ticker successful collection time, NOT exchange/quote time. Unknown
+    # legacy dates stay null: generated_at could include failed carry-forwards.
+    prior_dates = existing.get("market_cap_as_of") or {}
+    if not isinstance(prior_dates, dict):
+        prior_dates = {}
+    as_of = {tk: prior_dates.get(tk) if isinstance(prior_dates.get(tk), str) else None
+             for tk in merged}
+    failed = existing.get("failed_tickers") or []
+    failed = {tk for tk in failed if isinstance(tk, str)} if isinstance(failed, list) else set()
+    now = datetime.now(KST)
 
     if args.ticker:
         tickers = [args.ticker.upper()]
     else:
         path = COMBINED_PATH if args.universe == "combined" else SP1500_PATH
         tickers = load_universe_tickers(path)
-        if args.offset > 0:
-            tickers = tickers[args.offset:]
-        if args.limit > 0:
-            tickers = tickers[:args.limit]
+    tickers = list(dict.fromkeys(tickers))
+    if args.retry_only or args.stale_days is not None:
+        tickers = [tk for tk in tickers if tk not in merged or tk in failed
+                   or (args.stale_days is not None and _is_stale(as_of.get(tk), now, args.stale_days))]
+    # Recovery filtering precedes batching so healthy prefixes do not starve gaps.
+    tickers = tickers[args.offset:]
+    if args.limit > 0:
+        tickers = tickers[:args.limit]
 
     print(f"[us_market_caps] universe size={len(tickers)}", file=sys.stderr)
 
-    merged: Dict[str, float] = load_existing()
+    if not tickers:
+        return 0  # No fetch and no misleading generated_at refresh on a no-op.
     ok = 0
     fail = 0
     for i, tk in enumerate(tickers, 1):
-        mc = fetch_market_cap(tk)
+        mc = _positive_finite(fetch_market_cap(tk))
         if mc is not None:
             merged[tk] = mc
+            as_of[tk] = datetime.now(KST).isoformat(timespec="seconds")
+            failed.discard(tk)
             ok += 1
             if i % 100 == 0 or i == len(tickers):
                 print(f"  [{i}/{len(tickers)}] {tk} ${mc/1e9:.2f}B (ok={ok} fail={fail})",
                       file=sys.stderr, flush=True)
         else:
             fail += 1
+            failed.add(tk)
             print(f"  [{i}/{len(tickers)}] {tk}: market_cap 부재/실패 "
                   f"({'기존값 보존' if tk in merged else '결손'})", file=sys.stderr)
 
@@ -135,11 +200,13 @@ def main() -> int:
         "schema_version": "v0",
         "generated_at": datetime.now(KST).isoformat(timespec="seconds"),
         "count": len(merged),
-        "source": "yfinance.fast_info.market_cap",
+        "source": "yfinance.fast_info.market_cap; fallback=yfinance.info.marketCap",
         "market_caps": dict(sorted(merged.items())),
+        "market_cap_as_of": dict(sorted(as_of.items())),
+        "failed_tickers": sorted(failed),
     }
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    OUTPUT_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
 
     rl = get_state_snapshot().get("rate_limit_count", 0)
     # logged=True — [[feedback_data_collection_verification_mandatory]]

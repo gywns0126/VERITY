@@ -454,31 +454,35 @@ def _market_cap_or_fallback(market_cap, shares_outstanding, price) -> int:
 _US_MCAP_CACHE: Dict[str, Any] = {}
 
 
-def _us_market_cap_cached(ticker: str) -> Tuple[int, str]:
+def _us_market_cap_cached(ticker: str) -> Tuple[int, Optional[str]]:
     """3단 폴백 — yfinance 가 marketCap·sharesOutstanding 을 **둘 다** 안 줄 때.
 
     2026-08-23: 운영풀 38 중 2건(ADI·AMG)이 `market_cap 0` 으로 발행됐다. 0 은 '작다'로도
     '모른다'로도 읽히는데 하류 정렬·필터는 숫자로 받는다.
     🚨 이 소스는 **stale 하다** — `us_market_caps.json` 은 주기 생성물이라 오늘 값이 아니다.
-    그래서 값만 돌려주지 않고 `generated_at` 을 같이 돌려주고, 호출부가 레코드에
+    그래서 값과 종목별 성공 수집시각을 함께 돌려주고, 호출부가 레코드에
     `market_cap_source`·`market_cap_as_of` 를 찍는다. 신선한 값으로 오독되면 안 된다.
+    파일의 `generated_at`은 실패 후 보존된 값의 날짜가 아니다. 미상은 None 유지.
     """
     if not _US_MCAP_CACHE:
-        _US_MCAP_CACHE["caps"], _US_MCAP_CACHE["as_of"] = {}, ""
+        _US_MCAP_CACHE["caps"], _US_MCAP_CACHE["as_of"] = {}, {}
         try:
             path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
                 os.path.abspath(__file__)))), "data", "us_market_caps.json")
             with open(path, encoding="utf-8") as fh:
                 blob = json.load(fh) or {}
             _US_MCAP_CACHE["caps"] = blob.get("market_caps") or {}
-            _US_MCAP_CACHE["as_of"] = str(blob.get("generated_at") or "")
+            dates = blob.get("market_cap_as_of")
+            _US_MCAP_CACHE["as_of"] = dates if isinstance(dates, dict) else {}
         except (OSError, json.JSONDecodeError, TypeError):
             pass
     try:
         v = float(_US_MCAP_CACHE["caps"].get(str(ticker).upper()) or 0)
     except (TypeError, ValueError):
-        return 0, ""
-    return (int(v), _US_MCAP_CACHE["as_of"]) if v > 0 else (0, "")
+        return 0, None
+    date = _US_MCAP_CACHE["as_of"].get(str(ticker).upper())
+    date = date if isinstance(date, str) and date else None
+    return (int(v), date) if v > 0 else (0, None)
 
 
 def get_stock_data(
