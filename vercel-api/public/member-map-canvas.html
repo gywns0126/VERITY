@@ -2590,12 +2590,17 @@ function memberReportedDegree(edge,node){
     const escape=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
     const company='(?:당사|'+escape(issuer[1])+')';
     const counterparty=escape(name);
+    // The existing upstream grammar also admits a closed counterparty clause
+    // followed by an issuer-owned qualifier. Both must name this same party.
+    const rolePrefix=role==='공급처'?'(?:구매처|공급업체)':'(?:매출처|고객사)';
+    const qualified=quote.trim().match(new RegExp('^당사의 '+rolePrefix+'는 '+counterparty+'(?:이)?며, (.+)$'));
+    const assertion=qualified?qualified[1]:quote.trim();
     const rules=[
       [3,new RegExp('^'+company+'의 유일한 '+role+'(?:는|은) '+counterparty+'(?:입니다|이다|이며)[.。]?$'),'해당 회사의 유일한 '+role+'로 명시됨'],
       [2,new RegExp('^'+company+'의 주요 '+role+'(?:는|은) '+counterparty+'(?:입니다|이다|이며)[.。]?$'),'해당 회사의 주요 '+role+'로 명시됨'],
       [1,new RegExp('^'+company+'의 '+counterparty+'(?:에 대한|와의|과의) 거래 비중은 미미(?:합니다|하다)[.。]?$'),'해당 회사와 상대방의 거래 비중이 미미하다고 명시됨']
     ];
-    const matched=rules.filter(([,pattern])=>pattern.test(quote.trim()));
+    const matched=rules.filter(([,pattern])=>pattern.test(assertion));
     if(matched.length!==1)return null;
     [grade,,basis]=matched[0];
   }
