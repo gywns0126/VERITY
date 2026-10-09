@@ -13,6 +13,7 @@ from typing import Dict, List
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CACHE_PATH = os.path.join(_ROOT, "data", "news_translation_cache.json")
+CURATED_PATH = os.path.join(os.path.dirname(__file__), "news_translation_curated.json")
 MAX_NEW_PER_RUN = 100  # 신규 번역 cron 당 상한 (비용 가드). 종목 헤드라인 75개 + 미국 15개를 한 run에 전량 처리(stragglers 방지). Gemini flash-lite 1 batch call 비용 미미.
 CACHE_CAP = 3000  # 캐시 size 상한 (최근 우선 유지)
 
@@ -22,12 +23,17 @@ def _has_hangul(s: str) -> bool:
 
 
 def _load_cache() -> Dict[str, str]:
-    try:
-        with open(CACHE_PATH, "r", encoding="utf-8") as f:
-            d = json.load(f)
-            return d if isinstance(d, dict) else {}
-    except Exception:  # noqa: BLE001
-        return {}
+    cache: Dict[str, str] = {}
+    # 수동 보충은 별도 정본에 유지해 자동 캐시의 3,000건 eviction으로 사라지지 않는다.
+    for path in (CACHE_PATH, CURATED_PATH):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    cache.update(data)
+        except Exception:  # noqa: BLE001 — 한 입력이 실패해도 나머지 기존 번역은 유지.
+            pass
+    return cache
 
 
 def _save_cache(cache: Dict[str, str]) -> None:
@@ -78,16 +84,17 @@ def _gemini_translate(titles: List[str]) -> Dict[str, str]:
         return {}
 
 
-def translate_headlines_ko(titles: List[str]) -> Dict[str, str]:
+def translate_headlines_ko(titles: List[str], *, cache_only: bool = False) -> Dict[str, str]:
     """영어 헤드라인 list → {원문 title: 한글}. 캐시 우선, miss 만 LLM batch 호출.
 
     이미 한글이 섞인 제목(미국 키워드 매칭된 국내 기사 등)은 번역 불필요 → 원문 그대로 매핑.
+    cache_only=True는 기존 번역 읽기만 한다. 모델 호출·캐시 쓰기 없이 원문 fallback.
     """
     uniq: List[str] = []
     seen = set()
     for t in titles:
-        if isinstance(t, str) and t.strip() and t not in seen:
-            seen.add(t)
+        if isinstance(t, str) and t.strip() and t.strip() not in seen:
+            seen.add(t.strip())
             uniq.append(t.strip())
     if not uniq:
         return {}
@@ -96,14 +103,15 @@ def translate_headlines_ko(titles: List[str]) -> Dict[str, str]:
     result: Dict[str, str] = {}
     misses: List[str] = []
     for t in uniq:
-        if t in cache:
-            result[t] = cache[t]
-        elif _has_hangul(t):
+        ko = cache.get(t)
+        if _has_hangul(t):
             result[t] = t  # 이미 한국어 — 토글 시 그대로 노출
+        elif isinstance(ko, str) and ko.strip() and _has_hangul(ko) and ko.strip() != t:
+            result[t] = ko.strip()
         else:
             misses.append(t)
 
-    if misses:
+    if misses and not cache_only:
         new = _gemini_translate(misses[:MAX_NEW_PER_RUN])
         if new:
             cache.update(new)
