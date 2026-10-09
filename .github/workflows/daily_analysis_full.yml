@@ -510,6 +510,8 @@ jobs:
 
       - name: 국민연금 보유종목 집계 (NPS 공개 패널)
         id: nps_holdings
+        # Independent official facts: a failed analysis must not skip NPS refresh.
+        if: ${{ !cancelled() }}
         # data.go.kr #15106890 분기 확정값을 바탕으로, 이후 DART 국민연금 지분공시 종목만 증분 조회한다.
         # 신규 공시 미해결·입력 무결성 실패 시 기존 정상본 보존 + 즉시 알림 + 마지막 step 에서 workflow 실패 확정.
         # 외부 사실 조회(KIS 0). RULE 7 = 대량보유 공시 사실(지분율)만, 점수·추천 0. 다음 step git add data/ (broad) 자동 = RULE 4. publish allowlist 등재 완료.
@@ -841,6 +843,7 @@ jobs:
           done
 
       - name: Commit & push results
+        id: commit_results
         # 핵심 데이터 붕괴 시 커밋 차단 (coverage_gate fail-closed) — 결함본이 repo·사이트로 안 나감. 2026-07-12.
         if: success() && steps.coverage_gate.outcome != 'failure'
         run: |
@@ -876,6 +879,16 @@ jobs:
             echo "::error::All 8 push attempts failed (main 경합) — 다음 스케줄에서 재시도"
             exit 1
           fi
+
+      - name: Preserve independent NPS checkpoints after analysis failure
+        if: always() && steps.nps_holdings.outcome == 'success' && steps.commit_results.outcome == 'skipped' && steps.coverage_gate.outcome != 'failure'
+        run: |
+          set -euo pipefail
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          bash scripts/git/commit_mine.sh -m "data: preserve independent NPS disclosure checkpoints" -- data/nps_holdings.json data/nps_history_cache.json
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
 
       - name: 멀티배거 선별 리스트 갱신 (채점 반영 · 알파콘솔 전용)
         # 🚨 여기가 등급이 붙는 시점이다. universe_scan 쪽 빌드는 승격 직후라 아직

@@ -239,6 +239,23 @@ def test_workflow_escalates_nps_failure_after_safe_publish():
     assert workflow.index("Publish hot data to VERITY-data") < workflow.index("국민연금 보유 신선도 실패 확정")
 
 
+def test_workflow_keeps_nps_refresh_and_checkpoints_after_analysis_failure():
+    import yaml
+
+    workflow = yaml.safe_load((ROOT / ".github/workflows/daily_analysis_full.yml").read_text())
+    steps = workflow["jobs"]["analyze"]["steps"]
+    nps_step = next(step for step in steps if step.get("id") == "nps_holdings")
+    assert nps_step["if"] == "${{ !cancelled() }}"
+    fallback = next(step for step in steps if step.get("name") == "Preserve independent NPS checkpoints after analysis failure")
+    assert "steps.nps_holdings.outcome == 'success'" in fallback["if"]
+    assert "steps.commit_results.outcome == 'skipped'" in fallback["if"]
+    assert "steps.coverage_gate.outcome != 'failure'" in fallback["if"]
+    assert "-- data/nps_holdings.json data/nps_history_cache.json" in fallback["run"]
+    assert "--force" not in fallback["run"] and "-X " not in fallback["run"]
+    verify = next(step for step in steps if step.get("name") == "Verify public NPS history delivery")
+    assert verify["if"].startswith("always()")
+
+
 def test_sla_tracks_success_heartbeat_as_p0():
     manifest = json.loads((ROOT / "data/freshness_sla.json").read_text(encoding="utf-8"))
     stream = next(item for item in manifest["streams"] if item["id"] == "nps_holdings")
