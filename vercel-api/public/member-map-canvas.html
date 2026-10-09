@@ -1994,7 +1994,7 @@ html>body{padding:0}</style>
       registrationDialog.addEventListener('keydown',e=>{if(e.key==='Tab'){const items=[...registrationDialog.querySelectorAll('button,input')],first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 
       function groupedOverview(){return state.scenario==='stress'&&!state.focusId&&!state.selected;}
-      function nodeScale(n,zoom=state.zoom){return n.kind==='stock'?Math.max(.85,Math.min(1.1,zoom)):Math.max(MIN_ZOOM,Math.min(1.25,zoom))*({1:.94,2:1,3:1.10}[n.priority]||1);}
+      function nodeScale(n,zoom=state.zoom){return Math.max(.85,Math.min(1.1,zoom));}
       function restore(saved){if(!saved)return;const m=saved.modelContent||{},p=saved.privateContent||{};if(nodeById[m.selected]||edges.some(e=>e.id===m.selected)||m.selected==='')state.selected=m.selected;if(m.filter==='all'||Object.hasOwn(sourceNames,m.filter))state.filter=m.filter;if(m.topic==='all'||Object.hasOwn(topicNames,m.topic))state.topic=m.topic;const selectedNode=nodeById[state.selected],selectedEdge=edges.find(e=>e.id===state.selected);if((selectedNode&&!shown(selectedNode))||(selectedEdge&&!visibleEdge(selectedEdge)))state.selected='';if(!state.focusId&&p.layoutVersion===2&&Number.isFinite(p.zoom)){hasSavedCamera=true;state.zoom=Math.max(MIN_ZOOM,Math.min(MAX_ZOOM,p.zoom));if(Number.isFinite(p.panX))state.panX=p.panX;if(Number.isFinite(p.panY))state.panY=p.panY;}if(p.marks&&typeof p.marks==='object')state.marks=p.marks;}
       restore(window.openai&&window.openai.widgetState);
       function save(){const camera=focusCamera||state;if(window.openai&&window.openai.setWidgetState)window.openai.setWidgetState({modelContent:{selected:state.selected,filter:state.filter,topic:state.topic},privateContent:{layoutVersion:2,zoom:camera.zoom,panX:camera.panX,panY:camera.panY,marks:state.marks,introVersion:introSeen?1:0}}).catch(function(){});}
@@ -2177,7 +2177,7 @@ html>body{padding:0}</style>
           const a=point(nodeById[e.from]),b=point(nodeById[e.to]),active=state.focusId?focus.has(e.from)&&focus.has(e.to):state.selected===e.id||e.from===state.selected||e.to===state.selected,d='M '+a.x+' '+a.y+' Q '+((a.x+b.x)/2+16)+' '+((a.y+b.y)/2)+' '+b.x+' '+b.y;
           pair.group.dataset.topic=nodeById[e.from].topic||nodeById[e.to].topic||'holding';pair.path.setAttribute('d',d);[pair.rim,pair.flow].forEach(el=>{el.style.offsetPath='path("'+d+'")';});pair.hit.setAttribute('d',d);pair.hit.setAttribute('aria-pressed',String(state.selected===e.id));pair.path.dataset.edge=e.id;pair.group.style.setProperty('--edge-width',({0:1.4,1:1.4,2:2.4,3:3.6}[e.strength])+'px');
           pair.path.setAttribute('class','an-edge '+(e.type==='direct'||e.type==='documented'?'':'indirect ')+(active?'active':'')+(!active&&state.selected?' dim':''));
-          const animate=!!e.recent&&(active||!state.selected&&!state.focusId);pair.rim.classList.toggle('play',animate);pair.flow.classList.toggle('play',animate);
+          /* play state is applied after render by the member visual adapter */
           if((active||!state.selected)&&!groupedOverview()&&(!state.focusId||e.from===state.focusId||e.to===state.focusId||state.selected===e.id)){const label=document.createElement('button');label.type='button';label.dataset.edgeLabel=e.id;label.dataset.topic=pair.group.dataset.topic;label.className='an-edge-label cursor-interaction';label.style.visibility='hidden';const name=document.createElement('span'),degree=document.createElement('span');name.className='an-edge-name';name.textContent=e.verb;degree.className='an-edge-degree';degree.textContent=relationType(e)+' · '+memberConnectionLabel(e);label.append(name,degree);label.setAttribute('aria-label',nodeById[e.from].name+' ↔ '+nodeById[e.to].name+' · '+e.verb+' · '+relationType(e)+' 관련 · 관련도 '+memberConnectionLabel(e)+' · 이 종목에 '+e.impact+' · 탭하여 설명 보기');label.setAttribute('aria-pressed',String(state.selected===e.id));label.onclick=function(){select(e.id);};bindPreview(label,e,true);labelsEl.appendChild(label);}
         });
         root.querySelector('#an-source-filter').value=state.filter;root.querySelector('#an-topic-filter').value=state.topic;
@@ -2505,7 +2505,8 @@ html>body{padding:0}</style>
       function applyMapResize(){if(nodeMoveActive){pendingMapResize=true;return;}pendingMapResize=false;closePreview();if(cancelGesture)cancelGesture();const narrow=space.clientWidth<560;if(state.focusId&&narrow!==narrowFocusLayout)focusStock(state.focusId,true);narrowFocusLayout=narrow;renderMap();if(state.focusId)fitNodes('nearby');}
       new ResizeObserver(applyMapResize).observe(space);
 // Product criteria v1. Source: research-plan-20261003/plan.md sections 4, 5E/F.
-// Explain supplied evidence; do not manufacture a graded score or rejudge sources here.
+// Source-explicit qualitative dependency rubric (2026-10-09), not a numeric score.
+// A rating describes the reporting issuer's stated relationship in that period.
 // Display routing is not economic importance, confidence, or a price forecast.
 // Inputs remain unchanged. API/AI results must satisfy these same evidence gates.
 function memberValidDate(value){return typeof value==='string'&&/^\d{4}-\d{2}-\d{2}(?:T|$)/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value.slice(0,10)).toISOString().slice(0,10)===value.slice(0,10);}
@@ -2557,6 +2558,56 @@ function memberOwnershipMeasure(edge){
   if(edge?.confirmation!=='confirmed'||m?.kind!=='reported-ownership'||typeof m.value!=='number'||!Number.isFinite(m.value)||m.value<=0||m.value>100||m.asOf!==edge.asOf||!/^\d{4}-\d{2}-\d{2}$/.test(m.asOf)||!['trmend_posesn_stock_qota_rt','trmend_blce_qota_rt'].includes(m.sourceField))return null;
   return m;
 }
+function memberReportedDegree(edge,node){
+  // Only the existing, strictly parsed DART business-relation projection may enter.
+  // A general article, AI proposal or a bare high/medium/low field is not evidence.
+  const e=edge||{},n=node||{},reason=e.reason;
+  const annual=/^automatic-link:automatic:relation:annual-customer:[a-f0-9]{16}:KR:\d{6}$/.test(e.id||'');
+  const paragraph=/^automatic-link:automatic:relation:business-role:[a-f0-9]{16}:KR:\d{6}$/.test(e.id||'');
+  if((!annual&&!paragraph)||e.confirmation!=='confirmed'||e.type!=='direct'||n.recordKind!=='relationship'||n.layer!=='relationships'
+    ||!['고객사 공시 회사','매출처 공시 회사','구매처 공시 회사'].includes(e.verb)||!memberValidDate(e.asOf)
+    ||e.asOf.slice(0,10)>new Date().toISOString().slice(0,10)||typeof reason!=='string'||n.reason!==reason
+    ||n.changeStatus==='종료'||['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(n.status)||memberLifecycle(n)?.review)return null;
+  const proof=(e.evidence||[]).find(s=>s?.explanation===reason&&s.asOf===e.asOf&&/^https:\/\/dart\.fss\.or\.kr\/dsaf001\/main\.do\?rcpNo=\d{14}$/.test(s.url));
+  if(!proof)return null;
+  const split=reason.indexOf('\n');if(split<0)return null;
+  const header=reason.slice(0,split),quote=reason.slice(split+1);
+  const issuer=header.match(/^공시 작성 회사: (.+?)\. (\d{4}) 회계연도 · /);
+  const target=header.match(/(?:표에 기재된 고객사|공시상 매출처|공시상 공급처): (.+?)\. 현재 유효 여부/);
+  if(!issuer||!target||!header.includes('공개 공시일 '+e.asOf)||!quote.includes(target[1]))return null;
+  const name=target[1],role=e.verb==='구매처 공시 회사'?'공급처':'매출처';
+  let grade=0,basis='';
+  if(annual){
+    const period=header.match(/보고기간 (\d{4}-\d{2}-\d{2})~(\d{4}-\d{2}-\d{2})/);
+    const cells=quote.match(/^회사: (.+)\n주요고객: ([^\n]+)\n원문 표 \d+ · 행 \d+ · 열 \d+$/);
+    const legalName=v=>v.normalize('NFKC').replace(/^(?:주식회사|\(주\))\s*|\s*(?:주식회사|\(주\))$/g,'').trim();
+    if(!period||!memberValidDate(period[1])||!memberValidDate(period[2])||period[1]>period[2]||period[2]>e.asOf||period[2].slice(0,4)!==issuer[2]
+      ||!cells||legalName(cells[1])!==legalName(issuer[1])||!cells[2].split(/[,、，·ㆍ;]/).map(v=>v.trim().replace(/\s+등$/, '')).includes(name))return null;
+    grade=2;basis='해당 회사의 주요고객 표에 상대방이 명시됨';
+  }else{
+    // Closed, subject-explicit sentences, not keyword scores. Mixed clauses, a
+    // principal material/product, plans and another company's dependency abstain.
+    const escape=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const company='(?:당사|'+escape(issuer[1])+')';
+    const counterparty=escape(name);
+    // The existing upstream grammar also admits a closed counterparty clause
+    // followed by an issuer-owned qualifier. Both must name this same party.
+    const rolePrefix=role==='공급처'?'(?:구매처|공급업체)':'(?:매출처|고객사)';
+    const qualified=quote.trim().match(new RegExp('^당사의 '+rolePrefix+'는 '+counterparty+'(?:이)?며, (.+)$'));
+    const assertion=qualified?qualified[1]:quote.trim();
+    const rules=[
+      [3,new RegExp('^'+company+'의 유일한 '+role+'(?:는|은) '+counterparty+'(?:입니다|이다|이며)[.。]?$'),'해당 회사의 유일한 '+role+'로 명시됨'],
+      [2,new RegExp('^'+company+'의 주요 '+role+'(?:는|은) '+counterparty+'(?:입니다|이다|이며)[.。]?$'),'해당 회사의 주요 '+role+'로 명시됨'],
+      [1,new RegExp('^'+company+'의 '+counterparty+'(?:에 대한|와의|과의) 거래 비중은 미미(?:합니다|하다)[.。]?$'),'해당 회사와 상대방의 거래 비중이 미미하다고 명시됨']
+    ];
+    const matched=rules.filter(([,pattern])=>pattern.test(assertion));
+    if(matched.length!==1)return null;
+    [grade,,basis]=matched[0];
+  }
+  return {version:'source-qualitative-v1',grade,label:({1:'낮음',2:'중간',3:'높음'})[grade],company:issuer[1],counterparty:name,
+    period:issuer[2]+' 회계연도',asOf:e.asOf,sourceUrl:proof.url,quote,basis,
+    reason:issuer[1]+' 기준 · '+issuer[2]+' 회계연도 · 공시 '+e.asOf+'. '+basis+'. 원문 표현을 분류한 정성기준(가설 / T=0일 / N=0)이에요. 통계적 유효성은 미검증이며 현재 의존도·반대편 회사의 정도·주가 전망을 뜻하지 않아요.'};
+}
 function memberConnectionLabel(edge){
   const m=memberOwnershipMeasure(edge);
   return m?'지분 '+m.value+'%':({0:'미평가',1:'낮음',2:'중간',3:'높음'})[edge?.strength]||'미평가';
@@ -2574,8 +2625,15 @@ function memberRelationshipCriteria(edge,sourceNode){
   const documentOnly=sourceNode?.recordKind==='document';
   const verified=!documentOnly&&sourceNode?.layer!=='candidates'&&confirmed&&supported&&dated;
   const lifecycle=memberLifecycle(sourceNode);
+  const historical=sourceNode?.changeStatus==='종료'||['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(sourceNode?.status);
+  // Evidence can remain verified for a reported past fact while its visual grade is
+  // suppressed. A missing source node keeps the legacy detail-only call contract.
+  const strengthContext=!sourceNode||sourceNode.recordKind==='event'||sourceNode.recordKind==='relationship';
+  const strengthType=direct||e.type==='indirect';
+  const strengthEligible=verified&&strengthContext&&strengthType&&!historical&&!lifecycle?.review;
+  const reportedDegree=strengthEligible?memberReportedDegree(e,sourceNode):null;
   const direction=documentOnly?'종목과 자료 연결':direct?'직접 연결':e.type==='indirect'?'간접 연결':'참고 연결';
-  const level=verified?({1:'낮음',2:'중간',3:'높음'})[e.strength]:null;
+  const level=reportedDegree?.label||(strengthEligible?({1:'낮음',2:'중간',3:'높음'})[e.strength]:null);
   const measure=verified?memberOwnershipMeasure(e):null;
   const period=verified?memberContractPeriod(e):null;
   const scenarios=Array.isArray(e.assessment?.scenarios)?e.assessment.scenarios.filter(row=>row&&typeof row==='object'&&!Array.isArray(row)):[];
@@ -2584,7 +2642,7 @@ function memberRelationshipCriteria(edge,sourceNode){
     rows:[
       {label:'연결 방식',value:direction,reason:e.verb||'관계 유형 미제공'},
       {label:'근거 확인',value:documentOnly?'자료 포함 확인 · 사업 관계 미확정':verified?'보고 시점 근거 확인':e.confirmation==='candidate'?'검토할 후보':'추가 확인 필요',reason:documentOnly?'종목 조회에 포함된 자료예요. 공동 언급만으로 공급·계약·지분 관계를 확정하지 않아요.':verified?'원문과 기준일이 있는 연결이에요. 현재도 유효한지는 별도 확인해요.':!supported?'연결을 뒷받침하는 원문 정보가 부족해요.':!dated?'연결의 기준일이 부족해요.':'문서에 등장한다는 사실만으로 사업 관계를 확정하지 않아요.'},
-      {label:'연결 정도',value:measure?'공시 지분 '+measure.value+'%':level?level+' · 기존 평가':'미평가',reason:measure?measure.asOf+' 결산기준 · '+(measure.shareClass||'주식 종류 미제공')+'. 원문 표의 보고 지분율이며 관련도 점수·의결권 비율·현재 보유율로 환산하지 않아요.':level?'입력 자료의 등급이에요. 이 화면에서 새 점수를 계산하지 않아요.':'지분율·매출 의존도·계약 규모의 분모와 기간, 유형별 평가 근거가 필요해요. 문서 수나 직접 연결만으로 높게 매기지 않아요.'},
+      {label:'연결 정도',value:measure?'공시 지분 '+measure.value+'%':reportedDegree?level+' · 정성기준(가설)':level?level+' · 기존 평가':'미평가',reason:measure?measure.asOf+' 결산기준 · '+(measure.shareClass||'주식 종류 미제공')+'. 원문 표의 보고 지분율이며 관련도 점수·의결권 비율·현재 보유율로 환산하지 않아요.':reportedDegree?reportedDegree.reason:level?'입력 자료의 등급이에요. 이 화면에서 새 점수를 계산하지 않아요.':'지분율·매출 의존도·계약 규모의 분모와 기간, 유형별 평가 근거가 필요해요. 문서 수나 직접 연결만으로 높게 매기지 않아요.'},
       ...(period?[{label:'보고된 계약기간',value:period.start+' ~ '+period.end,reason:period.asOf+' 보고·정정 기준. 원문에 적힌 기간이며 현재 유효성·이행 여부나 연결 정도를 뜻하지 않아요. 해지·후속 정정은 근거 이력에서 따로 확인해요.'}]:[]),
       ...(lifecycle?[{label:'후속 공시',value:lifecycle.label+' · 현재 상태 미확인',reason:lifecycle.reason}]:[]),
       {label:'영향 해석',value:scenarios.length?'조건부 사업 경로':e.impact&&e.impact!=='미확인'?e.impact:'미확인',reason:scenarios.length?'사업 경로의 조건과 반대 요인을 함께 확인해요. 현재 순영향이나 주가 예측이 아니에요.':e.impactReason||'연결의 존재와 실적·주가 영향은 별개예요.'}
@@ -2701,7 +2759,7 @@ for(const [value,label] of Object.entries({macro:'환율·거시',general:'시�
 eventHoldings=n=>[...new Set(edges.filter(e=>inScenario(e)&&e.from===n.id&&nodeById[e.to]?.kind==='stock'&&inScenario(nodeById[e.to])).map(e=>e.to))];
 const prototypeMatchesEvent=matchesEvent;
 matchesEvent=n=>prototypeMatchesEvent(n)&&(state.view!=='shared'||n.recordKind==='event');
-// Existing card dimensions stay unchanged. Flags describe LISTING market, not domicile.
+// Flags describe LISTING market, not domicile. Card density is presentation only.
 const memberLogos=new Map();
 // Use the site's existing circle-flags assets. Never substitute emoji flags.
 const memberFlags={"KR":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PG1hc2sgaWQ9ImEiPjxjaXJjbGUgY3g9IjI1NiIgY3k9IjI1NiIgcj0iMjU2IiBmaWxsPSIjZmZmIi8+PC9tYXNrPjxnIG1hc2s9InVybCgjYSkiPjxwYXRoIGZpbGw9IiNlZWUiIGQ9Ik0wIDBoNTEydjUxMkgwWiIvPjxwYXRoIGZpbGw9IiMzMzMiIGQ9Im0zNTAgMzM1IDI0LTI0IDE2IDE2LTI0IDIzem0tMzkgMzkgMjQtMjQgMTUgMTYtMjMgMjR6bTg3IDggMjMtMjQgMTYgMTYtMjQgMjR6bS00MCAzOSAyNC0yMyAxNiAxNS0yNCAyNFptMTYtNjMgMjQtMjMgMTUgMTUtMjMgMjR6bS0zOSA0MCAyMy0yNCAxNiAxNi0yNCAyM3ptNjMtMjIxLTYzLTYzIDE1LTE1IDY0IDYzem0tNjMtMTUtMjQtMjQgMTYtMTYgMjMgMjR6bTM5IDM5LTI0LTI0IDE2LTE1IDI0IDIzem04LTg3LTI0LTIzIDE2LTE2IDI0IDI0Wm0zOSA0MC0yMy0yNCAxNS0xNiAyNCAyNFpNOTEgMzU4bDYzIDYzLTE2IDE2LTYzLTYzem02MyAxNiAyMyAyNC0xNSAxNS0yNC0yM3ptLTQwLTM5IDI0IDIzLTE2IDE2LTIzLTI0em0yNC0yNCA2MyA2My0xNiAxNi02My02M3ptMTYtMjIwLTYzIDYzLTE2LTE2IDYzLTYzem0yMyAyMy02MyA2My0xNS0xNiA2My02M3ptMjQgMjQtNjMgNjMtMTYtMTYgNjMtNjN6Ii8+PHBhdGggZmlsbD0iI2Q4MDAyNyIgZD0iTTMxOSAzMTkgMTkzIDE5M2E4OSA4OSAwIDEgMSAxMjYgMTI2eiIvPjxwYXRoIGZpbGw9IiMwMDUyYjQiIGQ9Ik0zMTkgMzE5YTg5IDg5IDAgMSAxLTEyNi0xMjZ6Ii8+PGNpcmNsZSBjeD0iMjI0LjUiIGN5PSIyMjQuNSIgcj0iNDQuNSIgZmlsbD0iI2Q4MDAyNyIvPjxjaXJjbGUgY3g9IjI4Ny41IiBjeT0iMjg3LjUiIHI9IjQ0LjUiIGZpbGw9IiMwMDUyYjQiLz48L2c+PC9zdmc+Cg==","US":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PG1hc2sgaWQ9ImEiPjxjaXJjbGUgY3g9IjI1NiIgY3k9IjI1NiIgcj0iMjU2IiBmaWxsPSIjZmZmIi8+PC9tYXNrPjxnIG1hc2s9InVybCgjYSkiPjxwYXRoIGZpbGw9IiNlZWUiIGQ9Ik0yNTYgMGgyNTZ2NjRsLTMyIDMyIDMyIDMydjY0bC0zMiAzMiAzMiAzMnY2NGwtMzIgMzIgMzIgMzJ2NjRsLTI1NiAzMkwwIDQ0OHYtNjRsMzItMzItMzItMzJ2LTY0eiIvPjxwYXRoIGZpbGw9IiNkODAwMjciIGQ9Ik0yMjQgNjRoMjg4djY0SDIyNFptMCAxMjhoMjg4djY0SDI1NlpNMCAzMjBoNTEydjY0SDBabTAgMTI4aDUxMnY2NEgwWiIvPjxwYXRoIGZpbGw9IiMwMDUyYjQiIGQ9Ik0wIDBoMjU2djI1NkgwWiIvPjxwYXRoIGZpbGw9IiNlZWUiIGQ9Im0xODcgMjQzIDU3LTQxaC03MGw1NyA0MS0yMi02N3ptLTgxIDAgNTctNDFIOTNsNTcgNDEtMjItNjd6bS04MSAwIDU3LTQxSDEybDU3IDQxLTIyLTY3em0xNjItODEgNTctNDFoLTcwbDU3IDQxLTIyLTY3em0tODEgMCA1Ny00MUg5M2w1NyA0MS0yMi02N3ptLTgxIDAgNTctNDFIMTJsNTcgNDEtMjItNjdabTE2Mi04MiA1Ny00MWgtNzBsNTcgNDEtMjItNjdabS04MSAwIDU3LTQxSDkzbDU3IDQxLTIyLTY3em0tODEgMCA1Ny00MUgxMmw1NyA0MS0yMi02N1oiLz48L2c+PC9zdmc+Cg=="};
@@ -2748,30 +2806,101 @@ function memberCategoryIcon(key){
   icon.style.backgroundPosition=memberCategoryArtwork.sprites[sprite]||memberCategoryArtwork.sprites.valuation;
   return icon;
 }
+function memberRecordDateText(n){
+  if(n?.kind!=='event')return '';
+  let label='자료 기준',raw=n.asOf;
+  const reviewedAnnouncement=n.recordKind==='event'&&n.layer==='events'&&n.code==='검토 완료 공통 사건'&&typeof n.id==='string'&&n.id.startsWith('reviewed:events:');
+  const dartContract=n.recordKind==='event'&&n.layer==='filing'&&n.source==='DART'&&n.code==='공시상 계약 사건'&&typeof n.id==='string'&&n.id.startsWith('contract:');
+  if(reviewedAnnouncement)label='발표일';
+  else if(dartContract)label='공시일';
+  if(n.recordKind==='market-context'&&n.layer==='calendar'){
+    label='예정일';
+    const match=typeof n.code==='string'?/^예정\s+([^·]+?)(?:\s*·|$)/.exec(n.code):null;
+    raw=match?.[1]?.trim();
+  }
+  if(raw==null||raw==='')return label+' 미확인';
+  if(typeof raw!=='string'||!memberValidDate(raw))return label+' 형식 확인 필요';
+  return label+' '+raw.slice(0,10).replaceAll('-','.');
+}
+function decorateMemberRecordDate(button,n){
+  const content=memberRecordDateText(n),prior=button.querySelector('.an-record-date');
+  if(!content){prior?.remove();return;}
+  const date=prior||document.createElement('span');
+  if(!prior){date.className='an-record-date';button.querySelector('strong').after(date);}
+  date.textContent=content;
+}
 function decorateMemberRecord(n){
   if(n.kind!=='event')return;
   const button=[...nodesEl.children].find(el=>el.dataset.node===n.id);if(!button)return;
   const key=n.recordKind==='event'?'events':n.layer==='government'?'policy':n.layer;
   const prior=button.querySelector('.an-dot,.an-category-icon');if(prior)prior.replaceWith(memberCategoryIcon(key));
+  // One visible status line uses the same evidence-gated encoder as the edge.
+  // It is not the source's confirmation badge or a guessed relevance score.
+  if(!button.querySelector('.an-record-criteria')){
+    const criteria=document.createElement('span');criteria.className='an-record-criteria';
+    button.querySelector('strong').after(criteria);
+  }
+  decorateMemberRecordDate(button,n);
   button.setAttribute('aria-label',n.name+' · 눌러 원문 제목과 근거 보기');
 }
 const memberCardStyle=document.createElement('style');memberCardStyle.textContent=`
-#an-map-design .an-node.event{width:300px;max-width:300px;align-items:flex-start}
+#an-map-design .an-node.event{width:260px;max-width:260px;padding:12px;gap:10px;align-items:flex-start}
 #an-map-design .an-node.event>span:last-child{min-width:0;flex:1}
-#an-map-design #an-nodes .an-node.event strong{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+#an-map-design .an-record-date{display:block;font-size:11px;line-height:1.5;margin-top:4px;color:var(--an-sub);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#an-map-design .an-node.event .an-record-criteria{display:block;font-size:12px;line-height:1.5;margin-top:4px;color:var(--an-sub);font-weight:600;white-space:normal}
+#an-map-design .an-node.event small{display:none}
+#an-map-design #an-nodes .an-node.event strong{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere;font-size:14px;line-height:1.45}
+#an-map-design .an-node.event .an-note-badge{font-size:11px;line-height:1.5;margin-top:4px}
 #an-map-design .an-node:not(.event):not([data-group]){max-width:260px}
 #an-map-design .an-node:not(.event):not([data-group])>span:last-child{min-width:0}
 #an-map-design .an-node:not(.event):not([data-group]) strong{overflow:hidden;text-overflow:ellipsis}
 #an-map-design .an-category-icon{display:inline-block;width:22px;height:22px;flex:none;color:var(--an-sub);margin-top:1px;background-size:300% 200%;background-repeat:no-repeat}
 #an-map-design[data-map-detail=compact] #an-nodes .an-node.event small{visibility:hidden}
 #an-map-design[data-map-detail=compact] #an-nodes .an-node.event .an-note-badge{display:block}
-#an-map-design[data-map-detail=overview] #an-nodes .an-node.event>span:last-child{visibility:hidden}
+#an-map-design[data-map-detail=overview] #an-nodes .an-node.event>span:last-child{visibility:visible}
+#an-map-design[data-map-detail=overview] #an-nodes .an-node.event small,#an-map-design[data-map-detail=overview] #an-nodes .an-node.event .an-note-badge{visibility:hidden}
 #an-map-design[data-map-detail=overview] #an-member-groups .an-note-badge{visibility:hidden}
 #an-map-design[data-map-detail=overview] .an-edge-label{visibility:hidden}
 #an-map-design .an-relation-summary{display:block;color:var(--an-sub);font-size:12px;font-weight:600;line-height:1.55;margin-top:5px;white-space:normal}
 #an-map-design .an-connection.an-related-card{display:block;width:100%;text-align:left;white-space:normal}
+#an-map-design .an-hover{width:240px;padding:12px;border-radius:12px;font-weight:600}
+#an-map-design .an-hover strong{font-size:13px;line-height:1.5;font-weight:700;color:var(--an-text);margin:4px 0 6px}
+#an-map-design .an-hover p{font-size:12px;line-height:1.65;font-weight:600;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin:0 0 8px}
+#an-map-design .an-hover small{font-size:11px;font-weight:600}
+#an-map-design .an-hover small:first-child{font-size:11px}
+#an-map-design .an-detail{padding:20px}
+#an-map-design .an-detail h2{font-size:20px;font-weight:800;line-height:1.4;margin:0 0 12px}
+#an-map-design .an-detail h4{font-size:14px;font-weight:800;margin:24px 0 10px}
+#an-map-design .an-detail p{font-size:13px;font-weight:600;line-height:1.7;margin:0 0 12px}
+#an-map-design .an-detail .an-save-note{font-size:11px;line-height:1.6;font-weight:600}
+#an-map-design .an-detail .an-evidence{border:0;box-shadow:none;padding:14px;background:light-dark(#f8f9fb,#1d242c);border-radius:12px;font-weight:600;overflow-wrap:anywhere}
+#an-map-design .an-detail>.an-evidence{margin:12px 0}
+#an-map-design .an-detail .an-evidence strong{font-weight:700}
+#an-map-design .an-detail .an-evidence>h4:first-child{margin-top:0}
+#an-map-design .an-detail .an-evidence p:last-child{margin-bottom:0}
+#an-map-design .an-detail .an-evidence .an-evidence{padding:12px 0;margin:0;border-radius:0;background:transparent}
+#an-map-design .an-detail details.an-evidence{padding:0;background:transparent}
+#an-map-design .an-detail details.an-evidence>summary{display:flex;align-items:center;gap:10px;min-height:44px;padding:10px 12px;border-radius:10px;list-style:none;cursor:pointer;font-size:13px;line-height:1.6;font-weight:700}
+#an-map-design .an-detail details.an-evidence>summary::-webkit-details-marker{display:none}
+#an-map-design .an-detail details.an-evidence>summary::before{content:'';width:6px;height:6px;flex:none;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(-45deg)}
+#an-map-design .an-detail details.an-evidence[open]>summary::before{transform:rotate(45deg) translateY(-2px)}
+#an-map-design .an-detail details.an-evidence[open]>summary{margin-bottom:8px;background:light-dark(#f8f9fb,#1d242c)}
+#an-map-design .an-detail .an-stock-actions{border:0;padding:12px;margin:12px 0;background:light-dark(#f8f9fb,#1d242c)}
+#an-map-design .an-detail .an-evidence .an-stock-actions{padding:0 12px;margin:8px 0 12px;background:transparent}
+#an-map-design .an-detail .an-source{min-height:44px;padding:10px 12px;border:0;box-shadow:none;background:var(--an-panel);font-size:12px;font-weight:700}
+#an-map-design .an-detail .an-mark-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 24px}
+#an-map-design .an-detail .an-mark-actions .an-tool{min-height:44px;padding:10px 12px;border:0;box-shadow:none;background:light-dark(#f8f9fb,#1d242c);font-size:12px;font-weight:700}
+#an-map-design .an-detail .an-mark-actions [aria-pressed=true]{background:var(--an-soft);color:var(--an-accent)}
+#an-map-design .an-detail .an-connection{border:0;box-shadow:none;padding:12px;border-radius:10px;margin:4px 0;font-size:13px}
+#an-map-design .an-detail .an-connection .an-relation-summary{white-space:normal;font-size:12px;line-height:1.6}
+#an-map-design .an-detail .an-note-open{min-height:44px;padding:10px 12px;margin:20px 0 12px;border:0;box-shadow:none;font-size:13px;font-weight:700}
+#an-map-design .an-detail :is(button,summary):focus-visible{outline:none;background:light-dark(#e9edf2,#303945)}
+@media(hover:hover){#an-map-design .an-detail :is(.an-source,.an-mark-actions .an-tool:not([aria-pressed=true]),.an-connection,details.an-evidence>summary):hover{background:light-dark(#f1f3f5,#252c35)}}
 @media(max-width:700px){#an-map-design .an-node.event{width:230px;max-width:230px}}
-`;document.head.append(memberCardStyle);
+`;
+// The accepted source has styles inside the root. Put these scoped overrides
+// after them; a head style with equal specificity would lose to the old rules.
+root.append(memberCardStyle);
 nodes.forEach(decorateMemberRecord);
 root.querySelector('#an-empty').textContent='이 필터에 표시할 자료가 없어요. 아직 수집되지 않은 자료가 있을 수 있어요.';
 root.querySelector('.an-intro-notice').textContent='내 보유·관심종목과 수집된 자료를 연결해요. 지도에서 숨겨도 둥지의 보유 기록은 바뀌지 않아요. 메모·배치를 바꾼 뒤 기록 저장을 눌러주세요.';
@@ -2986,7 +3115,7 @@ renderMap=function(){
   root.dataset.mapDetail=state.zoom<.3?'overview':state.zoom<.65?'compact':'detail';
   prototypeRenderMap();
   const connectionText=n=>(changeStatus[n.id]||'미확인')+' · '+eventHoldings(n).length+'종목 연결';
-  root.querySelectorAll('[data-select]').forEach(button=>{const n=nodeById[button.dataset.select],small=button.querySelector('small');if(n&&small)small.textContent=connectionText(n);});
+  root.querySelectorAll('[data-select]').forEach(button=>{const n=nodeById[button.dataset.select],small=button.querySelector('small');if(n&&small){small.textContent=connectionText(n);decorateMemberRecordDate(button,n);}});
   nodes.filter(n=>n.kind==='event').forEach(n=>{
     const badge=nodesEl.querySelector('[data-node="'+n.id+'"] .an-note-badge');if(!badge)return;
     const linked=eventHoldings(n).map(id=>nodeById[id]?.name).filter(Boolean);
@@ -3151,8 +3280,9 @@ renderDetail=function(){
   const doc=node?.kind==='event'?node:edge?nodeById[edge.from]:null;
   if(doc){
     const marked=state.marks[doc.id]||(state.marks[doc.id]={});
+    const actions=text('div','','an-mark-actions');actions.setAttribute('role','group');actions.setAttribute('aria-label','자료 확인 상태');
     for(const [key,label] of [['read','읽음'],['important','중요'],['later','나중에 보기'],['irrelevant','무관']]){
-      const b=text('button',label,'an-tool');b.type='button';b.setAttribute('aria-pressed',String(!!marked[key]));b.onclick=()=>{marked[key]=!marked[key];if(key==='read'){marked.readTouched=true;if(!memberVisit)changeStatus[doc.id]=marked.read?'확인':'미확인';}if(key==='later'&&marked[key])marked.irrelevant=false;if(key==='irrelevant'&&marked[key])marked.later=false;emitMemberDraft();renderMap();renderDetail();};
+      const b=appendMemberText(actions,'button',label,'an-tool');b.type='button';b.setAttribute('aria-pressed',String(!!marked[key]));b.onclick=()=>{marked[key]=!marked[key];if(key==='read'){marked.readTouched=true;if(!memberVisit)changeStatus[doc.id]=marked.read?'확인':'미확인';}if(key==='later'&&marked[key])marked.irrelevant=false;if(key==='irrelevant'&&marked[key])marked.later=false;emitMemberDraft();renderMap();renderDetail();};
     }
   }
   const related=edge?[edge.from,edge.to]:[...new Set(edges.filter(e=>e.from===node.id||e.to===node.id).flatMap(e=>[e.from,e.to]).filter(id=>id!==node.id))];
@@ -3176,6 +3306,7 @@ renderDetail=function(){
     const relation=edge||edges.find(e=>(e.from===node.id&&e.to===id)||(e.to===node.id&&e.from===id));
     const b=text('button','','an-connection an-related-card');b.type='button';
     appendMemberText(b,'strong',target.name);
+    const targetDate=memberRecordDateText(target);if(targetDate)appendMemberText(b,'span',targetDate,'an-record-date');
     const label=relation?.verb||relationType(relation||{});
     appendMemberText(b,'span',label+' · '+(relation?.confirmation==='confirmed'?'근거 확인':'추가 확인 필요'),'an-relation-summary');
     appendMemberText(b,'span',relation?.reason||'연결 이유를 아직 확인하지 못했어요.','an-relation-summary');
@@ -3228,20 +3359,30 @@ const memberLayoutBases=new Map(Object.entries(member.layoutBases||{}));
 let memberVisible=new Set(),memberEligible=[],memberReveal='',memberGroupContext='',memberLayoutKey='',memberHoveredGroup='',memberFocusGroupId='',memberOverviewOpen=null;
 const ungroupedShown=shown,ungroupedRenderMap=renderMap,ungroupedSelect=select;
 function memberGroupKey(n){return n.recordKind==='event'?'events':n.layer==='candidates'?'candidates':n.layer==='relationships'?'relationships':n.layer||'other';}
+// Category membership is navigation, not a business relationship. Show it only
+// for the inspected group or focused stock; verified edges remain independent.
+function memberGroupConnectionIds(group,hoveredGroup,focusId){
+  return hoveredGroup===group.key?group.stockIds:focusId?group.stockIds.filter(id=>id===focusId):[];
+}
 const memberGroupNames={filing:'공시',news:'뉴스',business:'사업 자료',candidates:'관계 후보',relationships:'확인된 관계',events:'공통 사건',government:'정부 발표',prices:'가격 자료',other:'기타 자료',fx:'환율',commodity:'원자재',calendar:'발표 일정'};
 // Summary chips keep the accepted surfaces/icons, not full articles at a fixed size.
 const memberSummaryStyle=document.createElement('style');memberSummaryStyle.textContent=`
-#an-map-design #an-nodes .an-node:not(.event){width:180px;max-width:180px;min-height:60px;padding:12px;gap:10px}
-#an-map-design #an-nodes .an-node:not(.event) strong{font-size:16px;line-height:1.4}
+#an-map-design #an-nodes .an-node:not(.event){width:160px;max-width:160px;min-height:52px;padding:12px;gap:10px}
+#an-map-design #an-nodes .an-node:not(.event) strong{font-size:14px;line-height:1.4}
+#an-map-design #an-nodes .an-logo{width:28px;height:28px}
 #an-map-design #an-nodes .an-node:not(.event) small,#an-map-design #an-nodes .an-node:not(.event) .an-note-badge{display:none}
-#an-map-design #an-member-groups [data-group]{width:180px;max-width:180px;min-height:72px;padding:12px;gap:10px}
-#an-map-design #an-member-groups strong{font-size:16px;line-height:1.4}
-#an-map-design #an-member-groups small{display:block!important;font-size:12px;line-height:1.5;margin-top:3px}
+#an-map-design #an-member-groups [data-group]{width:160px;max-width:160px;min-height:60px;padding:12px;gap:10px}
+#an-map-design #an-member-groups strong{font-size:14px;line-height:1.4}
+#an-map-design #an-member-groups small{display:block!important;font-size:11px;line-height:1.5;margin-top:3px}
 #an-map-design #an-member-groups .an-note-badge{display:none}
+#an-map-design #an-member-groups [data-group] strong{display:flex;align-items:center;gap:8px}
+#an-map-design #an-member-groups [data-group] strong::before{content:'';width:6px;height:6px;flex:none;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(-45deg)}
+#an-map-design #an-member-groups [data-group][aria-expanded=true] strong::before{transform:rotate(45deg) translateY(-2px)}
 #an-map-design .an-node[data-summary-icon=true]{width:44px!important;min-height:44px!important;padding:8px!important;gap:0!important}
 #an-map-design .an-node[data-summary-icon=true]>span:last-child{display:none}
 #an-map-design[data-dense-stocks=true] #an-nodes .an-node:not(.event){width:140px;max-width:140px;min-height:48px;padding:8px;gap:8px}
 #an-map-design[data-dense-stocks=true] #an-nodes .an-node:not(.event) strong{font-size:14px}
+#an-map-design[data-readable-fit=true] .an-foot > span:last-of-type{display:block;white-space:normal}
 @media(max-width:700px){
 #an-map-design #an-nodes .an-node:not(.event){width:160px;max-width:160px;min-height:48px;padding:8px}
 #an-map-design #an-nodes .an-node:not(.event) strong,#an-map-design #an-member-groups strong{font-size:14px}
@@ -3250,6 +3391,25 @@ const memberSummaryStyle=document.createElement('style');memberSummaryStyle.text
 }
 `;document.head.append(memberSummaryStyle);
 const memberSummaryScale=zoom=>Math.max(.85,Math.min(1.1,zoom));
+// Auto-fit must not silently replace company/group names with anonymous icons.
+// If the viewport cannot contain readable cards, keep pan available. Manual
+// zoom remains unrestricted and never modifies stored coordinates.
+function memberReadableFitZoom(fitted,summaries){
+  let result=fitted;
+  const axisZoom=(distance,size)=>{
+    if(!distance)return Infinity;
+    const floor=(size*.85+4)/distance;
+    return floor<=.85?floor:distance>size?4/(distance-size):Infinity;
+  };
+  for(let i=0;i<summaries.length;i++)for(let j=i+1;j<summaries.length;j++){
+    const a=summaries[i],b=summaries[j],dx=Math.abs(a.x-b.x),dy=Math.abs(a.y-b.y);
+    const x=axisZoom(dx,(a.width+b.width)/2);
+    const y=axisZoom(dy,(a.height+b.height)/2);
+    result=Math.max(result,Math.min(x,y));
+  }
+  // Dragged/overlapping positions can be impossible to separate by zoom alone.
+  return result<=1.1?result:null;
+}
 function memberScope(){
   const stocks=holdings.filter(ungroupedShown),allStockIds=new Set(stocks.map(n=>n.id));
   const candidates=nodes.filter(n=>n.kind==='event'&&matchesEvent(n));
@@ -3280,14 +3440,14 @@ function makeMemberGroup(key){
   button.onkeydown=e=>{memberMovingGroup=group;try{moveWithKeys(e,group.id);}finally{memberMovingGroup=null;}};
   button.onpointerenter=button.onfocus=()=>{memberHoveredGroup=key;drawMemberGroups();};
   button.onpointerleave=button.onblur=()=>{memberHoveredGroup='';drawMemberGroups();};
-  button.onclick=()=>{if(suppressClick){suppressClick=false;return;}if(cancelGesture)return;closePreview();memberGroupManual.add(key);memberReveal='';const closing=memberOpenGroups.has(key);if(closing)memberOpenGroups.delete(key);else memberOpenGroups.set(key,6);renderMap();fitNodes(closing?false:'group:'+key);};
+  button.onclick=()=>{if(suppressClick){suppressClick=false;return;}if(cancelGesture)return;closePreview();memberGroupManual.add(key);memberReveal='';const closing=group.records.some(n=>memberVisible.has(n.id));if(closing)memberOpenGroups.delete(key);else memberOpenGroups.set(key,6);renderMap();fitNodes(closing?false:'group:'+key);};
   more.onclick=()=>{closePreview();memberGroupManual.add(key);memberOpenGroups.set(key,(memberOpenGroups.get(key)||0)+6);renderMap();fitNodes('group:'+key);};
   memberGroupLayer.append(button,more);memberGroups.set(key,group);return group;
 }
 function memberCardSize(n){
   const el=nodesEl.querySelector('[data-node="'+n.id+'"]');if(!el)return {width:240,height:90};
   const wasHidden=el.hidden,visibility=el.style.visibility;
-  try{if(wasHidden){el.hidden=false;el.style.visibility='hidden';}return {width:el.offsetWidth||240,height:Math.max(el.offsetHeight||0,n.kind==='stock'?48:120)};}
+  try{if(wasHidden){el.hidden=false;el.style.visibility='hidden';}return {width:el.offsetWidth||240,height:Math.max(el.offsetHeight||0,n.kind==='stock'?48:100)};}
   finally{if(wasHidden){el.hidden=true;el.style.visibility=visibility;}}
 }
 function prepareMemberGroups(){
@@ -3321,12 +3481,13 @@ function prepareMemberGroups(){
     const selectedEdge=edges.find(e=>e.id===memberReveal),revealIds=selectedEdge?[selectedEdge.from,selectedEdge.to]:[memberReveal];
     records.filter(n=>revealIds.includes(n.id)).forEach(n=>memberVisible.add(n.id));
     // The sidebar retains every source category; focused canvas shows opened evidence only.
-    group.button.hidden=(!group.stockIds.length&&!open)||(!!state.focusId&&!open&&!records.some(n=>memberVisible.has(n.id)));
+    group.button.hidden=(!group.stockIds.length&&!open)||(!!state.focusId&&!open&&!memberGroupManual.has(key)&&!records.some(n=>memberVisible.has(n.id)));
     group.title.textContent=memberGroupNames[key]||'기타 자료';
     group.count.textContent=records.length+'건 · 연결 '+group.stockIds.length+'종목';group.count.hidden=false;
-    group.hint.textContent=key==='candidates'?'원문 확인 필요 · '+(open?'접기':'펼치기'):key==='events'?'검토된 사건 · '+(open?'접기':'펼치기'):'자료 묶음 · '+(open?'접기':'펼치기');
-    group.button.setAttribute('aria-expanded',String(open));group.button.setAttribute('aria-label',group.title.textContent+' '+records.length+'건 '+(open?'접기':'펼치기')+' · 드래그 및 방향키로 이동');
     const displayed=records.filter(n=>memberVisible.has(n.id)).length;
+    const expanded=displayed>0;
+    group.hint.textContent=key==='candidates'?'원문 확인 필요 · '+(expanded?'접기':'펼치기'):key==='events'?'검토된 사건 · '+(expanded?'접기':'펼치기'):'자료 묶음 · '+(expanded?'접기':'펼치기');
+    group.button.setAttribute('aria-expanded',String(expanded));group.button.setAttribute('aria-label',group.title.textContent+' '+records.length+'건 '+(expanded?'접기':'펼치기')+' · 드래그 및 방향키로 이동');
     group.more.hidden=displayed===0||displayed>=records.length;group.more.textContent=displayed+'/'+records.length+'건 · 더 보기';
   }
   // Preserve all source IDs and marks; grouping affects only presentation.
@@ -3396,9 +3557,10 @@ select=function(id,toggle=false){
   prepareMemberGroups();ungroupedSelect(id,toggle);
 };
 function drawMemberGroups(){
+  if(root.dataset.readableFit==='true'&&Number(root.dataset.readableFitZoom)!==state.zoom)root.dataset.readableFit='false';
   memberGroupLines.replaceChildren();
   const summaries=[];
-  for(const n of holdings.filter(shown)){
+  for(const n of nodes.filter(shown)){
     const el=nodesEl.querySelector('[data-node="'+n.id+'"]');if(!el||el.hidden)continue;
     el.dataset.summaryIcon='false';el.style.transform='translate(-50%,-50%) scale('+memberSummaryScale(state.zoom)+')';summaries.push(el);
   }
@@ -3406,10 +3568,9 @@ function drawMemberGroups(){
     if(!g.records.length||g.button.hidden)continue;
     const p=point(g),scale=memberSummaryScale(state.zoom);g.button.dataset.summaryIcon='false';g.button.style.left=p.x+'px';g.button.style.top=p.y+'px';g.button.style.transform='translate(-50%,-50%) scale('+scale+')';summaries.push(g.button);
     if(!g.more.hidden){const m=point(g.morePoint);g.more.style.left=m.x+'px';g.more.style.top=m.y+'px';g.more.style.transform='translate(-50%,-50%) scale('+scale+')';}
-    // Membership paths stay visible before hover. These dashed paths mean source
-    // coverage only; actual verified relationships retain their own edge styling.
-    const showConnections=!memberOpenGroups.has(g.key)||memberHoveredGroup===g.key;
-    for(const id of showConnections?g.stockIds:[]){if(state.focusId&&!memberScope().stockIds.has(id))continue;const n=nodeById[id];if(!n||!ungroupedShown(n))continue;const q=point(n),path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M '+p.x+' '+p.y+' L '+q.x+' '+q.y);path.setAttribute('class','an-edge indirect');path.style.setProperty('--edge-width','1.4px');memberGroupLines.append(path);}
+    // Hover and keyboard focus reveal coverage paths without turning every
+    // collapsed source category into a permanent fan of apparent relationships.
+    for(const id of memberGroupConnectionIds(g,memberHoveredGroup,state.focusId)){if(state.focusId&&!memberScope().stockIds.has(id))continue;const n=nodeById[id];if(!n||!ungroupedShown(n))continue;const q=point(n),path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M '+p.x+' '+p.y+' L '+q.x+' '+q.y);path.setAttribute('class','an-edge indirect');path.style.setProperty('--edge-width','1.4px');memberGroupLines.append(path);}
   }
   // At extreme manual zoom, retain hit targets/icons instead of overlapping labels.
   // Camera changes never rewrite node positions, layout offsets or saved records.
@@ -3430,7 +3591,7 @@ function drawMemberGroups(){
   if(!state.selected||state.zoom<.65)labelsEl.replaceChildren();
   else for(const label of labelsEl.children){const a=label.getBoundingClientRect();if([...memberGroups.values()].some(g=>{if(!g.records.length)return false;const b=g.button.getBoundingClientRect();return a.left<b.right+6&&a.right>b.left-6&&a.top<b.bottom+6&&a.bottom>b.top-6;}))label.hidden=true;}
   root.querySelector('#an-counts').textContent='종목 '+holdings.filter(ungroupedShown).length+'/'+holdings.length+' · 자료 '+memberEligible.length+'건 · 펼침 '+memberEligible.filter(n=>memberVisible.has(n.id)).length+'건';
-  root.querySelector('.an-foot > span:last-of-type').textContent='묶음 제목을 끌어 이동 · 눌러 자료 펼치기 · 점선 묶음은 자료 분류이며 영향 크기가 아니에요';
+  root.querySelector('.an-foot > span:last-of-type').textContent=root.dataset.readableFit==='true'?'읽기 크기 유지 · 휠 이동 · ⌘/Ctrl+휠 확대·축소 · Space+드래그':'휠 이동 · ⌘/Ctrl+휠 확대·축소 · Space+드래그 · 묶음을 누르면 접기·펼치기';
   // Keep the existing source controls, grouped into collapsible native lists.
   const signature=memberEligible.map(n=>n.id+':'+memberDisplayDecisions.get(n.id)?.code).join('|');
   if(inbox.dataset.groupSignature!==signature){
@@ -3483,7 +3644,15 @@ fitNodes=function(selectionOnly){
     return {left,right,top,bottom};
   }
   let low=.08,high=1.1;for(let i=0;i<20;i++){const mid=(low+high)/2,b=bounds(mid);if(b.right-b.left<=Math.max(1,w-64)&&b.bottom-b.top<=Math.max(1,h-64))low=mid;else high=mid;}
-  state.zoom=low;const b=bounds(low);state.panX=-(b.left+b.right)/2;state.panY=-(b.top+b.bottom)/2-(space.clientHeight-h)/2;renderMap();saveZoomSoon();
+  const summaries=items.filter(({kind})=>!kind||kind==='tile').map(({n,el,kind})=>{const p=kind?n:viewPosition(n);return {x:p.x*WORLD_WIDTH,y:p.y*WORLD_HEIGHT,width:el.offsetWidth||180,height:el.offsetHeight||72};});
+  const readable=memberReadableFitZoom(low,summaries)??low;root.dataset.readableFit=String(readable>low+.001);root.dataset.readableFitZoom=String(readable);
+  state.zoom=readable;const b=bounds(readable);state.panX=-(b.left+b.right)/2;state.panY=-(b.top+b.bottom)/2-(space.clientHeight-h)/2;
+  if(root.dataset.readableFit==='true'&&b.bottom-b.top>h-64){
+    // Opening a category must land on its evidence, not on distant stock rows.
+    const top=chosenGroup?(chosenGroup.y-.5)*WORLD_HEIGHT*readable-(chosenGroup.button.offsetHeight||72)*memberSummaryScale(readable)/2:b.top;
+    state.panY=-space.clientHeight/2+32-top;
+  }
+  renderMap();saveZoomSoon();
 };
 const groupingUpdate=updateMemberGraph;
 updateMemberGraph=function(model,ticker){
@@ -3519,31 +3688,53 @@ updateMemberGraph=function(model,ticker){
 // Visual encoding v1: presentation only; never writes evidence, grades or member records.
 function memberEdgeVisual(edge,source,context={}){
   const e=edge||{},n=source||{},decision=memberDisplayDecision(n,[e],context);
-  const historical=['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(n.status)||context.changes?.[n.id]==='종료';
+  const historical=['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(n.status)||n.changeStatus==='종료'||context.changes?.[n.id]==='종료';
   const review=memberLifecycle(n)?.review===true;
   const supported=decision.evidence==='reported',direct=e.type==='direct'||e.type==='documented';
   const kind=historical?'history':review?'review':!supported?'reference':direct?'direct':e.type==='indirect'?'indirect':'reference';
   const measure=supported?memberOwnershipMeasure(e):null;
-  const grade=supported&&!historical&&!review&&kind!=='reference'&&!measure&&[1,2,3].includes(e.strength)?e.strength:0;
+  const assessed=supported&&!historical&&!review&&kind!=='reference'&&!measure?memberReportedDegree(e,n):null;
+  const grade=supported&&!historical&&!review&&kind!=='reference'&&!measure?(assessed?.grade||([1,2,3].includes(e.strength)?e.strength:0)):0;
   const label=measure?'지분 '+measure.value+'%':({0:'미평가',1:'낮음',2:'중간',3:'높음'})[grade];
+  const business=n.recordKind==='event'||n.recordKind==='relationship';
+  const candidate=business&&(n.layer==='candidates'||e.confirmation==='candidate');
+  const statusLabel=historical?'과거 이력':review?'후속 확인':candidate?'관계 후보':!business?'참고 자료':supported?'근거 확인':'근거 보완 필요';
+  const summaryKind=historical?'이력':review?'후속 확인':candidate?'후보':!business||supported&&kind==='reference'?'참고':!supported?'보완 필요':kind==='direct'?'직접':'간접';
+  const summaryLabel=summaryKind+' · '+(measure?label:'정도 '+label)+(assessed?' (가설)':'');
   const changed=['새로','변경'].includes(context.changes?.[n.id]);
   const animate=supported&&!historical&&!review&&kind!=='reference'&&!context.paused&&!context.reduced&&(context.active||changed);
   return {kind,dash:({direct:'none',indirect:'6 5',reference:'2 6',history:'8 4 2 4',review:'8 4 2 4'})[kind],
-    width:({0:1.4,1:1.4,2:2.4,3:3.6})[grade],label,grade,
+    width:({0:1.4,1:1.4,2:2.4,3:3.6})[grade],label,grade,statusLabel,summaryLabel,
     topic:supported&&!historical&&!review&&kind!=='reference'?(n.topic||'holding'):'holding',
     color:supported&&!historical&&!review&&kind!=='reference'?'var(--an-topic,var(--an-accent))':'var(--an-line)',
     opacity:context.active?1:context.hasSelection?.36:.82,animate,
     lineLabel:({direct:'실선 · 직접 연결',indirect:'긴 점선 · 간접 연결',reference:'짧은 점선 · 참고·미확인',history:'혼합 점선 · 종료·정정 이력',review:'혼합 점선 · 후속 공시 확인'})[kind],
     motionLabel:animate?'선택·변경된 연결 경로 표시':'정지',
-    reason:'선 모양은 연결 방식, 색은 주제, 굵기는 기존 연결 정도예요. 화살표 진행은 화면의 연결 경로이며 실제 거래·인과 방향이나 주가 전망이 아니에요.'};
+    reason:'선 모양은 연결 방식, 색은 주제, 굵기는 근거가 있는 연결 정도예요. 화살표 진행은 화면의 연결 경로이며 실제 거래·인과 방향이나 주가 전망이 아니에요.'};
+}
+
+function memberRecordVisualSummary(node,allEdges,context={}){
+  const n=node||{},stockIds=new Set(context.stockIds||[]);
+  const links=(allEdges||[]).filter(e=>(e.from===n.id&&(!stockIds.size||stockIds.has(e.to)))||(e.to===n.id&&(!stockIds.size||stockIds.has(e.from))));
+  const visuals=links.map(e=>memberEdgeVisual(e,n,context));
+  if(visuals.length){
+    const signatures=new Set(visuals.map(v=>v.statusLabel+'\u0000'+v.summaryLabel));
+    if(signatures.size===1){const v=visuals[0];return {statusLabel:v.statusLabel,summaryLabel:v.summaryLabel,title:v.statusLabel+' · '+v.summaryLabel};}
+    return {statusLabel:'연결별 확인',summaryLabel:'연결별 확인',title:'연결별 확인 · '+visuals.map(v=>v.statusLabel+' / '+v.summaryLabel).join(' · ')};
+  }
+  const historical=['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(n.status)||context.changes?.[n.id]==='종료';
+  const review=memberLifecycle(n)?.review===true,business=n.recordKind==='event'||n.recordKind==='relationship',candidate=business&&n.layer==='candidates';
+  const statusLabel=historical?'과거 이력':review?'후속 확인':!business?'참고 자료':candidate?'관계 후보':'근거 보완 필요';
+  const summaryLabel=(historical?'이력':review?'후속 확인':!business?'참고':candidate?'후보':'보완 필요')+' · 정도 미평가';
+  return {statusLabel,summaryLabel,title:statusLabel+' · '+summaryLabel};
 }
 
 // DOM adapter: reuse the accepted renderer, hit areas, topic palette and chevrons.
 const memberVisualStyle=document.createElement('style');
 memberVisualStyle.textContent=`
-#an-map-design .an-edge[data-visual-kind]{stroke:var(--an-visual-color);stroke-width:var(--edge-width);stroke-dasharray:var(--an-visual-dash);opacity:var(--an-visual-opacity);stroke-linecap:round}
+#an-map-design .an-edge[data-visual-kind]:not([data-visual-kind="navigation"]){stroke:var(--an-visual-color);stroke-width:var(--edge-width);stroke-dasharray:var(--an-visual-dash);opacity:var(--an-visual-opacity);stroke-linecap:round}
 #an-map-design .an-edge-hit:focus-visible{outline:none}
-#an-map-design g:focus-within .an-edge[data-visual-kind],#an-map-design g:hover .an-edge[data-visual-kind]{opacity:1}
+#an-map-design g:focus-within .an-edge[data-visual-kind]:not([data-visual-kind="navigation"]),#an-map-design g:hover .an-edge[data-visual-kind]:not([data-visual-kind="navigation"]){opacity:1}
 #an-map-design .an-encoding-summary{font-size:12px;font-weight:700;padding:6px 8px;border-radius:8px;background:var(--an-panel);color:var(--an-text)}
 #an-map-design .an-encoding-summary:focus-visible{outline:0;background:light-dark(#e9edf2,#303945)}
 #an-map-design .an-encoding-sample{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:12px;font-weight:600;min-width:0}
@@ -3558,6 +3749,13 @@ function memberVisualSource(e){return nodeById[e.from]?.kind==='event'?nodeById[
 const memberReducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 function memberVisualContext(active=false){return {stockIds:holdings.map(n=>n.id),changes:changeStatus,active,hasSelection:!!(state.selected||state.focusId),paused:root.dataset.motion==='paused',reduced:memberReducedMotion.matches};}
 memberConnectionLabel=function(edge){return memberEdgeVisual(edge,memberVisualSource(edge),memberVisualContext()).label;};
+function applyMemberRecordVisuals(){
+  const context=memberVisualContext();
+  for(const el of root.querySelectorAll('.an-record-criteria')){
+    const id=el.dataset.record||el.dataset.node||el.closest('[data-node]')?.dataset.node,n=nodeById[id];if(!n)continue;
+    const summary=memberRecordVisualSummary(n,edges,context);el.textContent=summary.summaryLabel;el.title=summary.title;
+  }
+}
 function applyMemberEdgeVisuals(){
   const labels=new Map([...labelsEl.children].map(el=>[el.dataset.edgeLabel,el]));
   for(const e of edges){
@@ -3566,14 +3764,15 @@ function applyMemberEdgeVisuals(){
     pair.group.dataset.topic=visual.topic;pair.path.dataset.visualKind=visual.kind;
     pair.group.style.setProperty('--edge-width',visual.width+'px');
     pair.path.style.setProperty('--an-visual-color',visual.color);pair.path.style.setProperty('--an-visual-dash',visual.dash);pair.path.style.setProperty('--an-visual-opacity',String(visual.opacity));
-    for(const flow of [pair.rim,pair.flow])flow.classList.toggle('play',visual.animate);
-    const description=e.verb+' · '+visual.lineLabel+' · '+visual.label;
+    for(const flow of [pair.rim,pair.flow])if(flow.classList.contains('play')!==visual.animate)flow.classList.toggle('play',visual.animate);
+    const description=e.verb+' · '+visual.statusLabel+' · '+visual.summaryLabel+' · '+visual.lineLabel;
     pair.hit.setAttribute('aria-label',nodeById[e.from].name+' ↔ '+nodeById[e.to].name+' · '+description+' · 설명 보기');
     const label=labels.get(e.id);
-    if(label){label.querySelector('.an-edge-degree').textContent=visual.lineLabel+' · '+visual.label;label.setAttribute('aria-label',description+' · 설명 보기');}
+    if(label){label.querySelector('.an-edge-degree').textContent=visual.summaryLabel+' · '+visual.statusLabel;label.setAttribute('aria-label',description+' · 설명 보기');}
   }
   // Category membership is a navigation aid, visually distinct from indirect business paths.
-  for(const path of memberGroupLines.children){path.dataset.visualKind='reference';path.style.setProperty('--an-visual-color','var(--an-line)');path.style.setProperty('--an-visual-dash','2 6');path.style.setProperty('--an-visual-opacity','.55');}
+  for(const path of memberGroupLines.children){path.dataset.visualKind='navigation';path.setAttribute('title','자료 분류 안내선 · 관계 아님');}
+  applyMemberRecordVisuals();
 }
 function memberEncodingSample(parent,label,dash='none',width=1.4,color='var(--an-line)',motion=false){
   const row=appendMemberText(parent,'div','','an-encoding-sample'),svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -3589,11 +3788,12 @@ function appendMemberEncodingGuide(parent){
   memberEncodingSample(s,'긴 점선: 근거가 있는 간접 연결','6 5',2.4);
   memberEncodingSample(s,'짧은 점선: 참고 자료·미확인 후보·자료 묶음','2 6');
   memberEncodingSample(s,'혼합 점선: 종료·정정·상충 이력 또는 해지 통보 확인','8 4 2 4');
+  appendMemberText(s,'p','자료 분류 안내선은 묶음과 종목 사이를 찾기 위한 탐색 경로이며 관계선이 아니에요. 직접·간접·참고 관계 판정에 포함하지 않아요.','an-save-note');
   appendMemberText(s,'p','해지 통보는 종료 확정이 아니에요. 정정공시는 새 근거를 확인하고, 상충 자료는 어느 쪽도 현재 사실로 강조하지 않아요.','an-save-note');
   appendMemberText(s,'p','직접·간접과 근거 확인은 별개예요. 원문·기준일이 부족하면 직접으로 입력돼 있어도 참고선으로 보여줘요.','an-save-note');
   s=section('02 · 굵기 — 연결 정도');
   for(const [label,width] of [['미평가 / 낮음',1.4],['중간',2.4],['높음',3.6]])memberEncodingSample(s,label,'none',width);
-  appendMemberText(s,'p','미평가와 낮음은 글자로 구분해요. 굵기는 근거가 있는 기존 등급만 사용하며, 지분율은 숫자로 표시하고 선 굵기로 환산하지 않아요. 중요도·확실성·상승 확률이 아니에요.','an-save-note');
+  appendMemberText(s,'p','미평가와 낮음은 글자로 구분해요. 정성기준(가설)은 원문에 명시된 유일한 거래처=높음, 주요 거래처=중간, 미미한 거래 비중=낮음으로 해당 공시 회사의 보고기간만 분류해요. 당사자·문맥을 확인하지 못하면 미평가예요. 지분율은 숫자로 표시하고 선 굵기로 환산하지 않아요. 확실성·상승 확률이 아니에요.','an-save-note');
   s=section('03 · 색 — 주제');const topics=appendMemberText(s,'div','','an-encoding-topics');
   for(const [key,name] of [['contract','공시·계약'],['supply','고객사·공급망'],['policy','정책·규제'],['commodity','원자재'],['holding','기타 주제']]){const tag=appendMemberText(topics,'span',name);tag.dataset.topic=key;}
   appendMemberText(s,'p','기존 주제색을 유지해요. 참고·미확인·이력 선은 회색이에요. 호재·악재와 가격 등락을 색으로 단정하지 않아요.','an-save-note');
@@ -3616,8 +3816,8 @@ renderDetail=function(){
   if(memberStockList||state.activeNote||state.noteList)return;
   const edge=edges.find(e=>e.id===state.selected);if(!edge)return;
   const v=memberEdgeVisual(edge,memberVisualSource(edge),memberVisualContext(true));
-  const panel=appendMemberText(detail,'details','','an-evidence');panel.dataset.visualCriteria='v1';appendMemberText(panel,'summary','이 연결의 시각 표시');
-  memberEncodingSample(panel,v.lineLabel+' · '+v.label,v.dash,v.width,v.color);
+  const panel=appendMemberText(detail,'details','','an-evidence');panel.dataset.visualCriteria='v1';panel.dataset.topic=v.topic;appendMemberText(panel,'summary','이 연결의 시각 표시');
+  memberEncodingSample(panel,v.summaryLabel+' · '+v.statusLabel,v.dash,v.width,v.color);
   appendMemberText(panel,'p',v.motionLabel+' · '+v.reason,'an-save-note');
 };
 const memberEncodingButton=document.createElement('button');memberEncodingButton.type='button';memberEncodingButton.className='an-encoding-summary';memberEncodingButton.textContent='선·색·움직임 기준';
