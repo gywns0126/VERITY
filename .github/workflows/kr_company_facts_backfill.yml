@@ -207,8 +207,9 @@ jobs:
                   and counts['selected'] <= counts['available'] and counts['public_gets'] <= 3
                   and counts['not_attempted'] == counts['selected'] - counts['attempted']):
             raise ValueError('annual capture count bounds invalid')
-          stopped = manifest.get('stopped') == 'source-access-or-rate-limit'
-          state = 'source-access-or-rate-limit' if stopped else 'partial' if counts['parsed'] < counts['selected'] else 'selected-set-parsed'
+          stop_reason = manifest.get('stopped')
+          stopped = stop_reason in ('source-access-or-rate-limit', 'source-maintenance')
+          state = stop_reason if stopped else 'partial' if counts['parsed'] < counts['selected'] else 'selected-set-parsed'
           with open(sys.argv[2], 'a', encoding='utf-8') as output:
             output.write(f"source_access_stop={'true' if stopped else 'false'}\n")
           with open(sys.argv[3], 'a', encoding='utf-8') as summary:
@@ -257,7 +258,7 @@ jobs:
       - name: Fail stopped public capture after preserving successful source rows
         if: steps.automatic_evidence.outputs.source_access_stop == 'true' || steps.annual_capture.outputs.source_access_stop == 'true'
         run: |
-          echo "::error::Public source access or rate-limit stop; successful parsed rows were retained, but publication must not proceed."
+          echo "::error::Public source access, rate-limit or maintenance stop; successful parsed rows were retained, but publication must not proceed."
           exit 1
 
       - name: Publish verified public evidence catalog
