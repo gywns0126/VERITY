@@ -1,10 +1,8 @@
 {
-  "collected_at": "2026-10-09T00:40:40.967262+00:00",
+  "collected_at": "2026-10-09T06:48:22.419155+00:00",
   "schema_version": 1,
-  "severity": "RED",
-  "severity_reasons": [
-    "data delivery RED: 배달 검증 실패 1건"
-  ],
+  "severity": "GREEN",
+  "severity_reasons": [],
   "n_verification_days": 51,
   "n_milestones": {
     "to_50": 0,
@@ -32,31 +30,31 @@
   "operator_deadman": {
     "days_git": 0.0,
     "days_telegram": null,
-    "days_uaq": 17.15,
+    "days_uaq": 18.15,
     "trigger": "ok",
     "maintenance": false,
     "warn_days": 7.0
   },
   "pre_registration_pending": [],
   "alert_volume_24h": {
-    "sent": 9,
-    "dedupe_skip": 16,
+    "sent": 8,
+    "dedupe_skip": 17,
     "quiet_skip": 16,
     "fp_repeat_max": 16
   },
   "auto_action_blocked": [],
   "_inputs_snapshot": {
     "kis_lock_commits_24h": 1,
-    "fred_age_h": 0.21,
+    "fred_age_h": 0.13,
     "fred_24h_failure_rate": 0.0,
     "core_sources_ok": true,
-    "delivery_status": "red",
-    "publish_verify_ok": false,
-    "publish_verify_failed": 1,
+    "delivery_status": "amber",
+    "publish_verify_ok": true,
+    "publish_verify_failed": 0,
     "runtime_mode": "full",
     "ramp_up_stage": 5000,
     "brain_anomaly_24h": 0,
-    "vams_days_since_reset": 144,
+    "vams_days_since_reset": 145,
     "validation_sample": null
   },
   "rule7_quota": {
