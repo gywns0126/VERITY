@@ -148187,7 +148187,7 @@
     "_note": "표시 전용 · 산식 불변 — 이미 산출된 작용값의 집계 (오퍼레이터)"
   },
   "exec_paper": {
-    "as_of": "2026-10-08T23:19:04+09:00",
+    "as_of": "2026-10-09T22:26:26+09:00",
     "status": "RUNNING",
     "version": "v1-ranked-forward-20260901",
     "formula_version": "brain-current/fact-v1.1-20260823",
@@ -148200,9 +148200,9 @@
     "benchmark": {
       "name": "KOSPI",
       "start_date": "20260831",
-      "as_of": "20261006",
-      "return_pct": 1.78,
-      "excess_pct": -1.78,
+      "as_of": "20261007",
+      "return_pct": -0.236,
+      "excess_pct": 0.236,
       "source": "금융위원회 지수시세정보",
       "freshness": "T+1 EOD"
     },
@@ -148574,22 +148574,22 @@
     ],
     "target_holdings": 9,
     "target_capacity": 10,
-    "target_exposure_pct": 7.63,
+    "target_exposure_pct": 11.02,
     "actual_exposure_pct": 0.0,
     "pending": 2,
     "trades_total": 0,
     "realized_pnl": 0,
     "cost_paid": 0.0,
     "entered_today": 0,
-    "market_sessions": 22,
+    "market_sessions": 23,
     "rebalance": {
       "interval_sessions": 20,
-      "sessions_since": 21,
+      "sessions_since": 22,
       "sessions_remaining": 0,
       "last_date": "2026-09-02"
     },
     "denominator": {
-      "kr_candidate_n": 15,
+      "kr_candidate_n": 36,
       "eligible_n": 0,
       "signal_eligible_n": 0,
       "selected_n": 0,
@@ -148598,20 +148598,19 @@
       "whole_share_only": true,
       "not_selected_by_rank_n": 0,
       "rejected": {
-        "liquidity": 14,
-        "grade_below_watch": 1
+        "liquidity": 34,
+        "critical_red_flag": 2
       }
     },
     "price_snapshot": {
       "source": "portfolio.recommendations.current_price",
-      "as_of": "2026-10-08T10:14:51+09:00",
-      "market_clock_state": "regular_session_clock_holiday_unverified",
+      "as_of": "2026-10-09T22:12:52+09:00",
+      "market_clock_state": "after_close_clock",
       "holiday_calendar": "not_connected",
       "fingerprint_source": "analysis_plus_active_live_quotes",
       "active_live_quotes_n": 2
     },
     "flags": [
-      "already_ran_today",
       "candidate_pool_rank_not_full_kr_universe",
       "e2_next_run_fill",
       "e3_1m_proxy",
@@ -148635,9 +148634,9 @@
       "min_detectable": {
         "status": "computed",
         "unit": "daily excess return pct",
-        "n": 21,
-        "sigma_pct": 2.012,
-        "effect_pct": 1.3172,
+        "n": 22,
+        "sigma_pct": 2.0132,
+        "effect_pct": 1.2876,
         "t_target": 3.0
       },
       "evidence_class": "forward_execution",
