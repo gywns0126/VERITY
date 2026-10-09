@@ -1612,6 +1612,17 @@
    ]
   },
   {
+   "path": "data/member_map_annual_capture_attempts.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 347,
+   "producers": [
+    "scripts/member-map/capture-annual-customer-tables.py"
+   ]
+  },
+  {
    "path": "data/member_map_auto_evidence.json",
    "visibility": "public",
    "publish": true,
@@ -1818,6 +1829,18 @@
    ]
   },
   {
+   "path": "data/nps_full_holdings_annual.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 182980,
+   "producers": [
+    "api/collectors/nps_holdings.py",
+    "api/collectors/nps_history.py"
+   ]
+  },
+  {
    "path": "data/nps_full_holdings_overseas.csv",
    "visibility": "work",
    "publish": false,
@@ -1837,6 +1860,17 @@
    "size_bytes": 1508,
    "producers": [
     "api/collectors/nps_holdings.py"
+   ]
+  },
+  {
+   "path": "data/nps_history_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 114804,
+   "producers": [
+    "api/collectors/nps_history.py"
    ]
   },
   {
