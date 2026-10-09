@@ -928,7 +928,7 @@ jobs:
           blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
 
       - name: Verify public NPS history delivery
-        if: success() && steps.nps_holdings.outcome == 'success'
+        if: always() && steps.nps_holdings.outcome == 'success' && steps.coverage_gate.outcome != 'failure'
         run: node scripts/nps_history_publish.cjs --verify-only
 
       - name: 국민연금 보유 신선도 실패 확정

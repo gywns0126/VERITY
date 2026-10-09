@@ -1,17 +1,23 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {PUBLIC_URL, digest, validate, preserveBaseline, verify, publish} = require('../scripts/nps_history_publish.cjs');
-const fixture = () => ({count: 1, holdings: [{ticker:'123456'}], full_n:1,
-  full:[{ticker:'123456',as_of:'2025-12-31'}], fund:{unchanged:true},
+const fixture = () => ({count: 1, holdings: [{ticker:'123456'}], full_n:100,
+  full:[{ticker:'123456',name:'First',eval_amt_100m:100,as_of:'2025-12-31'},
+    ...Array.from({length:99},(_,i)=>({ticker:null,name:`Unmapped${i}`,eval_amt_100m:0,as_of:'2025-12-31'}))], fund:{unchanged:true},
   detail_history:{schema_version:1,scope:'annual_domestic_evaluation_top100',
     selection:{as_of:'2025-12-31',limit:100,target_n:1,annual_top100_n:100,annual_top100_unmatched_n:99},
-    stocks:[{ticker:'123456',events:[{rcept_no:'20260101000001',date_basis:'filing_date',trade_date:null}]}]}});
+    stocks:[{ticker:'123456',name:'First',rank:1,eval_amt_100m:100,selection_as_of:'2025-12-31',
+      events:[{rcept_no:'20260101000001',date_basis:'filing_date',trade_date:null}]}]}});
 const fetcher = value => async url => { assert.equal(url, PUBLIC_URL); return {ok:true,json:async()=>value}; };
 test('canonical hashes ignore object key formatting only', () => {
   assert.equal(digest({b:2,a:1}),digest({a:1,b:2}));assert.notEqual(digest([1,2]),digest([2,1]));
 });
 test('official six-character alphanumeric KRX codes remain supported', () => {
-  const p=fixture();p.detail_history.stocks[0].ticker='0126Z0';assert.equal(validate(p).selected,1);
+  const p=fixture();p.full[0].ticker=p.detail_history.stocks[0].ticker='0126Z0';assert.equal(validate(p).selected,1);
+});
+test('right counts cannot replace the source Top100 with unrelated stocks or reorder ranks', () => {
+  const p=fixture();p.detail_history.stocks[0].ticker='654321';assert.throws(()=>validate(p),/official annual source Top100/);
+  p.detail_history.stocks[0].ticker='123456';p.detail_history.stocks[0].rank=100;assert.throws(()=>validate(p));
 });
 test('selection, annual date, receipt and missing history fail closed', () => {
   assert.equal(validate(fixture()).filings,1);

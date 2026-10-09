@@ -23,6 +23,30 @@ function validate(payload) {
     throw new Error('Invalid Top100 selection; refuse release');
   if (payload.full.some(row => row.as_of !== selection.as_of))
     throw new Error('Annual period and selection mismatch');
+  const names = new Set(), tickerCounts = new Map();
+  const mappedTicker = value => {
+    const text = String(value || '').trim().toUpperCase().split('.')[0];
+    return /^[0-9A-Z]{6}$/.test(text) && text !== '000000' ? text : null;
+  };
+  for (const row of payload.full) {
+    const name = String(row.name || '').replace(/\s/g, '').toLowerCase();
+    if (!name || names.has(name) || typeof row.eval_amt_100m !== 'number'
+        || !Number.isFinite(row.eval_amt_100m) || row.eval_amt_100m < 0)
+      throw new Error('Invalid or ambiguous annual source row');
+    names.add(name);
+    const ticker = mappedTicker(row.ticker);
+    if (ticker) tickerCounts.set(ticker, (tickerCounts.get(ticker) || 0) + 1);
+  }
+  // Same source-order rule as select_top100: rank raw securities before mapping.
+  const ranked = [...payload.full].sort((a, b) => b.eval_amt_100m - a.eval_amt_100m
+    || (a.name.toLowerCase() < b.name.toLowerCase() ? -1 : a.name.toLowerCase() > b.name.toLowerCase() ? 1 : 0));
+  const expected = ranked.slice(0, 100).map((row, index) => ({...row, rank:index + 1, ticker:mappedTicker(row.ticker)}))
+    .filter(row => row.ticker && tickerCounts.get(row.ticker) === 1);
+  if (expected.length !== history.stocks.length || history.stocks.some((stock, index) => {
+    const row = expected[index];
+    return stock.ticker !== row.ticker || stock.rank !== row.rank || stock.name !== row.name
+      || stock.eval_amt_100m !== row.eval_amt_100m || stock.selection_as_of !== selection.as_of;
+  })) throw new Error('History selection is not the official annual source Top100');
   const tickers = new Set();
   let filings = 0, withHistory = 0;
   for (const stock of history.stocks) {
