@@ -3,9 +3,11 @@ from __future__ import annotations
 import importlib.util
 from datetime import date
 import io
+import json
 from pathlib import Path
 import subprocess
 import sys
+import types
 import urllib.error
 import zipfile
 
@@ -271,6 +273,89 @@ def test_auth_and_access_statuses_stop_without_becoming_receipt_failures(status_
         module._fetch_archive(receipt, "test-key-never-logged", opener)
 
     assert len(opener.calls) == 1
+
+
+@pytest.mark.parametrize("format", ["json", "xml"])
+def test_source_maintenance_status_stops_with_exact_classification(format):
+    module = _module()
+    receipt = "20260331000001"
+    if format == "json":
+        body = b'{"status":"800","message":"maintenance"}'
+    else:
+        body = b"<result><status>800</status><message>maintenance</message></result>"
+    opener = _Opener(_Response(body))
+
+    with pytest.raises(module.SourceAccessStop, match="dart-source-status-800") as stopped:
+        module._fetch_archive(receipt, "test-key-never-logged", opener)
+
+    assert stopped.value.stopped == "source-maintenance"
+    assert len(opener.calls) == 1
+
+
+def test_source_maintenance_stops_before_later_documents_without_spending_ledger(tmp_path, monkeypatch):
+    module = _module()
+    source_dir = tmp_path / "source"
+    source_dir.mkdir()
+    output_dir = tmp_path / "output"
+    receipts = ["20260331000001", "20260331000002", "20260331000003"]
+    selected = [
+        {"ticker": f"{index:06d}", "issuer_id": f"KR:{index:06d}",
+         "issuer_name": f"Issuer {index}", "corp_code": f"{index:08d}",
+         "receipt_no": receipt, "filed_on": "2026-03-31", "fiscal_year": "2025",
+         "report_name": "사업보고서 (2025.12)"}
+        for index, receipt in enumerate(receipts, 1)
+    ]
+    prior_row = {"receipt_no": "20250331000001", "tables": [], "table_count": 0}
+    baseline = {"annual_customer_tables": [prior_row]}
+    ledger = {"schema": module._ATTEMPT_SCHEMA, "receipts": {
+        receipts[0]: {"failures": 1, "reason": "source-fetch-failed"}}}
+    writes = {}
+
+    def write_result(path, value):
+        writes[path.name] = value
+        path.write_text(json.dumps(value), encoding="utf-8")
+
+    def apply_local(_source_dir, before, after, _output_dir):
+        assert before == baseline
+        assert after == baseline
+        return {"applied": False}
+
+    helper = types.SimpleNamespace(
+        _read_regular_json=lambda _path: baseline,
+        _validate_capture_fields=lambda _before, _after: None,
+        project_public_sources=lambda _sources: {"companies": []},
+        add_public_company_names=lambda _sources, companies: companies,
+        write_result=write_result,
+        apply_local=apply_local,
+    )
+    selection = {"unique_uncaptured_receipts": 3, "selected": 3, "limit": 3}
+    requested = []
+
+    def maintenance(receipt, _api_key):
+        requested.append(receipt)
+        raise module.SourceAccessStop("dart-source-status-800", stopped="source-maintenance")
+
+    monkeypatch.setenv("DART_API_KEY", "test-key-never-logged")
+    monkeypatch.setattr(module, "_load_capture_module", lambda: helper)
+    monkeypatch.setattr(module, "_read_json", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(module, "_read_attempt_ledger", lambda _source: (ledger, b"prior"))
+    monkeypatch.setattr(module, "select_candidates", lambda *_args, **_kwargs: (selected, selection))
+    monkeypatch.setattr(module, "_fetch_archive", maintenance)
+    monkeypatch.setattr(module, "_write_attempt_ledger_atomic",
+                        lambda *_args: pytest.fail("unchanged ledger must not be rewritten"))
+
+    assert module.main(["--source-dir", str(source_dir), "--output-dir", str(output_dir),
+                        "--limit", "3", "--fetch-public", "--apply-local"]) == 0
+
+    manifest = writes["manifest.json"]
+    assert manifest["stopped"] == "source-maintenance"
+    assert (manifest["selected"], manifest["attempted"], manifest["parsed"],
+            manifest["not_attempted"], manifest["public_gets"]) == (3, 1, 0, 2, 1)
+    assert requested == receipts[:1]
+    assert manifest["documents"] == [{**selected[0], "status": "failed",
+                                       "reason": "dart-source-status-800"}]
+    assert writes["member_map_annual_capture_attempts.json"] == ledger
+    assert writes["member_map_auto_evidence.json"] == baseline
 
 
 def test_fetch_rejects_redirected_endpoint_and_invalid_receipt():

@@ -386,7 +386,9 @@ def _fetch_archive(receipt: str, api_key: str, opener=None):
         status_code = match.group(1).decode("ascii") if match else None
     if status_code in {"010", "011", "012", "020", "021", "429"}:
         raise SourceAccessStop("dart-status-" + status_code)
-    if status_code in {"013", "014", "100", "101", "800", "900"}:
+    if status_code == "800":
+        raise SourceAccessStop("dart-source-status-800", stopped="source-maintenance")
+    if status_code in {"013", "014", "100", "101", "900"}:
         raise ValueError("dart-source-status-" + status_code)
     try:
         with zipfile.ZipFile(__import__("io").BytesIO(raw)) as archive:
@@ -398,7 +400,11 @@ def _fetch_archive(receipt: str, api_key: str, opener=None):
 
 
 class SourceAccessStop(Exception):
-    pass
+    def __init__(self, reason, *, stopped="source-access-or-rate-limit"):
+        super().__init__(reason)
+        if stopped not in {"source-access-or-rate-limit", "source-maintenance"}:
+            raise ValueError("annual-source-stop-invalid")
+        self.stopped = stopped
 
 
 def _load_capture_module():
@@ -516,7 +522,7 @@ def main(argv=None):
         except SourceAccessStop as error:
             record.update(status="failed", reason=str(error))
             _update_attempt_ledger(proposed_ledger, receipt, "access-stop")
-            manifest["stopped"] = "source-access-or-rate-limit"
+            manifest["stopped"] = error.stopped
             break
         except Exception as error:  # keep provider text, URLs and keys out of the journal
             reason = str(error) if isinstance(error, ValueError) and re.fullmatch(r"[a-z0-9-]{1,80}", str(error)) else type(error).__name__
