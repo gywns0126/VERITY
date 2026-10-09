@@ -970,7 +970,8 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install existing collector dependencies
-        run: pip install 'requests>=2.31.0,<3.0.0' 'python-dotenv>=1.0.0,<2.0.0' 'dart-fss>=0.4.3,<1.0.0'
+        # api.collectors.__init__ eagerly imports existing ETF/yield collectors too.
+        run: pip install -r requirements.txt
       - name: Refresh bounded NPS history
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
