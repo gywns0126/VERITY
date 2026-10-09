@@ -63,6 +63,25 @@ GOOGLE_NEWS_UA = (
 )
 
 
+def _attach_cached_market_translations(items: list) -> list:
+    """시장 원문·출처·시각을 보존하고 기존 번역만 부착한다. 추가 모델 호출 없음."""
+    try:
+        from api.collectors.news_translation import translate_headlines_ko
+
+        ko_map = translate_headlines_ko([item.get("title", "") for item in items], cache_only=True)
+        for item in items:
+            existing = item.get("title_ko")
+            if isinstance(existing, str) and existing.strip():
+                continue
+            title = item.get("title") or ""
+            ko = ko_map.get(title.strip())
+            if isinstance(ko, str) and ko.strip() and ko.strip() != title.strip():
+                item["title_ko"] = ko.strip()
+    except Exception:  # noqa: BLE001 — 번역 누락으로 뉴스 수집을 중단하지 않는다.
+        pass
+    return items
+
+
 def collect_headlines(max_items: int = 20) -> list:
     """네이버 금융 주요 뉴스 수집 + 호악재 분류 + 정렬"""
     raw = []
@@ -124,7 +143,7 @@ def collect_headlines(max_items: int = 20) -> list:
                 item["dup_topic"] = _novelty.group_topic(g)
 
     unique.sort(key=lambda x: x["composite_score"], reverse=True)
-    return unique[:max_items]
+    return _attach_cached_market_translations(unique[:max_items])
 
 
 def _naver_market_news() -> list:
@@ -340,7 +359,7 @@ def collect_bloomberg_google_news_rss(max_items: int = 15) -> list:
                 break
     except Exception:
         pass
-    return items
+    return _attach_cached_market_translations(items)
 
 
 def _classify_sentiment_mixed(title: str) -> str:
@@ -421,5 +440,28 @@ def collect_us_headlines(
                 it["title_ko"] = ko
     except Exception:  # noqa: BLE001
         pass
+
+    # 기존 US 호출에서 얻은 번역을 같은 제목·URL의 원본 시장 기사에도 보존한다.
+    # 저장 실패에도 이번 산출물에는 반영하며, 번역 없는 시장 기사를 새로 호출하지 않는다.
+    donors = {}
+    for item in result:
+        title = item.get("title") or ""
+        url = (item.get("link") or item.get("url") or "").strip()
+        ko = item.get("title_ko")
+        if not url or not isinstance(ko, str) or not ko.strip() or ko.strip() == title.strip():
+            continue
+        key = (title, url)
+        if key not in donors:
+            donors[key] = ko.strip()
+        elif donors[key] != ko.strip():
+            donors[key] = None
+    for item in (kr_headlines or []) + (bloomberg_rss or []):
+        existing = item.get("title_ko")
+        if isinstance(existing, str) and existing.strip():
+            continue
+        url = (item.get("link") or item.get("url") or "").strip()
+        ko = donors.get((item.get("title") or "", url))
+        if ko:
+            item["title_ko"] = ko
 
     return result
