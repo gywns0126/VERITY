@@ -16,6 +16,7 @@ import threading
 import unicodedata
 
 from .portfolio_evidence import project_portfolio_evidence
+from .portfolio_ai_public import project_public_ai_review
 from .portfolio_public_sources import (
     PUBLIC_SOURCE_FILES,
     project_public_sources,
@@ -634,7 +635,10 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
             "requested": len(requested), "matched": len(companies),
             "missing": missing,
             "sources": deepcopy(projected["coverage"]),
-            "missing_source_files": [name for name in PUBLIC_SOURCE_FILES if name not in public_documents],
+            # Preserve the v1 list for already-open clients. The optional AI
+            # lane reports absence/rejection separately in coverage.ai_review.
+            "missing_source_files": [name for name in PUBLIC_SOURCE_FILES
+                                     if name != "member_map_ai_candidates.json" and name not in public_documents],
             "company_data": [{"id": c["id"],
                               "facts": "available" if c["facts"] else "not-supplied-or-rejected",
                               "documents": "available" if c["document_ids"] else "not-supplied-or-rejected"}
@@ -673,6 +677,20 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
                   "external_model_calls": 0, "operator_private_sources_used": False,
                   "financial_advice": False},
     }
+    # Precomputed PUBLIC extraction only. This path cannot invoke a model, read
+    # a ledger, or send a member's selection to an external AI provider.
+    ai_artifact = public_documents.get("member_map_ai_candidates.json")
+    ai_status = "unavailable"
+    if ai_artifact is not None:
+        try:
+            result["ai_review"] = project_public_ai_review(
+                ai_artifact, list(by_id.values()), [row["id"] for row in requested]
+            )
+            ai_status = "ready"
+        except (ValueError, TypeError, UnicodeError):
+            # Broken optional AI output must not hide existing filings/prices.
+            ai_status = "rejected"
+    result["coverage"]["ai_review"] = {"status": ai_status}
     # Only sanitized content; equality fingerprint, not a timestamp or a score.
     result["revision"] = _revision(result)
     return result
