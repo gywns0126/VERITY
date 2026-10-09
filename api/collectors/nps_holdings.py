@@ -4,7 +4,7 @@
   - "실시간 전체 보유종목"을 주는 공식 API 없음.
   - 즉시 가용(신규 secret 0) = DART 5% 대량보유 공시 부산물(reporter='국민연금공단'). 분기 지연, 5%+ 만.
   - 전체 5%+ ~111종목 = data.go.kr #15106890(국민연금 대량보유) — 키+API URL 등록 시 unlock(graceful).
-  - 전체 ~1,200종목 = fund.nps.or.kr 연 1회 9개월 지연 공시(미연결).
+  - 전체 ~1,200종목 = 공식 연말 공시의 검증된 로컬 annual JSON 우선(연 1회 지연 공시).
   - 운용수익률/AUM = 전용 API 없음 → data/nps_fund_overview.json(수기/분기 갱신) seed.
 
 출력 = data/nps_holdings.json. 점수·추천 없음 — 공시 사실(지분율)만, 판단은 사용자.
@@ -21,6 +21,7 @@ NAMES_PATH = os.path.join(_ROOT, "data", "kr_stock_names.json")
 CATALYST_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
 FUND_OVERVIEW_PATH = os.path.join(_ROOT, "data", "nps_fund_overview.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "nps_holdings.json")
+ANNUAL_SEED_PATH = os.path.join(_ROOT, "data", "nps_full_holdings_annual.json")
 HEARTBEAT_PATH = os.path.join(_ROOT, "data", "metadata", "nps_holdings_heartbeat.json")
 
 NPS_NAME = "국민연금"
@@ -435,6 +436,8 @@ def _from_full_list(name2tk: Dict[str, str]) -> List[Dict[str, Any]]:
     반환 = [{ticker, name, pct, eval_amt_100m, as_of}] · 실패/미신청 = [] (기존 5%+ 경로 무영향).
     용도 = 공개 패널 '내 종목 겹침(5% 미만 포함)' — 리스트 전체 노출은 5%+ 유지(볼륨).
     """
+    from api.collectors.nps_history import annual_cohort_as_of, read_annual_seed
+    annual = read_annual_seed(ANNUAL_SEED_PATH)
     key = ""
     try:
         from api.config import PUBLIC_DATA_API_KEY
@@ -469,8 +472,8 @@ def _from_full_list(name2tk: Dict[str, str]) -> List[Dict[str, Any]]:
                     if not nm:
                         continue
                     tk = _lookup_ticker(name2tk, nm)
-                    if tk:
-                        rows.append({"ticker": tk, "name": nm, "pct": pct, "eval_amt_100m": amt, "as_of": asof or "csv"})
+                    # Preserve unmapped source securities before evaluation ranking.
+                    rows.append({"ticker": tk or None, "name": nm, "pct": pct, "eval_amt_100m": amt, "as_of": asof or "csv"})
             if rows:
                 meta = _load_json(os.path.join(_ROOT, "data", "nps_full_holdings.meta.json"), {}) or {}
                 asof2 = str(meta.get("as_of") or "")
@@ -478,9 +481,16 @@ def _from_full_list(name2tk: Dict[str, str]) -> List[Dict[str, Any]]:
                     for r0 in rows:
                         if r0.get("as_of") in ("", "csv"):
                             r0["as_of"] = asof2
+                current_asof = annual_cohort_as_of(rows, require_top100=bool(annual))
+                if annual and (not current_asof or annual["as_of"] >= current_asof):
+                    return annual["full"]
                 return rows
         except Exception:  # noqa: BLE001
             pass
+
+    # A validated local seed does not trigger an annual API refresh each build.
+    if annual:
+        return annual["full"]
 
     # 경로 B: odcloud API (활용신청 후 활성)
     key = key or os.environ.get("PUBLIC_DATA_API_KEY", "").strip()
@@ -544,9 +554,7 @@ def _from_full_list(name2tk: Dict[str, str]) -> List[Dict[str, Any]]:
                 if not nm:
                     continue
                 tk = _lookup_ticker(name2tk, nm)
-                if not tk:
-                    continue
-                rows.append({"ticker": tk, "name": nm, "pct": pct, "eval_amt_100m": amt, "as_of": asof})
+                rows.append({"ticker": tk or None, "name": nm, "pct": pct, "eval_amt_100m": amt, "as_of": asof})
             page += 1
         return rows
     except Exception:  # noqa: BLE001
@@ -695,7 +703,11 @@ def _asset_mix() -> List[Dict[str, Any]]:
 
 def build_nps_holdings() -> Dict[str, Any]:
     from datetime import datetime, timezone, timedelta
+    from api.collectors.nps_history import annual_cohort_as_of, build_history
     kst = timezone(timedelta(hours=9))
+    previous = _load_json(OUTPUT_PATH, {}) or {}
+    if not isinstance(previous, dict):
+        previous = {}
 
     names = _load_json(NAMES_PATH, {}) or {}
     name2tk = _name_to_ticker(names)
@@ -724,6 +736,15 @@ def build_nps_holdings() -> Dict[str, Any]:
     fund = _load_json(FUND_OVERVIEW_PATH, None)
 
     full_rows = _from_full_list(name2tk)
+    prior_full = previous.get("full")
+    current_asof = annual_cohort_as_of(full_rows, require_top100=isinstance(prior_full, list) and len(prior_full) >= 100)
+    previous_asof = annual_cohort_as_of(previous.get("full"))
+    # A stale CSV/API must not replace a newer, dated annual last-good cohort.
+    full_fallback = bool((previous_asof and (
+        not current_asof or current_asof < previous_asof
+    )) or (not full_rows and isinstance(previous.get("full"), list) and previous["full"]))
+    if full_fallback:
+        full_rows = previous["full"]  # Keep dated annual last-good rows on outage/empty response.
     full_us_rows = _from_full_overseas()
     has_full = any(h.get("src", "").startswith("data.go.kr") for h in holdings)
     as_of_latest = max((_iso_date(h.get("date")) for h in holdings), default="")
@@ -739,6 +760,8 @@ def build_nps_holdings() -> Dict[str, Any]:
         "holdings": holdings,
         "full": full_rows,          # 전체 투자현황(연말, KR ~1,200) — 겹침 검사용 (5% 미만 포함)
         "full_n": len(full_rows),
+        "detail_history": build_history(full_rows, previous=previous.get("detail_history"),
+                                        annual_input_status="last_good" if full_fallback else "current"),
         "full_us": full_us_rows,    # 해외(미장 매칭분) 전체 투자현황 — 미장 겹침 검사용
         "full_us_n": len(full_us_rows),
         "asset_mix": _asset_mix(),  # 자산군 비중 (기금 포트폴리오 현황 CSV, 분기)

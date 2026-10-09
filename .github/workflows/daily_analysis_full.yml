@@ -57,6 +57,11 @@ on:
           - staging
           - prod
           - dev
+      nps_history_only:
+        description: '국민연금 Top100 공시 이력만 갱신·발행 (KIS/LLM/전체 분석 제외)'
+        required: false
+        default: false
+        type: boolean
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)
 env:
@@ -130,7 +135,7 @@ jobs:
 
   analyze:
     needs: guard
-    if: needs.guard.outputs.run == '1'
+    if: needs.guard.outputs.run == '1' && inputs.nps_history_only != true
     runs-on: ubuntu-latest
     # 🚨 2026-07-16 안전변 120 → 150. 평일 baseline 이 ~100~120분(고정, 크립 아님 — 프로파일 확인)
     #   이라 120 천장에 붙어 있어, 외부 API 무제한 호출이 가끔 멈추면 슬롯이 천장을 넘어 SIGTERM.
@@ -514,7 +519,16 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python -m api.collectors.nps_holdings
+        run: |
+          set -euo pipefail
+          python -m api.collectors.nps_holdings
+          python -m api.collectors.nps_history \
+            --input data/nps_holdings.json \
+            --annual-input data/nps_full_holdings_annual.json \
+            --output "$RUNNER_TEMP/nps_holdings-history.json" \
+            --cache data/nps_history_cache.json \
+            --collect --maxcalls 20 --ttl-hours 168 --resume
+          mv "$RUNNER_TEMP/nps_holdings-history.json" data/nps_holdings.json
 
       - name: 증권 대차잔고 집계 (공매도 압력 proxy, 금융위 공개패널)
         # data.go.kr #1160100(금융위 대차거래, serviceKey=PUBLIC_DATA_API_KEY 공통) → 전종목 ~2,769개 대차잔고.
@@ -833,6 +847,8 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/
+          # RULE 4: 공시 원문·마지막 정상 수집시각 체크포인트를 매 실행 보존한다.
+          if [ -f data/nps_history_cache.json ]; then git add data/nps_history_cache.json; fi
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
           MODE="${{ steps.detect_mode.outputs.mode }}"
           if [[ "$MODE" == periodic_* ]]; then
@@ -911,6 +927,10 @@ jobs:
           personal_token: ${{ secrets.VERITY_DATA_PAT }}
           blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
 
+      - name: Verify public NPS history delivery
+        if: success() && steps.nps_holdings.outcome == 'success'
+        run: node scripts/nps_history_publish.cjs --verify-only
+
       - name: 국민연금 보유 신선도 실패 확정
         if: always() && steps.nps_holdings.outcome == 'failure'
         run: |
@@ -922,3 +942,54 @@ jobs:
         run: |
           echo "::error::Operator analyst metadata refresh failed; do not treat old private data as fresh"
           exit 1
+
+  # 기존 스케줄·직렬 그룹 유지. N=1 검증을 위해 전체 분석/토큰 경로를 실행하지 않는다.
+  nps_history_only:
+    if: github.event_name == 'workflow_dispatch' && inputs.nps_history_only == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 100
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install existing collector dependencies
+        run: pip install 'requests>=2.31.0,<3.0.0' 'python-dotenv>=1.0.0,<2.0.0' 'dart-fss>=0.4.3,<1.0.0'
+      - name: Refresh bounded NPS history
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: |
+          set -euo pipefail
+          python -m api.collectors.nps_history \
+            --input data/nps_holdings.json \
+            --annual-input data/nps_full_holdings_annual.json \
+            --output "$RUNNER_TEMP/nps_holdings-history.json" \
+            --cache data/nps_history_cache.json \
+            --collect --maxcalls 20 --ttl-hours 168 --resume
+          mv "$RUNNER_TEMP/nps_holdings-history.json" data/nps_holdings.json
+      - name: Commit only NPS checkpoints
+        run: |
+          set -euo pipefail
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/nps_holdings.json
+          git add data/nps_history_cache.json
+          if ! git diff --staged --quiet; then
+            git commit -m "data: refresh NPS Top100 disclosure checkpoints"
+            # No force push or conflict resolution that discards another collector's data.
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install existing Blob SDK in isolated runner directory
+        run: npm install --prefix "$RUNNER_TEMP/nps-blob-runtime" --no-save --no-audit --no-fund @vercel/blob@2.3.0
+      - name: Publish and verify only NPS public data
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+          NODE_PATH: ${{ runner.temp }}/nps-blob-runtime/node_modules
+        run: node scripts/nps_history_publish.cjs
