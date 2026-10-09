@@ -251,6 +251,7 @@ def test_workflow_keeps_nps_refresh_and_checkpoints_after_analysis_failure():
     assert "steps.commit_results.outcome == 'skipped'" in fallback["if"]
     assert "steps.coverage_gate.outcome != 'failure'" in fallback["if"]
     assert "-- data/nps_holdings.json data/nps_history_cache.json" in fallback["run"]
+    assert "data/metadata/nps_holdings_heartbeat.json" in fallback["run"]
     assert "--force" not in fallback["run"] and "-X " not in fallback["run"]
     verify = next(step for step in steps if step.get("name") == "Verify public NPS history delivery")
     assert verify["if"].startswith("always()")

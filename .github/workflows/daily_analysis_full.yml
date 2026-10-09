@@ -886,7 +886,7 @@ jobs:
           set -euo pipefail
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          bash scripts/git/commit_mine.sh -m "data: preserve independent NPS disclosure checkpoints" -- data/nps_holdings.json data/nps_history_cache.json
+          bash scripts/git/commit_mine.sh -m "data: preserve independent NPS disclosure checkpoints" -- data/nps_holdings.json data/nps_history_cache.json data/metadata/nps_holdings_heartbeat.json
           git pull --rebase --autostash origin main
           git push origin HEAD:main
 
