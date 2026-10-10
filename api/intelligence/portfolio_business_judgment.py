@@ -73,6 +73,12 @@ a short reason and a concrete review_trigger. No confidence percentages, price
 targets, hidden reasoning, confirmed/verified status or current-validity claims.
 Output at most 16 judgments and remaining_count; scope is these excerpts, not the
 whole market. All output is a proposal; separate semantic review owns acceptance.
+Use Korean for reason, review_trigger and impact.condition; keep source spans verbatim.
+Put an explicit issuer/product/division qualifier already in quote in scope_quote;
+missing profit or scale does not erase supplied scope. Preserve supplied consolidated,
+separate-financial and period context in reason, never splice it into quote/period_quote.
+Distinguish a stated domestic/product/group denominator from missing whole-company
+materiality. Exposure degree does not describe company-wide economic importance.
 """
 
 
