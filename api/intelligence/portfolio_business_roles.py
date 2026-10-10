@@ -17,8 +17,8 @@ from .portfolio_public_sources import safe_public_text
 
 
 _LIST = re.compile(
-    r"당사의\s*(?:주요\s*)?(?P<label>매출처|고객사|구매처|공급업체)"
-    r"(?:는|로는)\s*(?P<names>.+?)(?:\s*등)?"
+    r"당사의\s*(?:주요\s*)?(?P<label>매출처|고객사|고객|구매처|공급업체)"
+    r"(?:는|은|으로는|로는)\s*(?P<names>.+?)(?:\s*등)?"
     r"(?:입니다|(?:이|가)\s*있습니다)\."
 )
 _PURCHASE = re.compile(
@@ -27,8 +27,13 @@ _PURCHASE = re.compile(
     r"구매하고\s*있습니다\."
 )
 _COMPOUND_LIST = re.compile(
-    r"당사의\s*(?:주요\s*)?(?P<label>매출처|고객사|구매처|공급업체)"
-    r"(?:는|로는)\s*(?P<names>.+?)(?:\s*등)?\s*(?:이)?며,\s*(?P<tail>.+)\."
+    r"당사의\s*(?:주요\s*)?(?P<label>매출처|고객사|고객|구매처|공급업체)"
+    r"(?:는|은|으로는|로는)\s*(?P<names>.+?)(?:\s*등)?\s*(?:이)?며,\s*(?P<tail>.+)\."
+)
+_AS_CUSTOMER = re.compile(
+    r"당사는\s*(?P<names>.+?)(?:\s*등)?(?:을|를)\s*(?:주요\s*)?"
+    r"(?P<label>고객사|고객|매출처)(?:으로|로)\s*"
+    r"(?:두고\s*(?:거래하고\s*)?|확보하고\s*)있습니다\."
 )
 _DELIVERY = re.compile(
     r"당사는\s*(?:(?:(?:국내|해외|국내외)\s*)?(?:주요\s*)?"
@@ -152,7 +157,7 @@ def index_business_roles(business, company_catalog):
         for sentence in re.finditer(r"[^.!?]*[.!?]", text):
             raw_quote = sentence.group()
             quote = raw_quote.strip()
-            parsed = (_COMPOUND_LIST.fullmatch(quote) or _DELIVERY.fullmatch(quote)
+            parsed = (_COMPOUND_LIST.fullmatch(quote) or _AS_CUSTOMER.fullmatch(quote) or _DELIVERY.fullmatch(quote)
                       or _LIST.fullmatch(quote) or _PURCHASE.fullmatch(quote)
                       or _FROM_SUPPLIER.fullmatch(quote))
             if parsed is None:
@@ -168,12 +173,12 @@ def index_business_roles(business, company_catalog):
                 reasons["uncertain-or-different-subject"] += 1
                 continue
             delivery = parsed.re is _DELIVERY
-            role = ("customer" if delivery or parsed.groupdict().get("label") in {"매출처", "고객사"} else "supplier")
+            role = ("customer" if delivery or parsed.groupdict().get("label") in {"매출처", "고객사", "고객"} else "supplier")
             names = [name.strip() for name in _SEPARATOR.split(parsed["names"]) if name.strip()]
             if not names or len(names) > 12:
                 reasons["counterparty-list-not-bounded"] += 1
                 continue
-            if delivery or parsed.re is _FROM_SUPPLIER:
+            if delivery or parsed.re in (_FROM_SUPPLIER, _AS_CUSTOMER):
                 # An exact first counterparty anchors the list. A prose prefix
                 # that happens to contain a later known name cannot establish a
                 # sale. Unresolved *later* bare names stay unresolved, not guessed.
@@ -184,7 +189,10 @@ def index_business_roles(business, company_catalog):
                         or any(not _BARE_DELIVERY_NAME.fullmatch(name) or _NAME_CONTEXT.search(name) for name in names)
                         or (delivery and not product)
                         or (product and (len(product) > 80 or _PRODUCT_CONTEXT.search(product)))):
-                    reasons["delivery-clause-not-bound" if delivery else "supplier-clause-not-bound"] += 1
+                    reason = ("delivery-clause-not-bound" if delivery else
+                              "customer-clause-not-bound" if parsed.re is _AS_CUSTOMER else
+                              "supplier-clause-not-bound")
+                    reasons[reason] += 1
                     continue
             for raw_name in names:
                 targets = aliases.get(_legal_name(raw_name).casefold(), set())
