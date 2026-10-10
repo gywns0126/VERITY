@@ -1,0 +1,57 @@
+name: member-map-judgment-proposals
+
+# Reuse the existing daily public collection; no new high-frequency cron.
+# Only bounded public DART excerpts enter OpenAI. Results remain private/pending.
+# Supabase's existing global reservation/result RPCs survive runner replacement.
+on:
+  workflow_run:
+    workflows: ['kr-company-facts-backfill']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Maximum new paid attempts; cached answers do not spend again'
+        default: '3'
+        type: choice
+        options: ['1', '3', '5', '10']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verity-member-map-judgment-proposals
+  cancel-in-progress: false
+
+jobs:
+  judge:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read-only source plan
+        run: python3 scripts/member-map/run-company-judgments.py --limit 1
+      - name: Run bounded private judgment proposals
+        env:
+          PORTFOLIO_AI_OPERATING_ENABLED: '1'
+          PORTFOLIO_AI_LEDGER: supabase
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          JUDGMENT_LIMIT: ${{ inputs.limit || '3' }}
+        run: |
+          python3 scripts/member-map/run-company-judgments.py \
+            --execute --limit "$JUDGMENT_LIMIT"
+      # No cache/result upload or data commit: private Supabase owns responses.
+      # General report-builder CI/VERCEL paid-worker guards are not removed.
