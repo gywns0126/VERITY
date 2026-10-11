@@ -6,6 +6,7 @@ import { authHeaders } from "@/lib/auth"
 import { useDark, palette } from "@/lib/theme"
 import { useDataRefreshEpoch } from "@/lib/useDataRefreshEpoch"
 import { selectTicker } from "@/lib/types"
+import StockLogo from "./StockLogo"
 
 type Holding = { ticker: string; name: string; reported_shares: number | null; target_shares: number | null; target_krw: number | null; target_pct: number | null }
 type PersonalView = {
@@ -90,12 +91,14 @@ export default function PersonalPortfolio() {
                     <thead><tr style={{ color: c.faint, textAlign: "right" }}><th style={{ textAlign: "left", padding: "8px 4px" }}>종목</th><th>확인 보유</th><th>제안 수량 / 금액</th><th>목표 비중</th></tr></thead>
                     <tbody>{view.rows.map(row => <tr key={row.ticker} style={{ borderTop: `1px solid ${c.line}` }}>
                         <td style={{ padding: "9px 4px" }}><button type="button" className="af-portfolio-ticker"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
                             aria-label={`${row.name || row.ticker} 분석 보기`}
                             onClick={() => {
                                 selectTicker(row.ticker, row.name)
                                 document.getElementById("console-analysis")?.scrollIntoView({ block: "start", behavior: "instant" })
                             }}>
-                            {row.name || row.ticker}<span style={{ color: c.faint, fontSize: 10, marginLeft: 6 }}>{row.ticker}</span>
+                            <StockLogo ticker={row.ticker} name={row.name} size={22} />
+                            <span>{row.name || row.ticker}<span style={{ color: c.faint, fontSize: 10, marginLeft: 6 }}>{row.ticker}</span></span>
                         </button></td>
                         <td style={{ textAlign: "right" }}>{row.reported_shares === null ? "미확인" : `${number(row.reported_shares)}주`}</td>
                         <td style={{ textAlign: "right" }}>{row.target_shares !== null ? `${number(row.target_shares)}주` : amount(row.target_krw)}</td>

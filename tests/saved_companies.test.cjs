@@ -43,7 +43,7 @@ function harness(options = {}) {
             requests.push({ method: init.method, body: init.body ? JSON.parse(init.body) : undefined, signal: init.signal })
             return options.fetch ? options.fetch(requests.at(-1), requests.length) : response(groups())
         },
-        require: name => name === "react" ? react : name === "@/lib/api" ? { API_BASE: "https://fixture.invalid" } : name === "@/lib/auth" ? {
+        require: name => name === "react" ? react : name === "./StockLogo" ? { default: ({ ticker }) => appRequire("react").createElement("span", { "data-stock-logo": ticker }) } : name === "@/lib/api" ? { API_BASE: "https://fixture.invalid" } : name === "@/lib/auth" ? {
             authHeaders: () => token ? { Authorization: `Bearer ${token}` } : {}, refreshAuth: options.refresh || (async () => true),
         } : name === "@/lib/theme" ? { useDark: () => false, palette: () => ({}), cardStyle: () => ({}), CARD_TITLE: {}, RAIL_PAD: "", FONT: "sans-serif" } : name === "@/lib/types" ? { selectTicker: (...value) => selected.push(value) } : appRequire(name),
     })
@@ -65,6 +65,7 @@ test("mount is GET only, accepts owned bare arrays and selects existing ticker",
     const h = harness(); await flush()
     assert.equal(h.requests.length, 1); assert.equal(h.requests[0].method, "GET")
     assert.match(h.html(), /AlphaNest 계정과 공유/)
+    assert.match(h.html(), /data-stock-logo="MSFT"/)
     h.node(n => n.props?.["aria-label"] === "Microsoft 분석 보기").props.onClick()
     assert.deepEqual(h.selected, [["MSFT", "Microsoft"]]); assert.equal(h.scrolls.length, 1)
     assert.equal(h.timers, 0); h.cleanup()
