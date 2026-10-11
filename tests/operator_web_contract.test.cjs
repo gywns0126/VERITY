@@ -235,11 +235,29 @@ for (const [stock, expected] of [
     const Search = load("app/components/StockSearch.tsx", {
         react: h.react, "@/lib/theme": { ...theme, NUM: {} },
         "@/lib/api": { fetchPublic: () => { throw Error("no network") } },
+        "./StockLogo": load("app/components/StockLogo.tsx"),
     }).default
     const html = renderToStaticMarkup(h.render(Search, {}))
     assert.match(html, /role="option"/)
+    assert.ok(html.includes(`icn-sec-fill-${stock.ticker}.png`))
+    assert.ok(html.includes(`/flags/${expected.toLowerCase()}.svg`))
     const labels = [...html.matchAll(/<span[^>]*>(US|KR)<\/span>/g)].map(match => match[1])
     assert.deepEqual(labels, [expected])
+})
+
+test("logo failure cannot leak across ticker changes or late old-image errors", () => {
+    const h = hooks()
+    const Logo = load("app/components/StockLogo.tsx", { react: h.react }).default
+    const render = ticker => h.render(Logo, { ticker, name: ticker, size: 22 })
+    const oldError = render("MISSING").props.children[0].props.onError
+    oldError()
+    assert.doesNotMatch(renderToStaticMarkup(render("MISSING")), /icn-sec-fill-/)
+    assert.match(renderToStaticMarkup(render("005930")), /icn-sec-fill-005930.png/)
+    oldError()
+    const current = renderToStaticMarkup(render("005930"))
+    assert.match(current, /icn-sec-fill-005930.png/)
+    assert.match(current, /flags\/kr.svg/)
+    assert.match(renderToStaticMarkup(render("MISSING")), /icn-sec-fill-MISSING.png/)
 })
 
 for (const [status, text] of [["unresolved", "종목을 확인하지 못했습니다"], ["empty", "조회된 자료 없음"],

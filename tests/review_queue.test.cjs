@@ -25,6 +25,7 @@ function setup(fetch, allowed = true) {
         window: { addEventListener(name, fn) { listeners[name] = fn }, removeEventListener(name) { delete listeners[name] } },
         require(name) {
             if (name === "react") return react
+            if (name === "./StockLogo") return { default: ({ ticker }) => appRequire("react").createElement("span", { "data-stock-logo": ticker }) }
             if (name === "@/lib/api") return { API_BASE: "https://fixture.invalid" }
             if (name === "@/lib/auth") return { refreshAuth: async () => true, authHeaders: () => ({ Authorization: authorization }) }
             if (name === "@/lib/types") return { selectTicker: (...args) => selected.push(args) }
@@ -55,6 +56,7 @@ test("queue uses authenticated private GET and selects the workspace ticker", as
     })
     await flush()
     assert.match(panel.html(), /판단 대기/)
+    assert.match(panel.html(), /data-stock-logo="MSFT"/)
     buttons(panel.render()).find(b => b.props.className === "af-review-row").props.onClick()
     assert.deepEqual(panel.selected, [["MSFT", "MSFT"]])
     panel.cleanup()

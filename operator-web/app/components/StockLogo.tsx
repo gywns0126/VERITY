@@ -38,8 +38,10 @@ export default function StockLogo({
     size?: number
     flag?: boolean
 }) {
-    const [err, setErr] = useState(false)
     const key = cdnKey(ticker)
+    const [failure, setFailure] = useState({ key, failed: false })
+    if (failure.key !== key) setFailure({ key, failed: false })
+    const err = failure.key === key && failure.failed
     const radius = Math.round(size * 0.32)
 
     const seed = name || String(ticker || "") || "?"
@@ -53,13 +55,14 @@ export default function StockLogo({
         key && !err ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
+                key={key}
                 src={`${CDN}${key}.png`}
                 alt=""
                 width={size}
                 height={size}
                 loading="lazy"
                 decoding="async"
-                onError={() => setErr(true)}
+                onError={() => setFailure(current => current.key === key ? { key, failed: true } : current)}
                 style={{ width: size, height: size, borderRadius: radius, objectFit: "cover", display: "block", background: "rgba(128,128,128,0.08)" }}
             />
         ) : (

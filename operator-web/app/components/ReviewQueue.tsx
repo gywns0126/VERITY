@@ -5,6 +5,7 @@ import { API_BASE } from "@/lib/api"
 import { authHeaders, refreshAuth } from "@/lib/auth"
 import { selectTicker } from "@/lib/types"
 import { useDark, palette, cardStyle, CARD_TITLE, RAIL_PAD, FONT } from "@/lib/theme"
+import StockLogo from "./StockLogo"
 
 type Item = {
     ticker: string; name: string; state: "awaiting_review" | "review_expired" | "reviewed"
@@ -70,7 +71,7 @@ export default function ReviewQueue() {
         selectTicker(item.ticker, item.name || item.ticker)
         document.getElementById("console-analysis")?.scrollIntoView({ behavior: "smooth", block: "start" })
     }} style={{ color: c.ink, borderColor: c.line }}>
-        <span style={{ fontWeight: 800 }}>{item.name || item.ticker}{item.name && item.name !== item.ticker ? ` · ${item.ticker}` : ""}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800 }}><StockLogo ticker={item.ticker} name={item.name} size={22} /><span>{item.name || item.ticker}{item.name && item.name !== item.ticker ? ` · ${item.ticker}` : ""}</span></span>
         <span style={{ fontSize: 12, color: expired(item) ? c.amber : c.sub }}>
             {expired(item) ? "기한 경과 · 재검토 필요" : item.state === "awaiting_review" ? "자료 준비됨 · 판단 대기" : `저장된 판단 · ${item.verdict}`}
         </span>

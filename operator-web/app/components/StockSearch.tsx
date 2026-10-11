@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react"
 import { useDark, palette, FONT, NUM } from "@/lib/theme"
 import { fetchPublic } from "@/lib/api"
+import StockLogo from "./StockLogo"
 
 const RECENT_KEY = "verity_recent_tickers"
 const LAST_KEY = "verity_last_ticker"
@@ -91,7 +92,8 @@ export default function StockSearch({ placeholder = "종목명·티커 검색", 
                 onMouseEnter={(e) => { e.currentTarget.style.background = hover }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = active ? hover : "transparent" }}
             >
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <StockLogo ticker={item.ticker} name={item.name} size={22} />
                     <span style={{ fontSize: 14, fontWeight: 600, color: c.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {item.name || item.ticker}
                     </span>

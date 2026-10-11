@@ -5,6 +5,7 @@ import { API_BASE } from "@/lib/api"
 import { authHeaders, refreshAuth } from "@/lib/auth"
 import { CARD_TITLE, FONT, RAIL_PAD, cardStyle, palette, useDark } from "@/lib/theme"
 import { selectTicker } from "@/lib/types"
+import StockLogo from "./StockLogo"
 
 type Item = { id: string; group_id: string; ticker: string; name: string; market: string }
 type Group = { id: string; user_id: string; name: string; items: Item[] }
@@ -206,11 +207,11 @@ export default function SavedCompanies() {
         {group && <ul style={{ listStyle: "none", margin: "10px 0", padding: 0 }}>
             {group.items.map(item => <li key={item.id} style={{ padding: "9px 0", borderBottom: `1px solid ${c.line}` }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <button type="button" style={{ ...button, textAlign: "left", background: "transparent", border: "none", padding: "4px 0", overflowWrap: "anywhere" }} aria-label={`${item.name || item.ticker} 분석 보기`} onClick={() => {
+                    <button type="button" style={{ ...button, display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0, textAlign: "left", background: "transparent", border: "none", padding: "4px 0", overflowWrap: "anywhere" }} aria-label={`${item.name || item.ticker} 분석 보기`} onClick={() => {
                         try { sameOwner(snapshot!.owner) } catch (error) { setNotice(readError(error)); return }
                         selectTicker(item.ticker, item.name)
                         document.getElementById("console-analysis")?.scrollIntoView({ block: "start", behavior: "instant" })
-                    }}>{item.name || item.ticker}<span style={{ color: c.faint, fontSize: 10, marginLeft: 6 }}>{item.ticker}</span></button>
+                    }}><StockLogo ticker={item.ticker} name={item.name} size={22} /><span style={{ minWidth: 0 }}>{item.name || item.ticker}<span style={{ color: c.faint, fontSize: 10, marginLeft: 6 }}>{item.ticker}</span></span></button>
                     <button type="button" disabled={disabled} style={button} aria-label={`${item.name || item.ticker} 그룹에서 제외`} onClick={() => setConfirm(item.id)}>제외</button>
                 </div>
                 {confirm === item.id && <div style={{ fontSize: 12, paddingTop: 7 }}><span>이 그룹에서 제외할까요? </span><button type="button" disabled={disabled} style={button} onClick={() => void mutate({ action: "remove_item", item_id: item.id })}>제외 확인</button> <button type="button" disabled={busy} style={button} onClick={() => setConfirm(null)}>취소</button></div>}
