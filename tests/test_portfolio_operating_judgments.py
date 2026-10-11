@@ -1,6 +1,7 @@
 """Self-contained synthetic operating fixtures; no credentials, provider, or deploy."""
 from copy import deepcopy
 import importlib.util
+import io
 import json
 from pathlib import Path
 import re
@@ -8,12 +9,14 @@ import socket
 import sqlite3
 import sys
 from types import SimpleNamespace
+import urllib.error
 import urllib.request
 
 import pytest
 
 from api.intelligence import portfolio_business_judgment as business
 from api.intelligence.portfolio_ai_budget_ledger import SupabaseBudgetLedger
+from api.intelligence.portfolio_ai_fallback import openai_transport
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -225,6 +228,137 @@ def test_actual_cached_answer_preserves_old_assessment_and_spends_nothing(worker
     assert seen[0]["raw_answer"] == answer
     assert seen[0]["judgments"][0]["display"] == {"degree": "unrated", "impact": "unknown", "importance": "unrated"}
     assert ledger.read_bytes() == before
+
+
+def test_cached_failed_diagnostic_answer_is_free_and_not_a_successful_grade(worker, tmp_path):
+    doc, ledger = _doc(), tmp_path / "failed-ledger.sqlite3"
+    saved = {"status": "error", "error_type": "ValueError", "assessed_as_of": "2026-10-10",
+             "raw_answer": _cached_answer(doc)}
+    key = worker.ai._digest([worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT, business.VERSION, doc])
+    with sqlite3.connect(ledger) as db:
+        db.execute("CREATE TABLE calls (key TEXT PRIMARY KEY, day TEXT NOT NULL, reserved INTEGER NOT NULL, result TEXT)")
+        db.execute("INSERT INTO calls VALUES (?,?,?,?)", (key, "2026-10-10", 10000, json.dumps(saved)))
+    before, seen = ledger.read_bytes(), []
+
+    def runner(*args, **kwargs):
+        result = worker.ai.run_document(*args, **kwargs)
+        seen.append(result)
+        return result
+
+    summary = worker.run_batch([doc], ledger, "synthetic-key", object(), as_of=AS_OF, limit=1, runner=runner)
+    assert seen[0]["original_status"] == "error" and seen[0]["raw_answer"] == saved["raw_answer"]
+    assert seen[0]["assessed_as_of"] == "2026-10-10" and seen[0]["fresh_assessment"] is False
+    assert summary["results"] == {"cached": 1} and summary["archived_failed_documents"] == 1
+    assert summary["paid_attempts"] == summary["pending_judgments"] == summary["quality_findings"] == 0
+    assert summary["proposed_degree_counts"] == summary["error_counts"] == {}
+    assert summary["accepted_judgments"] == summary["confirmed_relationships"] == 0
+    assert summary["published"] is False and ledger.read_bytes() == before
+
+
+@pytest.mark.parametrize("diagnostic,label", [
+    ({"provider_error_code": "invalid_api_key", "http_status": 401,
+      "reason": "response-incomplete", "error_type": "HTTPError"}, "invalid_api_key"),
+    ({"provider_error_code": "SYNTHETIC_PRIVATE_DIAGNOSTIC", "http_status": 401,
+      "reason": "response-incomplete", "error_type": "HTTPError"}, "HTTP_401"),
+    ({"provider_error_code": ["insufficient_quota"], "http_status": "429",
+      "reason": "response-incomplete", "error_type": "ValueError"}, "response-incomplete"),
+    ({"provider_error_code": {}, "http_status": True,
+      "reason": ["response-incomplete"], "error_type": "ValueError"}, "ValueError"),
+    ({"provider_error_code": [], "http_status": {"code": 429},
+      "reason": {}, "error_type": ["HTTPError"]}, "unclassified"),
+])
+def test_error_summary_uses_only_closed_labels_and_stops_without_leaking(worker, tmp_path, diagnostic, label):
+    calls = []
+    private = "SYNTHETIC_PRIVATE_DIAGNOSTIC"
+
+    def runner(*args, **kwargs):
+        calls.append(args[0])
+        return {"status": "error", **diagnostic, "message": private, "body": private,
+                "raw_answer": {"text": QUOTE}, "url": SOURCE_URL, "api_key": "synthetic-key"}
+
+    summary = worker.run_batch([_doc(), _doc()], tmp_path / "ledger", "synthetic-key", object(),
+                              as_of=AS_OF, limit=10, runner=runner)
+    assert summary["error_counts"] == {label: 1}
+    assert summary["status"] == "stopped" and summary["stop_reason"] == "error"
+    assert summary["processed_documents"] == len(calls) == summary["paid_attempts"] == 1
+    assert summary["archived_failed_documents"] == summary["pending_judgments"] == 0
+    rendered = json.dumps(summary, ensure_ascii=False)
+    assert all(value not in rendered for value in (private, QUOTE, SOURCE_URL, "synthetic-key"))
+
+
+def test_run_document_preserves_only_numeric_http_status_not_exception_text(worker, tmp_path, capsys):
+    private, calls = "SYNTHETIC_HTTP_PRIVATE_MESSAGE", []
+    ledger = tmp_path / "http-error.sqlite3"
+
+    def transport(payload, key):
+        calls.append(payload)
+        raise urllib.error.HTTPError("https://synthetic.invalid/" + private, 401,
+                                     private + QUOTE, {"X-Synthetic-Private": private},
+                                     io.BytesIO(private.encode()))
+
+    result = worker.ai.run_document(_doc(), ledger, "synthetic-key", enabled=True,
+                                    judgment_as_of=AS_OF, transport=transport)
+    assert result["status"] == "error" and result["error_type"] == "HTTPError"
+    assert result["http_status"] == 401 and "provider_error_code" not in result
+    assert "usage" not in result and result.get("raw_answer") is None
+    with sqlite3.connect(ledger) as db:
+        reserved, saved = db.execute("SELECT reserved,result FROM calls").fetchone()
+    assert reserved == worker.ai.RESERVE_MICRO_USD and json.loads(saved) == result
+    rendered = json.dumps(result, ensure_ascii=False) + saved
+    assert all(value not in rendered for value in (private, QUOTE, "synthetic-key"))
+    captured = capsys.readouterr()
+    assert len(calls) == 1 and captured.out == captured.err == ""
+
+
+@pytest.mark.parametrize("provider_code,expected", [
+    ("insufficient_quota", "insufficient_quota"),
+    ("rate_limit_exceeded", "rate_limit_exceeded"),
+    ("SYNTHETIC_UNTRUSTED_PROVIDER_CODE", None),
+    (["insufficient_quota"], None),
+])
+def test_openai_http429_closed_code_survives_archive_and_free_cache_without_body_leaks(
+        worker, monkeypatch, tmp_path, capsys, provider_code, expected):
+    private, calls = "SYNTHETIC_PROVIDER_PRIVATE_MESSAGE", []
+    ledger = tmp_path / "provider-error.sqlite3"
+    body = json.dumps({"error": {"code": provider_code, "message": private + QUOTE,
+                                 "param": "synthetic-key", "extra": private}}).encode()
+
+    def open_request(request, *, timeout):
+        assert request.full_url == "https://api.openai.com/v1/responses"
+        assert request.get_method() == "POST" and timeout == 25
+        calls.append(request.full_url)
+        raise urllib.error.HTTPError(request.full_url, 429, private,
+                                     {"X-Synthetic-Private": private}, io.BytesIO(body))
+
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *handlers: SimpleNamespace(open=open_request))
+    result = worker.ai.run_document(_doc(), ledger, "synthetic-key", enabled=True,
+                                    judgment_as_of=AS_OF, transport=openai_transport)
+    assert result["status"] == "error" and result["error_type"] == "HTTPError"
+    assert result["http_status"] == 429 and "usage" not in result and result.get("raw_answer") is None
+    if expected is None:
+        assert "provider_error_code" not in result
+    else:
+        assert result["provider_error_code"] == expected
+    with sqlite3.connect(ledger) as db:
+        reserved, saved = db.execute("SELECT reserved,result FROM calls").fetchone()
+    assert reserved == worker.ai.RESERVE_MICRO_USD and json.loads(saved) == result
+    summary = worker.run_batch([_doc(), _doc()], ledger, "synthetic-key", object(), as_of=AS_OF,
+                              limit=10, runner=lambda *a, **k: result)
+    assert summary["error_counts"] == {expected or "HTTP_429": 1}
+    assert summary["stop_reason"] == "error" and summary["paid_attempts"] == summary["processed_documents"] == 1
+    before = ledger.read_bytes()
+    cached = worker.ai.run_document(_doc(), ledger, "synthetic-key", enabled=True,
+                                    judgment_as_of=AS_OF, transport=openai_transport)
+    assert cached["status"] == "cached" and cached["original_status"] == "error"
+    assert cached.get("provider_error_code") == expected and cached["http_status"] == 429
+    cached_summary = worker.run_batch([_doc()], ledger, "synthetic-key", object(), as_of=AS_OF,
+                                     limit=1, runner=lambda *a, **k: cached)
+    assert cached_summary["archived_failed_documents"] == 1 and cached_summary["paid_attempts"] == 0
+    assert cached_summary["error_counts"] == {} and len(calls) == 1 and ledger.read_bytes() == before
+    rendered = json.dumps([result, cached, summary, cached_summary], ensure_ascii=False) + saved
+    assert all(value not in rendered for value in (private, QUOTE, "synthetic-key", "SYNTHETIC_UNTRUSTED_PROVIDER_CODE"))
+    captured = capsys.readouterr()
+    assert captured.out == captured.err == ""
 
 
 @pytest.mark.parametrize("status,settlement,stop,paid", [
