@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-10-11T10:26:18.022426+09:00",
+  "generated_at": "2026-10-11T16:47:15.366124+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 367994,
-    "python_modules": 1194,
+    "code_lines_tsx_py": 371657,
+    "python_modules": 1203,
     "tsx_components": 149,
-    "json_data_files": 2416,
-    "json_total_tracked": 2441,
-    "workflows": 80,
+    "json_data_files": 2417,
+    "json_total_tracked": 2442,
+    "workflows": 81,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 8500
+    "git_tracked_files": 8511
   },
   "subsystems": {
     "ingest": {
@@ -106,7 +106,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 80,
+      "count": 86,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -155,7 +155,13 @@
         "api/intelligence/periodic_report.py",
         "api/intelligence/perplexity_realtime.py",
         "api/intelligence/portfolio.py",
+        "api/intelligence/portfolio_ai_budget_ledger.py",
+        "api/intelligence/portfolio_ai_claims.py",
+        "api/intelligence/portfolio_ai_fallback.py",
+        "api/intelligence/portfolio_ai_public.py",
+        "api/intelligence/portfolio_ai_result_store.py",
         "api/intelligence/portfolio_annual_customer_tables.py",
+        "api/intelligence/portfolio_business_judgment.py",
         "api/intelligence/portfolio_business_roles.py",
         "api/intelligence/portfolio_company_names.py",
         "api/intelligence/portfolio_contract_facts.py",
@@ -192,7 +198,7 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 80,
+      "count": 81,
       "scheduled": 62,
       "workflows": [
         {
@@ -454,6 +460,11 @@
         },
         {
           "name": "measure_universe_load",
+          "crons": [],
+          "scheduled": false
+        },
+        {
+          "name": "member_map_judgments",
           "crons": [],
           "scheduled": false
         },
@@ -751,24 +762,24 @@
     },
     "data": {
       "label": "데이터",
-      "count": 2416
+      "count": 2417
     },
     "validation": {
       "label": "검증",
       "n_trading_days": 98,
-      "n_calendar_days": 146,
+      "n_calendar_days": 147,
       "next_milestone": {
         "next_n": 100,
         "days_remaining": 2,
         "label": "예비 결과 (binomial 95% CI ±10%p)"
       },
-      "as_of": "2026-10-10T15:06:21+09:00"
+      "as_of": "2026-10-11T15:04:05+09:00"
     }
   },
   "python_by_dir": {
-    "api": 471,
-    "tests": 437,
-    "scripts": 165,
+    "api": 477,
+    "tests": 438,
+    "scripts": 167,
     "vercel-api": 108,
     "server": 7,
     ".github": 6
@@ -796,7 +807,7 @@
       "warn": 0,
       "alert": 0
     },
-    "infra_as_of": "2026-10-10T12:07:24+09:00",
+    "infra_as_of": "2026-10-11T11:37:21+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
