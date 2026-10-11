@@ -48,6 +48,8 @@ RESERVE_MICRO_USD = 10_000
 MAX_PROMPT_BYTES = 8_000
 MAX_OUTPUT_TOKENS = 1_024
 OPENAI_MAX_OUTPUT_TOKENS = 4_096
+_PROVIDER_ERROR_CODES = {"insufficient_quota", "rate_limit_exceeded", "invalid_api_key",
+                         "model_not_found", "unsupported_country_region_territory"}
 _ROLE = re.compile(r"고객|매출처|공급|납품|구매|매입|원재료|customer|suppl", re.I)
 _ID = re.compile(r"(?:KR:[0-9]{6}|US:[A-Z][A-Z0-9.-]{0,12})\Z")
 _INSTRUCTION = re.compile(r"ignore.{0,30}instruction|system\s*prompt|api[_ -]?key|비밀|지시를?\s*무시", re.I)
@@ -739,8 +741,18 @@ def openai_transport(payload, api_key):
         "https://api.openai.com/v1/responses", method="POST",
         data=json.dumps(payload, ensure_ascii=False).encode(),
         headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"})
-    with urllib.request.build_opener(NoRedirect).open(request, timeout=25) as response:
-        raw = response.read(65537)
+    try:
+        with urllib.request.build_opener(NoRedirect).open(request, timeout=25) as response:
+            raw = response.read(65537)
+    except urllib.error.HTTPError as error:
+        # Extract only closed provider codes; never log an HTTP body or message.
+        try:
+            diagnostic = json.loads(error.read(8192)).get("error", {}).get("code")
+            if type(diagnostic) is str and diagnostic in _PROVIDER_ERROR_CODES:
+                error.portfolio_error_code = diagnostic
+        except Exception:
+            pass
+        raise
     if len(raw) > 65536:
         raise ValueError("response-too-large")
     body = json.loads(raw)
@@ -965,6 +977,11 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
         except Exception as error:
             # Never persist provider exception strings (may contain keys/source).
             result = {"status": "error", "error_type": type(error).__name__, "candidates": []}
+            if isinstance(error, urllib.error.HTTPError) and type(error.code) is int:
+                result["http_status"] = error.code
+                diagnostic = getattr(error, "portfolio_error_code", None)
+                if type(diagnostic) is str and diagnostic in _PROVIDER_ERROR_CODES:
+                    result["provider_error_code"] = diagnostic
             if isinstance(error, ValueError) and str(error) in {
                 "candidate-shape", "candidate-count", "candidate-fields", "candidate-evidence",
                 "candidate-uncertain-sentence", "candidate-direction-uncertain", "candidate-duplicate", "candidate-context",

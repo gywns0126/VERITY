@@ -23,6 +23,11 @@ from api.intelligence.portfolio_business_judgment import prepare_judgment_packet
 MAX_PROBES = 40
 _STOP = {"error", "missing-key", "budget-ledger-unavailable", "result-store-unavailable",
          "disabled", "budget-exhausted"}
+_ERROR_TYPES = {"HTTPError", "URLError", "TimeoutError", "SSLError", "ValueError",
+                "JSONDecodeError", "KeyError", "TypeError", "OSError"}
+_ERROR_REASONS = {"response-incomplete", "response-too-large", "usage-invalid"}
+_PROVIDER_ERRORS = {"insufficient_quota", "rate_limit_exceeded", "invalid_api_key",
+                    "model_not_found", "unsupported_country_region_territory"}
 
 
 def read_sources():
@@ -83,6 +88,7 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
         raise ValueError("operating-limit")
     runner = runner or ai.run_document
     counts, calls, pending, grade_proposals, findings, stop = Counter(), 0, 0, Counter(), 0, None
+    errors, archived_failures = Counter(), 0
     for doc in documents:
         result = runner(doc, ledger_path, api_key, enabled=True,
                         judgment_as_of=as_of, budget_ledger=budget)
@@ -90,7 +96,22 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
         counts[status] += 1
         if status in {"ok", "error"}:
             calls += 1
-        if status in {"ok", "cached"}:
+        if status == "error":
+            # Closed diagnostic labels only; never log provider messages, body,
+            # source text, URLs, credentials or arbitrary model output.
+            code = result.get("http_status")
+            kind = result.get("error_type")
+            reason = result.get("reason")
+            provider = result.get("provider_error_code")
+            label = (provider if type(provider) is str and provider in _PROVIDER_ERRORS
+                     else "HTTP_" + str(code) if type(code) is int and 400 <= code <= 599
+                     else reason if type(reason) is str and reason in _ERROR_REASONS
+                     else kind if type(kind) is str and kind in _ERROR_TYPES else "unclassified")
+            errors[label] += 1
+        archived_error = status == "cached" and result.get("original_status") == "error"
+        if archived_error:
+            archived_failures += 1
+        if status in {"ok", "cached"} and not archived_error:
             judgments = result.get("judgments", [])
             pending += len(judgments)
             grade_proposals.update(row["proposal"]["degree"]["value"] for row in judgments)
@@ -107,6 +128,7 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
             "results": dict(counts), "paid_attempts": calls,
             "processed_documents": sum(counts.values()), "pending_judgments": pending,
             "proposed_degree_counts": dict(grade_proposals), "quality_findings": findings,
+            "error_counts": dict(errors), "archived_failed_documents": archived_failures,
             "accepted_judgments": 0, "confirmed_relationships": 0, "published": False}
 
 
