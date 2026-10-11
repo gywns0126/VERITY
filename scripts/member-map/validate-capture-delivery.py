@@ -15,6 +15,7 @@ CAPTURE_FIELDS = {
     "contract_terminations": "validate_contract_termination",
     "filing_excerpts": "validate_filing_excerpts",
     "annual_customer_tables": "validate_annual_customer_capture",
+    "sec_filing_excerpts": "validate_sec_capture",
 }
 FORBIDDEN_TEXT = (
     "/Users/", "\\Users\\", "/private/", "file://", "project-file:",
@@ -53,12 +54,14 @@ def _validators():
     from api.intelligence.portfolio_contract_termination import validate_contract_termination
     from api.intelligence.portfolio_filing_excerpts import validate_filing_excerpts
     from api.intelligence.portfolio_annual_customer_tables import validate_annual_customer_capture
+    from api.intelligence.portfolio_sec_relationships import validate_sec_capture
     return {
         "contract_facts": validate_contract_fact,
         "documentFamilies": validate_family,
         "contract_terminations": validate_contract_termination,
         "filing_excerpts": validate_filing_excerpts,
         "annual_customer_tables": validate_annual_customer_capture,
+        "sec_filing_excerpts": validate_sec_capture,
     }
 
 
@@ -78,6 +81,8 @@ def validate(payload):
             if validated != row:
                 raise ValueError("capture-value-changed")
             receipt = row.get("receipt_no") if isinstance(row, dict) else None
+            if field == "sec_filing_excerpts":
+                receipt = (row["issuer_id"], row["accession"])
             if receipt in receipts:
                 raise ValueError("duplicate-capture-receipt")
             receipts.add(receipt)

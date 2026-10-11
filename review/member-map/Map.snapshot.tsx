@@ -1172,6 +1172,20 @@ function businessQuote(role, quote3, rawName) {
   const item = product || supply_product;
   if ((delivery || fromSupplier) && (entries.some((name) => !bareDeliveryName.test(name) || deliveryNameContext.test(name)) || delivery && !item?.trim() || item && ([...item.trim()].length > 80 || deliveryProductContext.test(item.trim())))) throw invalid();
 }
+// SEC source identity and document hashes are bound upstream; this boundary
+// validates the closed projection, not the original filing's authenticity.
+var secList = /^Our (?:major |principal )?(customers|suppliers) (?:include|are) (.+)\.$/i;
+var secFoundries = /(?:^|\.\s+)We utilize foundries, such as ([^;!?]+?), or [A-Za-z][A-Za-z0-9-]*, and ([^;!?]+?), or [A-Za-z][A-Za-z0-9-]*, to produce our semiconductor wafers\.(?:$|\s)/;
+var secRisk = /\b(?:not|no|may|might|could|would|will|expect|plan|former|previous|potential|indirect|subsidiar\w*|affiliate\w*|competitor\w*|except|excluding|terminated|ceased|historical|if|unless|subject to|provided that|conditional\w*|contingent|pending|according to|states?|stated|said|says?|quot\w*|example|illustrat\w*)\b|["“”]/i;
+function secLegalName(value) {
+  return value.replace(/\s+/g, " ").trim().toLowerCase().replace(/,?\s+(?:incorporated|inc\.?|corporation|corp\.?|limited|ltd\.?)$/, "").trim();
+}
+function secQuote(role, quote, rawName) {
+  const parsed = secList.exec(quote), foundries = secFoundries.exec(quote);
+  if ((!parsed && !foundries) || quote !== quote.trim() || /[\r\n]/.test(quote) || secRisk.test(quote) || (foundries ? "supplier" : parsed[1].toLowerCase() === "customers" ? "customer" : "supplier") !== role) throw invalid();
+  const entries = foundries ? [foundries[1], foundries[2]] : parsed[2].replace(/,\s+(Inc\.?|Ltd\.?|Corp\.?)\b/gi, " $1").split(/,\s*(?:and\s+)?|\s+and\s+/).map(name => name.trim());
+  if (!entries.length || entries.length > 12 || !secLegalName(rawName) || entries.some(name => !(foundries ? /^[\p{L}\p{N}][\p{L}\p{N}&.,'’() -]{0,159}$/u : /^[\p{L}\p{N}][\p{L}\p{N}&.'’() -]{0,159}$/u).test(name)) || !entries.some(name => secLegalName(name) === secLegalName(rawName))) throw invalid();
+}
 function parseAutomaticEvidence(payload, selected) {
   if (payload === void 0 || payload === null) return { relations: [], materials: [], commonMaterials: [] };
   const body = object(payload);
@@ -1181,6 +1195,38 @@ function parseAutomaticEvidence(payload, selected) {
   const relations = list2(body.relationships, 1e3).map((value) => {
     const r = object(value), id = text4(r.stable_id, 100), revision2 = text4(r.revision, 64);
     const reported = r.status === "accepted_reported";
+    if (r.type === "reported-sec-counterparty") {
+      exactKeys(r, ["stable_id", "revision", "type", "status", "verification", "snapshot_scope", "label", "participants", "source", "evidence"]);
+      if (!/^relation:sec-role:[a-f0-9]{16}$/.test(id) || !/^[a-f0-9]{64}$/.test(revision2) || ids.has(id) || !reported || r.verification !== "reported-sec-excerpt" || r.snapshot_scope !== "reported-filing-period-not-current") throw invalid();
+      const rawPeople = list2(r.participants, 2);
+      rawPeople.forEach(value => { const p = object(value); exactKeys(p, ["id", "role", "name"]); text4(p.name, 160); });
+      const people = participants(rawPeople), issuer = rawPeople.find(p => p.role === "document_issuer");
+      const target = rawPeople.find(p => p.role === "reported_customer" || p.role === "reported_supplier");
+      if (people.length !== 2 || !issuer || !target || people.some(p => !p.id.startsWith("US:")) || !people.some(p => selected.has(p.id))) throw invalid();
+      const role = target.role === "reported_customer" ? "customer" : "supplier";
+      const title = role === "customer" ? "SEC 보고서상 매출처" : "SEC 보고서상 공급처";
+      if (r.label !== title) throw invalid();
+      const s = object(r.source), e = object(r.evidence);
+      exactKeys(s, ["id", "kind", "cik", "accession", "as_of", "period_end", "form", "url", "document_issuer"]);
+      const cik = text4(s.cik, 10), accession = text4(s.accession, 20), asOf = isoDate(s.as_of), period = isoDate(s.period_end);
+      if (s.kind !== "sec-filing-excerpt" || !/^[0-9]{10}$/.test(cik) || Number(cik) === 0 || !/^[0-9]{10}-[0-9]{2}-[0-9]{6}$/.test(accession) || s.id !== `source:sec:${cik}:${accession}` || s.document_issuer !== issuer.id || !["10-K", "20-F"].includes(s.form) || period.startsWith("0000-") || period > asOf || asOf > new Date().toISOString().slice(0, 10)) throw invalid();
+      const url = text4(s.url, 300), base = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${accession.replaceAll("-", "")}/`;
+      if (!url.startsWith(base) || !/^[A-Za-z0-9_-]+\.html?$/.test(url.slice(base.length))) throw invalid();
+      exactKeys(e, ["role", "raw_name", "quote", "paragraph_sha256", "document_sha256"]);
+      const name = text4(e.raw_name, 160), quote = text4(e.quote, 1200);
+      if (e.role !== role || name !== name.trim() || !/^[a-f0-9]{64}$/.test(text4(e.paragraph_sha256, 64)) || !/^[a-f0-9]{64}$/.test(text4(e.document_sha256, 64))) throw invalid();
+      secQuote(role, quote, name);
+      ids.add(id);
+      const issuerLabel = role === "customer" ? "매출처 공시 회사" : "구매처 공시 회사";
+      const targetLabel = role === "customer" ? "공시상 매출처" : "공시상 공급처";
+      return {
+        id: `automatic:${id}`, read_revision: Number.parseInt(revision2.slice(0, 13), 16) + 1,
+        title, reported: true, reportedBasis: "business-period",
+        reason: `공시 작성 회사: ${issuer.name}. SEC ${s.form} · 보고기간 종료일 ${period} · 공개 제출일 ${asOf}. ${targetLabel}: ${name}. 현재 유효 여부·거래 규모·주가 영향은 미확인이에요.\n${quote}`,
+        participants: people.map(p => p.id === issuer.id ? { ...p, name: issuer.name, roleLabel: issuerLabel } : { ...p, name: target.name, roleLabel: targetLabel }),
+        source: `SEC · ${s.form}`, asOf, url
+      };
+    }
     if (r.verification === "reported-annual-table") {
       exactKeys(r, ["stable_id", "revision", "type", "status", "verification", "snapshot_scope", "label", "participants", "source", "evidence"]);
       if (!/^relation:annual-customer:[a-f0-9]{16}$/.test(id) || !/^[a-f0-9]{64}$/.test(revision2) || ids.has(id) || r.type !== "reported-business-counterparty" || !reported || r.snapshot_scope !== "reported-fiscal-year-not-current" || r.label !== "보고서상 고객사 후보") throw invalid();

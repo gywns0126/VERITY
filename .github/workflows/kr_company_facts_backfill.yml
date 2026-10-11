@@ -86,6 +86,11 @@ jobs:
             --axes "${{ github.event.inputs.axes || 'dividends,shareholders,cb_bw,chain,overview' }}" \
             --limit "${{ github.event.inputs.limit || '200' }}"
 
+      - name: Refresh public business overviews from local raw rows
+        # Local transform only; preserve each filing date and the prior snapshot on empty input.
+        # No report-builder main(), relation worker, provider call or additional collection.
+        run: python scripts/refresh_kr_business_overview_public.py
+
       - name: Rebuild Lynch classes
         # 순수 변환 (외부 호출 0) — 위 백필로 배당·재무가 늘어난 만큼 분류 커버리지가 따라 오른다.
         # 산식 무변경(2026-05-23 PM 사전등록 A3), 계산 범위만 전 종목.
@@ -112,7 +117,7 @@ jobs:
             prior = json.load(source, object_pairs_hook=unique_object)
           if not isinstance(prior, dict):
             raise ValueError('prior catalog must be an object')
-          fields = ('contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts', 'annual_customer_tables')
+          fields = ('contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts', 'annual_customer_tables', 'sec_filing_excerpts')
           print('yes' if any(field in prior for field in fields) else 'no')
           PY
           )"
@@ -237,6 +242,7 @@ jobs:
           #   스테이징되지 않는다 (2026-08-09 KIS 락 동결 사고와 동형).
           for f in data/dividends_kr.json \
                    data/dart_business_overview.json \
+                   data/kr_business_overview_public.json \
                    data/kr_major_shareholders.json \
                    data/dart_cb_bw_cache.json \
                    data/chain_snippets.json \
@@ -272,3 +278,4 @@ jobs:
           PUBLISH_DEPS_DIR="$(mktemp -d "$RUNNER_TEMP/member-map-publish-deps.XXXXXX")"
           npm install --prefix "$PUBLISH_DEPS_DIR" --no-save --package-lock=false @vercel/blob@2.4.1
           NODE_PATH="$PUBLISH_DEPS_DIR/node_modules" node scripts/member-map/upload-public-source-filter.cjs data/member_map_auto_evidence.json
+          NODE_PATH="$PUBLISH_DEPS_DIR/node_modules" node scripts/member-map/upload-public-overview.cjs data/kr_business_overview_public.json
