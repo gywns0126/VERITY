@@ -25,7 +25,10 @@ _STOP = {"error", "missing-key", "budget-ledger-unavailable", "result-store-unav
          "disabled", "budget-exhausted"}
 _ERROR_TYPES = {"HTTPError", "URLError", "TimeoutError", "SSLError", "ValueError",
                 "JSONDecodeError", "KeyError", "TypeError", "OSError"}
-_ERROR_REASONS = {"response-incomplete", "response-too-large", "usage-invalid"}
+_ERROR_REASONS = {"response-incomplete", "response-too-large", "usage-invalid",
+                  "response-max-output-tokens", "response-content-filter",
+                  "response-message-incomplete", "response-refused", "response-content-shape",
+                  "response-status-absent", "response-status-failed", "response-status-pending"}
 _PROVIDER_ERRORS = {"insufficient_quota", "rate_limit_exceeded", "invalid_api_key",
                     "model_not_found", "unsupported_country_region_territory"}
 

@@ -757,13 +757,27 @@ def openai_transport(payload, api_key):
         raise ValueError("response-too-large")
     body = json.loads(raw)
     if body.get("status") != "completed":
+        detail = body.get("incomplete_details")
+        cause = detail.get("reason") if type(detail) is dict else None
+        if cause == "max_output_tokens":
+            raise ValueError("response-max-output-tokens")
+        if cause == "content_filter":
+            raise ValueError("response-content-filter")
+        if "status" not in body:
+            raise ValueError("response-status-absent")
+        if body.get("status") == "failed":
+            raise ValueError("response-status-failed")
+        if body.get("status") in {"queued", "in_progress"}:
+            raise ValueError("response-status-pending")
         raise ValueError("response-incomplete")
     messages = [row for row in body.get("output", []) if row.get("type") == "message"]
     if len(messages) != 1 or messages[0].get("status") != "completed":
-        raise ValueError("response-incomplete")
+        raise ValueError("response-message-incomplete")
     parts = messages[0].get("content", [])
+    if any(type(part) is dict and part.get("type") == "refusal" for part in parts):
+        raise ValueError("response-refused")
     if len(parts) != 1 or parts[0].get("type") != "output_text":
-        raise ValueError("response-incomplete")
+        raise ValueError("response-content-shape")
     usage = body.get("usage", {})
     return json.loads(parts[0]["text"]), {
         "input_tokens": usage.get("input_tokens"),
@@ -986,6 +1000,9 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
                 "candidate-shape", "candidate-count", "candidate-fields", "candidate-evidence",
                 "candidate-uncertain-sentence", "candidate-direction-uncertain", "candidate-duplicate", "candidate-context",
                 "response-incomplete", "response-too-large", "usage-invalid",
+                "response-max-output-tokens", "response-content-filter",
+                "response-message-incomplete", "response-refused", "response-content-shape",
+                "response-status-absent", "response-status-failed", "response-status-pending",
             }:
                 result["reason"] = str(error)
             if counts is not None:
