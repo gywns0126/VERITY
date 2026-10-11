@@ -40,6 +40,7 @@ PUBLIC_SOURCE_FILES = (
     "macro_snapshot.json",
     "commodity_exposure.json",
     "portfolio.json",
+    "member_map_ai_candidates.json",
 )
 
 OPTIONAL_PUBLIC_SOURCE_FILES = (
@@ -48,6 +49,7 @@ OPTIONAL_PUBLIC_SOURCE_FILES = (
     "macro_snapshot.json",
     "commodity_exposure.json",
     "portfolio.json",
+    "member_map_ai_candidates.json",
 )
 
 PUBLIC_SOURCE_MAX_BYTES = {
@@ -61,6 +63,7 @@ PUBLIC_SOURCE_MAX_BYTES = {
     "macro_snapshot.json": 8 * 1024 * 1024,
     "commodity_exposure.json": 2 * 1024 * 1024,
     "portfolio.json": 8 * 1024 * 1024,
+    "member_map_ai_candidates.json": 2_000_000,
 }
 
 PUBLIC_COMPANY_FIELDS = ("id", "ticker", "market", "name", "sector", "facts", "documents")
