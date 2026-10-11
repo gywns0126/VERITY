@@ -42,8 +42,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
+from datetime import date
 from typing import Any, Dict, List, Tuple
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -334,10 +336,33 @@ def _save_shareholders(path, by, year):
     os.replace(tmp, path)
 
 
+def _valid_chain_source(payload, ticker):
+    """Only successfully extracted, issuer-bound annual sources may mark progress."""
+    if (not isinstance(payload, dict) or "error" in payload
+            or payload.get("ticker") != ticker or not re.fullmatch(r"[0-9]{6}", ticker)
+            or not isinstance(payload.get("corp_code"), str)
+            or not re.fullmatch(r"[0-9]{8}", payload["corp_code"])
+            or not isinstance(payload.get("snippets"), list)
+            or type(payload.get("plain_text_len")) is not int or payload["plain_text_len"] <= 0):
+        return False
+    receipt, source_day, report = (payload.get(key) for key in ("rcept_no", "rcept_dt", "report_nm"))
+    if (not isinstance(receipt, str) or not re.fullmatch(r"[0-9]{14}", receipt)
+            or not isinstance(source_day, str) or not re.fullmatch(r"[0-9]{8}", source_day)
+            or not isinstance(report, str)
+            or not re.fullmatch(r"(?:\[(?:기재정정|첨부정정|첨부추가)\])*사업보고서 \([0-9]{4}\.(?:0[1-9]|1[0-2])\)", report)):
+        return False
+    try:
+        return date(int(source_day[:4]), int(source_day[4:6]), int(source_day[6:])) <= date.today()
+    except ValueError:
+        return False
+
+
 def run_chain(univ, year, delay, dry, limit=None, deadline=None) -> Dict[str, int]:
     """주요 매출처 스니펫 — DART 사업보고서 원문 앵커 추출. LLM 0.
 
     기존 파이프라인은 full run 당 `candidates[:5]` 만 돌아 31종에서 멈춰 있었다.
+    정상 원문의 빈 스니펫도 기존 by_ticker에 저장한다(관계 없음의 확정은 아님).
+    보유분의 새 공시·연도 갱신 정책은 positive/no-hit 모두 별도 미결이다.
     """
     from api.collectors.ChainScout import scout_major_customer_snippets, save_snippets_payload
     cur = _load(os.path.join(DATA, "chain_snippets.json"), {}) or {}
@@ -350,6 +375,7 @@ def run_chain(univ, year, delay, dry, limit=None, deadline=None) -> Dict[str, in
     if dry or not todo:
         return {"todo": len(todo), "ok": 0}
     ok = 0
+    no_hit = 0
     stopped = 0
     for i, (tk, nm) in enumerate(todo, 1):
         # 🚨 축 예산 — 이 축이 job 전체를 먹으면 뒤 축이 **시작조차 못 한다**.
@@ -363,17 +389,24 @@ def run_chain(univ, year, delay, dry, limit=None, deadline=None) -> Dict[str, in
         mkt = (corner.get(tk) or {}).get("market") or "KS"
         try:
             r = scout_major_customer_snippets(f"{tk}.{mkt}")
-            if isinstance(r, dict) and r.get("snippets"):
+            if _valid_chain_source(r, tk):
                 save_snippets_payload(r)   # by_ticker 병합 저장 = 종목마다 영속
-                ok += 1
+                if r["snippets"]:
+                    ok += 1
+                else:
+                    no_hit += 1
         except Exception as e:  # noqa: BLE001
             print(f"    {tk} 실패 {type(e).__name__}: {str(e)[:60]}", file=sys.stderr)
         if i % 100 == 0:
             print(f"    … {i}/{len(todo)} (스니펫 확보 {ok})", flush=True)
         time.sleep(delay)
     print(f"  [chain] 신규 {ok} / 시도 {len(todo) - stopped}"
+          + (f" · 정상 원문 no-hit {no_hit}" if no_hit else "")
           + (f" · ⏱ 예산으로 {stopped} 미시도" if stopped else ""))
-    return {"todo": len(todo), "ok": ok, "budget_stopped": stopped}
+    result = {"todo": len(todo), "ok": ok, "budget_stopped": stopped}
+    if no_hit:
+        result.update(no_hit=no_hit, progressed=ok + no_hit)
+    return result
 
 
 def run_overview(univ, year, delay, dry, limit=None, retry_exhausted=False,
@@ -490,7 +523,12 @@ def main() -> int:
         return 2
 
     univ = build_universe(a.universe, a.limit, a.ticker)
-    if not univ:
+    # chain도 전 상장목록을 후보로 사용한다. 다른 축의 지정 유니버스는 보존한다.
+    # corner 밖의 명시 --ticker도 chain 실행 전에 빈 목록으로 탈락시키지 않는다.
+    chain_univ = ((univ if a.universe == "market"
+                   else build_universe("market", a.limit, (a.ticker or "").strip() or None))
+                  if "chain" in axes else [])
+    if not univ and not chain_univ:
         print("유니버스 비어 있음", file=sys.stderr)
         return 1
     print(f"[facts_backfill] universe={a.universe} 종목={len(univ)} year={a.year} "
@@ -509,9 +547,9 @@ def main() -> int:
             elif ax == "shareholders":
                 summary[ax] = run_shareholders(univ, a.year, a.delay, a.dry_run, a.limit)
             elif ax == "chain":
-                summary[ax] = run_chain(univ, a.year, a.delay, a.dry_run, a.limit, deadline=_dl)
+                summary[ax] = run_chain(chain_univ, a.year, a.delay, a.dry_run, a.limit, deadline=_dl)
             elif ax == "overview":
-                # 🚨 2026-08-24 N=2 감사에서 발견 — 개요 축만 **market** 유니버스로 돈다.
+                # 🚨 2026-08-24 N=2 감사에서 발견 — 개요 축은 **market** 유니버스로 돈다.
                 #   다른 축은 코너(중·소형주 채움)가 목적이지만 개요는 **공개 리포트 표면**
                 #   자산이고, 리포트 유니버스(1,789) ⊄ corner(1,513) 다. 실측:
                 #     corner 미보유 20 · report 미보유 243 · 그 243 중 corner 소속은 **16**.

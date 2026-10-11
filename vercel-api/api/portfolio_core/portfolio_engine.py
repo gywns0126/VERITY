@@ -33,6 +33,7 @@ from .portfolio_contract_termination import attach_contract_terminations
 from .portfolio_capture_archive import retain_captured_documents
 from .portfolio_filing_excerpts import index_filing_excerpts, attach_parent_relationships
 from .portfolio_business_roles import index_business_roles, attach_business_relationships
+from .portfolio_sec_relationships import index_sec_relationships, attach_sec_relationships
 from .portfolio_annual_customer_tables import (
     attach_annual_customer_table_relationships,
     index_annual_customer_table_captures,
@@ -82,6 +83,13 @@ class _ProjectedPublicIndexCache:
                              "relationships": 0, "identity_holds": 0,
                              "rejection_reasons": {"capture-rejected": 1}},
             }
+        try:
+            sec_relationships = index_sec_relationships(
+                auto_evidence.get("sec_filing_excerpts", []) if type(auto_evidence) is dict else [],
+                list(by_id.values()))
+        except (TypeError, ValueError, UnicodeError):
+            sec_relationships = index_sec_relationships([], list(by_id.values()))
+            sec_relationships["coverage"]["rejection_reasons"] = {"capture-rejected": 1}
         return {
             "by_id": by_id,
             "coverage": projected["coverage"],
@@ -93,6 +101,7 @@ class _ProjectedPublicIndexCache:
             "contract_events": index_contract_events(public_documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values())),
             "filing_excerpts": index_filing_excerpts(public_documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values())),
             "annual_customer_tables": annual_customer_tables,
+            "sec_relationships": sec_relationships,
         }
 
     def get(self, public_documents, revision):
@@ -458,6 +467,7 @@ def _automatic_evidence(public_documents, positions, public_index):
         projection = project_portfolio_evidence(artifact, positions) if artifact is not None else None
         projection = _add_business_materials(projection, business, positions, public_index["by_id"])
         projection = attach_business_relationships(projection, business["reported_roles"], positions)
+        projection = attach_sec_relationships(projection, public_index["sec_relationships"], positions)
         projection = attach_parent_relationships(projection, public_index["filing_excerpts"], positions)
         projection = attach_annual_customer_table_relationships(
             projection, public_index["annual_customer_tables"], positions

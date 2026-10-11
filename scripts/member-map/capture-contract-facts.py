@@ -29,6 +29,7 @@ from api.intelligence.portfolio_company_names import add_public_company_names
 from api.intelligence.portfolio_contract_termination import parse_contract_termination, validate_contract_termination
 from api.intelligence.portfolio_filing_excerpts import validate_filing_excerpts
 from api.intelligence.portfolio_annual_customer_tables import validate_annual_customer_capture
+from api.intelligence.portfolio_sec_relationships import validate_sec_capture
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -36,7 +37,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError('public-redirect-refused')
 
 
-_CAPTURE_FIELDS = ('contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts', 'annual_customer_tables')
+_CAPTURE_FIELDS = ('contract_facts', 'documentFamilies', 'contract_terminations', 'filing_excerpts', 'annual_customer_tables', 'sec_filing_excerpts')
 _JSON_LIMIT = 8 * 1024 * 1024
 
 
@@ -100,13 +101,16 @@ def _validate_capture_fields(baseline, evidence):
     _validate_artifact(evidence)
     baseline = baseline if isinstance(baseline, dict) else {}
     for field, validator in zip(_CAPTURE_FIELDS,
-                                (validate_contract_fact, validate_family, validate_contract_termination, validate_filing_excerpts, validate_annual_customer_capture)):
+                                (validate_contract_fact, validate_family, validate_contract_termination, validate_filing_excerpts, validate_annual_customer_capture, validate_sec_capture)):
         rows = evidence.get(field, [])
         prior = baseline.get(field, [])
         if not isinstance(rows, list) or not isinstance(prior, list):
             raise ValueError('invalid-contract-history')
-        receipts = [validator(row)['receipt_no'] for row in rows]
-        prior_receipts = [validator(row)['receipt_no'] for row in prior]
+        def capture_key(row):
+            valid = validator(row)
+            return (valid['issuer_id'], valid['accession']) if field == 'sec_filing_excerpts' else valid['receipt_no']
+        receipts = [capture_key(row) for row in rows]
+        prior_receipts = [capture_key(row) for row in prior]
         if len(receipts) != len(set(receipts)):
             raise ValueError('duplicate-contract-receipt')
         if not set(prior_receipts).issubset(receipts):
