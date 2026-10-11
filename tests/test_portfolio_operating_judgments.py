@@ -361,6 +361,80 @@ def test_openai_http429_closed_code_survives_archive_and_free_cache_without_body
     assert captured.out == captured.err == ""
 
 
+@pytest.mark.parametrize("case,reason", [
+    ("max-output", "response-max-output-tokens"),
+    ("content-filter", "response-content-filter"),
+    ("other-incomplete", "response-incomplete"),
+    ("status-absent", "response-status-absent"),
+    ("status-failed", "response-status-failed"),
+    ("status-pending", "response-status-pending"),
+    ("message", "response-message-incomplete"),
+    ("refusal", "response-refused"),
+    ("content-shape", "response-content-shape"),
+])
+def test_response_failures_keep_only_safe_reason_through_transport_archive_and_summary(
+        worker, monkeypatch, tmp_path, capsys, case, reason):
+    private = "SYNTHETIC_RESPONSE_PRIVATE_BODY"
+    message = {"type": "message", "status": "completed",
+               "content": [{"type": "output_text", "text": private + QUOTE}]}
+    body = {"status": "completed", "output": [message], "extra": private,
+            "usage": {"input_tokens": 1525, "output_tokens": 347}}
+    variants = [body]
+    if case in {"max-output", "content-filter", "other-incomplete"}:
+        body.update(status="incomplete", incomplete_details={"reason": {
+            "max-output": "max_output_tokens", "content-filter": "content_filter",
+            "other-incomplete": private}[case]})
+        if case == "other-incomplete":
+            variants.append({**body, "status": private})
+    elif case == "status-absent":
+        body.pop("status")
+    elif case == "status-failed":
+        body["status"] = "failed"
+    elif case == "status-pending":
+        variants = [{**body, "status": status} for status in ("queued", "in_progress")]
+    elif case == "message":
+        incomplete = {**message, "status": "incomplete"}
+        variants = [{**body, "output": output} for output in ([], [incomplete], [message, message])]
+    elif case == "refusal":
+        message["content"] = [{"type": "refusal", "refusal": private + QUOTE}]
+    else:
+        variants = [{**body, "output": [{**message, "content": content}]} for content in (
+            [], message["content"] * 2, [{"type": "other", "text": private + QUOTE}])]
+
+    for index, variant in enumerate(variants):
+        raw, calls = json.dumps(variant, ensure_ascii=False).encode(), []
+
+        def open_request(request, *, timeout):
+            assert request.full_url == "https://api.openai.com/v1/responses" and timeout == 25
+            calls.append(request.full_url)
+            return io.BytesIO(raw)
+
+        monkeypatch.setattr(urllib.request, "build_opener", lambda *handlers: SimpleNamespace(open=open_request))
+        with pytest.raises(ValueError) as caught:
+            openai_transport({}, "synthetic-key")
+        assert str(caught.value) == reason
+        ledger = tmp_path / f"response-{index}.sqlite3"
+        result = worker.ai.run_document(_doc(), ledger, "synthetic-key", enabled=True,
+                                        judgment_as_of=AS_OF, transport=openai_transport)
+        assert result["status"] == "error" and result["error_type"] == "ValueError"
+        assert result["reason"] == reason and result.get("raw_answer") is None
+        assert "usage" not in result and "http_status" not in result and "provider_error_code" not in result
+        assert not {"incomplete_details", "output", "body", "message", "raw_body", "metadata"}.intersection(result)
+        with sqlite3.connect(ledger) as db:
+            reserved, saved = db.execute("SELECT reserved,result FROM calls").fetchone()
+        assert reserved == worker.ai.RESERVE_MICRO_USD and json.loads(saved) == result
+        summary = worker.run_batch([_doc(), _doc()], ledger, "synthetic-key", object(), as_of=AS_OF,
+                                  limit=10, runner=lambda *a, **k: result)
+        assert summary["error_counts"] == {reason: 1} and summary["stop_reason"] == "error"
+        assert summary["paid_attempts"] == summary["processed_documents"] == 1
+        assert summary["pending_judgments"] == summary["accepted_judgments"] == summary["confirmed_relationships"] == 0
+        assert summary["published"] is False and len(calls) == 2
+        rendered = json.dumps([result, summary], ensure_ascii=False) + saved
+        assert all(value not in rendered for value in (private, QUOTE, "synthetic-key", "incomplete_details"))
+    captured = capsys.readouterr()
+    assert captured.out == captured.err == ""
+
+
 @pytest.mark.parametrize("status,settlement,stop,paid", [
     ("result-store-unavailable", None, "result-store-unavailable", 0),
     ("budget-ledger-unavailable", None, "budget-ledger-unavailable", 0),
