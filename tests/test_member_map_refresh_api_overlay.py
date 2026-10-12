@@ -107,3 +107,48 @@ def test_explicit_source_fixture_never_reads_optional_private_store(monkeypatch)
     monkeypatch.setattr(fetch, "_refresh_overlay", lambda *_: pytest.fail("fixture caused private read"))
     result = fetch.fetch_public_sources(_fetcher=baseline)
     assert result["coverage"]["status"] == "complete"
+
+
+@pytest.mark.parametrize("mode,extra_hashes", [
+    ("unmodified", 0), ("replaced", 1), ("equal-replaced", 1), ("removed", 0),
+])
+def test_overlay_hash_reuse_preserves_full_rehash_revision(monkeypatch, mode, extra_hashes):
+    names = ("universe_search.json", "public_disclosure_feed.json",
+             "member_map_auto_evidence.json", "member_map_ai_candidates.json")
+    documents = {name: baseline(name) for name in names}
+    expected = deepcopy(documents)
+    checkpoints = {"DART": state()} if mode == "replaced" else {}
+    if mode == "replaced":
+        live = importlib.import_module(PACKAGE + ".member_map_live_refresh")
+        expected = live.overlay_states(expected, checkpoints)
+    elif mode in ("equal-replaced", "removed"):
+        def overlay(current, _reader):
+            result = current.copy()
+            if mode == "removed":
+                result.pop("universe_search.json")
+            else:
+                result["universe_search.json"] = deepcopy(result["universe_search.json"])
+            return result
+        monkeypatch.setattr(fetch, "_refresh_overlay", overlay)
+        if mode == "removed":
+            expected.pop("universe_search.json")
+
+    canonical_hash = fetch._document_revision
+    hash_calls = []
+    def counted_hash(document):
+        hash_calls.append(True)
+        return canonical_hash(document)
+    monkeypatch.setattr(fetch, "_document_revision", counted_hash)
+    result = fetch.fetch_public_sources(
+        _fetcher=lambda name: documents.get(name), _clock=lambda: 0,
+        _refresh_reader=lambda: checkpoints)
+    assert len(hash_calls) == len(names) + extra_hashes
+    assert result["documents"] == expected
+    assert documents == {name: baseline(name) for name in names}
+    assert result["revision"] == fetch._bundle_revision(
+        {name: canonical_hash(document) for name, document in expected.items()})
+    assert result["coverage"] == {
+        "expected": len(fetch.PUBLIC_SOURCE_FILES), "available": len(expected),
+        "missing": [name for name in fetch.PUBLIC_SOURCE_FILES if name not in expected],
+        "status": "partial",
+    }
