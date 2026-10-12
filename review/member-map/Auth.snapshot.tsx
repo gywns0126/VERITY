@@ -31,6 +31,7 @@ import {
 
 const SESSION_KEY = "verity_supabase_session"
 const AUTH_EVENT = "verity_auth_change"
+let sessionRevision = 0
 
 interface SupaSession {
     access_token: string
@@ -40,23 +41,36 @@ interface SupaSession {
 }
 
 function saveSession(s: SupaSession) {
+    sessionRevision += 1
     if (typeof window !== "undefined")
         localStorage.setItem(SESSION_KEY, JSON.stringify(s))
 }
 function clearSession() {
+    sessionRevision += 1
     if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY)
 }
-function loadSession(): SupaSession | null {
+function isStoredSession(s: any): s is SupaSession {
+    return !!s && typeof s === "object" &&
+        typeof s.access_token === "string" && !!s.access_token.trim() &&
+        typeof s.refresh_token === "string" &&
+        typeof s.expires_at === "number" && Number.isFinite(s.expires_at) && s.expires_at > 0 &&
+        !!s.user && typeof s.user.id === "string" && !!s.user.id.trim()
+}
+// Review-only recovery input: expired access tokens never leave loadSession().
+function loadStoredSession(): SupaSession | null {
     if (typeof window === "undefined") return null
     try {
         const raw = localStorage.getItem(SESSION_KEY)
         if (!raw) return null
-        const s: SupaSession = JSON.parse(raw)
-        if (s.expires_at && Date.now() / 1000 > s.expires_at) return null
-        return s
+        const s = JSON.parse(raw)
+        return isStoredSession(s) ? s : null
     } catch {
         return null
     }
+}
+function loadSession(): SupaSession | null {
+    const s = loadStoredSession()
+    return s && s.expires_at > Date.now() / 1000 ? s : null
 }
 export function getVeritySession(): SupaSession | null {
     return loadSession()
@@ -275,28 +289,51 @@ async function signInEmail(
 async function refreshSession(
     supabaseUrl: string,
     anonKey: string,
-    refreshToken: string
+    expected: SupaSession,
+    isActive: () => boolean
 ): Promise<SupaSession | null> {
+    const revision = sessionRevision
+    const unchanged = () => isActive() && sessionRevision === revision &&
+        JSON.stringify(loadStoredSession()) === JSON.stringify(expected)
+    if (!isStoredSession(expected) || !expected.refresh_token.trim() || !unchanged()) return null
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null
+    const deadline = Date.now() + FETCH_TIMEOUT_MS
+    let timer: ReturnType<typeof setTimeout> | undefined
     try {
-        const body = await supaFetch(
-            `${supabaseUrl}/auth/v1/token?grant_type=refresh_token`,
-            anonKey,
-            {
-                method: "POST",
-                body: JSON.stringify({ refresh_token: refreshToken }),
-            }
-        )
-        if (!body.access_token) return null
+        // Bound both headers and JSON parsing; a late response cannot save a session.
+        const body = await Promise.race([
+            (async () => {
+                const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+                    body: JSON.stringify({ refresh_token: expected.refresh_token }),
+                    signal: controller?.signal,
+                })
+                return res.ok ? await res.json() : null
+            })(),
+            new Promise<never>((_, reject) => {
+                timer = setTimeout(() => {
+                    controller?.abort()
+                    reject(new Error("Session refresh timed out"))
+                }, FETCH_TIMEOUT_MS)
+            }),
+        ])
+        if (!isStoredSession(body) || !body.refresh_token.trim() ||
+            body.user.id !== expected.user.id || body.expires_at <= Date.now() / 1000 ||
+            Date.now() >= deadline || !unchanged()) return null
         const session: SupaSession = {
             access_token: body.access_token,
             refresh_token: body.refresh_token,
-            expires_at: body.expires_at || Date.now() / 1000 + 3600,
+            expires_at: body.expires_at,
             user: body.user,
         }
         saveSession(session)
+        emitAuthChange()
         return session
     } catch {
         return null
+    } finally {
+        if (timer !== undefined) clearTimeout(timer)
     }
 }
 
@@ -520,6 +557,18 @@ export default function AlphaNestAuth(props: Props) {
     useEffect(() => {
         if (onCanvas || typeof window === "undefined") return
         let alive = true
+        let refreshing = false
+        const refreshStored = async () => {
+            const stored = loadStoredSession()
+            if (!alive || refreshing || !stored?.refresh_token.trim() ||
+                Date.now() / 1000 <= stored.expires_at - 300) return
+            refreshing = true
+            try {
+                await refreshSession(url, anonKey, stored, () => alive)
+            } finally {
+                refreshing = false
+            }
+        }
 
         const consumeHash = async () => {
             const hash = window.location.hash || ""
@@ -587,7 +636,7 @@ export default function AlphaNestAuth(props: Props) {
         const init = async () => {
             const consumed = await consumeHash()
             if (consumed || !alive) return
-            let s = loadSession()
+            const s = loadSession()
             // 유효 세션이면 로그인 페이지에서 대기하지 않는다.
             // 이동 후 갱신은 기존 PublicSessionKeeper가 담당한다.
             if (s?.access_token && s?.user?.id && /^\/login\/?$/.test(window.location.pathname)) {
@@ -595,24 +644,15 @@ export default function AlphaNestAuth(props: Props) {
                 navigateAfterLogin()
                 if (loginReturnRef.current) return
             }
-            if (
-                s &&
-                s.refresh_token &&
-                s.expires_at &&
-                Date.now() / 1000 > s.expires_at - 300
-            ) {
-                const refreshed = await refreshSession(
-                    url,
-                    anonKey,
-                    s.refresh_token
-                )
-                if (refreshed) s = refreshed
-            }
-            if (alive) setSession(s)
+            await refreshStored()
+            if (alive) setSession(loadSession())
         }
         init()
 
-        const onAuth = () => {
+        const onAuth = (event?: Event) => {
+            if (event?.type === "storage" &&
+                ((event as StorageEvent).key === SESSION_KEY || (event as StorageEvent).key === null))
+                sessionRevision += 1
             if (!alive) return
             const s = loadSession()
             setSession(s)
@@ -623,16 +663,8 @@ export default function AlphaNestAuth(props: Props) {
         window.addEventListener("storage", onAuth)
 
         const timer = setInterval(async () => {
-            const cur = loadSession()
-            if (
-                cur &&
-                cur.refresh_token &&
-                cur.expires_at &&
-                Date.now() / 1000 > cur.expires_at - 300
-            ) {
-                const r = await refreshSession(url, anonKey, cur.refresh_token)
-                if (alive && r) setSession(r)
-            }
+            await refreshStored()
+            if (alive) setSession(loadSession())
         }, 60000)
 
         return () => {
