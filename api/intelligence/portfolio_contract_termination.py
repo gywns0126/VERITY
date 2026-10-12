@@ -1,8 +1,8 @@
 """Closed extraction for observed public DART contract-termination layouts.
 
 The filing proves that a termination notice was reported. It does not prove
-that the contract is already terminated, resolve the counterparty, or infer an
-effective date from narrative text.
+that the contract is already terminated or resolve the counterparty. Explicitly
+dated notice/effect clauses are quoted separately; relative dates are not computed.
 """
 from __future__ import annotations
 
@@ -21,16 +21,20 @@ from .portfolio_contract_facts import (
     _contract_title,
     _decode,
     _field,
+    _financial_terms,
     _is_correction_title,
     _name,
     _observation,
     _quoted_day,
     _quoted_field,
+    _revenue_basis,
     _rows,
     _single,
     _source_text,
     _text,
     _valid_viewer_url,
+    _validate_financial_terms,
+    _validate_revenue_basis,
 )
 
 
@@ -118,6 +122,33 @@ def _validate_related_link(link, *, receipt, as_of, seen, contract):
     seen.add(related_receipt)
 
 
+def _reported_dates(text, date_field, filed_on):
+    """Extract literal labelled dates only; never add six months or use period.end."""
+    clauses = re.split(r"(?<=[.!?])(?<![0-9]\.)\s+", text)
+    result = {}
+    for key, label in (("notice_on", "해지통보일"), ("effective_on", "해지발효일")):
+        found = []
+        for clause in clauses:
+            for match in re.finditer(label + r"\s*\(([^)]{1,40})\)", clause):
+                try:
+                    day = _quoted_day(match[1])
+                    if re.search(r"아니|아닌|아님|아닐|아닙|않|미정|취소|철회|불확실|다른\s*계약|자회사", clause):
+                        raise ValueError("uncertain-date")
+                except ValueError:
+                    found.append(None)
+                    continue
+                found.append({"date": day.isoformat(), "quote": clause.strip()})
+        if len(found) == 1 and found[0] is not None:
+            result[key] = found[0]
+    notice = result.get("notice_on")
+    if (not notice or notice["date"] != _quoted_day(date_field["value"]).isoformat()
+            or notice["date"] > filed_on):
+        return {}
+    if "effective_on" in result and result["effective_on"]["date"] < notice["date"]:
+        result.pop("effective_on")
+    return result
+
+
 def validate_contract_termination(value):
     """Validate and return one closed termination-notice fact."""
     required = {
@@ -151,7 +182,8 @@ def validate_contract_termination(value):
         raise ValueError("invalid-contract-termination")
 
     contract = value.get("contract")
-    if not isinstance(contract, dict) or set(contract) != {"name", "counterparty", "period"}:
+    if (not isinstance(contract, dict) or set(contract) - {"financial_terms", "revenue_basis"}
+            != {"name", "counterparty", "period"}):
         raise ValueError("invalid-contract-termination")
     _quoted_field(contract["name"])
     _quoted_field(contract["counterparty"])
@@ -164,14 +196,29 @@ def validate_contract_termination(value):
         raise ValueError("invalid-contract-termination")
 
     termination = value.get("termination")
-    if not isinstance(termination, dict) or set(termination) not in (
-            {"date", "reason", "other_matters", "related_filings"},
-            {"date", "reason", "other_matters", "related_filings", "related_documents"}):
+    if (not isinstance(termination, dict)
+            or set(termination) - {"related_documents", "notice_on", "effective_on"}
+            != {"date", "reason", "other_matters", "related_filings"}):
         raise ValueError("invalid-contract-termination")
     _quoted_field(termination["date"])
     _quoted_day(termination["date"]["value"])
     _quoted_field(termination["reason"])
     _quoted_field(termination["other_matters"])
+    notes = termination["other_matters"]["value"]
+    if "financial_terms" in contract:
+        _validate_financial_terms(contract["financial_terms"], termination=True)
+    if "revenue_basis" in contract:
+        if "recent_revenue" not in contract.get("financial_terms", {}):
+            raise ValueError("invalid-contract-revenue-basis")
+        _validate_revenue_basis(contract["revenue_basis"], value["as_of"])
+        if _revenue_basis(notes) != contract["revenue_basis"]:
+            raise ValueError("invalid-contract-revenue-basis")
+    dates = _reported_dates(notes, termination["date"], value["as_of"])
+    for key in ("notice_on", "effective_on"):
+        if key in termination and (key not in dates or termination[key] != dates[key]):
+            raise ValueError("invalid-contract-termination-date")
+    if "effective_on" in termination and "notice_on" not in termination:
+        raise ValueError("invalid-contract-termination-date")
     links = termination.get("related_filings")
     documents = termination.get("related_documents", [])
     if (not isinstance(links, list) or not isinstance(documents, list)
@@ -242,6 +289,12 @@ def parse_contract_termination(viewer_bytes, *, receipt_no, issuer_id, issuer_na
     termination = {"date": _field(date_row), "reason": _field(reason_row),
                    "other_matters": _field(other_row),
                    "related_filings": related_filings}
+    termination.update(_reported_dates(termination["other_matters"]["value"], termination["date"], filed_on))
+    financial_terms = _financial_terms(body_rows, anchor, counterparty_row, termination=True)
+    basis = (_revenue_basis(termination["other_matters"]["value"])
+             if financial_terms and "recent_revenue" in financial_terms else None)
+    if basis and basis["year"] > as_of.year:
+        basis = None
     if related_documents:
         termination["related_documents"] = related_documents
     result = {
@@ -257,6 +310,8 @@ def parse_contract_termination(viewer_bytes, *, receipt_no, issuer_id, issuer_na
         "contract": {
             "name": _field(name_row),
             "counterparty": _field(counterparty_row),
+            **({"financial_terms": financial_terms} if financial_terms else {}),
+            **({"revenue_basis": basis} if basis else {}),
             "period": {"label": period_row["cells"][0],
                        "start": {"label": period_row["cells"][1],
                                  "value": period_row["cells"][2]},

@@ -180,6 +180,89 @@ def _field(row, value_index=-1):
     return {"label": cells[0], "value": cells[value_index]}
 
 
+_FINANCIAL_TERM_LABELS = {
+    "amount": ("계약금액총액(원)", "계약금액(원)"),
+    "recent_revenue": ("최근매출액(원)",),
+    "revenue_ratio": ("매출액대비(%)",),
+}
+
+
+def _financial_terms(rows, anchor, counterparty, *, termination=False):
+    """Preserve literal financial rows only inside the issuer contract section."""
+    labels_by_key = {**_FINANCIAL_TERM_LABELS,
+                     **({"amount": ("해지금액(원)",)} if termination else {})}
+    candidates = {key: [] for key in labels_by_key}
+    section_rows = [row for row in rows
+                    if row["table_index"] == anchor["table_index"]
+                    and anchor["row_index"] < row["row_index"] < counterparty["row_index"]
+                    and row["cells"] and _name(row["cells"][0]) ==
+                    _name("2. 해지내역" if termination else "2. 계약내역")]
+    if len(section_rows) != 1:
+        return None
+    section_start = section_rows[0]
+    for row in rows:
+        if (row["table_index"] != section_start["table_index"]
+                or row["row_index"] < section_start["row_index"]
+                or row["row_index"] >= counterparty["row_index"]):
+            continue
+        cells = row["cells"]
+        if len(cells) == 3 and row is section_start:
+            field = {"label": cells[1], "value": cells[2]}
+        elif len(cells) == 2 and row is not section_start:
+            field = {"label": cells[0], "value": cells[1]}
+        else:
+            continue
+        label = "".join(_name(field["label"]).split())
+        for key, labels in labels_by_key.items():
+            if label in labels:
+                candidates[key].append(field)
+                break
+    result = {}
+    for key, matches in candidates.items():
+        if len(matches) == 1:
+            result[key] = matches[0]
+    return result or None
+
+
+def _revenue_basis(text):
+    """Only the explicitly identified recent-revenue denominator, not a newer comparison."""
+    clauses = re.split(r"(?<=[.!?])(?<![0-9]\.)\s+", text)
+    pattern = (r"(?:-\s*)?(?:상기\s*['\"‘’]?(?:2\.\s*(?:계약|해지)내역\s*(?:중\s*|-\s*))?)?"
+               r"최근\s*매출액(?:\(원\))?['\"‘’]?\s*(?:은|는)\s*(?:당사의\s*)?"
+               r"((?:19|20)\d{2})년(?:도|말)?\s*(연결|별도|개별)\s*재무제표\s*기준"
+               r"(?:임|입니다|\s*매출액입니다)\.")
+    matches, references = [], 0
+    for clause in clauses:
+        if re.search(r"최근\s*매출액(?:\(원\))?['\"‘’]?\s*(?:은|는)", clause):
+            references += 1
+        match = re.fullmatch(pattern, clause.strip())
+        if match:
+            matches.append({"year": int(match[1]),
+                            "scope": "consolidated" if match[2] == "연결" else "separate",
+                            "quote": clause.strip()})
+    # Do not pick among conflicting/duplicated denominator descriptions.
+    return matches[0] if references == 1 and len(matches) == 1 else None
+
+
+def _validate_revenue_basis(value, filed_on):
+    if (not isinstance(value, dict) or set(value) != {"year", "scope", "quote"}
+            or type(value["year"]) is not int or value["year"] > _calendar_day(filed_on).year
+            or not isinstance(value["quote"], str) or len(value["quote"]) > MAX_CELL_CHARS
+            or _source_text(value["quote"]) != value["quote"]
+            or _revenue_basis(value["quote"]) != value):
+        raise ValueError("invalid-contract-revenue-basis")
+
+
+def _validate_financial_terms(terms, *, termination=False):
+    if not isinstance(terms, dict) or not terms or not set(terms) <= set(_FINANCIAL_TERM_LABELS):
+        raise ValueError("invalid-contract-fact")
+    for key, field in terms.items():
+        quoted = _quoted_field(field)
+        labels = ("해지금액(원)",) if termination and key == "amount" else _FINANCIAL_TERM_LABELS[key]
+        if "".join(_name(quoted["label"]).split()) not in labels:
+            raise ValueError("invalid-contract-fact")
+
+
 def _contract_title(value):
     return re.sub(r"[\sㆍᆞ·•]", "", _name(value))
 
@@ -226,7 +309,8 @@ def validate_contract_fact(value):
             or not _SHA256.fullmatch(source["content_sha256"])
             or type(source.get("bytes")) is not int or not 0 < source["bytes"] <= MAX_HTML
             or not isinstance(contract, dict)
-            or set(contract) != {"type", "name", "counterparty", "period", "signed_on"}
+            or set(contract) - {"financial_terms", "revenue_basis", "financial_notes"} !=
+                {"type", "name", "counterparty", "period", "signed_on"}
             or value.get("counterparty_company_id") is not None
             or value.get("verified_common_event") is not False
             or value.get("current_contract_status") != "not-inferred"):
@@ -253,6 +337,19 @@ def validate_contract_fact(value):
                    "end": _quoted_field(period["end"])},
         "signed_on": _quoted_field(contract["signed_on"]),
     }
+    if "financial_terms" in contract:
+        _validate_financial_terms(contract["financial_terms"])
+    if "revenue_basis" in contract:
+        if "recent_revenue" not in contract.get("financial_terms", {}):
+            raise ValueError("invalid-contract-revenue-basis")
+        _validate_revenue_basis(contract["revenue_basis"], filed_on)
+        if ("financial_notes" not in contract
+                or _revenue_basis(_quoted_field(contract["financial_notes"])["value"]) != contract["revenue_basis"]):
+            raise ValueError("invalid-contract-revenue-basis")
+    if "financial_notes" in contract:
+        notes = _quoted_field(contract["financial_notes"])
+        if not re.fullmatch(r"(?:9|10)\.\s*기타\s*투자판단(?:에\s*참고할\s*사항|과\s*관련한\s*중요사항)", notes["label"]):
+            raise ValueError("invalid-contract-financial-notes")
     correction = value.get("correction")
     projected_correction = None
     if correction is not None:
@@ -527,6 +624,23 @@ def parse_contract_facts(viewer_bytes, *, receipt_no, issuer_id, issuer_name,
     counterparty_row = _single(body_rows, "3. 계약상대방" if kosdaq else "3. 계약상대")
     period_row = _single(body_rows, "5. 계약기간")
     signed_row = _single(body_rows, "8. 계약(수주)일자" if kosdaq else "7. 계약(수주)일자")
+    financial_terms = _financial_terms(body_rows, anchor, counterparty_row)
+    # Read only the notes section of this contract table, never counterparty
+    # financial rows or correction tables. Support the observed one-cell notes.
+    notes = [row for row in body_rows if re.fullmatch(
+        r"(?:9|10)\.\s*기타\s*투자판단(?:에\s*참고할\s*사항|과\s*관련한\s*중요사항)", row["cells"][0])]
+    basis, financial_notes = None, None
+    if financial_terms and "recent_revenue" in financial_terms and len(notes) == 1:
+        note = notes[0]
+        text = note["cells"][1] if len(note["cells"]) == 2 else ""
+        if len(note["cells"]) == 1:
+            following = [r for r in body_rows if r["row_index"] == note["row_index"] + 1 and len(r["cells"]) == 1]
+            text = following[0]["cells"][0] if len(following) == 1 else ""
+        basis = _revenue_basis(text)
+        if text:
+            financial_notes = {"label": note["cells"][0], "value": text}
+        if basis and basis["year"] > filing_day.year:
+            basis = None
     if len(period_row["cells"]) != 3 or _name(period_row["cells"][1]) != "시작일":
         raise ValueError("invalid-contract-period")
     end_rows = [row for row in rows if row["table_index"] == period_row["table_index"]
@@ -573,6 +687,9 @@ def parse_contract_facts(viewer_bytes, *, receipt_no, issuer_id, issuer_name,
                        "start": {"label": period_row["cells"][1], "value": period_row["cells"][2]},
                        "end": {"label": end_rows[0]["cells"][0], "value": end_rows[0]["cells"][1]}},
             "signed_on": _field(signed_row),
+            **({"financial_terms": financial_terms} if financial_terms else {}),
+            **({"revenue_basis": basis} if basis else {}),
+            **({"financial_notes": financial_notes} if financial_notes else {}),
         },
         "correction": correction,
         "counterparty_company_id": None,
