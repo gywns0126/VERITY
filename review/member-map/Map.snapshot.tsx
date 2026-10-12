@@ -3964,7 +3964,7 @@ function createPortfolioMapWorkspace(options = {}) {
     const timer = setTimeout(() => {
       timedOut = true;
       controller.abort();
-    }, 15e3);
+    }, 60e3);
     timers.add(timer);
     state = { ...state, phase: "loading", error: null };
     emit();
