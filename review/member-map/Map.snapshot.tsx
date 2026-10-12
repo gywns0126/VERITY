@@ -2639,6 +2639,49 @@ function attachPublicAIReview(graph, payload, coverage) {
 }
 
 // framer-components/public-probe/PortfolioAnalysisClient.ts
+function memberMapLoadDiagnostic(stage, error, response) {
+  try {
+    if (typeof window === "undefined") return;
+    const flags = new URLSearchParams(window.location.search).getAll("mapDiagnostics");
+    if (flags.length !== 1 || flags[0] !== "1") return;
+    if (!["request", "json", "adapter", "graph-timeout", "graph-other"].includes(stage)) return;
+    const errorName = ["Error", "TypeError", "ReferenceError", "SyntaxError", "RangeError", "AbortError", "TimeoutError"].find((name) => name === error?.name) || "unknown";
+    const message = error?.message;
+    const codes = [
+      ["unavailable", "unavailable"],
+      ["분석 자료의 형식을 확인하지 못했어요.", "analysis-format"],
+      ["분석 자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.", "analysis-unavailable"],
+      ["invalid-local-company-judgments", "invalid-local-company-judgments"],
+      ["graph-load-timeout", "graph-load-timeout"],
+      ["graph-load-cancelled", "graph-load-cancelled"],
+      ["graph-holdings-mismatch", "graph-holdings-mismatch"],
+      ["invalid-analysis-position-market", "invalid-analysis-position-market"],
+      ["portfolio-document-without-evidence", "portfolio-document-without-evidence"],
+      ["portfolio-company-universe-mismatch", "portfolio-company-universe-mismatch"],
+      ["portfolio-document-identity-conflict", "portfolio-document-identity-conflict"],
+      ["duplicate-legacy-company", "duplicate-legacy-company"],
+      ["duplicate-analysis-company", "duplicate-analysis-company"],
+      ["duplicate-legacy-document", "duplicate-legacy-document"],
+      ["duplicate-analysis-document", "duplicate-analysis-document"],
+      ["portfolio-legacy-company-market-unknown", "portfolio-legacy-company-market-unknown"],
+      ["portfolio-analysis-company-market-unknown", "portfolio-analysis-company-market-unknown"]
+    ];
+    const errorCode = codes.find(([known]) => known === message)?.[1] || "unknown";
+    const publicBindings = [
+      "crypto", "TextEncoder", "buildPortfolioMapGraph", "portfolioDocumentIdentity",
+      "parseAutomaticEvidence", "parseAnalysisPrices", "parseMarketContext", "parseDocumentLineage",
+      "parseContractFacts", "parseContractEvents", "parseContractTermination", "attachPublicAIReview",
+      "quotedContractDay", "quotedContractFinancialLines", "memberMapBoundBusinessJudgments", "mergePortfolioAnalysisGraphs"
+    ];
+    const missingBinding = errorName === "ReferenceError" ? publicBindings.find((name) => message === `${name} is not defined` || message === `Can't find variable: ${name}`) || "unknown" : "unknown";
+    const status = response?.status;
+    console.warn("member-map-load-diagnostic", JSON.stringify({
+      stage, errorName, errorCode, missingBinding,
+      status: Number.isInteger(status) && status >= 100 && status <= 599 ? status : null
+    }));
+  } catch {
+  }
+}
 var { analysisToGraph, fetchPortfolioAnalysisGraph, boundBusinessJudgments: memberMapBoundBusinessJudgments } = ((secBindings) => {
 var MemberMapClientDelta = (() => {
   var __defProp = Object.defineProperty;
@@ -3452,7 +3495,7 @@ ${correction.item.explanation}`
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ positions })
     });
-    let response;
+    let response, diagnosticStage = "request";
     try {
       response = await request(session.token);
       const current = check();
@@ -3462,13 +3505,16 @@ ${correction.item.explanation}`
         check();
       }
       if (!response.ok) throw new Error("unavailable");
+      diagnosticStage = "json";
       const payload = await response.json();
       check();
+      diagnosticStage = "adapter";
       const graph = await analysisToGraph(payload, positions);
       check();
       return graph;
-    } catch {
+    } catch (error) {
       check();
+      memberMapLoadDiagnostic(diagnosticStage, error, response);
       throw new Error("분석 자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
   }
@@ -3937,6 +3983,7 @@ function createPortfolioMapWorkspace(options = {}) {
       return valid(version);
     } catch (error) {
       if (!valid(version) || signal.aborted && !timedOut) return false;
+      memberMapLoadDiagnostic(timedOut ? "graph-timeout" : "graph-other", error);
       state = { ...state, phase: "error", error: timedOut ? "graph-load-timeout" : error instanceof Error ? error.message : "data-unavailable" };
       emit();
       return false;
