@@ -2393,322 +2393,502 @@ function attachPublicAIReview(graph, payload, coverage) {
 }
 
 // framer-components/public-probe/PortfolioAnalysisClient.ts
-var ENDPOINT2 = "https://project-yw131.vercel.app/api/member_map_analysis";
-var FACT_NAMES = {
-  revenue: "매출",
-  operating_income: "영업이익",
-  net_income: "순이익",
-  total_assets: "총자산",
-  total_liabilities: "총부채",
-  equity: "자기자본",
-  cash: "현금성 자산",
-  free_cash_flow: "잉여현금흐름",
-  eps: "주당순이익",
-  market_cap: "시가총액",
-  per: "PER",
-  pbr: "PBR",
-  roe: "자기자본이익률",
-  debt_ratio: "부채비율",
-  operating_margin: "영업이익률",
-  revenue_growth: "매출 성장률",
-  revenue_growth_quarterly_yoy: "분기 매출 성장률(전년 대비)"
-};
-var invalid7 = () => new Error("분석 자료의 형식을 확인하지 못했어요.");
-var row4 = (v) => {
-  if (!v || typeof v !== "object" || Array.isArray(v)) throw invalid7();
-  return v;
-};
-var array = (v, max = 1e4) => {
-  if (!Array.isArray(v) || v.length > max) throw invalid7();
-  return v;
-};
-var text11 = (v, max = 300) => {
-  if (typeof v !== "string" || !v.trim() || v.length > max || /[\u0000-\u001f\u007f<>]/.test(v)) throw invalid7();
-  return v;
-};
-var date = (v) => {
-  const value = text11(v, 10);
-  if (!/^(19|20|21)\d{2}(?:-\d{2}-\d{2})?$/.test(value)) throw invalid7();
-  if (value.length === 10 && (!Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value)) throw invalid7();
-  return value;
-};
-function positionsOnly(input) {
-  if (!Array.isArray(input) || input.length > 30) throw invalid7();
-  const seen = /* @__PURE__ */ new Set();
-  return input.map((position2) => {
-    const { ticker, market: market2 } = position2;
-    if (!(market2 === "KR" ? /^\d{6}$/.test(ticker) : market2 === "US" && /^[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,2})?$/.test(ticker)) || seen.has(ticker)) throw invalid7();
-    seen.add(ticker);
-    return { ticker, market: market2 };
+var { analysisToGraph, fetchPortfolioAnalysisGraph } = ((secBindings) => {
+var MemberMapClientDelta = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // framer-components/public-probe/PortfolioAnalysisClient.ts
+  var PortfolioAnalysisClient_exports = {};
+  __export(PortfolioAnalysisClient_exports, {
+    analysisToGraph: () => analysisToGraph,
+    fetchPortfolioAnalysisGraph: () => fetchPortfolioAnalysisGraph
   });
-}
-var officialDocument = (value, source) => {
-  const url = text11(value, 2048);
-  const valid = source === "DART" ? /^https:\/\/dart\.fss\.or\.kr\/dsaf001\/main\.do\?rcpNo=\d{14}$/.test(url) : source === "SEC" && /^https:\/\/www\.sec\.gov\/Archives\/edgar\/data\/[1-9]\d{0,9}\/\d{18}\/(?:[A-Za-z0-9][A-Za-z0-9_.-]{0,199})?$/.test(url);
-  if (!valid) throw invalid7();
-  return url;
-};
-function financialProof(fact, market2) {
-  if (fact.provenance === void 0) {
-    if (fact.unit === "currency-unverified") throw invalid7();
-    return {};
+
+  // sec-binding:./PortfolioMapData.tsx
+  var buildPortfolioMapGraph = secBindings.buildPortfolioMapGraph;
+  var portfolioDocumentIdentity = secBindings.portfolioDocumentIdentity;
+
+  // sec-binding:./PortfolioAutomaticEvidence.ts
+  var parseAutomaticEvidence = secBindings.parseAutomaticEvidence;
+
+  // sec-binding:./PortfolioAnalysisPrices.ts
+  var parseAnalysisPrices = secBindings.parseAnalysisPrices;
+
+  // sec-binding:./PortfolioMarketContext.ts
+  var parseMarketContext = secBindings.parseMarketContext;
+
+  // sec-binding:./PortfolioEventLineage.ts
+  var parseDocumentLineage = secBindings.parseDocumentLineage;
+
+  // sec-binding:./PortfolioContractFacts.ts
+  var parseContractFacts = secBindings.parseContractFacts;
+
+  // sec-binding:./PortfolioContractEvents.ts
+  var parseContractEvents = secBindings.parseContractEvents;
+
+  // sec-binding:./PortfolioContractTermination.ts
+  var parseContractTermination = secBindings.parseContractTermination;
+
+  // sec-binding:../../review/member-map/local-ai-candidates.ts
+  var attachPublicAIReview = secBindings.attachPublicAIReview;
+
+  // framer-components/public-probe/PortfolioAnalysisClient.ts
+  var ENDPOINT = "https://project-yw131.vercel.app/api/member_map_analysis";
+  var FACT_NAMES = {
+    revenue: "매출",
+    operating_income: "영업이익",
+    net_income: "순이익",
+    institution_13f_shares: "13F 보고 보유수량",
+    institution_13f_value_usd: "13F 분기말 평가액",
+    etf_listed_units: "ETF 상장좌수",
+    etf_nav: "ETF 순자산가치(NAV)",
+    etf_net_assets: "ETF 순자산",
+    etf_unit_change: "ETF 상장좌수 증감",
+    foreign_net_shares: "외국인 일별 순매매량",
+    institution_net_shares: "기관 일별 순매매량",
+    total_assets: "총자산",
+    total_liabilities: "총부채",
+    equity: "자기자본",
+    cash: "현금성 자산",
+    free_cash_flow: "잉여현금흐름",
+    eps: "주당순이익",
+    market_cap: "시가총액",
+    per: "PER",
+    pbr: "PBR",
+    roe: "자기자본이익률",
+    debt_ratio: "부채비율",
+    operating_margin: "영업이익률",
+    revenue_growth: "매출 성장률",
+    revenue_growth_quarterly_yoy: "분기 매출 성장률(전년 대비)"
+  };
+  var invalid = () => new Error("분석 자료의 형식을 확인하지 못했어요.");
+  var row = (v) => {
+    if (!v || typeof v !== "object" || Array.isArray(v)) throw invalid();
+    return v;
+  };
+  var array = (v, max = 1e4) => {
+    if (!Array.isArray(v) || v.length > max) throw invalid();
+    return v;
+  };
+  var text = (v, max = 300) => {
+    if (typeof v !== "string" || !v.trim() || v.length > max || /[\u0000-\u001f\u007f<>]/.test(v)) throw invalid();
+    return v;
+  };
+  var date = (v) => {
+    const value = text(v, 10);
+    if (!/^(19|20|21)\d{2}(?:-\d{2}-\d{2})?$/.test(value)) throw invalid();
+    if (value.length === 10 && (!Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value)) throw invalid();
+    return value;
+  };
+  function positionsOnly(input) {
+    if (!Array.isArray(input) || input.length > 30) throw invalid();
+    const seen = /* @__PURE__ */ new Set();
+    return input.map((position) => {
+      const { ticker, market } = position;
+      if (!(market === "KR" ? /^\d{6}$/.test(ticker) : market === "US" && /^[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,2})?$/.test(ticker)) || seen.has(ticker)) throw invalid();
+      seen.add(ticker);
+      return { ticker, market };
+    });
   }
-  const p = row4(fact.provenance);
-  if (p.kind === "dart-annual") {
-    const receipt = text11(p.rcept_no, 14), start = date(p.period_start), end = date(p.period_end), filed = date(p.filed);
-    const basis = text11(p.fs_div, 3), account = text11(p.account_name, 200);
-    const days = (Date.parse(end) - Date.parse(start)) / 864e5 + 1;
-    if (market2 !== "KR" || fact.source !== "DART" || fact.unit !== "KRW" || !["revenue", "operating_income", "net_income"].includes(String(fact.metric)) || !/^\d{14}$/.test(receipt) || [start, end, filed].some((d) => d.length !== 10) || end.slice(0, 4) !== fact.as_of || days < 330 || days > 371 || filed < end || receipt.slice(0, 8) !== filed.replace(/-/g, "") || !["CFS", "OFS"].includes(basis) || p.source_url !== `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}`) throw invalid7();
-    return {
-      url: p.source_url,
-      explanation: `DART ${basis === "CFS" ? "연결" : "별도"}재무제표의 연간 수치예요. 회계기간 ${start} ~ ${end} · 제출일 ${filed}.
+  var officialDocument = (value, source) => {
+    const url = text(value, 2048);
+    const valid = source === "DART" ? /^https:\/\/dart\.fss\.or\.kr\/dsaf001\/main\.do\?rcpNo=\d{14}$/.test(url) : source === "SEC" && /^https:\/\/www\.sec\.gov\/Archives\/edgar\/data\/[1-9]\d{0,9}\/\d{18}\/(?:[A-Za-z0-9][A-Za-z0-9_.-]{0,199})?$/.test(url);
+    if (!valid) throw invalid();
+    return url;
+  };
+  var HOLDER_METRICS = /* @__PURE__ */ new Set([
+    "foreign_net_shares",
+    "institution_net_shares",
+    "institution_13f_shares",
+    "institution_13f_value_usd",
+    "etf_listed_units",
+    "etf_nav",
+    "etf_net_assets",
+    "etf_unit_change"
+  ]);
+  var PUBLIC_DATA = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/";
+  var CHANGE_NAMES = {
+    price: "가격",
+    market_cap: "시가총액",
+    pbr: "PBR",
+    eps: "EPS",
+    roe: "ROE",
+    debt_ratio: "부채비율",
+    operating_margin: "영업이익률",
+    revenue_growth: "매출 성장률",
+    shares_outstanding: "발행주식수"
+  };
+  function changeDetails(value, wanted) {
+    const items = /* @__PURE__ */ new Map();
+    if (value === void 0) return items;
+    const projected = row(value), stocks = row(projected.stocks);
+    for (const [key, position] of wanted) if (position.market === "KR") {
+      items.set(key, [{
+        id: `change-${position.ticker}`,
+        title: "지난 수집과 수치 비교",
+        source: "기존 종목 변화센터",
+        relationship: "unknown",
+        value: "비교 자료 확인 필요",
+        explanation: "이 종목의 비교 가능한 이전·현재 자료를 받지 못했어요. 자료 누락·수집본 부족·검증 제외일 수 있으며 변화가 없다는 뜻은 아니에요."
+      }]);
+    }
+    if (Object.keys(stocks).length > 30) throw invalid();
+    for (const [ticker, entry] of Object.entries(stocks)) {
+      const stock = row(entry), key = `KR:${ticker}`;
+      const url = `https://raw.githubusercontent.com/gywns0126/VERITY-data/main/stock_change_public/${ticker.slice(0, 3)}.json`;
+      if (!wanted.has(key) || stock.ticker !== ticker || stock.market !== "KR" || stock.source_url !== url) throw invalid();
+      if (stock.today === null) continue;
+      const comparison = row(stock.today), current = date(comparison.as_of), previous = date(comparison.previous_as_of);
+      if (current.length !== 10 || previous.length !== 10 || previous >= current || current > (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) || comparison.date_basis !== "collection_date" || comparison.source_url !== url || !["changed", "unchanged", "partial", "unavailable"].includes(String(comparison.status))) throw invalid();
+      const seen = /* @__PURE__ */ new Set();
+      const rows = array(comparison.fields, 9).map((value2) => {
+        const field = row(value2), name = text(field.key, 40), before = field.before, after = field.after, delta = field.delta;
+        const numeric = (n) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= Number.MAX_SAFE_INTEGER;
+        if (!Object.hasOwn(CHANGE_NAMES, name) || seen.has(name) || !numeric(before) || !numeric(after) || !numeric(delta) || before === after || Math.abs(after - before - delta) > 1e-6 || ["price", "market_cap", "shares_outstanding"].includes(name) && Math.min(before, after) < 0 || name === "shares_outstanding" && (!Number.isSafeInteger(before) || !Number.isSafeInteger(after)) || (before === 0 ? field.delta_pct !== null : !numeric(field.delta_pct) || Math.abs((after - before) / Math.abs(before) * 100 - field.delta_pct) > 5001e-6)) throw invalid();
+        seen.add(name);
+        return { label: CHANGE_NAMES[name], value: `${before.toLocaleString("ko-KR", { maximumFractionDigits: 6 })} → ${after.toLocaleString("ko-KR", { maximumFractionDigits: 6 })}` };
+      });
+      if (["unchanged", "unavailable"].includes(String(comparison.status)) && rows.length || ["changed", "partial"].includes(String(comparison.status)) && !rows.length) throw invalid();
+      items.set(key, [{
+        id: `change-${ticker}`,
+        title: rows.length ? "지난 수집 이후 달라진 수치" : "지난 수집과 수치 비교",
+        source: "기존 종목 변화센터",
+        url,
+        asOf: current,
+        relationship: "unknown",
+        rows,
+        ...!rows.length ? { value: comparison.status === "unchanged" ? "제공된 비교 항목에 변화 없음" : "표시할 비교 수치 확인 불가" } : {},
+        explanation: `수집일 ${previous} → ${current}. 거래일이나 연속 거래일 비교가 아니에요. 출처가 보관한 이전·현재 수치이며 통화·회계기간이 확인되지 않은 값은 서로 다른 종목과 비교하지 않아요. 호재·악재나 이전 투자 판단의 변경을 뜻하지 않아요.` + (comparison.status === "partial" ? " 검증된 항목만 표시하며 일부 비교는 제외했어요." : comparison.status === "unavailable" ? " 원자료에는 변경 표시가 있으나 비교 기준이나 수치 검증을 통과한 항목이 없어요. 변화가 없다는 뜻은 아니에요." : "")
+      }]);
+    }
+    return items;
+  }
+  function financialProof(fact, market, ticker) {
+    if (fact.provenance === void 0) {
+      if (fact.unit === "currency-unverified" || HOLDER_METRICS.has(String(fact.metric))) throw invalid();
+      return {};
+    }
+    const p = row(fact.provenance);
+    if (p.kind === "public-13f") {
+      const report = date(p.report_date), filed = date(p.filed_at), institution = text(p.institution, 160);
+      const metric = String(fact.metric);
+      if (market !== "US" || p.ticker !== ticker || fact.source !== "SEC" || !["institution_13f_shares", "institution_13f_value_usd"].includes(metric) || fact.unit !== (metric === "institution_13f_shares" ? "주" : "USD") || !Number.isSafeInteger(fact.value) || fact.value < 0 || report.length !== 10 || filed.length !== 10 || report !== fact.as_of || filed < report || !["03-31", "06-30", "09-30", "12-31"].includes(report.slice(5)) || filed > (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) || !["us_smart_money_13f.json", "us_investor_portfolios.json"].some((name) => p.source_url === PUBLIC_DATA + name)) throw invalid();
+      let original;
+      if (p.original_status === "provided") {
+        const cik2 = text(p.manager_cik, 10), accession2 = text(p.accession, 20);
+        original = officialDocument(p.original_url, "SEC");
+        if (!/^[1-9]\d{0,9}$/.test(cik2) || !/^\d{10}-\d{2}-\d{6}$/.test(accession2) || !original.startsWith(`https://www.sec.gov/Archives/edgar/data/${cik2}/${accession2.replace(/-/g, "")}/`) || original.endsWith("/")) throw invalid();
+      } else if (p.original_status !== "not-supplied" || p.original_url !== null || p.accession !== null) throw invalid();
+      return {
+        title: `${institution} · ${FACT_NAMES[metric]}`,
+        url: original || p.source_url,
+        explanation: `보유 기준일 ${report} · 제출일 ${filed}. 해당 기관이 보고한 분기말 보유·평가액이며 현재 보유, 매수 체결가 또는 매매 신호가 아니에요. 기관별 보고분기가 다를 수 있어요.` + (original ? "" : " 원문 접수번호는 이 공개 자료에 제공되지 않아 기존 공개 집계 자료로 연결해요.")
+      };
+    }
+    if (p.kind === "public-etf-flow") {
+      const trade = date(p.trade_date), metric = String(fact.metric);
+      if (market !== "KR" || p.ticker !== ticker || fact.source !== "KRX 공개 ETF 자료" || !["etf_listed_units", "etf_nav", "etf_net_assets", "etf_unit_change"].includes(metric) || trade.length !== 10 || trade !== fact.as_of || trade > (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) || [0, 6].includes(new Date(trade).getUTCDay()) || p.source_url !== PUBLIC_DATA + "etf_flow.json" || fact.unit !== (["etf_listed_units", "etf_unit_change"].includes(metric) ? "좌" : "KRW") || metric !== "etf_unit_change" && fact.value < 0 || ["etf_listed_units", "etf_unit_change"].includes(metric) && !Number.isSafeInteger(fact.value)) throw invalid();
+      const previous = metric === "etf_unit_change" ? date(p.previous_date) : null;
+      if (previous && (previous.length !== 10 || previous >= trade || [0, 6].includes(new Date(previous).getUTCDay()))) throw invalid();
+      return {
+        url: p.source_url,
+        explanation: `ETF 자체의 공개 수치 · 거래일 ${trade}${previous ? ` · 비교 거래일 ${previous}` : ""}. 기존 KRX 수집 자료를 재사용해요. 구성종목의 매수 압력·호재·악재로 환산하지 않아요.`
+      };
+    }
+    if (p.kind === "public-stock-flow") {
+      const day = date(p.trade_date);
+      if (market !== "KR" || p.ticker !== ticker || day.length !== 10 || day !== fact.as_of || fact.source !== "네이버 금융" || fact.unit !== "주" || !Number.isSafeInteger(fact.value) || !["foreign_net_shares", "institution_net_shares"].includes(String(fact.metric)) || p.source_url !== `https://finance.naver.com/item/frgn.naver?code=${ticker}`) throw invalid();
+      return {
+        url: p.source_url,
+        explanation: "보관된 최근 거래일의 순매매량이에요. 양수는 순매수, 음수는 순매도이며 금액이 아닌 주식 수예요. 갱신 시각과 거래일은 다를 수 있어요. 호재·악재나 주가 방향을 뜻하지 않아요."
+      };
+    }
+    if (p.kind === "dart-annual") {
+      const receipt = text(p.rcept_no, 14), start = date(p.period_start), end = date(p.period_end), filed = date(p.filed);
+      const basis = text(p.fs_div, 3), account = text(p.account_name, 200);
+      const days = (Date.parse(end) - Date.parse(start)) / 864e5 + 1;
+      if (market !== "KR" || fact.source !== "DART" || fact.unit !== "KRW" || !["revenue", "operating_income", "net_income"].includes(String(fact.metric)) || !/^\d{14}$/.test(receipt) || [start, end, filed].some((d) => d.length !== 10) || end.slice(0, 4) !== fact.as_of || days < 330 || days > 371 || filed < end || receipt.slice(0, 8) !== filed.replace(/-/g, "") || !["CFS", "OFS"].includes(basis) || p.source_url !== `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}`) throw invalid();
+      return {
+        url: p.source_url,
+        explanation: `DART ${basis === "CFS" ? "연결" : "별도"}재무제표의 연간 수치예요. 회계기간 ${start} ~ ${end} · 제출일 ${filed}.
 공시 계정 ${account}`
+      };
+    }
+    const cik = text(p.cik, 10), accession = text(p.accession, 20);
+    const period = date(p.period_end), form = text(p.form, 8), tag = text(p.tag, 200);
+    if (market !== "US" || fact.source !== "SEC" || !/^[1-9][0-9]{0,9}$/.test(cik) || !/^\d{10}-\d{2}-\d{6}$/.test(accession) || period.length !== 10 || period.slice(0, 4) !== fact.as_of || !["10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"].includes(form) || !/^[A-Za-z][A-Za-z0-9_:]{0,199}$/.test(tag) || typeof p.currency_verified !== "boolean" || (p.currency_verified ? !/^(KRW|USD|CAD|AUD|EUR|GBP|JPY|HKD|CNY|CHF|ILS|SGD|NZD|BRL)$/.test(String(fact.unit)) : fact.unit !== "currency-unverified")) throw invalid();
+    const base = `https://www.sec.gov/Archives/edgar/data/${cik}/${accession.replace(/-/g, "")}/${accession}-index`;
+    if (p.source_url !== base + ".html" && p.source_url !== base + ".htm") throw invalid();
+    const url = p.source_url;
+    return {
+      url,
+      ...p.currency_verified ? {} : { unit: "보고 통화 미확인" },
+      explanation: `SEC ${form}의 연간 수치예요. 회계기간 종료일 ${period} · 제출일은 이 자료에 없어요.
+XBRL 항목 ${tag}` + (p.currency_verified ? "" : "\n저장된 원자료에 통화가 없어 달러로 단정하지 않아요.")
     };
   }
-  const cik = text11(p.cik, 10), accession = text11(p.accession, 20);
-  const period = date(p.period_end), form = text11(p.form, 8), tag = text11(p.tag, 200);
-  if (market2 !== "US" || fact.source !== "SEC" || !/^[1-9][0-9]{0,9}$/.test(cik) || !/^\d{10}-\d{2}-\d{6}$/.test(accession) || period.length !== 10 || period.slice(0, 4) !== fact.as_of || !["10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"].includes(form) || !/^[A-Za-z][A-Za-z0-9_:]{0,199}$/.test(tag) || typeof p.currency_verified !== "boolean" || (p.currency_verified ? !/^(KRW|USD|CAD|AUD|EUR|GBP|JPY|HKD|CNY|CHF|ILS|SGD|NZD|BRL)$/.test(String(fact.unit)) : fact.unit !== "currency-unverified")) throw invalid7();
-  const base = `https://www.sec.gov/Archives/edgar/data/${cik}/${accession.replace(/-/g, "")}/${accession}-index`;
-  if (p.source_url !== base + ".html" && p.source_url !== base + ".htm") throw invalid7();
-  const url = p.source_url;
-  return {
-    url,
-    ...p.currency_verified ? {} : { unit: "보고 통화 미확인" },
-    explanation: `SEC ${form}의 연간 수치예요. 회계기간 종료일 ${period} · 제출일은 이 자료에 없어요.
-XBRL 항목 ${tag}` + (p.currency_verified ? "" : "\n저장된 원자료에 통화가 없어 달러로 단정하지 않아요.")
-  };
-}
-async function analysisToGraph(payload, input) {
-  const positions = positionsOnly(input), body = row4(payload), coverage = row4(body.coverage);
-  if (body.schema !== "alphaconsole-portfolio-v1" || coverage.requested !== positions.length) throw invalid7();
-  const wanted = new Map(positions.map((p) => [`${p.market}:${p.ticker}`, p]));
-  const companies = /* @__PURE__ */ new Map(), missing2 = /* @__PURE__ */ new Set();
-  for (const value of array(body.companies, 30)) {
-    const company = row4(value), id = text11(company.id);
-    const expected = wanted.get(id);
-    if (!expected || company.ticker !== expected.ticker || company.market !== expected.market || companies.has(id)) throw invalid7();
-    companies.set(id, company);
-  }
-  for (const value of array(coverage.missing, 30)) {
-    const company = row4(value), id = text11(company.id), expected = wanted.get(id);
-    if (!expected || company.ticker !== expected.ticker || company.market !== expected.market || companies.has(id) || missing2.has(id)) throw invalid7();
-    missing2.add(id);
-  }
-  if (companies.size + missing2.size !== wanted.size || coverage.matched !== companies.size) throw invalid7();
-  const automatic = parseAutomaticEvidence(body.automatic_evidence, new Set(wanted.keys()));
-  const prices = parseAnalysisPrices(body.prices, wanted);
-  const companyNames = new Map([...companies].map(([id, company]) => {
-    const name = text11(company.name, 180);
-    const names = company.source_names === void 0 ? [name] : array(company.source_names, 4).map((v) => text11(v, 180));
-    if (names[0] !== name || new Set(names).size !== names.length) throw invalid7();
-    return [id, names];
-  }));
-  const documents = /* @__PURE__ */ new Map();
-  for (const value of array(body.documents)) {
-    const doc = row4(value), id = text11(doc.id), source = text11(doc.source, 30);
-    const ids = array(doc.company_ids, 30).map((v) => text11(v));
-    if (documents.has(id) || !ids.length || new Set(ids).size !== ids.length || ids.some((key) => !companies.has(key)) || doc.kind !== "disclosure") throw invalid7();
-    const matches = array(doc.source_matches === void 0 ? [] : doc.source_matches, 30);
-    const matchedTickers = /* @__PURE__ */ new Set();
-    for (const value2 of matches) {
-      const match = row4(value2), ticker = text11(match.ticker, 6), receipt = text11(match.receipt_no, 14);
-      if (source !== "DART" || match.kind !== "same-dart-receipt" || match.source_file !== "portfolio.json" || !/^\d{6}$/.test(ticker) || !/^\d{14}$/.test(receipt) || id !== `DART:${receipt}` || doc.url !== `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}` || !ids.includes(`KR:${ticker}`) || date(match.as_of) !== doc.as_of || matchedTickers.has(ticker)) throw invalid7();
-      matchedTickers.add(ticker);
+  async function analysisToGraph(payload, input) {
+    const positions = positionsOnly(input), body = row(payload), coverage = row(body.coverage);
+    if (body.schema !== "alphaconsole-portfolio-v1" || coverage.requested !== positions.length) throw invalid();
+    const wanted = new Map(positions.map((p) => [`${p.market}:${p.ticker}`, p]));
+    const changes = changeDetails(body.public_changes === void 0 && coverage.change_reuse !== void 0 ? { stocks: {} } : body.public_changes, wanted);
+    const companies = /* @__PURE__ */ new Map(), missing = /* @__PURE__ */ new Set();
+    for (const value of array(body.companies, 30)) {
+      const company = row(value), id = text(company.id);
+      const expected = wanted.get(id);
+      if (!expected || company.ticker !== expected.ticker || company.market !== expected.market || companies.has(id)) throw invalid();
+      companies.set(id, company);
     }
-    const context = { id, source, url: text11(doc.url, 2048), title: text11(doc.title), as_of: date(doc.as_of), company_ids: ids };
-    const lineage = parseDocumentLineage(doc.event_lineage, context);
-    const contract = parseContractFacts(doc.contract_facts, context);
-    const termination = parseContractTermination(doc.contract_termination, context, companyNames.get(ids[0]));
-    const archived = doc.capture_archive !== void 0;
-    if (archived && (doc.capture_archive !== "retained-public-capture" || source !== "DART" || !contract && !termination)) throw invalid7();
-    documents.set(id, { ids, archived, item: {
-      id: `disclosure-${id}`,
-      title: text11(doc.title),
-      source,
-      url: officialDocument(doc.url, source),
-      asOf: date(doc.as_of),
-      relationship: "direct",
-      explanation: "이 종목에 연결된 공시 원문이에요. 사업상 영향이나 주가 방향을 뜻하지 않아요." + (matches.length ? " 공시 목록·공시 알림에서 접수번호·종목·접수일·제목이 일치해 같은 원문으로 묶었어요. 동일 DART 자료의 재수집이며 독립된 추가 확인은 아니에요." : "") + (lineage ? " " + lineage.explanation : "") + (contract ? "\n\n" + contract.explanation : "") + (termination ? "\n\n" + termination.explanation : ""),
-      reason: termination ? "계약 해지 통보 공시" : "공시 연결",
-      ...lineage || contract || termination ? { sources: [...lineage?.sources || [], ...contract?.sources || [], ...termination?.sources || []] } : {}
-    } });
-  }
-  const missingSources = array(coverage.missing_source_files, 11);
-  if (missingSources.some((v) => typeof v !== "string" || !/^(universe_search|stock_report_public|us_stock_report_public|public_disclosure_feed|us_disclosure_feed|member_map_auto_evidence|member_map_ai_candidates|kr_business_overview_public|macro_snapshot|commodity_exposure|portfolio)\.json$/.test(v))) throw invalid7();
-  const evidenceCoverage = coverage.evidence === void 0 ? {} : row4(coverage.evidence);
-  const evidenceFailed = evidenceCoverage.status === "not-supplied" || evidenceCoverage.status === "rejected";
-  const counts = [
-    ["document_records", "공시", documents.size],
-    ["automatic_relationships", "관계 후보", automatic.relations.length],
-    ["automatic_materials", "원문 발췌", automatic.materials.length]
-  ];
-  const notices = counts.flatMap(([key, label2, received]) => {
-    if (evidenceCoverage[key] === void 0) return [];
-    const count = row4(evidenceCoverage[key]);
-    if (!Number.isSafeInteger(count.total) || !Number.isSafeInteger(count.returned) || count.total < received || count.returned !== received || count.omitted !== count.total - received) throw invalid7();
-    return count.omitted ? [`${label2} ${received}/${count.total}건 표시`] : [];
-  });
-  const correctionCount = body.automatic_evidence === void 0 || body.automatic_evidence === null ? void 0 : row4(body.automatic_evidence).coverage?.response_records?.corrections;
-  if (correctionCount !== void 0) {
-    const count = row4(correctionCount), received = automatic.corrections?.length || 0;
-    if (!Number.isSafeInteger(count.total) || count.total < received || count.returned !== received || count.omitted !== count.total - received || count.truncated !== (count.omitted !== 0)) throw invalid7();
-    if (count.omitted) notices.push(`정정공시 ${received}/${count.total}건 표시`);
-  }
-  const maps = positions.map((position2) => {
-    const key = `${position2.market}:${position2.ticker}`, company = companies.get(key);
-    const declared = company ? array(company.document_ids).map((v) => text11(v)) : [];
-    const associated = [...documents.entries()].filter(([, doc]) => doc.ids.includes(key));
-    if (new Set(declared).size !== declared.length || declared.length !== associated.length || declared.some((id) => !documents.get(id)?.ids.includes(key))) throw invalid7();
-    const eventItems = associated.map(([, doc]) => doc.item);
-    for (const correction of (automatic.corrections || []).filter((c) => c.companyId === key)) {
-      if (!company) throw invalid7();
-      const priorIndex = eventItems.findIndex((item) => item.url === correction.item.url);
-      if (priorIndex < 0) eventItems.push(correction.item);
-      else {
-        const prior = eventItems[priorIndex];
-        if (prior.source !== correction.item.source || prior.title !== correction.item.title || prior.asOf !== correction.item.asOf) throw invalid7();
-        eventItems[priorIndex] = {
-          ...prior,
-          reason: correction.item.reason,
-          explanation: `${prior.explanation}
+    for (const value of array(coverage.missing, 30)) {
+      const company = row(value), id = text(company.id), expected = wanted.get(id);
+      if (!expected || company.ticker !== expected.ticker || company.market !== expected.market || companies.has(id) || missing.has(id)) throw invalid();
+      missing.add(id);
+    }
+    if (companies.size + missing.size !== wanted.size || coverage.matched !== companies.size) throw invalid();
+    const automatic = parseAutomaticEvidence(body.automatic_evidence, new Set(wanted.keys()));
+    const prices = parseAnalysisPrices(body.prices, wanted);
+    const companyNames = new Map([...companies].map(([id, company]) => {
+      const name = text(company.name, 180);
+      const names = company.source_names === void 0 ? [name] : array(company.source_names, 4).map((v) => text(v, 180));
+      if (names[0] !== name || new Set(names).size !== names.length) throw invalid();
+      return [id, names];
+    }));
+    const documents = /* @__PURE__ */ new Map();
+    for (const value of array(body.documents)) {
+      const doc = row(value), id = text(doc.id), source = text(doc.source, 30);
+      const ids = array(doc.company_ids, 30).map((v) => text(v));
+      if (documents.has(id) || !ids.length || new Set(ids).size !== ids.length || ids.some((key) => !companies.has(key)) || doc.kind !== "disclosure") throw invalid();
+      const matches = array(doc.source_matches === void 0 ? [] : doc.source_matches, 30);
+      const matchedTickers = /* @__PURE__ */ new Set();
+      for (const value2 of matches) {
+        const match = row(value2), ticker = text(match.ticker, 6), receipt = text(match.receipt_no, 14);
+        if (source !== "DART" || match.kind !== "same-dart-receipt" || match.source_file !== "portfolio.json" || !/^\d{6}$/.test(ticker) || !/^\d{14}$/.test(receipt) || id !== `DART:${receipt}` || doc.url !== `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}` || !ids.includes(`KR:${ticker}`) || date(match.as_of) !== doc.as_of || matchedTickers.has(ticker)) throw invalid();
+        matchedTickers.add(ticker);
+      }
+      const context = { id, source, url: text(doc.url, 2048), title: text(doc.title), as_of: date(doc.as_of), company_ids: ids };
+      const lineage = parseDocumentLineage(doc.event_lineage, context);
+      const contract = parseContractFacts(doc.contract_facts, context);
+      const termination = parseContractTermination(doc.contract_termination, context, companyNames.get(ids[0]));
+      const archived = doc.capture_archive !== void 0;
+      if (archived && (doc.capture_archive !== "retained-public-capture" || source !== "DART" || !contract && !termination)) throw invalid();
+      documents.set(id, { ids, archived, item: {
+        id: `disclosure-${id}`,
+        title: text(doc.title),
+        source,
+        url: officialDocument(doc.url, source),
+        asOf: date(doc.as_of),
+        relationship: "direct",
+        explanation: "이 종목에 연결된 공시 원문이에요. 사업상 영향이나 주가 방향을 뜻하지 않아요." + (matches.length ? " 공시 목록·공시 알림에서 접수번호·종목·접수일·제목이 일치해 같은 원문으로 묶었어요. 동일 DART 자료의 재수집이며 독립된 추가 확인은 아니에요." : "") + (lineage ? " " + lineage.explanation : "") + (contract ? "\n\n" + contract.explanation : "") + (termination ? "\n\n" + termination.explanation : ""),
+        reason: termination ? "계약 해지 통보 공시" : "공시 연결",
+        ...lineage || contract || termination ? { sources: [...lineage?.sources || [], ...contract?.sources || [], ...termination?.sources || []] } : {}
+      } });
+    }
+    const missingSources = array(coverage.missing_source_files, 11);
+    if (missingSources.some((v) => typeof v !== "string" || !/^(universe_search|stock_report_public|us_stock_report_public|public_disclosure_feed|us_disclosure_feed|member_map_auto_evidence|member_map_ai_candidates|kr_business_overview_public|macro_snapshot|commodity_exposure|portfolio)\.json$/.test(v))) throw invalid();
+    const evidenceCoverage = coverage.evidence === void 0 ? {} : row(coverage.evidence);
+    const evidenceFailed = evidenceCoverage.status === "not-supplied" || evidenceCoverage.status === "rejected";
+    const counts = [
+      ["document_records", "공시", documents.size],
+      ["automatic_relationships", "관계 후보", automatic.relations.length],
+      ["automatic_materials", "원문 발췌", automatic.materials.length]
+    ];
+    const notices = counts.flatMap(([key, label, received]) => {
+      if (evidenceCoverage[key] === void 0) return [];
+      const count = row(evidenceCoverage[key]);
+      if (!Number.isSafeInteger(count.total) || !Number.isSafeInteger(count.returned) || count.total < received || count.returned !== received || count.omitted !== count.total - received) throw invalid();
+      return count.omitted ? [`${label} ${received}/${count.total}건 표시`] : [];
+    });
+    const correctionCount = body.automatic_evidence === void 0 || body.automatic_evidence === null ? void 0 : row(body.automatic_evidence).coverage?.response_records?.corrections;
+    if (correctionCount !== void 0) {
+      const count = row(correctionCount), received = automatic.corrections?.length || 0;
+      if (!Number.isSafeInteger(count.total) || count.total < received || count.returned !== received || count.omitted !== count.total - received || count.truncated !== (count.omitted !== 0)) throw invalid();
+      if (count.omitted) notices.push(`정정공시 ${received}/${count.total}건 표시`);
+    }
+    const maps = positions.map((position) => {
+      const key = `${position.market}:${position.ticker}`, company = companies.get(key);
+      const declared = company ? array(company.document_ids).map((v) => text(v)) : [];
+      const associated = [...documents.entries()].filter(([, doc]) => doc.ids.includes(key));
+      if (new Set(declared).size !== declared.length || declared.length !== associated.length || declared.some((id) => !documents.get(id)?.ids.includes(key))) throw invalid();
+      const eventItems = associated.map(([, doc]) => doc.item);
+      for (const correction of (automatic.corrections || []).filter((c) => c.companyId === key)) {
+        if (!company) throw invalid();
+        const priorIndex = eventItems.findIndex((item) => item.url === correction.item.url);
+        if (priorIndex < 0) eventItems.push(correction.item);
+        else {
+          const prior = eventItems[priorIndex];
+          if (prior.source !== correction.item.source || prior.title !== correction.item.title || prior.asOf !== correction.item.asOf) throw invalid();
+          eventItems[priorIndex] = {
+            ...prior,
+            reason: correction.item.reason,
+            explanation: `${prior.explanation}
 
 ${correction.item.explanation}`
-        };
+          };
+        }
       }
-    }
-    const facts = (company ? array(company.facts) : []).map((value, index) => {
-      const fact = row4(value), numeric2 = fact.value;
-      if (typeof numeric2 !== "number" || !Number.isFinite(numeric2) || Math.abs(numeric2) > 1e30) throw invalid7();
-      const unit = text11(fact.unit, 30), metric = text11(fact.metric, 80);
+      const facts = (company ? array(company.facts) : []).map((value, index) => {
+        const fact = row(value), numeric = fact.value;
+        if (typeof numeric !== "number" || !Number.isFinite(numeric) || Math.abs(numeric) > 1e30) throw invalid();
+        const unit = text(fact.unit, 30), metric = text(fact.metric, 80);
+        return {
+          id: ["foreign_net_shares", "institution_net_shares"].includes(metric) ? `flow-${metric}` : HOLDER_METRICS.has(metric) ? `flow-${metric}-${index}` : `fact-${index}`,
+          title: FACT_NAMES[metric] || metric,
+          value: numeric.toLocaleString("ko-KR"),
+          explanation: "출처에 표시된 값과 기준일이에요.",
+          source: text(fact.source, 80),
+          asOf: date(fact.as_of),
+          unit,
+          relationship: "unknown",
+          ...financialProof(fact, position.market, position.ticker)
+        };
+      });
+      const flows = facts.filter((item) => item.id.startsWith("flow-"));
+      const financial = [...changes.get(key) || [], ...facts.filter((item) => !item.id.startsWith("flow-"))];
+      const failed = !company || missingSources.some((name) => name === "universe_search.json" || (position.market === "KR" ? ["stock_report_public.json", "public_disclosure_feed.json"] : ["us_stock_report_public.json", "us_disclosure_feed.json"]).includes(name));
+      const sections = [
+        {
+          id: "business",
+          title: "사업 자료",
+          state: evidenceFailed ? "error" : automatic.materials.some((m) => m.companyIds.includes(key)) ? "ready" : "empty",
+          items: automatic.materials.filter((m) => m.companyIds.includes(key)).map((m) => m.item),
+          message: evidenceFailed ? "자동 관계 자료를 불러오지 못했어요. 실제 관계가 없다는 뜻은 아니에요." : "원문에 함께 언급된 자료와 관계 후보를 구분해요. 언급만으로 거래 관계나 주가 영향을 판단하지 않아요."
+        },
+        {
+          id: "finance",
+          title: "공개 재무 자료",
+          state: failed ? "error" : financial.length ? "ready" : "empty",
+          items: financial,
+          message: failed ? "공개 자료 일부를 불러오지 못했어요." : "항목마다 출처와 기준일을 함께 확인하세요."
+        },
+        ...flows.length ? [{
+          id: "holders",
+          title: "수급 자료",
+          state: "ready",
+          items: flows,
+          message: "항목별 거래일·보고기간·제출일을 구분하세요. 순매매량·13F 보유·ETF 수치만으로 투자 방향을 판단하지 않아요."
+        }] : [],
+        {
+          id: "events",
+          title: "공시 자료",
+          state: failed ? "error" : eventItems.length ? "ready" : "empty",
+          items: eventItems,
+          message: failed ? "공개 자료 일부를 불러오지 못했어요." : "같은 공시가 여러 종목에 연결돼도 공통 영향이 확인된 것은 아니에요."
+        }
+      ];
       return {
-        id: `fact-${index}`,
-        title: FACT_NAMES[metric] || metric,
-        value: numeric2.toLocaleString("ko-KR"),
-        explanation: "출처에 표시된 값과 기준일이에요.",
-        source: text11(fact.source, 80),
-        asOf: date(fact.as_of),
-        unit,
-        relationship: "unknown",
-        ...financialProof(fact, position2.market)
+        ...position,
+        name: company ? text(company.name, 180) : position.ticker,
+        sections,
+        coverage: { ok: failed ? 0 : 1, total: 1, missing: failed ? ["공개 자료"] : [] }
       };
     });
-    const failed = !company || missingSources.some((name) => name === "universe_search.json" || (position2.market === "KR" ? ["stock_report_public.json", "public_disclosure_feed.json"] : ["us_stock_report_public.json", "us_disclosure_feed.json"]).includes(name));
-    const sections = [
-      {
-        id: "business",
-        title: "사업 자료",
-        state: evidenceFailed ? "error" : automatic.materials.some((m) => m.companyIds.includes(key)) ? "ready" : "empty",
-        items: automatic.materials.filter((m) => m.companyIds.includes(key)).map((m) => m.item),
-        message: evidenceFailed ? "자동 관계 자료를 불러오지 못했어요. 실제 관계가 없다는 뜻은 아니에요." : "원문에 함께 언급된 자료와 관계 후보를 구분해요. 언급만으로 거래 관계나 주가 영향을 판단하지 않아요."
-      },
-      {
-        id: "finance",
-        title: "공개 재무 자료",
-        state: failed ? "error" : facts.length ? "ready" : "empty",
-        items: facts,
-        message: failed ? "공개 자료 일부를 불러오지 못했어요." : "항목마다 출처와 기준일을 함께 확인하세요."
-      },
-      {
-        id: "events",
-        title: "공시 자료",
-        state: failed ? "error" : eventItems.length ? "ready" : "empty",
-        items: eventItems,
-        message: failed ? "공개 자료 일부를 불러오지 못했어요." : "같은 공시가 여러 종목에 연결돼도 공통 영향이 확인된 것은 아니에요."
+    const graph = await buildPortfolioMapGraph(maps);
+    for (const { archived, item } of documents.values()) {
+      if (!archived) continue;
+      const identity = await portfolioDocumentIdentity(item.url);
+      const document = graph.documents.find((d) => d.id === identity?.id);
+      if (!document) throw invalid();
+      const qualifier = " · 보관한 원문 · 최신 목록 밖의 자료";
+      document.reason += qualifier;
+      for (const proof of document.evidence) proof.reason += qualifier;
+      for (const link of graph.links.filter((l) => l.documentId === document.id)) link.reason += qualifier;
+    }
+    const sharedReason = "같은 원문 공동 언급 후보 · 거래 관계·공통 영향 미확인";
+    for (const common of automatic.commonMaterials) {
+      const identity = await portfolioDocumentIdentity(common.url);
+      const document = graph.documents.find((d) => d.id === identity?.id && d.url === common.url);
+      if (!document) throw invalid();
+      const material = automatic.materials.find((m) => m.id === common.materialId);
+      const tickers = new Set(common.companyIds.map((id) => wanted.get(id).ticker));
+      for (const evidence of document.evidence) {
+        if (tickers.has(evidence.ticker) && evidence.url === common.url && evidence.sectionId === "business" && evidence.originalExplanation === material.item.explanation && !evidence.reason.includes(sharedReason)) evidence.reason += ` · ${sharedReason}`;
       }
-    ];
-    return {
-      ...position2,
-      name: company ? text11(company.name, 180) : position2.ticker,
-      sections,
-      coverage: { ok: failed ? 0 : 1, total: 1, missing: failed ? ["공개 자료"] : [] }
+      document.reason = [...new Set(document.evidence.map((e) => e.reason))].join(" · ");
+      for (const link of graph.links.filter((l) => l.documentId === document.id))
+        link.reason = [...new Set(link.evidence.map((e) => e.reason))].join(" · ");
+    }
+    graph.automaticRelations = automatic.relations;
+    if (body.contract_events !== void 0) {
+      Object.assign(graph, { contractEvents: await parseContractEvents(body.contract_events, companyNames) });
+      const count = row(row(body.contract_events).coverage);
+      if (count.omitted) notices.push(`계약 사건 ${count.returned}/${count.selected}건 표시`);
+      if (count.oversized_history) notices.push(`긴 계약 이력 ${count.oversized_history}건은 공시 원문에서 확인`);
+    }
+    const marketContext = await parseMarketContext(body.market_context, new Set(wanted.keys()), companyNames);
+    Object.assign(graph, { marketContext });
+    const marketCoverage = body.market_context === void 0 ? void 0 : row(body.market_context).coverage;
+    if (marketCoverage !== void 0 && row(marketCoverage).news_groups !== void 0) {
+      const groups = row(row(marketCoverage).news_groups), received = marketContext.filter((item) => item.kind === "news").length;
+      if (!Number.isSafeInteger(groups.total) || groups.total < received || groups.returned !== received || groups.omitted !== groups.total - received) throw invalid();
+      if (groups.omitted) notices.push(`뉴스 ${received}/${groups.total}묶음 표시`);
+    }
+    if (notices.length) graph.analysisNotice = `최근 원문 우선 · ${notices.join(" · ")}`;
+    for (const company of graph.companies) {
+      const quote = prices.get(`${company.market}:${company.ticker}`);
+      if (quote) company.closeQuote = quote;
+    }
+    return attachPublicAIReview(graph, body.ai_review, coverage.ai_review);
+  }
+  async function fetchPortfolioAnalysisGraph(input, options) {
+    const positions = positionsOnly(input);
+    const check = () => {
+      if (options.signal?.aborted) throw options.signal.reason || new Error("요청이 취소되었어요.");
+      const session2 = options.getSession();
+      if (!session2 || session2.userId !== options.ownerId || !session2.token) throw new Error("로그인 계정이 변경되었어요.");
+      return session2;
     };
-  });
-  const graph = await buildPortfolioMapGraph(maps);
-  for (const { archived, item } of documents.values()) {
-    if (!archived) continue;
-    const identity2 = await portfolioDocumentIdentity(item.url);
-    const document2 = graph.documents.find((d) => d.id === identity2?.id);
-    if (!document2) throw invalid7();
-    const qualifier = " · 보관한 원문 · 최신 목록 밖의 자료";
-    document2.reason += qualifier;
-    for (const proof of document2.evidence) proof.reason += qualifier;
-    for (const link of graph.links.filter((l) => l.documentId === document2.id)) link.reason += qualifier;
-  }
-  const sharedReason = "같은 원문 공동 언급 후보 · 거래 관계·공통 영향 미확인";
-  for (const common of automatic.commonMaterials) {
-    const identity2 = await portfolioDocumentIdentity(common.url);
-    const document2 = graph.documents.find((d) => d.id === identity2?.id && d.url === common.url);
-    if (!document2) throw invalid7();
-    const material = automatic.materials.find((m) => m.id === common.materialId);
-    const tickers = new Set(common.companyIds.map((id) => wanted.get(id).ticker));
-    for (const evidence of document2.evidence) {
-      if (tickers.has(evidence.ticker) && evidence.url === common.url && evidence.sectionId === "business" && evidence.originalExplanation === material.item.explanation && !evidence.reason.includes(sharedReason)) evidence.reason += ` · ${sharedReason}`;
-    }
-    document2.reason = [...new Set(document2.evidence.map((e) => e.reason))].join(" · ");
-    for (const link of graph.links.filter((l) => l.documentId === document2.id))
-      link.reason = [...new Set(link.evidence.map((e) => e.reason))].join(" · ");
-  }
-  graph.automaticRelations = automatic.relations;
-  if (body.contract_events !== void 0) {
-    Object.assign(graph, { contractEvents: await parseContractEvents(body.contract_events, companyNames) });
-    const count = row4(row4(body.contract_events).coverage);
-    if (count.omitted) notices.push(`계약 사건 ${count.returned}/${count.selected}건 표시`);
-    if (count.oversized_history) notices.push(`긴 계약 이력 ${count.oversized_history}건은 공시 원문에서 확인`);
-  }
-  const marketContext = await parseMarketContext(body.market_context, new Set(wanted.keys()), companyNames);
-  Object.assign(graph, { marketContext });
-  const marketCoverage = body.market_context === void 0 ? void 0 : row4(body.market_context).coverage;
-  if (marketCoverage !== void 0 && row4(marketCoverage).news_groups !== void 0) {
-    const groups = row4(row4(marketCoverage).news_groups), received = marketContext.filter((item) => item.kind === "news").length;
-    if (!Number.isSafeInteger(groups.total) || groups.total < received || groups.returned !== received || groups.omitted !== groups.total - received) throw invalid7();
-    if (groups.omitted) notices.push(`뉴스 ${received}/${groups.total}묶음 표시`);
-  }
-  if (notices.length) graph.analysisNotice = `최근 원문 우선 · ${notices.join(" · ")}`;
-  for (const company of graph.companies) {
-    const quote3 = prices.get(`${company.market}:${company.ticker}`);
-    if (quote3) company.closeQuote = quote3;
-  }
-  return attachPublicAIReview(graph, body.ai_review, coverage.ai_review);
-}
-async function fetchPortfolioAnalysisGraph(input, options) {
-  const positions = positionsOnly(input);
-  const check = () => {
-    if (options.signal?.aborted) throw options.signal.reason || new Error("요청이 취소되었어요.");
-    const session2 = options.getSession();
-    if (!session2 || session2.userId !== options.ownerId || !session2.token) throw new Error("로그인 계정이 변경되었어요.");
-    return session2;
-  };
-  let session = check();
-  if (!positions.length) return buildPortfolioMapGraph([]);
-  const request = (token) => (options.fetcher || fetch)(ENDPOINT2, {
-    method: "POST",
-    credentials: "omit",
-    cache: "no-store",
-    redirect: "error",
-    signal: options.signal,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ positions })
-  });
-  let response;
-  try {
-    response = await request(session.token);
-    const current = check();
-    if (response.status === 401 && current.token !== session.token) {
-      session = current;
+    let session = check();
+    if (!positions.length) return buildPortfolioMapGraph([]);
+    const request = (token) => (options.fetcher || fetch)(ENDPOINT, {
+      method: "POST",
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "error",
+      signal: options.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ positions })
+    });
+    let response;
+    try {
       response = await request(session.token);
+      const current = check();
+      if (response.status === 401 && current.token !== session.token) {
+        session = current;
+        response = await request(session.token);
+        check();
+      }
+      if (!response.ok) throw new Error("unavailable");
+      const payload = await response.json();
       check();
+      const graph = await analysisToGraph(payload, positions);
+      check();
+      return graph;
+    } catch {
+      check();
+      throw new Error("분석 자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
-    if (!response.ok) throw new Error("unavailable");
-    const payload = await response.json();
-    check();
-    const graph = await analysisToGraph(payload, positions);
-    check();
-    return graph;
-  } catch {
-    check();
-    throw new Error("분석 자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
   }
-}
+  return __toCommonJS(PortfolioAnalysisClient_exports);
+})();
+
+return MemberMapClientDelta;
+})({buildPortfolioMapGraph,portfolioDocumentIdentity,parseAutomaticEvidence,parseAnalysisPrices,parseMarketContext,parseDocumentLineage,parseContractFacts,parseContractEvents,parseContractTermination,attachPublicAIReview});
 
 // framer-components/public-probe/PortfolioAnalysisMerge.ts
 var order2 = (a, b) => a < b ? -1 : a > b ? 1 : 0;

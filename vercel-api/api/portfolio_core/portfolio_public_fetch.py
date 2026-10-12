@@ -34,6 +34,8 @@ PUBLIC_SOURCE_URLS = MappingProxyType({
 })
 CACHE_TTL_SECONDS = 60
 FETCH_TIMEOUT_SECONDS = 15
+AI_SOURCE_TIMEOUT_SECONDS = 3
+_OPTIONAL_AI_SOURCE = "member_map_ai_candidates.json"
 
 _CACHE_LOCK = threading.Lock()
 _CACHE_RESULT = None
@@ -56,15 +58,17 @@ def _unique_object(pairs):
 
 def _download_source(filename):
     """Download one exact allowlisted source; failures are handled by the caller."""
-    for attempt in range(2):
+    # Optional enrichment must not incur the full core-source retry delay.
+    attempts = 1 if filename == _OPTIONAL_AI_SOURCE else 2
+    for attempt in range(attempts):
         try:
             return _download_source_once(filename)
         except urllib.error.HTTPError as error:
             # Missing artifacts and access denials are not transient outages.
-            if attempt or error.code not in {408, 429, 500, 502, 503, 504}:
+            if attempt + 1 == attempts or error.code not in {408, 429, 500, 502, 503, 504}:
                 raise
         except (ConnectionError, TimeoutError, urllib.error.URLError):
-            if attempt:
+            if attempt + 1 == attempts:
                 raise
 
 
@@ -72,10 +76,11 @@ def _download_source_once(filename):
     """One bounded attempt. Retry never changes URL, headers or validation."""
     url = PUBLIC_SOURCE_URLS[filename]
     limit = PUBLIC_SOURCE_MAX_BYTES[filename]
-    return _read_public_document(url, limit)
+    timeout = AI_SOURCE_TIMEOUT_SECONDS if filename == _OPTIONAL_AI_SOURCE else FETCH_TIMEOUT_SECONDS
+    return _read_public_document(url, limit, timeout=timeout)
 
 
-def _read_public_document(url, limit):
+def _read_public_document(url, limit, *, timeout=FETCH_TIMEOUT_SECONDS):
     """Shared transport for code-owned public URLs, never caller supplied URLs."""
     opener = urllib.request.build_opener(
         urllib.request.ProxyHandler({}),
@@ -84,7 +89,7 @@ def _read_public_document(url, limit):
     # Do not inherit urllib's default User-Agent or accept caller-supplied headers.
     opener.addheaders = []
     request = urllib.request.Request(url, method="GET")
-    with opener.open(request, timeout=FETCH_TIMEOUT_SECONDS) as response:
+    with opener.open(request, timeout=timeout) as response:
         status = getattr(response, "status", None)
         if status is None:
             status = response.getcode()
