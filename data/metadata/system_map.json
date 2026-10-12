@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-10-12T11:13:04.074234+09:00",
+  "generated_at": "2026-10-12T18:23:51.686901+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 373269,
-    "python_modules": 1210,
+    "code_lines_tsx_py": 376253,
+    "python_modules": 1215,
     "tsx_components": 149,
     "json_data_files": 2419,
     "json_total_tracked": 2444,
     "workflows": 81,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 8518
+    "git_tracked_files": 8525
   },
   "subsystems": {
     "ingest": {
@@ -767,29 +767,29 @@
     },
     "validation": {
       "label": "검증",
-      "n_trading_days": 98,
-      "n_calendar_days": 147,
+      "n_trading_days": 99,
+      "n_calendar_days": 148,
       "next_milestone": {
         "next_n": 100,
-        "days_remaining": 2,
+        "days_remaining": 1,
         "label": "예비 결과 (binomial 95% CI ±10%p)"
       },
-      "as_of": "2026-10-11T15:04:05+09:00"
+      "as_of": "2026-10-12T15:14:41+09:00"
     }
   },
   "python_by_dir": {
     "api": 478,
-    "tests": 441,
+    "tests": 444,
     "scripts": 169,
-    "vercel-api": 109,
+    "vercel-api": 111,
     "server": 7,
     ".github": 6
   },
   "funnel": {
-    "investable_real": 76,
+    "investable_real": 2730,
     "cap": 5000,
     "stages": [
-      76,
+      2730,
       300,
       100,
       25
@@ -800,7 +800,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~76 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2730 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
@@ -808,7 +808,7 @@
       "warn": 0,
       "alert": 0
     },
-    "infra_as_of": "2026-10-11T11:37:21+09:00",
+    "infra_as_of": "2026-10-12T12:03:00+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
