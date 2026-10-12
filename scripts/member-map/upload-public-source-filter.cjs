@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { publishSourceFilter } = require('./publish-source-filter.cjs');
+const { MAX_PUBLIC_BYTES } = require('./publish-source-filter.cjs');
 const HOST = 'https://rte5guenhonw9fzn.public.blob.vercel-storage.com';
 const NAME = 'member_map_auto_evidence.json';
 const sha256 = body => crypto.createHash('sha256').update(body).digest('hex');
@@ -42,38 +43,82 @@ function contentClass(observedAt, expectedAt) {
   return observed < expected ? 'older-content' : observed === expected ? 'same-age-content' : 'newer-content';
 }
 
-async function upload(source, { put, fetch: get = fetch, sleep = delay, token = process.env.BLOB_READ_WRITE_TOKEN } = {}) {
+async function upload(source, { put, head, fetch: get = fetch, sleep = delay,
+  token = process.env.BLOB_READ_WRITE_TOKEN, artifactSha256, replaceSha256, env = process.env } = {}) {
   let stageName = 'credential';
   let diagnostics;
   try {
+  if ([artifactSha256, replaceSha256].some(v => v !== undefined)
+      && ![artifactSha256, replaceSha256].every(v => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v))) throw Error();
   if (!/^vercel_blob_rw_rte5guenhonw9fzn_/i.test(token || '')) throw Error('Expected public catalog store credential missing');
   stageName = 'local-validation';
   const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'member-map-upload-'));
   const validated = publishSourceFilter({ source, publishDirectory: stage });
   const body = fs.readFileSync(path.join(stage, NAME));
+  if (artifactSha256 && validated.sha256 !== artifactSha256) throw Error();
   const url = `${HOST}/${NAME}`;
   const expected = { expectedSha256: validated.sha256, expectedGeneratedAt: diagnosticDate(validated.generatedAt) };
   stageName = 'public-preflight';
   diagnostics = { ...expected, attempts: 0, classification: 'request-failed' };
-  const prior = await get(url, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
+  const preflightUrl = replaceSha256 ? `${url}?verify=${validated.sha256}-${Date.now()}` : url;
+  async function responseBytes(response) {
+    if (!replaceSha256) return Buffer.from(await response.arrayBuffer());
+    if (Number(response.headers.get('content-length')) > MAX_PUBLIC_BYTES) throw Error();
+    const chunks = []; let bytes = 0;
+    for await (const chunk of response.body) {
+      bytes += chunk.length;
+      if (bytes > MAX_PUBLIC_BYTES) throw Error();
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  }
+  const prior = await get(preflightUrl, { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000) });
+  if (replaceSha256 && (prior.redirected || prior.url !== preflightUrl)) throw Error();
   diagnostics.httpStatus = prior.status;
+  let same = false, ifMatch;
   if (prior.ok) {
-    const priorBody = Buffer.from(await prior.arrayBuffer());
+    const priorBody = await responseBytes(prior);
     diagnostics.observedSha256 = sha256(priorBody);
-    if (diagnostics.observedSha256 === validated.sha256) return { ...validated, destination: url, uploaded: false, verified: true };
+    same = diagnostics.observedSha256 === validated.sha256;
+    if (same && !replaceSha256) return { ...validated, destination: url, uploaded: false, verified: true };
+    if (replaceSha256 && !same && diagnostics.observedSha256 !== replaceSha256) throw Error();
     diagnostics.classification = 'invalid-json';
     const old = JSON.parse(priorBody.toString('utf8'));
     diagnostics.observedGeneratedAt = diagnosticDate(old?.generatedAt);
     diagnostics.classification = contentClass(old?.generatedAt, validated.generatedAt);
-    if (!(Date.parse(validated.generatedAt) > Date.parse(old?.generatedAt))) throw Error('Refusing to replace same-age or newer public catalog');
+    if (!same && !(Date.parse(validated.generatedAt) > Date.parse(old?.generatedAt))) throw Error('Refusing to replace same-age or newer public catalog');
   } else if (prior.status !== 404) {
     diagnostics.classification = 'http-error';
     throw Error(`Catalog preflight HTTP ${prior.status}`);
   }
+  if (replaceSha256 && prior.status === 404) throw Error();
+  if (replaceSha256 && !same) {
+    stageName = 'storage-precondition';
+    if (Object.keys(env).some(key => /^(?:NEXT_PUBLIC_)?VERCEL_BLOB_(?:API_|PROXY_)/.test(key)
+        || key === 'DEBUG' || key === 'VERCEL_DEBUG')) throw Error();
+    const meta = await (head || require('@vercel/blob').head)(url, { token, abortSignal: AbortSignal.timeout(30000) });
+    if (meta.url !== url || meta.pathname !== NAME || typeof meta.etag !== 'string'
+        || !meta.etag || meta.etag === '*' || /[\r\n]/.test(meta.etag) || meta.etag.startsWith('W/')
+        || !prior.headers.get('etag') || prior.headers.get('etag').replace(/^W\//, '') !== meta.etag) throw Error();
+    ifMatch = meta.etag;
+  }
   stageName = 'upload';
   diagnostics = { ...expected, attempts: 0, classification: 'upload-failed' };
-  const result = await put(NAME, body, { token, access: 'public', addRandomSuffix: false,
-    allowOverwrite: true, contentType: 'application/json', cacheControlMaxAge: 600 });
+  let result;
+  if (!same) {
+    const retries = env.VERCEL_BLOB_RETRIES;
+    try {
+      if (replaceSha256) env.VERCEL_BLOB_RETRIES = '0';
+      result = await put(NAME, body, { token, access: 'public', addRandomSuffix: false,
+        allowOverwrite: true, ...(ifMatch ? { ifMatch, multipart: false, abortSignal: AbortSignal.timeout(30000) } : {}),
+        contentType: 'application/json', cacheControlMaxAge: 600 });
+    } finally {
+      if (replaceSha256) {
+        if (retries === undefined) delete env.VERCEL_BLOB_RETRIES;
+        else env.VERCEL_BLOB_RETRIES = retries;
+      }
+    }
+  } else result = { url };
   stageName = 'destination-validation';
   diagnostics.classification = 'unexpected-destination';
   if (result.url !== url) throw Error('Unexpected upload destination');
@@ -83,7 +128,9 @@ async function upload(source, { put, fetch: get = fetch, sleep = delay, token = 
     // Each request replaces the prior observation; a transport failure must not
     // inherit an earlier response's hash, date or HTTP status.
     diagnostics = { ...expected, attempts: attempt + 1, classification: 'request-failed' };
-    const response = await get(`${url}?sha=${validated.sha256}&attempt=${attempt}`, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
+    const readbackUrl = replaceSha256 ? url : `${url}?sha=${validated.sha256}&attempt=${attempt}`;
+    const response = await get(readbackUrl, { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000) });
+    if (replaceSha256 && (response.redirected || response.url !== readbackUrl)) throw Error();
     diagnostics.httpStatus = response.status;
     const last = attempt === READBACK_DELAYS_MS.length - 1;
     if (!response.ok) {
@@ -95,11 +142,11 @@ async function upload(source, { put, fetch: get = fetch, sleep = delay, token = 
       }
       throw Error(`Catalog readback HTTP ${response.status}`);
     }
-    const readback = Buffer.from(await response.arrayBuffer());
+    const readback = await responseBytes(response);
     stageName = 'readback-hash';
     diagnostics.observedSha256 = sha256(readback);
     if (diagnostics.observedSha256 === validated.sha256) {
-      return { ...validated, destination: url, uploaded: true, verified: true, readbackAttempts: attempt + 1 };
+      return { ...validated, destination: url, uploaded: !same, verified: true, readbackAttempts: attempt + 1 };
     }
     // Only an older, parseable catalog can plausibly be propagation lag.
     // Corrupt, same-age altered or newer content must fail immediately.
@@ -120,7 +167,7 @@ async function upload(source, { put, fetch: get = fetch, sleep = delay, token = 
   }
 }
 function failureSummary(error) {
-  const stages = ['credential', 'local-validation', 'public-preflight', 'upload',
+  const stages = ['credential', 'local-validation', 'public-preflight', 'storage-precondition', 'upload',
     'destination-validation', 'public-readback', 'readback-hash'];
   const summary = { status: 'failed', stage: stages.includes(error?.stage) ? error.stage : 'unknown' };
   const diagnostics = safeDiagnostics(error?.diagnostics);
@@ -129,8 +176,17 @@ function failureSummary(error) {
 }
 module.exports = { upload, failureSummary };
 if (require.main === module) {
-  if (process.argv.length !== 3) throw Error('Usage: upload-public-source-filter.cjs SOURCE');
-  upload(process.argv[2], { put: require('@vercel/blob').put })
+  const args = process.argv.slice(2), source = args.shift(), options = {};
+  try {
+    while (args.length) {
+      const key = { '--artifact-sha256': 'artifactSha256', '--replace-sha256': 'replaceSha256' }[args.shift()];
+      const value = args.shift();
+      if (!key || options[key] || !/^[a-f0-9]{64}$/.test(value || '')) throw Error();
+      options[key] = value;
+    }
+    if (!source || Object.keys(options).length !== 0 && Object.keys(options).length !== 2) throw Error();
+  } catch { console.error(JSON.stringify({ status: 'failed', stage: 'arguments' })); process.exit(1); }
+  upload(source, { ...options, put: require('@vercel/blob').put })
     .then(result => console.log(JSON.stringify(result)))
     .catch(error => { console.error(JSON.stringify(failureSummary(error))); process.exitCode = 1; });
 }

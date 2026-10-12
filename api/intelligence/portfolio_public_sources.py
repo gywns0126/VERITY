@@ -19,7 +19,7 @@ must never become an invented filing/publication date or currency assertion.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 import json
 import math
 import os
@@ -696,6 +696,108 @@ def _disclosure(
     return projected
 
 
+def _dart_source_collection(document: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Optional listing-check evidence, separate from file/fact availability.
+
+    Never copy the source payload, error text, scope or group records. A legacy
+    feed remains unchanged; invalid optional metadata cannot remove its filings.
+    Counts describe bounded query groups/pages, never issuers or raw documents.
+    """
+    meta = document.get("_meta")
+    if not isinstance(meta, Mapping) or "source_collection" not in meta:
+        return None
+    unknown = {
+        "file_present": True, "endpoint": "list.json", "status": "unknown",
+        "attempted_at": None, "completed_at": None, "successful_checked_at": None,
+        "groups_expected": None, "groups_completed": None,
+        "pages_attempted": None, "pages_succeeded": None,
+        "raw_body_checked": False, "whole_market_coverage": False,
+    }
+    source = meta["source_collection"]
+    if (not isinstance(source, Mapping) or type(source.get("schema_version")) is not int
+            or source["schema_version"] != 1 or source.get("endpoint") != "list.json"
+            or source.get("status") not in ("running", "success", "partial", "failed")):
+        return unknown
+    now = datetime.now(timezone.utc)
+
+    def timestamp(value):
+        if _generated_at(value) is None:
+            raise ValueError
+        stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if stamp.tzinfo is None or stamp > now:
+            raise ValueError
+        return stamp
+
+    try:
+        status = source["status"]
+        attempted = timestamp(source["attempted_at"])
+        if status == "running":
+            if source["completed_at"] is not None or source["successful_checked_at"] is not None:
+                return unknown
+        else:
+            completed = timestamp(source["completed_at"])
+            if completed < attempted:
+                return unknown
+            if status == "success":
+                if timestamp(source["successful_checked_at"]) != completed:
+                    return unknown
+            elif source["successful_checked_at"] is not None:
+                return unknown  # A prior success cannot certify the current attempt.
+        scope = source["scope"]
+        classes = scope["corp_cls"]
+        if (not isinstance(classes, list) or not 1 <= len(classes) <= 2
+                or any(cls not in ("Y", "K") for cls in classes)
+                or len(set(classes)) != len(classes)
+                or scope["pblntf_ty"] != ["B", "C", "D", "I"]
+                or scope["requires_stock_code"] is not True):
+            return unknown
+        expected = {(cls, ty) for cls in classes for ty in scope["pblntf_ty"]}
+        cap = source["max_pages_per_group"]
+        # Current producer's existing 20-page cap, not a freshness/impact threshold.
+        if type(cap) is not int or not 1 <= cap <= 20:
+            return unknown
+        count_keys = ("groups_expected", "groups_completed", "pages_attempted", "pages_succeeded")
+        if (any(type(source[key]) is not int or source[key] < 0 for key in count_keys)
+                or source["groups_expected"] != len(expected)):
+            return unknown
+        groups = source["groups"]
+        if (not isinstance(groups, list) or len(groups) > len(expected)
+                or status != "running" and len(groups) != len(expected)):
+            return unknown
+        seen, finished, tried, succeeded = set(), 0, 0, 0
+        for group in groups:
+            if not isinstance(group, Mapping):
+                return unknown
+            identity = (group["corp_cls"], group["pblntf_ty"])
+            if identity not in expected or identity in seen:
+                return unknown
+            seen.add(identity)
+            a, s = group["pages_attempted"], group["pages_succeeded"]
+            if (type(a) is not int or type(s) is not int or not 0 <= s <= a <= cap
+                    or group["status"] not in ("success", "failed", "truncated")):
+                return unknown
+            if group["status"] == "success":
+                total = group["total_pages"]
+                if (type(total) is not int or total < 0 or s != max(1, total)
+                        or a != s or group["failure"] is not None):
+                    return unknown
+                finished += 1
+            tried += a
+            succeeded += s
+        if (source["groups_completed"] != finished or source["pages_attempted"] != tried
+                or source["pages_succeeded"] != succeeded):
+            return unknown
+        if status != "running":
+            actual = "success" if finished == len(expected) else ("partial" if succeeded else "failed")
+            if status != actual:
+                return unknown
+        return {**unknown, "status": status,
+                **{key: source[key] for key in (
+                    "attempted_at", "completed_at", "successful_checked_at", *count_keys)}}
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return unknown
+
+
 def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
     """Project allowlisted public documents into a fixed company/fact schema."""
 
@@ -834,6 +936,8 @@ def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
         facts_projected += len(company["facts"])
         documents_projected += len(company["documents"])
 
+    collection = (_dart_source_collection(documents["public_disclosure_feed.json"])
+                  if "public_disclosure_feed.json" in documents else None)
     loaded = len(keys)
     # This status reports fixed-source availability only.  It does not claim
     # complete company, fact, filing, market, or time-window coverage.
@@ -853,6 +957,8 @@ def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
             "facts": facts_projected,
             "documents": documents_projected,
             "status": status_value,
+            **({"source_collection": {"public_disclosure_feed.json": collection}}
+               if collection is not None else {}),
         },
     }
 
