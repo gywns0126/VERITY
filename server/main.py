@@ -38,6 +38,7 @@ from server.kis_rest_client import (
 )
 from server.kis_ws_client import KISWebSocketClient
 from server.security import start_security
+from server import member_map_refresh
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,7 +50,7 @@ ws_client = KISWebSocketClient()
 
 # 배포 관측 태그 — /health 로 어떤 커밋 계열이 떠 있는지 판별 (2026-08-03 배포 추적 사고:
 # uptime_seconds 는 WS 연결 uptime 이라 배포판별 불가였음). 서버 변경 시 갱신.
-BUILD_TAG = "2026-08-15-chartcache"
+BUILD_TAG = "2026-10-12-maprefresh"
 
 
 def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
@@ -195,11 +196,14 @@ async def lifespan(app: FastAPI):
 
     cleanup_task = asyncio.create_task(_cleanup_idle_tickers())
     refresh_task = asyncio.create_task(_approval_key_refresher())
+    map_refresh_task = asyncio.create_task(member_map_refresh.run())
 
     yield
 
     refresh_task.cancel()
     cleanup_task.cancel()
+    map_refresh_task.cancel()
+    await asyncio.gather(map_refresh_task, return_exceptions=True)
     ws_client.stop()
     ws_client.remove_listener(_on_ws_event)
 
@@ -250,6 +254,7 @@ async def health():
         "approval_key_remaining_hours": round(key_remaining / 3600, 1),
         # RULE 1 관측성 — Railway REST 토큰 모드. rule1_ok=False = 자체 발급(P0).
         "kis_rest_token": token_status(),
+        "member_map_refresh": member_map_refresh.status(),
     }
 
 

@@ -40,6 +40,38 @@ _OPTIONAL_AI_SOURCE = "member_map_ai_candidates.json"
 _CACHE_LOCK = threading.Lock()
 _CACHE_RESULT = None
 _CACHE_EXPIRES_AT = 0.0
+_LIVE_STATES = {}
+_REFRESH_STORE = None
+
+
+def _refresh_overlay(documents, reader=None):
+    """Optional public-fact checkpoints only; never pass a caller's identity.
+
+    Failed reads retain earlier validated facts, not a new success clock. The
+    fixed service-role adapter never reads member, price or AI tables. Only
+    existing public feed fields enter the documents returned to the engine.
+    """
+    global _LIVE_STATES, _REFRESH_STORE
+    try:
+        from .member_map_refresh_store import RefreshStore, validate_state
+        from .member_map_live_refresh import overlay_states
+        if reader is None:
+            if _REFRESH_STORE is None:
+                _REFRESH_STORE = RefreshStore.from_environment()
+            reader = _REFRESH_STORE.read_states
+        states = reader()
+        if type(states) is not dict or not set(states) <= {"DART", "SEC", "news"}:
+            raise ValueError("refresh states rejected")
+        validated = {source: validate_state(source, state) for source, state in states.items()}
+        merged = overlay_states(documents, validated)
+        _LIVE_STATES = deepcopy(validated)
+        return merged
+    except Exception:
+        try:
+            from .member_map_live_refresh import overlay_states
+            return overlay_states(documents, _LIVE_STATES)
+        except Exception:
+            return documents
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -152,7 +184,7 @@ def _bundle_revision(source_revisions):
     return digest.hexdigest()
 
 
-def fetch_public_sources(*, _fetcher=None, _clock=None):
+def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
     """Return fixed public documents plus explicit source availability.
 
     A valid warm entry avoids a refresh.  Once expired, the old entry is never
@@ -185,6 +217,14 @@ def fetch_public_sources(*, _fetcher=None, _clock=None):
                     documents[name] = document
                     source_revisions[name] = source_revision
 
+        # Explicit fake-source hooks remain network-free. Production reads only
+        # the existing private public-refresh table; failed optional reads never
+        # remove the existing Blob source bundle or promote an AI relation.
+        if _fetcher is None or _refresh_reader is not None:
+            documents = _refresh_overlay(documents, _refresh_reader)
+            source_revisions = {name: _document_revision(document)
+                                for name, document in documents.items()}
+
         result = {
             "documents": documents,
             "coverage": _coverage(documents),
@@ -201,7 +241,9 @@ def fetch_public_sources(*, _fetcher=None, _clock=None):
 
 def _reset_cache_for_tests():
     """Clear process-local public data; not used by the deployed handler."""
-    global _CACHE_RESULT, _CACHE_EXPIRES_AT
+    global _CACHE_RESULT, _CACHE_EXPIRES_AT, _LIVE_STATES, _REFRESH_STORE
     with _CACHE_LOCK:
         _CACHE_RESULT = None
         _CACHE_EXPIRES_AT = 0.0
+        _LIVE_STATES = {}
+        _REFRESH_STORE = None
