@@ -192,3 +192,74 @@ test('temporary read errors retry but denied access and competing content do not
     assert.equal(reads,2);
   }
 });
+
+const URL='https://rte5guenhonw9fzn.public.blob.vercel-storage.com/member_map_auto_evidence.json';
+function boundResponse(body,url,etag='"previous"') {
+  const response=new Response(body,{headers:{etag}});
+  Object.defineProperty(response,'url',{value:url});return response;
+}
+test('explicit historical enrichment uses exact bytes, strong ETag CAS and canonical delivery',async()=>{
+  const f=fixture();const prior=JSON.stringify({...f.document,generatedAt:'2026-10-04T00:00:00Z'});
+  let reads=0,puts=0;const env={VERCEL_BLOB_RETRIES:'7'};
+  const result=await upload(f.source,{token,env,artifactSha256:digest(f.body),replaceSha256:digest(prior),
+    fetch:async url=>++reads===1?boundResponse(prior,url):boundResponse(f.body,url),
+    head:async()=>({url:URL,pathname:'member_map_auto_evidence.json',etag:'"previous"'}),
+    put:async(name,body,options)=>{puts++;assert.equal(env.VERCEL_BLOB_RETRIES,'0');
+      assert.equal(options.ifMatch,'"previous"');assert.deepEqual(body,f.body);return {url:URL};}});
+  assert.equal(puts,1);assert.equal(reads,2);assert.equal(result.verified,true);
+  assert.equal(env.VERCEL_BLOB_RETRIES,'7');
+});
+test('changed prior or mismatched storage ETag blocks conditional enrichment before PUT',async()=>{
+  const f=fixture(),prior=JSON.stringify({...f.document,generatedAt:'2026-10-04T00:00:00Z'});
+  for(const mismatch of ['bytes','etag']) {
+    await assert.rejects(upload(f.source,{token,artifactSha256:digest(f.body),replaceSha256:digest(prior),
+      fetch:async url=>boundResponse(mismatch==='bytes'?'{}':prior,url),
+      head:async()=>({url:URL,pathname:'member_map_auto_evidence.json',etag:'"different"'}),
+      put:async()=>assert.fail('no write')}),{stage:mismatch==='bytes'?'public-preflight':'storage-precondition'});
+  }
+});
+test('explicit artifact hash cannot silently publish different bytes',async()=>{
+  const f=fixture();await assert.rejects(upload(f.source,{token,artifactSha256:'a'.repeat(64),replaceSha256:'b'.repeat(64),
+    fetch:async()=>assert.fail('no public read'),put:async()=>assert.fail('no write')}),{stage:'local-validation'});
+});
+test('accepted enrichment is idempotent but stale canonical bytes are not delivered',async()=>{
+  const f=fixture(),prior=JSON.stringify({...f.document,generatedAt:'2026-10-04T00:00:00Z'});let reads=0;
+  await assert.rejects(upload(f.source,{token,artifactSha256:digest(f.body),replaceSha256:digest(prior),sleep:async()=>{},
+    fetch:async url=>boundResponse(++reads===1?f.body:prior,url),
+    head:async()=>assert.fail('no storage call'),put:async()=>assert.fail('no write')}),{stage:'readback-hash'});
+  assert.equal(reads,5);
+});
+
+test('both source modules deliver bounded collection metadata without raw/private fields',()=>{
+  const script = `
+import importlib, sys
+sys.path.insert(0, 'vercel-api/api')
+for module in ('api.intelligence.portfolio_public_sources', 'portfolio_core.portfolio_public_sources'):
+    m = importlib.import_module(module)
+    groups = [dict(corp_cls=c, pblntf_ty=t, status='success', pages_attempted=1,
+                   pages_succeeded=1, total_pages=1, failure=None)
+              for c in ('Y','K') for t in ('B','C','D','I')]
+    meta = dict(schema_version=1, endpoint='list.json', status='success',
+        attempted_at='2026-10-01T00:00:00Z', completed_at='2026-10-01T00:01:00Z',
+        successful_checked_at='2026-10-01T00:01:00Z', max_pages_per_group=20,
+        scope=dict(corp_cls=['Y','K'], pblntf_ty=['B','C','D','I'], requires_stock_code=True),
+        groups_expected=8, groups_completed=8, pages_attempted=8, pages_succeeded=8,
+        groups=groups, private_value='synthetic-never-forward')
+    def project(value):
+        return m.project_public_sources({'public_disclosure_feed.json':
+            {'items':[], '_meta':{'source_collection':value}}})['coverage']['source_collection']['public_disclosure_feed.json']
+    result=project(meta)
+    assert result['status']=='success' and result['groups_expected']==8 and result['pages_succeeded']==8
+    assert result['raw_body_checked'] is False and result['whole_market_coverage'] is False
+    assert 'private_value' not in result and 'groups' not in result and 'scope' not in result
+    for bad in (dict(meta, pages_succeeded=7), dict(meta, groups_completed=True),
+                dict(meta, successful_checked_at='2026-09-30T00:01:00Z')):
+        assert project(bad)['status']=='unknown'
+    assert m._dart_source_collection({'items':[]}) is None
+print('two-module-source-collection-boundary-passed')
+`;
+  const result=spawnSync('python3',['-c',script],{cwd:path.resolve(__dirname,'..'),
+    encoding:'utf8',timeout:10000,env:{PATH:process.env.PATH,PYTHONDONTWRITEBYTECODE:'1'}});
+  assert.equal(result.status,0,result.stderr);
+  assert.equal(result.stdout.trim(),'two-module-source-collection-boundary-passed');
+});

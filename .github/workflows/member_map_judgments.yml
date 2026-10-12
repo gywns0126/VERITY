@@ -14,7 +14,7 @@ on:
         description: 'Private bounded proposals, or publish the explicitly reviewed public artifact without AI'
         default: 'judge'
         type: choice
-        options: ['judge', 'publish-reviewed']
+        options: ['judge', 'publish-reviewed', 'publish-contracts']
       artifact_sha256:
         description: 'Exact reviewed public artifact SHA256 (publish-reviewed only)'
         type: string
@@ -37,7 +37,7 @@ concurrency:
 jobs:
   judge:
     if: >-
-      (github.event_name == 'workflow_dispatch' && inputs.mode != 'publish-reviewed') ||
+      (github.event_name == 'workflow_dispatch' && inputs.mode == 'judge') ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
@@ -101,3 +101,37 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/member-map-blob/node_modules" node scripts/member-map/upload-ai-candidates.cjs \
             --artifact data/member_map_ai_candidates.json --artifact-sha256 "$ARTIFACT_SHA256" \
             --source-dir data --replace-sha256 "$REPLACE_SHA256" --upload
+
+  publish-contracts:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish-contracts'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare the existing source validator dependency
+        run: python3 -m pip install 'beautifulsoup4>=4.12.0,<5.0.0'
+      - name: Validate exact source-bound enrichment offline
+        env:
+          ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
+          REPLACE_SHA256: ${{ inputs.replace_sha256 }}
+        run: |
+          node -e 'const fs=require("node:fs"),os=require("node:os"),path=require("node:path"); if(!/^[a-f0-9]{64}$/.test(process.env.REPLACE_SHA256||"")) throw Error("invalid prior hash"); const dir=fs.mkdtempSync(path.join(os.tmpdir(),"contract-review-")); try { const r=require("./scripts/member-map/publish-source-filter.cjs").publishSourceFilter({source:"data/member_map_auto_evidence.json",publishDirectory:dir}); if(r.sha256!==process.env.ARTIFACT_SHA256) throw Error("unexpected artifact hash"); console.log(JSON.stringify({sha256:r.sha256,network_calls:0})); } finally { fs.rmSync(dir,{recursive:true,force:true}); }'
+      - name: Install pinned public storage SDK
+        run: npm install --prefix "$RUNNER_TEMP/member-map-blob" --no-save --ignore-scripts --no-audit --no-fund @vercel/blob@2.4.1
+      - name: Publish only the explicitly reviewed contract enrichment
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+          ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
+          REPLACE_SHA256: ${{ inputs.replace_sha256 }}
+        run: |
+          NODE_PATH="$RUNNER_TEMP/member-map-blob/node_modules" node scripts/member-map/upload-public-source-filter.cjs \
+            data/member_map_auto_evidence.json --artifact-sha256 "$ARTIFACT_SHA256" --replace-sha256 "$REPLACE_SHA256"
