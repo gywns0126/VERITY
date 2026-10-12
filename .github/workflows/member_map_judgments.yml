@@ -10,6 +10,17 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'Private bounded proposals, or publish the explicitly reviewed public artifact without AI'
+        default: 'judge'
+        type: choice
+        options: ['judge', 'publish-reviewed']
+      artifact_sha256:
+        description: 'Exact reviewed public artifact SHA256 (publish-reviewed only)'
+        type: string
+      replace_sha256:
+        description: 'Exact current public bytes authorized for replacement (publish-reviewed only)'
+        type: string
       limit:
         description: 'Maximum new paid attempts; cached answers do not spend again'
         default: '3'
@@ -26,7 +37,7 @@ concurrency:
 jobs:
   judge:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && inputs.mode != 'publish-reviewed') ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
@@ -55,3 +66,38 @@ jobs:
             --execute --limit "$JUDGMENT_LIMIT"
       # No cache/result upload or data commit: private Supabase owns responses.
       # General report-builder CI/VERCEL paid-worker guards are not removed.
+
+  publish-reviewed:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish-reviewed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate exact reviewed projection offline
+        env:
+          ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
+          REPLACE_SHA256: ${{ inputs.replace_sha256 }}
+        run: |
+          node scripts/member-map/upload-ai-candidates.cjs \
+            --artifact data/member_map_ai_candidates.json --artifact-sha256 "$ARTIFACT_SHA256" \
+            --source-dir data --replace-sha256 "$REPLACE_SHA256"
+      - name: Install pinned public storage SDK
+        run: npm install --prefix "$RUNNER_TEMP/member-map-blob" --no-save --ignore-scripts --no-audit --no-fund @vercel/blob@2.4.1
+      - name: Publish one conditional public artifact and verify canonical readback
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+          ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
+          REPLACE_SHA256: ${{ inputs.replace_sha256 }}
+        run: |
+          NODE_PATH="$RUNNER_TEMP/member-map-blob/node_modules" node scripts/member-map/upload-ai-candidates.cjs \
+            --artifact data/member_map_ai_candidates.json --artifact-sha256 "$ARTIFACT_SHA256" \
+            --source-dir data --replace-sha256 "$REPLACE_SHA256" --upload

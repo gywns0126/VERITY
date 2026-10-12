@@ -46,6 +46,13 @@ CONTRACTS = os.path.join(ROOT, "data", "contracts")
 CODE_DIRS = ["api", "scripts", "server", "vercel-api", ".github"]
 NON_ARTIFACT_DATA_PATHS = {"data/package.json"}
 SPECIAL_PUBLIC_ARTIFACTS = {
+    "member_map_ai_candidates.json": {
+        "publishers": (
+            (".github/workflows/member_map_judgments.yml",
+             "scripts/member-map/upload-ai-candidates.cjs"),
+        ),
+        "producers": ["scripts/member-map/export-ai-candidates.py"],
+    },
     "member_map_auto_evidence.json": {
         "publishers": (
             (".github/actions/publish-data/action.yml",
