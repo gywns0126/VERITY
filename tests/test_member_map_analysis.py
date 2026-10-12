@@ -95,6 +95,9 @@ def modules(monkeypatch, tmp_path):
     )
     price_fetch = types.ModuleType("api.portfolio_core.portfolio_price_fetch")
     price_fetch.fetch_public_prices = Mock(return_value={})
+    change_fetch = types.ModuleType("api.portfolio_core.portfolio_change_facts")
+    change_fetch.fetch_public_changes = Mock(return_value=None)
+    monkeypatch.setitem(sys.modules, "api.portfolio_core.portfolio_change_facts", change_fetch)
     monkeypatch.setitem(sys.modules, "api.portfolio_core.portfolio_public_sources", public_sources)
     monkeypatch.setitem(sys.modules, "api.portfolio_core.portfolio_prices", prices)
     monkeypatch.setitem(sys.modules, "api.portfolio_core.portfolio_evidence", evidence)
@@ -217,9 +220,34 @@ def test_validated_public_prices_are_forwarded_without_private_fields(modules, m
     assert analysis.call_args.kwargs == {
         "public_bundle_revision": source["revision"],
         "price_documents": price_documents,
+        "change_projection": None,
     }
     assert "jwt-a" not in repr(price_fetch.call_args)
     assert USER_A not in repr(price_fetch.call_args)
+
+
+def test_optional_changes_use_identifiers_only_after_authentication(modules, monkeypatch):
+    endpoint, storage = modules
+    monkeypatch.setattr(endpoint, "fetch_public_sources", Mock(return_value=_bundle()))
+    changes = sys.modules["api.portfolio_core.portfolio_change_facts"].fetch_public_changes
+    changes.return_value = {"synthetic": "projected-change-data"}
+    analysis = Mock(return_value={"schema": "alphaconsole-portfolio-v1"})
+    monkeypatch.setattr(endpoint, "analyze_portfolio", analysis)
+    positions = [{"ticker": "005930", "market": "KR"}]
+    status, _, _ = endpoint.analyze_request(_request("jwt-a", {"positions": positions}))
+    assert status == 200
+    changes.assert_called_once_with(positions)
+    assert analysis.call_args.kwargs["change_projection"] == changes.return_value
+    assert USER_A not in repr(changes.call_args) and "jwt-a" not in repr(changes.call_args)
+    changes.reset_mock()
+    status, _, _ = endpoint.analyze_request(_request("invalid", {"positions": positions}))
+    assert status == 401
+    changes.assert_not_called()
+    changes.side_effect = ValueError("private-error-canary")
+    status, _, body = endpoint.analyze_request(_request("jwt-a", {"positions": positions}))
+    assert status == 200 and "private-error-canary" not in repr(body)
+    assert analysis.call_args.kwargs["change_projection"] is None
+    storage.select.assert_not_called()
 
 
 def test_price_source_failure_preserves_analysis_with_empty_price_documents(
