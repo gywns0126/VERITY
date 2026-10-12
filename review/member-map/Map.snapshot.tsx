@@ -3907,27 +3907,44 @@ function createPortfolioMapWorkspace(options = {}) {
   const showTickers = async (tickers, fromOpen = false) => {
     if (!account || !valid(generation)) return false;
     const codes = [...new Set(tickers.map((ticker) => ticker.trim().toUpperCase()))];
-    if (codes.length > 30 || codes.some((code) => !workspaceStocks(state).some((row5) => row5.ticker === code))) throw new Error("choose-up-to-30-holdings");
+    if (codes.length > 30 || codes.some((code) => !workspaceStocks(state).some((row) => row.ticker === code))) throw new Error("choose-up-to-30-holdings");
     if (!fromOpen) automaticSelection = false;
     cancelDataRefresh();
     pending?.abort();
-    pending = new AbortController();
-    const signal = pending.signal, version = ++generation;
-    state = { ...state, phase: "loading", selectedTickers: codes, graph: null, error: null };
+    const controller = new AbortController();
+    pending = controller;
+    const signal = controller.signal, version = ++generation;
+    let timedOut = false, cancelWait;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 15e3);
+    timers.add(timer);
+    state = { ...state, phase: "loading", error: null };
     emit();
     try {
       if (!valid(version) || signal.aborted) return false;
-      const graph = await loadGraph(codes, signal);
+      const graph = await new Promise((resolve, reject) => {
+        cancelWait = () => reject(new Error(timedOut ? "graph-load-timeout" : "graph-load-cancelled"));
+        signal.addEventListener("abort", cancelWait, { once: true });
+        if (signal.aborted) cancelWait();
+        else Promise.resolve(loadGraph(codes, signal)).then(resolve, reject);
+      });
       if (!valid(version) || signal.aborted) return false;
-      if (graph.companies.length !== codes.length || new Set(graph.companies.map((row5) => row5.ticker)).size !== codes.length || graph.companies.some((row5) => !codes.includes(row5.ticker))) throw new Error("graph-holdings-mismatch");
-      state = { ...state, phase: "ready", graph };
+      if (graph.companies.length !== codes.length || new Set(graph.companies.map((row) => row.ticker)).size !== codes.length || graph.companies.some((row) => !codes.includes(row.ticker))) throw new Error("graph-holdings-mismatch");
+      state = { ...state, phase: "ready", graph, selectedTickers: codes };
       emit();
       return valid(version);
     } catch (error) {
-      if (!valid(version) || signal.aborted) return false;
-      state = { ...state, phase: "error", graph: null, error: error instanceof Error ? error.message : "data-unavailable" };
+      if (!valid(version) || signal.aborted && !timedOut) return false;
+      state = { ...state, phase: "error", error: timedOut ? "graph-load-timeout" : error instanceof Error ? error.message : "data-unavailable" };
       emit();
       return false;
+    } finally {
+      clearTimeout(timer);
+      timers.delete(timer);
+      if (cancelWait) signal.removeEventListener("abort", cancelWait);
+      if (pending === controller) pending = null;
     }
   };
   const exploreStock = async (metadata) => {
