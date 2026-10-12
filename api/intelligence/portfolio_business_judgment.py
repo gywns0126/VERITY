@@ -565,6 +565,20 @@ def _quality_findings(row, source):
         findings.append({"judgment_id": row["id"], "axis": axis,
                          "code": code, "evidence_quotes": evidence})
 
+    # A catalog ticker/name match is not corporate identity. Explicit product
+    # expansions (e.g. APS (Accelrator Pedal Sensor)) must not become a company
+    # relationship. Keep immutable answers/revisions readable; the existing
+    # source-context projection gate blocks acceptance without rewriting them.
+    if re.fullmatch(r"[A-Z]{2,8}", name):
+        definition = re.compile(
+            r"(?<![A-Za-z0-9])" + re.escape(name)
+            + r"\s*\(\s*[A-Za-z][A-Za-z /-]{0,100}\b"
+            + r"(?:Sensor|Switch|Memory|Module|Display)\s*\)", re.I)
+        evidence = [sentence for sentence in base._sentences(source["text"])
+                    if definition.search(sentence)]
+        if evidence and base._name_in_text(name, quote):
+            flag("source_context", "counterparty-product-acronym", evidence[:1])
+
     # Only affirmative issuer-owned, explicitly dated qualitative statements.
     # The label must govern this named party, not a nearby company/product.
     major = r"주요\s*(?:매출처|고객사|고객|공급처|공급업체)"

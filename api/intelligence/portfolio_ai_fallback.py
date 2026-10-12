@@ -867,8 +867,6 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
     if judgment_mode:
         payload.update(instructions=business.SYSTEM, input=json.dumps(packet, ensure_ascii=False))
         payload["text"]["format"].update(name="company_judgment", schema=business.SCHEMA)
-    if len(json.dumps(payload, ensure_ascii=False).encode()) > MAX_PROMPT_BYTES:
-        return {"status": "input-too-large", "candidates": []}
     path = Path(ledger_path)
     if path.is_symlink() or path.parent.is_symlink():
         raise ValueError("unsafe-ledger")
@@ -936,6 +934,12 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
             except (BudgetLedgerUnavailable, ValueError, TypeError, KeyError):
                 connection.rollback()
                 return {"status": "result-store-unavailable", "candidates": []}
+        # The outbound limit must not block free recovery of a previously paid
+        # answer after instructions grow. It still precedes every reservation
+        # and provider call; cached source/answer bytes are never rewritten.
+        if len(json.dumps(payload, ensure_ascii=False).encode()) > MAX_PROMPT_BYTES:
+            connection.rollback()
+            return {"status": "input-too-large", "candidates": []}
         month = connection.execute("SELECT COALESCE(SUM(reserved),0) FROM calls WHERE day LIKE ?", (today[:7] + "%",)).fetchone()[0]
         day = connection.execute("SELECT COALESCE(SUM(reserved),0) FROM calls WHERE day=?", (today,)).fetchone()[0]
         if month + RESERVE_MICRO_USD > MONTH_LIMIT_MICRO_USD or day + RESERVE_MICRO_USD > DAY_LIMIT_MICRO_USD:
