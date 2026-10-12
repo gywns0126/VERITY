@@ -56,26 +56,40 @@ def _public_kr_rows(document):
 
 def _public_catalog():
     global _catalog_rows, _catalog_retry_at
-    if monotonic() < _catalog_retry_at or not _catalog_lock.acquire(blocking=False):
+    started = monotonic()
+    if started < _catalog_retry_at or not _catalog_lock.acquire(blocking=False):
+        return _catalog_rows
+    if monotonic() < _catalog_retry_at:
+        _catalog_lock.release()
+        return _catalog_rows
+    deadline = started + CATALOG_DEADLINE_SECONDS
+    _catalog_retry_at = started + CATALOG_TTL_SECONDS
+    try:
+        done, result = threading.Event(), []
+
+        def collect():
+            try:
+                # Import, fixed public read and validation all share the caller deadline.
+                from api.portfolio_core.member_map_refresh_store import read_public_catalog
+                result.append(_public_kr_rows(read_public_catalog()))
+            except Exception:
+                pass  # Never expose error/body content or mutate the shared cache here.
+            finally:
+                _catalog_lock.release()
+                done.set()
+
+        threading.Thread(target=collect, daemon=True).start()
+    except Exception:
+        _catalog_lock.release()
+        _catalog_retry_at = monotonic() + CATALOG_TTL_SECONDS
         return _catalog_rows
     try:
-        if monotonic() < _catalog_retry_at:
-            return _catalog_rows
-        try:
-            # Fixed public URL only; no environment credentials or checkpoint reads.
-            from api.portfolio_core.member_map_refresh_store import read_public_catalog
-            started = monotonic()
-            rows = _public_kr_rows(read_public_catalog())
-            if monotonic() - started >= CATALOG_DEADLINE_SECONDS:
-                raise ValueError("public-search-catalog-deadline")
-            _catalog_rows = rows
-        except Exception:
-            pass  # Retain the last good projection; never expose error/body content.
-        finally:
-            _catalog_retry_at = monotonic() + CATALOG_TTL_SECONDS
-        return _catalog_rows
+        if done.wait(max(0.0, deadline - monotonic())) and monotonic() < deadline and result:
+            _catalog_rows = result[0]
     finally:
-        _catalog_lock.release()
+        # A hung worker keeps the inflight lock; a late worker only releases it.
+        _catalog_retry_at = monotonic() + CATALOG_TTL_SECONDS
+    return _catalog_rows
 
 
 def _safe_int(raw, default: int, lo: int = 1, hi: int = 100) -> int:
