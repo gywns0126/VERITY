@@ -3,9 +3,12 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const { createHash } = require('node:crypto');
+const { spawnSync } = require('node:child_process');
 const { buildPublicCatalog } = require('../scripts/member-map/build-public-source-filter.cjs');
 const { upload, failureSummary } = require('../scripts/member-map/upload-public-source-filter.cjs');
 const token = 'vercel_blob_rw_rte5guenhonw9fzn_synthetic';
+const digest = body => createHash('sha256').update(body).digest('hex');
 function fixture() {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'map-upload-test-'));
   const source = path.join(directory, 'member_map_auto_evidence.json');
@@ -42,13 +45,121 @@ test('failure output identifies the stage without provider messages or credentia
   const secret='synthetic-secret-never-in-output';
   await assert.rejects(upload(f.source,{token,fetch:async()=>new Response(null,{status:404}),
     put:async()=>{throw Error(secret);}}),e=>{
-      assert.deepEqual(failureSummary(e),{status:'failed',stage:'upload'});
+      assert.deepEqual(failureSummary(e),{status:'failed',stage:'upload',diagnostics:{
+        expectedSha256:digest(f.body),expectedGeneratedAt:'2026-10-05T00:00:00.000Z',
+        attempts:0,classification:'upload-failed'}});
       assert.equal(JSON.stringify(failureSummary(e)).includes(secret),false);
       assert.equal(e.cause,undefined);
       assert.equal(e.stack.includes(secret),false);
       return true;
     });
   assert.deepEqual(failureSummary({stage:secret,message:secret}),{status:'failed',stage:'unknown'});
+});
+
+test('mismatch diagnostics distinguish observed content without claiming a CDN or writer cause',async()=>{
+  const f=fixture();
+  const cases=[
+    {document:{...f.document,generatedAt:'2026-10-04T00:00:00Z'},classification:'older-content',attempts:4,date:'2026-10-04T00:00:00.000Z'},
+    {document:{...f.document,extra:'different bytes'},classification:'same-age-content',attempts:1,date:'2026-10-05T00:00:00.000Z'},
+    {document:{...f.document,generatedAt:'2026-10-06T09:00:00+09:00'},classification:'newer-content',attempts:1,date:'2026-10-06T00:00:00.000Z'},
+    {document:{generatedAt:'secret https://private.invalid/?key=never-log'},classification:'invalid-generated-at',attempts:1},
+    {document:null,classification:'invalid-generated-at',attempts:1},
+    {body:'not JSON: secret https://private.invalid/?key=never-log',classification:'invalid-json',attempts:1},
+  ];
+  for (const sample of cases) {
+    const body=Buffer.from(sample.body || JSON.stringify(sample.document));
+    let reads=0,puts=0;const waits=[];
+    await assert.rejects(upload(f.source,{token,sleep:async ms=>waits.push(ms),
+      fetch:async()=>++reads===1?new Response(null,{status:404}):new Response(body,{headers:{'x-provider-secret':'never-log'}}),
+      put:async()=>{puts++;return {url:'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/member_map_auto_evidence.json'};}}),e=>{
+        assert.deepEqual(failureSummary(e),{status:'failed',stage:'readback-hash',diagnostics:{
+          expectedSha256:digest(f.body),observedSha256:digest(body),
+          expectedGeneratedAt:'2026-10-05T00:00:00.000Z',
+          ...(sample.date?{observedGeneratedAt:sample.date}:{}),
+          httpStatus:200,attempts:sample.attempts,classification:sample.classification}});
+        assert.equal(JSON.stringify(e).includes('never-log'),false);
+        return true;
+      });
+    assert.equal(puts,1);assert.equal(reads,sample.attempts+1);
+    assert.deepEqual(waits,sample.attempts===4?[10000,20000,30000]:[]);
+  }
+});
+
+test('preflight refusal records safe hashes and dates with zero readback attempts',async()=>{
+  const f=fixture();const body=JSON.stringify({...f.document,extra:'changed'});
+  await assert.rejects(upload(f.source,{token,put:async()=>assert.fail('no write'),
+    fetch:async()=>new Response(body)}),e=>{
+      assert.deepEqual(failureSummary(e),{status:'failed',stage:'public-preflight',diagnostics:{
+        expectedSha256:digest(f.body),observedSha256:digest(body),
+        expectedGeneratedAt:'2026-10-05T00:00:00.000Z',observedGeneratedAt:'2026-10-05T00:00:00.000Z',
+        httpStatus:200,attempts:0,classification:'same-age-content'}});
+      return true;
+    });
+});
+
+test('HTTP and request failures cannot inherit an earlier response observation',async()=>{
+  const f=fixture();const expected={expectedSha256:digest(f.body),expectedGeneratedAt:'2026-10-05T00:00:00.000Z'};
+  const put=async()=>({url:'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/member_map_auto_evidence.json'});
+  for (const kind of ['preflight-http','preflight-request','readback-http','readback-request','readback-body']) {
+    let reads=0;
+    await assert.rejects(upload(f.source,{token,put,sleep:async()=>{},fetch:async()=>{
+      reads++;
+      if (kind.startsWith('readback') && reads===1) return new Response(null,{status:404});
+      if (kind.startsWith('readback') && reads===2) return Response.json({...f.document,generatedAt:'2026-10-04T00:00:00Z'});
+      if (kind.endsWith('http')) return new Response('never-log',{status:403});
+      if (kind.endsWith('body')) return {ok:true,status:200,arrayBuffer:async()=>{throw Error('never-log');}};
+      throw Object.assign(Error('never-log'),{diagnostics:{observedSha256:'a'.repeat(64),httpStatus:401}});
+    }}),e=>{
+      assert.deepEqual(failureSummary(e),{status:'failed',stage:kind.startsWith('preflight')?'public-preflight':'public-readback',
+        diagnostics:{...expected,...(kind.endsWith('http')?{httpStatus:403}:kind.endsWith('body')?{httpStatus:200}:{}),
+          attempts:kind.startsWith('preflight')?0:2,classification:kind.endsWith('http')?'http-error':'request-failed'}});
+      assert.equal(JSON.stringify(e).includes('never-log'),false);
+      return true;
+    });
+  }
+});
+
+test('failure summary reconstructs only typed diagnostic fields and fixed classifications',()=>{
+  const secret='secret/?token=never-log';
+  const safe={expectedSha256:'a'.repeat(64),observedSha256:'b'.repeat(64),
+    expectedGeneratedAt:'2026-10-05T00:00:00.000Z',observedGeneratedAt:'2026-10-04T00:00:00.000Z',
+    httpStatus:200,attempts:4,classification:'older-content'};
+  assert.deepEqual(failureSummary({stage:'readback-hash',message:secret,diagnostics:{...safe,
+    rawBody:secret,url:secret,headers:{authorization:secret},providerError:secret,token:secret}}),
+    {status:'failed',stage:'readback-hash',diagnostics:safe});
+  for (const invalid of [secret,null,{},[],true,NaN,Infinity,-1,600]) {
+    assert.deepEqual(failureSummary({stage:secret,diagnostics:Object.fromEntries(Object.keys(safe).map(k=>[k,invalid]))}),
+      {status:'failed',stage:'unknown'});
+  }
+  assert.deepEqual(failureSummary({stage:'credential'}),{status:'failed',stage:'credential'});
+});
+
+test('workflow attempts both validated uploads under errexit and fails if either command fails',()=>{
+  const workflow=fs.readFileSync(path.join(__dirname,'../.github/workflows/kr_company_facts_backfill.yml'),'utf8');
+  const publish=workflow.split('      - name: Publish verified public evidence catalog\n')[1].split(/\n      - /)[0];
+  // Execute the actual two-command workflow tail, never npm or either uploader.
+  const marker='          # Independent validated artifacts:';
+  assert.equal(publish.split(marker).length,2);
+  const body=publish.slice(publish.indexOf(marker)).replace(/^ {10}/gm,'');
+  assert.equal((body.match(/\bnode scripts\/member-map\/upload-public-/g)||[]).length,2);
+  for (const [catalog,overview] of [[0,0],[17,0],[0,23],[17,23]]) {
+    const stub=`node() {
+      printf '%s\\n' "$1"
+      case "$1" in
+        scripts/member-map/upload-public-source-filter.cjs) return ${catalog} ;;
+        scripts/member-map/upload-public-overview.cjs) return ${overview} ;;
+        *) return 99 ;;
+      esac
+    }\n`;
+    const result=spawnSync('/bin/bash',['-e','-u','-o','pipefail','-c',stub+body],{
+      encoding:'utf8',timeout:5000,env:{PUBLISH_DEPS_DIR:'/synthetic-deps'}});
+    assert.equal(result.error,undefined);
+    assert.equal(result.status,catalog||overview?1:0);
+    assert.equal(result.stderr,'');
+    assert.deepEqual(result.stdout.trim().split('\n').slice(0,2),[
+      'scripts/member-map/upload-public-source-filter.cjs','scripts/member-map/upload-public-overview.cjs']);
+    assert.equal(result.stdout.includes('::error::'),Boolean(catalog||overview));
+  }
 });
 test('stale cached readback is retried without a second upload',async()=>{
   const f=fixture();let reads=0,puts=0;const waits=[];const urls=[];
