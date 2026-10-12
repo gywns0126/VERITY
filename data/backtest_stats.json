@@ -19,7 +19,7 @@
         "hits_gross": 0,
         "hits_net": 0
       },
-      "evaluation_date": "2026-10-12",
+      "evaluation_date": "2026-10-13",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
@@ -37,7 +37,7 @@
       "hits_net": 0,
       "delisted_count": null,
       "listing_status_checked": false,
-      "snapshot_date": "2026-10-05"
+      "snapshot_date": "2026-10-06"
     },
     "14d": {
       "evaluation_status": "no_recommendations",
@@ -58,7 +58,7 @@
         "hits_gross": 0,
         "hits_net": 0
       },
-      "evaluation_date": "2026-10-12",
+      "evaluation_date": "2026-10-13",
       "hit_rate_net": null,
       "avg_return_net": null,
       "hit_rate_gross": null,
@@ -76,19 +76,53 @@
       "hits_net": 0,
       "delisted_count": null,
       "listing_status_checked": false,
-      "snapshot_date": "2026-09-28"
+      "snapshot_date": "2026-09-29"
     },
     "30d": {
+      "evaluation_status": "no_recommendations",
+      "cohort_size": 0,
+      "evaluated_count": 0,
+      "unresolved_count": 0,
+      "coverage_pct": null,
+      "unresolved": [],
+      "observed": {
+        "hit_rate_gross": null,
+        "hit_rate_net": null,
+        "avg_return_gross": null,
+        "avg_return_net": null,
+        "max_return": null,
+        "min_return": null,
+        "sharpe": null,
+        "sample": 0,
+        "hits_gross": 0,
+        "hits_net": 0
+      },
+      "evaluation_date": "2026-10-13",
+      "hit_rate_net": null,
+      "avg_return_net": null,
+      "hit_rate_gross": null,
+      "avg_return_gross": null,
+      "skipped_no_t_plus_1": 0,
+      "rec_price_basis": "next_available_snapshot_price",
       "hit_rate": null,
       "avg_return": null,
-      "total_recs": 0
+      "max_return": null,
+      "min_return": null,
+      "sharpe": null,
+      "total_recs": 0,
+      "total_recs_with_delisted": 0,
+      "hits": 0,
+      "hits_net": 0,
+      "delisted_count": null,
+      "listing_status_checked": false,
+      "snapshot_date": "2026-09-13"
     }
   },
   "recommendations": [],
-  "updated_at": "2026-10-12 18:10:57.629401+09:00",
+  "updated_at": "2026-10-13 02:54:32.567441+09:00",
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-10-12 18:10:57.629417+09:00",
+    "applied_at": "2026-10-13 02:54:32.567468+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -98,7 +132,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-10-12 18:10:57.629419+09:00"
+      "fixed_at": "2026-10-13 02:54:32.567473+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
