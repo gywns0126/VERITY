@@ -146,7 +146,7 @@ test('getter·console·브라우저 전역 장애는 외부로 전파되지 않�
 });
 test('실제 화면 함수에서 동일 그래프 시간초과 진단과 기존 오류 유지', async () => {
   const h = workspaceFixture(); await h.workspace.open(); h.mode('pending');
-  const pending = h.workspace.showTickers(['EXM']); await flush(); await h.advance(15000);
+  const pending = h.workspace.showTickers(['EXM']); await flush(); await h.advance(60000);
   assert.equal(await pending, false); assert.equal(h.workspace.getState().error, 'graph-load-timeout');
   safeLog(h, { stage: 'graph-timeout', errorCode: 'graph-load-timeout' });
   h.loads[0].resolve(); await flush(); assert.equal(h.logs.length, 1); h.workspace.dispose();
