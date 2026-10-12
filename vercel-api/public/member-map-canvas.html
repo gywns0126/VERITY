@@ -3067,6 +3067,7 @@ renderStockActions=function(n){
 };
 function updateMemberGraph(model,ticker){
   if(cancelGesture)cancelGesture();closePreview();
+  memberDraftOrigins=model.layoutBases||{};
   // News grouping changes the display identity, not the user's saved annotations.
   const groupedSelection=model.nodes.find(n=>n.legacyIds?.includes(state.selected));
   if(groupedSelection)state.selected=groupedSelection.id;
@@ -3115,10 +3116,20 @@ showPreview=function(anchor,item,isEdge,at){
   source.textContent=(item.asOf||'기준일 미확인')+' · '+(item.source||'내 포트폴리오');
 };
 let memberWritable=!!member.writable,memberReset=false,lastDraft='',memberStockList=false;
+let memberDraftOrigins=member.layoutBases||{};
+const memberPositionEdits=new Set(),memberMarkEdits=new Set();
 let memberOriginGeneration=Number.isSafeInteger(member.originGeneration)&&member.originGeneration>0?member.originGeneration:null,memberApplyingGraph=false;
 const memberOriginStamp=()=>memberOriginGeneration===null?{}:{originGeneration:memberOriginGeneration};
-function memberDraft(){return {positions:nodes.map(n=>({id:n.id,x:n.x,y:n.y})),notes:Object.values(state.notes),marks:state.marks,
-  ...(memberLocalView?{hiddenStockIds:boardDraft[state.scenario].hidden.filter(id=>nodeById[id]?.kind==='stock')}: {})};}
+function memberDraft(){
+  // Persist user changes, not every newly collected document's default layout.
+  // Once changed, keep sending an item even after undo/reset/clearing its mark.
+  // The parent retains off-screen saved records and enforces the same limits.
+  for(const n of nodes){const base=memberDraftOrigins[n.id];if(!base||!Number.isFinite(n.x)||!Number.isFinite(n.y)||n.x!==base.x||n.y!==base.y)memberPositionEdits.add(n.id);}
+  for(const [id,mark] of Object.entries(state.marks))if(!mark||typeof mark!=='object'||Array.isArray(mark)||['read','readTouched','important','later','irrelevant'].some(k=>mark[k]!==undefined&&mark[k]!==false))memberMarkEdits.add(id);
+  return {positions:nodes.filter(n=>memberPositionEdits.has(n.id)).map(n=>({id:n.id,x:n.x,y:n.y})),notes:Object.values(state.notes),
+    marks:Object.fromEntries(Object.entries(state.marks).filter(([id])=>memberMarkEdits.has(id))),
+    ...(memberLocalView?{hiddenStockIds:boardDraft[state.scenario].hidden.filter(id=>nodeById[id]?.kind==='stock')}: {})};
+}
 function emitMemberDraft(force=false){
   if(!memberWritable||memberApplyingGraph)return;
   const draft=memberDraft(),encoded=JSON.stringify(draft);
@@ -4311,11 +4322,11 @@ updateMemberGraph=function(model,ticker){
         for(const layout of memberGroups.scopedLayouts?.values()||[]){
           const offset=layout.offsets.get(id);if(offset)layout.offsets.set(id,{x:offset.x-dx,y:offset.y-dy});
         }
-        if(node){node.x+=dx;node.y+=dy;}
+        if(node){node.x=node.x===prior.x?base.x:node.x+dx;node.y=node.y===prior.y?base.y:node.y+dy;}
         // Local snapshots are rebased by the parent before hydration, including
         // records absent from the previous display. Native member input is not.
         else if(!memberLocalView){const returning=model.nodes.find(n=>n.id===id);if(returning){returning.x+=dx;returning.y+=dy;}}
-        const shift=p=>({x:p.x+dx,y:p.y+dy});
+        const shift=p=>({x:p.x===prior.x?base.x:p.x+dx,y:p.y===prior.y?base.y:p.y+dy});
         if(initialPositions.has(id))initialPositions.set(id,shift(initialPositions.get(id)));
         for(const entry of history){
           if(entry.before[id])entry.before[id]=shift(entry.before[id]);

@@ -4921,6 +4921,10 @@ function prototypeDraftRejection(value, code) {
     marks: plain(value) && plain(value.marks) ? Object.keys(value.marks).length : null
   };
 }
+function prototypeLayoutBases(state, extraNodes) {
+  const base = projectWorkspaceToPrototype({ ...state, privateState: { ...state.privateState, document: { layouts: [] } } });
+  return new Map([...base.nodes, ...extraNodes].map((n) => [n.id, { x: n.x, y: n.y }]));
+}
 function marketLayout(layout, market2) {
   const aliases = /* @__PURE__ */ new Map(), positions = new Map(layout.positions.map((p) => [p.node_id, p])), marks = { ...layout.marks };
   for (const node of market2.nodes) {
@@ -4971,6 +4975,7 @@ function mergePrototypeDraft(state, value, onReject) {
   const reviewed = projectReviewedPrototype(state), automatic = projectAutomaticPrototype(state.graph), contracts = projectContractPrototype(state.graph), markets = projectMarketPrototype(state.graph);
   const market2 = { nodes: [...markets.nodes, ...contracts.nodes], edges: [...markets.edges, ...contracts.edges], recordsMap: { ...markets.recordsMap, ...contracts.recordsMap } };
   const prior = marketLayout(state.privateState.document.layouts.find((l) => l.map_key === "main") || { map_key: "main", positions: [], notes: [], marks: {} }, market2);
+  const layoutBases = prototypeLayoutBases(state, [...reviewed.nodes, ...automatic.nodes, ...market2.nodes]);
   const allowed = new Set([...state.graph.companies, ...state.graph.documents, ...reviewed.nodes, ...automatic.nodes, ...market2.nodes].map((n) => n.id));
   const edgeIds = /* @__PURE__ */ new Set([...state.graph.links.map((e) => e.id), ...reviewed.edges.map((e) => e.id), ...automatic.edges.map((e) => e.id), ...market2.edges.map((e) => e.id)]), positions = new Map(prior.positions.map((p) => [p.node_id, p]));
   const seen = /* @__PURE__ */ new Set();
@@ -4979,7 +4984,10 @@ function mergePrototypeDraft(state, value, onReject) {
     if (typeof p.id !== "string" || !allowed.has(p.id) || seen.has(p.id)) return reject("position_identity");
     seen.add(p.id);
     const previous = positions.get(p.id);
-    positions.set(p.id, { node_id: p.id, x: pixel(p.x, 1e3, previous?.x), y: pixel(p.y, 680, previous?.y) });
+    const position = { node_id: p.id, x: pixel(p.x, 1e3, previous?.x), y: pixel(p.y, 680, previous?.y) };
+    const base = layoutBases.get(p.id);
+    if (!previous && base && p.x === base.x && p.y === base.y && validMapDocument({ layouts: [{ map_key: "main", positions: [position], notes: [], marks: {} }] })) continue;
+    positions.set(p.id, position);
   }
   const oldNotes = new Map(prior.notes.map((n) => [n.note_id, n]));
   const notes = [];
@@ -4997,11 +5005,13 @@ function mergePrototypeDraft(state, value, onReject) {
     if (!doc) return reject("mark_identity");
     if (!plain(mark) || ["read", "readTouched", "important", "later", "irrelevant"].some((key) => mark[key] !== void 0 && typeof mark[key] !== "boolean")) return reject("mark_shape");
     const old = prior.marks[id];
-    marks[id] = {
+    const nextMark = {
       read_revision: mark.read ? doc.read_revision : mark.readTouched ? null : old?.read_revision ?? null,
       important: !!mark.important,
       disposition: mark.irrelevant ? "irrelevant" : mark.later ? "later" : "inbox"
     };
+    if (!Object.hasOwn(prior.marks, id) && !mark.read && !mark.readTouched && !mark.important && !mark.later && !mark.irrelevant && validMapDocument({ layouts: [{ map_key: "main", positions: [], notes: [], marks: { [id]: nextMark } }] })) continue;
+    marks[id] = nextMark;
   }
   const next = { map_key: "main", positions: [...positions.values()], notes, marks };
   return validMapDocument({ layouts: [next] }) ? next : reject("final_schema", next);
@@ -5011,8 +5021,7 @@ function prototypeMemberModel(state, explorationNotice = "", visitBaseline) {
   const projected = projectWorkspaceToPrototype(state), graph = state.graph, reviewed = projectReviewedPrototype(state), automatic = projectAutomaticPrototype(state.graph), contracts = projectContractPrototype(state.graph), markets = projectMarketPrototype(state.graph);
   const judgments = new Map(memberMapBoundBusinessJudgments(graph).map(row => [row.record_id, row]));
   const market2 = { nodes: [...markets.nodes, ...contracts.nodes], edges: [...markets.edges, ...contracts.edges], recordsMap: { ...markets.recordsMap, ...contracts.recordsMap } };
-  const base = projectWorkspaceToPrototype({ ...state, privateState: { ...state.privateState, document: { layouts: [] } } });
-  const layoutBases = new Map([...base.nodes, ...reviewed.nodes, ...automatic.nodes, ...market2.nodes].map((n) => [n.id, { x: n.x, y: n.y }]));
+  const layoutBases = prototypeLayoutBases(state, [...reviewed.nodes, ...automatic.nodes, ...market2.nodes]);
   const stocks = new Map(workspaceStocks(state).map((stock) => [stock.ticker, stock]));
   const savedLayout = state.privateState.document?.layouts.find((l) => l.map_key === "main");
   const layout = savedLayout ? marketLayout(savedLayout, market2) : void 0;
