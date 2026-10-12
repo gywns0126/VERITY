@@ -1897,130 +1897,248 @@ function parseDocumentLineage(value, doc) {
 }
 
 // framer-components/public-probe/PortfolioContractFacts.ts
-var invalid4 = () => new Error("계약공시 본문 자료를 확인하지 못했어요.");
-var row = (v) => {
-  if (!v || typeof v !== "object" || Array.isArray(v)) throw invalid4();
-  return v;
-};
-var text7 = (v, max = 2e3) => {
-  if (typeof v !== "string" || !v.trim() || v.length > max || /[<>\u0000-\u001f\u007f]/.test(v)) throw invalid4();
-  return v;
-};
-var day = (v) => {
-  const value = text7(v, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value) throw invalid4();
-  return value;
-};
-var titleKey2 = (v) => v.normalize("NFKC").replace(/^\[(?:기재|첨부|기타)?정정\]/, "").replace(/[\sㆍ·ᆞ•]/g, "");
-var field = (v) => {
-  const item = row(v);
-  return { label: text7(item.label), value: text7(item.value) };
-};
-var quote = (v) => {
-  const item = field(v);
-  return `${item.label}: ${item.value}`;
-};
-var quotedContractDay = (value) => {
-  const match = text7(value, 12).match(/^(\d{4})[.-](\d{1,2})[.-](\d{1,2})\.?$/);
-  if (!match) throw invalid4();
-  return day(`${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`);
-};
-function parseContractFacts(value, doc) {
-  if (value === void 0) return null;
-  const facts = row(value), issuer = row(facts.issuer), filing = row(facts.filing);
-  const receipt = text7(facts.receipt_no, 14), issuerId = text7(issuer.id, 9);
-  const url = `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}`;
-  if (facts.schema !== "dart-contract-fact-v1" || !/^\d{14}$/.test(receipt) || !/^KR:\d{6}$/.test(issuerId) || doc.id !== `DART:${receipt}` || doc.source !== "DART" || doc.url !== url || doc.company_ids.length !== 1 || doc.company_ids[0] !== issuerId || day(filing.filed_on) !== doc.as_of || titleKey2(text7(filing.title, 300)) !== "단일판매공급계약체결" || titleKey2(doc.title) !== titleKey2(text7(filing.title, 300)) || facts.counterparty_company_id !== null || facts.verified_common_event !== false || facts.current_contract_status !== "not-inferred") throw invalid4();
-  text7(issuer.name, 160);
-  const contract = row(facts.contract), period = row(contract.period);
-  const lines = [
-    "공시 본문 발췌",
-    quote(contract.type),
-    quote(contract.name),
-    quote(contract.counterparty),
-    `${text7(period.label)} · ${quote(period.start)} / ${quote(period.end)}`,
-    quote(contract.signed_on)
-  ];
-  if (facts.correction === null) {
-    if (doc.title.includes("정정")) throw invalid4();
-  } else {
-    const correction = row(facts.correction);
-    const corrected = field(correction.corrected_on), related = field(correction.related_filing_date);
-    if (!doc.title.includes("정정") || quotedContractDay(corrected.value) > doc.as_of || quotedContractDay(related.value) > doc.as_of || !Array.isArray(correction.changes) || !correction.changes.length || correction.changes.length > 20) throw invalid4();
-    lines.push(quote(correction.corrected_on), quote(correction.related_filing_date), quote(correction.reason));
-    for (const raw of correction.changes) {
-      const change = row(raw);
-      lines.push(`${text7(change.field)} · 정정 전: ${text7(change.before)} → 정정 후: ${text7(change.after)}`);
-    }
-  }
-  lines.push("공시의 표현 그대로예요. ‘-’·일반 명칭은 특정 기업으로 연결하지 않으며 현재 계약 유효성이나 주가 영향을 뜻하지 않아요.");
-  return {
-    explanation: lines.join("\n"),
-    sources: [{ title: "계약공시 본문", source: "DART", asOf: doc.as_of, url }]
+var { parseContractFacts, quotedContractDay, quotedContractFinancialLines } = (() => {
+var MemberMapContractFactsDelta = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
   };
-}
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // framer-components/public-probe/PortfolioContractFacts.ts
+  var PortfolioContractFacts_exports = {};
+  __export(PortfolioContractFacts_exports, {
+    parseContractFacts: () => parseContractFacts,
+    quotedContractDay: () => quotedContractDay,
+    quotedContractFinancialLines: () => quotedContractFinancialLines
+  });
+  var invalid = () => new Error("계약공시 본문 자료를 확인하지 못했어요.");
+  var row = (v) => {
+    if (!v || typeof v !== "object" || Array.isArray(v)) throw invalid();
+    return v;
+  };
+  var text = (v, max = 2e3) => {
+    if (typeof v !== "string" || !v.trim() || v.length > max || /[<>\u0000-\u001f\u007f]/.test(v)) throw invalid();
+    return v;
+  };
+  var day = (v) => {
+    const value = text(v, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value) throw invalid();
+    return value;
+  };
+  var titleKey = (v) => v.normalize("NFKC").replace(/^\[(?:기재|첨부|기타)?정정\]/, "").replace(/[\sㆍ·ᆞ•]/g, "");
+  var field = (v) => {
+    const item = row(v);
+    return { label: text(item.label), value: text(item.value) };
+  };
+  var quote = (v) => {
+    const item = field(v);
+    return `${item.label}: ${item.value}`;
+  };
+  var quotedContractDay = (value) => {
+    const match = text(value, 12).match(/^(\d{4})[.-](\d{1,2})[.-](\d{1,2})\.?$/);
+    if (!match) throw invalid();
+    return day(`${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`);
+  };
+  function quotedContractFinancialLines(contract, asOf, notes, termination = false) {
+    const lines = [];
+    if (contract.financial_terms !== void 0) {
+      const financial = row(contract.financial_terms);
+      const labels = {
+        amount: termination ? ["해지금액(원)"] : ["계약금액(원)", "계약금액총액(원)"],
+        recent_revenue: ["최근매출액(원)"],
+        revenue_ratio: ["매출액대비(%)"]
+      };
+      const keys = Object.keys(financial);
+      if (!keys.length || keys.some((key) => !Object.hasOwn(labels, key))) throw invalid();
+      for (const key of ["amount", "recent_revenue", "revenue_ratio"]) {
+        if (!Object.hasOwn(financial, key)) continue;
+        const raw = row(financial[key]), quoted = field(raw);
+        if (Object.keys(raw).sort().join(",") !== "label,value" || !labels[key].includes(quoted.label.normalize("NFKC").replace(/\s+/g, ""))) throw invalid();
+        lines.push(`${quoted.label}: ${quoted.value}`);
+      }
+      lines.push("계약 내역에 보고된 금액·최근 매출액·비율이며 연결 정도 점수나 연간 매출 의존도가 아니에요. 매출 기준연도·별도/연결 기준과 후속 정정은 원문을 함께 확인하세요.");
+    }
+    if (contract.revenue_basis !== void 0) {
+      const basis = row(contract.revenue_basis), quoted = text(basis.quote);
+      const clauses = notes?.split(/(?<=[.!?])(?<![0-9]\.)\s+/).map((s) => s.trim()) || [];
+      const references = clauses.filter((s) => /최근\s*매출액(?:\(원\))?['"‘’]?\s*(?:은|는)/.test(s));
+      const match = quoted.match(/^(?:-\s*)?(?:상기\s*['"‘’]?(?:2\.\s*(?:계약|해지)내역\s*(?:중\s*|-\s*))?)?최근\s*매출액(?:\(원\))?['"‘’]?\s*(?:은|는)\s*(?:당사의\s*)?((?:19|20)\d{2})년(?:도|말)?\s*(연결|별도|개별)\s*재무제표\s*기준(?:임|입니다|\s*매출액입니다)\.$/);
+      if (Object.keys(basis).sort().join(",") !== "quote,scope,year" || !Number.isSafeInteger(basis.year) || basis.year > Number(day(asOf).slice(0, 4)) || !match || Number(match[1]) !== basis.year || basis.scope !== (match[2] === "연결" ? "consolidated" : "separate") || references.length !== 1 || references[0] !== quoted || row(contract.financial_terms).recent_revenue === void 0) throw invalid();
+      lines.push(
+        `최근 매출액 분모 기준 · ${basis.year}년 · ${basis.scope === "consolidated" ? "연결" : "별도/개별"} 재무제표`,
+        `분모 기준 원문 · ${quoted}`
+      );
+    }
+    return lines;
+  }
+  function parseContractFacts(value, doc) {
+    if (value === void 0) return null;
+    const facts = row(value), issuer = row(facts.issuer), filing = row(facts.filing);
+    const receipt = text(facts.receipt_no, 14), issuerId = text(issuer.id, 9);
+    const url = `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}`;
+    if (facts.schema !== "dart-contract-fact-v1" || !/^\d{14}$/.test(receipt) || !/^KR:\d{6}$/.test(issuerId) || doc.id !== `DART:${receipt}` || doc.source !== "DART" || doc.url !== url || doc.company_ids.length !== 1 || doc.company_ids[0] !== issuerId || day(filing.filed_on) !== doc.as_of || titleKey(text(filing.title, 300)) !== "단일판매공급계약체결" || titleKey(doc.title) !== titleKey(text(filing.title, 300)) || facts.counterparty_company_id !== null || facts.verified_common_event !== false || facts.current_contract_status !== "not-inferred") throw invalid();
+    text(issuer.name, 160);
+    const contract = row(facts.contract), period = row(contract.period);
+    const lines = [
+      "공시 본문 발췌",
+      quote(contract.type),
+      quote(contract.name),
+      quote(contract.counterparty),
+      `${text(period.label)} · ${quote(period.start)} / ${quote(period.end)}`,
+      quote(contract.signed_on)
+    ];
+    let financialNotes;
+    if (contract.financial_notes !== void 0) {
+      const raw = row(contract.financial_notes);
+      financialNotes = field(raw);
+      if (Object.keys(raw).sort().join(",") !== "label,value" || !/^(?:9|10)\.\s*기타\s*투자판단(?:에\s*참고할\s*사항|과\s*관련한\s*중요사항)$/.test(financialNotes.label)) throw invalid();
+    }
+    lines.push(...quotedContractFinancialLines(contract, doc.as_of, financialNotes?.value));
+    if (financialNotes) lines.push(`${financialNotes.label}: ${financialNotes.value}`);
+    if (facts.correction === null) {
+      if (doc.title.includes("정정")) throw invalid();
+    } else {
+      const correction = row(facts.correction);
+      const corrected = field(correction.corrected_on), related = field(correction.related_filing_date);
+      if (!doc.title.includes("정정") || quotedContractDay(corrected.value) > doc.as_of || quotedContractDay(related.value) > doc.as_of || !Array.isArray(correction.changes) || !correction.changes.length || correction.changes.length > 20) throw invalid();
+      lines.push(quote(correction.corrected_on), quote(correction.related_filing_date), quote(correction.reason));
+      for (const raw of correction.changes) {
+        const change = row(raw);
+        lines.push(`${text(change.field)} · 정정 전: ${text(change.before)} → 정정 후: ${text(change.after)}`);
+      }
+    }
+    lines.push("공시의 표현 그대로예요. ‘-’·일반 명칭은 특정 기업으로 연결하지 않으며 현재 계약 유효성이나 주가 영향을 뜻하지 않아요.");
+    return {
+      explanation: lines.join("\n"),
+      sources: [{ title: "계약공시 본문", source: "DART", asOf: doc.as_of, url }]
+    };
+  }
+  return __toCommonJS(PortfolioContractFacts_exports);
+})();
+
+return MemberMapContractFactsDelta;
+})();
 
 // framer-components/public-probe/PortfolioContractTermination.ts
-var invalid5 = () => new Error("계약 해지 공시의 근거를 확인하지 못했어요.");
-var row2 = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw invalid5();
-  return value;
-};
-var text8 = (value, max = 2e3) => {
-  if (typeof value !== "string" || !value.trim() || value.length > max || /[<>\u0000-\u001f\u007f]/.test(value)) throw invalid5();
-  return value;
-};
-var day2 = (value) => {
-  const result = text8(value, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(result) || !Number.isFinite(Date.parse(result)) || new Date(result).toISOString().slice(0, 10) !== result) throw invalid5();
-  return result;
-};
-var titleKey3 = (value) => value.normalize("NFKC").trim().replace(/^\[(?:기재|첨부|기타)?정정\]/, "").replace(/[\sㆍ·ᆞ•]/g, "");
-var correctionTitle = (value) => /^\[(?:기재|첨부|기타)?정정\]/.test(value.normalize("NFKC").trim());
-var relatedTitleKey = (value) => value.normalize("NFKC").replace(/[\sㆍ·ᆞ•]/g, "");
-var field2 = (value) => {
-  const item = row2(value);
-  return { label: text8(item.label), value: text8(item.value) };
-};
-var quote2 = (value) => {
-  const item = field2(value);
-  return `${item.label}: ${item.value}`;
-};
-var dart = (receipt) => `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}`;
-function parseContractTermination(value, doc, knownNames) {
-  if (value === void 0) return null;
-  const facts = row2(value), issuer = row2(facts.issuer), receipt = text8(facts.receipt_no, 14);
-  const issuerId = text8(issuer.id, 9), name = text8(issuer.name, 160), sourceName = text8(issuer.source_name, 160);
-  if (facts.schema !== "dart-contract-termination-v1" || facts.proves !== "termination-notice" || facts.current_contract_status !== "not-inferred" || !/^\d{14}$/.test(receipt) || !/^KR:\d{6}$/.test(issuerId) || doc.id !== `DART:${receipt}` || doc.source !== "DART" || doc.url !== dart(receipt) || doc.company_ids.length !== 1 || doc.company_ids[0] !== issuerId || day2(facts.as_of) !== doc.as_of || titleKey3(text8(facts.filing_title, 300)) !== "단일판매공급계약해지" || titleKey3(doc.title) !== "단일판매공급계약해지" || correctionTitle(facts.filing_title) !== correctionTitle(doc.title) || knownNames && (!knownNames.includes(name) || !knownNames.includes(sourceName))) throw invalid5();
-  const contract = row2(facts.contract), period = row2(contract.period), notice = row2(facts.termination);
-  if (quotedContractDay(field2(period.start).value) > quotedContractDay(field2(period.end).value)) throw invalid5();
-  quotedContractDay(field2(notice.date).value);
-  const lines = [
-    "계약 해지 통보 공시 · 현재 종료 여부는 미확인",
-    quote2(contract.name),
-    quote2(contract.counterparty),
-    `${text8(period.label)} · ${quote2(period.start)} / ${quote2(period.end)}`,
-    quote2(notice.date),
-    quote2(notice.reason),
-    quote2(notice.other_matters)
-  ];
-  const links = notice.related_filings, documents = notice.related_documents === void 0 ? [] : notice.related_documents;
-  if (!Array.isArray(links) || !Array.isArray(documents) || links.length + documents.length < 1 || links.length + documents.length > 20) throw invalid5();
-  const seen = /* @__PURE__ */ new Set(), sources = [
-    { title: "계약 해지 공시", source: "DART", asOf: doc.as_of, url: doc.url }
-  ];
-  const addRelated = (raw, contract2) => {
-    const link = row2(raw), previous = text8(link.receipt_no, 14), published = day2(link.filed_on), title = text8(link.title, 300);
-    const isContract = relatedTitleKey(title) === "단일판매공급계약체결";
-    if (!/^\d{14}$/.test(previous) || seen.has(previous) || previous === receipt || published > doc.as_of || previous.slice(0, 8) !== published.replaceAll("-", "") || isContract !== contract2 || link.href !== `/dsaf001/main.do?rcpNo=${previous}`) throw invalid5();
-    seen.add(previous);
-    sources.push({ title: `공시가 명시한 ${contract2 ? "계약 원문" : "기타 원문"} · ${title}`, source: "DART", asOf: published, url: dart(previous) });
+var { parseContractTermination } = ((contractBindings) => {
+var MemberMapContractTerminationDelta = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
   };
-  for (const raw of links) addRelated(raw, true);
-  for (const raw of documents) addRelated(raw, false);
-  lines.push("통보일과 효력일은 다를 수 있어요. 계약 범위·효력 발생 여부를 임의로 판단하지 않아요. 관련 원문 링크는 해지 공시에 명시된 연결이에요.");
-  return { explanation: lines.join("\n"), sources };
-}
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // framer-components/public-probe/PortfolioContractTermination.ts
+  var PortfolioContractTermination_exports = {};
+  __export(PortfolioContractTermination_exports, {
+    parseContractTermination: () => parseContractTermination
+  });
+
+  // contract-binding:facts
+  var quotedContractDay = contractBindings.quotedContractDay;
+  var quotedContractFinancialLines = contractBindings.quotedContractFinancialLines;
+
+  // framer-components/public-probe/PortfolioContractTermination.ts
+  var invalid = () => new Error("계약 해지 공시의 근거를 확인하지 못했어요.");
+  var row = (value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw invalid();
+    return value;
+  };
+  var text = (value, max = 2e3) => {
+    if (typeof value !== "string" || !value.trim() || value.length > max || /[<>\u0000-\u001f\u007f]/.test(value)) throw invalid();
+    return value;
+  };
+  var day = (value) => {
+    const result = text(value, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(result) || !Number.isFinite(Date.parse(result)) || new Date(result).toISOString().slice(0, 10) !== result) throw invalid();
+    return result;
+  };
+  var titleKey = (value) => value.normalize("NFKC").trim().replace(/^\[(?:기재|첨부|기타)?정정\]/, "").replace(/[\sㆍ·ᆞ•]/g, "");
+  var correctionTitle = (value) => /^\[(?:기재|첨부|기타)?정정\]/.test(value.normalize("NFKC").trim());
+  var relatedTitleKey = (value) => value.normalize("NFKC").replace(/[\sㆍ·ᆞ•]/g, "");
+  var field = (value) => {
+    const item = row(value);
+    return { label: text(item.label), value: text(item.value) };
+  };
+  var quote = (value) => {
+    const item = field(value);
+    return `${item.label}: ${item.value}`;
+  };
+  var dart = (receipt) => `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}`;
+  function parseContractTermination(value, doc, knownNames) {
+    if (value === void 0) return null;
+    const facts = row(value), issuer = row(facts.issuer), receipt = text(facts.receipt_no, 14);
+    const issuerId = text(issuer.id, 9), name = text(issuer.name, 160), sourceName = text(issuer.source_name, 160);
+    if (facts.schema !== "dart-contract-termination-v1" || facts.proves !== "termination-notice" || facts.current_contract_status !== "not-inferred" || !/^\d{14}$/.test(receipt) || !/^KR:\d{6}$/.test(issuerId) || doc.id !== `DART:${receipt}` || doc.source !== "DART" || doc.url !== dart(receipt) || doc.company_ids.length !== 1 || doc.company_ids[0] !== issuerId || day(facts.as_of) !== doc.as_of || titleKey(text(facts.filing_title, 300)) !== "단일판매공급계약해지" || titleKey(doc.title) !== "단일판매공급계약해지" || correctionTitle(facts.filing_title) !== correctionTitle(doc.title) || knownNames && (!knownNames.includes(name) || !knownNames.includes(sourceName))) throw invalid();
+    const contract = row(facts.contract), period = row(contract.period), notice = row(facts.termination);
+    if (quotedContractDay(field(period.start).value) > quotedContractDay(field(period.end).value)) throw invalid();
+    quotedContractDay(field(notice.date).value);
+    const lines = [
+      "계약 해지 통보 공시 · 현재 종료 여부는 미확인",
+      quote(contract.name),
+      quote(contract.counterparty),
+      `${text(period.label)} · ${quote(period.start)} / ${quote(period.end)}`,
+      quote(notice.date),
+      quote(notice.reason),
+      quote(notice.other_matters)
+    ];
+    const notes = field(notice.other_matters).value;
+    lines.push(...quotedContractFinancialLines(contract, doc.as_of, notes, true));
+    for (const [key, label] of [["notice_on", "해지통보일"], ["effective_on", "해지발효일"]]) {
+      if (notice[key] === void 0) continue;
+      const stated = row(notice[key]), date = day(stated.date), quoted = text(stated.quote);
+      const clauses = notes.split(/(?<=[.!?])(?<![0-9]\.)\s+/).map((s) => s.trim());
+      const mentions = clauses.flatMap((clause) => [...clause.matchAll(new RegExp(label + "\\s*\\(([^)]{1,40})\\)", "g"))].map((match) => ({ value: match[1], quote: clause })));
+      if (Object.keys(stated).sort().join(",") !== "date,quote" || mentions.length !== 1 || mentions[0].quote !== quoted || quotedContractDay(mentions[0].value) !== date || /아니|아닌|아님|아닐|아닙|않|미정|취소|철회|불확실|다른\s*계약|자회사/.test(quoted) || key === "notice_on" && (date !== quotedContractDay(field(notice.date).value) || date > doc.as_of) || key === "effective_on" && (notice.notice_on === void 0 || date < day(row(notice.notice_on).date))) throw invalid();
+      lines.push(`${key === "notice_on" ? "원문 명시 통지일" : "원문 명시 발효일"} · ${date}`, `${label} 근거 원문 · ${quoted}`);
+    }
+    const links = notice.related_filings, documents = notice.related_documents === void 0 ? [] : notice.related_documents;
+    if (!Array.isArray(links) || !Array.isArray(documents) || links.length + documents.length < 1 || links.length + documents.length > 20) throw invalid();
+    const seen = /* @__PURE__ */ new Set(), sources = [
+      { title: "계약 해지 공시", source: "DART", asOf: doc.as_of, url: doc.url }
+    ];
+    const addRelated = (raw, contract2) => {
+      const link = row(raw), previous = text(link.receipt_no, 14), published = day(link.filed_on), title = text(link.title, 300);
+      const isContract = relatedTitleKey(title) === "단일판매공급계약체결";
+      if (!/^\d{14}$/.test(previous) || seen.has(previous) || previous === receipt || published > doc.as_of || previous.slice(0, 8) !== published.replaceAll("-", "") || isContract !== contract2 || link.href !== `/dsaf001/main.do?rcpNo=${previous}`) throw invalid();
+      seen.add(previous);
+      sources.push({ title: `공시가 명시한 ${contract2 ? "계약 원문" : "기타 원문"} · ${title}`, source: "DART", asOf: published, url: dart(previous) });
+    };
+    for (const raw of links) addRelated(raw, true);
+    for (const raw of documents) addRelated(raw, false);
+    lines.push("통보일과 효력일은 다를 수 있어요. 계약 범위·효력 발생 여부를 임의로 판단하지 않아요. 관련 원문 링크는 해지 공시에 명시된 연결이에요.");
+    return { explanation: lines.join("\n"), sources };
+  }
+  return __toCommonJS(PortfolioContractTermination_exports);
+})();
+
+return MemberMapContractTerminationDelta;
+})({quotedContractDay,quotedContractFinancialLines});
 
 // framer-components/public-probe/PortfolioContractEvents.ts
 var invalid6 = () => new Error("계약 사건의 연결 근거를 확인하지 못했어요.");
