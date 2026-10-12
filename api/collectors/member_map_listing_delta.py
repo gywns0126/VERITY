@@ -288,8 +288,9 @@ def parse_dart_list(payload: Mapping[str, Any]) -> dict:
             reported = datetime.strptime(stamp, "%Y%m%d").date().isoformat()
         except ValueError:
             raise ListingError("invalid_reported_date") from None
-        ticker = row.get("stock_code") or ""
-        if not isinstance(ticker, str) or ticker and not re.fullmatch(r"[0-9]{6}", ticker):
+        # Listing identity only; the existing public universe still controls mapping.
+        ticker = row.get("stock_code", "")
+        if not isinstance(ticker, str) or ticker and not re.fullmatch(r"[0-9][0-9A-Z]{5}", ticker):
             raise ListingError("invalid_stock_code")
         title = _text(row.get("report_nm"))
         result.append({"id": f"DART:{receipt}", "ticker": ticker, "title": title,

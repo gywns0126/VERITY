@@ -231,17 +231,49 @@ def test_dart_replays_same_day_no_receipt_order_assumption():
     assert set(result["cursor"]["ids"]) == {"DART:20261012000001", "DART:20261012000002"}
 
 
-def test_dart_pages_unmapped_and_unique_denominator():
+@pytest.mark.parametrize("unmapped_ticker", ["", "00499K"])
+def test_dart_pages_unmapped_and_unique_denominator(unmapped_ticker):
     transport = FixtureTransport(dart_page([dart_row(1)], page_size=1, total=2),
-                                 dart_page([dart_row(2, ticker="")], page=2, page_size=1, total=2))
+                                 dart_page([dart_row(2, ticker=unmapped_ticker)], page=2, page_size=1, total=2))
     result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, None, CHECKED, "key", page_size=1, transport=transport)
     assert result["status"] == "success" and result["requests"] == 2
     assert result["unmapped"] == 1 and result["coverage"]["total_records"] == 2
+    assert result["complete"] and result["coverage"]["listing_records"] == 2
+    assert set(result["next_cursor"]["ids"]) == {"DART:20261012000001", "DART:20261012000002"}
     duplicate = FixtureTransport(dart_page([dart_row()], page_size=1, total=2),
                                  dart_page([dart_row()], page=2, page_size=1, total=2))
     result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, None, CHECKED, "key", page_size=1, transport=duplicate)
     assert result["error"] == "incomplete_unique_records" and result["duplicates"] == 1
     assert result["feed"] == PREVIOUS and result["next_cursor"] is None
+
+
+@pytest.mark.parametrize("ticker", ["123456", "00499K"])
+@pytest.mark.parametrize("mapped", [False, True])
+def test_dart_listing_code_mapping_remains_explicit(ticker, mapped):
+    universe = {ticker: "Example"} if mapped else {}
+    result = delta.collect_dart_delta(universe, PREVIOUS, None, CHECKED, "key",
+        transport=FixtureTransport(dart_page([dart_row(ticker=ticker)])))
+    assert result["status"] == "success" and result["complete"]
+    assert result["unmapped"] == (0 if mapped else 1)
+    assert [r["ticker"] for r in result["records"]] == ([ticker] if mapped else [])
+    assert result["coverage"]["listing_records"] == result["coverage"]["total_records"] == 1
+    assert result["next_cursor"]["ids"] == ["DART:20261012000001"]
+    if not mapped:
+        assert result["feed"] == PREVIOUS
+
+
+@pytest.mark.parametrize("ticker", ["      ", "00499k", "A12345", "00499K ", "12345", "1234567",
+                                    "１２３４５６", None, 0, 123456, False, [], {}])
+def test_dart_malformed_stock_code_keeps_prior_cursor_and_feed(ticker):
+    cursor = {"source": "DART", "through_date": "2026-10-11", "ids": []}
+    transport = FixtureTransport(dart_page([dart_row(1)], page_size=1, total=2),
+        dart_page([dart_row(2, ticker=ticker)], page=2, page_size=1, total=2))
+    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, cursor, CHECKED, "key",
+        page_size=1, transport=transport)
+    assert result["status"] == "partial" and result["error"] == "invalid_stock_code"
+    assert not result["complete"] and result["next_cursor"] is None
+    assert result["cursor"] == cursor and result["feed"] == PREVIOUS
+    assert result["requests"] == 2 and result["coverage"]["pages_succeeded"] == 1
 
 
 @pytest.mark.parametrize("second,error", [
