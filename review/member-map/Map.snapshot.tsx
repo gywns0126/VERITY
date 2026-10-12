@@ -4913,6 +4913,14 @@ function portfolioCompanyDisplayName(market2, ticker, formalName) {
 var plain = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 var point = (v) => plain(v) && Number.isFinite(v.x) && Number.isFinite(v.y);
 var pixel = (value, scale, prior) => prior !== void 0 && value === 0.5 + prior / scale ? prior : (value - 0.5) * scale;
+function prototypeDraftRejection(value, code) {
+  return {
+    code,
+    positions: plain(value) && Array.isArray(value.positions) ? value.positions.length : null,
+    notes: plain(value) && Array.isArray(value.notes) ? value.notes.length : null,
+    marks: plain(value) && plain(value.marks) ? Object.keys(value.marks).length : null
+  };
+}
 function marketLayout(layout, market2) {
   const aliases = /* @__PURE__ */ new Map(), positions = new Map(layout.positions.map((p) => [p.node_id, p])), marks = { ...layout.marks };
   for (const node of market2.nodes) {
@@ -4944,9 +4952,22 @@ function marketLayout(layout, market2) {
     notes: layout.notes.map((n) => n.anchor && aliases.has(n.anchor.id) ? { ...n, anchor: { ...n.anchor, id: aliases.get(n.anchor.id) } } : n)
   };
 }
-function mergePrototypeDraft(state, value) {
-  if (state.phase !== "ready" || !state.graph || !["ready", "saving"].includes(state.privateState.phase) || !state.privateState.document) return null;
-  if (!plain(value) || !Array.isArray(value.positions) || !Array.isArray(value.notes) || !plain(value.marks) || value.positions.length > 200 || value.notes.length > 100 || Object.keys(value.marks).length > 200) return null;
+function mergePrototypeDraft(state, value, onReject) {
+  const reject = (code, rejected = value) => {
+    try {
+      onReject?.(prototypeDraftRejection(rejected, code));
+    } catch {
+    }
+    return null;
+  };
+  if (state.phase !== "ready" || !state.graph || !["ready", "saving"].includes(state.privateState.phase) || !state.privateState.document) return reject("state_unready");
+  if (!plain(value)) return reject("draft_shape");
+  if (!Array.isArray(value.positions)) return reject("positions_shape");
+  if (!Array.isArray(value.notes)) return reject("notes_shape");
+  if (!plain(value.marks)) return reject("marks_shape");
+  if (value.positions.length > 200) return reject("positions_limit");
+  if (value.notes.length > 100) return reject("notes_limit");
+  if (Object.keys(value.marks).length > 200) return reject("marks_limit");
   const reviewed = projectReviewedPrototype(state), automatic = projectAutomaticPrototype(state.graph), contracts = projectContractPrototype(state.graph), markets = projectMarketPrototype(state.graph);
   const market2 = { nodes: [...markets.nodes, ...contracts.nodes], edges: [...markets.edges, ...contracts.edges], recordsMap: { ...markets.recordsMap, ...contracts.recordsMap } };
   const prior = marketLayout(state.privateState.document.layouts.find((l) => l.map_key === "main") || { map_key: "main", positions: [], notes: [], marks: {} }, market2);
@@ -4954,7 +4975,8 @@ function mergePrototypeDraft(state, value) {
   const edgeIds = /* @__PURE__ */ new Set([...state.graph.links.map((e) => e.id), ...reviewed.edges.map((e) => e.id), ...automatic.edges.map((e) => e.id), ...market2.edges.map((e) => e.id)]), positions = new Map(prior.positions.map((p) => [p.node_id, p]));
   const seen = /* @__PURE__ */ new Set();
   for (const p of value.positions) {
-    if (!point(p) || typeof p.id !== "string" || !allowed.has(p.id) || seen.has(p.id)) return null;
+    if (!point(p)) return reject("position_coordinates");
+    if (typeof p.id !== "string" || !allowed.has(p.id) || seen.has(p.id)) return reject("position_identity");
     seen.add(p.id);
     const previous = positions.get(p.id);
     positions.set(p.id, { node_id: p.id, x: pixel(p.x, 1e3, previous?.x), y: pixel(p.y, 680, previous?.y) });
@@ -4962,17 +4984,18 @@ function mergePrototypeDraft(state, value) {
   const oldNotes = new Map(prior.notes.map((n) => [n.note_id, n]));
   const notes = [];
   for (const n of value.notes) {
-    if (!point(n) || typeof n.id !== "string" || typeof n.text !== "string" || typeof n.done !== "boolean" || typeof n.target !== "string") return null;
+    if (!point(n) || typeof n.id !== "string" || typeof n.text !== "string" || typeof n.done !== "boolean" || typeof n.target !== "string") return reject("notes_shape");
     const old = oldNotes.get(n.id);
-    if (!old && !/^note-[0-9]+$/.test(n.id)) return null;
+    if (!old && !/^note-[0-9]+$/.test(n.id)) return reject("notes_identity");
     const anchor = n.target ? allowed.has(n.target) ? { kind: "node", id: n.target } : edgeIds.has(n.target) ? { kind: "edge", id: n.target } : old && old.anchor?.id === n.target ? old.anchor : void 0 : null;
-    if (anchor === void 0) return null;
+    if (anchor === void 0) return reject("notes_anchor");
     notes.push({ note_id: n.id, anchor, x: pixel(n.x, 1e3, old?.x), y: pixel(n.y, 680, old?.y), text: n.text, done: n.done });
   }
   const marks = { ...prior.marks };
   for (const [id, mark] of Object.entries(value.marks)) {
     const doc = state.graph.documents.find((d) => d.id === id) || reviewed.recordsMap[id] || automatic.recordsMap[id] || market2.recordsMap[id];
-    if (!doc || !plain(mark) || ["read", "readTouched", "important", "later", "irrelevant"].some((key) => mark[key] !== void 0 && typeof mark[key] !== "boolean")) return null;
+    if (!doc) return reject("mark_identity");
+    if (!plain(mark) || ["read", "readTouched", "important", "later", "irrelevant"].some((key) => mark[key] !== void 0 && typeof mark[key] !== "boolean")) return reject("mark_shape");
     const old = prior.marks[id];
     marks[id] = {
       read_revision: mark.read ? doc.read_revision : mark.readTouched ? null : old?.read_revision ?? null,
@@ -4981,7 +5004,7 @@ function mergePrototypeDraft(state, value) {
     };
   }
   const next = { map_key: "main", positions: [...positions.values()], notes, marks };
-  return validMapDocument({ layouts: [next] }) ? next : null;
+  return validMapDocument({ layouts: [next] }) ? next : reject("final_schema", next);
 }
 function prototypeMemberModel(state, explorationNotice = "", visitBaseline) {
   if (state.phase !== "ready" || !state.graph) return { nodes: [], edges: [], notes: {}, marks: {}, writable: false };
@@ -5095,7 +5118,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
   let waiting = false, reloadPending = false, frameNonce = "";
   let hydrated = false, focusRevision = 0;
   let displayedWindow = "", reloadingWindow = null;
-  let rejectedDraft = false;
+  let rejectedDraft = null;
   let searchRequest = null, searchRevision = 0;
   let searchStocks = /* @__PURE__ */ new Map();
   let exploration = null;
@@ -5168,7 +5191,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
     port = null;
     waiting = false;
     hydrated = false;
-    rejectedDraft = false;
+    rejectedDraft = null;
     appliedOriginGeneration = -1;
     displayedWindow = "";
     reloadingWindow = null;
@@ -5181,7 +5204,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
       writable: p.phase === "ready" || p.phase === "saving",
       saving: p.phase === "saving" || originPending,
       dataRefresh: options.enableDataRefresh ? { phase: current.dataRefresh?.phase || "idle", checked: !!current.dataRefresh?.checkedAt } : null,
-      message: originPending ? "새 자료의 배치를 적용 중이에요…" : rejectedDraft ? "배치·메모가 저장 범위를 벗어나 저장하지 않았어요. 현재 화면은 유지했어요." : p.phase === "loading" ? "저장된 종목과 기록을 불러오는 중이에요…" : p.phase === "conflict" ? "다른 화면에서 기록이 바뀌었어요. 덮어쓰지 않았어요." : p.phase === "error" ? options.localSession && p.error ? p.error : "저장하지 못했어요. 변경 내용을 유지하고 있어요." : p.phase === "saving" ? "저장 중…" : p.dirty ? "아직 저장하지 않은 변경이 있어요" : "저장된 기록을 불러왔어요"
+      message: originPending ? "새 자료의 배치를 적용 중이에요…" : rejectedDraft ? `배치·메모가 저장 범위를 벗어나 저장하지 않았어요. 현재 화면은 유지했어요. (${rejectedDraft.code}; positions=${rejectedDraft.positions ?? "?"}, notes=${rejectedDraft.notes ?? "?"}, marks=${rejectedDraft.marks ?? "?"})` : p.phase === "loading" ? "저장된 종목과 기록을 불러오는 중이에요…" : p.phase === "conflict" ? "다른 화면에서 기록이 바뀌었어요. 덮어쓰지 않았어요." : p.phase === "error" ? options.localSession && p.error ? p.error : "저장하지 못했어요. 변경 내용을 유지하고 있어요." : p.phase === "saving" ? "저장 중…" : p.dirty ? "아직 저장하지 않은 변경이 있어요" : "저장된 기록을 불러왔어요"
     });
   };
   const ready = (event) => {
@@ -5265,13 +5288,14 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
           if (exploration?.version === version) exploration = null;
         }
       } else if (command.type === "edit") {
-        const next = mergePrototypeDraft(state, command.draft);
+        rejectedDraft = null;
+        const next = mergePrototypeDraft(state, command.draft, (reason) => { rejectedDraft = reason; });
         const hidden = command.draft?.hiddenStockIds;
         const allowed = new Set(state.graph?.companies.map((row5) => "company:" + row5.ticker));
         const validView = !options.localView || Array.isArray(hidden) && hidden.length <= 30 && new Set(hidden).size === hidden.length && hidden.every((id) => typeof id === "string" && allowed.has(id));
-        rejectedDraft = !next || !validView;
+        if (next && !validView) rejectedDraft = prototypeDraftRejection(command.draft, "local_view");
         if (next && validView) {
-          rejectedDraft = workspace.editLayout("main", () => next) === false;
+          if (workspace.editLayout("main", () => next) === false) rejectedDraft = prototypeDraftRejection(next, "workspace_rejected");
           if (!rejectedDraft) options.localView?.setHiddenStockIds([...hidden]);
         }
         if (rejectedDraft) status();
