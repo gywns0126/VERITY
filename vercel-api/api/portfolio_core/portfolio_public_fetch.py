@@ -221,9 +221,15 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
         # the existing private public-refresh table; failed optional reads never
         # remove the existing Blob source bundle or promote an AI relation.
         if _fetcher is None or _refresh_reader is not None:
+            baseline_documents = documents.copy()
             documents = _refresh_overlay(documents, _refresh_reader)
-            source_revisions = {name: _document_revision(document)
-                                for name, document in documents.items()}
+            # The overlay replaces changed documents and preserves other objects.
+            source_revisions = {
+                name: source_revisions[name]
+                if name in source_revisions and document is baseline_documents.get(name)
+                else _document_revision(document)
+                for name, document in documents.items()
+            }
 
         result = {
             "documents": documents,
