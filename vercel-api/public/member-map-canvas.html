@@ -2534,7 +2534,11 @@ html>body{padding:0}</style>
 // Display routing is not economic importance, confidence, or a price forecast.
 // Inputs remain unchanged. API/AI results must satisfy these same evidence gates.
 function memberValidDate(value){return typeof value==='string'&&/^\d{4}-\d{2}-\d{2}(?:T|$)/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value.slice(0,10)).toISOString().slice(0,10)===value.slice(0,10);}
-function memberObservedDate(value){return memberValidDate(value)&&value.slice(0,10)<=new Date().toISOString().slice(0,10);}
+function memberEvidenceToday(record){
+  const now=new Date(),krContract=record?.source==='DART'&&/^contract:KR:[0-9]{6}:[0-9]{14}$/.test(record.id);
+  return new Date(now.getTime()+(krContract?9*60*60*1000:0)).toISOString().slice(0,10);
+}
+function memberObservedDate(value,today=new Date().toISOString().slice(0,10)){return memberValidDate(value)&&value.slice(0,10)<=today;}
 function memberSourced(edge){return Array.isArray(edge?.evidence)&&edge.evidence.some(s=>{
   if(!s||!String(s.explanation||s.title||'').trim())return false;
   try{const u=new URL(s.url);return u.protocol==='https:'&&!u.username&&!u.password;}catch{return false;}
@@ -2552,13 +2556,13 @@ function memberLifecycle(record){
 // Negative time gates only. Being inside a reported term is not proof of
 // performance/current validity. No client-supplied current/core flag is read.
 function memberTemporalEvidence(record,links){
-  const today=new Date().toISOString().slice(0,10),n=record||{};
+  const n=record||{},today=memberEvidenceToday(n);
   const dates=[n.asOf,...(links||[]).flatMap(e=>[e.asOf,...(Array.isArray(e.evidence)?e.evidence:[]).map(s=>s?.asOf)])].filter(v=>v!==undefined&&v!==null);
   if(dates.some(v=>!memberValidDate(v)))return {code:'invalid-date',reason:'기준일이 유효하지 않아 현재 자료로 강조하지 않아요.'};
   if(dates.some(v=>v.slice(0,10)>today))return {code:'future',reason:'미래 기준일의 자료가 있어 현재 확인된 변화로 강조하지 않아요.'};
   const reported=(links||[]).filter(e=>e.measure?.kind==='reported-contract-period');
   if(!reported.length)return null;
-  const periods=reported.map(memberContractPeriod);
+  const periods=reported.map(e=>memberContractPeriod(e,today));
   if(periods.some(p=>!p))return {code:'invalid-period',reason:'계약기간의 날짜·원문 결속을 확인하지 못해 현재 자료로 강조하지 않아요.'};
   if(new Set(periods.map(p=>p.start+'|'+p.end)).size!==1)return {code:'period-conflict',reason:'연결별 보고된 계약기간이 달라 현재 자료로 강조하지 않아요.'};
   const period=periods[0];
@@ -2571,7 +2575,7 @@ function memberDisplayDecision(record,allEdges,context={}){
   const links=(allEdges||[]).filter(e=>(e.from===n.id&&stockIds.has(e.to))||(e.to===n.id&&stockIds.has(e.from)));
   const business=n.recordKind==='event'||n.recordKind==='relationship';
   const temporal=memberTemporalEvidence(n,links);
-  const verified=business&&n.layer!=='candidates'&&links.length>0&&!['future','invalid-date'].includes(temporal?.code)&&links.every(e=>e.confirmation==='confirmed'&&memberObservedDate(e.asOf)&&memberSourced(e));
+  const verified=business&&n.layer!=='candidates'&&links.length>0&&!['future','invalid-date'].includes(temporal?.code)&&links.every(e=>e.confirmation==='confirmed'&&memberObservedDate(e.asOf,memberEvidenceToday(n))&&memberSourced(e));
   const evidence=verified?'reported':business?'pending':'reference';
   // A reading shortcut is not an analytical recommendation. Neither a shared
   // company nor a changed document establishes economic significance/currentness.
@@ -2677,16 +2681,16 @@ function memberConnectionDegree(edge,sourceNode){
   // Operational degree accepts only bound ownership or source-qualitative-v1.
   // The static guide draws explicit samples; raw edge strength is not evidence.
   const e=edge||{},n=sourceNode||{},documentOnly=n.recordKind==='document';
-  const verified=!documentOnly&&n.layer!=='candidates'&&!memberTemporalEvidence(n,[e])&&e.confirmation==='confirmed'&&memberSourced(e)&&memberObservedDate(e.asOf);
+  const verified=!documentOnly&&n.layer!=='candidates'&&!memberTemporalEvidence(n,[e])&&e.confirmation==='confirmed'&&memberSourced(e)&&memberObservedDate(e.asOf,memberEvidenceToday(n));
   const lifecycle=memberLifecycle(n),historical=n.changeStatus==='종료'||['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(n.status);
   const measure=verified?memberOwnershipMeasure(e):null;
   const sourceDegree=verified&&!measure&&(n.recordKind==='event'||n.recordKind==='relationship')
     &&(e.type==='direct'||e.type==='documented'||e.type==='indirect')&&!historical&&!lifecycle?.review?memberReportedDegree(e,n):null;
   return {measure,sourceDegree,grade:sourceDegree?.grade||0,label:measure?'지분 '+measure.value+'%':sourceDegree?.label||'미평가'};
 }
-function memberContractPeriod(edge){
+function memberContractPeriod(edge,today=new Date().toISOString().slice(0,10)){
   const m=edge?.measure,validDay=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v;
-  if(edge?.confirmation!=='confirmed'||m?.kind!=='reported-contract-period'||![m.start,m.end,m.asOf].every(validDay)||m.start>m.end||!validDay(edge.asOf)||!memberObservedDate(edge.asOf)||m.asOf>edge.asOf||!Array.isArray(edge.evidence)||!edge.evidence.some(s=>s?.url===m.sourceUrl&&/^https:\/\/dart\.fss\.or\.kr\/dsaf001\/main\.do\?rcpNo=\d{14}$/.test(s.url)))return null;
+  if(edge?.confirmation!=='confirmed'||m?.kind!=='reported-contract-period'||![m.start,m.end,m.asOf].every(validDay)||m.start>m.end||!validDay(edge.asOf)||!memberObservedDate(edge.asOf,today)||m.asOf>edge.asOf||!Array.isArray(edge.evidence)||!edge.evidence.some(s=>s?.url===m.sourceUrl&&/^https:\/\/dart\.fss\.or\.kr\/dsaf001\/main\.do\?rcpNo=\d{14}$/.test(s.url)))return null;
   return m;
 }
 function memberRelationshipCriteria(edge,sourceNode){
@@ -2694,14 +2698,14 @@ function memberRelationshipCriteria(edge,sourceNode){
   const confirmed=e.confirmation==='confirmed';
   const supported=memberSourced(e);
   const temporal=memberTemporalEvidence(sourceNode,[e]);
-  const dated=memberObservedDate(e.asOf)&&!['future','invalid-date'].includes(temporal?.code);
+  const dated=memberObservedDate(e.asOf,memberEvidenceToday(sourceNode))&&!['future','invalid-date'].includes(temporal?.code);
   const documentOnly=sourceNode?.recordKind==='document';
   const verified=!documentOnly&&sourceNode?.layer!=='candidates'&&confirmed&&supported&&dated;
   const lifecycle=memberLifecycle(sourceNode);
   const degree=memberConnectionDegree(e,sourceNode),reportedDegree=degree.sourceDegree;
   const direction=documentOnly?'종목과 자료 연결':direct?'직접 연결':e.type==='indirect'?'간접 연결':'참고 연결';
   const level=degree.label,measure=degree.measure;
-  const period=verified?memberContractPeriod(e):null;
+  const period=verified?memberContractPeriod(e,memberEvidenceToday(sourceNode)):null;
   const scenarios=Array.isArray(e.assessment?.scenarios)?e.assessment.scenarios.filter(row=>row&&typeof row==='object'&&!Array.isArray(row)):[];
   return {
     version:'근거 분리 기준 v1',
@@ -2763,29 +2767,6 @@ function appendMemberEventSummary(parent,node,allEdges,byId,onSelect){
   }
 }
 
-/* circle-flags: https://github.com/HatScripts/circle-flags
-MIT License
-
-Copyright (c) 2026 HatScripts
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
 // Runs inside the original prototype closure. No credentials, fetch, or browser storage.
 // Keep interaction/geometry code in the accepted template; replace only fixture data/copy.
 const memberSaveButton=document.createElement('button');
@@ -3434,7 +3415,7 @@ function memberCompanyJudgment(edge,node){
   const stock=nodeById[company],companyKey=stock?.kind==='stock'?stock.market+':'+stock.ticker:null;
   const matches=rows.filter(row=>row.record_id===node.id&&row.company_id===companyKey
     &&row.read_revision===node.read_revision&&row.published_on===node.asOf
-    &&(row.status==='pending'||memberValidDate(row.reviewed_on)&&row.reviewed_on>=row.published_on&&row.reviewed_on<=new Date().toISOString().slice(0,10))
+    &&(row.status==='pending'||memberValidDate(row.reviewed_on)&&row.reviewed_on>=row.published_on&&row.reviewed_on<=(row.core_selection?.basis==='contract-announcement'?memberEvidenceToday(node):new Date().toISOString().slice(0,10)))
     &&/^source:dart:[0-9]{14}$/.test(row.source_id)
     &&row.source_url==='https://dart.fss.or.kr/dsaf001/main.do?rcpNo='+row.source_id.slice(12)
     &&(node.evidence||[]).some(source=>source.url===row.source_url));
@@ -3468,14 +3449,53 @@ function memberEconomicImportance(record,allEdges,context={}){
     materialityCompany:row.company_id,materialityScopeQuote:m.scope_quote};
 }
 const companyBaseDisplayDecision=memberDisplayDecision;
-// Positive core selection is intentionally unavailable with the current producers:
-// contract events declare current_status=not-inferred; accepted economic reviews
-// bind only automatic:ai candidates and reporting periods. A revision change is
-// a reading delta, not a reviewed economic change. Required producer contract:
-// same verified fact/path + issuer/scope + accepted materiality + source-bound
-// effective period/current check (including conflicts) + old/new revisions and
-// meaningful changed fields/reason, all bound to the current source version.
-// Do not implement this by accepting new unvalidated flags on a client record.
+// Only the closed receipt projection can supply this gate. Reporting periods,
+// degree, client current/core flags and AI comparison changes are insufficient.
+function memberCoreSelection(row,record){
+  const c=row?.core_selection,m=row?.economic_v2?.materiality,p=c?.previous,today=c?.basis==='contract-announcement'?memberEvidenceToday(record):new Date().toISOString().slice(0,10);
+  const exact=(v,fields)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).sort().join()===fields.sort().join();
+  if(c?.basis==='contract-announcement'){
+    const binding=record?.contractJudgmentBinding;
+    const basis=String(c.facts?.contract?.financial_notes?.value||'').match(/(?:상기\s*['"‘’]?2\.\s*(?:계약내역의?\s*)?|상기\s*계약내역의\s*)최근\s*매출액(?:\(원\))?['"‘’]?(?:\s*및\s*계약상대방의\s*최근\s*매출액)?\s*(?:은|는)\s*(?:당사의\s*)?((?:19|20)\d{2})년(?:도|말)?\s*(연결|별도|개별)\s*재무제표\s*기준/);
+    if(!exact(c,['basis','event_revision','source_receipt','body_sha256','fact_revision','checked_on','effective_start',
+      'effective_end','review_scope','materiality','change_kind','facts','reason','denominator'])
+      ||row.status!=='accepted'||row.degree!=='unrated'||row.impact?.direction!=='unknown'
+      ||c.materiality!=='material'||c.review_scope!=='provided-contract-family-only'
+      ||[row.source_version,c.event_revision,c.body_sha256,c.fact_revision].some(v=>typeof v!=='string'||!/^[a-f0-9]{64}$/.test(v))
+      ||c.fact_revision!==row.source_version||!binding||binding.revision!==c.event_revision||binding.sourceReceipt!==c.source_receipt
+      ||![c.checked_on,c.effective_start,c.effective_end,row.published_on].every(memberValidDate)
+      ||row.published_on>c.checked_on||c.checked_on!==row.reviewed_on||c.checked_on>today
+      ||c.effective_start>today||c.effective_end<today||row.published_on>today
+      ||parseInt(c.event_revision.slice(0,13),16)+1!==row.base_read_revision
+      ||record.id!==row.record_id||record.read_revision!==row.read_revision||record.asOf!==row.published_on
+      ||row.source_id!=='source:dart:'+c.source_receipt||row.quote!==c.facts?.contract?.name?.value
+      ||row.period_quote!==c.effective_start+' ~ '+c.effective_end||c.denominator?.quote!==c.facts?.contract?.financial_notes?.value
+      ||!basis||Number(basis[1])!==c.denominator.year||(basis[2]==='연결'?'consolidated':'separate')!==c.denominator.scope
+      ||!['new-contract','amount-amendment'].includes(c.change_kind)
+      ||(c.change_kind==='new-contract'?c.facts.correction!==null||!row.quote.includes('신규 계약'):!c.facts.correction)
+      ||!['first','unavailable'].includes(row.comparison?.status)||row.comparison.current.assessed_as_of>today)return null;
+    const canonical=v=>JSON.stringify(v&&typeof v==='object'?Array.isArray(v)?v.map(x=>JSON.parse(canonical(x))):
+      Object.fromEntries(Object.keys(v).sort().map(k=>[k,JSON.parse(canonical(v[k]))])):v);
+    return canonical(binding.facts)===canonical(c.facts)?c:null;
+  }
+  if(!exact(c,['checked_on','effective_start','effective_end','current_quote','period_quote','change_quote','reason','candidate_revision','previous'])
+    ||!exact(p,['record_id','source_id','source_url','published_on','source_version','review_revision','quote'])
+    ||row.status!=='accepted'||m?.status!=='accepted'||m.value!=='material'||m.review_reasons?.length
+    ||[row.source_version,c.candidate_revision,p.source_version,p.review_revision].some(v=>typeof v!=='string'||!/^[a-f0-9]{64}$/.test(v))
+    ||parseInt(c.candidate_revision.slice(0,13),16)+1!==row.base_read_revision
+    ||![c.checked_on,c.effective_start,c.effective_end,p.published_on].every(v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&memberValidDate(v))
+    ||c.checked_on>row.published_on||c.checked_on>row.reviewed_on||c.checked_on>today
+    ||c.effective_start>c.checked_on||c.effective_start>today||c.effective_end<today||p.published_on>row.published_on
+    ||!/^automatic:ai:[a-f0-9]{24}$/.test(p.record_id)||!/^source:dart:[0-9]{14}$/.test(p.source_id)
+    ||p.source_url!=='https://dart.fss.or.kr/dsaf001/main.do?rcpNo='+p.source_id.slice(12)||p.published_on.replaceAll('-','')!==p.source_id.slice(12,20)
+    ||['current_quote','period_quote','change_quote','reason'].some(k=>typeof c[k]!=='string'||!c[k].trim()||c[k].length>600)
+    ||typeof p.quote!=='string'||!p.quote.trim()||p.quote===c.change_quote||c.change_quote!==m.quote
+    ||['current_quote','period_quote','change_quote'].some(k=>!m.scope_quote||!c[k].includes(m.scope_quote)||!/[.!?]$/.test(c[k]))
+    ||!c.current_quote.includes(c.checked_on)||!c.current_quote.includes('현재')||!/(?:공급|납품|구매|매입|이행)하고\s+있습니다/.test(c.current_quote)
+    ||!new RegExp(c.effective_start+'부터\\s+'+c.effective_end+'까지').test(c.period_quote)||!/유효|효력/.test(c.period_quote)
+    ||!c.change_quote.includes(c.checked_on)||!/증가|감소|확대|축소|중단|재개/.test(c.change_quote))return null;
+  return c;
+}
 memberDisplayDecision=function(record,allEdges,context={}){
   const decision={...companyBaseDisplayDecision(record,allEdges,context),...memberEconomicImportance(record,allEdges,context)};
   // Keep reviewed degree/materiality visible in their group, but do not equate
@@ -3485,6 +3505,30 @@ memberDisplayDecision=function(record,allEdges,context={}){
     ||record.changeStatus==='종료'||context.changes?.[record.id]==='종료'||memberLifecycle(record)?.review
     ||memberCompanyTemporalEvidence(record,allEdges))return decision;
   const stocks=new Set(context.stockIds||[]);
+  const coreRows=new Map();
+  for(const edge of allEdges||[]){
+    const issuer=edge.from===record.id?edge.to:edge.to===record.id?edge.from:null;
+    if(!stocks.has(issuer)||context.focusId&&issuer!==context.focusId)continue;
+    const row=memberCompanyJudgment(edge,record),core=memberCoreSelection(row,record);
+    if(core)coreRows.set(row.company_id,{row,core});
+  }
+  if(coreRows.size===1){
+    const {row,core}=[...coreRows.values()][0];
+    if(core.basis==='contract-announcement'){
+      decision.coreEligible=true;decision.coreMissing=[];decision.currentness='reviewed-contract-announcement';decision.attention='material';
+      decision.materiality='material';decision.materialityScope='contract';decision.materialityCompany=row.company_id;
+      decision.materialityPeriod=row.period_quote;decision.materialityScopeQuote=row.quote;
+      if(decision.code!=='marked')decision.mode='default';
+      decision.reason='제공된 원문 범위에서 '+(core.change_kind==='new-contract'?'신규 계약 발표':'계약금액 정정')
+        +'의 규모·노출·명시기간을 별도 검수했어요. 실제 이행·매출 인식과 전체 후속 공시 부재는 확인하지 않았어요.';
+      return decision;
+    }
+    decision.coreEligible=true;decision.coreMissing=[];decision.currentness='reviewed-source-period';decision.attention='material';
+    if(decision.code!=='marked')decision.mode='default';
+    decision.reason='같은 회사·거래·'+row.economic_v2.materiality.scope_quote+'의 경제적 중요도와 전후 경제 변화를 별도로 검수했어요. '
+      +'현재 확인 '+core.checked_on+' · 명시 유효기간 '+core.effective_start+' ~ '+core.effective_end+' · '+core.reason;
+    return decision;
+  }
   const reviewed=(allEdges||[]).some(edge=>{
     const issuer=edge.from===record.id?edge.to:edge.to===record.id?edge.from:null;
     if(!stocks.has(issuer)||context.focusId&&issuer!==context.focusId)return false;
@@ -3516,9 +3560,9 @@ function applyMemberEconomicImportance(record,decision){
   const body=card.querySelector('strong')?.parentElement;if(!body)return;
   if(!label){label=document.createElement('span');label.className='an-economic-importance';body.append(label);}
   const stock=holdings.find(n=>n.market+':'+n.ticker===decision.materialityCompany);
-  const scope={company:'전사',division:'사업부',product:'제품'}[decision.materialityScope];
+  const scope={company:'전사',division:'사업부',product:'제품',contract:'계약 발표'}[decision.materialityScope];
   label.textContent=(stock?.name||decision.materialityCompany)+' · '+scope+' '+(value==='material'?'중요':'경미')+' · '+decision.materialityPeriod;
-  label.title='별도 검수한 원문 정성 판단 · '+decision.materialityScopeQuote+' · '+decision.materialityPeriod+'. 연결 정도·주가 전망과는 별개예요.';
+  label.title='별도 검수한 원문 범위 판단 · '+decision.materialityScopeQuote+' · '+decision.materialityPeriod+'. 연결 정도·주가 전망과는 별개예요.';
 }
 function memberBusinessVisual(visual,edge,node){
   if(['history','review'].includes(visual.kind))return visual;
@@ -3594,8 +3638,15 @@ function appendMemberCompanyJudgment(parent,row){
     appendMemberText(panel,'p','원문 재검토 · 주요 거래처 표현이 다른 회사에 붙어 있어요. 이 상대방의 연결 정도 근거로 쓰지 않고 다시 확인해야 해요.','an-save-note');
   if(row.impact.condition)appendMemberText(panel,'p','조건 · '+row.impact.condition+' / '+channel[row.impact.channel]+' 경로');
   const economic=row.economic_v2,materiality=economic?.materiality;
+  if(row.core_selection?.basis==='contract-announcement'){
+    const c=row.core_selection,d=c.denominator;
+    appendMemberText(panel,'p','경제적 중요도 · 중요 (계약 발표 범위·별도 검수)','an-judgment-verdict');
+    appendMemberText(panel,'p','계약 발표 검수 · '+c.reason,'an-save-note');
+    appendMemberText(panel,'p','발행회사 매출 분모 · '+d.year+'년 '+(d.scope==='consolidated'?'연결':'개별/별도')+' / '+d.quote,'an-save-note');
+    appendMemberText(panel,'p','보고된 계약기간 · '+row.period_quote+' / 실제 이행·매출 인식은 미확인','an-save-note');
+  }
   const importance={material:'중요',limited:'경미',unrated:'미평가'},scope={company:'전사',division:'사업부',product:'제품',unknown:'미확인'};
-  appendMemberText(panel,'p','경제적 중요도 · '+(materiality?.status==='accepted'
+  if(row.core_selection?.basis!=='contract-announcement')appendMemberText(panel,'p','경제적 중요도 · '+(materiality?.status==='accepted'
     ?importance[materiality.value]+' (원문 정성·별도 검수) / '+scope[materiality.scope]
     :'미평가'+(materiality?' · '+statuses[materiality.status]:'')),'an-judgment-verdict');
   if(materiality?.quote){
