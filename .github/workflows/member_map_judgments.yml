@@ -98,7 +98,6 @@ jobs:
           ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
           REPLACE_SHA256: ${{ inputs.replace_sha256 }}
         run: |
-          NODE_PATH="$RUNNER_TEMP/member-map-blob/node_modules" \
-          node scripts/member-map/upload-ai-candidates.cjs \
+          NODE_PATH="$RUNNER_TEMP/member-map-blob/node_modules" node scripts/member-map/upload-ai-candidates.cjs \
             --artifact data/member_map_ai_candidates.json --artifact-sha256 "$ARTIFACT_SHA256" \
             --source-dir data --replace-sha256 "$REPLACE_SHA256" --upload

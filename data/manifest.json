@@ -243,6 +243,17 @@
    ]
   },
   {
+   "path": "data/ai_synthesis_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 2,
+   "producers": [
+    "api/builders/ai_synthesis_builder.py"
+   ]
+  },
+  {
    "path": "data/ai_synthesis.json",
    "visibility": "public",
    "publish": true,
@@ -253,17 +264,6 @@
     "api/intelligence/ticker_facts.py",
     "api/builders/ai_synthesis_builder.py",
     "vercel-api/api/operator_core/ticker_facts.py"
-   ]
-  },
-  {
-   "path": "data/ai_synthesis_cache.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 2,
-   "producers": [
-    "api/builders/ai_synthesis_builder.py"
    ]
   },
   {
@@ -311,17 +311,6 @@
    ]
   },
   {
-   "path": "data/backtest_kr_fundamental.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 7495,
-   "producers": [
-    "api/quant/backtest/kr_fundamental.py"
-   ]
-  },
-  {
    "path": "data/backtest_kr_fundamental_trail.jsonl",
    "visibility": "work",
    "publish": false,
@@ -333,14 +322,14 @@
    ]
   },
   {
-   "path": "data/backtest_kr_price_axes.json",
+   "path": "data/backtest_kr_fundamental.json",
    "visibility": "work",
    "publish": false,
    "sla": null,
    "contract": null,
-   "size_bytes": 11294,
+   "size_bytes": 7495,
    "producers": [
-    "api/quant/backtest/kr_price_axes.py"
+    "api/quant/backtest/kr_fundamental.py"
    ]
   },
   {
@@ -350,6 +339,17 @@
    "sla": null,
    "contract": null,
    "size_bytes": 9711,
+   "producers": [
+    "api/quant/backtest/kr_price_axes.py"
+   ]
+  },
+  {
+   "path": "data/backtest_kr_price_axes.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 11294,
    "producers": [
     "api/quant/backtest/kr_price_axes.py"
    ]
@@ -609,17 +609,6 @@
    ]
   },
   {
-   "path": "data/crypto_regime.json",
-   "visibility": "public",
-   "publish": true,
-   "sla": "crypto:P0",
-   "contract": null,
-   "size_bytes": 15452,
-   "producers": [
-    "api/builders/crypto_regime_synthesis.py"
-   ]
-  },
-  {
    "path": "data/crypto_regime_history.json",
    "visibility": "work",
    "publish": false,
@@ -641,6 +630,17 @@
     "api/builders/crypto_regime_synthesis.py",
     "api/collectors/crypto_regime_history.py",
     "api/collectors/crypto_exogenous_history.py"
+   ]
+  },
+  {
+   "path": "data/crypto_regime.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "crypto:P0",
+   "contract": null,
+   "size_bytes": 15452,
+   "producers": [
+    "api/builders/crypto_regime_synthesis.py"
    ]
   },
   {
@@ -692,6 +692,17 @@
    ]
   },
   {
+   "path": "data/daily_briefing_history.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 196311,
+   "producers": [
+    "api/builders/daily_briefing_builder.py"
+   ]
+  },
+  {
    "path": "data/daily_briefing.json",
    "visibility": "public",
    "publish": true,
@@ -701,17 +712,6 @@
    "producers": [
     "api/builders/daily_briefing_builder.py",
     "vercel-api/content_public.py"
-   ]
-  },
-  {
-   "path": "data/daily_briefing_history.jsonl",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 196311,
-   "producers": [
-    "api/builders/daily_briefing_builder.py"
    ]
   },
   {
@@ -754,6 +754,17 @@
    ]
   },
   {
+   "path": "data/dart_catalyst_backfill_done.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 16903,
+   "producers": [
+    "scripts/dart_catalyst_backfill.py"
+   ]
+  },
+  {
    "path": "data/dart_catalyst_backfill.jsonl",
    "visibility": "work",
    "publish": false,
@@ -764,17 +775,6 @@
     "api/builders/event_study_builder.py",
     "api/builders/stock_report_public_builder.py",
     "api/builders/disclosure_forensics_builder.py"
-   ]
-  },
-  {
-   "path": "data/dart_catalyst_backfill_done.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 16903,
-   "producers": [
-    "scripts/dart_catalyst_backfill.py"
    ]
   },
   {
@@ -830,19 +830,6 @@
    ]
   },
   {
-   "path": "data/dart_kr_fin_history.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 4971293,
-   "producers": [
-    "api/intelligence/ticker_facts.py",
-    "api/builders/stock_report_public_builder.py",
-    "api/builders/kr_lynch_class_builder.py"
-   ]
-  },
-  {
    "path": "data/dart_kr_fin_history_done.json",
    "visibility": "work",
    "publish": false,
@@ -862,6 +849,19 @@
    "size_bytes": 355421,
    "producers": [
     "scripts/dart_kr_fin_backfill.py"
+   ]
+  },
+  {
+   "path": "data/dart_kr_fin_history.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 4971293,
+   "producers": [
+    "api/intelligence/ticker_facts.py",
+    "api/builders/stock_report_public_builder.py",
+    "api/builders/kr_lynch_class_builder.py"
    ]
   },
   {
@@ -930,6 +930,17 @@
    ]
   },
   {
+   "path": "data/dividends_kr_ksd.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": "dividends_kr_ksd:P2",
+   "contract": null,
+   "size_bytes": 5538682,
+   "producers": [
+    "api/collectors/dividend_ksd.py"
+   ]
+  },
+  {
    "path": "data/dividends_kr.json",
    "visibility": "work",
    "publish": false,
@@ -940,17 +951,6 @@
     "api/main.py",
     "api/intelligence/ticker_facts.py",
     "api/builders/calendar_public_builder.py"
-   ]
-  },
-  {
-   "path": "data/dividends_kr_ksd.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": "dividends_kr_ksd:P2",
-   "contract": null,
-   "size_bytes": 5538682,
-   "producers": [
-    "api/collectors/dividend_ksd.py"
    ]
   },
   {
@@ -1612,6 +1612,17 @@
    ]
   },
   {
+   "path": "data/member_map_ai_candidates.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 58231,
+   "producers": [
+    "scripts/member-map/export-ai-candidates.py"
+   ]
+  },
+  {
    "path": "data/member_map_annual_capture_attempts.json",
    "visibility": "work",
    "publish": false,
@@ -1782,19 +1793,6 @@
    ]
   },
   {
-   "path": "data/nps_employment.json",
-   "visibility": "public",
-   "publish": true,
-   "sla": "nps_employment:P2",
-   "contract": null,
-   "size_bytes": 305703,
-   "producers": [
-    "api/intelligence/ticker_facts.py",
-    "api/builders/stock_change_public_builder.py",
-    "api/collectors/nps_employment.py"
-   ]
-  },
-  {
    "path": "data/nps_employment_history.jsonl",
    "visibility": "work",
    "publish": false,
@@ -1807,25 +1805,16 @@
    ]
   },
   {
-   "path": "data/nps_full_holdings.csv",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
+   "path": "data/nps_employment.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "nps_employment:P2",
    "contract": null,
-   "size_bytes": 35795,
+   "size_bytes": 305703,
    "producers": [
-    "api/collectors/nps_holdings.py"
-   ]
-  },
-  {
-   "path": "data/nps_full_holdings.meta.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 125,
-   "producers": [
-    "api/collectors/nps_holdings.py"
+    "api/intelligence/ticker_facts.py",
+    "api/builders/stock_change_public_builder.py",
+    "api/collectors/nps_employment.py"
    ]
   },
   {
@@ -1847,6 +1836,28 @@
    "sla": null,
    "contract": null,
    "size_bytes": 121070,
+   "producers": [
+    "api/collectors/nps_holdings.py"
+   ]
+  },
+  {
+   "path": "data/nps_full_holdings.csv",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 35795,
+   "producers": [
+    "api/collectors/nps_holdings.py"
+   ]
+  },
+  {
+   "path": "data/nps_full_holdings.meta.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 125,
    "producers": [
     "api/collectors/nps_holdings.py"
    ]
@@ -1966,6 +1977,17 @@
    ]
   },
   {
+   "path": "data/portfolio_exposure_map.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 609763,
+   "producers": [
+    "api/builders/stock_change_public_builder.py"
+   ]
+  },
+  {
    "path": "data/portfolio.dev.json",
    "visibility": "work",
    "publish": false,
@@ -1989,17 +2011,6 @@
     "api/main.py",
     "api/run_bond_etf.py",
     "api/predictors/backtester.py"
-   ]
-  },
-  {
-   "path": "data/portfolio_exposure_map.json",
-   "visibility": "public",
-   "publish": true,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 609763,
-   "producers": [
-    "api/builders/stock_change_public_builder.py"
    ]
   },
   {
@@ -2169,19 +2180,6 @@
    ]
   },
   {
-   "path": "data/smallcap_corner.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 534047,
-   "producers": [
-    "api/builders/us_disclosure_forensics_builder.py",
-    "api/builders/us_smallcap_corner_builder.py",
-    "api/builders/smallcap_corner_filters_builder.py"
-   ]
-  },
-  {
    "path": "data/smallcap_corner_filters.json",
    "visibility": "public",
    "publish": true,
@@ -2192,6 +2190,19 @@
     "api/intelligence/ticker_facts.py",
     "api/builders/smallcap_corner_filters_builder.py",
     "api/builders/us_smallcap_corner_filters_builder.py"
+   ]
+  },
+  {
+   "path": "data/smallcap_corner.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 534047,
+   "producers": [
+    "api/builders/us_disclosure_forensics_builder.py",
+    "api/builders/us_smallcap_corner_builder.py",
+    "api/builders/smallcap_corner_filters_builder.py"
    ]
   },
   {
@@ -2306,19 +2317,6 @@
    ]
   },
   {
-   "path": "data/universe_search.json",
-   "visibility": "public",
-   "publish": true,
-   "sla": "universe_search:P1",
-   "contract": null,
-   "size_bytes": 2235269,
-   "producers": [
-    "api/intelligence/ticker_facts.py",
-    "api/builders/krx_mktcap_snapshot.py",
-    "api/builders/us_smart_money_13f_public_builder.py"
-   ]
-  },
-  {
    "path": "data/universe_search_kr.json",
    "visibility": "public",
    "publish": true,
@@ -2329,6 +2327,19 @@
     "api/intelligence/ticker_facts.py",
     "api/builders/krx_mktcap_snapshot.py",
     "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/universe_search.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "universe_search:P1",
+   "contract": null,
+   "size_bytes": 2235269,
+   "producers": [
+    "api/intelligence/ticker_facts.py",
+    "api/builders/krx_mktcap_snapshot.py",
+    "api/builders/us_smart_money_13f_public_builder.py"
    ]
   },
   {
@@ -2355,6 +2366,17 @@
    ]
   },
   {
+   "path": "data/us_catalyst_backfill_done.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 11087,
+   "producers": [
+    "scripts/us/backfill_us_catalyst.py"
+   ]
+  },
+  {
    "path": "data/us_catalyst_backfill.jsonl",
    "visibility": "work",
    "publish": false,
@@ -2364,17 +2386,6 @@
    "producers": [
     "api/builders/event_study_builder.py",
     "api/builders/us_event_study_builder.py",
-    "scripts/us/backfill_us_catalyst.py"
-   ]
-  },
-  {
-   "path": "data/us_catalyst_backfill_done.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 11087,
-   "producers": [
     "scripts/us/backfill_us_catalyst.py"
    ]
   },
@@ -2463,17 +2474,6 @@
    ]
   },
   {
-   "path": "data/us_eps_revision.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 2458985,
-   "producers": [
-    "api/collectors/us_eps_revision.py"
-   ]
-  },
-  {
    "path": "data/us_eps_revision_trail.jsonl",
    "visibility": "work",
    "publish": false,
@@ -2485,16 +2485,14 @@
    ]
   },
   {
-   "path": "data/us_etf.json",
-   "visibility": "public",
-   "publish": true,
-   "sla": "us_etf:P2",
+   "path": "data/us_eps_revision.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
    "contract": null,
-   "size_bytes": 1703763,
+   "size_bytes": 2458985,
    "producers": [
-    "api/intelligence/ticker_facts.py",
-    "api/builders/krx_mktcap_snapshot.py",
-    "api/builders/us_etf_public_builder.py"
+    "api/collectors/us_eps_revision.py"
    ]
   },
   {
@@ -2519,6 +2517,19 @@
     "api/intelligence/ticker_facts.py",
     "api/builders/us_etf_public_builder.py",
     "api/builders/us_smart_money_13f_public_builder.py"
+   ]
+  },
+  {
+   "path": "data/us_etf.json",
+   "visibility": "public",
+   "publish": true,
+   "sla": "us_etf:P2",
+   "contract": null,
+   "size_bytes": 1703763,
+   "producers": [
+    "api/intelligence/ticker_facts.py",
+    "api/builders/krx_mktcap_snapshot.py",
+    "api/builders/us_etf_public_builder.py"
    ]
   },
   {
@@ -2655,6 +2666,17 @@
    ]
   },
   {
+   "path": "data/us_options_trail.jsonl",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 12922552,
+   "producers": [
+    "api/collectors/us_options_snapshot.py"
+   ]
+  },
+  {
    "path": "data/us_options.json",
    "visibility": "work",
    "publish": false,
@@ -2664,17 +2686,6 @@
    "producers": [
     "api/intelligence/ticker_facts.py",
     "api/builders/us_form144_public_builder.py",
-    "api/collectors/us_options_snapshot.py"
-   ]
-  },
-  {
-   "path": "data/us_options_trail.jsonl",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 12922552,
-   "producers": [
     "api/collectors/us_options_snapshot.py"
    ]
   },
@@ -2705,6 +2716,17 @@
    ]
   },
   {
+   "path": "data/us_short_interest_cache.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1044528,
+   "producers": [
+    "api/builders/us_short_interest_public_builder.py"
+   ]
+  },
+  {
    "path": "data/us_short_interest.json",
    "visibility": "public",
    "publish": true,
@@ -2715,17 +2737,6 @@
     "api/intelligence/ticker_facts.py",
     "api/builders/us_short_interest_public_builder.py",
     "scripts/audit/us_forensics_coverage.py"
-   ]
-  },
-  {
-   "path": "data/us_short_interest_cache.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 1044528,
-   "producers": [
-    "api/builders/us_short_interest_public_builder.py"
    ]
   },
   {
@@ -2754,19 +2765,6 @@
    ]
   },
   {
-   "path": "data/us_smallcap_corner.json",
-   "visibility": "work",
-   "publish": false,
-   "sla": null,
-   "contract": null,
-   "size_bytes": 1061905,
-   "producers": [
-    "api/builders/us_disclosure_forensics_builder.py",
-    "api/builders/us_smallcap_corner_builder.py",
-    "api/builders/us_smallcap_corner_filters_builder.py"
-   ]
-  },
-  {
    "path": "data/us_smallcap_corner_filters.json",
    "visibility": "public",
    "publish": true,
@@ -2777,6 +2775,19 @@
     "api/intelligence/ticker_facts.py",
     "api/builders/us_smallcap_corner_filters_builder.py",
     "vercel-api/api/operator_core/ticker_facts.py"
+   ]
+  },
+  {
+   "path": "data/us_smallcap_corner.json",
+   "visibility": "work",
+   "publish": false,
+   "sla": null,
+   "contract": null,
+   "size_bytes": 1061905,
+   "producers": [
+    "api/builders/us_disclosure_forensics_builder.py",
+    "api/builders/us_smallcap_corner_builder.py",
+    "api/builders/us_smallcap_corner_filters_builder.py"
    ]
   },
   {
