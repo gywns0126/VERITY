@@ -475,3 +475,31 @@ def test_duplicate_json_keys_and_malformed_fetch_contract_fail_closed(modules, m
         "jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]}
     ))
     assert (status, payload) == (503, {"error": "public_sources_unavailable"})
+
+@pytest.mark.parametrize("failure", [None, "source-version", "candidate-revision", "foreign-issuer", "private-field"])
+def test_prepared_company_judgment_delivery_is_selected_and_optional(modules, monkeypatch, failure):
+    # Synthetic raw+review fixture exported by the closed producer; no paid calls.
+    fixture = json.loads("{\"artifact\": {\"schema\": \"local-ai-review-v1\", \"candidates\": [{\"issuer_id\": \"KR:111111\", \"counterparty_id\": \"KR:222222\", \"role\": \"customer\", \"quote\": \"당사는 2025년 Synthetic A에 반도체 부품을 공급하며, Synthetic A는 당사의 주요 매출처입니다.\", \"source_id\": \"source:dart:20260312000001\", \"url\": \"https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260312000001\", \"as_of\": \"2026-03-12\", \"status\": \"ai_candidate\", \"verification\": \"unreviewed-model-extraction\", \"issuer_name\": \"Synthetic Issuer\", \"counterparty_name\": \"Synthetic A\", \"evidence_scope\": \"unspecified\", \"current_validity\": \"not-inferred\", \"id\": \"automatic:ai:a9a80936a5a6a21df5a6df3c\", \"revision\": \"1046e7bd3d55aa7df91ad89562942094cbb33379eeb1413fb6c97f11dd0fcdde\"}], \"coverage\": {\"input\": 1, \"accepted\": 1, \"rejected\": 0, \"skipped\": 0}, \"company_judgments\": {\"schema\": \"local-company-judgments-v1\", \"judgments\": [{\"record_id\": \"automatic:ai:a9a80936a5a6a21df5a6df3c\", \"base_read_revision\": 286347547104603, \"company_id\": \"KR:111111\", \"counterparty_id\": \"KR:222222\", \"source_id\": \"source:dart:20260312000001\", \"source_url\": \"https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260312000001\", \"published_on\": \"2026-03-12\", \"quote\": \"당사는 2025년 Synthetic A에 반도체 부품을 공급하며, Synthetic A는 당사의 주요 매출처입니다.\", \"scope_quote\": \"Synthetic A는 당사의 주요 매출처\", \"period_quote\": \"2025년\", \"status\": \"accepted\", \"reviewed_on\": \"2026-10-10\", \"review_reason\": \"원문 범위의 검토가 완료되었습니다.\", \"degree\": \"medium\", \"impact\": {\"direction\": \"unknown\", \"channel\": \"unknown\", \"condition\": null}, \"reason\": \"공개 원문에 연결된 회사별 검토입니다.\", \"review_trigger\": \"원문이나 검토 범위가 바뀌면 다시 확인합니다.\", \"missing_evidence\": [\"counter_evidence_not_searched\"], \"review_reasons\": [], \"revision\": \"8c890e894eeb1789098bc37fc840b47d04e6b98d4729aac14a84c43c52326d9a\", \"read_revision\": 2472324516605618, \"comparison\": {\"status\": \"first\", \"unavailable_reason\": null, \"changed_fields\": [], \"review_changed_fields\": [], \"previous\": null, \"current\": {\"source_version\": \"bedfda4412952e9f180c664a2b03c9ae516f8e5f7828cd6fd0b7528cf63f1d77\", \"judgment_revision\": \"167c1e868452d69fa47c29e7dae3ccccd6b15f2c6fbb57ec878f9ec927af8ca8\", \"review_revision\": \"8c890e894eeb1789098bc37fc840b47d04e6b98d4729aac14a84c43c52326d9a\", \"assessed_as_of\": \"2026-10-10\", \"reviewed_on\": \"2026-10-10\", \"reason\": \"공개 원문에 연결된 회사별 검토입니다.\", \"review_reason\": \"원문 범위의 검토가 완료되었습니다.\"}}, \"source_version\": \"bedfda4412952e9f180c664a2b03c9ae516f8e5f7828cd6fd0b7528cf63f1d77\"}]}}, \"catalog\": [{\"market\": \"KR\", \"ticker\": \"111111\", \"name\": \"Synthetic Issuer\"}, {\"market\": \"KR\", \"ticker\": \"222222\", \"name\": \"Synthetic A\"}]}")
+    endpoint, sb = modules
+    artifact = fixture["artifact"]
+    row = artifact["company_judgments"]["judgments"][0]
+    if failure == "source-version":
+        row["source_version"] = "0" * 64
+    elif failure == "candidate-revision":
+        row["base_read_revision"] += 1
+    elif failure == "foreign-issuer":
+        row["company_id"] = row["counterparty_id"]
+    elif failure == "private-field":
+        row["member_notes"] = "PRIVATE_CANARY"
+    sources = {"universe_search.json": {"stocks": fixture["catalog"]},
+               "member_map_ai_candidates.json": artifact}
+    monkeypatch.setattr(endpoint, "fetch_public_sources", Mock(return_value=_bundle(sources)))
+    market, ticker = artifact["candidates"][0]["issuer_id"].split(":")
+    status, _, result = endpoint.analyze_request(_request("jwt-a", {"positions": [{"market": market, "ticker": ticker}]}))
+    assert status == 200 and len(result["companies"]) == 1
+    assert result["ai_review"]["candidates"][0]["status"] == "ai_candidate"
+    assert len(result["company_judgments"]["judgments"]) == (0 if failure else 1)
+    if not failure:
+        assert result["company_judgments"]["judgments"][0]["degree"] == "medium"
+    assert "PRIVATE_CANARY" not in json.dumps(result)
+    sb.select.assert_not_called()

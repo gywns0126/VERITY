@@ -702,11 +702,15 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
             result["ai_review"] = project_public_ai_review(
                 ai_artifact, list(by_id.values()), [row["id"] for row in requested]
             )
+            if "company_judgments" in result["ai_review"]:
+                result["company_judgments"] = result["ai_review"].pop("company_judgments")
+                result["coverage"]["company_judgments"] = result["ai_review"]["coverage"].pop("company_judgments")
             ai_status = "ready"
         except (ValueError, TypeError, UnicodeError):
             # Broken optional AI output must not hide existing filings/prices.
             ai_status = "rejected"
     result["coverage"]["ai_review"] = {"status": ai_status}
+    result["coverage"].setdefault("company_judgments", {"status": "unavailable" if ai_status != "rejected" else "rejected"})
     # Only sanitized content; equality fingerprint, not a timestamp or a score.
     if change_projection is not None:
         from .portfolio_change_facts import validate_public_change_projection

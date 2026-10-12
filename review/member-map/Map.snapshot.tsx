@@ -2393,7 +2393,7 @@ function attachPublicAIReview(graph, payload, coverage) {
 }
 
 // framer-components/public-probe/PortfolioAnalysisClient.ts
-var { analysisToGraph, fetchPortfolioAnalysisGraph } = ((secBindings) => {
+var { analysisToGraph, fetchPortfolioAnalysisGraph, boundBusinessJudgments: memberMapBoundBusinessJudgments } = ((secBindings) => {
 var MemberMapClientDelta = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -2417,6 +2417,7 @@ var MemberMapClientDelta = (() => {
   var PortfolioAnalysisClient_exports = {};
   __export(PortfolioAnalysisClient_exports, {
     analysisToGraph: () => analysisToGraph,
+    boundBusinessJudgments: () => boundBusinessJudgments,
     fetchPortfolioAnalysisGraph: () => fetchPortfolioAnalysisGraph
   });
 
@@ -2447,6 +2448,229 @@ var MemberMapClientDelta = (() => {
 
   // sec-binding:../../review/member-map/local-ai-candidates.ts
   var attachPublicAIReview = secBindings.attachPublicAIReview;
+
+  // reviewed-judgments:../../review/member-map/local-business-judgments.ts
+  var fail = () => {
+    throw Error("invalid-local-company-judgments");
+  };
+  var keys = (v, expected) => {
+    if (!v || typeof v !== "object" || Array.isArray(v) || Object.keys(v).sort().join() !== [...expected].sort().join()) fail();
+  };
+  var text = (v, max = 600) => typeof v === "string" && v.trim() && v.length <= max && !/[<>\u0000-\u001f\u007f]/.test(v) ? v : fail();
+  var nullableText = (v) => v === null ? null : text(v);
+  var day = (v) => {
+    const value = text(v, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value) fail();
+    return value;
+  };
+  var missing = /* @__PURE__ */ new Set([
+    "entity_scope",
+    "role",
+    "object",
+    "period",
+    "scale",
+    "denominator",
+    "structured_table",
+    "counter_evidence_not_searched",
+    "path_evidence",
+    "source_context"
+  ]);
+  function judgmentComparison(row2) {
+    const c = row2.comparison;
+    keys(c, ["status", "unavailable_reason", "changed_fields", "review_changed_fields", "previous", "current"]);
+    const snapshot = (s) => {
+      keys(s, ["source_version", "judgment_revision", "review_revision", "assessed_as_of", "reviewed_on", "reason", "review_reason"]);
+      for (const key of ["source_version", "judgment_revision", "review_revision"]) {
+        if (!/^[a-f0-9]{64}$/.test(text(s[key], 64))) fail();
+      }
+      if (day(s.assessed_as_of) < row2.published_on) fail();
+      text(s.reason);
+      nullableText(s.review_reason);
+      if (s.reviewed_on === null ? s.review_reason !== null : !s.review_reason || day(s.reviewed_on) < row2.published_on || s.reviewed_on > s.assessed_as_of) fail();
+      return { ...s };
+    };
+    const current = snapshot(c.current);
+    if (current.review_revision !== row2.revision || current.reason !== row2.reason || current.reviewed_on !== row2.reviewed_on || current.review_reason !== row2.review_reason || row2.source_version !== void 0 && current.source_version !== row2.source_version || row2.period_context_v2 && current.source_version !== row2.period_context_v2.source_version) fail();
+    const fields = (values, allowed) => {
+      if (!Array.isArray(values) || values.length > allowed.length || new Set(values).size !== values.length || values.some((v) => !allowed.includes(v))) fail();
+      return [...values];
+    };
+    const changed = fields(c.changed_fields, [
+      "quote",
+      "degree",
+      "impact",
+      "counter_evidence_quotes",
+      "missing_evidence",
+      "reason",
+      "review_trigger",
+      "economic_v2",
+      "period_context_v2",
+      "status",
+      "review_reasons",
+      "display"
+    ]);
+    const reviewed = fields(c.review_changed_fields, ["decision", "reason", "checks", "materiality_review"]);
+    if (!["first", "unavailable", "changed", "unchanged"].includes(c.status)) fail();
+    const comparable = ["changed", "unchanged"].includes(c.status);
+    let previous = null;
+    if (comparable) {
+      previous = snapshot(c.previous);
+      if (c.unavailable_reason !== null || !previous.reviewed_on || !current.reviewed_on || previous.source_version !== current.source_version || previous.assessed_as_of > current.assessed_as_of || previous.reviewed_on > current.reviewed_on || current.assessed_as_of > (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) || c.status === "changed" !== Boolean(changed.length || reviewed.length)) fail();
+    } else if (c.previous !== null || changed.length || reviewed.length || (c.status === "first" ? c.unavailable_reason !== null : !["invalid-history", "history-binding", "unreviewed", "time-reversed", "source-changed", "scope-period-changed"].includes(c.unavailable_reason))) fail();
+    return { ...c, current, previous, changed_fields: changed, review_changed_fields: reviewed };
+  }
+  function economicContext(row2) {
+    const value = row2.economic_v2, m = value?.materiality;
+    keys(value, ["materiality", "impact_quote", "counter_evidence_quotes"]);
+    keys(m, ["value", "scope", "quote", "scope_quote", "period_quote", "mechanism_quote", "status", "reviewed_on", "review_reason", "review_reasons"]);
+    nullableText(m.quote);
+    if (m.quote !== null && !/[.!?]$/.test(m.quote)) fail();
+    for (const span of [m.scope_quote, m.period_quote, m.mechanism_quote]) {
+      if (nullableText(span) !== null && !(m.quote || "").includes(span)) fail();
+    }
+    if (nullableText(value.impact_quote) !== null && !row2.quote.includes(value.impact_quote)) fail();
+    if (!["material", "limited", "unrated"].includes(m.value) || !["company", "division", "product", "unknown"].includes(m.scope) || !["pending", "held", "accepted", "rejected"].includes(m.status) || !Array.isArray(m.review_reasons) || m.review_reasons.length > 3 || m.review_reasons.some((r) => !["materiality-scope", "materiality-period", "materiality-economic-basis"].includes(r)) || new Set(m.review_reasons).size !== m.review_reasons.length) fail();
+    nullableText(m.review_reason);
+    if (m.reviewed_on !== null && day(m.reviewed_on) < row2.published_on) fail();
+    if (m.status === "pending" ? m.reviewed_on !== null || m.review_reason !== null : !m.reviewed_on || !m.review_reason) fail();
+    if (!Array.isArray(value.counter_evidence_quotes) || value.counter_evidence_quotes.length > 4 || new Set(value.counter_evidence_quotes).size !== value.counter_evidence_quotes.length) fail();
+    value.counter_evidence_quotes.forEach((q) => {
+      text(q);
+      if (q === row2.quote) fail();
+    });
+    if (row2.status === "accepted" && row2.impact.direction !== "unknown" && !value.impact_quote) fail();
+    if (m.status === "accepted") {
+      const scope = m.scope_quote || "", period = m.period_quote || "", quote = m.quote || "";
+      const scoped = /^당사(?:의)?\s+/.test(scope) && {
+        company: /^당사(?:의)?\s+(?:전체|전사)$/.test(scope),
+        division: /사업부|부문/.test(scope),
+        product: /제품|서비스/.test(scope),
+        unknown: false
+      }[m.scope];
+      const cues = { material: /중요한|중대한|중요합니다|중대합니다|유의적인/, limited: /경미|미미/ };
+      if (!["accepted", "held"].includes(row2.status) || m.value === "unrated" || m.review_reasons.length || !scoped || !period || row2.period_quote !== null && period !== row2.period_quote || !/\d{4}년|당기|보고기간|회계연도/.test(period) || !/매출|영업이익|순이익|현금흐름|원가|비용|자산|부채/.test(quote) || !m.mechanism_quote || !/매출|영업이익|순이익|현금흐름|원가|비용|자산|부채/.test(m.mechanism_quote) || /아니|않|없|미확인|불확실/.test(quote) || !cues[m.value].test(quote) || cues[m.value === "material" ? "limited" : "material"].test(quote)) fail();
+    } else if (m.value !== "unrated") fail();
+    return { ...value, materiality: { ...m, review_reasons: [...m.review_reasons] }, counter_evidence_quotes: [...value.counter_evidence_quotes] };
+  }
+  function validateLocalBusinessJudgments(payload) {
+    const body = payload;
+    keys(body, ["schema", "judgments"]);
+    if (body.schema !== "local-company-judgments-v1" || !Array.isArray(body.judgments) || body.judgments.length > 16) fail();
+    const ids = /* @__PURE__ */ new Set();
+    const judgments = body.judgments.map((row2) => {
+      keys(row2, [
+        "record_id",
+        "base_read_revision",
+        "read_revision",
+        "revision",
+        "company_id",
+        "counterparty_id",
+        "source_id",
+        "source_url",
+        "published_on",
+        "quote",
+        "scope_quote",
+        "period_quote",
+        "status",
+        "reviewed_on",
+        "review_reason",
+        "degree",
+        "impact",
+        "reason",
+        "review_trigger",
+        "missing_evidence",
+        "review_reasons",
+        ...row2 && Object.hasOwn(row2, "source_version") ? ["source_version"] : [],
+        ...row2 && Object.hasOwn(row2, "economic_v2") ? ["economic_v2"] : [],
+        ...row2 && Object.hasOwn(row2, "comparison") ? ["comparison"] : [],
+        ...row2 && Object.hasOwn(row2, "period_context_v2") ? ["period_context_v2"] : []
+      ]);
+      if (!/^automatic:ai:[a-f0-9]{24}$/.test(text(row2.record_id, 50)) || ids.has(row2.record_id) || !/^[a-f0-9]{64}$/.test(text(row2.revision, 64)) || !Number.isSafeInteger(row2.base_read_revision) || row2.base_read_revision < 1 || !Number.isSafeInteger(row2.read_revision) || row2.read_revision < 1 || row2.read_revision !== Number.parseInt(row2.revision.slice(0, 13), 16) + 1 || !/^KR:[0-9]{6}$/.test(text(row2.company_id, 20)) || !/^(KR:[0-9]{6}|US:[A-Z][A-Z0-9.-]{0,12})$/.test(text(row2.counterparty_id, 20)) || row2.company_id === row2.counterparty_id || !/^source:dart:[0-9]{14}$/.test(text(row2.source_id, 40)) || row2.source_url !== `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${row2.source_id.slice(12)}`) fail();
+      ids.add(row2.record_id);
+      if (Object.hasOwn(row2, "source_version") && (!/^[a-f0-9]{64}$/.test(text(row2.source_version, 64)) || row2.period_context_v2 && row2.source_version !== row2.period_context_v2.source_version)) fail();
+      if (day(row2.published_on).replaceAll("-", "") !== row2.source_id.slice(12, 20)) fail();
+      text(row2.quote);
+      text(row2.reason);
+      text(row2.review_trigger);
+      if (Object.hasOwn(row2, "period_context_v2")) {
+        const context = row2.period_context_v2;
+        keys(context, ["quote", "source_version"]);
+        text(context.quote);
+        if (!/[.!?]$/.test(context.quote) || !/^[a-f0-9]{64}$/.test(text(context.source_version, 64)) || !row2.period_quote || !/^(?:20\d{2}년(?:도)?|당기|보고기간|회계연도)$/.test(row2.period_quote)) fail();
+      }
+      for (const key of ["scope_quote", "period_quote"]) {
+        const span = nullableText(row2[key]);
+        const support = key === "period_quote" && row2.period_context_v2 ? row2.period_context_v2.quote : row2.quote;
+        if (span !== null && !support.includes(span)) fail();
+      }
+      nullableText(row2.review_reason);
+      if (row2.reviewed_on !== null && day(row2.reviewed_on) < row2.published_on) fail();
+      keys(row2.impact, ["direction", "channel", "condition"]);
+      nullableText(row2.impact.condition);
+      if (!["pending", "held", "accepted", "rejected"].includes(row2.status) || !["high", "medium", "low", "unrated"].includes(row2.degree) || !["positive", "negative", "mixed", "unknown"].includes(row2.impact.direction) || !["revenue", "cost", "capacity", "funding", "regulation", "unknown"].includes(row2.impact.channel) || !Array.isArray(row2.missing_evidence) || row2.missing_evidence.length > missing.size || row2.missing_evidence.some((m) => typeof m !== "string" || !missing.has(m)) || new Set(row2.missing_evidence).size !== row2.missing_evidence.length || !Array.isArray(row2.review_reasons) || row2.review_reasons.length > 10 || row2.review_reasons.some((r) => typeof r !== "string" || !/^[a-z]+(?:-[a-z]+)*$/.test(r) || r.length > 60) || new Set(row2.review_reasons).size !== row2.review_reasons.length) fail();
+      if (row2.status === "accepted") {
+        if (!row2.reviewed_on || !row2.review_reason || !row2.scope_quote || !row2.period_quote || row2.review_reasons.length) fail();
+        if (row2.impact.direction !== "unknown" && (row2.impact.channel === "unknown" || row2.impact.condition === null)) fail();
+      } else if (row2.degree !== "unrated" || row2.impact.direction !== "unknown") fail();
+      if (row2.status === "pending" ? row2.reviewed_on !== null || row2.review_reason !== null : !row2.reviewed_on || !row2.review_reason) fail();
+      return {
+        ...row2,
+        impact: { ...row2.impact },
+        missing_evidence: [...row2.missing_evidence],
+        review_reasons: [...row2.review_reasons],
+        ...Object.hasOwn(row2, "period_context_v2") ? { period_context_v2: { ...row2.period_context_v2 } } : {},
+        ...Object.hasOwn(row2, "comparison") ? { comparison: judgmentComparison(row2) } : {},
+        ...Object.hasOwn(row2, "economic_v2") ? { economic_v2: economicContext(row2) } : {}
+      };
+    });
+    return { schema: "local-company-judgments-v1", judgments };
+  }
+  function matchesCandidate(graph, relation, row2) {
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    return relation.reported === false && relation.url === row2.source_url && relation.asOf === row2.published_on && row2.published_on <= today && (!row2.reviewed_on || row2.reviewed_on <= today) && (!row2.comparison || row2.comparison.current.assessed_as_of <= today) && (!row2.economic_v2?.materiality.reviewed_on || row2.economic_v2.materiality.reviewed_on <= today) && graph.companies.some((c) => `${c.market}:${c.ticker}` === row2.company_id) && relation.reason.includes(row2.quote) && relation.participants.length === 2 && relation.participants.filter((p) => p.id === row2.company_id && p.role === "document_issuer").length === 1 && relation.participants.filter((p) => p.id === row2.counterparty_id && p.role !== "document_issuer").length === 1;
+  }
+  function boundBusinessJudgments(graph) {
+    const rows = graph.companyJudgments;
+    if (rows === void 0) return [];
+    try {
+      return validateLocalBusinessJudgments({ schema: "local-company-judgments-v1", judgments: rows }).judgments.filter((row2) => {
+        const relations = graph.automaticRelations?.filter((r) => r.id === row2.record_id) || [];
+        return relations.length === 1 && relations[0].read_revision === row2.read_revision && matchesCandidate(graph, relations[0], row2);
+      });
+    } catch {
+      return [];
+    }
+  }
+  function attachLocalBusinessJudgments(graph, payload) {
+    if (payload === void 0) return graph;
+    const rows = new Map(validateLocalBusinessJudgments(payload).judgments.map((row2) => [row2.record_id, row2]));
+    const bound = new Map(boundBusinessJudgments(graph).map((row2) => [row2.record_id, row2]));
+    let changed = false;
+    const automaticRelations = graph.automaticRelations?.map((relation) => {
+      const row2 = rows.get(relation.id);
+      const previous = bound.get(relation.id);
+      const baseRevision = previous?.base_read_revision ?? relation.read_revision;
+      if (!row2 || baseRevision !== row2.base_read_revision || !matchesCandidate(graph, relation, row2)) return relation;
+      const sourceVersion = (r) => r.source_version || r.comparison?.current.source_version || r.period_context_v2?.source_version;
+      if (previous && sourceVersion(previous) && sourceVersion(row2) && sourceVersion(previous) !== sourceVersion(row2)) return relation;
+      if (previous && JSON.stringify(previous) === JSON.stringify(row2)) return relation;
+      changed = true;
+      bound.set(row2.record_id, row2);
+      return { ...relation, read_revision: row2.read_revision };
+    });
+    return changed ? { ...graph, automaticRelations, companyJudgments: [...bound.values()] } : graph;
+  }
+  function attachPublicBusinessJudgments(graph, payload) {
+    if (payload === void 0) return graph;
+    try {
+      const checked = validateLocalBusinessJudgments(payload);
+      if (checked.judgments.some((row2) => row2.source_version === void 0)) fail();
+      const retained = new Set(boundBusinessJudgments(graph).map((row2) => row2.record_id));
+      return attachLocalBusinessJudgments(graph, { ...checked, judgments: checked.judgments.filter((row2) => !retained.has(row2.record_id)) });
+    } catch {
+      return graph;
+    }
+  }
 
   // framer-components/public-probe/PortfolioAnalysisClient.ts
   var ENDPOINT = "https://project-yw131.vercel.app/api/member_map_analysis";
@@ -2486,12 +2710,12 @@ var MemberMapClientDelta = (() => {
     if (!Array.isArray(v) || v.length > max) throw invalid();
     return v;
   };
-  var text = (v, max = 300) => {
+  var text2 = (v, max = 300) => {
     if (typeof v !== "string" || !v.trim() || v.length > max || /[\u0000-\u001f\u007f<>]/.test(v)) throw invalid();
     return v;
   };
   var date = (v) => {
-    const value = text(v, 10);
+    const value = text2(v, 10);
     if (!/^(19|20|21)\d{2}(?:-\d{2}-\d{2})?$/.test(value)) throw invalid();
     if (value.length === 10 && (!Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value)) throw invalid();
     return value;
@@ -2507,7 +2731,7 @@ var MemberMapClientDelta = (() => {
     });
   }
   var officialDocument = (value, source) => {
-    const url = text(value, 2048);
+    const url = text2(value, 2048);
     const valid = source === "DART" ? /^https:\/\/dart\.fss\.or\.kr\/dsaf001\/main\.do\?rcpNo=\d{14}$/.test(url) : source === "SEC" && /^https:\/\/www\.sec\.gov\/Archives\/edgar\/data\/[1-9]\d{0,9}\/\d{18}\/(?:[A-Za-z0-9][A-Za-z0-9_.-]{0,199})?$/.test(url);
     if (!valid) throw invalid();
     return url;
@@ -2558,7 +2782,7 @@ var MemberMapClientDelta = (() => {
       if (current.length !== 10 || previous.length !== 10 || previous >= current || current > (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) || comparison.date_basis !== "collection_date" || comparison.source_url !== url || !["changed", "unchanged", "partial", "unavailable"].includes(String(comparison.status))) throw invalid();
       const seen = /* @__PURE__ */ new Set();
       const rows = array(comparison.fields, 9).map((value2) => {
-        const field = row(value2), name = text(field.key, 40), before = field.before, after = field.after, delta = field.delta;
+        const field = row(value2), name = text2(field.key, 40), before = field.before, after = field.after, delta = field.delta;
         const numeric = (n) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= Number.MAX_SAFE_INTEGER;
         if (!Object.hasOwn(CHANGE_NAMES, name) || seen.has(name) || !numeric(before) || !numeric(after) || !numeric(delta) || before === after || Math.abs(after - before - delta) > 1e-6 || ["price", "market_cap", "shares_outstanding"].includes(name) && Math.min(before, after) < 0 || name === "shares_outstanding" && (!Number.isSafeInteger(before) || !Number.isSafeInteger(after)) || (before === 0 ? field.delta_pct !== null : !numeric(field.delta_pct) || Math.abs((after - before) / Math.abs(before) * 100 - field.delta_pct) > 5001e-6)) throw invalid();
         seen.add(name);
@@ -2586,12 +2810,12 @@ var MemberMapClientDelta = (() => {
     }
     const p = row(fact.provenance);
     if (p.kind === "public-13f") {
-      const report = date(p.report_date), filed = date(p.filed_at), institution = text(p.institution, 160);
+      const report = date(p.report_date), filed = date(p.filed_at), institution = text2(p.institution, 160);
       const metric = String(fact.metric);
       if (market !== "US" || p.ticker !== ticker || fact.source !== "SEC" || !["institution_13f_shares", "institution_13f_value_usd"].includes(metric) || fact.unit !== (metric === "institution_13f_shares" ? "주" : "USD") || !Number.isSafeInteger(fact.value) || fact.value < 0 || report.length !== 10 || filed.length !== 10 || report !== fact.as_of || filed < report || !["03-31", "06-30", "09-30", "12-31"].includes(report.slice(5)) || filed > (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) || !["us_smart_money_13f.json", "us_investor_portfolios.json"].some((name) => p.source_url === PUBLIC_DATA + name)) throw invalid();
       let original;
       if (p.original_status === "provided") {
-        const cik2 = text(p.manager_cik, 10), accession2 = text(p.accession, 20);
+        const cik2 = text2(p.manager_cik, 10), accession2 = text2(p.accession, 20);
         original = officialDocument(p.original_url, "SEC");
         if (!/^[1-9]\d{0,9}$/.test(cik2) || !/^\d{10}-\d{2}-\d{6}$/.test(accession2) || !original.startsWith(`https://www.sec.gov/Archives/edgar/data/${cik2}/${accession2.replace(/-/g, "")}/`) || original.endsWith("/")) throw invalid();
       } else if (p.original_status !== "not-supplied" || p.original_url !== null || p.accession !== null) throw invalid();
@@ -2612,16 +2836,16 @@ var MemberMapClientDelta = (() => {
       };
     }
     if (p.kind === "public-stock-flow") {
-      const day = date(p.trade_date);
-      if (market !== "KR" || p.ticker !== ticker || day.length !== 10 || day !== fact.as_of || fact.source !== "네이버 금융" || fact.unit !== "주" || !Number.isSafeInteger(fact.value) || !["foreign_net_shares", "institution_net_shares"].includes(String(fact.metric)) || p.source_url !== `https://finance.naver.com/item/frgn.naver?code=${ticker}`) throw invalid();
+      const day2 = date(p.trade_date);
+      if (market !== "KR" || p.ticker !== ticker || day2.length !== 10 || day2 !== fact.as_of || fact.source !== "네이버 금융" || fact.unit !== "주" || !Number.isSafeInteger(fact.value) || !["foreign_net_shares", "institution_net_shares"].includes(String(fact.metric)) || p.source_url !== `https://finance.naver.com/item/frgn.naver?code=${ticker}`) throw invalid();
       return {
         url: p.source_url,
         explanation: "보관된 최근 거래일의 순매매량이에요. 양수는 순매수, 음수는 순매도이며 금액이 아닌 주식 수예요. 갱신 시각과 거래일은 다를 수 있어요. 호재·악재나 주가 방향을 뜻하지 않아요."
       };
     }
     if (p.kind === "dart-annual") {
-      const receipt = text(p.rcept_no, 14), start = date(p.period_start), end = date(p.period_end), filed = date(p.filed);
-      const basis = text(p.fs_div, 3), account = text(p.account_name, 200);
+      const receipt = text2(p.rcept_no, 14), start = date(p.period_start), end = date(p.period_end), filed = date(p.filed);
+      const basis = text2(p.fs_div, 3), account = text2(p.account_name, 200);
       const days = (Date.parse(end) - Date.parse(start)) / 864e5 + 1;
       if (market !== "KR" || fact.source !== "DART" || fact.unit !== "KRW" || !["revenue", "operating_income", "net_income"].includes(String(fact.metric)) || !/^\d{14}$/.test(receipt) || [start, end, filed].some((d) => d.length !== 10) || end.slice(0, 4) !== fact.as_of || days < 330 || days > 371 || filed < end || receipt.slice(0, 8) !== filed.replace(/-/g, "") || !["CFS", "OFS"].includes(basis) || p.source_url !== `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}`) throw invalid();
       return {
@@ -2630,8 +2854,8 @@ var MemberMapClientDelta = (() => {
 공시 계정 ${account}`
       };
     }
-    const cik = text(p.cik, 10), accession = text(p.accession, 20);
-    const period = date(p.period_end), form = text(p.form, 8), tag = text(p.tag, 200);
+    const cik = text2(p.cik, 10), accession = text2(p.accession, 20);
+    const period = date(p.period_end), form = text2(p.form, 8), tag = text2(p.tag, 200);
     if (market !== "US" || fact.source !== "SEC" || !/^[1-9][0-9]{0,9}$/.test(cik) || !/^\d{10}-\d{2}-\d{6}$/.test(accession) || period.length !== 10 || period.slice(0, 4) !== fact.as_of || !["10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"].includes(form) || !/^[A-Za-z][A-Za-z0-9_:]{0,199}$/.test(tag) || typeof p.currency_verified !== "boolean" || (p.currency_verified ? !/^(KRW|USD|CAD|AUD|EUR|GBP|JPY|HKD|CNY|CHF|ILS|SGD|NZD|BRL)$/.test(String(fact.unit)) : fact.unit !== "currency-unverified")) throw invalid();
     const base = `https://www.sec.gov/Archives/edgar/data/${cik}/${accession.replace(/-/g, "")}/${accession}-index`;
     if (p.source_url !== base + ".html" && p.source_url !== base + ".htm") throw invalid();
@@ -2648,40 +2872,40 @@ XBRL 항목 ${tag}` + (p.currency_verified ? "" : "\n저장된 원자료에 통�
     if (body.schema !== "alphaconsole-portfolio-v1" || coverage.requested !== positions.length) throw invalid();
     const wanted = new Map(positions.map((p) => [`${p.market}:${p.ticker}`, p]));
     const changes = changeDetails(body.public_changes === void 0 && coverage.change_reuse !== void 0 ? { stocks: {} } : body.public_changes, wanted);
-    const companies = /* @__PURE__ */ new Map(), missing = /* @__PURE__ */ new Set();
+    const companies = /* @__PURE__ */ new Map(), missing2 = /* @__PURE__ */ new Set();
     for (const value of array(body.companies, 30)) {
-      const company = row(value), id = text(company.id);
+      const company = row(value), id = text2(company.id);
       const expected = wanted.get(id);
       if (!expected || company.ticker !== expected.ticker || company.market !== expected.market || companies.has(id)) throw invalid();
       companies.set(id, company);
     }
     for (const value of array(coverage.missing, 30)) {
-      const company = row(value), id = text(company.id), expected = wanted.get(id);
-      if (!expected || company.ticker !== expected.ticker || company.market !== expected.market || companies.has(id) || missing.has(id)) throw invalid();
-      missing.add(id);
+      const company = row(value), id = text2(company.id), expected = wanted.get(id);
+      if (!expected || company.ticker !== expected.ticker || company.market !== expected.market || companies.has(id) || missing2.has(id)) throw invalid();
+      missing2.add(id);
     }
-    if (companies.size + missing.size !== wanted.size || coverage.matched !== companies.size) throw invalid();
+    if (companies.size + missing2.size !== wanted.size || coverage.matched !== companies.size) throw invalid();
     const automatic = parseAutomaticEvidence(body.automatic_evidence, new Set(wanted.keys()));
     const prices = parseAnalysisPrices(body.prices, wanted);
     const companyNames = new Map([...companies].map(([id, company]) => {
-      const name = text(company.name, 180);
-      const names = company.source_names === void 0 ? [name] : array(company.source_names, 4).map((v) => text(v, 180));
+      const name = text2(company.name, 180);
+      const names = company.source_names === void 0 ? [name] : array(company.source_names, 4).map((v) => text2(v, 180));
       if (names[0] !== name || new Set(names).size !== names.length) throw invalid();
       return [id, names];
     }));
     const documents = /* @__PURE__ */ new Map();
     for (const value of array(body.documents)) {
-      const doc = row(value), id = text(doc.id), source = text(doc.source, 30);
-      const ids = array(doc.company_ids, 30).map((v) => text(v));
+      const doc = row(value), id = text2(doc.id), source = text2(doc.source, 30);
+      const ids = array(doc.company_ids, 30).map((v) => text2(v));
       if (documents.has(id) || !ids.length || new Set(ids).size !== ids.length || ids.some((key) => !companies.has(key)) || doc.kind !== "disclosure") throw invalid();
       const matches = array(doc.source_matches === void 0 ? [] : doc.source_matches, 30);
       const matchedTickers = /* @__PURE__ */ new Set();
       for (const value2 of matches) {
-        const match = row(value2), ticker = text(match.ticker, 6), receipt = text(match.receipt_no, 14);
+        const match = row(value2), ticker = text2(match.ticker, 6), receipt = text2(match.receipt_no, 14);
         if (source !== "DART" || match.kind !== "same-dart-receipt" || match.source_file !== "portfolio.json" || !/^\d{6}$/.test(ticker) || !/^\d{14}$/.test(receipt) || id !== `DART:${receipt}` || doc.url !== `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}` || !ids.includes(`KR:${ticker}`) || date(match.as_of) !== doc.as_of || matchedTickers.has(ticker)) throw invalid();
         matchedTickers.add(ticker);
       }
-      const context = { id, source, url: text(doc.url, 2048), title: text(doc.title), as_of: date(doc.as_of), company_ids: ids };
+      const context = { id, source, url: text2(doc.url, 2048), title: text2(doc.title), as_of: date(doc.as_of), company_ids: ids };
       const lineage = parseDocumentLineage(doc.event_lineage, context);
       const contract = parseContractFacts(doc.contract_facts, context);
       const termination = parseContractTermination(doc.contract_termination, context, companyNames.get(ids[0]));
@@ -2689,7 +2913,7 @@ XBRL 항목 ${tag}` + (p.currency_verified ? "" : "\n저장된 원자료에 통�
       if (archived && (doc.capture_archive !== "retained-public-capture" || source !== "DART" || !contract && !termination)) throw invalid();
       documents.set(id, { ids, archived, item: {
         id: `disclosure-${id}`,
-        title: text(doc.title),
+        title: text2(doc.title),
         source,
         url: officialDocument(doc.url, source),
         asOf: date(doc.as_of),
@@ -2722,7 +2946,7 @@ XBRL 항목 ${tag}` + (p.currency_verified ? "" : "\n저장된 원자료에 통�
     }
     const maps = positions.map((position) => {
       const key = `${position.market}:${position.ticker}`, company = companies.get(key);
-      const declared = company ? array(company.document_ids).map((v) => text(v)) : [];
+      const declared = company ? array(company.document_ids).map((v) => text2(v)) : [];
       const associated = [...documents.entries()].filter(([, doc]) => doc.ids.includes(key));
       if (new Set(declared).size !== declared.length || declared.length !== associated.length || declared.some((id) => !documents.get(id)?.ids.includes(key))) throw invalid();
       const eventItems = associated.map(([, doc]) => doc.item);
@@ -2745,13 +2969,13 @@ ${correction.item.explanation}`
       const facts = (company ? array(company.facts) : []).map((value, index) => {
         const fact = row(value), numeric = fact.value;
         if (typeof numeric !== "number" || !Number.isFinite(numeric) || Math.abs(numeric) > 1e30) throw invalid();
-        const unit = text(fact.unit, 30), metric = text(fact.metric, 80);
+        const unit = text2(fact.unit, 30), metric = text2(fact.metric, 80);
         return {
           id: ["foreign_net_shares", "institution_net_shares"].includes(metric) ? `flow-${metric}` : HOLDER_METRICS.has(metric) ? `flow-${metric}-${index}` : `fact-${index}`,
           title: FACT_NAMES[metric] || metric,
           value: numeric.toLocaleString("ko-KR"),
           explanation: "출처에 표시된 값과 기준일이에요.",
-          source: text(fact.source, 80),
+          source: text2(fact.source, 80),
           asOf: date(fact.as_of),
           unit,
           relationship: "unknown",
@@ -2793,7 +3017,7 @@ ${correction.item.explanation}`
       ];
       return {
         ...position,
-        name: company ? text(company.name, 180) : position.ticker,
+        name: company ? text2(company.name, 180) : position.ticker,
         sections,
         coverage: { ok: failed ? 0 : 1, total: 1, missing: failed ? ["공개 자료"] : [] }
       };
@@ -2843,7 +3067,7 @@ ${correction.item.explanation}`
       const quote = prices.get(`${company.market}:${company.ticker}`);
       if (quote) company.closeQuote = quote;
     }
-    return attachPublicAIReview(graph, body.ai_review, coverage.ai_review);
+    return attachPublicBusinessJudgments(attachPublicAIReview(graph, body.ai_review, coverage.ai_review), body.company_judgments);
   }
   async function fetchPortfolioAnalysisGraph(input, options) {
     const positions = positionsOnly(input);
@@ -3068,6 +3292,7 @@ async function mergePortfolioAnalysisGraphs(legacy, analysis) {
     };
   }));
   const automaticRelations = mergeAutomatic(legacy.automaticRelations, analysis.automaticRelations);
+  const companyJudgments = memberMapBoundBusinessJudgments(analysis);
   const marketContext = analysis.marketContext ?? legacy.marketContext;
   const contractEvents = analysis.contractEvents ?? legacy.contractEvents;
   const analysisNotice = mergeNotice(legacy.analysisNotice, analysis.analysisNotice, documentEntries.length);
@@ -3078,6 +3303,7 @@ async function mergePortfolioAnalysisGraphs(legacy, analysis) {
     commonItems: rebuilt.filter((document2) => document2.tickers.length >= 2),
     coverage: mergedCoverage(legacy, analysis),
     ...automaticRelations.length ? { automaticRelations } : {},
+    ...companyJudgments.length ? { companyJudgments } : {},
     ...marketContext ? { marketContext } : {},
     ...contractEvents ? { contractEvents } : {},
     ...analysis.aiReviewStatus ? { aiReviewStatus: analysis.aiReviewStatus } : {},
@@ -3087,6 +3313,8 @@ async function mergePortfolioAnalysisGraphs(legacy, analysis) {
 function preserveIncompletePortfolioGraph(previous, incoming) {
   const universe = (graph) => graph.companies.map((row5) => JSON.stringify([row5.id, row5.ticker, canonicalMarket(row5.market)])).sort(order2);
   if (JSON.stringify(universe(previous)) !== JSON.stringify(universe(incoming))) throw new Error("portfolio-company-universe-mismatch");
+  if (Object.hasOwn(incoming, "companyJudgments")) incoming = Object.assign({}, incoming,
+    { companyJudgments: memberMapBoundBusinessJudgments(incoming) });
   if (incoming.aiReviewStatus !== "ready") {
     const priorAI = (previous.automaticRelations || []).filter((row5) => row5.id.startsWith("automatic:ai:"));
     if (priorAI.length) incoming = {
@@ -4640,6 +4868,7 @@ function mergePrototypeDraft(state, value) {
 function prototypeMemberModel(state, explorationNotice = "", visitBaseline) {
   if (state.phase !== "ready" || !state.graph) return { nodes: [], edges: [], notes: {}, marks: {}, writable: false };
   const projected = projectWorkspaceToPrototype(state), graph = state.graph, reviewed = projectReviewedPrototype(state), automatic = projectAutomaticPrototype(state.graph), contracts = projectContractPrototype(state.graph), markets = projectMarketPrototype(state.graph);
+  const judgments = new Map(memberMapBoundBusinessJudgments(graph).map(row => [row.record_id, row]));
   const market2 = { nodes: [...markets.nodes, ...contracts.nodes], edges: [...markets.edges, ...contracts.edges], recordsMap: { ...markets.recordsMap, ...contracts.recordsMap } };
   const base = projectWorkspaceToPrototype({ ...state, privateState: { ...state.privateState, document: { layouts: [] } } });
   const layoutBases = new Map([...base.nodes, ...reviewed.nodes, ...automatic.nodes, ...market2.nodes].map((n) => [n.id, { x: n.x, y: n.y }]));
@@ -4692,6 +4921,7 @@ function prototypeMemberModel(state, explorationNotice = "", visitBaseline) {
     }), ...reviewedNodes.map((n) => ({ ...n, changeStatus: changes[n.id] })), ...[...automatic.nodes, ...market2.nodes].map((n) => ({
       ...n,
       changeStatus: changes[n.id],
+      companyJudgment: judgments.get(n.id) || null,
       ...positions.has(n.id) ? { x: 0.5 + positions.get(n.id).x / 1e3, y: 0.5 + positions.get(n.id).y / 680 } : {}
     }))],
     edges: [
