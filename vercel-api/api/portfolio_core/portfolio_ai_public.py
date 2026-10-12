@@ -6,7 +6,7 @@ content hashes only. Hashes detect inconsistency, not publisher authenticity.
 No model, fallback, ledger, credentials or network modules are imported here.
 """
 from copy import deepcopy
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 import hashlib
 import json
 import re
@@ -97,13 +97,18 @@ def _bound_quote(value, quotes):
     return value
 
 
-def _review_label(row, published):
+def _kr_contract_today():
+    """KR contract date-only evidence uses the Seoul calendar, not host UTC."""
+    return datetime.now(timezone(timedelta(hours=9))).date().isoformat()
+
+
+def _review_label(row, published, *, today=None):
     status = _enum(row["status"], _REVIEW_LABELS)
     if status == "pending":
         if row["reviewed_on"] is not None or row["review_reason"] is not None:
             _fail()
     elif (type(row["review_reason"]) is not str or not row["review_reason"].strip()
-          or not published <= _day(row["reviewed_on"]) <= date.today().isoformat()):
+          or not published <= _day(row["reviewed_on"]) <= (today if today is not None else date.today().isoformat())):
         _fail()
     return _REVIEW_LABELS[status]
 
@@ -127,7 +132,7 @@ def _judgment_candidates(candidates):
     return {c["id"]: c for c in candidates}
 
 
-def _judgment_comparison(value, row):
+def _judgment_comparison(value, row, *, today=None):
     _keys(value, {"status", "unavailable_reason", "changed_fields", "review_changed_fields", "previous", "current"})
     value = deepcopy(value)
     _enum(value["status"], {"first", "unavailable", "changed", "unchanged"})
@@ -141,7 +146,7 @@ def _judgment_comparison(value, row):
                          "reviewed_on", "reason", "review_reason"})
         for field in ("source_version", "judgment_revision", "review_revision"):
             _hash_value(snapshot[field])
-        if not row["published_on"] <= _day(snapshot["assessed_as_of"]) <= date.today().isoformat():
+        if not row["published_on"] <= _day(snapshot["assessed_as_of"]) <= (today if today is not None else date.today().isoformat()):
             _fail()
         if snapshot["reviewed_on"] is None:
             if snapshot["review_reason"] is not None:
@@ -175,8 +180,222 @@ def _judgment_comparison(value, row):
     return value
 
 
+def _contract_proof_facts(facts, filed_on):
+    """Closed source-free projection; never invent raw metadata to validate it."""
+    from .portfolio_contract_facts import (
+        _quoted_field, _quoted_day, _validate_financial_terms,
+        _validate_revenue_basis, _revenue_basis,
+    )
+    _keys(facts, {"contract", "correction"})
+    contract = facts["contract"]
+    optional = set(contract) & {"financial_terms", "financial_notes", "revenue_basis"} if type(contract) is dict else set()
+    _keys(contract, {"type", "name", "counterparty", "period", "signed_on"} | optional)
+    for key in ("type", "name", "counterparty", "signed_on"):
+        _quoted_field(contract[key])
+    period = contract["period"]
+    _keys(period, {"label", "start", "end"}); _text(period["label"], 2000)
+    for key in ("start", "end"):
+        _quoted_field(period[key])
+    if "financial_terms" in contract:
+        _validate_financial_terms(contract["financial_terms"])
+    if "financial_notes" in contract:
+        notes = _quoted_field(contract["financial_notes"])
+        if not re.fullmatch(r"(?:9|10)\.\s*기타\s*투자판단(?:에\s*참고할\s*사항|과\s*관련한\s*중요사항)", notes["label"]):
+            _fail()
+    if "revenue_basis" in contract:
+        _validate_revenue_basis(contract["revenue_basis"], filed_on)
+        if ("recent_revenue" not in contract.get("financial_terms", {})
+                or "financial_notes" not in contract
+                or _revenue_basis(contract["financial_notes"]["value"]) != contract["revenue_basis"]):
+            _fail()
+    correction = facts["correction"]
+    if correction is not None:
+        _keys(correction, {"corrected_on", "related_filing_date", "reason", "changes"})
+        for key in ("corrected_on", "related_filing_date", "reason"):
+            quoted = _quoted_field(correction[key])
+            if key != "reason" and _quoted_day(quoted["value"]).isoformat() > _day(filed_on):
+                _fail()
+        changes = correction["changes"]
+        if type(changes) is not list or not 1 <= len(changes) <= 20:
+            _fail()
+        for change in changes:
+            _keys(change, {"field", "before", "after"})
+            for value in change.values():
+                _text(value, 2000)
+
+
+def _contract_event_revision(event):
+    """Selection-independent binding of the existing validated event projection."""
+    fields = ("id", "root_receipt", "participants", "signed_on", "title", "as_of", "current_status")
+    docs = []
+    for d in event["documents"]:
+        f = d["contract_facts"]
+        _keys(f, {"schema", "receipt_no", "issuer", "filing", "contract", "correction",
+                  "counterparty_company_id", "verified_common_event", "current_contract_status"})
+        _keys(f["issuer"], {"id", "name"}); _keys(f["filing"], {"title", "filed_on"})
+        _entity(f["issuer"]["id"]); _text(f["issuer"]["name"], 160)
+        from .portfolio_contract_facts import _contract_title, _filing_title, _is_correction_title
+        if (f["schema"] != "dart-contract-fact-v1" or not re.fullmatch(r"[0-9]{14}", f["receipt_no"])
+                or d["id"] != "DART:" + f["receipt_no"] or d["url"] != "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=" + f["receipt_no"]
+                or d["company_ids"] != [f["issuer"]["id"]]
+                or f["issuer"]["id"] != event["participants"][0]["id"]
+                or _day(f["filing"]["filed_on"]) != d["as_of"]
+                or _contract_title(f["filing"]["title"]) != "단일판매공급계약체결"
+                or _contract_title(_filing_title(d["title"])) != _contract_title(f["filing"]["title"])
+                or _is_correction_title(d["title"]) != (f["correction"] is not None)
+                or f["counterparty_company_id"] is not None or f["verified_common_event"] is not False
+                or f["current_contract_status"] != "not-inferred"):
+            _fail()
+        _contract_proof_facts({"contract": f["contract"], "correction": f["correction"]}, d["as_of"])
+        docs.append({k: d[k] for k in ("id", "url", "title", "as_of", "company_ids", "contract_facts")})
+    return _digest({**{k: event[k] for k in fields}, "documents": docs,
+                    "termination_notices": event.get("termination_notices", [])})
+
+
+def validated_contract_sources(artifact):
+    """Current canonical facts only; invalid/duplicate receipts cannot back review."""
+    from .portfolio_contract_facts import validate_contract_fact
+    values = artifact.get("contract_facts", []) if type(artifact) is dict else []
+    if type(values) is not list or len(values) > 1000:  # Existing fact-lane bound.
+        return {}
+    out, seen, duplicates = {}, set(), set()
+    for raw in values:
+        receipt = raw.get("receipt_no") if type(raw) is dict else None
+        if type(receipt) is not str:
+            continue
+        if receipt in seen:
+            duplicates.add(receipt)
+        seen.add(receipt)
+        try:
+            out[receipt] = validate_contract_fact(raw)
+        except (ValueError, KeyError, TypeError, OverflowError, RecursionError, UnicodeError):
+            continue
+    for receipt in duplicates:
+        out.pop(receipt, None)
+    return out
+
+
+def _contract_events(value):
+    if value is None:
+        return {}
+    values = list(value["events"].values()) if "events" in value else value["items"]
+    if type(values) is not list or len(values) > MAX_CANDIDATES:
+        _fail()
+    out = {}
+    for e in values:
+        issuer, party = e["participants"]
+        if (e["kind"] != "reported-contract" or e["identity_basis"] != "explicit-contract-parties"
+                or e["current_status"] != "not-inferred" or issuer["role"] != "supplier"
+                or party["role"] != "counterparty" or issuer["id"] == party["id"]
+                or e["company_ids"] != [issuer["id"], party["id"]]
+                or e["id"] != f"contract:{issuer['id']}:{e['root_receipt']}" or e["id"] in out):
+            _fail()
+        _entity(issuer["id"]); _entity(party["id"])
+        out[e["id"]] = e
+    return out
+
+
+def _contract_denominator(contract, denominator, published):
+    """Issuer section 2 only; section 3 counterparty sales are not its denominator."""
+    _keys(denominator, {"year", "scope", "quote"})
+    notes = contract.get("financial_notes", {}).get("value", "")
+    prefix = r"(?:상기\s*['\"‘’]?2\.\s*(?:계약내역의?\s*)?|상기\s*계약내역의\s*)최근\s*매출액(?:\(원\))?['\"‘’]?"
+    basis = r"(?:\s*및\s*계약상대방의\s*최근\s*매출액)?\s*(?:은|는)\s*(?:당사의\s*)?((?:19|20)\d{2})년(?:도|말)?\s*(연결|별도|개별)\s*재무제표\s*기준"
+    matches = list(re.finditer(prefix + basis, notes))
+    if (type(denominator["year"]) is not int or denominator["year"] > int(published[:4])
+            or denominator["scope"] not in {"consolidated", "separate"} or denominator["quote"] != notes
+            or len(matches) != 1 or re.search(r"아닌|아니|않|미확인", notes)
+            or int(matches[0][1]) != denominator["year"]
+            or ("consolidated" if matches[0][2] == "연결" else "separate") != denominator["scope"]):
+        _fail()
+
+
+def _public_contract_judgment(row, events, sources=None, *, public_wire=False):
+    """Only prevalidated contract events, never an arbitrary record-ID escape."""
+    _keys(row, _JUDGMENT_FIELDS | {"source_version", "core_selection", "comparison"})
+    e, c = events[row["record_id"]], row["core_selection"]
+    today = _kr_contract_today()
+    _keys(c, {"basis", "event_revision", "source_receipt", "body_sha256", "fact_revision", "checked_on",
+              "effective_start", "effective_end", "review_scope", "materiality", "change_kind", "facts", "reason", "denominator"})
+    if (c["basis"] != "contract-announcement" or c["review_scope"] != "provided-contract-family-only"
+            or c["materiality"] != "material" or row["status"] != "accepted"
+            or row["degree"] != "unrated" or row["impact"] != {"direction": "unknown", "channel": "unknown", "condition": None}
+            or row["review_reasons"] or row["missing_evidence"] != ["counter_evidence_not_searched"]
+            or e.get("termination_notices") or c["event_revision"] != _contract_event_revision(e)
+            or row["company_id"] != e["participants"][0]["id"]
+            or row["counterparty_id"] != e["participants"][1]["id"]):
+        _fail()
+    for h in (c["event_revision"], c["body_sha256"], c["fact_revision"], row["source_version"], row["revision"]):
+        _hash_value(h)
+    matches = [d for d in e["documents"] if d["id"] == "DART:" + c["source_receipt"]]
+    if len(matches) != 1:
+        _fail()
+    d = matches[0]; f = d["contract_facts"]; contract = f["contract"]
+    if len([v for v in e["documents"] if v["as_of"] == e["as_of"]]) != 1:
+        _fail()  # Never choose between competing latest-date originals.
+    _contract_proof_facts(c["facts"], row["published_on"])
+    if (c["facts"] != {"contract": contract, "correction": f["correction"]}
+            or row["source_id"] != "source:dart:" + c["source_receipt"]
+            or row["source_url"] != d["url"] or row["published_on"] != d["as_of"]
+            or e["as_of"] != d["as_of"] or c["fact_revision"] != row["source_version"]
+            or row["quote"] != contract["name"]["value"]
+            or row["scope_quote"] != row["quote"] or row["period_quote"] != c["effective_start"] + " ~ " + c["effective_end"]
+            or row["base_read_revision"] != int(c["event_revision"][:13], 16) + 1
+            or type(row["read_revision"]) is not int or row["read_revision"] != int(row["revision"][:13], 16) + 1):
+        _fail()
+    from .portfolio_contract_facts import _quoted_day
+    if (c["effective_start"] != _quoted_day(contract["period"]["start"]["value"]).isoformat()
+            or c["effective_end"] != _quoted_day(contract["period"]["end"]["value"]).isoformat()
+            or not row["published_on"] <= _day(c["checked_on"]) == _day(row["reviewed_on"]) <= today
+            or not _day(c["effective_start"]) <= c["checked_on"] <= _day(c["effective_end"])):
+        _fail()
+    financial = contract["financial_terms"]
+    if not {"amount", "recent_revenue", "revenue_ratio"} <= set(financial) or not contract.get("financial_notes"):
+        _fail()
+    _contract_denominator(contract, c["denominator"], row["published_on"])
+    if c["change_kind"] == "new-contract":
+        if f["correction"] is not None or "신규 계약" not in row["quote"]:
+            _fail()
+    elif c["change_kind"] == "amount-amendment":
+        if not f["correction"] or not any("계약금액" in v["field"] and v["before"] != v["after"] for v in f["correction"]["changes"]):
+            _fail()
+        if d.get("event_lineage", {}).get("root_receipt") != e["root_receipt"]:
+            _fail()
+    else:
+        _fail()
+    if sources is not None:
+        from .portfolio_contract_facts import validate_contract_fact
+        original = validate_contract_fact(sources[c["source_receipt"]])
+        if (_digest(original) != row["source_version"] or original["source"]["content_sha256"] != c["body_sha256"]
+                or original["issuer"]["id"] != row["company_id"]
+                or original["contract"] != contract or original["correction"] != f["correction"]):
+            _fail()
+    else:
+        # Prepared fingerprints are not proof that the current canonical
+        # original still exists. Missing raw facts withdraw this row only.
+        _fail()
+    out = deepcopy(row)
+    out["reason"] = _JUDGMENT_REASON; out["review_trigger"] = _JUDGMENT_TRIGGER
+    out["review_reason"] = _review_label(row, row["published_on"], today=today)
+    out["core_selection"]["reason"] = "제공된 계약 원문 범위에서 발표의 규모·노출·변경을 검수했습니다. 실제 이행과 전체 후속 공시 부재는 확인하지 않았습니다."
+    _text(row["quote"], 600)
+    for value in (row["reason"], row["review_trigger"], c["reason"]):
+        if type(value) is not str or not value.strip():
+            _fail()  # Validate presence; only fixed labels leave this boundary.
+    fingerprint = {k: v for k, v in out.items() if k not in {"revision", "read_revision", "comparison"}}
+    out["revision"] = _digest(["public-company-judgment-v1", c["event_revision"], fingerprint])
+    out["read_revision"] = int(out["revision"][:13], 16) + 1
+    comparison = deepcopy(out["comparison"])
+    comparison["current"]["review_revision"] = out["revision"]
+    out["comparison"] = _judgment_comparison(comparison, out, today=today)
+    # These receipts do not manufacture a prior AI judgment or compare grades.
+    if out["comparison"]["status"] not in {"first", "unavailable"}:
+        _fail()
+    return out
+
+
 def _public_judgment(row, candidates, *, source_documents=None, public_wire=False):
-    optional = {k for k in ("economic_v2", "period_context_v2", "comparison") if type(row) is dict and k in row}
+    optional = {k for k in ("economic_v2", "period_context_v2", "comparison", "core_selection") if type(row) is dict and k in row}
     _keys(row, _JUDGMENT_FIELDS | {"source_version"} | optional)
     _hash_value(row["source_version"])
     c = candidates.get(row["record_id"])
@@ -304,6 +523,13 @@ def _public_judgment(row, candidates, *, source_documents=None, public_wire=Fals
             _fail()
     if "comparison" in out:
         out["comparison"] = _judgment_comparison(out["comparison"], out)
+    if "core_selection" in out:
+        try:
+            out["core_selection"] = _public_core_selection(out["core_selection"], out, c, source_documents)
+        except (ValueError, TypeError, KeyError):
+            # A missing prior source or bad optional core proof must not remove
+            # the otherwise valid scoped judgment during fresh export.
+            out.pop("core_selection")
     # Optional history describes this judgment; it is not a new judgment.
     fingerprint = {k: v for k, v in out.items() if k not in {"revision", "read_revision", "comparison"}}
     out["revision"] = _digest(["public-company-judgment-v1", c["revision"], fingerprint])
@@ -311,6 +537,59 @@ def _public_judgment(row, candidates, *, source_documents=None, public_wire=Fals
     if "comparison" in out:
         out["comparison"]["current"]["review_revision"] = out["revision"]
     return out
+
+
+def _public_core_selection(value, row, candidate, sources):
+    """Closed existing-v1 extension, only after offline receipt/source review.
+
+    Fresh export requires both original documents. Prepared wire binds these
+    minimal quotes/digests in the existing public fingerprint, never raw AI or
+    arbitrary reviewer prose. This boundary does not authenticate the reviewer.
+    """
+    _keys(value, {"checked_on", "effective_start", "effective_end", "current_quote",
+                  "period_quote", "change_quote", "reason", "candidate_revision", "previous"})
+    value = deepcopy(value)
+    m = row.get("economic_v2", {}).get("materiality", {})
+    p = value["previous"]
+    _keys(p, {"record_id", "source_id", "source_url", "published_on", "source_version", "review_revision", "quote"})
+    match = _SOURCE.fullmatch(p["source_id"]) if type(p["source_id"]) is str else None
+    if (row["status"] != "accepted" or m.get("status") != "accepted" or m.get("value") != "material"
+            or _hash_value(value["candidate_revision"]) != candidate["revision"]
+            or not match or p["source_url"] != "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=" + match[1]
+            or not re.fullmatch(r"automatic:ai:[a-f0-9]{24}", p["record_id"])
+            or _day(p["published_on"]).replace("-", "") != match[1][:8]
+            or p["published_on"] > row["published_on"]):
+        _fail()
+    _hash_value(p["source_version"]); _hash_value(p["review_revision"])
+    checked, start, end = (_day(value[k]) for k in ("checked_on", "effective_start", "effective_end"))
+    if not checked <= row["published_on"] <= row["reviewed_on"] <= date.today().isoformat() or not start <= checked <= end:
+        _fail()
+    for key in ("current_quote", "period_quote", "change_quote"):
+        q = _text(value[key], 600)
+        if not re.search(r"[.!?]$", q) or not m["scope_quote"] or m["scope_quote"] not in q or candidate["counterparty_name"] not in q:
+            _fail()
+    _text(p["quote"], 600)
+    if (value["change_quote"] != m["quote"] or p["quote"] == value["change_quote"]
+            or checked not in value["current_quote"] or "현재" not in value["current_quote"]
+            or not re.search(r"(?:공급|납품|구매|매입|이행)하고\s+있습니다", value["current_quote"])
+            or not re.search(re.escape(start) + r"부터\s+" + re.escape(end) + r"까지", value["period_quote"])
+            or not re.search(r"유효|효력", value["period_quote"])
+            or checked not in value["change_quote"]
+            or not re.search(r"증가|감소|확대|축소|중단|재개", value["change_quote"])):
+        _fail()
+    if sources is not None:
+        current, previous = sources.get(row["source_id"]), sources.get(p["source_id"])
+        if (not current or not previous or previous["source_version"] != p["source_version"]
+                or previous["issuer_id"] != row["company_id"]
+                or previous["url"] != p["source_url"] or previous["as_of"] != p["published_on"]
+                or previous["text"].count(p["quote"]) != 1
+                or not any(v["id"] == row["counterparty_id"] for v in previous["counterparties"])
+                or any(current["text"].count(value[key]) != 1 for key in ("current_quote", "period_quote", "change_quote"))):
+            _fail()
+    if type(value["reason"]) is not str or not value["reason"].strip():
+        _fail()
+    value["reason"] = "같은 회사·거래·경제 범위의 현재 확인과 전후 경제 변화를 별도로 검수했습니다."
+    return value
 
 
 def _judgment_envelope(projection):
@@ -366,7 +645,8 @@ def _judgment_sources(documents):
     return sources
 
 
-def project_public_company_judgments(projection, candidates, *, source_documents=None):
+def project_public_company_judgments(projection, candidates, *, source_documents=None,
+                                    contract_events=None, contract_sources=None):
     """Offline export only, AFTER project_company_judgments(raw, receipts).
 
     Preserve the local UI shape, omit individually unsafe/stale bindings, and
@@ -380,6 +660,7 @@ def project_public_company_judgments(projection, candidates, *, source_documents
     """
     try:
         rows, indexed = _judgment_envelope(projection), _judgment_candidates(candidates)
+        events = _contract_events(contract_events)
         sources = _judgment_sources(source_documents) if source_documents is not None else None
         ids = [r.get("record_id") for r in rows if type(r) is dict and type(r.get("record_id")) is str]
         output = []
@@ -388,6 +669,11 @@ def project_public_company_judgments(projection, candidates, *, source_documents
                 if type(row) is not dict or ids.count(row.get("record_id")) != 1:
                     continue
                 is_public = row.get("reason") == _JUDGMENT_REASON and row.get("review_trigger") == _JUDGMENT_TRIGGER
+                if row.get("record_id") in events:
+                    value = _public_contract_judgment(row, events, contract_sources, public_wire=is_public)
+                    if not is_public or value == row:
+                        output.append(value)
+                    continue
                 prepared = row
                 if not is_public:
                     if sources is None or row.get("source_id") not in sources:
@@ -409,18 +695,20 @@ def project_public_company_judgments(projection, candidates, *, source_documents
         raise ValueError("invalid-public-company-judgments") from None
 
 
-def validate_public_company_judgments(projection, candidates):
+def validate_public_company_judgments(projection, candidates, *, contract_events=None, contract_sources=None):
     """Strict public-wire check: raw local projections must not enter runtime."""
-    sanitized = project_public_company_judgments(projection, candidates)
+    sanitized = project_public_company_judgments(projection, candidates, contract_events=contract_events,
+                                                contract_sources=contract_sources)
     if sanitized != projection:
         raise ValueError("invalid-public-company-judgments")
     return sanitized
 
 
-def _optional_company_judgments(projection, candidates):
+def _optional_company_judgments(projection, candidates, contract_events=None, contract_sources=None):
     try:
         rows = _judgment_envelope(projection)
         indexed = _judgment_candidates(candidates)
+        events = _contract_events(contract_events)
     except (ValueError, TypeError, KeyError, OverflowError, RecursionError, UnicodeError):
         return {"schema": _JUDGMENT_SCHEMA, "judgments": []}, {"status": "rejected"}
     output = []
@@ -429,7 +717,8 @@ def _optional_company_judgments(projection, candidates):
         try:
             if type(row) is not dict or ids.count(row.get("record_id")) != 1:
                 continue
-            value = _public_judgment(row, indexed, public_wire=True)
+            value = (_public_contract_judgment(row, events, contract_sources, public_wire=True) if row.get("record_id") in events
+                     else _public_judgment(row, indexed, public_wire=True))
             if value == row:
                 output.append(value)
         except (ValueError, TypeError, KeyError, OverflowError, RecursionError, UnicodeError):
@@ -594,19 +883,19 @@ def _validate(payload, catalog):
     return deepcopy(payload)
 
 
-def validate_public_ai_review(payload, catalog):
+def validate_public_ai_review(payload, catalog, *, contract_events=None, contract_sources=None):
     """Base candidates are atomic; optional unsafe judgments are isolated."""
     try:
         prepared = _validate(payload, catalog)
         if "company_judgments" in payload:
             prepared["company_judgments"], _ = _optional_company_judgments(
-                payload["company_judgments"], prepared["candidates"])
+                payload["company_judgments"], prepared["candidates"], contract_events, contract_sources)
         return prepared
     except (ValueError, TypeError, KeyError, OverflowError, RecursionError, UnicodeError):
         raise ValueError(_ERROR) from None
 
 
-def project_public_ai_review(payload, catalog, selected_ids):
+def project_public_ai_review(payload, catalog, selected_ids, *, contract_events=None, contract_sources=None):
     """Return at most 40 matching candidates, preserving input order and totals."""
     try:
         prepared = _validate(payload, catalog)
@@ -622,8 +911,13 @@ def project_public_ai_review(payload, catalog, selected_ids):
                              "returned": min(len(matching), MAX_RETURNED),
                              "omitted": max(len(matching) - MAX_RETURNED, 0)}}
         if "company_judgments" in payload:
-            judgments, coverage = _optional_company_judgments(payload["company_judgments"], prepared["candidates"])
+            judgments, coverage = _optional_company_judgments(payload["company_judgments"], prepared["candidates"],
+                                                             contract_events, contract_sources)
             returned = {row["id"] for row in result["candidates"]}
+            try:
+                returned.update(_contract_events(contract_events))
+            except (ValueError, KeyError, TypeError):
+                pass  # Optional contract review never breaks base candidates.
             # Counterparty selection must never disclose another issuer's
             # judgment. Also require the associated candidate to be delivered.
             rows = [row for row in judgments["judgments"]

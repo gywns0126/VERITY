@@ -16,7 +16,7 @@ import threading
 import unicodedata
 
 from .portfolio_evidence import project_portfolio_evidence
-from .portfolio_ai_public import project_public_ai_review
+from .portfolio_ai_public import project_public_ai_review, validated_contract_sources
 from .portfolio_public_sources import (
     PUBLIC_SOURCE_FILES,
     project_public_sources,
@@ -700,7 +700,9 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
     if ai_artifact is not None:
         try:
             result["ai_review"] = project_public_ai_review(
-                ai_artifact, list(by_id.values()), [row["id"] for row in requested]
+                ai_artifact, list(by_id.values()), [row["id"] for row in requested],
+                contract_events=result["contract_events"],
+                contract_sources=validated_contract_sources(public_documents.get(_AUTOMATIC_EVIDENCE_FILE)),
             )
             if "company_judgments" in result["ai_review"]:
                 result["company_judgments"] = result["ai_review"].pop("company_judgments")
