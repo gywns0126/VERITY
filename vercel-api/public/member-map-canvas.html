@@ -3412,6 +3412,246 @@ memberSaveStatus.textContent=memberWritable?'회원별 비공개 기록':'저장
 // Init is consumed by the bootstrap before this handler exists. Acknowledge only now.
 memberPort.postMessage({type:'hydrated',...memberOriginStamp()});
 
+// Local source-bound interpretations. Never changes relation facts or private drafts.
+function memberCompanyJudgment(edge,node){
+  if(!edge||!node)return null;
+  // Per-snapshot projection wins, including explicit null withdrawal. Legacy
+  // static local builds remain supported without requiring that global in API builds.
+  const rows=Object.hasOwn(node,'companyJudgment')?(node.companyJudgment?[node.companyJudgment]:[]):
+    typeof memberCompanyJudgmentRows!=='undefined'&&Array.isArray(memberCompanyJudgmentRows)?memberCompanyJudgmentRows:[];
+  const company=edge.from===node.id?edge.to:edge.to===node.id?edge.from:null;
+  const stock=nodeById[company],companyKey=stock?.kind==='stock'?stock.market+':'+stock.ticker:null;
+  const matches=rows.filter(row=>row.record_id===node.id&&row.company_id===companyKey
+    &&row.read_revision===node.read_revision&&row.published_on===node.asOf
+    &&(row.status==='pending'||memberValidDate(row.reviewed_on)&&row.reviewed_on>=row.published_on&&row.reviewed_on<=new Date().toISOString().slice(0,10))
+    &&/^source:dart:[0-9]{14}$/.test(row.source_id)
+    &&row.source_url==='https://dart.fss.or.kr/dsaf001/main.do?rcpNo='+row.source_id.slice(12)
+    &&(node.evidence||[]).some(source=>source.url===row.source_url));
+  return matches.length===1?matches[0]:null;
+}
+function memberCompanyTemporalEvidence(record,allEdges){
+  return memberTemporalEvidence(record,(allEdges||[]).filter(e=>e.from===record?.id||e.to===record?.id));
+}
+function memberEconomicImportance(record,allEdges,context={}){
+  const unrated={materiality:'unrated',materialityScope:null,materialityPeriod:null,materialityCompany:null,materialityScopeQuote:null};
+  if(!record||!['event','relationship'].includes(record.recordKind)
+    ||['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(record.status)
+    ||record.changeStatus==='종료'||context.changes?.[record.id]==='종료'||memberLifecycle(record)?.review
+    ||memberCompanyTemporalEvidence(record,allEdges))return unrated;
+  const stocks=new Set(context.stockIds||[]),matched=new Map();
+  for(const edge of allEdges||[]){
+    const issuer=edge.from===record.id?edge.to:edge.to===record.id?edge.from:null;
+    if(!issuer||!stocks.has(issuer)||context.focusId&&context.focusId!==issuer)continue;
+    const row=memberCompanyJudgment(edge,record),m=row?.economic_v2?.materiality;
+    if(!row||!['accepted','held'].includes(row.status)||m?.status!=='accepted'
+      ||!['material','limited'].includes(m.value)||!['company','division','product'].includes(m.scope)
+      ||!m.scope_quote||!m.period_quote||!m.mechanism_quote||!m.quote
+      ||!memberValidDate(m.reviewed_on)||m.reviewed_on<row.published_on
+      ||m.reviewed_on>new Date().toISOString().slice(0,10)||m.review_reasons?.length)continue;
+    matched.set(row.company_id,row);
+  }
+  // Never combine different issuers' judgments into an implied whole-company score.
+  if(matched.size!==1)return unrated;
+  const row=[...matched.values()][0],m=row.economic_v2.materiality;
+  return {materiality:m.value,materialityScope:m.scope,materialityPeriod:m.period_quote,
+    materialityCompany:row.company_id,materialityScopeQuote:m.scope_quote};
+}
+const companyBaseDisplayDecision=memberDisplayDecision;
+// Positive core selection is intentionally unavailable with the current producers:
+// contract events declare current_status=not-inferred; accepted economic reviews
+// bind only automatic:ai candidates and reporting periods. A revision change is
+// a reading delta, not a reviewed economic change. Required producer contract:
+// same verified fact/path + issuer/scope + accepted materiality + source-bound
+// effective period/current check (including conflicts) + old/new revisions and
+// meaningful changed fields/reason, all bound to the current source version.
+// Do not implement this by accepting new unvalidated flags on a client record.
+memberDisplayDecision=function(record,allEdges,context={}){
+  const decision={...companyBaseDisplayDecision(record,allEdges,context),...memberEconomicImportance(record,allEdges,context)};
+  // Keep reviewed degree/materiality visible in their group, but do not equate
+  // a historical source-bound interpretation with a current important change.
+  if(decision.mode==='detail'||!['event','relationship'].includes(record?.recordKind)
+    ||['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(record.status)
+    ||record.changeStatus==='종료'||context.changes?.[record.id]==='종료'||memberLifecycle(record)?.review
+    ||memberCompanyTemporalEvidence(record,allEdges))return decision;
+  const stocks=new Set(context.stockIds||[]);
+  const reviewed=(allEdges||[]).some(edge=>{
+    const issuer=edge.from===record.id?edge.to:edge.to===record.id?edge.from:null;
+    if(!stocks.has(issuer)||context.focusId&&issuer!==context.focusId)return false;
+    const row=memberCompanyJudgment(edge,record);
+    return row?.status==='accepted'&&['medium','high'].includes(row.degree);
+  });
+  decision.attention=decision.materiality==='material'?'material':reviewed?'reviewed':null;
+  if(decision.attention)decision.coreMissing=[...(decision.evidence==='pending'?['관계 사실 확인']:[]),
+    ...(decision.materiality!=='material'?['경제적 중요도']:[]),'현재 유효성·새로운 변화'];
+  if(decision.attention&&!['marked','changed'].includes(decision.code)){
+    decision.mode='group';
+    decision.reason=(decision.attention==='material'?'보고기간의 경제적 중요도를 검수했어요. ':'보고기간의 연결 정도를 검수했어요. ')
+      +'핵심 선정에 필요한 '+decision.coreMissing.join(' · ')+'는 아직 확인되지 않아 묶음에서 보여줘요.';
+  }
+  return decision;
+};
+const companyBaseDisplayCompare=compareMemberDisplay;
+function compareMemberEconomicDisplay(a,b){
+  const rank=d=>d.code==='marked'?0:d.code==='changed'?1:d.attention==='material'?2:d.attention==='reviewed'?3:4;
+  const primary=rank(a)-rank(b)||companyBaseDisplayCompare(a,b),order={material:0,unrated:1,limited:2};
+  return primary||((order[a.materiality]??1)-(order[b.materiality]??1));
+}
+compareMemberDisplay=compareMemberEconomicDisplay;
+function applyMemberEconomicImportance(record,decision){
+  const card=nodesEl.querySelector('[data-node="'+record.id+'"]');if(!card)return;
+  const value=decision.materiality||'unrated';card.dataset.economicImportance=value;
+  let label=card.querySelector('.an-economic-importance');
+  if(value==='unrated'){if(label)label.remove();return;}
+  const body=card.querySelector('strong')?.parentElement;if(!body)return;
+  if(!label){label=document.createElement('span');label.className='an-economic-importance';body.append(label);}
+  const stock=holdings.find(n=>n.market+':'+n.ticker===decision.materialityCompany);
+  const scope={company:'전사',division:'사업부',product:'제품'}[decision.materialityScope];
+  label.textContent=(stock?.name||decision.materialityCompany)+' · '+scope+' '+(value==='material'?'중요':'경미')+' · '+decision.materialityPeriod;
+  label.title='별도 검수한 원문 정성 판단 · '+decision.materialityScopeQuote+' · '+decision.materialityPeriod+'. 연결 정도·주가 전망과는 별개예요.';
+}
+function memberBusinessVisual(visual,edge,node){
+  if(['history','review'].includes(visual.kind))return visual;
+  const temporal=memberTemporalEvidence(node,[edge]);
+  if(temporal){
+    const expired=temporal.code==='period-ended';
+    return {...visual,kind:expired?'history':'review',dash:'8 4 2 4',grade:0,label:'미평가',width:1.4,
+      color:'var(--an-line)',animate:false,statusLabel:expired?'보고된 계약기간 경과':'시점 확인 필요',
+      summaryLabel:expired?'기간 이력 · 정도 미평가':'시점 확인 · 정도 미평가',motionLabel:'정지',
+      lineLabel:'혼합 점선 · 시점 확인',reason:temporal.reason};
+  }
+  const row=memberCompanyJudgment(edge,node);
+  if(row?.status==='held')return {...visual,summaryLabel:visual.statusLabel+' · 영향 판단 보류'};
+  if(!row||row.status!=='accepted')return visual;
+  const labels={high:'높음',medium:'중간',low:'낮음',unrated:'미평가'},grade={high:3,medium:2,low:1,unrated:0}[row.degree];
+  const impacts={positive:'조건부 수혜',negative:'조건부 부담',mixed:'상반 경로',unknown:'영향 미평가'};
+  // A separately reviewed business interpretation does NOT turn a candidate
+  // relation into a confirmed fact. Keep its dash, kind, lifecycle and motion.
+  return {...visual,grade,label:labels[row.degree],width:({0:1.4,1:1.4,2:2.4,3:3.6})[grade],
+    color:row.impact.direction==='positive'?'var(--red)':row.impact.direction==='negative'?'var(--blue)':visual.color,
+    summaryLabel:visual.statusLabel+' · 범위 내 정도 '+labels[row.degree]+' (가설) · '+impacts[row.impact.direction],
+    reason:'별도 검수한 회사별 조건부 해석이에요. 범위: '+row.scope_quote+' · 기간: '+row.period_quote
+      +' · 조건: '+(row.impact.condition||'방향 미평가')+'. 현재 실적·주가 전망·회사 전체 중요도를 뜻하지 않아요.'};
+}
+function appendMemberJudgmentComparison(panel,row){
+  const c=row.comparison;
+  const unavailable={'invalid-history':'이전 자료 검증 실패','history-binding':'동일 회사·공시·record 이력 미확인',
+    unreviewed:'전후 검수 미완료','time-reversed':'판단·검수 시점 정합 미확인',
+    'source-changed':'원문 버전이 달라 동일 원문 판단 비교 불가','scope-period-changed':'판단 범위·기간이 달라 직접 비교 불가'};
+  appendMemberText(panel,'p','이전 판단과 비교','an-judgment-verdict');
+  if(!c||c.status==='unavailable'){
+    appendMemberText(panel,'p','비교 불가 · '+(c?unavailable[c.unavailable_reason]||'이력 정합 미확인':'이전 판단 자료 미연결'),'an-save-note');
+  }else if(c.status==='first'){
+    appendMemberText(panel,'p','첫 판단 · 이전 판단 없음','an-save-note');
+  }else{
+    const fields={quote:'선택 원문',degree:'연결 정도',impact:'영향 경로',counter_evidence_quotes:'반대 근거',
+      missing_evidence:'추가 근거',reason:'판단 사유',review_trigger:'재검토 조건',economic_v2:'경제 근거',
+      period_context_v2:'기간 문맥',status:'검증 상태',review_reasons:'검증 사유',display:'검증 표시'};
+    const reviews={decision:'검수 결정',reason:'검수 사유',checks:'검수 확인 항목',materiality_review:'경제 근거 검수'};
+    appendMemberText(panel,'p',c.changed_fields.length?'동일 원문의 AI 판단 변경 필드 · '+c.changed_fields.map(k=>fields[k]).join(' · '):'동일 원문의 AI 판단 필드 변경 없음','an-save-note');
+    appendMemberText(panel,'p',c.review_changed_fields.length?'검수 변경 필드 · '+c.review_changed_fields.map(k=>reviews[k]).join(' · '):'검수 내용 변경 없음','an-save-note');
+    appendMemberText(panel,'p','판단 기준일 · '+c.previous.assessed_as_of+' → '+c.current.assessed_as_of+' / 검수일 · '+c.previous.reviewed_on+' → '+c.current.reviewed_on,'an-save-note');
+    // These are the existing reasons, not a generated explanation of causality.
+    if(c.changed_fields.includes('reason')){
+      appendMemberText(panel,'p','이전 판단 사유 · '+c.previous.reason);
+      appendMemberText(panel,'p','현재 판단 사유 · '+c.current.reason);
+    }
+    if(c.review_changed_fields.includes('reason')){
+      appendMemberText(panel,'p','이전 검수 사유 · '+c.previous.review_reason);
+      appendMemberText(panel,'p','현재 검수 사유 · '+c.current.review_reason);
+    }
+  }
+  appendMemberText(panel,'p','판단·검수 이력 비교예요. 자료 수치 변화, 현재 유효성, 핵심 선별과는 별개이며 변경 원인을 추정하지 않아요.','an-save-note');
+}
+function appendMemberCompanyJudgment(parent,row){
+  const statuses={pending:'검수 대기',held:'판단 보류',accepted:'범위 내 검토',rejected:'판단 제외'};
+  const missing={entity_scope:'회사 귀속',role:'거래 역할',object:'거래 대상',period:'적용 기간',scale:'거래 규모',denominator:'비중의 분모',structured_table:'표의 행·열 원문',counter_evidence_not_searched:'별도 반대 근거 조사',path_evidence:'간접 경로 근거',source_context:'주변 원문'};
+  const degree={high:'높음',medium:'중간',low:'낮음',unrated:'미평가'};
+  const direction={positive:'조건부 수혜',negative:'조건부 부담',mixed:'상반 경로',unknown:'미평가'};
+  const channel={revenue:'매출',cost:'원가',capacity:'생산 능력',funding:'자금',regulation:'규제',unknown:'미확인'};
+  const panel=appendMemberText(parent,'section','','an-company-judgment');panel.dataset.companyJudgment=row.company_id;
+  const company=holdings.find(n=>n.market+':'+n.ticker===row.company_id);
+  appendMemberText(panel,'h3',(company?.name||row.company_id)+' · 원문과 사업 영향');
+  appendMemberText(panel,'p',row.quote,'an-judgment-quote');
+  if(row.period_context_v2)appendMemberText(panel,'p','적용 기간의 앞 문장 · '+row.period_context_v2.quote,'an-judgment-quote');
+  appendMemberSource(panel,{source:'판단에 사용한 DART 원문',asOf:row.published_on,url:row.source_url});
+  appendMemberText(panel,'p','범위 · '+(row.scope_quote||'미확인')+' / 적용 기간 · '+(row.period_quote||'미확인'),'an-save-note');
+  appendMemberText(panel,'p','사업 영향 · '+statuses[row.status]+(row.status==='accepted'?' / 연결 정도 '+degree[row.degree]+' · '+direction[row.impact.direction]:''),'an-judgment-verdict');
+  appendMemberText(panel,'p',row.review_reason||row.reason);
+  if(row.review_reasons?.includes('issuer-exposure-evidence-omitted'))
+    appendMemberText(panel,'p','원문 재검토 · AI가 선택한 문장 외에 발행회사·연결실체의 주요 거래처 근거가 있어요. 회사 범위와 적용 기간을 다시 확인해야 해요.','an-save-note');
+  if(row.review_reasons?.includes('degree-party-attribution'))
+    appendMemberText(panel,'p','원문 재검토 · 주요 거래처 표현이 다른 회사에 붙어 있어요. 이 상대방의 연결 정도 근거로 쓰지 않고 다시 확인해야 해요.','an-save-note');
+  if(row.impact.condition)appendMemberText(panel,'p','조건 · '+row.impact.condition+' / '+channel[row.impact.channel]+' 경로');
+  const economic=row.economic_v2,materiality=economic?.materiality;
+  const importance={material:'중요',limited:'경미',unrated:'미평가'},scope={company:'전사',division:'사업부',product:'제품',unknown:'미확인'};
+  appendMemberText(panel,'p','경제적 중요도 · '+(materiality?.status==='accepted'
+    ?importance[materiality.value]+' (원문 정성·별도 검수) / '+scope[materiality.scope]
+    :'미평가'+(materiality?' · '+statuses[materiality.status]:'')),'an-judgment-verdict');
+  if(materiality?.quote){
+    appendMemberText(panel,'p','중요도 근거 원문 · '+materiality.quote,'an-judgment-quote');
+    appendMemberText(panel,'p','경제 범위 · '+(materiality.scope_quote||'미확인')+' / 적용 기간 · '+(materiality.period_quote||'미확인'),'an-save-note');
+    if(materiality.mechanism_quote)appendMemberText(panel,'p','경제 경로 근거 · '+materiality.mechanism_quote);
+  }
+  if(materiality?.review_reason)appendMemberText(panel,'p','중요도 검수 · '+materiality.review_reason+' / '+materiality.reviewed_on,'an-save-note');
+  if(economic?.impact_quote)appendMemberText(panel,'p','영향 경로 원문 · '+economic.impact_quote,'an-save-note');
+  for(const quote of economic?.counter_evidence_quotes||[])appendMemberText(panel,'p','상쇄·반대 근거 원문 · '+quote,'an-save-note');
+  appendMemberText(panel,'p','연결 정도와 경제적 중요도는 별도 판단이에요. 미평가는 중립을 뜻하지 않으며, 사업부·제품 판단을 전사로 확대하지 않아요.','an-save-note');
+  if(row.missing_evidence.length)appendMemberText(panel,'p','추가 확인 · '+row.missing_evidence.map(key=>missing[key]).join(' · '),'an-save-note');
+  appendMemberText(panel,'p','다시 볼 조건 · '+row.review_trigger,'an-save-note');
+  appendMemberText(panel,'p',(row.reviewed_on?'검토일 '+row.reviewed_on+' · ':'')+'원문 발췌 범위의 검토예요. 현재 유효성·상대 회사의 의존도·주가 방향은 별도 확인이 필요해요.','an-save-note');
+  appendMemberJudgmentComparison(panel,row);
+  return panel;
+}
+const companyJudgmentStyle=document.createElement('style');
+companyJudgmentStyle.textContent=`#an-map-design .an-company-judgment{display:flex;flex-direction:column;gap:10px;margin:16px 0;padding:16px;border:0;border-radius:16px;background:light-dark(#f8f9fb,#1d242c)}
+#an-map-design .an-company-judgment h3{margin:0;font-size:14px;font-weight:800}
+#an-map-design .an-company-judgment p{margin:0;font-size:13px;font-weight:600;line-height:1.6;overflow-wrap:anywhere}
+#an-map-design .an-company-judgment .an-save-note{font-size:12px;color:light-dark(#6b7684,#9aa4b1)}
+#an-map-design .an-company-judgment .an-judgment-verdict{font-weight:700}
+#an-map-design #an-nodes .an-node.event[data-economic-importance=material]{width:320px;max-width:320px}
+#an-map-design #an-nodes .an-node.event[data-economic-importance=limited]{width:220px;max-width:220px}
+#an-map-design #an-nodes .an-node.event[data-economic-importance=unrated]{width:260px;max-width:260px}
+#an-map-design #an-nodes .an-economic-importance{display:block;margin-top:6px;font-size:11px;line-height:1.5;font-weight:700;overflow-wrap:anywhere;color:light-dark(#6b7684,#9aa4b1)}
+#an-map-design .an-judgment-proof{border:0;background:none;padding:0}
+#an-map-design .an-judgment-proof summary{border:0;border-radius:10px;padding:8px 10px;font-size:13px;font-weight:700;cursor:pointer}
+#an-map-design .an-judgment-proof summary:focus-visible{outline:0;background:light-dark(#e9edf2,#303945)}
+@media(hover:hover){#an-map-design .an-judgment-proof summary:hover{background:light-dark(#f1f3f5,#252c35)}}
+@media(pointer:coarse){#an-map-design .an-judgment-proof summary{min-height:44px;box-sizing:border-box}}
+`;root.append(companyJudgmentStyle);
+for(const label of root.querySelectorAll('.an-foot span'))if(label.textContent.startsWith('색:'))
+  label.textContent='색: 주제·검수된 조건부 영향 · 움직임: 연결 경로 · 굵기: 연결 정도 · 크기: 검수된 중요도';
+const companyJudgmentBaseDetail=renderDetail;
+renderDetail=function(){
+  companyJudgmentBaseDetail();
+  if(memberReset||showGuide||memberStockList||state.activeNote||state.noteList)return;
+  const selected=edges.find(e=>e.id===state.selected),seen=new Set();
+  const links=selected?[selected]:edges.filter(e=>e.from===state.selected||e.to===state.selected);
+  const anchor=detail.querySelector('h4');
+  for(const edge of links){
+    const node=nodeById[edge.from]?.kind==='event'?nodeById[edge.from]:nodeById[edge.to];
+    const row=memberCompanyJudgment(edge,node);if(!row||seen.has(row.record_id+'|'+row.company_id))continue;
+    seen.add(row.record_id+'|'+row.company_id);
+    const panel=appendMemberCompanyJudgment(detail,row);if(anchor)detail.insertBefore(panel,anchor);
+  }
+  const record=selected?(nodeById[selected.from]?.kind==='event'?nodeById[selected.from]:nodeById[selected.to]):nodeById[state.selected];
+  if(record?.layer==='candidates'&&seen.size){
+    // Keep the extraction-era text as provenance, not the current verdict.
+    const intro=detail.querySelector('h2')?.nextElementSibling;
+    if(intro?.tagName==='P'){
+      const proof=document.createElement('details');proof.className='an-judgment-proof';
+      appendMemberText(proof,'summary','최초 AI 추출 내용 · 검수 전');
+      if(anchor)detail.insertBefore(proof,anchor);else detail.append(proof);
+      proof.append(intro);
+    }
+  }
+  if(record?.layer==='candidates'&&!seen.size){
+    const panel=appendMemberText(detail,'section','','an-company-judgment');panel.dataset.companyJudgment='not-connected';
+    appendMemberText(panel,'h3','회사별 영향 분석 미연결');
+    appendMemberText(panel,'p','원문에서 관계를 추출한 후보예요. 이 자료에는 회사별 사업 영향 판단이 아직 연결되지 않았으며, 검토 후 보류된 결과와는 달라요.');
+    if(anchor)detail.insertBefore(panel,anchor);
+  }
+};
+
 // Display-only grouping. Never add synthetic records to nodes, edges or saved drafts.
 // Categories use supplied record kinds/layers; no inferred events from similar titles.
 const memberGroupLayer=document.createElement('div');memberGroupLayer.id='an-member-groups';space.append(memberGroupLayer);
