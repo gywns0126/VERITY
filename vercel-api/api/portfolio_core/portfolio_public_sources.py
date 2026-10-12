@@ -41,6 +41,11 @@ PUBLIC_SOURCE_FILES = (
     "commodity_exposure.json",
     "portfolio.json",
     "member_map_ai_candidates.json",
+    "calendar_public.json",
+    "stock_flow_5d.json",
+    "us_smart_money_13f.json",
+    "us_investor_portfolios.json",
+    "etf_flow.json",
 )
 
 OPTIONAL_PUBLIC_SOURCE_FILES = (
@@ -50,6 +55,11 @@ OPTIONAL_PUBLIC_SOURCE_FILES = (
     "commodity_exposure.json",
     "portfolio.json",
     "member_map_ai_candidates.json",
+    "calendar_public.json",
+    "stock_flow_5d.json",
+    "us_smart_money_13f.json",
+    "us_investor_portfolios.json",
+    "etf_flow.json",
 )
 
 PUBLIC_SOURCE_MAX_BYTES = {
@@ -64,6 +74,11 @@ PUBLIC_SOURCE_MAX_BYTES = {
     "commodity_exposure.json": 2 * 1024 * 1024,
     "portfolio.json": 8 * 1024 * 1024,
     "member_map_ai_candidates.json": 2_000_000,
+    "calendar_public.json": 8 * 1024 * 1024,
+    "stock_flow_5d.json": 8 * 1024 * 1024,
+    "us_smart_money_13f.json": 8 * 1024 * 1024,
+    "us_investor_portfolios.json": 8 * 1024 * 1024,
+    "etf_flow.json": 8 * 1024 * 1024,
 }
 
 PUBLIC_COMPANY_FIELDS = ("id", "ticker", "market", "name", "sector", "facts", "documents")
@@ -696,6 +711,214 @@ def _disclosure(
     return projected
 
 
+def _append_public_flows(document, companies):
+    """Latest retained observation, not collection time, impact or trade price."""
+    counts = {"input": 0, "accepted": 0, "rejected": 0, "facts": 0, "shape_errors": 0}
+    flows = document.get("flows")
+    if not isinstance(flows, Mapping):
+        counts["shape_errors"] = 1
+        return counts
+    counts["input"] = len(flows)
+    for ticker, rows in flows.items():
+        identifier = f"KR:{ticker}"
+        if (not isinstance(ticker, str) or not _KR_TICKER_RE.fullmatch(ticker)
+                or identifier not in companies or not isinstance(rows, list)
+                or not rows or len(rows) > 60):
+            counts["rejected"] += 1
+            continue
+        dated = []
+        for row in rows:
+            day = row.get("date") if isinstance(row, Mapping) else None
+            try:
+                if (not isinstance(day, str) or not re.fullmatch(r"(?:19|20|21)[0-9]{2}-[0-9]{2}-[0-9]{2}", day)
+                        or date.fromisoformat(day).isoformat() != day):
+                    raise ValueError
+            except ValueError:
+                dated = []
+                break
+            dated.append((day, row))
+        if not dated:
+            counts["rejected"] += 1
+            continue
+        latest = max(day for day, _ in dated)
+        selected = [row for day, row in dated if day == latest]
+        facts = []
+        for field, metric in (("foreign_net", "foreign_net_shares"), ("inst_net", "institution_net_shares")):
+            values = [row.get(field) for row in selected]
+            # Zero is an observation; null is not. Reject conflicting duplicates
+            # without falling back to another date or using a derived window.
+            if (any(type(value) not in (int, float) or abs(value) > 9007199254740991
+                    or not math.isfinite(value) or int(value) != value for value in values)
+                    or any(value != values[0] for value in values[1:])):
+                continue
+            facts.append({"metric": metric, "value": int(values[0]), "unit": "주",
+                          "as_of": latest, "source": "네이버 금융",
+                          "provenance": {"kind": "public-stock-flow", "ticker": ticker,
+                              "trade_date": latest,
+                              "source_url": f"https://finance.naver.com/item/frgn.naver?code={ticker}"}})
+        if facts:
+            companies[identifier]["facts"].extend(facts)
+            counts["accepted"] += 1
+            counts["facts"] += len(facts)
+        else:
+            counts["rejected"] += 1
+    return counts
+
+
+_PUBLIC_13F_URLS = {
+    name: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/" + name
+    for name in ("us_smart_money_13f.json", "us_investor_portfolios.json")
+}
+
+
+def _append_public_institutional(documents, companies):
+    """Reuse disclosed quarter snapshots in facts, never trading relationships.
+
+    Existing public builders omit accession/original URL. Keep the exact public
+    artifact link and explicitly report missing original proof; never synthesize
+    an EDGAR URL from a manager name or turn collection time into a report date.
+    """
+    counts = {"input": 0, "accepted": 0, "duplicate": 0, "rejected": 0,
+              "facts": 0, "shape_errors": 0, "rejection_reasons": {}}
+    candidates = {}
+    aliases = {}
+    for identifier, company in companies.items():
+        if company["market"] == "US":
+            aliases.setdefault(company["ticker"].replace(".", "-"), []).append(identifier)
+
+    def reject(reason, count=1):
+        counts["rejected"] += count
+        reasons = counts["rejection_reasons"]
+        reasons[reason] = reasons.get(reason, 0) + count
+
+    def append(row, meta, institution, filename):
+        counts["input"] += 1
+        if not isinstance(row, Mapping) or not isinstance(meta, Mapping):
+            reject("invalid-row-or-fund-metadata")
+            return
+        raw_ticker = row.get("ticker")
+        # Only known class-share spelling equivalents; no names/CUSIP guessing.
+        ticker = (raw_ticker.replace("/", "-").replace(".", "-")
+                  if isinstance(raw_ticker, str) else None)
+        matches = (aliases.get(ticker, []) if _ticker(ticker, "US")
+                   and _source_market(row.get("market", "US")) == "US" else [])
+        if len(matches) != 1:
+            reject("unknown-or-ambiguous-issuer")
+            return
+        identifier = matches[0]
+        name = _safe_text(institution, 160)
+        report, filed = _as_of(meta.get("report_date")), _as_of(meta.get("filed_at"))
+        if (name is None or report is None or filed is None
+                or not 1900 <= int(report[:4]) <= 2100
+                or not 1900 <= int(filed[:4]) <= 2100
+                or report[5:] not in {"03-31", "06-30", "09-30", "12-31"}
+                or filed < report or filed > date.today().isoformat()):
+            reject("invalid-institution-or-period")
+            return
+        cik = meta.get("cik")
+        if cik is not None:
+            if (not isinstance(cik, str) or not re.fullmatch(r"[0-9]{1,10}", cik, re.ASCII)
+                    or int(cik) <= 0):
+                reject("invalid-manager-cik")
+                return
+            cik = str(int(cik))
+        accession = meta.get("accession_no")
+        original = meta.get("source_url")
+        # A claimed original must bind both CIK and accession. Invalid proof may
+        # not silently fall back to the artifact-only path.
+        if accession is not None or original is not None:
+            target = _canonical_disclosure_url(original, "SEC")
+            if (cik is None or not isinstance(accession, str)
+                    or not re.fullmatch(r"[0-9]{10}-[0-9]{2}-[0-9]{6}", accession, re.ASCII)
+                    or target is None
+                    or not target[1].startswith(f"SEC:{cik}:{accession.replace('-', '')}:")
+                    or target[1].endswith(":filing")):
+                reject("invalid-original-proof")
+                return
+            original = target[0]
+        cusip = row.get("cusip")
+        if cusip is not None and (not isinstance(cusip, str)
+                or not re.fullmatch(r"[A-Z0-9]{9}", cusip, re.ASCII)):
+            reject("invalid-cusip")
+            return
+        values = (row.get("shares"), row.get("value_usd"))
+        if any(type(value) not in (int, float) or not 0 <= value <= 9007199254740991
+               or not math.isfinite(value) or int(value) != value for value in values):
+            reject("invalid-reported-value")
+            return
+        provenance = {"kind": "public-13f", "ticker": companies[identifier]["ticker"],
+                      "institution": name, "manager_cik": cik, "accession": accession,
+                      "report_date": report, "filed_at": filed,
+                      "source_url": _PUBLIC_13F_URLS[filename], "original_url": original,
+                      "original_status": "provided" if original else "not-supplied"}
+        if cusip is not None:
+            provenance["cusip"] = cusip
+        key = (identifier, name, report)
+        candidates.setdefault(key, []).append((values, provenance))
+
+    for filename in _PUBLIC_13F_URLS:
+        if filename not in documents:
+            continue
+        document = documents[filename]
+        field = "stocks" if filename == "us_smart_money_13f.json" else "investors"
+        rows = document.get(field)
+        if not isinstance(rows, list) or len(rows) > 10000:
+            counts["shape_errors"] += 1
+            continue
+        meta = document.get("_meta")
+        funds = meta.get("funds") if isinstance(meta, Mapping) else None
+        for row in rows:
+            holdings = row.get("holders" if field == "stocks" else "top_holdings") if isinstance(row, Mapping) else None
+            if not isinstance(holdings, list) or len(holdings) > 300:
+                counts["input"] += 1
+                reject("invalid-holdings-container")
+                continue
+            for holding in holdings:
+                if field == "stocks":
+                    fund = holding.get("fund") if isinstance(holding, Mapping) else None
+                    fund_meta = funds.get(fund) if isinstance(funds, Mapping) and isinstance(fund, str) else None
+                    append({**holding, "ticker": row.get("ticker"), "market": row.get("market", "US")}
+                           if isinstance(holding, Mapping) else holding,
+                           fund_meta, fund, filename)
+                else:
+                    append(holding, row, row.get("institution"), filename)
+
+    cusip_targets = {}
+    for (identifier, _, _), entries in candidates.items():
+        for _, proof in entries:
+            if "cusip" in proof:
+                cusip_targets.setdefault(proof["cusip"], set()).add(identifier)
+    for (identifier, _, report), entries in candidates.items():
+        values, provenance = entries[0]
+        # Do not sum duplicate slices or choose an arbitrary conflicting filing.
+        ciks = {p["manager_cik"] for _, p in entries if p["manager_cik"] is not None}
+        # Artifact-only stock rows omit CIK/CUSIP; an investor row can retain
+        # those identities only when the reported values/dates agree exactly.
+        comparable = {(tuple(v), p["filed_at"], p["accession"], p["original_url"])
+                      for v, p in entries}
+        cusips = {p["cusip"] for _, p in entries if "cusip" in p}
+        if any(len(cusip_targets[cusip]) != 1 for cusip in cusips):
+            reject("ambiguous-cusip-issuer", len(entries))
+            continue
+        if len(comparable) != 1 or len(ciks) > 1 or len(cusips) > 1:
+            reject("conflicting-duplicate", len(entries))
+            continue
+        provenance = next((p for _, p in entries if p["manager_cik"] is not None), provenance)
+        provenance = dict(provenance)
+        if cusips:
+            provenance["cusip"] = next(iter(cusips))
+        counts["accepted"] += 1
+        counts["duplicate"] += len(entries) - 1
+        for metric, value, unit in zip(("institution_13f_shares", "institution_13f_value_usd"),
+                                       values, ("주", "USD")):
+            companies[identifier]["facts"].append({"metric": metric, "value": int(value),
+                "unit": unit, "as_of": report, "source": "SEC", "provenance": dict(provenance)})
+            counts["facts"] += 1
+        # Detail-only proof: a manager's 13F must never become an issuer filing
+        # node, common event or inter-company relationship in the mindmap.
+    return counts
+
+
 def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
     """Project allowlisted public documents into a fixed company/fact schema."""
 
@@ -821,6 +1044,50 @@ def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
             company_id, company = registered
             append_disclosures(company_id, company, row, source)
 
+    # Reuse the calendar page's wider disclosure window, never its inferred
+    # dividend dates, IPO names, title-based impact tags or personal metadata.
+    calendar_counts = None
+    calendar = documents.get("calendar_public.json")
+    if calendar is not None:
+        calendar_counts = {"input": 0, "accepted": 0, "duplicate": 0,
+                           "excluded_schedule": 0, "rejected": 0, "shape_errors": 0}
+        events = calendar.get("events")
+        if not isinstance(events, list):
+            calendar_counts["shape_errors"] = 1
+        else:
+            calendar_counts["input"] = len(events)
+            for event in events:
+                if not isinstance(event, Mapping):
+                    calendar_counts["rejected"] += 1
+                    continue
+                if event.get("type") in ("dividend", "ipo"):
+                    calendar_counts["excluded_schedule"] += 1
+                    continue
+                ticker = _ticker(event.get("ticker"), "KR")
+                identifier = f"KR:{ticker}" if ticker else None
+                projected = _disclosure({"title": event.get("title"),
+                    "date": event.get("date"), "source_url": event.get("url")}, "DART")
+                if (event.get("type") != "disclosure" or event.get("market") != "KR"
+                        or event.get("date_estimated", False) is not False
+                        or identifier not in companies or projected is None
+                        or projected["id"][5:13] != projected["as_of"].replace("-", "")):
+                    calendar_counts["rejected"] += 1
+                    continue
+                if projected["id"] in document_keys[identifier]:
+                    calendar_counts["duplicate"] += 1
+                    continue
+                document_keys[identifier].add(projected["id"])
+                companies[identifier]["documents"].append(projected)
+                calendar_counts["accepted"] += 1
+
+    flow_counts = (_append_public_flows(documents["stock_flow_5d.json"], companies)
+                   if "stock_flow_5d.json" in documents else None)
+    institutional_counts = (_append_public_institutional(documents, companies)
+                            if any(name in documents for name in _PUBLIC_13F_URLS) else None)
+    etf_counts = None
+    if "etf_flow.json" in documents:
+        from .portfolio_etf_facts import append_public_etf_facts
+        etf_counts = append_public_etf_facts(documents["etf_flow.json"], companies)
     result_companies = sorted(companies.values(), key=lambda company: company["id"])
     facts_projected = 0
     documents_projected = 0
@@ -853,6 +1120,10 @@ def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
             "facts": facts_projected,
             "documents": documents_projected,
             "status": status_value,
+            **({"calendar_reuse": calendar_counts} if calendar_counts is not None else {}),
+            **({"flow_reuse": flow_counts} if flow_counts is not None else {}),
+            **({"institutional_reuse": institutional_counts} if institutional_counts is not None else {}),
+            **({"etf_reuse": etf_counts} if etf_counts is not None else {}),
         },
     }
 

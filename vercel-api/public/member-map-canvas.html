@@ -1924,7 +1924,7 @@ html>body{padding:0}</style>
       function finishNodePointer(){if(!nodePointerActive)return;nodePointerActive=false;closePreview();}
       document.addEventListener('pointerup',finishNodePointer,true);document.addEventListener('pointercancel',finishNodePointer,true);document.addEventListener('lostpointercapture',finishNodePointer,true);window.addEventListener('blur',finishNodePointer);
       preview.addEventListener('pointerenter',()=>clearTimeout(previewCloseTimer));preview.addEventListener('pointerleave',delayClosePreview);
-      document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!preview.hidden){closePreview();e.preventDefault();}},true);
+      document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.defaultPrevented&&!e.target.closest('dialog')&&!editable(e.target)&&!intro.open&&!registrationDialog.open&&(cancelGesture||!preview.hidden)){if(!e.repeat){if(cancelGesture)cancelGesture();else closePreview();}e.preventDefault();e.stopPropagation();}},true);
 
       const searchToggle=document.createElement('button');searchToggle.type='button';searchToggle.className='an-tool';searchToggle.id='an-stock-search';searchToggle.textContent='종목 검색·추가';searchToggle.setAttribute('aria-expanded','false');searchToggle.setAttribute('aria-controls','an-search-panel');workbar.prepend(searchToggle);
       const searchPanel=document.createElement('section');searchPanel.id='an-search-panel';searchPanel.className='an-search-panel';searchPanel.hidden=true;searchPanel.setAttribute('aria-label','가상 종목 검색');
@@ -1938,9 +1938,9 @@ html>body{padding:0}</style>
       function closeSearch(focus=true){searchPanel.hidden=true;searchToggle.setAttribute('aria-expanded','false');if(focus)searchToggle.focus({preventScroll:true});}
       function openSearch(){closePreview();if(cancelGesture)cancelGesture();searchPanel.hidden=false;searchToggle.setAttribute('aria-expanded','true');positionSearch();renderSearch();searchInput.focus();}
       function membership(n){return !n.explore?'보유 · 가상':demoRegistration[n.id]?.kind==='holding'?'보유 등록 예시':demoRegistration[n.id]?.kind==='watch'?'관심 등록 예시':'탐색 중';}
-      function focusBoardNode(n){state.filter='all';state.topic='all';state.view='all';root.querySelector('#an-view').value='all';select(n.id);const p=point(n);if(p.x<60||p.y<40||p.x>space.clientWidth-60||p.y>space.clientHeight-40){state.panX+=space.clientWidth/2-p.x;state.panY+=space.clientHeight/2-p.y;}renderMap();}
+      function focusBoardNode(n){invalidateMemberSelectionReturn();state.filter='all';state.topic='all';state.view='all';root.querySelector('#an-view').value='all';select(n.id);const p=point(n);if(p.x<60||p.y<40||p.x>space.clientWidth-60||p.y>space.clientHeight-40){state.panX+=space.clientWidth/2-p.x;state.panY+=space.clientHeight/2-p.y;}renderMap();}
       function addBoardNode(n,at){
-        closeSearch(false);closePreview();const b=boardDraft[state.scenario],already=inScenario(n);
+        invalidateMemberSelectionReturn();closeSearch(false);closePreview();const b=boardDraft[state.scenario],already=inScenario(n);
         if(already){focusBoardNode(n);sayBoard(n.name+'는 이미 작업판에 있어요.');return;}
         b.hidden=b.hidden.filter(id=>id!==n.id);if(n.explore&&!b.added.includes(n.id))b.added.push(n.id);
         const r=space.getBoundingClientRect();let px=at?at.x-r.left:space.clientWidth/2,py=at?at.y-r.top:space.clientHeight/2;
@@ -1949,7 +1949,7 @@ html>body{padding:0}</style>
         if(n.explore)initialPositions.set(n.id,{x:n.x,y:n.y});
         focusBoardNode(n);sayBoard(n.name+'를 작업판에 추가했어요. 실제 둥지는 바뀌지 않았어요.');renderSearch();observeTour('add');
       }
-      function hideBoardNode(n){const scenario=state.scenario,b=boardDraft[scenario];if(b.hidden.includes(n.id))return;closeSearch(false);closePreview();b.hidden.push(n.id);clearFocus();state.selected='';selectedItems.delete(n.id);renderMap();renderDetail();sayBoard(n.name+'를 작업판에서 제거했어요. 실제 둥지는 그대로이고 메모는 유지돼요.',()=>{b.hidden=b.hidden.filter(id=>id!==n.id);if(state.scenario===scenario){focusBoardNode(n);}sayBoard(n.name+'를 다시 표시했어요.');});}
+      function hideBoardNode(n){const scenario=state.scenario,b=boardDraft[scenario];if(b.hidden.includes(n.id))return;invalidateMemberSelectionReturn();closeSearch(false);closePreview();b.hidden.push(n.id);clearFocus();state.selected='';selectedItems.delete(n.id);renderMap();renderDetail();sayBoard(n.name+'를 작업판에서 제거했어요. 실제 둥지는 그대로이고 메모는 유지돼요.',()=>{b.hidden=b.hidden.filter(id=>id!==n.id);if(state.scenario===scenario){focusBoardNode(n);}sayBoard(n.name+'를 다시 표시했어요.');});}
       function renderSearch(){
         const q=searchInput.value.trim().toLocaleLowerCase(),catalog=nodes.filter(n=>n.kind==='stock'&&(baseScenario(n)||n.explore)),matched=catalog.filter(n=>(n.name+' '+(n.ticker||n.id)).toLocaleLowerCase().includes(q));
         searchResults.replaceChildren();searchPanel.querySelector('#an-search-status').textContent=matched.length?'검색 결과 '+matched.length+'개':'보유종목에서 찾지 못했어요. 종목 이름이나 코드를 확인해주세요.';
@@ -1964,7 +1964,7 @@ html>body{padding:0}</style>
       }
       searchToggle.onclick=()=>searchPanel.hidden?openSearch():closeSearch();searchInput.oninput=renderSearch;
       searchPanel.querySelector('.an-close').onclick=()=>closeSearch();
-      searchPanel.addEventListener('keydown',e=>{if(e.key==='Escape'){if(cancelGesture)cancelGesture();closeSearch();e.preventDefault();e.stopPropagation();}});
+      searchPanel.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!e.repeat){if(cancelGesture)cancelGesture();else closeSearch();}e.preventDefault();e.stopPropagation();}});
       document.addEventListener('pointerdown',e=>{if(!searchPanel.hidden&&!cancelGesture&&!searchPanel.contains(e.target)&&!searchToggle.contains(e.target))closeSearch(false);},true);
       window.addEventListener('resize',positionSearch);
       function renderStockActions(n){
@@ -1994,7 +1994,7 @@ html>body{padding:0}</style>
       registrationDialog.addEventListener('keydown',e=>{if(e.key==='Tab'){const items=[...registrationDialog.querySelectorAll('button,input')],first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 
       function groupedOverview(){return state.scenario==='stress'&&!state.focusId&&!state.selected;}
-      function nodeScale(n,zoom=state.zoom){return Math.max(.85,Math.min(1.1,zoom));}
+      function nodeScale(n,zoom=state.zoom){return Math.max(MIN_ZOOM,Math.min(MAX_ZOOM,zoom));}
       function restore(saved){if(!saved)return;const m=saved.modelContent||{},p=saved.privateContent||{};if(nodeById[m.selected]||edges.some(e=>e.id===m.selected)||m.selected==='')state.selected=m.selected;if(m.filter==='all'||Object.hasOwn(sourceNames,m.filter))state.filter=m.filter;if(m.topic==='all'||Object.hasOwn(topicNames,m.topic))state.topic=m.topic;const selectedNode=nodeById[state.selected],selectedEdge=edges.find(e=>e.id===state.selected);if((selectedNode&&!shown(selectedNode))||(selectedEdge&&!visibleEdge(selectedEdge)))state.selected='';if(!state.focusId&&p.layoutVersion===2&&Number.isFinite(p.zoom)){hasSavedCamera=true;state.zoom=Math.max(MIN_ZOOM,Math.min(MAX_ZOOM,p.zoom));if(Number.isFinite(p.panX))state.panX=p.panX;if(Number.isFinite(p.panY))state.panY=p.panY;}if(p.marks&&typeof p.marks==='object')state.marks=p.marks;}
       restore(window.openai&&window.openai.widgetState);
       function save(){const camera=focusCamera||state;if(window.openai&&window.openai.setWidgetState)window.openai.setWidgetState({modelContent:{selected:state.selected,filter:state.filter,topic:state.topic},privateContent:{layoutVersion:2,zoom:camera.zoom,panX:camera.panX,panY:camera.panY,marks:state.marks,introVersion:introSeen?1:0}}).catch(function(){});}
@@ -2031,7 +2031,7 @@ html>body{padding:0}</style>
       function focusNeighborhood(id){if(space.clientWidth>=560)return neighborhood(id);return new Set([id,...nodes.filter(n=>n.kind==='event'&&visibleEdgeForStock(n.id,id)).map(n=>n.id)]);}
       function relevant(){if(state.focusId&&shown(nodeById[state.focusId]))return focusNeighborhood(state.focusId);const e=edges.find(e=>e.id===state.selected);if(e)return new Set([e.from,e.to]);if(!state.selected)return new Set(nodes.filter(shown).map(n=>n.id));return new Set([state.selected,...edges.filter(e=>visibleEdge(e)&&(e.from===state.selected||e.to===state.selected)).flatMap(e=>[e.from,e.to])]);}
       let focusCamera=null;
-      function clearFocus(){state.focusId='';focusOffsets.clear();focusOrigins.clear();if(focusCamera){Object.assign(state,focusCamera);focusCamera=null;}}
+      function clearFocus(){state.focusId='';focusOffsets.clear();focusOrigins.clear();focusCamera=null;}
       function focusStock(id,rebuild=false){
         if(state.focusId===id&&!rebuild)return;
         if(state.focusId!==id){focusOrigins.clear();nodes.forEach(n=>{if(!initialPositions.has(n.id))initialPositions.set(n.id,{x:n.x,y:n.y});const origin=(state.scenario==='stress'?stressPositions:initialPositions).get(n.id)||initialPositions.get(n.id);focusOrigins.set(n.id,{x:origin.x,y:origin.y});});}
@@ -2082,7 +2082,8 @@ html>body{padding:0}</style>
       const primaryTools=root.querySelector('.an-tools'),filterControls=root.querySelector('.an-filters'),zoomControls=root.querySelector('.an-zoom');
       function labeledControl(text,control){const label=document.createElement('label');label.className='an-filter';label.append(document.createTextNode(text),control);return label;}
       filterControls.append(labeledControl('사건',root.querySelector('#an-view')));
-      const resetFilters=document.createElement('button');resetFilters.type='button';resetFilters.className='an-tool';resetFilters.textContent='필터 초기화';resetFilters.onclick=()=>{state.filter=state.topic=state.view='all';root.querySelector('#an-view').value='all';if(state.focusId)focusStock(state.focusId,true);renderMap();renderDetail();if(state.focusId)fitNodes('nearby');save();};filterControls.append(resetFilters);
+      const changedToggle=document.createElement('button');changedToggle.type='button';changedToggle.id='an-changed-toggle';changedToggle.className='an-tool';changedToggle.textContent='달라진 사건';changedToggle.setAttribute('aria-pressed',String(state.view==='changed'));changedToggle.onclick=toggleMemberChangedNews;filterControls.append(changedToggle);
+      const resetFilters=document.createElement('button');resetFilters.type='button';resetFilters.className='an-tool';resetFilters.textContent='필터 초기화';resetFilters.onclick=()=>{invalidateMemberSelectionReturn();state.filter=state.topic=state.view='all';root.querySelector('#an-view').value='all';if(state.focusId)focusStock(state.focusId,true);renderMap();renderDetail();if(state.focusId)fitNodes('nearby');save();};filterControls.append(resetFilters);
       const scenarioSelect=root.querySelector('#an-scenario'),notesButton=root.querySelector('#an-notes-open');
       const browseTools=document.createElement('div'),adjustTools=document.createElement('div');
       browseTools.className=adjustTools.className='an-controls-row';adjustTools.setAttribute('role','group');adjustTools.setAttribute('aria-label','지도 조정');
@@ -2097,7 +2098,7 @@ html>body{padding:0}</style>
       const focusStatus=document.createElement('span');focusStatus.className='an-focus-status';focusStatus.hidden=true;
       const focusTitle=document.createElement('span'),fullMapButton=document.createElement('button');fullMapButton.type='button';fullMapButton.className='an-tool';fullMapButton.textContent='전체 지도';fullMapButton.onclick=returnToMap;focusStatus.append(focusTitle,fullMapButton);
       const filterStatus=document.createElement('span');filterStatus.className='an-filter-status';workbar.prepend(focusStatus,filterStatus);
-      function syncMainTools(){
+      function syncMainTools(){syncMemberChangedToggle();
         const activeFilters=[state.filter==='all'?'':sourceNames[state.filter],state.topic==='all'?'':topicNames[state.topic],state.view==='all'?'':state.view==='changed'?'달라진 사건 · 가상':'공통 사건'].filter(Boolean);
         filterStatus.textContent=activeFilters.join(' / ');filterStatus.hidden=!activeFilters.length;
         focusStatus.hidden=!state.focusId;if(state.focusId)focusTitle.textContent=nodeById[state.focusId].name+(space.clientWidth<560?' 주변 사건':' 주변')+' · 임시 보기';
@@ -2326,7 +2327,7 @@ html>body{padding:0}</style>
         if(n?.explore){const sourceButton=detail.querySelector('#an-source');sourceButton.hidden=true;sourceButton.previousElementSibling.hidden=true;}
         if(edge)addRelationFeedback(edge);
         if(n?.kind==='stock'){
-          const control=document.createElement('button');control.type='button';control.className='an-note-open';control.textContent='이 종목 주변을 한눈에';control.onclick=()=>{focusStock(n.id);fitNodes('nearby');};detail.querySelector('h2').after(control);
+          const control=document.createElement('button');control.type='button';control.className='an-note-open';control.textContent='이 종목 주변을 한눈에';control.onclick=()=>{focusStock(n.id);fitMemberSelection('nearby');};detail.querySelector('h2').after(control);
           const coverage=document.createElement('p');coverage.className='an-coverage';const count=edges.filter(e=>inScenario(e)&&(e.from===n.id||e.to===n.id)).length;
           coverage.textContent=n.explore?'근거 자료 미수집 · 연결선이 없다고 실제 관계가 없는 것은 아니에요.':count&&!related.length?'현재 필터에서 보이는 연결이 없어요. 필터를 바꾸면 다른 연결을 볼 수 있어요.':'가상 자료에 설정된 연결만 표시해요. 실제 시장의 관계를 모두 조사한 결과는 아니에요.';
           detail.querySelector('.an-stock-actions').after(coverage);
@@ -2340,29 +2341,52 @@ html>body{padding:0}</style>
       }
       // One return view for a selection sequence; never restore notes or node coordinates.
       let selectionReturn=null;
+      let changedReturn=null;
       function selectionContext(){return [state.scenario,state.filter,state.topic,state.view].join('|');}
-      function select(id,toggle=false){
-        const deselect=toggle&&id&&state.selected===id&&!showGuide&&!state.activeNote&&!state.noteList;
-        const previous=deselect&&selectionReturn?.context===selectionContext()?selectionReturn:null;
-        if(!toggle||deselect)selectionReturn=null;
-        else if(id&&(nodeById[id]?.kind==='stock'||!selectionReturn||selectionReturn.context!==selectionContext()||state.selected===state.focusId)){
-          const stock=nodeById[id]?.kind==='stock',camera=stock?(focusCamera||state):state;
-          selectionReturn={context:selectionContext(),selected:stock?'':state.selected,focusId:stock?'':state.focusId,
-            zoom:camera.zoom,panX:camera.panX,panY:camera.panY,focusCamera:!stock&&focusCamera?{...focusCamera}:null,
-            offsets:stock?[]:[...focusOffsets],origins:stock?[]:[...focusOrigins],narrow:space.clientWidth<560};
+      // Call before group reset or removal of a selected/focused graph target.
+      function invalidateMemberSelectionReturn(invalidateChanged=true){selectionReturn=null;focusCamera=null;if(invalidateChanged)changedReturn=null;}
+      function memberChangedContext(){return JSON.stringify([state.scenario,state.filter,state.topic,holdings.map(n=>n.id).sort()]);}
+      function syncMemberChangedToggle(){
+        const exists=id=>!id||!!nodeById[id]||edges.some(e=>e.id===id);
+        if(changedReturn&&(state.view!=='changed'||changedReturn.context!==memberChangedContext()||!exists(changedReturn.selected)||!exists(changedReturn.focusId)||!changedReturn.items.every(id=>exists(id)||!!state.notes[id])))changedReturn=null;
+        root.querySelector('#an-changed-toggle')?.setAttribute('aria-pressed',String(state.view==='changed'));
+      }
+      function toggleMemberChangedNews(){
+        if(cancelGesture)return;
+        syncMemberChangedToggle();
+        const entering=state.view!=='changed',previous=entering?null:changedReturn;
+        changedReturn=entering?{context:memberChangedContext(),view:state.view,filter:state.filter,topic:state.topic,
+          camera:{zoom:state.zoom,panX:state.panX,panY:state.panY},selected:state.selected,focusId:state.focusId,items:[...selectedItems],selection:selectionReturn}:null;
+        invalidateMemberSelectionReturn(false);closePreview();clearFocus();selectedItems.clear();
+        showGuide=false;state.activeNote='';state.noteList=false;state.selected='';state.view=entering?'changed':'all';
+        if(previous){
+          Object.assign(state,{view:previous.view,filter:previous.filter,topic:previous.topic});
+          if(previous.focusId)focusStock(previous.focusId);
+          state.selected=previous.selected;previous.items.forEach(id=>selectedItems.add(id));selectionReturn=previous.selection;
+          Object.assign(state,previous.camera);
         }
+        root.querySelector('#an-source-filter').value=state.filter;root.querySelector('#an-topic-filter').value=state.topic;root.querySelector('#an-view').value=state.view;
+        syncMemberChangedToggle();renderMap();renderDetail();detail.scrollTop=0;
+      }
+      function fitMemberSelection(selectionOnly){
+        fitNodes(selectionOnly);
+        if(selectionOnly&&selectionReturn&&selectionReturn.context===selectionContext()&&(state.selected||state.focusId||selectedItems.size))selectionReturn.usedFit=true;
+      }
+      function select(id,toggle=false){
+        if(id&&!nodeById[id]&&!edges.some(e=>e.id===id)){invalidateMemberSelectionReturn();id='';}
+        const deselect=toggle&&id&&state.selected===id&&!showGuide&&!state.activeNote&&!state.noteList;
+        const leaving=!id||deselect;
+        const previous=leaving&&selectionReturn?.usedFit&&selectionReturn.context===selectionContext()?selectionReturn:null;
+        if(leaving)invalidateMemberSelectionReturn(false);
+        else if(!state.selected&&!state.focusId&&!selectionReturn)selectionReturn={context:selectionContext(),camera:{zoom:state.zoom,panX:state.panX,panY:state.panY},usedFit:false};
         if(deselect){id='';selectedItems.clear();}
         if(edges.some(e=>e.id===id))observeTour('edge');closePreview();if(!selectedItems.has(id))selectedItems.clear();
-        const stock=nodeById[id]?.kind==='stock',newFocus=stock&&state.focusId!==id;
+        const stock=nodeById[id]?.kind==='stock';
         if(!id)clearFocus();else if(stock)focusStock(id);else if(state.focusId&&!relevant().has(id)&&!edges.some(e=>e.id===id&&relevant().has(e.from)&&relevant().has(e.to)))clearFocus();
         showGuide=false;state.activeNote='';state.noteList=false;state.selected=id;
-        if(previous){
-          const {selected,focusId,zoom,panX,panY}=previous;Object.assign(state,{selected,focusId,zoom,panX,panY});
-          focusCamera=previous.focusCamera;previous.offsets.forEach(([key,value])=>focusOffsets.set(key,value));previous.origins.forEach(([key,value])=>focusOrigins.set(key,value));
-          if(state.focusId&&previous.narrow!==(space.clientWidth<560))focusStock(state.focusId,true);
-        }
-        renderMap();renderDetail();if(newFocus)fitNodes('nearby');detail.scrollTop=0;
-        root.querySelector('#an-live').textContent=deselect?'선택을 해제하고 이전 지도 보기로 돌아왔어요.':state.focusId?nodeById[state.focusId].name+' 주변을 크게 표시했어요. 전체 지도에서 원래 배치로 돌아갈 수 있어요.':id?'선택한 항목의 연결과 설명을 표시했어요.':'전체 연결을 표시했어요.';save();
+        if(previous)Object.assign(state,previous.camera);
+        renderMap();renderDetail();detail.scrollTop=0;
+        root.querySelector('#an-live').textContent=deselect?'선택을 해제했어요.':state.focusId?nodeById[state.focusId].name+' 주변 연결을 표시했어요.':id?'선택한 항목의 연결과 설명을 표시했어요.':'전체 연결을 표시했어요.';save();
       }
       function appendMemberNode(n){const button=document.createElement('button');button.type='button';button.className='an-node '+(n.kind==='event'?'event':'');button.dataset.node=n.id;button.dataset.topic=n.topic||'holding';button.setAttribute('aria-label',n.name+' · 다시 눌러 선택 해제 · 드래그 및 방향키로 이동');button.innerHTML=(n.kind==='event'?'<i class="an-dot" aria-hidden="true"></i>':'<span class="an-logo" aria-hidden="true">'+escaped(n.logo)+'<span class="an-flag"></span></span>')+'<span><strong>'+escaped(n.name)+'</strong><small>'+escaped(n.code)+'</small></span>';button.onclick=function(e){if(suppressClick){suppressClick=false;return;}if(e.shiftKey){toggleSelection(n.id);return;}select(n.id,true);};button.onkeydown=e=>moveWithKeys(e,n.id);button.onpointerdown=e=>beginMove(e,n.id,button);bindPreview(button,n,false);nodesEl.appendChild(button);}
       nodes.forEach(appendMemberNode);
@@ -2371,8 +2395,8 @@ html>body{padding:0}</style>
       inbox.querySelectorAll('[data-select]').forEach(el=>el.remove());
       nodes.filter(n=>n.kind==='event').forEach(n=>{const b=document.createElement('button');b.type='button';b.className='an-news';b.dataset.select=n.id;const t=document.createElement('strong'),s=document.createElement('small');t.textContent=n.name;b.append(t,s);inbox.insertBefore(b,inbox.querySelector('.an-aside-note'));});
       root.querySelectorAll('[data-select]').forEach(b=>b.onclick=function(){select(b.dataset.select,true);});
-      function applyFilters(){closePreview();showGuide=false;state.activeNote='';state.noteList=false;state.filter=root.querySelector('#an-source-filter').value;state.topic=root.querySelector('#an-topic-filter').value;state.view=root.querySelector('#an-view').value;const selectedNode=nodeById[state.selected],selectedEdge=edges.find(e=>e.id===state.selected);if((selectedNode&&!shown(selectedNode))||(selectedEdge&&!visibleEdge(selectedEdge)))state.selected='';if(state.focusId){if(shown(nodeById[state.focusId]))focusStock(state.focusId,true);else clearFocus();}renderMap();renderDetail();if(state.focusId)fitNodes('nearby');detail.scrollTop=0;save();}
-      root.querySelector('#an-view').onchange=applyFilters;
+      function applyFilters(){invalidateMemberSelectionReturn();closePreview();showGuide=false;state.activeNote='';state.noteList=false;state.filter=root.querySelector('#an-source-filter').value;state.topic=root.querySelector('#an-topic-filter').value;state.view=root.querySelector('#an-view').value;const selectedNode=nodeById[state.selected],selectedEdge=edges.find(e=>e.id===state.selected);if((selectedNode&&!shown(selectedNode))||(selectedEdge&&!visibleEdge(selectedEdge)))state.selected='';if(state.focusId){if(shown(nodeById[state.focusId]))focusStock(state.focusId,true);else clearFocus();}renderMap();renderDetail();if(state.focusId)fitNodes('nearby');detail.scrollTop=0;save();}
+      root.querySelector('#an-view').onchange=()=>{if(root.querySelector('#an-view').value==='changed'){if(state.view!=='changed')toggleMemberChangedNews();}else applyFilters();};
 
 
       root.querySelector('#an-scenario').onchange=function(){clearFocus();selectedItems.clear();moveHistory.past.length=0;moveHistory.future.length=0;syncHistoryButtons();state.scenario=this.value;closeSearch(false);state.selected='';state.activeNote='';state.noteList=false;showGuide=false;arrangeStress();nodes.forEach(n=>{const p=(state.scenario==='stress'?stressPositions:initialPositions).get(n.id);if(p)Object.assign(n,p);});renderMap();renderDetail();fitNodes(false);};
@@ -2447,9 +2471,9 @@ html>body{padding:0}</style>
         else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
       });
       intro.addEventListener('close',function(){introSeen=true;if(intro.returnValue==='tour'){startTour();return;}if(intro.returnValue==='rules'){state.activeNote='';state.noteList=false;showGuide=true;renderDetail();detail.scrollTop=0;detail.querySelector('h2').focus();}else root.querySelector('#an-guide').focus({preventScroll:true});});
-      root.querySelector('#an-fit').onclick=function(){fitNodes(state.focusId?'nearby':false);observeTour('fit');};
+      root.querySelector('#an-fit').onclick=function(){fitMemberSelection(state.focusId?'nearby':false);observeTour('fit');};
       root.querySelector('#an-reset-layout').onclick=function(){
-        if(cancelGesture)return;clearFocus();const before=layoutSnapshot();
+        if(cancelGesture)return;invalidateMemberSelectionReturn();clearFocus();const before=layoutSnapshot();
         selectedItems.clear();
         if(state.scenario==='stress')arrangeStress();
         nodes.forEach(n=>Object.assign(n,(state.scenario==='stress'?stressPositions:initialPositions).get(n.id)||{}));
@@ -2471,8 +2495,8 @@ html>body{padding:0}</style>
       space.addEventListener('pointerleave',function(){mapHovered=false;});
       function editable(target){return !!target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])');}
       document.addEventListener('keydown',function(e){
-        if(intro.open||registrationDialog.open||editable(e.target)||(!mapHovered&&!root.contains(document.activeElement)))return;
-        if(e.key==='Escape'){if(cancelGesture)cancelGesture();else selectedItems.clear();renderSelection();closePreview();e.preventDefault();return;}
+        if(e.defaultPrevented||intro.open||registrationDialog.open||e.target.closest('dialog')||editable(e.target)||(!mapHovered&&!root.contains(document.activeElement)))return;
+        if(e.key==='Escape'){if(!e.repeat){if(cancelGesture)cancelGesture();else if(!searchPanel.hidden)closeSearch();else if(!preview.hidden)closePreview();else if(selectedItems.size){selectedItems.clear();renderSelection();}else if(state.selected||state.focusId)select('');}e.preventDefault();return;}
         if(e.code==='Space'&&!e.metaKey&&!e.ctrlKey&&(mapHovered||space.contains(document.activeElement))){e.preventDefault();spaceHeld=true;space.classList.add('pan-ready');return;}
         const command=e.metaKey||e.ctrlKey;
         if(command&&!e.altKey&&(e.key.toLowerCase()==='z'||e.key.toLowerCase()==='y')){e.preventDefault();if(!e.repeat)travelHistory(e.key.toLowerCase()==='y'||e.shiftKey);return;}
@@ -2481,7 +2505,7 @@ html>body{padding:0}</style>
         if(cancelGesture)return;
         if(command&&['+','=','-','_'].includes(e.key)){e.preventDefault();zoomAt(state.zoom*(['+','='].includes(e.key)?2:.5));return;}
         const digit=/^(?:Digit|Numpad)([012])$/.exec(e.code);
-        if(digit&&(command||e.shiftKey)){e.preventDefault();if(digit[1]==='0')zoomAt(1);else {fitNodes(digit[1]==='2');if(digit[1]==='1')observeTour('fit');}}
+        if(digit&&(command||e.shiftKey)){e.preventDefault();if(digit[1]==='0')zoomAt(1);else {fitMemberSelection(digit[1]==='2');if(digit[1]==='1')observeTour('fit');}}
       });
       document.addEventListener('keyup',function(e){if(e.code==='Space'&&spaceHeld){e.preventDefault();spaceHeld=false;space.classList.remove('pan-ready');}});
       window.addEventListener('blur',function(){if(cancelGesture)cancelGesture();spaceHeld=false;mapHovered=false;space.classList.remove('pan-ready');});
@@ -2502,7 +2526,7 @@ html>body{padding:0}</style>
       space.addEventListener('click',function(e){if(suppressClick||spaceHeld){e.preventDefault();e.stopPropagation();}},true);
       let narrowFocusLayout=space.clientWidth<560;
       let pendingMapResize=false;
-      function applyMapResize(){if(nodeMoveActive){pendingMapResize=true;return;}pendingMapResize=false;closePreview();if(cancelGesture)cancelGesture();const narrow=space.clientWidth<560;if(state.focusId&&narrow!==narrowFocusLayout)focusStock(state.focusId,true);narrowFocusLayout=narrow;renderMap();if(state.focusId)fitNodes('nearby');}
+      function applyMapResize(){if(nodeMoveActive){pendingMapResize=true;return;}pendingMapResize=false;closePreview();if(cancelGesture)cancelGesture();const narrow=space.clientWidth<560;if(state.focusId&&narrow!==narrowFocusLayout)focusStock(state.focusId,true);narrowFocusLayout=narrow;renderMap();}
       new ResizeObserver(applyMapResize).observe(space);
 // Product criteria v1. Source: research-plan-20261003/plan.md sections 4, 5E/F.
 // Source-explicit qualitative dependency rubric (2026-10-09), not a numeric score.
@@ -2510,13 +2534,14 @@ html>body{padding:0}</style>
 // Display routing is not economic importance, confidence, or a price forecast.
 // Inputs remain unchanged. API/AI results must satisfy these same evidence gates.
 function memberValidDate(value){return typeof value==='string'&&/^\d{4}-\d{2}-\d{2}(?:T|$)/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value.slice(0,10)).toISOString().slice(0,10)===value.slice(0,10);}
+function memberObservedDate(value){return memberValidDate(value)&&value.slice(0,10)<=new Date().toISOString().slice(0,10);}
 function memberSourced(edge){return Array.isArray(edge?.evidence)&&edge.evidence.some(s=>{
   if(!s||!String(s.explanation||s.title||'').trim())return false;
   try{const u=new URL(s.url);return u.protocol==='https:'&&!u.username&&!u.password;}catch{return false;}
 });}
 function memberLifecycle(record){
   const l=record?.lifecycle;
-  if(l?.currentStatus!=='unverified')return null;
+  if(!l)return null;
   const notice=Number.isSafeInteger(l.terminationNoticeCount)&&l.terminationNoticeCount>0;
   const corrected=Number.isSafeInteger(l.correctionCount)&&l.correctionCount>0;
   const conflict=l.periodConflict===true;
@@ -2524,28 +2549,49 @@ function memberLifecycle(record){
   return {review:notice||conflict,label:[conflict?'계약기간 상충':'',notice?'해지 통보':'',corrected?'정정공시':''].filter(Boolean).join(' · '),
     reason:'원문에서 확인한 공시 상태예요. '+(conflict?'같은 최신 기준일의 계약기간이 달라 기간을 확정하지 않았어요. ':'')+(notice?'해지 통보일과 효력일은 다를 수 있어요. ':'')+'정정·해지 통보만으로 현재 계약 종료나 주가 영향을 확정하지 않아요.'};
 }
+// Negative time gates only. Being inside a reported term is not proof of
+// performance/current validity. No client-supplied current/core flag is read.
+function memberTemporalEvidence(record,links){
+  const today=new Date().toISOString().slice(0,10),n=record||{};
+  const dates=[n.asOf,...(links||[]).flatMap(e=>[e.asOf,...(Array.isArray(e.evidence)?e.evidence:[]).map(s=>s?.asOf)])].filter(v=>v!==undefined&&v!==null);
+  if(dates.some(v=>!memberValidDate(v)))return {code:'invalid-date',reason:'기준일이 유효하지 않아 현재 자료로 강조하지 않아요.'};
+  if(dates.some(v=>v.slice(0,10)>today))return {code:'future',reason:'미래 기준일의 자료가 있어 현재 확인된 변화로 강조하지 않아요.'};
+  const reported=(links||[]).filter(e=>e.measure?.kind==='reported-contract-period');
+  if(!reported.length)return null;
+  const periods=reported.map(memberContractPeriod);
+  if(periods.some(p=>!p))return {code:'invalid-period',reason:'계약기간의 날짜·원문 결속을 확인하지 못해 현재 자료로 강조하지 않아요.'};
+  if(new Set(periods.map(p=>p.start+'|'+p.end)).size!==1)return {code:'period-conflict',reason:'연결별 보고된 계약기간이 달라 현재 자료로 강조하지 않아요.'};
+  const period=periods[0];
+  if(period.end<today)return {code:'period-ended',reason:'보고된 계약기간이 지났어요. 후속 연장·이행 여부는 미확인이므로 현재 변화로 강조하지 않고 이력에서 확인해요.'};
+  if(period.start>today)return {code:'period-not-started',reason:'보고된 계약기간이 아직 시작되지 않았어요. 현재 이행 중인 관계로 강조하지 않아요.'};
+  return null;
+}
 function memberDisplayDecision(record,allEdges,context={}){
   const n=record||{},marks=context.marks?.[n.id]||{},stockIds=new Set(context.stockIds||[]);
   const links=(allEdges||[]).filter(e=>(e.from===n.id&&stockIds.has(e.to))||(e.to===n.id&&stockIds.has(e.from)));
   const business=n.recordKind==='event'||n.recordKind==='relationship';
-  const verified=business&&n.layer!=='candidates'&&links.length>0&&links.every(e=>e.confirmation==='confirmed'&&memberValidDate(e.asOf)&&memberSourced(e));
+  const temporal=memberTemporalEvidence(n,links);
+  const verified=business&&n.layer!=='candidates'&&links.length>0&&!['future','invalid-date'].includes(temporal?.code)&&links.every(e=>e.confirmation==='confirmed'&&memberObservedDate(e.asOf)&&memberSourced(e));
   const evidence=verified?'reported':business?'pending':'reference';
-  const decide=(mode,code,reason)=>({version:'display-v1',mode,code,reason,evidence,materiality:'unrated'});
+  // A reading shortcut is not an analytical recommendation. Neither a shared
+  // company nor a changed document establishes economic significance/currentness.
+  const decide=(mode,code,reason)=>({version:'display-v1',mode,code,reason,evidence,materiality:'unrated',coreEligible:false,currentness:temporal?.code||'unverified'});
   if(marks.irrelevant)return decide('detail','irrelevant','내가 무관으로 표시해 기본 지도에서는 접었어요.');
   if(marks.later)return decide('detail','later','내가 나중에 보기로 표시해 상세 목록에 남겼어요.');
   if(!links.length)return decide('detail','outside','현재 작업판 종목에 연결된 근거가 없어 상세 목록에 남겼어요.');
   if(marks.important)return decide('default','marked','내가 중요로 표시한 항목이에요. '+(verified?'보고 시점의 근거가 있어요.':'근거 확인 상태는 별개이며, 확인된 사업 관계로 승격하지 않아요.'));
   if(!business)return decide('group','reference','원문·시장 참고 자료로 묶었어요. 자료 수나 가격 변화만으로 중요도를 판단하지 않아요.');
-  if(!verified)return decide('group','pending','관계 후보이거나 원문·기준일·참여 근거가 부족해 확인할 자료로 묶었어요.');
   const lifecycle=memberLifecycle(n);
-  if(lifecycle?.review)return decide('group','history',lifecycle.label+' 확인이 필요해요. '+lifecycle.reason);
+  if(lifecycle?.review)return decide('group','history',lifecycle.label+' 확인이 필요해요. '+lifecycle.reason+(temporal?' '+temporal.reason:''));
   const historical=['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(n.status);
   if(historical)return decide('group','history','대체되었거나 근거가 상충하는 기록이에요. 현재 관계로 강조하지 않고 이력에서 확인해요.');
+  if(temporal)return decide('group',temporal.code==='period-ended'?'history':'pending',temporal.reason);
+  if(!verified)return decide('group','pending','관계 후보이거나 원문·기준일·참여 근거가 부족해 확인할 자료로 묶었어요.');
   const change=context.changes?.[n.id]||n.changeStatus;
   if(['새로','변경','종료'].includes(change))return decide('default','changed','지난 확인 이후 '+change+' 표시된 근거 있는 연결이에요. 변경 확인 순서이며 영향 크기나 현재 유효성을 뜻하지 않아요.');
-  if(context.focusId&&links.some(e=>e.from===context.focusId||e.to===context.focusId))return decide('default','focused','선택한 종목의 근거 있는 연결이라 먼저 보여줘요. 보고 시점과 현재 유효성은 구분해요.');
+  if(context.focusId&&links.some(e=>e.from===context.focusId||e.to===context.focusId))return decide('group','focused','선택한 종목의 근거 있는 연결이에요. 선택만으로 중요 자료로 올리지 않고, 경제적 중요도와 현재 유효성을 따로 확인해요.');
   const peers=new Set(links.map(e=>e.from===n.id?e.to:e.from));
-  if(peers.size>1)return decide('default','shared','작업판의 여러 종목에 참여 근거가 있는 '+(n.recordKind==='event'?'동일 사건':'관계')+'예요. 연결 종목 수를 중요도 점수로 환산하지 않아요.');
+  if(peers.size>1)return decide('group','shared','작업판의 여러 종목에 참여 근거가 있는 '+(n.recordKind==='event'?'동일 사건':'관계')+'예요. 여러 종목에 연결됐다는 이유만으로 핵심 지도에 올리지 않아요.');
   return decide('group','reported','보고 시점의 근거가 있는 연결이에요. 사업상 중요도는 미평가이며 묶음에서 확인할 수 있어요.');
 }
 function compareMemberDisplay(a,b){
@@ -2569,15 +2615,19 @@ function memberReportedDegree(edge,node){
     ||e.asOf.slice(0,10)>new Date().toISOString().slice(0,10)||typeof reason!=='string'||n.reason!==reason
     ||n.changeStatus==='종료'||['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(n.status)||memberLifecycle(n)?.review)return null;
   const proof=(e.evidence||[]).find(s=>s?.explanation===reason&&s.asOf===e.asOf&&/^https:\/\/dart\.fss\.or\.kr\/dsaf001\/main\.do\?rcpNo=\d{14}$/.test(s.url));
-  if(!proof)return null;
+  if(!proof||proof.url.slice(-14,-6)!==e.asOf.replaceAll('-',''))return null;
   const split=reason.indexOf('\n');if(split<0)return null;
   const header=reason.slice(0,split),quote=reason.slice(split+1);
   const issuer=header.match(/^공시 작성 회사: (.+?)\. (\d{4}) 회계연도 · /);
+  const report=header.match(/ · (?:\[(?:기재정정|첨부정정|첨부추가)\])*사업보고서 \((\d{4})\.(0[1-9]|1[0-2])\) · /);
   const target=header.match(/(?:표에 기재된 고객사|공시상 매출처|공시상 공급처): (.+?)\. 현재 유효 여부/);
-  if(!issuer||!target||!header.includes('공개 공시일 '+e.asOf)||!quote.includes(target[1]))return null;
+  if(!issuer||!report||issuer[2]!==report[1]||!target||!header.includes('공개 공시일 '+e.asOf)||!quote.includes(target[1]))return null;
+  const reportEnd=new Date(Date.UTC(Number(report[1]),Number(report[2]),0)).toISOString().slice(0,10);
+  if(reportEnd>e.asOf)return null;
   const name=target[1],role=e.verb==='구매처 공시 회사'?'공급처':'매출처';
   let grade=0,basis='';
   if(annual){
+    if(e.verb!=='고객사 공시 회사')return null;
     const period=header.match(/보고기간 (\d{4}-\d{2}-\d{2})~(\d{4}-\d{2}-\d{2})/);
     const cells=quote.match(/^회사: (.+)\n주요고객: ([^\n]+)\n원문 표 \d+ · 행 \d+ · 열 \d+$/);
     const legalName=v=>v.normalize('NFKC').replace(/^(?:주식회사|\(주\))\s*|\s*(?:주식회사|\(주\))$/g,'').trim();
@@ -2585,6 +2635,7 @@ function memberReportedDegree(edge,node){
       ||!cells||legalName(cells[1])!==legalName(issuer[1])||!cells[2].split(/[,、，·ㆍ;]/).map(v=>v.trim().replace(/\s+등$/, '')).includes(name))return null;
     grade=2;basis='해당 회사의 주요고객 표에 상대방이 명시됨';
   }else{
+    if(e.verb==='고객사 공시 회사'||!header.includes((role==='공급처'?'공시상 공급처: ':'공시상 매출처: ')+name+'. 현재 유효 여부'))return null;
     // Closed, subject-explicit sentences, not keyword scores. Mixed clauses, a
     // principal material/product, plans and another company's dependency abstain.
     const escape=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -2592,7 +2643,7 @@ function memberReportedDegree(edge,node){
     const counterparty=escape(name);
     // The existing upstream grammar also admits a closed counterparty clause
     // followed by an issuer-owned qualifier. Both must name this same party.
-    const rolePrefix=role==='공급처'?'(?:구매처|공급업체)':'(?:매출처|고객사)';
+    const rolePrefix=role==='공급처'?'(?:공급처|구매처|공급업체)':'(?:매출처|고객사|고객)';
     const qualified=quote.trim().match(new RegExp('^당사의 '+rolePrefix+'는 '+counterparty+'(?:이)?며, (.+)$'));
     const assertion=qualified?qualified[1]:quote.trim();
     const rules=[
@@ -2601,8 +2652,19 @@ function memberReportedDegree(edge,node){
       [1,new RegExp('^'+company+'의 '+counterparty+'(?:에 대한|와의|과의) 거래 비중은 미미(?:합니다|하다)[.。]?$'),'해당 회사와 상대방의 거래 비중이 미미하다고 명시됨']
     ];
     const matched=rules.filter(([,pattern])=>pattern.test(assertion));
-    if(matched.length!==1)return null;
-    [grade,,basis]=matched[0];
+    if(matched.length===1)[grade,,basis]=matched[0];
+    else{
+      // A list is not a score: each exact named party inherits only the source's
+      // explicit "major" qualifier, for this issuer and this reporting period.
+      const majorList=assertion.match(new RegExp('^'+company+'의\\s*주요\\s*'+rolePrefix+'(?:는|은|으로는|로는)\\s*(.+?)(?:\\s*등)?(?:입니다|(?:이|가)\\s*있습니다)\\.$'));
+      const majorCustomer=role==='매출처'&&assertion.match(/^당사는\s*(.+?)(?:\s*등)?(?:을|를)\s*주요\s*(?:고객사|고객|매출처)(?:으로|로)\s*(?:두고\s*(?:거래하고\s*)?|확보하고\s*)있습니다\.$/);
+      const names=(majorList||majorCustomer)?.[1];
+      if(!names)return null;
+      const entries=names.split(/[,、/·ㆍ]|\s+및\s+|(?<=\))(?:와|과)\s*|(?:와|과)(?=\s)/).map(v=>v.trim()).filter(Boolean);
+      const ambiguous=/예정|계획|추진|가능|예시|타사|과거|이전|전년|작년|향후|않|아니|아닙|없|중단|종료|해지|취소|철회|미확인|제외|만약|조건|경우|하지만|그러나|반면|종속|연결|그룹|계열|(?:매출처|고객사?|공급처|구매처|공급업체)(?:는|은|로는|으로는)|["'“”‘’]/;
+      if(entries.length>12||!entries.includes(name)||ambiguous.test(names)||entries.some(v=>!/^[A-Za-z0-9가-힣&()+\-\s]{1,80}$/.test(v)||/(?:에서|으로|하여|위해|통해|하고|하며|을|를)(?:\s|$)/.test(v)))return null;
+      grade=2;basis='해당 회사의 주요 '+role+'로 명시됨';
+    }
   }
   return {version:'source-qualitative-v1',grade,label:({1:'낮음',2:'중간',3:'높음'})[grade],company:issuer[1],counterparty:name,
     period:issuer[2]+' 회계연도',asOf:e.asOf,sourceUrl:proof.url,quote,basis,
@@ -2615,7 +2677,7 @@ function memberConnectionDegree(edge,sourceNode){
   // Operational degree accepts only bound ownership or source-qualitative-v1.
   // The static guide draws explicit samples; raw edge strength is not evidence.
   const e=edge||{},n=sourceNode||{},documentOnly=n.recordKind==='document';
-  const verified=!documentOnly&&n.layer!=='candidates'&&e.confirmation==='confirmed'&&memberSourced(e)&&memberValidDate(e.asOf);
+  const verified=!documentOnly&&n.layer!=='candidates'&&!memberTemporalEvidence(n,[e])&&e.confirmation==='confirmed'&&memberSourced(e)&&memberObservedDate(e.asOf);
   const lifecycle=memberLifecycle(n),historical=n.changeStatus==='종료'||['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(n.status);
   const measure=verified?memberOwnershipMeasure(e):null;
   const sourceDegree=verified&&!measure&&(n.recordKind==='event'||n.recordKind==='relationship')
@@ -2624,14 +2686,15 @@ function memberConnectionDegree(edge,sourceNode){
 }
 function memberContractPeriod(edge){
   const m=edge?.measure,validDay=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v;
-  if(edge?.confirmation!=='confirmed'||m?.kind!=='reported-contract-period'||![m.start,m.end,m.asOf].every(validDay)||m.start>m.end||!validDay(edge.asOf)||m.asOf>edge.asOf||!Array.isArray(edge.evidence)||!edge.evidence.some(s=>s?.url===m.sourceUrl&&/^https:\/\/dart\.fss\.or\.kr\/dsaf001\/main\.do\?rcpNo=\d{14}$/.test(s.url)))return null;
+  if(edge?.confirmation!=='confirmed'||m?.kind!=='reported-contract-period'||![m.start,m.end,m.asOf].every(validDay)||m.start>m.end||!validDay(edge.asOf)||!memberObservedDate(edge.asOf)||m.asOf>edge.asOf||!Array.isArray(edge.evidence)||!edge.evidence.some(s=>s?.url===m.sourceUrl&&/^https:\/\/dart\.fss\.or\.kr\/dsaf001\/main\.do\?rcpNo=\d{14}$/.test(s.url)))return null;
   return m;
 }
 function memberRelationshipCriteria(edge,sourceNode){
   const e=edge||{},direct=e.type==='direct'||e.type==='documented';
   const confirmed=e.confirmation==='confirmed';
   const supported=memberSourced(e);
-  const dated=memberValidDate(e.asOf);
+  const temporal=memberTemporalEvidence(sourceNode,[e]);
+  const dated=memberObservedDate(e.asOf)&&!['future','invalid-date'].includes(temporal?.code);
   const documentOnly=sourceNode?.recordKind==='document';
   const verified=!documentOnly&&sourceNode?.layer!=='candidates'&&confirmed&&supported&&dated;
   const lifecycle=memberLifecycle(sourceNode);
@@ -2647,6 +2710,7 @@ function memberRelationshipCriteria(edge,sourceNode){
       {label:'근거 확인',value:documentOnly?'자료 포함 확인 · 사업 관계 미확정':verified?'보고 시점 근거 확인':e.confirmation==='candidate'?'검토할 후보':'추가 확인 필요',reason:documentOnly?'종목 조회에 포함된 자료예요. 공동 언급만으로 공급·계약·지분 관계를 확정하지 않아요.':verified?'원문과 기준일이 있는 연결이에요. 현재도 유효한지는 별도 확인해요.':!supported?'연결을 뒷받침하는 원문 정보가 부족해요.':!dated?'연결의 기준일이 부족해요.':'문서에 등장한다는 사실만으로 사업 관계를 확정하지 않아요.'},
       {label:'연결 정도',value:measure?'공시 지분 '+measure.value+'%':reportedDegree?level+' · 정성기준(가설)':'미평가',reason:measure?measure.asOf+' 결산기준 · '+(measure.shareClass||'주식 종류 미제공')+'. 원문 표의 보고 지분율이며 관련도 점수·의결권 비율·현재 보유율로 환산하지 않아요.':reportedDegree?reportedDegree.reason:'지분율·매출 의존도·계약 규모의 분모와 기간, 유형별 평가 근거가 필요해요. 문서 수나 직접 연결만으로 높게 매기지 않아요.'},
       ...(period?[{label:'보고된 계약기간',value:period.start+' ~ '+period.end,reason:period.asOf+' 보고·정정 기준. 원문에 적힌 기간이며 현재 유효성·이행 여부나 연결 정도를 뜻하지 않아요. 해지·후속 정정은 근거 이력에서 따로 확인해요.'}]:[]),
+      ...(temporal?[{label:'현재 강조 제한',value:temporal.code==='period-ended'?'보고된 계약기간 경과':'시점 확인 필요',reason:temporal.reason}]:[]),
       ...(lifecycle?[{label:'후속 공시',value:lifecycle.label+' · 현재 상태 미확인',reason:lifecycle.reason}]:[]),
       {label:'영향 해석',value:scenarios.length?'조건부 사업 경로':e.impact&&e.impact!=='미확인'?e.impact:'미확인',reason:scenarios.length?'사업 경로의 조건과 반대 요인을 함께 확인해요. 현재 순영향이나 주가 예측이 아니에요.':e.impactReason||'연결의 존재와 실적·주가 영향은 별개예요.'}
     ]
@@ -2835,8 +2899,11 @@ function decorateMemberRecordDate(button,n){
 function decorateMemberRecord(n){
   if(n.kind!=='event')return;
   const button=[...nodesEl.children].find(el=>el.dataset.node===n.id);if(!button)return;
-  const key=n.recordKind==='event'?'events':n.layer==='government'?'policy':n.layer;
+  const groupKey=memberGroupKey(n),key=groupKey==='government'?'policy':groupKey;
   const prior=button.querySelector('.an-dot,.an-category-icon');if(prior)prior.replaceWith(memberCategoryIcon(key));
+  let category=button.querySelector('.an-record-category');
+  if(!category){category=document.createElement('span');category.className='an-record-category';button.querySelector('strong').before(category);}
+  category.textContent=groupKey==='candidates'?'관계 후보 · 미검수':groupKey==='prices'?'가격 자료':Object.hasOwn(sourceNames,groupKey)?sourceNames[groupKey]:'기타 자료';
   // One visible status line uses the same evidence-gated encoder as the edge.
   // It is not the source's confirmation badge or a guessed relevance score.
   if(!button.querySelector('.an-record-criteria')){
@@ -2849,6 +2916,7 @@ function decorateMemberRecord(n){
 const memberCardStyle=document.createElement('style');memberCardStyle.textContent=`
 #an-map-design .an-node.event{width:260px;max-width:260px;padding:12px;gap:10px;align-items:flex-start}
 #an-map-design .an-node.event>span:last-child{min-width:0;flex:1}
+#an-map-design .an-node.event .an-record-category{display:block;visibility:visible;font-size:11px;line-height:1.5;margin-bottom:3px;color:var(--an-sub);font-weight:700}
 #an-map-design .an-record-date{display:block;font-size:11px;line-height:1.5;margin-top:4px;color:var(--an-sub);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #an-map-design .an-node.event .an-record-criteria{display:block;font-size:12px;line-height:1.5;margin-top:4px;color:var(--an-sub);font-weight:600;white-space:normal}
 #an-map-design .an-node.event small{display:none}
@@ -3009,7 +3077,13 @@ function updateMemberGraph(model,ticker){
   for(const n of nodes)if(!ids.has(n.id)){[...nodesEl.children].find(el=>el.dataset.node===n.id)?.remove();selectedItems.delete(n.id);}
   for(const [id,pair] of edgeEls)if(!edgeIds.has(id)){pair.group.remove();edgeEls.delete(id);}
   const nextNodes=model.nodes.map(data=>{const existing=nodeById[data.id];if(existing){const {x,y,...rest}=data;Object.assign(existing,rest);return existing;}appendMemberNode(data);initialPositions.set(data.id,{x:data.x,y:data.y});return data;});
-  const priorEdges=new Map(edges.map(e=>[e.id,e]));nodes.splice(0,nodes.length,...nextNodes);edges.splice(0,edges.length,...model.edges.map(e=>Object.assign(priorEdges.get(e.id)||{},e)));
+  const priorEdges=new Map(edges.map(e=>[e.id,e]));nodes.splice(0,nodes.length,...nextNodes);
+  edges.splice(0,edges.length,...model.edges.map(e=>{
+    const edge=Object.assign(priorEdges.get(e.id)||{},e);
+    // Only these optional snapshot-derived fields withdraw on omission/null; evidence still merges.
+    for(const key of ['assessment','measure'])if(e[key]==null)delete edge[key];
+    return edge;
+  }));
   nodeById=Object.fromEntries(nodes.map(n=>[n.id,n]));holdings.splice(0,holdings.length,...nodes.filter(n=>n.kind==='stock'));
   clusterIds.splice(0,clusterIds.length,...nodes.filter(n=>n.kind==='event').map(n=>n.id));
   Object.keys(state.marks).forEach(id=>{if(!ids.has(id))delete state.marks[id];});Object.assign(state.marks,model.marks);
@@ -3341,6 +3415,7 @@ memberPort.postMessage({type:'hydrated',...memberOriginStamp()});
 // Display-only grouping. Never add synthetic records to nodes, edges or saved drafts.
 // Categories use supplied record kinds/layers; no inferred events from similar titles.
 const memberGroupLayer=document.createElement('div');memberGroupLayer.id='an-member-groups';space.append(memberGroupLayer);
+const memberSectionLayer=document.createElement('div');memberSectionLayer.id='an-member-sections';memberSectionLayer.setAttribute('aria-hidden','true');space.querySelector('svg').after(memberSectionLayer);
 const memberGroupLines=document.createElementNS('http://www.w3.org/2000/svg','g');memberGroupLines.setAttribute('aria-hidden','true');linesEl.before(memberGroupLines);
 const memberGroups=new Map(),memberOpenGroups=new Map(),memberGroupManual=new Set();
 const memberDisplayDecisions=new Map(),memberDisplayNames={default:'기본 표시',group:'묶음 표시',detail:'상세 확인'};
@@ -3359,73 +3434,150 @@ travelHistory=function(redo){
   groupTravelHistory(redo);
 };
 const memberLayoutBases=new Map(Object.entries(member.layoutBases||{}));
-let memberVisible=new Set(),memberEligible=[],memberReveal='',memberGroupContext='',memberLayoutKey='',memberHoveredGroup='',memberFocusGroupId='',memberOverviewOpen=null;
+// Presentation slots survive folding inside one scope. Focus/filter views have
+// separate automatic slots; canonical saved movement is never rewritten.
+const memberDisplayOffsets=new Map();let memberBaseLayoutKey='';
+let memberVisible=new Set(),memberEligible=[],memberReveal='',memberGroupContext='',memberLayoutKey='',memberHoveredGroup='',memberFocusGroupId='',memberOverviewOpen=null,memberInspectedRecord='';
 // Hydration coordinates include the user's saved movement. Reset to the model's
 // layout origins instead, and clear presentation-only group movement as well.
 // Keep this one history operation so undo restores both headers and their records.
 root.querySelector('#an-reset-layout').onclick=function(){
   if(cancelGesture)return;
-  closePreview();clearFocus();prepareMemberGroups();
+  invalidateMemberSelectionReturn();closePreview();clearFocus();prepareMemberGroups();
   const before=layoutSnapshot();selectedItems.clear();
   for(const n of nodes)Object.assign(n,memberLayoutBases.get(n.id)||initialPositions.get(n.id)||{});
-  for(const group of memberGroups.values()){group.dx=0;group.dy=0;}
-  memberLayoutKey='';state.zoom=1;state.panX=0;state.panY=0;
+  for(const group of memberGroups.values()){group.dx=0;group.dy=0;group.recordShifts.clear();}
+  memberLayoutKey='';memberBaseLayoutKey='';memberGroups.sectionSignature='';state.zoom=1;state.panX=0;state.panY=0;
   renderMap();fitNodes(false);saveZoomSoon();
   recordMove(before,'배치 초기화를',{camera:true});
   root.querySelector('#an-live').textContent='위치와 배율을 초기화했어요. 필터·메모·중요 표시는 유지돼요.';
 };
 const ungroupedShown=shown,ungroupedRenderMap=renderMap,ungroupedSelect=select;
 function memberGroupKey(n){return n.recordKind==='event'?'events':n.layer==='candidates'?'candidates':n.layer==='relationships'?'relationships':n.layer||'other';}
-// Category membership is navigation, not a business relationship. Show it only
-// for the inspected group or focused stock; verified edges remain independent.
+// One navigation path per expanded source category replaces a fan of document
+// paths. Confirmed business relations/events retain their individual paths.
 function memberGroupConnectionIds(group,hoveredGroup,focusId){
-  return hoveredGroup===group.key?group.stockIds:focusId?group.stockIds.filter(id=>id===focusId):[];
+  const expanded=group.key!=='events'&&group.key!=='relationships'&&group.records?.some(n=>memberVisible.has(n.id));
+  return hoveredGroup===group.key||expanded?group.stockIds:focusId?group.stockIds.filter(id=>id===focusId):[];
 }
+function memberIndividualEdgeVisible(edge){
+  const record=[nodeById[edge.from],nodeById[edge.to]].find(n=>n?.kind==='event');
+  if(!record)return true;
+  if(state.selected===edge.id||state.selected===record.id||memberInspectedRecord===record.id)return true;
+  const decision=memberDisplayDecisions.get(record.id);
+  if(decision?.mode==='detail')return false;
+  // Do not replace a separately reviewed degree with a generic category path.
+  // Only this edge is revealed; the counterparty's unrated edge stays grouped.
+  if(typeof memberEdgeVisual==='function'&&memberEdgeVisual(edge,record,{stockIds:holdings.map(n=>n.id),changes:changeStatus}).grade>0)return true;
+  return (record.recordKind==='event'||record.layer==='relationships')&&decision?.evidence==='reported';
+}
+function syncMemberIndividualEdges(){
+  for(const edge of edges){
+    const pair=edgeEls.get(edge.id);if(!pair)continue;
+    pair.group.style.display=visibleEdge(edge)&&memberIndividualEdgeVisible(edge)?'':'none';
+  }
+  for(const label of labelsEl.children){const edge=edges.find(e=>e.id===label.dataset.edgeLabel);if(edge&&!memberIndividualEdgeVisible(edge))label.hidden=true;}
+}
+// Inspecting a source reveals only that source's links; do not rebuild paths or
+// restart animations on hover. Selection provides the same route on touch.
+function inspectMemberRecord(target){
+  const id=target?.closest?.('[data-node]')?.dataset.node;
+  const next=nodeById[id]?.kind==='event'?id:'';
+  if(next===memberInspectedRecord)return;memberInspectedRecord=next;drawMemberGroups();
+}
+nodesEl.addEventListener('pointerover',e=>inspectMemberRecord(e.target));
+nodesEl.addEventListener('pointerout',e=>inspectMemberRecord(e.relatedTarget));
+nodesEl.addEventListener('focusin',e=>inspectMemberRecord(e.target));
+nodesEl.addEventListener('focusout',e=>inspectMemberRecord(e.relatedTarget));
 const memberGroupNames={filing:'공시',news:'뉴스',business:'사업 자료',candidates:'관계 후보',relationships:'확인된 관계',events:'공통 사건',government:'정부 발표',prices:'가격 자료',other:'기타 자료',fx:'환율',commodity:'원자재',calendar:'발표 일정'};
+// Only optional filters fold. Existing search, camera, history and save controls
+// keep their handlers and remain visible; disclosure never writes a member draft.
+function installMemberFilterDisclosure(){
+  const panel=root.querySelector('.an-filters'),row=root.querySelector('.an-controls-row');
+  if(!panel||!row)return;
+  panel.id='an-filter-panel';
+  const toggle=document.createElement('button');toggle.type='button';toggle.className='an-tool';toggle.id='an-filter-toggle';
+  toggle.setAttribute('aria-controls',panel.id);row.insertBefore(toggle,panel);
+  const changed=root.querySelector('#an-changed-toggle');if(changed)row.insertBefore(changed,panel);
+  const narrow=matchMedia('(max-width:700px)');let open=false;
+  function sync(){
+    toggle.hidden=!narrow.matches;panel.hidden=narrow.matches&&!open;
+    toggle.setAttribute('aria-expanded',String(!panel.hidden));
+    toggle.setAttribute('aria-label',panel.hidden?'필터 펼치기':'필터 접기');
+    const active=[...panel.querySelectorAll('select')].filter(el=>el.value!=='all'&&el.value!=='changed').length;
+    toggle.textContent='필터'+(active?' · '+active:'');
+  }
+  toggle.onclick=()=>{closePreview();open=!open;sync();};
+  panel.addEventListener('change',sync);panel.addEventListener('click',sync);
+  if(changed)changed.addEventListener('click',sync);
+  panel.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&narrow.matches&&open&&!e.defaultPrevented){open=false;sync();toggle.focus({preventScroll:true});e.preventDefault();e.stopPropagation();}
+  });
+  narrow.addEventListener('change',sync);sync();
+}
+installMemberFilterDisclosure();
 // Summary chips keep the accepted surfaces/icons, not full articles at a fixed size.
 const memberSummaryStyle=document.createElement('style');memberSummaryStyle.textContent=`
+#an-map-design .an-inbox{background:light-dark(#f8f9fb,#1d242c)}
+#an-map-design .an-inbox [data-member-list]{border:0;padding:0;margin:0 0 10px;border-radius:14px;background:light-dark(#ffffff,#171c23);box-shadow:0 2px 8px light-dark(rgb(25 31 40 / 6%),rgb(0 0 0 / 18%));color:light-dark(#191f28,#e3e7ec)}
+#an-map-design .an-inbox [data-member-list]>summary{display:flex;align-items:center;gap:8px;min-height:54px;padding:12px;border-radius:14px;list-style:none;cursor:pointer;font-size:13px;line-height:1.5;font-weight:700;transition:background-color 160ms}
+#an-map-design .an-inbox [data-member-list]>summary::-webkit-details-marker{display:none}
+#an-map-design .an-inbox [data-member-list]>summary::after{content:'';width:6px;height:6px;flex:none;border:solid light-dark(#6b7684,#9aa4b1);border-width:0 1.5px 1.5px 0;transform:rotate(-45deg)}
+#an-map-design .an-inbox [data-member-list][open]>summary::after{transform:rotate(45deg) translateY(-2px)}
+#an-map-design .an-inbox [data-member-list] .an-category-icon{width:24px;height:24px;flex:0 0 24px}
+#an-map-design .an-source-group-label{flex:1;min-width:0;overflow-wrap:anywhere}
+#an-map-design .an-source-group-count{flex:none;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:light-dark(#6b7684,#9aa4b1)}
+#an-map-design .an-inbox [data-member-list]>[data-select]{width:calc(100% - 16px);margin:4px 8px;padding:12px;border:0;border-radius:10px;box-shadow:none;transition:background-color 160ms}
+#an-map-design .an-inbox [data-member-list]>[data-select]:last-child{margin-bottom:8px}
+@media(hover:hover){#an-map-design .an-inbox [data-member-list]>summary:hover,#an-map-design .an-inbox [data-member-list]>[data-select]:not([aria-pressed=true]):hover{background:light-dark(#f1f3f5,#252c35);filter:none}}
+#an-map-design .an-inbox [data-member-list]>:is(summary,[data-select]):focus-visible{outline:none;box-shadow:none;background:light-dark(#e9edf2,#303945)}
+@media(prefers-reduced-motion:reduce){#an-map-design .an-inbox [data-member-list]>:is(summary,[data-select]){transition:none}}
+#an-map-design #an-filter-toggle,#an-map-design #an-changed-toggle{font-weight:700;border-radius:8px;transition:background-color 160ms;color:light-dark(#191f28,#e3e7ec);background:light-dark(#ffffff,#171c23)}
+#an-map-design #an-changed-toggle[aria-pressed=true]{background:light-dark(#6c5ce7,#a99bff);color:light-dark(#ffffff,#171c23)}
+#an-map-design #an-member-sections{position:absolute;inset:0;pointer-events:none}
+#an-map-design .an-member-section{position:absolute;border-radius:20px;background:light-dark(#f8f9fb,#1d242c);pointer-events:none}
+@media(hover:hover){#an-map-design #an-filter-toggle:hover,#an-map-design #an-changed-toggle:hover{filter:none;background:light-dark(#f1f3f5,#252c35);color:light-dark(#191f28,#e3e7ec)}}
+#an-map-design #an-filter-toggle:focus-visible,#an-map-design #an-changed-toggle:focus-visible{outline:none;filter:none;box-shadow:none;background:light-dark(#e9edf2,#303945);color:light-dark(#191f28,#e3e7ec)}
+@media(prefers-reduced-motion:reduce){#an-map-design #an-filter-toggle,#an-map-design #an-changed-toggle{transition:none}}
 #an-map-design #an-nodes .an-node:not(.event){width:160px;max-width:160px;min-height:52px;padding:12px;gap:10px}
 #an-map-design #an-nodes .an-node:not(.event) strong{font-size:14px;line-height:1.4}
 #an-map-design #an-nodes .an-logo{width:28px;height:28px}
 #an-map-design #an-nodes .an-node:not(.event) small,#an-map-design #an-nodes .an-node:not(.event) .an-note-badge{display:none}
-#an-map-design #an-member-groups [data-group]{width:160px;max-width:160px;min-height:60px;padding:12px;gap:10px}
+#an-map-design #an-member-groups [data-group]{width:160px;max-width:160px;min-height:50px;padding:8px 12px;gap:8px}
+#an-map-design #an-member-groups .an-category-icon{width:18px;height:18px;flex-basis:18px}
 #an-map-design #an-member-groups strong{font-size:14px;line-height:1.4}
 #an-map-design #an-member-groups small{display:block!important;font-size:11px;line-height:1.5;margin-top:3px}
 #an-map-design #an-member-groups .an-note-badge{display:none}
+#an-map-design[data-map-detail=compact] #an-nodes .an-record-criteria,
+#an-map-design[data-map-detail=overview] #an-nodes .an-record-criteria,
+#an-map-design[data-map-detail=overview] #an-nodes .an-record-date,
+#an-map-design[data-map-detail=overview] #an-member-groups small{visibility:hidden}
 #an-map-design #an-member-groups [data-group] strong{display:flex;align-items:center;gap:8px}
 #an-map-design #an-member-groups [data-group] strong::before{content:'';width:6px;height:6px;flex:none;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(-45deg)}
 #an-map-design #an-member-groups [data-group][aria-expanded=true] strong::before{transform:rotate(45deg) translateY(-2px)}
 #an-map-design .an-node[data-summary-icon=true]{width:44px!important;min-height:44px!important;padding:8px!important;gap:0!important}
 #an-map-design .an-node[data-summary-icon=true]>span:last-child{display:none}
-#an-map-design[data-dense-stocks=true] #an-nodes .an-node:not(.event){width:140px;max-width:140px;min-height:48px;padding:8px;gap:8px}
+#an-map-design[data-dense-stocks=true] #an-nodes .an-node:not(.event){width:140px;max-width:140px;min-height:50px;padding:8px;gap:8px}
 #an-map-design[data-dense-stocks=true] #an-nodes .an-node:not(.event) strong{font-size:14px}
 #an-map-design[data-readable-fit=true] .an-foot > span:last-of-type{display:block;white-space:normal}
 @media(max-width:700px){
-#an-map-design #an-nodes .an-node:not(.event){width:160px;max-width:160px;min-height:48px;padding:8px}
+#an-map-design #an-nodes .an-node:not(.event){width:160px;max-width:160px;min-height:50px;padding:8px}
 #an-map-design #an-nodes .an-node:not(.event) strong,#an-map-design #an-member-groups strong{font-size:14px}
-#an-map-design #an-member-groups [data-group]{width:160px;max-width:160px;min-height:60px;padding:10px}
+#an-map-design #an-member-groups [data-group]{width:160px;max-width:160px;min-height:50px;padding:8px 12px}
 #an-map-design #an-member-groups small{font-size:11px;line-height:1.4;margin-top:2px}
+#an-map-design #an-filter-panel{flex-basis:100%;padding:4px 0}
+#an-map-design #an-filter-panel[hidden]{display:none}
 }
 `;document.head.append(memberSummaryStyle);
-const memberSummaryScale=zoom=>Math.max(.85,Math.min(1.1,zoom));
-// Auto-fit must not silently replace company/group names with anonymous icons.
-// If the viewport cannot contain readable cards, keep pan available. Manual
-// zoom remains unrestricted and never modifies stored coordinates.
+const memberSummaryScale=zoom=>Math.max(.08,Math.min(4,zoom));
+// Cards and distances share one scale. Zoom cannot separate overlapping world
+// bounds, and must not impose a second minimum card size or mutate coordinates.
 function memberReadableFitZoom(fitted,summaries){
-  let result=fitted;
-  const axisZoom=(distance,size)=>{
-    if(!distance)return Infinity;
-    const floor=(size*.85+4)/distance;
-    return floor<=.85?floor:distance>size?4/(distance-size):Infinity;
-  };
   for(let i=0;i<summaries.length;i++)for(let j=i+1;j<summaries.length;j++){
     const a=summaries[i],b=summaries[j],dx=Math.abs(a.x-b.x),dy=Math.abs(a.y-b.y);
-    const x=axisZoom(dx,(a.width+b.width)/2);
-    const y=axisZoom(dy,(a.height+b.height)/2);
-    result=Math.max(result,Math.min(x,y));
+    if(dx<(a.width+b.width)/2&&dy<(a.height+b.height)/2)return null;
   }
-  // Dragged/overlapping positions can be impossible to separate by zoom alone.
-  return result<=1.1?result:null;
+  return fitted;
 }
 function memberScope(){
   const stocks=holdings.filter(ungroupedShown),allStockIds=new Set(stocks.map(n=>n.id));
@@ -3450,15 +3602,15 @@ function makeMemberGroup(key){
   const body=document.createElement('span'),title=document.createElement('strong'),count=document.createElement('small'),hint=document.createElement('span');hint.className='an-note-badge';body.append(title,count,hint);button.append(memberCategoryIcon(key==='government'?'policy':key),body);
   // Reuse the accepted card surface and type; only constrain summary width.
   button.style.maxWidth='280px';button.style.whiteSpace='normal';button.style.cursor='grab';button.style.touchAction='none';
-  const more=document.createElement('button');more.type='button';more.className='an-tool';more.dataset.groupMore=key;more.style.position='absolute';
-  const group={key,id:'__display_group:'+key,button,title,count,hint,more,records:[],stockIds:[],baseX:.5,baseY:.5,dx:0,dy:0,width:280,height:90};
-  for(const [axis,base,delta] of [['x','baseX','dx'],['y','baseY','dy']])Object.defineProperty(group,axis,{get(){return this[base]+this[delta];},set(value){const shift=value-this[axis];this[delta]+=shift;for(const n of this.records)n[axis]+=shift;}});
+  const more=document.createElement('button');more.type='button';more.className='an-tool';more.dataset.groupMore=key;more.style.position='absolute';more.style.width='max-content';more.style.whiteSpace='nowrap';
+  const group={key,id:'__display_group:'+key,button,title,count,hint,more,records:[],recordShifts:new Map(),stockIds:[],baseX:.5,baseY:.5,dx:0,dy:0,width:280,height:90};
+  for(const [axis,base,delta] of [['x','baseX','dx'],['y','baseY','dy']])Object.defineProperty(group,axis,{get(){return this[base]+this[delta];},set(value){const shift=value-this[axis];this[delta]+=shift;for(const n of this.records){n[axis]+=shift;const inherited=this.recordShifts.get(n.id)||{x:0,y:0};inherited[axis]+=shift;this.recordShifts.set(n.id,inherited);}}});
   button.onpointerdown=e=>{memberMovingGroup=group;try{beginMove(e,group.id,button);}finally{memberMovingGroup=null;}};
   button.onkeydown=e=>{memberMovingGroup=group;try{moveWithKeys(e,group.id);}finally{memberMovingGroup=null;}};
   button.onpointerenter=button.onfocus=()=>{memberHoveredGroup=key;drawMemberGroups();};
   button.onpointerleave=button.onblur=()=>{memberHoveredGroup='';drawMemberGroups();};
-  button.onclick=()=>{if(suppressClick){suppressClick=false;return;}if(cancelGesture)return;closePreview();memberGroupManual.add(key);memberReveal='';const closing=group.records.some(n=>memberVisible.has(n.id));if(closing)memberOpenGroups.delete(key);else memberOpenGroups.set(key,6);renderMap();fitNodes(closing?false:'group:'+key);};
-  more.onclick=()=>{closePreview();memberGroupManual.add(key);memberOpenGroups.set(key,(memberOpenGroups.get(key)||0)+6);renderMap();fitNodes('group:'+key);};
+  button.onclick=()=>{if(suppressClick){suppressClick=false;return;}if(cancelGesture)return;closePreview();memberGroupManual.add(key);memberReveal='';const closing=group.records.some(n=>memberVisible.has(n.id));if(closing)memberOpenGroups.delete(key);else memberOpenGroups.set(key,6);renderMap();};
+  more.onclick=()=>{if(cancelGesture)return;closePreview();memberGroupManual.add(key);memberOpenGroups.set(key,(memberOpenGroups.get(key)||0)+6);renderMap();};
   memberGroupLayer.append(button,more);memberGroups.set(key,group);return group;
 }
 function memberCardSize(n){
@@ -3466,6 +3618,33 @@ function memberCardSize(n){
   const wasHidden=el.hidden,visibility=el.style.visibility;
   try{if(wasHidden){el.hidden=false;el.style.visibility='hidden';}return {width:el.offsetWidth||240,height:Math.max(el.offsetHeight||0,n.kind==='stock'?48:100)};}
   finally{if(wasHidden){el.hidden=true;el.style.visibility=visibility;}}
+}
+function syncMemberScopedLayout(context,scope){
+  if(memberGroups.layoutContext===context)return;
+  const layouts=memberGroups.scopedLayouts||(memberGroups.scopedLayouts=new Map());
+  if(memberGroups.layoutContext!==undefined){
+    layouts.set(memberGroups.layoutContext,{
+      offsets:new Map([...memberDisplayOffsets].filter(([id])=>nodeById[id]?.kind==='event')),
+      sections:new Map([...memberGroups].map(([key,g])=>[key,(g.sectionBlocks||[]).map(ids=>[...ids])]))
+    });
+    // Bound presentation-only history; no draft or evidence is discarded.
+    if(layouts.size>8)layouts.delete(layouts.keys().next().value);
+  }
+  const eligible=new Set(scope.records.map(n=>n.id)),pinned=new Map();
+  for(const n of nodes.filter(n=>n.kind==='event')){
+    const origin=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;
+    const group=memberGroups.get(memberGroupKey(n)),inherited=group?.recordShifts.get(n.id)||{x:0,y:0};
+    const offset=memberDisplayOffsets.get(n.id);
+    if(offset&&(Math.abs(n.x-origin.x-inherited.x)>1e-9||Math.abs(n.y-origin.y-inherited.y)>1e-9))pinned.set(n.id,offset);
+    memberDisplayOffsets.delete(n.id);focusOffsets.delete(n.id);
+  }
+  const prior=layouts.get(context);
+  for(const [id,offset] of [...(prior?.offsets||[]),...pinned])if(eligible.has(id))memberDisplayOffsets.set(id,offset);
+  for(const [key,g] of memberGroups){
+    g.sectionBlocks=(prior?.sections.get(key)||[]).map(ids=>ids.filter(id=>eligible.has(id)&&memberDisplayOffsets.has(id))).filter(ids=>ids.length);
+    g.morePositioned=false;
+  }
+  memberGroups.layoutContext=context;
 }
 function prepareMemberGroups(){
   root.querySelectorAll('[data-summary-icon]').forEach(el=>{el.dataset.summaryIcon='false';});
@@ -3475,10 +3654,16 @@ function prepareMemberGroups(){
   const scope=memberScope(),buckets=new Map();memberEligible=scope.records;
   memberDisplayDecisions.clear();
   const decisionContext={stockIds:[...scope.stockIds],focusId:state.focusId,marks:state.marks,changes:changeStatus};
-  for(const n of scope.records)memberDisplayDecisions.set(n.id,memberDisplayDecision(n,edges.filter(inScenario),decisionContext));
+  for(const n of scope.records){
+    const decision=memberDisplayDecision(n,edges.filter(inScenario),decisionContext);
+    memberDisplayDecisions.set(n.id,decision);
+    // Apply reviewed size before measuring slots. Existing manual positions and
+    // reading modes survive; only new/reset automatic slots use the sorted order.
+    if(typeof applyMemberEconomicImportance==='function')applyMemberEconomicImportance(n,decision);
+  }
   const defaults=scope.records.filter(n=>memberDisplayDecisions.get(n.id).mode==='default'&&!memberGroupManual.has(memberGroupKey(n)))
     .sort((a,b)=>compareMemberDisplay(memberDisplayDecisions.get(a.id),memberDisplayDecisions.get(b.id))).slice(0,MEMBER_DEFAULT_BUDGET);
-  root.dataset.denseStocks=String(scope.stocks.length>12);
+  root.dataset.denseStocks=String(holdings.length>12);
   for(const n of scope.records){const key=memberGroupKey(n);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(n);}
   if(state.focusId&&memberFocusGroupId!==state.focusId){
     memberFocusGroupId=state.focusId;
@@ -3497,8 +3682,8 @@ function prepareMemberGroups(){
     // An explicit source/edge selection can reveal one record without expanding the entire group.
     const selectedEdge=edges.find(e=>e.id===memberReveal),revealIds=selectedEdge?[selectedEdge.from,selectedEdge.to]:[memberReveal];
     records.filter(n=>revealIds.includes(n.id)).forEach(n=>memberVisible.add(n.id));
-    // The sidebar retains every source category; focused canvas shows opened evidence only.
-    group.button.hidden=(!group.stockIds.length&&!open)||(!!state.focusId&&!open&&!memberGroupManual.has(key)&&!records.some(n=>memberVisible.has(n.id)));
+    // Relevant collapsed categories remain reachable next to the selected stock.
+    group.button.hidden=!group.stockIds.length&&!open;
     group.title.textContent=memberGroupNames[key]||'기타 자료';
     group.count.textContent=records.length+'건 · 연결 '+group.stockIds.length+'종목';group.count.hidden=false;
     const displayed=records.filter(n=>memberVisible.has(n.id)).length;
@@ -3508,14 +3693,16 @@ function prepareMemberGroups(){
     group.more.hidden=displayed===0||displayed>=records.length;group.more.textContent=displayed+'/'+records.length+'건 · 더 보기';
   }
   // Preserve all source IDs and marks; grouping affects only presentation.
-  const visibleNodes=nodes.filter(n=>memberVisible.has(n.id));
-  // Layout follows data/context only. Camera zoom never changes saved or display offsets.
+  // Folding, filtering and selection never recompute the base grid. Newly shown
+  // records take a free slot without moving headers or previously placed cards.
   const narrow=space.clientWidth<560;
-  const key=[context,narrow,...visibleNodes.map(n=>n.id),...buckets.keys()].join('|');
-  if(key!==memberLayoutKey){
-    memberLayoutKey=key;focusOffsets.clear();
-    function place(n,x,y){const origin=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;focusOffsets.set(n.id,{x:.5+x/WORLD_WIDTH-origin.x,y:.5+y/WORLD_HEIGHT-origin.y});}
-    const stocks=scope.stocks,stockCols=Math.min(narrow?2:5,Math.max(1,Math.ceil(Math.sqrt(stocks.length))));
+  const key=String(narrow);
+  if(key!==memberBaseLayoutKey){
+    memberBaseLayoutKey=key;memberGroups.sectionSignature='';memberDisplayOffsets.clear();focusOffsets.clear();
+    memberGroups.scopedLayouts=new Map();memberGroups.layoutContext=context;
+    for(const group of memberGroups.values()){group.positioned=false;group.sectionBlocks=[];group.slotSizes=new Map();group.morePositioned=false;}
+    function place(n,x,y){const origin=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;memberDisplayOffsets.set(n.id,{x:.5+x/WORLD_WIDTH-origin.x,y:.5+y/WORLD_HEIGHT-origin.y});}
+    const stocks=holdings,stockCols=Math.min(narrow?2:5,Math.max(1,Math.ceil(Math.sqrt(stocks.length))));
     const stockSizes=stocks.map(memberCardSize),maxPriorityScale=1.1,stockColWidths=Array.from({length:stockCols},(_,col)=>Math.max(0,...stockSizes.filter((_,i)=>i%stockCols===col).map(s=>s.width*maxPriorityScale)));
     const stockRowHeights=Array.from({length:Math.ceil(stocks.length/stockCols)},(_,row)=>Math.max(0,...stockSizes.slice(row*stockCols,(row+1)*stockCols).map(s=>s.height*maxPriorityScale)));
     const stockGapX=stocks.length>12?28:56,stockGapY=20,stockWidth=stockColWidths.reduce((a,b)=>a+b,0)+Math.max(0,stockCols-1)*stockGapX;
@@ -3527,21 +3714,26 @@ function prepareMemberGroups(){
       place(n,x,stockY+stockRowHeights.slice(0,row).reduce((a,b)=>a+b,0)+row*stockGapY+stockRowHeights[row]/2);
     });
 
-    // Reserve space only for visible records. Collapsed categories occupy their header alone.
-    const childCols=narrow?2:3,childGapX=48,childGapY=42,headerGap=30,moreGap=12;
+    // Reserve the full card width before expansion, so every category keeps its
+    // own column. A collapsed header must not borrow its neighbour's lane.
+    const childCols=1,childGapX=0,childGapY=24,headerGap=30,moreGap=12;
     const order=['events','relationships','candidates','filing','business','news','fx','commodity','government','calendar','prices','other'];
+    // Unlinked, hidden categories occupy no shelf width. Including their fallback
+    // sizes shifted the visible shelf left of the centered stock row.
     const active=[...memberGroups.values()].filter(g=>g.records.length&&!g.button.hidden).sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key)).map(g=>{
-      const visibleChildren=g.records.filter(n=>memberVisible.has(n.id)),sizes=visibleChildren.map(memberCardSize);
+      const visibleChildren=g.records.filter(n=>defaults.some(d=>d.id===n.id)),sizes=visibleChildren.map(memberCardSize);
       const colWidths=Array.from({length:childCols},(_,col)=>Math.max(0,...sizes.filter((_,i)=>i%childCols===col).map(s=>s.width)));
       const rowHeights=Array.from({length:Math.ceil(visibleChildren.length/childCols)},(_,row)=>Math.max(0,...sizes.slice(row*childCols,(row+1)*childCols).map(s=>s.height)));
       const headerWidth=g.button.offsetWidth||240,headerHeight=g.button.offsetHeight||90;
       const childWidth=visibleChildren.length?colWidths.reduce((a,b)=>a+b,0)+Math.max(0,Math.min(childCols,visibleChildren.length)-1)*childGapX:0;
       const contentHeight=visibleChildren.length?headerGap+rowHeights.reduce((a,b)=>a+b,0)+Math.max(0,rowHeights.length-1)*childGapY:0;
       const moreHeight=!g.more.hidden?(g.more.offsetHeight||32)+moreGap:0;
-      const tileWidth=Math.max(headerWidth,childWidth),tileHeight=headerHeight+contentHeight+moreHeight;
+      const tileWidth=Math.max(headerWidth,childWidth,...g.records.map(n=>memberCardSize(n).width))+32,tileHeight=headerHeight+contentHeight+moreHeight;
       return {g,visibleChildren,sizes,colWidths,rowHeights,headerWidth,headerHeight,tileWidth,tileHeight,contentHeight};
     });
-    const gridCols=Math.min(narrow?2:3,Math.max(1,active.length)),gridGapX=80,gridGapY=narrow?32:64,gridRows=Math.ceil(active.length/gridCols);
+    // Category handles form one horizontal shelf, including on a narrow canvas.
+    // Documents still expand below their own handle without moving this shelf.
+    const gridCols=Math.max(1,active.length),gridGapX=80,gridGapY=0,gridRows=Math.ceil(active.length/gridCols);
     const gridColWidths=Array.from({length:gridCols},(_,col)=>Math.max(0,...active.filter((_,i)=>i%gridCols===col).map(tile=>tile.tileWidth)));
     const gridRowHeights=Array.from({length:gridRows},(_,row)=>Math.max(0,...active.slice(row*gridCols,(row+1)*gridCols).map(tile=>tile.tileHeight)));
     const gridTop=0;
@@ -3550,16 +3742,159 @@ function prepareMemberGroups(){
       const {g,visibleChildren,sizes,colWidths,rowHeights,headerHeight,tileWidth,tileHeight,contentHeight}=tile,row=Math.floor(index/gridCols),col=index%gridCols;
       const left=gridLeft+gridColWidths.slice(0,col).reduce((a,b)=>a+b,0)+col*gridGapX+(gridColWidths[col]-tileWidth)/2;
       const top=gridTop+gridRowHeights.slice(0,row).reduce((a,b)=>a+b,0)+row*gridGapY;
-      g.baseX=.5+(left+tileWidth/2)/WORLD_WIDTH;g.baseY=.5+(top+headerHeight/2)/WORLD_HEIGHT;g.width=tileWidth;g.height=tileHeight;
+      g.baseX=.5+(left+tileWidth/2)/WORLD_WIDTH;g.baseY=.5+(top+headerHeight/2)/WORLD_HEIGHT;g.width=tileWidth;g.height=tileHeight;g.positioned=true;
+      g.sectionAnchorY=g.baseY;
       visibleChildren.forEach((n,i)=>{
         const childRow=Math.floor(i/childCols),childCol=i%childCols,size=sizes[i];
-        const childX=left+colWidths.slice(0,childCol).reduce((a,b)=>a+b,0)+childCol*childGapX+colWidths[childCol]/2;
+        const childX=left+tileWidth/2;
         const childY=top+headerHeight+headerGap+rowHeights.slice(0,childRow).reduce((a,b)=>a+b,0)+childRow*childGapY+rowHeights[childRow]/2;
         place(n,childX,childY);
       });
+      g.sectionBlocks=visibleChildren.length?[visibleChildren.map(n=>n.id)]:[];
       const moreY=.5+(top+headerHeight+contentHeight+moreGap+(g.more.offsetHeight||32)/2)/WORLD_HEIGHT;
       g.morePoint={get x(){return g.x;},get y(){return moreY+(g.dy||0);}};
     });
+  }
+  memberLayoutKey=key;
+  syncMemberScopedLayout(context,scope);
+  for(const [id,offset] of memberDisplayOffsets)if(nodeById[id])focusOffsets.set(id,offset);
+  placeRevealedMemberRecords();
+}
+function placeRevealedMemberRecords(){
+  const zoom=Math.max(.08,state.zoom),scale=memberSummaryScale(zoom),occupied=[];
+  const scopedIds=new Set([...memberScope().stocks,...memberEligible].map(n=>n.id));
+  const box=(n,width,height)=>{const p=viewPosition(n);return {x:p.x*WORLD_WIDTH,y:p.y*WORLD_HEIGHT,width:width*scale/zoom,height:height*scale/zoom};};
+  const overlap=(a,b)=>Math.abs(a.x-b.x)<(a.width+b.width)/2+16&&Math.abs(a.y-b.y)<(a.height+b.height)/2+16;
+  // A folded slot stays reserved, so reopening cannot collide with a later group.
+  for(const n of nodes)if(scopedIds.has(n.id)&&focusOffsets.has(n.id)){const s=memberCardSize(n);occupied.push(box(n,s.width,s.height));}
+  for(const g of memberGroups.values())if(g.positioned&&!g.button.hidden){
+    occupied.push(box(g,g.button.offsetWidth||160,g.button.offsetHeight||50));
+    if(g.morePositioned)occupied.push(box(g.morePoint,g.more.offsetWidth||120,g.more.offsetHeight||32));
+  }
+  // Refresh appends summaries into free slots; it never rebuilds existing anchors.
+  const added=[...holdings.filter(n=>!focusOffsets.has(n.id)).map(n=>({n,size:memberCardSize(n)})),
+    ...[...memberGroups.values()].filter(g=>!g.button.hidden&&!g.positioned).map(n=>({n,group:true,size:{width:Math.max(n.button.offsetWidth||160,...n.records.map(r=>memberCardSize(r).width))+32,height:n.button.offsetHeight||50}}))];
+  for(const item of added){
+    const {n,size,group}=item,width=size.width*scale/zoom,height=size.height*scale/zoom;
+    let candidate=null;
+    if(group){
+      const placed=[...memberGroups.values()].filter(g=>g.positioned);
+      const anchor=placed.reduce((first,g)=>!first||g.baseX<first.baseX?g:first,null);
+      const top=anchor?anchor.baseY*WORLD_HEIGHT-(anchor.button.offsetHeight||50)*scale/zoom/2:WORLD_HEIGHT/2;
+      const start=placed.length?Math.max(...placed.map(g=>{const b=box(g,g.width||160,g.button.offsetHeight||50);return b.x+b.width/2;}))+80+width/2:WORLD_WIDTH/2;
+      // A newly supplied category joins the right end; existing anchors and
+      // folded source slots stay untouched, even after a member moves a group.
+      for(let col=0;col<100&&!candidate;col++){
+        const next={x:start+col*(width+80),y:top+height/2,width,height};
+        if(!occupied.some(b=>overlap(next,b)))candidate=next;
+      }
+    }else for(let row=0;row<100&&!candidate;row++)for(const col of [0,1,-1]){
+      const next={x:WORLD_WIDTH/2+col*(width+32),y:WORLD_HEIGHT/2-100+row*(height+32),width,height};
+      if(!occupied.some(b=>overlap(next,b))){candidate=next;break;}
+    }
+    if(!candidate)continue;
+    if(group){n.baseX=candidate.x/WORLD_WIDTH-n.dx;n.baseY=candidate.y/WORLD_HEIGHT-n.dy;n.width=size.width;n.sectionAnchorY=n.baseY;n.positioned=true;}
+    else{const offset={x:candidate.x/WORLD_WIDTH-n.x,y:candidate.y/WORLD_HEIGHT-n.y};memberDisplayOffsets.set(n.id,offset);focusOffsets.set(n.id,offset);}
+    occupied.push(candidate);
+  }
+  for(const g of memberGroups.values()){
+    if(!g.records.length)continue;
+    const visible=g.records.filter(n=>memberVisible.has(n.id));
+    const displayed=visible.filter(n=>memberVisible.has(n.id));
+    // Section layout owns the more position; an unchanged repaint must not
+    // replace it with a different bottom calculation before the cached return.
+    g.more.hidden=displayed.length===0||displayed.length>=g.records.length;g.more.textContent=displayed.length+'/'+g.records.length+'건 · 더 보기';
+  }
+  arrangeMemberSections();
+}
+// Allocate only newly revealed records. Never repack existing headers or cards
+// when another group grows, folds, filters or changes camera scale. Each batch
+// keeps its own reading area, instead of a giant rectangle spanning other groups.
+function arrangeMemberSections(){
+  const groups=[...memberGroups.values()].filter(g=>!g.button.hidden&&g.records.length),gap=24,pad=16,occupied=[];
+  const scopedIds=new Set([...memberScope().stocks,...memberEligible].map(n=>n.id));
+  const rect=(x,y,width,height)=>({left:x-width/2,right:x+width/2,top:y-height/2,bottom:y+height/2});
+  const bounds=boxes=>({left:Math.min(...boxes.map(b=>b.left)),right:Math.max(...boxes.map(b=>b.right)),top:Math.min(...boxes.map(b=>b.top)),bottom:Math.max(...boxes.map(b=>b.bottom))});
+  const recordRect=n=>{const p=viewPosition(n),s=memberCardSize(n);return rect(p.x*WORLD_WIDTH,p.y*WORLD_HEIGHT,s.width,s.height);};
+  const intersects=(a,b)=>a.left<b.right+12&&a.right>b.left-12&&a.top<b.bottom+12&&a.bottom>b.top-12;
+  // A correction can make one existing source taller. Only that changed card
+  // may need a new slot; ordinary reveal/camera changes never invalidate slots.
+  // Preserve independent user movement even when it intentionally overlaps.
+  const cached=nodes.filter(n=>scopedIds.has(n.id)&&focusOffsets.has(n.id));
+  for(const g of groups){
+    if(!g.slotSizes)g.slotSizes=new Map();
+    for(const n of g.records){
+      const size=memberCardSize(n),prior=g.slotSizes.get(n.id);g.slotSizes.set(n.id,size);
+      if(!focusOffsets.has(n.id)||!prior||size.width<=prior.width+.1&&size.height<=prior.height+.1)continue;
+      const origin=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n,inherited=g.recordShifts.get(n.id)||{x:0,y:0};
+      if(Math.abs(n.x-origin.x-inherited.x)>1e-9||Math.abs(n.y-origin.y-inherited.y)>1e-9)continue;
+      const area=recordRect(n),overlaps=b=>area.left<b.right&&area.right>b.left&&area.top<b.bottom&&area.bottom>b.top;
+      const collision=cached.some(other=>other.id!==n.id&&focusOffsets.has(other.id)&&overlaps(recordRect(other)))||groups.some(other=>other.positioned&&(overlaps(rect(other.x*WORLD_WIDTH,other.y*WORLD_HEIGHT,other.button.offsetWidth||160,other.button.offsetHeight||50))||other.morePositioned&&overlaps(rect(other.morePoint.x*WORLD_WIDTH,other.morePoint.y*WORLD_HEIGHT,other.more.offsetWidth||120,other.more.offsetHeight||32))));
+      if(collision){memberDisplayOffsets.delete(n.id);focusOffsets.delete(n.id);}
+    }
+  }
+  for(const n of nodes)if(scopedIds.has(n.id)&&focusOffsets.has(n.id))occupied.push(recordRect(n));
+  for(const g of groups){
+    if(g.positioned)occupied.push(rect(g.x*WORLD_WIDTH,g.y*WORLD_HEIGHT,g.button.offsetWidth||160,g.button.offsetHeight||50));
+    g.sectionBlocks=(g.sectionBlocks||[]).map(ids=>ids.filter(id=>nodeById[id]&&memberGroupKey(nodeById[id])===g.key&&focusOffsets.has(id))).filter(ids=>ids.length);
+    // A refresh may reclassify an existing ID. Transfer its backing ownership,
+    // not its saved/display position, and never retain it in the old category.
+    const owned=new Set(g.sectionBlocks.flat());
+    for(const n of g.records)if(focusOffsets.has(n.id)&&!owned.has(n.id))g.sectionBlocks.push([n.id]);
+    for(const ids of g.sectionBlocks){const b=bounds(ids.map(id=>recordRect(nodeById[id])));occupied.push({left:b.left-pad,right:b.right+pad,top:b.top-pad,bottom:b.bottom+pad});}
+    if(g.morePositioned)occupied.push({...rect(g.morePoint.x*WORLD_WIDTH,g.morePoint.y*WORLD_HEIGHT,g.more.offsetWidth||120,g.more.offsetHeight||32),more:g.key});
+  }
+  function freeBlock(shape,x,y){
+    // Keep the header's X coordinate. Avoid only vertically, including around a
+    // manually moved card; never scatter a batch into another category's lane.
+    let dy=0;
+    for(let i=0;i<=occupied.length;i++){
+      const area={left:x+shape.left,right:x+shape.right,top:y+dy+shape.top,bottom:y+dy+shape.bottom};
+      const collisions=occupied.filter(b=>intersects(area,b));
+      if(!collisions.length)return {x,y:y+dy,area};
+      dy=Math.max(...collisions.map(b=>b.bottom))+gap-y-shape.top;
+    }
+    return null;
+  }
+  function placeMore(g,x,y){
+    const dx=x/WORLD_WIDTH-g.x,dy=y/WORLD_HEIGHT-g.y;
+    g.morePoint={get x(){return g.x+dx;},get y(){return g.y+dy;}};g.morePositioned=true;
+    for(let i=occupied.length-1;i>=0;i--)if(occupied[i].more===g.key)occupied.splice(i,1);
+    occupied.push({...rect(x,y,g.more.offsetWidth||120,g.more.offsetHeight||32),more:g.key});
+  }
+  for(const g of groups){
+    if(!g.records.length||g.button.hidden)continue;
+    const visible=g.records.filter(n=>memberVisible.has(n.id));
+    const children=visible.filter(n=>!focusOffsets.has(n.id)),sizes=children.map(memberCardSize);
+    if(!children.length){
+      if(visible.length&&!g.more.hidden&&!g.morePositioned){
+        const b=bounds(visible.map(recordRect)),w=g.more.offsetWidth||120,h=g.more.offsetHeight||32;
+        const slot=freeBlock(rect(0,0,w,h),g.x*WORLD_WIDTH,b.bottom+gap+h/2);
+        if(slot)placeMore(g,slot.x,slot.y);
+      }
+      continue;
+    }
+    const columns=1,rows=children.length;
+    const widths=Array.from({length:columns},(_,col)=>Math.max(0,...sizes.filter((_,i)=>i%columns===col).map(s=>s.width)));
+    const heights=Array.from({length:rows},(_,row)=>Math.max(0,...sizes.slice(row*columns,(row+1)*columns).map(s=>s.height)));
+    const bodyWidth=widths.reduce((a,b)=>a+b,0)+Math.max(0,columns-1)*gap;
+    const slots=children.map((n,i)=>{
+      const col=i%columns,row=Math.floor(i/columns),origin=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n,inherited=g.recordShifts.get(n.id)||{x:0,y:0};
+      const x=-bodyWidth/2+widths.slice(0,col).reduce((a,b)=>a+b,0)+col*gap+widths[col]/2+(n.x-origin.x-inherited.x)*WORLD_WIDTH;
+      const y=heights.slice(0,row).reduce((a,b)=>a+b,0)+row*gap+heights[row]/2+(n.y-origin.y-inherited.y)*WORLD_HEIGHT;
+      return {n,x,y,box:rect(x,y,sizes[i].width,sizes[i].height)};
+    });
+    const body=bounds(slots.map(s=>s.box)),moreHeight=g.more.offsetHeight||32,moreY=body.bottom+gap+moreHeight/2;
+    const shape=bounds([...slots.map(s=>s.box),...(g.more.hidden?[]:[rect(0,moreY,g.more.offsetWidth||120,moreHeight)])]);
+    const cached=g.records.filter(n=>focusOffsets.has(n.id));
+    const top=Math.max(g.y*WORLD_HEIGHT+(g.button.offsetHeight||50)/2+30,...cached.map(n=>recordRect(n).bottom+gap+pad*2));
+    // The old more button moves below this batch; it is not a permanent obstacle.
+    for(let i=occupied.length-1;i>=0;i--)if(occupied[i].more===g.key)occupied.splice(i,1);
+    const slot=freeBlock({left:shape.left-pad,right:shape.right+pad,top:shape.top-pad,bottom:shape.bottom+pad},g.x*WORLD_WIDTH,top);
+    if(!slot){children.forEach(n=>memberVisible.delete(n.id));continue;}
+    for(const item of slots){const offset={x:(slot.x+item.x)/WORLD_WIDTH-item.n.x,y:(slot.y+item.y)/WORLD_HEIGHT-item.n.y};memberDisplayOffsets.set(item.n.id,offset);focusOffsets.set(item.n.id,offset);}
+    g.sectionBlocks.push(children.map(n=>n.id));occupied.push(slot.area);
+    if(!g.more.hidden)placeMore(g,slot.x,slot.y+moreY);
   }
 }
 shown=function(n){return !!n&&ungroupedShown(n)&&(n.kind==='stock'||memberVisible.has(n.id));};
@@ -3575,10 +3910,12 @@ select=function(id,toggle=false){
 };
 function syncMemberMapFoot(){
   if(root.dataset.readableFit==='true'&&Number(root.dataset.readableFitZoom)!==state.zoom)root.dataset.readableFit='false';
-  root.querySelector('.an-foot > span:last-of-type').textContent=root.dataset.readableFit==='true'?'읽기 크기 유지 · 휠 이동 · ⌘/Ctrl+휠 확대·축소 · Space+드래그':'휠 이동 · ⌘/Ctrl+휠 확대·축소 · Space+드래그 · 묶음을 누르면 접기·펼치기';
+  root.querySelector('.an-foot > span:last-of-type').textContent=root.dataset.readableFit==='true'?'최소 배율 · 휠로 이동해 나머지 보기 · ⌘/Ctrl+휠 확대·축소':'휠 이동 · ⌘/Ctrl+휠 확대·축소 · Space+드래그 · 묶음을 누르면 접기·펼치기';
 }
 function drawMemberGroups(){
   syncMemberMapFoot();
+  syncMemberIndividualEdges();
+  memberSectionLayer.replaceChildren();
   memberGroupLines.replaceChildren();
   const summaries=[];
   for(const n of nodes.filter(shown)){
@@ -3589,17 +3926,28 @@ function drawMemberGroups(){
     if(!g.records.length||g.button.hidden)continue;
     const p=point(g),scale=memberSummaryScale(state.zoom);g.button.dataset.summaryIcon='false';g.button.style.left=p.x+'px';g.button.style.top=p.y+'px';g.button.style.transform='translate(-50%,-50%) scale('+scale+')';summaries.push(g.button);
     if(!g.more.hidden){const m=point(g.morePoint);g.more.style.left=m.x+'px';g.more.style.top=m.y+'px';g.more.style.transform='translate(-50%,-50%) scale('+scale+')';}
+    for(const ids of g.sectionBlocks||[]){
+      const cards=ids.filter(id=>memberVisible.has(id)).map(id=>nodesEl.querySelector('[data-node="'+id+'"]')).filter(el=>el&&!el.hidden);
+      if(!cards.length)continue;
+      const area=document.createElement('div');area.className='an-member-section';area.dataset.section=g.key;
+      // Separate newly opened batches can use different free spaces. Do not draw
+      // a backing rectangle across unrelated headers/cards between those spaces.
+      const canvas=space.getBoundingClientRect(),bounds=cards.map(el=>el.getBoundingClientRect());
+      const pad=16*scale,left=Math.min(...bounds.map(b=>b.left))-canvas.left-pad,top=Math.min(...bounds.map(b=>b.top))-canvas.top-pad;
+      Object.assign(area.style,{left:left+'px',top:top+'px',width:(Math.max(...bounds.map(b=>b.right))-canvas.left-left+pad)+'px',height:(Math.max(...bounds.map(b=>b.bottom))-canvas.top-top+pad)+'px',borderRadius:20*scale+'px'});memberSectionLayer.append(area);
+    }
     // Hover and keyboard focus reveal coverage paths without turning every
     // collapsed source category into a permanent fan of apparent relationships.
     for(const id of memberGroupConnectionIds(g,memberHoveredGroup,state.focusId)){if(state.focusId&&!memberScope().stockIds.has(id))continue;const n=nodeById[id];if(!n||!ungroupedShown(n))continue;const q=point(n),path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M '+p.x+' '+p.y+' L '+q.x+' '+q.y);path.setAttribute('class','an-edge indirect');path.style.setProperty('--edge-width','1.4px');memberGroupLines.append(path);}
   }
   // At extreme manual zoom, retain hit targets/icons instead of overlapping labels.
   // Camera changes never rewrite node positions, layout offsets or saved records.
-  const boxes=summaries.map(el=>el.getBoundingClientRect()),colliding=new Set();
+  const boxes=summaries.map(el=>el.getBoundingClientRect()),colliding=new Set(),collisionGap=2*memberSummaryScale(state.zoom);
   boxes.forEach((a,i)=>boxes.slice(i+1).forEach((b,j)=>{
-    if(a.left<b.right+2&&a.right>b.left-2&&a.top<b.bottom+2&&a.bottom>b.top-2){colliding.add(i);colliding.add(i+j+1);}
+    if(a.left<b.right+collisionGap&&a.right>b.left-collisionGap&&a.top<b.bottom+collisionGap&&a.bottom>b.top-collisionGap){colliding.add(i);colliding.add(i+j+1);}
   }));
   for(const i of colliding){
+    if(state.zoom>.3)continue; // Manual overlap at a readable zoom must not shrink a dragged card.
     const el=summaries[i],a=boxes[i],cx=(a.left+a.right)/2,cy=(a.top+a.bottom)/2;
     const distance=Math.min(...boxes.filter((_,j)=>j!==i).map(b=>Math.hypot(cx-(b.left+b.right)/2,cy-(b.top+b.bottom)/2)));
     el.dataset.summaryIcon='true';
@@ -3613,12 +3961,22 @@ function drawMemberGroups(){
   else for(const label of labelsEl.children){const a=label.getBoundingClientRect();if([...memberGroups.values()].some(g=>{if(!g.records.length)return false;const b=g.button.getBoundingClientRect();return a.left<b.right+6&&a.right>b.left-6&&a.top<b.bottom+6&&a.bottom>b.top-6;}))label.hidden=true;}
   root.querySelector('#an-counts').textContent='종목 '+holdings.filter(ungroupedShown).length+'/'+holdings.length+' · 자료 '+memberEligible.length+'건 · 펼침 '+memberEligible.filter(n=>memberVisible.has(n.id)).length+'건';
   // Keep the existing source controls, grouped into collapsible native lists.
-  const signature=memberEligible.map(n=>n.id+':'+memberDisplayDecisions.get(n.id)?.code).join('|');
+  const signature=memberEligible.map(n=>{const d=memberDisplayDecisions.get(n.id);return n.id+':'+d?.code+':'+d?.materiality+':'+d?.attention;}).join('|');
   if(inbox.dataset.groupSignature!==signature){
     inbox.dataset.groupSignature=signature;
     const buttons=new Map([...inbox.querySelectorAll('[data-select]')].map(b=>[b.dataset.select,b]));
     inbox.querySelectorAll('[data-member-list]').forEach(el=>{el.querySelectorAll('[data-select]').forEach(b=>inbox.append(b));el.remove();});
-    for(const g of memberGroups.values()){if(!g.records.length)continue;const list=document.createElement('details'),summary=document.createElement('summary');list.dataset.memberList=g.key;list.className='an-evidence';summary.textContent=memberGroupNames[g.key]+' '+g.records.length+'건';list.append(summary);for(const n of g.records){const b=buttons.get(n.id);if(b)list.append(b);}inbox.insertBefore(list,inbox.querySelector('.an-aside-note'));}
+    for(const g of memberGroups.values()){
+      if(!g.records.length)continue;
+      const list=document.createElement('details'),summary=document.createElement('summary');
+      list.dataset.memberList=g.key;list.className='an-evidence';
+      summary.append(memberCategoryIcon(g.key==='government'?'policy':g.key));
+      appendMemberText(summary,'span',memberGroupNames[g.key],'an-source-group-label');
+      appendMemberText(summary,'span',g.records.length+'건','an-source-group-count');
+      list.append(summary);
+      for(const n of g.records){const b=buttons.get(n.id);if(b)list.append(b);}
+      inbox.insertBefore(list,inbox.querySelector('.an-aside-note'));
+    }
   }
   inbox.querySelectorAll('[data-select]').forEach(b=>{b.hidden=!memberEligible.some(n=>n.id===b.dataset.select);});
   for(const b of inbox.querySelectorAll('[data-select]')){
@@ -3632,7 +3990,18 @@ renderMap=function(){
   // The base renderer temporarily writes its shorter footer after placing nodes.
   // Restore the member footer before each coordinate pass so nodes and groups
   // use the same canvas height, including repeated fit/reset and narrow layouts.
-  syncMemberMapFoot();prepareMemberGroups();ungroupedRenderMap();syncMemberMapFoot();drawMemberGroups();
+  syncMemberMapFoot();prepareMemberGroups();ungroupedRenderMap();syncMemberMapFoot();
+  // The accepted renderer decorates connection badges after its coordinate pass.
+  // Measure final criteria/badges once, and repaint only if one grown card moved.
+  if(typeof applyMemberRecordVisuals==='function')applyMemberRecordVisuals();
+  const resized=[...memberGroups.values()].some(g=>g.records.some(n=>{
+    const prior=g.slotSizes?.get(n.id),size=memberCardSize(n);return prior&&(Math.abs(size.width-prior.width)>.1||Math.abs(size.height-prior.height)>.1);
+  }));
+  if(resized){
+    const before=new Map(memberDisplayOffsets);arrangeMemberSections();
+    if([...memberDisplayOffsets].some(([id,p])=>before.get(id)!==p)){ungroupedRenderMap();syncMemberMapFoot();}
+  }
+  drawMemberGroups();
 };
 const displayCriteriaDetail=renderDetail;
 renderDetail=function(){
@@ -3643,7 +4012,7 @@ renderDetail=function(){
   const panel=document.createElement('details');panel.className='an-evidence';panel.dataset.displayCriteria='v1';
   appendMemberText(panel,'summary','표시 기준 · '+memberDisplayNames[decision.mode]);
   appendMemberText(panel,'p',decision.reason,'an-save-note');
-  appendMemberText(panel,'p','사업상 중요도: 미평가. 표시 순서는 근거 신뢰도·영향 크기·상승 확률 점수가 아니에요.','an-save-note');
+  appendMemberText(panel,'p','사업상 중요도: '+({material:'범위 내 중요',limited:'범위 내 경미'}[decision.materiality]||'미평가')+'. 표시 순서는 근거 신뢰도·상승 확률 점수가 아니며, 연결 정도와 경제적 중요도는 별개예요.','an-save-note');
   if(decision.mode==='default')appendMemberText(panel,'p','기본 펼침은 화면 공간에 맞춰 최대 '+MEMBER_DEFAULT_BUDGET+'건이에요. 나머지는 묶음과 목록에 남으며, 덜 중요하다는 뜻은 아니에요.','an-save-note');
   detail.append(panel);
 };
@@ -3654,15 +4023,15 @@ fitNodes=function(selectionOnly){
   const edge=edges.find(e=>e.id===state.selected),ids=selectionOnly==='nearby'?[...focusNeighborhood(state.focusId)]:edge?[edge.from,edge.to]:[state.selected];
   const selected=new Set(chosenGroup?[...chosenGroup.stockIds,...chosenGroup.records.filter(n=>memberVisible.has(n.id)).map(n=>n.id)]:selectionOnly==='nearby'?ids:selectedItems.size?[...selectedItems]:ids);
   const items=[...nodes.filter(n=>memberVisible.has(n.id)&&(!selectionOnly||selected.has(n.id))).map(n=>({n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')})),
-    ...[...memberGroups.values()].filter(g=>g.records.length&&!g.button.hidden&&(!selectionOnly||g===chosenGroup||g.records.some(n=>memberVisible.has(n.id)&&selected.has(n.id)))).map(n=>({n,el:n.button,kind:'tile'})),
-    ...[...memberGroups.values()].filter(g=>!g.more.hidden&&(!selectionOnly||g===chosenGroup||g.records.some(n=>selected.has(n.id)))).map(g=>({n:g.morePoint,el:g.more,kind:'more'})),
+    ...[...memberGroups.values()].filter(g=>g.records.length&&!g.button.hidden&&(!selectionOnly||selectionOnly==='nearby'||g===chosenGroup||g.records.some(n=>memberVisible.has(n.id)&&selected.has(n.id)))).map(n=>({n,el:n.button,kind:'tile'})),
+    ...[...memberGroups.values()].filter(g=>!g.more.hidden&&(!selectionOnly||g===chosenGroup||g.records.some(n=>selected.has(n.id)))).map(g=>({n:g,el:g.more,kind:'more'})),
     ...Object.values(state.notes).filter(n=>!n.target&&noteVisible(n)&&noteEls.get(n.id)&&(!selectionOnly||selectedItems.has(n.id))).map(n=>({n,el:noteEls.get(n.id),kind:'note'}))];
   if(!items.length)return;
   items.forEach(({el})=>{if(el?.hasAttribute('data-summary-icon'))el.dataset.summaryIcon='false';});
   const w=space.clientWidth,h=Math.max(180,space.clientHeight-(innerWidth<=700&&root.dataset.detail==='open'?Math.max(0,space.getBoundingClientRect().bottom-detail.getBoundingClientRect().top):0));
   function bounds(zoom){let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
     for(const {n,el,kind} of items){
-      const p=kind?n:viewPosition(n),x=(p.x-.5)*WORLD_WIDTH*zoom,y=(p.y-.5)*WORLD_HEIGHT*zoom;
+      const p=kind==='more'?n.morePoint:kind?n:viewPosition(n),x=(p.x-.5)*WORLD_WIDTH*zoom,y=(p.y-.5)*WORLD_HEIGHT*zoom;
       const summary=kind==='tile'||n.kind==='stock',scale=summary||kind==='more'?memberSummaryScale(zoom):kind==='note'?1:nodeScale(n,zoom);
       const width=(el.offsetWidth||(kind==='note'?150:240))*scale,height=(el.offsetHeight||(kind==='note'?54:90))*scale;
       left=Math.min(left,x-width/2);right=Math.max(right,x+width/2);top=Math.min(top,y-height/2);bottom=Math.max(bottom,y+height/2);
@@ -3672,7 +4041,9 @@ fitNodes=function(selectionOnly){
   let low=.08,high=1.1;for(let i=0;i<20;i++){const mid=(low+high)/2,b=bounds(mid);if(b.right-b.left<=Math.max(1,w-64)&&b.bottom-b.top<=Math.max(1,h-64))low=mid;else high=mid;}
   const summaries=items.filter(({kind})=>!kind||kind==='tile').map(({n,el,kind})=>{const p=kind?n:viewPosition(n);return {x:p.x*WORLD_WIDTH,y:p.y*WORLD_HEIGHT,width:el.offsetWidth||180,height:el.offsetHeight||72};});
   const readable=memberReadableFitZoom(low,summaries)??low;root.dataset.readableFit=String(readable>low+.001);root.dataset.readableFitZoom=String(readable);
-  state.zoom=readable;const b=bounds(readable);state.panX=-(b.left+b.right)/2;state.panY=-(b.top+b.bottom)/2-(space.clientHeight-h)/2;
+  state.zoom=readable;renderMap();const b=bounds(readable);
+  if(b.right-b.left>w-64||b.bottom-b.top>h-64)root.dataset.readableFit='true';
+  state.panX=-(b.left+b.right)/2;state.panY=-(b.top+b.bottom)/2-(space.clientHeight-h)/2;
   if(root.dataset.readableFit==='true'&&b.bottom-b.top>h-64){
     // Opening a category must land on its evidence, not on distant stock rows.
     const top=chosenGroup?(chosenGroup.y-.5)*WORLD_HEIGHT*readable-(chosenGroup.button.offsetHeight||72)*memberSummaryScale(readable)/2:b.top;
@@ -3684,6 +4055,7 @@ const groupingUpdate=updateMemberGraph;
 updateMemberGraph=function(model,ticker){
   if(cancelGesture)cancelGesture();
   const ids=new Set(model.nodes.map(n=>n.id)),history=[...moveHistory.past,...moveHistory.future];
+  if((state.focusId&&!ids.has(state.focusId))||(state.selected&&!ids.has(state.selected)&&!model.edges.some(e=>e.id===state.selected)))invalidateMemberSelectionReturn();
   const retained=new Set(history.flatMap(entry=>[...Object.keys(entry.before),...Object.keys(entry.after)]));
   for(const id of memberLayoutBases.keys())if(!ids.has(id)&&!retained.has(id))memberLayoutBases.delete(id);
   // The fallback origin depends on graph size. Rebase stored coordinates and
@@ -3694,6 +4066,11 @@ updateMemberGraph=function(model,ticker){
     if(prior){
       const dx=base.x-prior.x,dy=base.y-prior.y;
       if(dx||dy){
+        const displayOffset=memberDisplayOffsets.get(id);
+        if(displayOffset)memberDisplayOffsets.set(id,{x:displayOffset.x-dx,y:displayOffset.y-dy});
+        for(const layout of memberGroups.scopedLayouts?.values()||[]){
+          const offset=layout.offsets.get(id);if(offset)layout.offsets.set(id,{x:offset.x-dx,y:offset.y-dy});
+        }
         if(node){node.x+=dx;node.y+=dy;}
         // Local snapshots are rebased by the parent before hydration, including
         // records absent from the previous display. Native member input is not.
@@ -3725,10 +4102,10 @@ function memberEdgeVisual(edge,source,context={}){
   const candidate=business&&(n.layer==='candidates'||e.confirmation==='candidate');
   const statusLabel=historical?'과거 이력':review?'후속 확인':candidate?'관계 후보':!business?'참고 자료':supported?'근거 확인':'근거 보완 필요';
   const summaryKind=historical?'이력':review?'후속 확인':candidate?'후보':!business||supported&&kind==='reference'?'참고':!supported?'보완 필요':kind==='direct'?'직접':'간접';
-  const summaryLabel=summaryKind+' · '+(measure?label:'정도 '+label)+(assessed?' (가설)':'');
+  const summaryLabel=!historical&&!review&&!business?'참고 자료':!historical&&!review&&candidate?'관계 후보 · 검수 전':summaryKind+' · '+(measure?label:'정도 '+label)+(assessed?' (가설)':'');
   const changed=['새로','변경'].includes(context.changes?.[n.id]);
   const animate=supported&&!historical&&!review&&kind!=='reference'&&!context.paused&&!context.reduced&&(context.active||changed);
-  return {kind,dash:({direct:'none',indirect:'6 5',reference:'2 6',history:'8 4 2 4',review:'8 4 2 4'})[kind],
+  const visual={kind,dash:({direct:'none',indirect:'6 5',reference:'2 6',history:'8 4 2 4',review:'8 4 2 4'})[kind],
     width:({0:1.4,1:1.4,2:2.4,3:3.6})[grade],label,grade,statusLabel,summaryLabel,
     topic:supported&&!historical&&!review&&kind!=='reference'?(n.topic||'holding'):'holding',
     color:supported&&!historical&&!review&&kind!=='reference'?'var(--an-topic,var(--an-accent))':'var(--an-line)',
@@ -3736,6 +4113,7 @@ function memberEdgeVisual(edge,source,context={}){
     lineLabel:({direct:'실선 · 직접 연결',indirect:'긴 점선 · 간접 연결',reference:'짧은 점선 · 참고·미확인',history:'혼합 점선 · 종료·정정 이력',review:'혼합 점선 · 후속 공시 확인'})[kind],
     motionLabel:animate?'선택·변경된 연결 경로 표시':'정지',
     reason:'선 모양은 연결 방식, 색은 주제, 굵기는 근거가 있는 연결 정도예요. 화살표 진행은 화면의 연결 경로이며 실제 거래·인과 방향이나 주가 전망이 아니에요.'};
+  return typeof memberBusinessVisual==='function'?memberBusinessVisual(visual,e,n):visual;
 }
 
 function memberRecordVisualSummary(node,allEdges,context={}){
@@ -3745,12 +4123,20 @@ function memberRecordVisualSummary(node,allEdges,context={}){
   if(visuals.length){
     const signatures=new Set(visuals.map(v=>v.statusLabel+'\u0000'+v.summaryLabel));
     if(signatures.size===1){const v=visuals[0];return {statusLabel:v.statusLabel,summaryLabel:v.summaryLabel,title:v.statusLabel+' · '+v.summaryLabel};}
+    const graded=visuals.map((v,i)=>({v,e:links[i]})).filter(({v})=>v.grade>0);
+    if(graded.length){
+      const summary=graded.map(({v,e})=>{const id=e.from===n.id?e.to:e.from;
+        const name=typeof nodeById!=='undefined'?nodeById[id]?.name:null;
+        return (name||id)+' 기준 '+v.label;
+      }).join(' · ')+(graded.length<visuals.length?' · 나머지 미평가':'');
+      return {statusLabel:'연결별 확인',summaryLabel:summary,title:visuals.map(v=>v.statusLabel+' / '+v.summaryLabel).join(' · ')};
+    }
     return {statusLabel:'연결별 확인',summaryLabel:'연결별 확인',title:'연결별 확인 · '+visuals.map(v=>v.statusLabel+' / '+v.summaryLabel).join(' · ')};
   }
   const historical=['superseded','superseded_by_verified_correction','conflicting_evidence'].includes(n.status)||context.changes?.[n.id]==='종료';
   const review=memberLifecycle(n)?.review===true,business=n.recordKind==='event'||n.recordKind==='relationship',candidate=business&&n.layer==='candidates';
   const statusLabel=historical?'과거 이력':review?'후속 확인':!business?'참고 자료':candidate?'관계 후보':'근거 보완 필요';
-  const summaryLabel=(historical?'이력':review?'후속 확인':!business?'참고':candidate?'후보':'보완 필요')+' · 정도 미평가';
+  const summaryLabel=!historical&&!review&&!business?'참고 자료':!historical&&!review&&candidate?'관계 후보 · 검수 전':(historical?'이력':review?'후속 확인':'보완 필요')+' · 정도 미평가';
   return {statusLabel,summaryLabel,title:statusLabel+' · '+summaryLabel};
 }
 
@@ -3788,6 +4174,7 @@ function applyMemberEdgeVisuals(){
     const visual=memberEdgeVisual(e,memberVisualSource(e),memberVisualContext(pair.path.classList.contains('active')));
     pair.group.dataset.topic=visual.topic;pair.path.dataset.visualKind=visual.kind;
     pair.group.style.setProperty('--edge-width',visual.width+'px');
+    pair.path.dataset.connectionDegree=String(visual.grade);
     pair.path.style.setProperty('--an-visual-color',visual.color);pair.path.style.setProperty('--an-visual-dash',visual.dash);pair.path.style.setProperty('--an-visual-opacity',String(visual.opacity));
     for(const flow of [pair.rim,pair.flow])if(flow.classList.contains('play')!==visual.animate)flow.classList.toggle('play',visual.animate);
     const description=e.verb+' · '+visual.statusLabel+' · '+visual.summaryLabel+' · '+visual.lineLabel;
@@ -3819,13 +4206,22 @@ function appendMemberEncodingGuide(parent){
   s=section('02 · 굵기 — 연결 정도');
   for(const [label,width] of [['미평가 / 낮음',1.4],['중간',2.4],['높음',3.6]])memberEncodingSample(s,label,'none',width);
   appendMemberText(s,'p','미평가와 낮음은 글자로 구분해요. 정성기준(가설)은 원문에 명시된 유일한 거래처=높음, 주요 거래처=중간, 미미한 거래 비중=낮음으로 해당 공시 회사의 보고기간만 분류해요. 당사자·문맥을 확인하지 못하면 미평가예요. 지분율은 숫자로 표시하고 선 굵기로 환산하지 않아요. 확실성·상승 확률이 아니에요.','an-save-note');
-  s=section('03 · 색 — 주제');const topics=appendMemberText(s,'div','','an-encoding-topics');
+  s=section(typeof memberBusinessVisual==='function'?'03 · 색 — 주제와 검수된 조건부 영향':'03 · 색 — 주제');const topics=appendMemberText(s,'div','','an-encoding-topics');
   for(const [key,name] of [['contract','공시·계약'],['supply','고객사·공급망'],['policy','정책·규제'],['commodity','원자재'],['holding','기타 주제']]){const tag=appendMemberText(topics,'span',name);tag.dataset.topic=key;}
   appendMemberText(s,'p','기존 주제색을 유지해요. 참고·미확인·이력 선은 회색이에요. 호재·악재와 가격 등락을 색으로 단정하지 않아요.','an-save-note');
+  if(typeof memberBusinessVisual==='function'){
+    memberEncodingSample(s,'별도 검수한 회사별 조건부 수혜','2 6',2.4,'var(--red)');
+    memberEncodingSample(s,'별도 검수한 회사별 조건부 부담','2 6',2.4,'var(--blue)');
+    appendMemberText(s,'p','조건부 판단을 별도 검수한 연결만 빨강·파랑으로 구분해요. 선 모양의 후보·직접·간접 상태는 그대로예요. 굵기는 명시된 회사·기간·사업 범위의 연결 정도(가설)이며 경제적 중요도는 아니에요. 상반·미평가는 수혜·부담 색을 사용하지 않아요. 보류·제외·자료 버전 변경 시 강조를 철회해요. 현재 실적이나 주가 상승·하락을 뜻하지 않아요.','an-save-note');
+  }
   s=section('04 · 움직임 — 확인할 연결 경로');memberEncodingSample(s,'작은 화살표: 선택했거나 새로·변경된 연결','none',2.4,'var(--an-accent)',true);
   appendMemberText(s,'p','근거가 있는 연결에만 움직임을 적용해요. 속도는 동일하며 강도 점수가 아니에요. 화살표는 화면의 자료→종목 경로이지 실제 인과·거래 방향이 아니에요. 움직임 멈추기와 기기 동작 줄이기를 따릅니다.','an-save-note');
-  s=section('05 · 흐림·크기 — 화면의 집중 범위');
-  appendMemberText(s,'p','선택한 주변은 선명하게, 나머지는 흐리게 보여요. 투명도와 카드 크기는 신뢰도나 영향 크기가 아니에요. 확대·축소와 묶음 표시는 읽을 공간을 위한 조정입니다.','an-save-note');
+  s=section('05 · 크기·정렬 — 검수된 경제적 중요도');
+  appendMemberText(s,'p',typeof memberEconomicImportance==='function'
+    ?'별도 검수한 중요 자료는 넓게(320), 미평가는 기본(260), 경미한 자료는 작게(220) 보여요. 같은 배율의 카드 너비이며 점수가 아니에요. 미평가는 중립이나 낮음이 아니에요. 회사·사업 범위·기간을 함께 확인하며 사업부·제품 판단을 전사나 상대 회사에 적용하지 않아요.'
+    :'카드 크기는 화면을 읽기 위한 조정이며 경제적 중요도는 연결되지 않았어요.','an-save-note');
+  if(typeof memberEconomicImportance==='function')appendMemberText(s,'p','내 중요 표시 → 변경 → 검수된 경제적 중요 자료 → 연결 정도 중간·높음 검토 자료 → 선택 종목·공통 연결 순으로 최대 4건을 먼저 펼쳐요. 나머지는 묶음에 남아요. 후보 상태는 그대로이며 직접 옮긴 배치는 유지해요. 새 항목·배치 초기화에 자동 정렬을 적용하며 크기는 수익률·신뢰도·선 굵기와 별개예요.','an-save-note');
+  appendMemberText(s,'p','선택한 주변은 선명하게, 나머지는 흐리게 보여요. 투명도는 신뢰도가 아니며 확대·축소는 모든 카드에 동일하게 적용돼요.','an-save-note');
 }
 // Hover/focus redraws the group paths without a full map render, too.
 const visualBaseDrawGroups=drawMemberGroups;

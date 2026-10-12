@@ -535,7 +535,7 @@ def _document_revision(document):
     return _revision(fingerprint)
 
 
-def analyze_portfolio(positions, public_documents, *, public_bundle_revision=None, price_documents=None):
+def analyze_portfolio(positions, public_documents, *, public_bundle_revision=None, price_documents=None, change_projection=None):
     """Join a selected window against explicit public-only source projections.
 
     A shared filing is common material, NOT a confirmed economic event, trading
@@ -648,7 +648,13 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
             # Preserve the v1 list for already-open clients. The optional AI
             # lane reports absence/rejection separately in coverage.ai_review.
             "missing_source_files": [name for name in PUBLIC_SOURCE_FILES
-                                     if name != "member_map_ai_candidates.json" and name not in public_documents],
+                                     if name not in ("member_map_ai_candidates.json", "calendar_public.json", "stock_flow_5d.json",
+                                                     "us_smart_money_13f.json", "us_investor_portfolios.json", "etf_flow.json")
+                                     and name not in public_documents],
+            "calendar_reuse": deepcopy(projected["coverage"].get("calendar_reuse", {"missing": True})),
+            "flow_reuse": deepcopy(projected["coverage"].get("flow_reuse", {"missing": True})),
+            "institutional_reuse": deepcopy(projected["coverage"].get("institutional_reuse", {"missing": True})),
+            "etf_reuse": deepcopy(projected["coverage"].get("etf_reuse", {"missing": True})),
             "company_data": [{"id": c["id"],
                               "facts": "available" if c["facts"] else "not-supplied-or-rejected",
                               "documents": "available" if c["document_ids"] else "not-supplied-or-rejected"}
@@ -702,6 +708,25 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
             ai_status = "rejected"
     result["coverage"]["ai_review"] = {"status": ai_status}
     # Only sanitized content; equality fingerprint, not a timestamp or a score.
+    if change_projection is not None:
+        from .portfolio_change_facts import validate_public_change_projection
+        identifiers = [{"ticker": p["ticker"], "market": p["market"]} for p in requested]
+        try:
+            changes = validate_public_change_projection(change_projection, identifiers, as_of=date.today().isoformat())
+            # The client currently displays numeric comparisons only. Full
+            # before/after report excerpts can exceed the response budget;
+            # keep their validation counts, not unused duplicated source text.
+            result["public_changes"] = {
+                "stocks": {ticker: {key: row[key] for key in
+                           ("ticker", "market", "source_url", "today")}
+                           for ticker, row in changes["stocks"].items()},
+                "coverage": deepcopy(changes["coverage"]),
+            }
+            result["coverage"]["change_reuse"] = deepcopy(changes["coverage"])
+        except (ValueError, TypeError, KeyError):
+            result["coverage"]["change_reuse"] = {"status": "rejected"}
+    else:
+        result["coverage"]["change_reuse"] = {"status": "unavailable"}
     result["revision"] = _revision(result)
     return result
 

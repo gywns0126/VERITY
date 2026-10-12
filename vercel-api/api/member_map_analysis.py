@@ -153,12 +153,22 @@ def analyze_request(request):
         _LOGGER.warning("member map analysis price refresh failed [price_source_unavailable]")
         price_documents = {}
 
+    # Identifiers only, after authentication and request validation. Optional
+    # change-center failure cannot remove the existing filing/price result.
+    try:
+        from api.portfolio_core.portfolio_change_facts import fetch_public_changes
+        change_projection = fetch_public_changes(price_positions)
+    except Exception:
+        _LOGGER.warning("member map change refresh failed [change_source_unavailable]")
+        change_projection = None
+
     try:
         result = analyze_portfolio(
             payload["positions"],
             documents,
             public_bundle_revision=public_bundle_revision,
             price_documents=price_documents,
+            change_projection=change_projection,
         )
         if type(result) is not dict or result.get("schema") != "alphaconsole-portfolio-v1":
             raise ValueError("invalid analysis result")
