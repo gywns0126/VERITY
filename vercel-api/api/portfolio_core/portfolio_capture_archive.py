@@ -15,8 +15,11 @@ from .portfolio_public_sources import safe_public_text
 ARCHIVE = 'retained-public-capture'
 
 
-def retain_captured_documents(artifact, companies):
-    catalog = deepcopy(companies)
+def retain_captured_documents(artifact, companies, *, _owned_catalog=False):
+    # The engine's alias projection owns a deepcopy; standalone callers do not.
+    if type(_owned_catalog) is not bool or (_owned_catalog and type(companies) is not list):
+        raise TypeError('invalid-owned-public-catalog')
+    catalog = companies if _owned_catalog else deepcopy(companies)
     by_id = {company['id']: company for company in catalog}
     current = {}
     for company in catalog:

@@ -64,8 +64,9 @@ class _ProjectedPublicIndexCache:
     @staticmethod
     def _build(public_documents):
         projected = project_public_sources(public_documents)
+        # Alias projection already owns a deepcopy, including facts/documents.
         catalog, archive = retain_captured_documents(public_documents.get(_AUTOMATIC_EVIDENCE_FILE),
-            add_public_company_names(public_documents, projected["companies"]))
+            add_public_company_names(public_documents, projected["companies"]), _owned_catalog=True)
         by_id = {row["id"]: row for row in catalog}
         auto_evidence = public_documents.get(_AUTOMATIC_EVIDENCE_FILE)
         annual_captures = auto_evidence.get("annual_customer_tables", []) if type(auto_evidence) is dict else []
