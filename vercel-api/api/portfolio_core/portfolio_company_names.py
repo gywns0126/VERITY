@@ -20,8 +20,8 @@ def _name_key(value: str) -> str:
     return " ".join(unicodedata.normalize("NFKC", value).split()).casefold()
 
 
-def add_public_company_names(documents, company_catalog):
-    """Return a copied catalog with unique, exact-ticker report names only.
+def add_public_company_names(documents, company_catalog, *, _owned_catalog=False):
+    """Return exact-ticker aliases, copying unless the engine owns the catalog.
 
     No translation, fuzzy matching, or input-specific selection is performed.
     A report-name disagreement for one ticker, or a global name collision,
@@ -29,7 +29,9 @@ def add_public_company_names(documents, company_catalog):
     """
     if not isinstance(documents, Mapping) or not isinstance(company_catalog, list):
         raise PublicSourceError("public company names input rejected")
-    catalog = deepcopy(company_catalog)
+    if type(_owned_catalog) is not bool or (_owned_catalog and type(company_catalog) is not list):
+        raise PublicSourceError("public company names input rejected")
+    catalog = company_catalog if _owned_catalog else deepcopy(company_catalog)
     for company in catalog:
         if isinstance(company, dict):
             company.pop("source_names", None)

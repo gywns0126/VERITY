@@ -295,3 +295,181 @@ def test_public_text_unicode_length_and_existing_sensitive_boundaries():
         for value in (None, 1, b'plain', 'sample@example.invalid', 'Bearer synthetic',
                       'sk-proj-syntheticvalue', '/Users/synthetic/example', '<b>자료</b>'):
             assert validate(value, 160) is None
+
+
+def test_owned_public_catalog_reuses_fresh_projection_without_mutating_sources(endpoint):
+    from copy import deepcopy
+    sources = sys.modules['api.portfolio_core.portfolio_public_sources']
+    from api.portfolio_core.portfolio_company_names import add_public_company_names, PublicSourceError
+    documents = {'universe_search.json': {'stocks': [
+        {'ticker': '005930', 'market': 'KR', 'name': 'Synthetic Company'}]}}
+    before = deepcopy(documents)
+    projected = sources.project_public_sources(documents)['companies']
+    independent = add_public_company_names({}, projected)
+    independent[0]['facts'].append({'synthetic': True})
+    assert projected[0]['facts'] == []
+    owned = add_public_company_names({}, projected, _owned_catalog=True)
+    assert owned is projected
+    owned[0]['documents'].append({'synthetic': True})
+    assert documents == before
+    assert sources.project_public_sources(documents)['companies'][0]['documents'] == []
+    for flag in (0, 1, None, 'true'):
+        with pytest.raises(PublicSourceError):
+            add_public_company_names({}, projected, _owned_catalog=flag)
+
+
+def test_business_matchers_reuse_only_unchanged_public_dependencies(endpoint, monkeypatch):
+    from copy import deepcopy
+    engine = sys.modules['api.portfolio_core.portfolio_engine']
+    text = '당사의 주요 매출처는 합성고객, 다른업체입니다.'
+    documents = {
+        'universe_search.json': {'stocks': [
+            {'ticker': '001111', 'market': 'KR', 'name': '합성회사'},
+            {'ticker': '002222', 'market': 'KR', 'name': '합성고객'}]},
+        'stock_report_public.json': {'stocks': [{'ticker': '001111', 'name': '합성회사',
+            'facts': [{'metric': 'revenue', 'value': 100, 'unit': 'KRW',
+                       'as_of': '2025-12-31', 'source': 'DART'}]}]},
+        'kr_business_overview_public.json': {
+            '_meta': {'count': 1, 'generated_at': '2026-10-12T00:00:00Z'},
+            'rows': {'001111': {'name': '합성회사', 'text': text, 'chars': len(text),
+                'fiscal_year': '2025', 'filed_at': '20260318', 'report': '사업보고서 (2025.12)',
+                'url': 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000001',
+                'truncated': False}}}}
+    original = deepcopy(documents)
+    build = Mock(wraps=engine._business_material_index)
+    monkeypatch.setattr(engine, '_business_material_index', build)
+    positions = [{'ticker': '001111', 'market': 'KR'}]
+    first = engine.analyze_portfolio(positions, documents, public_bundle_revision='a'*64)
+    changed = deepcopy(documents)
+    changed['stock_report_public.json']['stocks'][0]['facts'][0]['value'] = 200
+    changed['portfolio.json'] = {'headlines': []}
+    second = engine.analyze_portfolio(positions, changed, public_bundle_revision='b'*64)
+    assert build.call_count == 1
+    assert second['companies'][0]['facts'][0]['value'] == 200
+    assert first['companies'][0]['facts'][0]['value'] == 100
+    second['automatic_evidence']['materials'][0]['evidence']['excerpt'] = 'caller-only edit'
+    third = engine.analyze_portfolio(positions, changed, public_bundle_revision='c'*64)
+    assert third['automatic_evidence']['materials'][0]['evidence']['excerpt'] == text
+    assert build.call_count == 1
+    renamed = deepcopy(changed)
+    renamed['universe_search.json']['stocks'][1]['name'] = '다른고객'
+    engine.analyze_portfolio(positions, renamed, public_bundle_revision='d'*64)
+    assert build.call_count == 2
+    revised = deepcopy(renamed)
+    revised['kr_business_overview_public.json']['rows']['001111']['truncated'] = True
+    engine.analyze_portfolio(positions, revised, public_bundle_revision='e'*64)
+    assert build.call_count == 3
+    assert documents == original
+    engine.analyze_portfolio(positions, revised)  # No revision never reuses cache.
+    assert build.call_count == 4
+
+
+def test_business_cache_key_covers_utc_day_and_identity_but_opts_out_safely(endpoint, monkeypatch):
+    from copy import deepcopy
+    from datetime import datetime, timezone
+    engine = sys.modules['api.portfolio_core.portfolio_engine']
+    class Clock:
+        day = 13
+        @classmethod
+        def now(cls, tz):
+            assert tz is timezone.utc
+            return datetime(2026, 10, cls.day, tzinfo=tz)
+    monkeypatch.setattr(engine, 'datetime', Clock)
+    catalog = {'KR:001111': {'id': 'KR:001111', 'market': 'KR',
+        'name': '합성회사', 'source_names': ['합성회사']}}
+    baseline = engine._business_index_revision({}, catalog)
+    assert baseline is not None
+    financial = deepcopy(catalog)
+    financial['KR:001111']['facts'] = [{'value': 999}]
+    assert engine._business_index_revision({}, financial) == baseline
+    for field, value in (('name', '다른회사'), ('market', 'US'),
+                         ('id', 'KR:003333'), ('source_names', ['합성회사', '다른상호'])):
+        changed = deepcopy(catalog)
+        changed['KR:001111'][field] = value
+        assert engine._business_index_revision({}, changed) != baseline
+    Clock.day = 14
+    assert engine._business_index_revision({}, catalog) != baseline
+    assert engine._business_index_revision({'kr_business_overview_public.json': {}}, catalog) is None
+    assert engine._business_index_revision({}, {str(i): catalog['KR:001111'] for i in range(50001)}) is None
+    engine._PROJECTED_PUBLIC_INDEX.clear()
+    assert engine._PROJECTED_PUBLIC_INDEX._business_index is None
+    assert engine._PROJECTED_PUBLIC_INDEX._business_revision is None
+
+
+def test_business_market_context_nested_returns_do_not_mutate_reused_index(endpoint):
+    from copy import deepcopy
+    import sys
+
+    engine = sys.modules['api.portfolio_core.portfolio_engine']
+
+    def mutable_ids(value):
+        seen, pending = set(), [value]
+        while pending:
+            current = pending.pop()
+            if isinstance(current, (dict, list)) and id(current) not in seen:
+                seen.add(id(current))
+                pending.extend(current.values() if isinstance(current, dict) else current)
+        return seen
+
+    text = ('당사의 주요 매출처는 합성고객입니다. '
+            '당사는 제품 가격이 환율 변동에 따라 변동합니다. '
+            '당사는 전력을 구매하고 있습니다. '
+            '당사는 항만 터미널을 운영하고 있습니다.')
+    documents = {
+        'universe_search.json': {'stocks': [
+            {'ticker': '001111', 'market': 'KR', 'name': '합성회사'},
+            {'ticker': '002222', 'market': 'KR', 'name': '합성고객'}]},
+        'stock_report_public.json': {'stocks': [{
+            'ticker': '001111', 'name': '합성회사',
+            'facts': [{'metric': 'revenue', 'value': 100, 'unit': 'KRW',
+                       'as_of': '2025-12-31', 'source': 'DART'}]}]},
+        'kr_business_overview_public.json': {
+            '_meta': {'count': 1, 'generated_at': '2026-10-12T00:00:00Z'},
+            'rows': {'001111': {
+                'name': '합성회사', 'text': text, 'chars': len(text),
+                'fiscal_year': '2025', 'filed_at': '20260318',
+                'report': '사업보고서 (2025.12)',
+                'url': 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000001',
+                'truncated': False}}},
+        'macro_snapshot.json': {'macro': {'usd_krw': {
+            'status': 'ok', 'value': 1400, 'change_pct': 0,
+            'data_date': '2026-10-13'}}},
+    }
+    original = deepcopy(documents)
+    positions = [{'ticker': '001111', 'market': 'KR'}]
+    engine._reset_projection_cache_for_tests()
+    try:
+        first = engine.analyze_portfolio(
+            positions, documents, public_bundle_revision='a' * 64)
+        cached = engine._PROJECTED_PUBLIC_INDEX._business_index
+        cached_context = cached['market_context']
+        cached_before = deepcopy(cached_context)
+        first_context = first['market_context']
+        assert mutable_ids(first_context).isdisjoint(mutable_ids(cached_context))
+        first_items = {item['id']: item for item in first_context['items']}
+        for identifier in ('market:fx:usd_krw',
+                           'market:power-context:electricity-input',
+                           'market:infrastructure-context:port-operation'):
+            ref = first_items[identifier]['filing_refs'][0]
+            assert ref['channels']
+            ref['channels'][0]['quote'] = 'synthetic-private-canary'
+            ref['channels'].append({'synthetic_private_canary': True})
+        assert cached_context == cached_before
+
+        changed = deepcopy(documents)
+        changed['stock_report_public.json']['stocks'][0]['facts'][0]['value'] = 200
+        second = engine.analyze_portfolio(
+            positions, changed, public_bundle_revision='b' * 64)
+        assert engine._PROJECTED_PUBLIC_INDEX._business_index is cached
+        assert second['companies'][0]['facts'][0]['value'] == 200
+        assert first['companies'][0]['facts'][0]['value'] == 100
+        assert 'synthetic-private-canary' not in repr(second)
+        assert 'synthetic_private_canary' not in repr(second)
+        assert mutable_ids(second['market_context']).isdisjoint(mutable_ids(cached_context))
+        assert mutable_ids(second['market_context']).isdisjoint(mutable_ids(first_context))
+        fresh = engine.analyze_portfolio(positions, changed)
+        assert second['market_context'] == fresh['market_context']
+        assert cached_context == cached_before
+        assert documents == original
+    finally:
+        engine._reset_projection_cache_for_tests()
