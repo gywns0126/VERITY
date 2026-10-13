@@ -183,6 +183,7 @@ _SOURCE_ALIASES = {
 }
 _SOURCE_MARKETS = {"DART": "KR", "KRX": "KR", "SEC": "US"}
 
+_CONTROL_CHAR_RE = re.compile(r"[\x00-\x1f\x7f]")
 _EMAIL_RE = re.compile(r"(?i)(?<![\w.+-])[\w.+-]+@[a-z0-9.-]+\.[a-z]{2,}(?![\w.-])")
 _PHONE_RE = re.compile(r"(?<!\d)(?:\+?\d{1,3}[- .]?)?\(?\d{2,4}\)?[- .]\d{3,4}[- .]\d{4}(?!\d)")
 _LONG_ID_RE = re.compile(r"(?<![0-9])[0-9]{10,}(?![0-9])", re.ASCII)
@@ -313,7 +314,7 @@ def _safe_text(value: Any, maximum: int) -> str | None:
     text = value.strip()
     if not text or len(text) > maximum:
         return None
-    if any(ord(char) < 32 or ord(char) == 127 for char in text):
+    if _CONTROL_CHAR_RE.search(text) is not None:
         return None
     if any(pattern.search(text) for pattern in (
         _EMAIL_RE,
