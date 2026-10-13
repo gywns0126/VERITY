@@ -3449,6 +3449,12 @@ function memberEconomicImportance(record,allEdges,context={}){
     materialityCompany:row.company_id,materialityScopeQuote:m.scope_quote};
 }
 const companyBaseDisplayDecision=memberDisplayDecision;
+// Match an already validated day only; source/review strings stay byte-exact.
+function memberCoreDatePattern(day){
+  const [year,month,number]=day.split('-');
+  const m=Number(month)<10?'0?'+Number(month):month,d=Number(number)<10?'0?'+Number(number):number;
+  return '(?<![0-9])(?:'+day+'(?![0-9])|'+year+'년\\s*'+m+'월\\s*'+d+'일(?=\\s|부터|까지|~|[,.!?]|$))';
+}
 // Only the closed receipt projection can supply this gate. Reporting periods,
 // degree, client current/core flags and AI comparison changes are insufficient.
 function memberCoreSelection(row,record){
@@ -3491,9 +3497,9 @@ function memberCoreSelection(row,record){
     ||['current_quote','period_quote','change_quote','reason'].some(k=>typeof c[k]!=='string'||!c[k].trim()||c[k].length>600)
     ||typeof p.quote!=='string'||!p.quote.trim()||p.quote===c.change_quote||c.change_quote!==m.quote
     ||['current_quote','period_quote','change_quote'].some(k=>!m.scope_quote||!c[k].includes(m.scope_quote)||!/[.!?]$/.test(c[k]))
-    ||!c.current_quote.includes(c.checked_on)||!c.current_quote.includes('현재')||!/(?:공급|납품|구매|매입|이행)하고\s+있습니다/.test(c.current_quote)
-    ||!new RegExp(c.effective_start+'부터\\s+'+c.effective_end+'까지').test(c.period_quote)||!/유효|효력/.test(c.period_quote)
-    ||!c.change_quote.includes(c.checked_on)||!/증가|감소|확대|축소|중단|재개/.test(c.change_quote))return null;
+    ||!new RegExp(memberCoreDatePattern(c.checked_on)).test(c.current_quote)||!c.current_quote.includes('현재')||!/(?:공급|납품|구매|매입|이행)하고\s+있습니다/.test(c.current_quote)
+    ||!new RegExp(memberCoreDatePattern(c.effective_start)+'(?:부터\\s+'+memberCoreDatePattern(c.effective_end)+'까지|\\s*~\\s*'+memberCoreDatePattern(c.effective_end)+'\\s+기간에)').test(c.period_quote)||!/유효|효력/.test(c.period_quote)
+    ||!new RegExp(memberCoreDatePattern(c.checked_on)).test(c.change_quote)||!/증가|감소|확대|축소|중단|재개/.test(c.change_quote))return null;
   return c;
 }
 memberDisplayDecision=function(record,allEdges,context={}){
