@@ -117,6 +117,28 @@ def test_map_preview_allows_get_post_and_only_matching_preflight(apis):
     assert _header(denied, "Access-Control-Allow-Origin") is None
 
 
+def test_review_logo_reads_allow_only_existing_public_paths_and_keep_sandbox():
+    import json
+    config = json.loads((ROOT / "vercel-api" / "vercel.json").read_text())
+    routes = {route["source"]: dict((h["key"], h["value"]) for h in route["headers"])
+              for route in config["headers"]}
+    header = routes["/member-map-review(.*)"]
+    policy = {part.split()[0]: part.split()[1:] for part in
+              header["Content-Security-Policy"].split(";") if part.strip()}
+    assert policy["connect-src"] == [
+        "'self'", "https://lykqebdcurreppowulsl.supabase.co",
+        "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/logo_map.json",
+        "https://static.toss.im/png-icons/securities/"]
+    for directive in ("default-src", "base-uri", "object-src", "frame-ancestors"):
+        assert policy[directive] == ["'none'"]
+    for directive in ("script-src", "frame-src", "form-action"):
+        assert policy[directive] == ["'self'"]
+    assert policy["img-src"] == ["'self'", "data:"]
+    assert header["Referrer-Policy"] == "no-referrer"
+    assert header["Cache-Control"] == "private, no-store"
+    assert routes["/member-map-canvas(.*)"]["Content-Security-Policy"] == "frame-ancestors 'self'; sandbox allow-scripts"
+
+
 def test_evil_and_null_origins_have_no_endpoint_allowance(apis):
     helper, holdings, member_map = apis
     for origin in (helper.MEMBER_PORTFOLIO_PREVIEW_ORIGIN + ".evil", "null"):

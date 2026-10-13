@@ -1071,8 +1071,9 @@ async function fetchMapWatchlist(options) {
     credentials: "omit",
     redirect: "error"
   });
+  let response;
   try {
-    let response = await abortable(request(token), signal);
+    response = await abortable(request(token), signal);
     const refreshedToken = current().token;
     if (response.status === 401 && refreshedToken !== token) {
       response = await abortable(request(refreshedToken), signal);
@@ -1083,8 +1084,13 @@ async function fetchMapWatchlist(options) {
     current();
     return normalizeMapWatchlist(payload, ownerId);
   } catch (error) {
-    current();
-    throw error;
+    try {
+      current();
+      throw error;
+    } catch (failure) {
+      try { options.onDiagnostic?.(failure, response); } catch {}
+      throw failure;
+    }
   }
 }
 
@@ -2639,16 +2645,26 @@ function attachPublicAIReview(graph, payload, coverage) {
 }
 
 // framer-components/public-probe/PortfolioAnalysisClient.ts
-function memberMapLoadDiagnostic(stage, error, response) {
+function memberMapLoadDiagnostic(stage, error, response, isCurrent) {
   try {
     if (typeof window === "undefined") return;
     const flags = new URLSearchParams(window.location.search).getAll("mapDiagnostics");
     if (flags.length !== 1 || flags[0] !== "1") return;
-    if (!["request", "json", "adapter", "graph-timeout", "graph-other"].includes(stage)) return;
+    if (!["request", "json", "adapter", "graph-timeout", "graph-other", "watch-load"].includes(stage)) return;
+    if (isCurrent && !isCurrent()) return;
     const errorName = ["Error", "TypeError", "ReferenceError", "SyntaxError", "RangeError", "AbortError", "TimeoutError"].find((name) => name === error?.name) || "unknown";
     const message = error?.message;
     const codes = [
       ["unavailable", "unavailable"],
+      ["watchlist-aborted", "watchlist-aborted"],
+      ["authentication-required", "authentication-required"],
+      ["watchlist-unavailable", "watchlist-unavailable"],
+      ["invalid-watchlist-response", "invalid-watchlist-response"],
+      ["watchlist-response-limit", "watchlist-response-limit"],
+      ["watchlist-owner-mismatch", "watchlist-owner-mismatch"],
+      ["duplicate-watchlist-group", "duplicate-watchlist-group"],
+      ["watchlist-group-mismatch", "watchlist-group-mismatch"],
+      ["ambiguous-watchlist-market", "ambiguous-watchlist-market"],
       ["분석 자료의 형식을 확인하지 못했어요.", "analysis-format"],
       ["분석 자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.", "analysis-unavailable"],
       ["invalid-local-company-judgments", "invalid-local-company-judgments"],
@@ -4063,7 +4079,10 @@ function createPortfolioMapWorkspace(options = {}) {
     emit();
     try {
       if (!valid(version) || controller.signal.aborted) return false;
-      const watchResult = options.includeWatchlist ? fetchMapWatchlist({ api: API, getSession, ownerId: next.userId, fetcher, signal: watchController.signal }).then((value) => ({ ...value, error: null }), (error) => ({ stocks: [], unsupportedCount: 0, error: error instanceof Error ? error.message : "watchlist-unavailable" })) : Promise.resolve({ stocks: [], unsupportedCount: 0, error: null });
+      const watchResult = options.includeWatchlist ? fetchMapWatchlist({ api: API, getSession, ownerId: next.userId, fetcher, signal: watchController.signal,
+        onDiagnostic: (error, response) => memberMapLoadDiagnostic("watch-load", error, response,
+          () => !disposed && generation === version && !controller.signal.aborted && sameAccount(next, getSession()))
+      }).then((value) => ({ ...value, error: null }), (error) => ({ stocks: [], unsupportedCount: 0, error: error instanceof Error ? error.message : "watchlist-unavailable" })) : Promise.resolve({ stocks: [], unsupportedCount: 0, error: null });
       const requestSession = getSession();
       if (!requestSession || !sameAccount(next, requestSession) || !valid(version) || controller.signal.aborted) return false;
       const requestHoldings = (token) => fetcher(API + "/api/holdings", {
