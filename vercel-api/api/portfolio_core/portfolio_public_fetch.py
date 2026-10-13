@@ -69,7 +69,7 @@ def _refresh_overlay(documents, reader=None):
     except Exception:
         try:
             from .member_map_live_refresh import overlay_states
-            return overlay_states(documents, _LIVE_STATES)
+            return overlay_states(documents, deepcopy(_LIVE_STATES))
         except Exception:
             return documents
 
@@ -237,7 +237,7 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
             "revision": _bundle_revision(source_revisions),
         }
         if documents:
-            _CACHE_RESULT = deepcopy(result)
+            _CACHE_RESULT = result if _fetcher is None and _refresh_reader is None else deepcopy(result)
             _CACHE_EXPIRES_AT = clock() + CACHE_TTL_SECONDS
         else:
             _CACHE_RESULT = None

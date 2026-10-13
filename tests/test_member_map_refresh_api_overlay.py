@@ -152,3 +152,87 @@ def test_overlay_hash_reuse_preserves_full_rehash_revision(monkeypatch, mode, ex
         "missing": [name for name in fetch.PUBLIC_SOURCE_FILES if name not in expected],
         "status": "partial",
     }
+
+
+def test_production_cold_and_warm_copy_counts_keep_return_isolation(monkeypatch):
+    downloads, reads, bundle_copies = [], [], []
+    original_copy = fetch.deepcopy
+
+    def download(name):
+        downloads.append(name)
+        return json.loads(json.dumps(baseline(name)))
+
+    def reader():
+        reads.append(True)
+        return {"DART": state()}
+
+    def counted_copy(value):
+        if type(value) is dict and set(value) == {"documents", "coverage", "revision"}:
+            bundle_copies.append(True)
+        return original_copy(value)
+
+    monkeypatch.setattr(fetch, "_download_source", download)
+    monkeypatch.setattr(fetch, "_REFRESH_STORE", types.SimpleNamespace(read_states=reader))
+    monkeypatch.setattr(fetch, "deepcopy", counted_copy)
+    # 다운로드·갱신 주입 인자 없이 고정 읽기 경로를 사용합니다. 시계만 고정합니다.
+    cold = fetch.fetch_public_sources(_clock=lambda: 0)
+    assert bundle_copies == [True]
+    assert sorted(downloads) == sorted(fetch.PUBLIC_SOURCE_FILES)
+    assert reads == [True]
+    assert fetch._CACHE_EXPIRES_AT == fetch.CACHE_TTL_SECONDS
+    assert cold == fetch._CACHE_RESULT and cold is not fetch._CACHE_RESULT
+    cached_stocks = fetch._CACHE_RESULT["documents"]["universe_search.json"]["stocks"]
+    assert cold["documents"]["universe_search.json"]["stocks"] is not cached_stocks
+    cold["documents"]["universe_search.json"]["stocks"][0]["name"] = "첫 반환값의 변이"
+    cold["coverage"]["missing"].append("반환값에서만 추가된 항목")
+
+    warm = fetch.fetch_public_sources(_clock=lambda: fetch.CACHE_TTL_SECONDS - 0.1)
+    assert bundle_copies == [True, True]
+    assert len(downloads) == len(fetch.PUBLIC_SOURCE_FILES) and reads == [True]
+    assert warm["documents"]["universe_search.json"] == baseline("universe_search.json")
+    assert warm["coverage"]["missing"] == []
+    warm["documents"]["universe_search.json"]["stocks"].clear()
+    assert cached_stocks == baseline("universe_search.json")["stocks"]
+
+
+def test_production_failed_news_overlay_separates_live_cache_and_return(monkeypatch):
+    news = state()
+    news.update(status="partial", requests=None, cursor=None, last_success_at=None,
+                health={"status": "unknown", "age_seconds": None},
+                feed={"headlines": [{"title": "공개 검수 기사", "source": "Reuters",
+                                     "link": "https://www.reuters.com/world/checked-public-news/",
+                                     "time": STAMP}]})
+    live_states = {"news": news}
+    original_copy = fetch.deepcopy
+    bundle_copies, state_copies = [], []
+
+    def failed_reader():
+        raise TimeoutError("합성 갱신 실패")
+
+    def counted_copy(value):
+        if value is live_states:
+            state_copies.append(True)
+        if type(value) is dict and set(value) == {"documents", "coverage", "revision"}:
+            bundle_copies.append(True)
+        return original_copy(value)
+
+    monkeypatch.setattr(fetch, "_LIVE_STATES", live_states)
+    monkeypatch.setattr(fetch, "_REFRESH_STORE", types.SimpleNamespace(read_states=failed_reader))
+    monkeypatch.setattr(fetch, "_download_source", lambda name: json.loads(json.dumps(baseline(name))))
+    monkeypatch.setattr(fetch, "deepcopy", counted_copy)
+    cold = fetch.fetch_public_sources(_clock=lambda: 0)
+    assert bundle_copies == [True] and state_copies == [True]
+    live_row = live_states["news"]["feed"]["headlines"][0]
+    cached_row = fetch._CACHE_RESULT["documents"]["portfolio.json"]["headlines"][0]
+    returned_row = cold["documents"]["portfolio.json"]["headlines"][0]
+    assert cached_row is not live_row and returned_row is not cached_row and returned_row is not live_row
+    assert cached_row == returned_row == live_row
+    live_row["title"] = "전역 상태의 변이"
+    returned_row["title"] = "반환값의 변이"
+    warm = fetch.fetch_public_sources(_clock=lambda: 1)
+    assert bundle_copies == [True, True] and state_copies == [True]
+    assert warm["documents"]["portfolio.json"]["headlines"][0]["title"] == "공개 검수 기사"
+    cached_row["title"] = "캐시의 변이"
+    assert live_row["title"] == "전역 상태의 변이"
+    assert returned_row["title"] == "반환값의 변이"
+    assert warm["documents"]["portfolio.json"]["headlines"][0]["title"] == "공개 검수 기사"

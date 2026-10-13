@@ -8,7 +8,7 @@ in a shared artifact or send it to an external model. No IO occurs here.
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import date
+from datetime import date, datetime, timezone
 import hashlib
 import json
 import re
@@ -60,13 +60,16 @@ class _ProjectedPublicIndexCache:
         self._lock = threading.Lock()
         self._revision = None
         self._index = None
+        self._business_revision = None
+        self._business_index = None
 
     @staticmethod
-    def _build(public_documents):
+    def _build(public_documents, _reuse_business=None):
         projected = project_public_sources(public_documents)
-        # Alias projection already owns a deepcopy, including facts/documents.
+        # The pure source projector creates fresh nested facts/documents.
         catalog, archive = retain_captured_documents(public_documents.get(_AUTOMATIC_EVIDENCE_FILE),
-            add_public_company_names(public_documents, projected["companies"]), _owned_catalog=True)
+            add_public_company_names(public_documents, projected["companies"], _owned_catalog=True),
+            _owned_catalog=True)
         by_id = {row["id"]: row for row in catalog}
         auto_evidence = public_documents.get(_AUTOMATIC_EVIDENCE_FILE)
         annual_captures = auto_evidence.get("annual_customer_tables", []) if type(auto_evidence) is dict else []
@@ -98,12 +101,24 @@ class _ProjectedPublicIndexCache:
             # Localized search/report names are mention hints only. Never add
             # them to the legal-name catalog used for contract-party matching.
             "news_names": index_public_news_names(public_news_name_catalog(public_documents, list(by_id.values()))),
-            "business_materials": _business_material_index(public_documents, by_id),
+            "business_materials": (_reuse_business(public_documents, by_id)
+                if _reuse_business is not None else _business_material_index(public_documents, by_id)),
             "contract_events": index_contract_events(public_documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values())),
             "filing_excerpts": index_filing_excerpts(public_documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values())),
             "annual_customer_tables": annual_customer_tables,
             "sec_relationships": sec_relationships,
         }
+
+    def _business(self, documents, by_id):
+        # Called under the existing public-index lock, never with a selection.
+        revision = _business_index_revision(documents, by_id)
+        if revision is None:
+            return _business_material_index(documents, by_id)
+        if self._business_index is None or self._business_revision != revision:
+            built = _business_material_index(documents, by_id)
+            self._business_index = built
+            self._business_revision = revision
+        return self._business_index
 
     def get(self, public_documents, revision):
         if revision is None:
@@ -112,7 +127,7 @@ class _ProjectedPublicIndexCache:
             raise ValueError("invalid-public-bundle-revision")
         with self._lock:
             if revision != self._revision or self._index is None:
-                self._index = self._build(public_documents)
+                self._index = self._build(public_documents, self._business)
                 self._revision = revision
             return self._index
 
@@ -120,9 +135,43 @@ class _ProjectedPublicIndexCache:
         with self._lock:
             self._revision = None
             self._index = None
+            self._business_revision = None
+            self._business_index = None
 
 
 _PROJECTED_PUBLIC_INDEX = _ProjectedPublicIndexCache()
+
+
+def _business_index_revision(documents, by_id):
+    """Fingerprint only business-matcher inputs; failures keep the old path.
+
+    Financial values, macro/news/AI output and caller selections are not inputs
+    to these matchers. Full source projection and all other joins still run.
+    The UTC day preserves the reported-role future-filing validation boundary.
+    """
+    try:
+        if len(by_id) > 50000:
+            return None  # Bound optimization work, never truncate analysis.
+        overview = documents.get("kr_business_overview_public.json")
+        if overview is not None:
+            rows, meta = overview["rows"], overview["_meta"]
+            if type(rows) is not dict or type(meta) is not dict or len(rows) > 5000:
+                return None
+            overview = {"_meta": {k: meta.get(k) for k in ("generated_at", "count")},
+                "rows": {ticker: {k: row.get(k) for k in
+                    ("name", "text", "chars", "fiscal_year", "filed_at", "report", "url", "truncated")}
+                    for ticker, row in rows.items()}}
+        declarations = documents.get("universe_search.json", {}).get("stocks", [])
+        declarations = list(declarations.values()) if type(declarations) is dict else declarations
+        if type(declarations) is not list or len(declarations) > 50000:
+            return None
+        identities = [{k: row.get(k) for k in ("id", "market", "name", "source_names")}
+                      for row in by_id.values()]
+        names = [[row.get(k) for k in ("market", "ticker", "name", "name_ko")]
+                 for row in declarations]
+        return _revision([datetime.now(timezone.utc).date().isoformat(), overview, identities, names])
+    except (AttributeError, KeyError, TypeError, ValueError, OverflowError, RecursionError):
+        return None
 
 
 def _name_key(value):
@@ -628,7 +677,7 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
             and "dart_catalyst_alerts" in public_documents["portfolio.json"]):
         automatic_evidence_coverage["source_matches"] = source_match_coverage
     market_context = project_market_context(public_documents, companies, list(by_id.values()),
-                                           projected["business_materials"]["market_context"], projected["filing_excerpts"],
+                                           deepcopy(projected["business_materials"]["market_context"]), projected["filing_excerpts"],
                                            news_name_index=projected["news_names"])
     companies_with_documents = sum(bool(company["document_ids"]) for company in companies)
     result = {
