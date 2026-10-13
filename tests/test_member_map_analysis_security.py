@@ -275,3 +275,23 @@ def test_results_are_request_local_and_handler_has_no_storage_or_access_log_path
         instance.log_message("Authorization: Bearer %s positions=%s", "token-a", "005930")
     assert "token-a" not in caplog.text
     assert "005930" not in caplog.text
+
+
+@pytest.mark.parametrize("point", (*range(32), 127))
+def test_public_text_control_boundary_keeps_strip_order(point):
+    sources = _load("public_text_control_test", INTELLIGENCE_DIR / "portfolio_public_sources.py")
+    char = chr(point)
+    for validate in (sources._safe_text, sources.safe_public_text):
+        assert validate('가' + char + '나', 160) is None
+        assert validate(char + '가' + char, 160) == ('가' if char.isspace() else None)
+
+
+def test_public_text_unicode_length_and_existing_sensitive_boundaries():
+    sources = _load("public_text_unicode_test", INTELLIGENCE_DIR / "portfolio_public_sources.py")
+    for validate in (sources._safe_text, sources.safe_public_text):
+        for value in ('한글😀', '가\x80나', '가\u2028나', '가\u2029나', '가\ud800나'):
+            assert validate('  ' + value + '  ', len(value)) == value
+            assert validate(value, len(value) - 1) is None
+        for value in (None, 1, b'plain', 'sample@example.invalid', 'Bearer synthetic',
+                      'sk-proj-syntheticvalue', '/Users/synthetic/example', '<b>자료</b>'):
+            assert validate(value, 160) is None
