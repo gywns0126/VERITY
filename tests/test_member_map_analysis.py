@@ -503,3 +503,101 @@ def test_prepared_company_judgment_delivery_is_selected_and_optional(modules, mo
         assert result["company_judgments"]["judgments"][0]["degree"] == "medium"
     assert "PRIVATE_CANARY" not in json.dumps(result)
     sb.select.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", [
+    "ok", "public_sources", "prices", "changes", "projection",
+    "empty_sources", "bad_prices", "bad_projection",
+])
+def test_stage_timing_is_fixed_metadata_only(modules, monkeypatch, capsys, caplog, mode):
+    endpoint, storage = modules
+    secret = "private-account-quote-jwt-a-stack-canary"
+    source = Mock(return_value=_bundle({}) if mode == "empty_sources" else _bundle())
+    price = sys.modules["api.portfolio_core.portfolio_price_fetch"].fetch_public_prices
+    changes = sys.modules["api.portfolio_core.portfolio_change_facts"].fetch_public_changes
+    projection = Mock(return_value={"schema": "alphaconsole-portfolio-v1", "private": secret})
+    targets = {"public_sources": source, "prices": price, "changes": changes, "projection": projection}
+    if mode in targets:
+        targets[mode].side_effect = RuntimeError(secret)
+    if mode == "bad_prices":
+        price.return_value = []
+    if mode == "bad_projection":
+        projection.return_value = {}
+    monkeypatch.setattr(endpoint, "fetch_public_sources", source)
+    monkeypatch.setattr(endpoint, "analyze_portfolio", projection)
+    ticks = iter(range(8))
+    monkeypatch.setattr(endpoint, "time", types.SimpleNamespace(monotonic=lambda: next(ticks)))
+    status, headers, _ = endpoint.analyze_request(_request(
+        "jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]}))
+    captured = capsys.readouterr()
+    stages = ["public_sources"] if mode in ("public_sources", "empty_sources") else [
+        "public_sources", "prices", "changes", "projection"]
+    error_stage = {"empty_sources": "public_sources", "bad_prices": "prices",
+                   "bad_projection": "projection"}.get(mode, mode)
+    assert captured.out == ""
+    assert captured.err.splitlines() == [
+        f"member_map_stage stage={stage} status={'error' if stage == error_stage else 'ok'} elapsed_ms=1000"
+        for stage in stages]
+    assert status == (503 if mode in ("public_sources", "empty_sources", "projection", "bad_projection") else 200)
+    assert headers == endpoint._headers(ALLOWED_ORIGIN)
+    for value in (secret, USER_A, USER_B, "jwt-a", "005930", "AAPL", "Traceback", "Bearer"):
+        assert value not in captured.err + captured.out + caplog.text
+    assert all(record.exc_info is None and record.stack_info is None for record in caplog.records)
+    storage.select.assert_not_called()
+
+
+@pytest.mark.parametrize("mode,status", [
+    ("unauthenticated", 401), ("invalid-token", 401), ("identity-error", 503),
+    ("invalid-input", 400), ("private-field", 400), ("origin", 403),
+])
+def test_early_rejection_never_starts_stage_logging(modules, monkeypatch, capsys, caplog, mode, status):
+    endpoint, storage = modules
+    secret = "private-auth-token-quote-canary"
+    clock, source = Mock(), Mock()
+    monkeypatch.setattr(endpoint, "_stage_clock", clock)
+    monkeypatch.setattr(endpoint, "fetch_public_sources", source)
+    if mode == "identity-error":
+        monkeypatch.setattr(endpoint, "_identity", Mock(side_effect=RuntimeError(secret)))
+    payload = {"positions": [{"ticker": "005930", "market": "KR"}]}
+    if mode == "invalid-input":
+        payload["positions"] = []
+    elif mode == "private-field":
+        payload["member_id"] = secret
+    token = None if mode == "unauthenticated" else secret if mode == "invalid-token" else "jwt-a"
+    request = _request(token, payload, origin="https://evil.example" if mode == "origin" else ALLOWED_ORIGIN)
+    assert endpoint.analyze_request(request)[0] == status
+    captured = capsys.readouterr()
+    assert captured.out == captured.err == ""
+    assert secret not in caplog.text
+    assert all(record.exc_info is None and record.stack_info is None for record in caplog.records)
+    clock.assert_not_called()
+    source.assert_not_called()
+    storage.select.assert_not_called()
+
+
+@pytest.mark.parametrize("failure", ["clock", "stderr"])
+def test_timing_failure_never_changes_response(modules, monkeypatch, capsys, caplog, failure):
+    endpoint, storage = modules
+    secret = "private-timing-error-never-exposed"
+    monkeypatch.setattr(endpoint, "fetch_public_sources", Mock(return_value=_bundle()))
+    expected = {"schema": "alphaconsole-portfolio-v1"}
+    monkeypatch.setattr(endpoint, "analyze_portfolio", Mock(return_value=expected))
+    if failure == "clock":
+        monkeypatch.setattr(endpoint, "time", types.SimpleNamespace(monotonic=Mock(side_effect=RuntimeError(secret))))
+    else:
+        sink = types.SimpleNamespace(write=Mock(side_effect=RuntimeError(secret)))
+        monkeypatch.setattr(endpoint, "sys", types.SimpleNamespace(stderr=sink))
+    result = endpoint.analyze_request(_request("jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]}))
+    assert result == (200, endpoint._headers(ALLOWED_ORIGIN), expected)
+    captured = capsys.readouterr()
+    assert captured.err == captured.out == ""
+    assert secret not in caplog.text
+    storage.select.assert_not_called()
+
+
+def test_timing_helper_rejects_non_fixed_labels(modules, capsys):
+    endpoint, _ = modules
+    endpoint._log_stage_timing("private-user-token", 0, "ok")
+    endpoint._log_stage_timing("prices", 0, "private-quote")
+    endpoint._log_stage_timing("prices", None, "ok")
+    assert capsys.readouterr().err == ""
