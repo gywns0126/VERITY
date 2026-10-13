@@ -2861,6 +2861,12 @@ var MemberMapClientDelta = (() => {
     } else if (m.value !== "unrated") fail();
     return { ...value, materiality: { ...m, review_reasons: [...m.review_reasons] }, counter_evidence_quotes: [...value.counter_evidence_quotes] };
   }
+  function coreDatePattern(day2) {
+    const [year, month, number] = day2.split("-");
+    const m = Number(month) < 10 ? "0?" + Number(month) : month;
+    const d = Number(number) < 10 ? "0?" + Number(number) : number;
+    return "(?<![0-9])(?:" + day2 + "(?![0-9])|" + year + "년\\s*" + m + "월\\s*" + d + "일(?=\\s|부터|까지|~|[,.!?]|$))";
+  }
   function coreSelection(row2) {
     if (row2.core_selection?.basis === "contract-announcement") return contractCoreSelection(row2);
     const c = row2.core_selection, p = c?.previous, m = row2.economic_v2?.materiality;
@@ -2875,7 +2881,7 @@ var MemberMapClientDelta = (() => {
     }
     text(c.reason);
     text(p.quote);
-    if (c.change_quote !== m.quote || p.quote === c.change_quote || !c.current_quote.includes(c.checked_on) || !c.current_quote.includes("현재") || !/(?:공급|납품|구매|매입|이행)하고\s+있습니다/.test(c.current_quote) || !new RegExp(c.effective_start + "부터\\s+" + c.effective_end + "까지").test(c.period_quote) || !/유효|효력/.test(c.period_quote) || !c.change_quote.includes(c.checked_on) || !/증가|감소|확대|축소|중단|재개/.test(c.change_quote)) fail();
+    if (c.change_quote !== m.quote || p.quote === c.change_quote || !new RegExp(coreDatePattern(c.checked_on)).test(c.current_quote) || !c.current_quote.includes("현재") || !/(?:공급|납품|구매|매입|이행)하고\s+있습니다/.test(c.current_quote) || !new RegExp(coreDatePattern(c.effective_start) + "(?:부터\\s+" + coreDatePattern(c.effective_end) + "까지|\\s*~\\s*" + coreDatePattern(c.effective_end) + "\\s+기간에)").test(c.period_quote) || !/유효|효력/.test(c.period_quote) || !new RegExp(coreDatePattern(c.checked_on)).test(c.change_quote) || !/증가|감소|확대|축소|중단|재개/.test(c.change_quote)) fail();
     return { ...c, previous: { ...p } };
   }
   function closedContractProofFacts(facts, published) {

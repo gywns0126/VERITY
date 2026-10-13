@@ -539,6 +539,14 @@ def _public_judgment(row, candidates, *, source_documents=None, public_wire=Fals
     return out
 
 
+def _core_date_pattern(day):
+    """Match only this already validated day; never rewrite source/review text."""
+    year, month, number = day.split("-")
+    month = "0?" + str(int(month)) if int(month) < 10 else month
+    number = "0?" + str(int(number)) if int(number) < 10 else number
+    return rf"(?<![0-9])(?:{re.escape(day)}(?![0-9])|{year}년\s*{month}월\s*{number}일(?=\s|부터|까지|~|[,.!?]|$))"
+
+
 def _public_core_selection(value, row, candidate, sources):
     """Closed existing-v1 extension, only after offline receipt/source review.
 
@@ -569,12 +577,13 @@ def _public_core_selection(value, row, candidate, sources):
         if not re.search(r"[.!?]$", q) or not m["scope_quote"] or m["scope_quote"] not in q or candidate["counterparty_name"] not in q:
             _fail()
     _text(p["quote"], 600)
+    checked_pattern, start_pattern, end_pattern = map(_core_date_pattern, (checked, start, end))
     if (value["change_quote"] != m["quote"] or p["quote"] == value["change_quote"]
-            or checked not in value["current_quote"] or "현재" not in value["current_quote"]
+            or not re.search(checked_pattern, value["current_quote"]) or "현재" not in value["current_quote"]
             or not re.search(r"(?:공급|납품|구매|매입|이행)하고\s+있습니다", value["current_quote"])
-            or not re.search(re.escape(start) + r"부터\s+" + re.escape(end) + r"까지", value["period_quote"])
+            or not re.search(start_pattern + r"(?:부터\s+" + end_pattern + r"까지|\s*~\s*" + end_pattern + r"\s+기간에)", value["period_quote"])
             or not re.search(r"유효|효력", value["period_quote"])
-            or checked not in value["change_quote"]
+            or not re.search(checked_pattern, value["change_quote"])
             or not re.search(r"증가|감소|확대|축소|중단|재개", value["change_quote"])):
         _fail()
     if sources is not None:
