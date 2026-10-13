@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-10-14T01:02:38+09:00",
+  "collected_at": "2026-10-14T02:02:40+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
-    "call": "risk_off",
-    "net_score": -2,
+    "call": "neutral",
+    "net_score": -1,
     "active_dims": 4,
     "rule": "net≥+2 risk_on / ≤−2 risk_off / else neutral (투명 tally, 가중치 없음)"
   },
@@ -27,8 +27,8 @@
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.594,
-        "long_short_ratio": 1.26
+        "put_call_oi": 0.599,
+        "long_short_ratio": 1.27
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
@@ -46,11 +46,11 @@
     },
     {
       "name": "추세",
-      "vote": -1,
-      "read": "off",
+      "vote": 0,
+      "read": "neutral",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": -3.77
+        "btc_change_pct_7d": -2.81
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -60,8 +60,8 @@
       "read": "누적 중",
       "active": false,
       "drivers": {
-        "ssr": 6.52,
-        "stablecoin_supply_usd": 256870231366.48468
+        "ssr": 6.51,
+        "stablecoin_supply_usd": 257070041592.31012
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -80,7 +80,7 @@
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 83417.0,
+  "btc_price_at_call": 83275.0,
   "trail": [
     {
       "date": "2026-07-17",
@@ -707,9 +707,9 @@
     },
     {
       "date": "2026-10-14",
-      "call": "risk_off",
-      "net_score": -2,
-      "btc_price": 83417.0,
+      "call": "neutral",
+      "net_score": -1,
+      "btc_price": 83275.0,
       "active_dims": 4
     }
   ],
@@ -719,14 +719,14 @@
         "horizon_days": 7,
         "n": 39,
         "hit_rate": 0.4872,
-        "mean_realized_return": 0.027864,
+        "mean_realized_return": 0.02782,
         "label": "예비 결과"
       },
       {
         "horizon_days": 30,
         "n": 33,
         "hit_rate": 0.5152,
-        "mean_realized_return": 0.148884,
+        "mean_realized_return": 0.148827,
         "label": "예비 결과"
       }
     ],
