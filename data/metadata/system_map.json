@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-10-13T10:26:24.003159+09:00",
+  "generated_at": "2026-10-13T17:21:44.391495+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 382840,
+    "code_lines_tsx_py": 382977,
     "python_modules": 1234,
     "tsx_components": 149,
-    "json_data_files": 2425,
-    "json_total_tracked": 2450,
+    "json_data_files": 2426,
+    "json_total_tracked": 2451,
     "workflows": 81,
     "scheduled_workflows": 62,
     "cron_triggers": 73,
-    "git_tracked_files": 8554
+    "git_tracked_files": 8555
   },
   "subsystems": {
     "ingest": {
@@ -764,18 +764,18 @@
     },
     "data": {
       "label": "데이터",
-      "count": 2425
+      "count": 2426
     },
     "validation": {
       "label": "검증",
-      "n_trading_days": 99,
-      "n_calendar_days": 148,
+      "n_trading_days": 100,
+      "n_calendar_days": 149,
       "next_milestone": {
-        "next_n": 100,
-        "days_remaining": 1,
-        "label": "예비 결과 (binomial 95% CI ±10%p)"
+        "next_n": 252,
+        "days_remaining": 152,
+        "label": "IC 의미 게이트 (Fama-MacBeth 1973, 1년 거래일)"
       },
-      "as_of": "2026-10-12T15:14:41+09:00"
+      "as_of": "2026-10-13T15:56:15+09:00"
     }
   },
   "python_by_dir": {
@@ -787,10 +787,10 @@
     ".github": 6
   },
   "funnel": {
-    "investable_real": 76,
+    "investable_real": 2818,
     "cap": 5000,
     "stages": [
-      76,
+      2818,
       300,
       100,
       25
@@ -801,7 +801,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~76 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2818 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
@@ -809,7 +809,7 @@
       "warn": 0,
       "alert": 0
     },
-    "infra_as_of": "2026-10-12T12:03:00+09:00",
+    "infra_as_of": "2026-10-13T13:17:44+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
