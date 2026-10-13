@@ -10,6 +10,8 @@ from http.server import BaseHTTPRequestHandler
 import json
 import logging
 import re
+import sys
+import time
 
 from api.member_map_state import _identity, _read_json
 from api.portfolio_core.portfolio_engine import analyze_portfolio, validate_positions
@@ -23,6 +25,26 @@ _LOGGER = logging.getLogger(__name__)
 _MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 _ANALYSIS_ORIGINS = frozenset({"https://project-yw131.vercel.app"})
 _PUBLIC_BUNDLE_REVISION = re.compile(r"[0-9a-f]{64}\Z", re.ASCII)
+
+
+def _stage_clock():
+    try:
+        return time.monotonic()
+    except Exception:
+        return None
+
+
+def _log_stage_timing(stage, started, status):
+    """Fixed metadata only; instrumentation failure cannot change a response."""
+    try:
+        if (stage not in ("public_sources", "prices", "changes", "projection")
+                or status not in ("ok", "error") or started is None):
+            return
+        elapsed_ms = max(0, int((time.monotonic() - started) * 1000))
+        print(f"member_map_stage stage={stage} status={status} elapsed_ms={elapsed_ms}",
+              file=sys.stderr)
+    except Exception:
+        pass
 
 
 def _resolve_origin(origin):
@@ -129,11 +151,16 @@ def analyze_request(request):
     except Exception:
         return 400, response_headers, {"error": "invalid_positions"}
 
+    started, stage_status = _stage_clock(), "error"
     try:
         validated_sources = _valid_fetch_result(fetch_public_sources())
+        if validated_sources is not None and validated_sources[0]:
+            stage_status = "ok"
     except Exception:
         _LOGGER.warning("member map analysis public refresh failed [source_unavailable]")
         return 503, response_headers, {"error": "public_sources_unavailable"}
+    finally:
+        _log_stage_timing("public_sources", started, stage_status)
     if validated_sources is None or not validated_sources[0]:
         _LOGGER.warning("member map analysis public refresh empty [source_unavailable]")
         return 503, response_headers, {"error": "public_sources_unavailable"}
@@ -143,25 +170,34 @@ def analyze_request(request):
         {"ticker": position["ticker"], "market": position["market"]}
         for position in validated_positions
     ]
+    started, stage_status = _stage_clock(), "error"
     try:
         from api.portfolio_core.portfolio_price_fetch import fetch_public_prices
 
         price_documents = fetch_public_prices(price_positions)
         if type(price_documents) is not dict:
             raise ValueError("invalid public price result")
+        stage_status = "ok"
     except Exception:
         _LOGGER.warning("member map analysis price refresh failed [price_source_unavailable]")
         price_documents = {}
+    finally:
+        _log_stage_timing("prices", started, stage_status)
 
     # Identifiers only, after authentication and request validation. Optional
     # change-center failure cannot remove the existing filing/price result.
+    started, stage_status = _stage_clock(), "error"
     try:
         from api.portfolio_core.portfolio_change_facts import fetch_public_changes
         change_projection = fetch_public_changes(price_positions)
+        stage_status = "ok"
     except Exception:
         _LOGGER.warning("member map change refresh failed [change_source_unavailable]")
         change_projection = None
+    finally:
+        _log_stage_timing("changes", started, stage_status)
 
+    started, stage_status = _stage_clock(), "error"
     try:
         result = analyze_portfolio(
             payload["positions"],
@@ -172,9 +208,12 @@ def analyze_request(request):
         )
         if type(result) is not dict or result.get("schema") != "alphaconsole-portfolio-v1":
             raise ValueError("invalid analysis result")
+        stage_status = "ok"
     except Exception:
         _LOGGER.warning("member map analysis failed [analysis_unavailable]")
         return 503, response_headers, {"error": "analysis_unavailable"}
+    finally:
+        _log_stage_timing("projection", started, stage_status)
     return 200, response_headers, result
 
 
