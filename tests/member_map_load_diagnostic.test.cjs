@@ -7,7 +7,7 @@ const { createRequire } = require('node:module');
 const repoRoot = path.resolve(__dirname, '..');
 const esbuild = createRequire(path.join(process.env.MEMBER_MAP_TEST_DEPENDENCY_ROOT || repoRoot, 'package.json'))('esbuild');
 const source = fs.readFileSync(path.join(process.env.MEMBER_MAP_TEST_SOURCE_ROOT || repoRoot, 'review/member-map/Map.snapshot.tsx'), 'utf8');
-const code = esbuild.transformSync(source + '\nexport { memberMapLoadDiagnostic, fetchPortfolioAnalysisGraph, createPortfolioMapWorkspace };', { loader: 'tsx', format: 'cjs', target: 'es2022' }).code;
+const code = esbuild.transformSync(source + '\nexport { memberMapLoadDiagnostic, fetchPortfolioAnalysisGraph, createPortfolioMapWorkspace, fetchMapWatchlist };', { loader: 'tsx', format: 'cjs', target: 'es2022' }).code;
 const CANARY = 'private-canary user@example.invalid Bearer synthetic-secret';
 const A = { userId: '11111111-1111-4111-8111-111111111111', token: CANARY };
 const B = { userId: '22222222-2222-4222-8222-222222222222', token: CANARY + '-B' };
@@ -49,7 +49,7 @@ function safeLog(h, expected) {
   const text = JSON.stringify(h.logs);
   for (const privateValue of [CANARY, A.userId, B.userId, 'user@example.invalid', 'synthetic-secret', 'positions', 'Authorization', 'stack']) assert.ok(!text.includes(privateValue));
 }
-function workspaceFixture(query = '?mapDiagnostics=1', extra = {}) {
+function workspaceFixture(query = '?mapDiagnostics=1', extra = {}, watch) {
   let now = 0, serial = 0, session = A, mode = 'ready', failure = new Error(CANARY);
   const timers = new Map(), loads = [];
   const h = runtime(query, {
@@ -57,8 +57,8 @@ function workspaceFixture(query = '?mapDiagnostics=1', extra = {}) {
     clearTimeout(id) { timers.delete(id); }, ...extra
   });
   const graph = codes => ({ companies: codes.map(ticker => ({ id: 'company:' + ticker, ticker, name: ticker, market: 'US' })), documents: [], links: [], coverage: { sources: [] } });
-  const workspace = h.api.createPortfolioMapWorkspace({ getSession: () => session,
-    fetcher: async url => ({ ok: true, status: 200, json: async () => url.endsWith('/holdings')
+  const workspace = h.api.createPortfolioMapWorkspace({ getSession: () => session, includeWatchlist: !!watch,
+    fetcher: async (url, init) => url.endsWith('/watchgroups') ? watch(url, init) : ({ ok: true, status: 200, json: async () => url.endsWith('/holdings')
       ? [{ ticker: 'EXM', market: 'US', name: '합성' }] : { revision: 0, document: { layouts: [] } } }),
     graphLoader: codes => {
       if (mode === 'ready') return Promise.resolve(graph(codes));
@@ -172,4 +172,104 @@ test('화면의 진단 출력 실패도 원래 상태 전이를 유지', async (
   await h.workspace.open(); h.mode('error');
   assert.equal(await h.workspace.showTickers(['EXM']), false);
   assert.equal(h.workspace.getState().phase, 'error'); h.workspace.dispose();
+});
+
+test('관심목록 5초 경계: current 재검사 예외도 고정 코드 관측, 늦은 결과 무시', async () => {
+  let finish, signal;
+  const h = workspaceFixture('?mapDiagnostics=1', {}, (_url, init) => {
+    signal = init.signal;
+    return new Promise(resolve => { finish = resolve; });
+  });
+  const pending = h.workspace.open(); await flush(); await h.advance(4999);
+  assert.equal(signal.aborted, false); assert.equal(h.logs.length, 0);
+  await h.advance(1); assert.equal(await pending, true);
+  assert.equal(signal.aborted, true);
+  assert.equal(h.workspace.getState().watchlistError, 'watchlist-aborted');
+  assert.equal(h.workspace.getState().holdings.length, 1);
+  safeLog(h, { stage: 'watch-load', errorName: 'AbortError', errorCode: 'watchlist-aborted' });
+  const before = plain(h.workspace.getState());
+  finish({ ok: true, status: 200, json: async () => [] }); await flush();
+  assert.deepEqual(plain(h.workspace.getState()), before); assert.equal(h.logs.length, 1);
+  h.workspace.dispose();
+});
+test('관심목록 HTTP 오류는 고정 코드와 상태만 관측', async () => {
+  for (const status of [401, 503]) {
+    let requests = 0;
+    const h = workspaceFixture('?mapDiagnostics=1', {}, async () => {
+      requests++; return { ok: false, status, body: CANARY, url: CANARY };
+    });
+    assert.equal(await h.workspace.open(), true);
+    const errorCode = status === 401 ? 'authentication-required' : 'watchlist-unavailable';
+    assert.equal(h.workspace.getState().watchlistError, errorCode); assert.equal(requests, 1);
+    safeLog(h, { stage: 'watch-load', errorCode, status }); h.workspace.dispose();
+  }
+});
+test('관심목록 JSON 및 형식 오류도 본문 없이 관측', async () => {
+  for (const syntax of [false, true]) {
+    const h = workspaceFixture('?mapDiagnostics=1', {}, async () => ({ ok: true, status: 200,
+      json: async () => { if (syntax) throw new SyntaxError(CANARY); return { private: CANARY }; }
+    }));
+    assert.equal(await h.workspace.open(), true);
+    safeLog(h, { stage: 'watch-load', status: 200, errorName: syntax ? 'SyntaxError' : 'Error',
+      errorCode: syntax ? 'unknown' : 'invalid-watchlist-response' }); h.workspace.dispose();
+  }
+});
+test('관심목록 코드 접두사 및 미허용 오류명은 개인정보 없이 unknown', async () => {
+  for (const message of [CANARY, 'watchlist-unavailable ' + CANARY, 'watchlist-aborted:' + CANARY]) {
+    const h = workspaceFixture('?mapDiagnostics=1', {}, async () => { throw { name: CANARY, message, stack: CANARY }; });
+    assert.equal(await h.workspace.open(), true);
+    safeLog(h, { stage: 'watch-load', errorName: 'unknown' }); h.workspace.dispose();
+  }
+});
+test('관심목록 비활성 진단에서는 오류와 5초 취소 모두 로그 없음', async () => {
+  for (const query of ['', '?mapDiagnostics=0', '?mapDiagnostics=1&mapDiagnostics=1']) {
+    const h = workspaceFixture(query, {}, () => new Promise(() => {}));
+    const pending = h.workspace.open(); await flush(); await h.advance(5000);
+    assert.equal(await pending, true); assert.equal(h.logs.length, 0);
+    assert.equal(h.workspace.getState().watchlistError, 'watchlist-aborted'); h.workspace.dispose();
+  }
+});
+test('관심목록 계정 전환 및 상위 취소는 진단 없음', async () => {
+  for (const dispose of [false, true]) {
+    const h = workspaceFixture('?mapDiagnostics=1', {}, () => new Promise(() => {}));
+    const pending = h.workspace.open(); await flush();
+    if (dispose) h.workspace.dispose(); else { h.session(B); h.workspace.getState(); }
+    await flush(); assert.equal(await pending, false); assert.equal(h.logs.length, 0); h.workspace.dispose();
+  }
+});
+test('관심목록 401은 동일 계정의 바뀐 토큰에만 한 번 재시도', async () => {
+  let requests = 0;
+  const h = workspaceFixture('?mapDiagnostics=1', {}, async () => {
+    requests++;
+    if (requests === 1) { h.session({ ...A, token: CANARY + '-new' }); return { ok: false, status: 401 }; }
+    return { ok: true, status: 200, json: async () => [] };
+  });
+  assert.equal(await h.workspace.open(), true); assert.equal(requests, 2);
+  assert.equal(h.workspace.getState().watchlistError, null); assert.equal(h.logs.length, 0); h.workspace.dispose();
+});
+test('관심목록 비지원 항목은 기존대로 제외하며 오류 진단 없음', async () => {
+  const h = workspaceFixture('?mapDiagnostics=1', {}, async () => ({ ok: true, status: 200,
+    json: async () => [{ id: 'synthetic-group', user_id: A.userId,
+      items: [{ group_id: 'synthetic-group', ticker: 'CMD_GOLD', market: 'OTHER', name: CANARY }] }]
+  }));
+  assert.equal(await h.workspace.open(), true); assert.equal(h.workspace.getState().watchlistUnsupportedCount, 1);
+  assert.equal(h.workspace.getState().watchlistError, null); assert.equal(h.logs.length, 0); h.workspace.dispose();
+});
+test('관심목록 진단 출력 실패는 기존 선택적 경고와 보유자료 유지', async () => {
+  const h = workspaceFixture('?mapDiagnostics=1', { console: { warn() { throw new Error(CANARY); } } },
+    async () => ({ ok: false, status: 503 }));
+  assert.equal(await h.workspace.open(), true); assert.equal(h.workspace.getState().watchlistError, 'watchlist-unavailable');
+  assert.equal(h.workspace.getState().holdings.length, 1); h.workspace.dispose();
+});
+test('관심목록 catch는 원래 예외 및 current 예외를 그대로 전파', async () => {
+  const h = runtime(), original = new Error(CANARY);
+  const base = { api: '/synthetic', getSession: () => A, ownerId: A.userId, signal: new AbortController().signal,
+    fetcher: async () => { throw original; }, onDiagnostic() { throw new Error('합성 진단 실패'); } };
+  await assert.rejects(h.api.fetchMapWatchlist(base), error => error === original);
+  let current = A;
+  await assert.rejects(h.api.fetchMapWatchlist({ ...base, getSession: () => current,
+    fetcher: async () => { current = B; throw original; } }), { message: 'session-changed' });
+  const controller = new AbortController();
+  await assert.rejects(h.api.fetchMapWatchlist({ ...base, signal: controller.signal,
+    fetcher: async () => { controller.abort(); throw original; } }), { name: 'AbortError', message: 'watchlist-aborted' });
 });
