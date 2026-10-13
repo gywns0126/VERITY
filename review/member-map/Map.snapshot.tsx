@@ -2784,6 +2784,56 @@ var MemberMapClientDelta = (() => {
     "path_evidence",
     "source_context"
   ]);
+  function reportedCustomerPeriod(row2) {
+    const c = row2.period_context_v3;
+    keys(c, [
+      "schema",
+      "source_version",
+      "source_id",
+      "company_id",
+      "counterparty_id",
+      "corp_code",
+      "archive_sha256",
+      "xml_sha256",
+      "archive_member",
+      "report_period_start",
+      "report_period_end",
+      "fiscal_year",
+      "paragraph_index",
+      "paragraph_quote",
+      "table_index",
+      "header_row",
+      "row_index",
+      "column_index",
+      "rows",
+      "table_sha256",
+      "period_quote",
+      "revision"
+    ]);
+    if (Object.hasOwn(row2, "period_context_v2") || c.schema !== "reported-customer-period-v1" || c.source_version !== row2.source_version || c.source_id !== row2.source_id || c.company_id !== row2.company_id || c.counterparty_id !== row2.counterparty_id || !/^KR:[0-9]{6}$/.test(text(c.counterparty_id, 20)) || !/^[0-9]{8}$/.test(text(c.corp_code, 8))) fail();
+    for (const key of ["source_version", "archive_sha256", "xml_sha256", "table_sha256", "revision"]) {
+      if (!/^[a-f0-9]{64}$/.test(text(c[key], 64))) fail();
+    }
+    if (c.archive_member !== row2.source_id.slice(12) + ".xml") fail();
+    if (day(c.report_period_start) > day(c.report_period_end) || c.report_period_end > row2.published_on || !/^20[0-9]{2}$/.test(text(c.fiscal_year, 4)) || c.report_period_end.slice(0, 4) !== c.fiscal_year || c.period_quote !== c.fiscal_year + "년" || row2.period_quote !== c.period_quote) fail();
+    text(c.paragraph_quote);
+    if (!c.paragraph_quote.includes(row2.quote)) fail();
+    for (const key of ["paragraph_index", "table_index", "header_row", "row_index", "column_index"]) {
+      if (!Number.isSafeInteger(c[key]) || c[key] < 0) fail();
+    }
+    if (!Array.isArray(c.rows) || c.rows.length < 2 || c.rows.length > 500) fail();
+    let width;
+    const rows = Array.from(c.rows, (cells) => {
+      if (!Array.isArray(cells) || cells.length < 2 || cells.length > 40 || width !== void 0 && cells.length !== width) fail();
+      width = cells.length;
+      return Array.from(cells, (cell) => {
+        return text(cell, 2e3);
+      });
+    });
+    const serialized = "[" + rows.map((cells) => "[" + cells.map((cell) => JSON.stringify(cell)).join(", ") + "]").join(", ") + "]";
+    if (new TextEncoder().encode(serialized).length > 512 * 1024 || c.header_row >= rows.length || c.row_index <= c.header_row || c.row_index >= rows.length || c.column_index < 1 || c.column_index >= rows[c.header_row].length || c.column_index >= rows[c.row_index].length || rows[c.header_row][c.column_index].trim().replace(/\s+/g, " ") !== c.period_quote) fail();
+    return { ...c, rows };
+  }
   function judgmentComparison(row2) {
     const c = row2.comparison;
     keys(c, ["status", "unavailable_reason", "changed_fields", "review_changed_fields", "previous", "current"]);
@@ -2799,7 +2849,7 @@ var MemberMapClientDelta = (() => {
       return { ...s };
     };
     const current = snapshot(c.current);
-    if (current.review_revision !== row2.revision || current.reason !== row2.reason || current.reviewed_on !== row2.reviewed_on || current.review_reason !== row2.review_reason || row2.source_version !== void 0 && current.source_version !== row2.source_version || row2.period_context_v2 && current.source_version !== row2.period_context_v2.source_version) fail();
+    if (current.review_revision !== row2.revision || current.reason !== row2.reason || current.reviewed_on !== row2.reviewed_on || current.review_reason !== row2.review_reason || row2.source_version !== void 0 && current.source_version !== row2.source_version || row2.period_context_v2 && current.source_version !== row2.period_context_v2.source_version || row2.period_context_v3 && current.source_version !== row2.period_context_v3.source_version) fail();
     const fields = (values, allowed) => {
       if (!Array.isArray(values) || values.length > allowed.length || new Set(values).size !== values.length || values.some((v) => !allowed.includes(v))) fail();
       return [...values];
@@ -2814,6 +2864,7 @@ var MemberMapClientDelta = (() => {
       "review_trigger",
       "economic_v2",
       "period_context_v2",
+      "period_context_v3",
       "status",
       "review_reasons",
       "display"
@@ -2990,7 +3041,8 @@ var MemberMapClientDelta = (() => {
         ...row2 && Object.hasOwn(row2, "economic_v2") ? ["economic_v2"] : [],
         ...row2 && Object.hasOwn(row2, "comparison") ? ["comparison"] : [],
         ...row2 && Object.hasOwn(row2, "core_selection") ? ["core_selection"] : [],
-        ...row2 && Object.hasOwn(row2, "period_context_v2") ? ["period_context_v2"] : []
+        ...row2 && Object.hasOwn(row2, "period_context_v2") ? ["period_context_v2"] : [],
+        ...row2 && Object.hasOwn(row2, "period_context_v3") ? ["period_context_v3"] : []
       ]);
       const contractRow = row2.core_selection?.basis === "contract-announcement";
       const contractId = typeof row2.record_id === "string" && row2.record_id.startsWith(`contract:${row2.company_id}:`) && /^contract:KR:[0-9]{6}:[0-9]{14}$/.test(row2.record_id);
@@ -3007,9 +3059,10 @@ var MemberMapClientDelta = (() => {
         text(context.quote);
         if (!/[.!?]$/.test(context.quote) || !/^[a-f0-9]{64}$/.test(text(context.source_version, 64)) || !row2.period_quote || !/^(?:20\d{2}년(?:도)?|당기|보고기간|회계연도)$/.test(row2.period_quote)) fail();
       }
+      const reportedPeriod = Object.hasOwn(row2, "period_context_v3") ? reportedCustomerPeriod(row2) : void 0;
       for (const key of ["scope_quote", "period_quote"]) {
         const span = nullableText(row2[key]);
-        const support = key === "period_quote" && row2.period_context_v2 ? row2.period_context_v2.quote : row2.quote;
+        const support = key === "period_quote" ? reportedPeriod?.period_quote ?? row2.period_context_v2?.quote ?? row2.quote : row2.quote;
         if (!contractRow && span !== null && !support.includes(span)) fail();
       }
       nullableText(row2.review_reason);
@@ -3028,6 +3081,7 @@ var MemberMapClientDelta = (() => {
         missing_evidence: [...row2.missing_evidence],
         review_reasons: [...row2.review_reasons],
         ...Object.hasOwn(row2, "period_context_v2") ? { period_context_v2: { ...row2.period_context_v2 } } : {},
+        ...reportedPeriod ? { period_context_v3: reportedPeriod } : {},
         ...Object.hasOwn(row2, "comparison") ? { comparison: judgmentComparison(row2) } : {},
         ...Object.hasOwn(row2, "core_selection") ? { core_selection: coreSelection(row2) } : {},
         ...Object.hasOwn(row2, "economic_v2") ? { economic_v2: economicContext(row2) } : {}
@@ -3072,7 +3126,7 @@ var MemberMapClientDelta = (() => {
       const previous = bound.get(relation.id);
       const baseRevision = previous?.base_read_revision ?? relation.read_revision;
       if (!row2 || baseRevision !== row2.base_read_revision || !matchesCandidate(graph, relation, row2)) return relation;
-      const sourceVersion = (r) => r.source_version || r.comparison?.current.source_version || r.period_context_v2?.source_version;
+      const sourceVersion = (r) => r.source_version || r.comparison?.current.source_version || r.period_context_v2?.source_version || r.period_context_v3?.source_version;
       if (previous && sourceVersion(previous) && sourceVersion(row2) && sourceVersion(previous) !== sourceVersion(row2)) return relation;
       if (previous && JSON.stringify(previous) === JSON.stringify(row2)) return relation;
       changed = true;

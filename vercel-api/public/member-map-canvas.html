@@ -3606,7 +3606,7 @@ function appendMemberJudgmentComparison(panel,row){
   }else{
     const fields={quote:'선택 원문',degree:'연결 정도',impact:'영향 경로',counter_evidence_quotes:'반대 근거',
       missing_evidence:'추가 근거',reason:'판단 사유',review_trigger:'재검토 조건',economic_v2:'경제 근거',
-      period_context_v2:'기간 문맥',status:'검증 상태',review_reasons:'검증 사유',display:'검증 표시'};
+      period_context_v2:'기간 문맥',period_context_v3:'원문 표의 보고기간',status:'검증 상태',review_reasons:'검증 사유',display:'검증 표시'};
     const reviews={decision:'검수 결정',reason:'검수 사유',checks:'검수 확인 항목',materiality_review:'경제 근거 검수'};
     appendMemberText(panel,'p',c.changed_fields.length?'동일 원문의 AI 판단 변경 필드 · '+c.changed_fields.map(k=>fields[k]).join(' · '):'동일 원문의 AI 판단 필드 변경 없음','an-save-note');
     appendMemberText(panel,'p',c.review_changed_fields.length?'검수 변경 필드 · '+c.review_changed_fields.map(k=>reviews[k]).join(' · '):'검수 내용 변경 없음','an-save-note');
@@ -3634,6 +3634,17 @@ function appendMemberCompanyJudgment(parent,row){
   appendMemberText(panel,'h3',(company?.name||row.company_id)+' · 원문과 사업 영향');
   appendMemberText(panel,'p',row.quote,'an-judgment-quote');
   if(row.period_context_v2)appendMemberText(panel,'p','적용 기간의 앞 문장 · '+row.period_context_v2.quote,'an-judgment-quote');
+  if(row.period_context_v3){
+    const context=row.period_context_v3;
+    const proof=appendMemberText(panel,'details','','an-judgment-proof');
+    appendMemberText(proof,'summary','원문 표의 보고기간 · '+context.period_quote+' (현재 관계 확인 아님)');
+    appendMemberText(proof,'p',context.paragraph_quote,'an-judgment-quote');
+    const table=appendMemberText(proof,'table','');
+    for(const cells of context.rows){
+      const tr=appendMemberText(table,'tr','');
+      for(const cell of cells)appendMemberText(tr,'td',cell,'an-judgment-quote');
+    }
+  }
   appendMemberSource(panel,{source:'판단에 사용한 DART 원문',asOf:row.published_on,url:row.source_url});
   appendMemberText(panel,'p','범위 · '+(row.scope_quote||'미확인')+' / 적용 기간 · '+(row.period_quote||'미확인'),'an-save-note');
   appendMemberText(panel,'p','사업 영향 · '+statuses[row.status]+(row.status==='accepted'?' / 연결 정도 '+degree[row.degree]+' · '+direction[row.impact.direction]:''),'an-judgment-verdict');

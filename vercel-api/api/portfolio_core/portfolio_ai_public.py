@@ -59,7 +59,7 @@ _REVIEW_CODES = {
 _MATERIALITY_CODES = {"materiality-scope", "materiality-period", "materiality-economic-basis"}
 _CHANGED_FIELDS = {
     "quote", "degree", "impact", "counter_evidence_quotes", "missing_evidence", "reason",
-    "review_trigger", "economic_v2", "period_context_v2", "status", "review_reasons", "display",
+    "review_trigger", "economic_v2", "period_context_v2", "period_context_v3", "status", "review_reasons", "display",
 }
 
 
@@ -394,9 +394,12 @@ def _public_contract_judgment(row, events, sources=None, *, public_wire=False):
     return out
 
 
-def _public_judgment(row, candidates, *, source_documents=None, public_wire=False):
-    optional = {k for k in ("economic_v2", "period_context_v2", "comparison", "core_selection") if type(row) is dict and k in row}
+def _public_judgment(row, candidates, *, source_documents=None, public_wire=False,
+                     period_archives=None, issuer_registry=None):
+    optional = {k for k in ("economic_v2", "period_context_v2", "period_context_v3", "comparison", "core_selection") if type(row) is dict and k in row}
     _keys(row, _JUDGMENT_FIELDS | {"source_version"} | optional)
+    if "period_context_v2" in row and "period_context_v3" in row:
+        _fail()
     _hash_value(row["source_version"])
     c = candidates.get(row["record_id"])
     if c is None:
@@ -433,7 +436,31 @@ def _public_judgment(row, candidates, *, source_documents=None, public_wire=Fals
     out = deepcopy(row)
     _bound_quote(row["scope_quote"], [row["quote"]])
     period_support = row["quote"]
-    if "period_context_v2" in row:
+    if "period_context_v3" in row:
+        try:
+            from .portfolio_reported_period import (
+                validate_reported_customer_period, validate_reported_period_projection,
+            )
+        except ImportError:
+            _fail()
+        # 공개 필드는 늘리지 않고 candidate의 고객명을 원문 표 행에 결속한다.
+        helper_row = {**row, "counterparty_name": c["counterparty_name"]}
+        context = row["period_context_v3"]
+        checked = validate_reported_period_projection(context, helper_row)
+        if checked != context:
+            _fail()
+        if source_documents is not None:
+            original = {key: value for key, value in source.items() if key != "source_version"}
+            checked = validate_reported_customer_period(
+                context, original, helper_row, archives=period_archives, issuer_registry=issuer_registry)
+            if checked != context:
+                _fail()
+        elif not public_wire:
+            _fail()
+        # 원문 재검증 없는 prepared wire 검사는 내부 결속이며 진위 인증이 아니다.
+        out["period_context_v3"] = checked
+        period_support = _text(context["period_quote"], 600)
+    elif "period_context_v2" in row:
         context = row["period_context_v2"]
         _keys(context, {"quote", "source_version"})
         if context["source_version"] != row["source_version"]:
@@ -655,7 +682,8 @@ def _judgment_sources(documents):
 
 
 def project_public_company_judgments(projection, candidates, *, source_documents=None,
-                                    contract_events=None, contract_sources=None):
+                                    contract_events=None, contract_sources=None,
+                                    period_archives=None, issuer_registry=None):
     """Offline export only, AFTER project_company_judgments(raw, receipts).
 
     Preserve the local UI shape, omit individually unsafe/stale bindings, and
@@ -691,7 +719,8 @@ def project_public_company_judgments(projection, candidates, *, source_documents
                     if "source_version" in row and row["source_version"] != version:
                         continue
                     prepared = {**row, "source_version": version}
-                value = _public_judgment(prepared, indexed, source_documents=sources, public_wire=is_public)
+                value = _public_judgment(prepared, indexed, source_documents=sources, public_wire=is_public,
+                                         period_archives=period_archives, issuer_registry=issuer_registry)
                 # Retention is not re-signing: an already-public judgment must
                 # still match its full candidate-bound public fingerprint.
                 if is_public and value != row:
