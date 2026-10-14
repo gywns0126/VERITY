@@ -11,7 +11,7 @@ const root = process.env.MEMBER_MAP_TEST_SOURCE_ROOT || (fs.existsSync(path.join
 const dependencyRoot = path.resolve(process.env.MEMBER_MAP_TEST_DEPENDENCY_ROOT || root);
 const esbuild = createRequire(path.join(dependencyRoot, 'package.json'))('esbuild');
 const snapshot = fs.readFileSync(path.join(root, 'review/member-map/Map.snapshot.tsx'), 'utf8');
-const compiled = esbuild.transformSync(snapshot + '\nexport { mergePrototypeDraft, prototypeMemberModel, mountMemberPrototype, validMapDocument };', {loader:'tsx',format:'cjs',target:'es2022'}).code;
+const compiled = esbuild.transformSync(snapshot + '\nexport { mergePrototypeDraft, prototypeMemberModel, mountMemberPrototype, validMapDocument, editMapLayout, projectWorkspaceToPrototype };', {loader:'tsx',format:'cjs',target:'es2022'}).code;
 const built = {outputFiles:[{text:compiled}]};
 const snapshotRequire = name => {
     if (name === 'react') return {};
@@ -20,7 +20,7 @@ const snapshotRequire = name => {
 };
 const box = {exports:{}};
 vm.runInNewContext(compiled, {module:box,exports:box.exports,require:snapshotRequire,Map,Set,Object,Array,Number,String,JSON,URL,TextEncoder,AbortController,MessageChannel,console});
-const {mergePrototypeDraft,prototypeMemberModel,validMapDocument} = box.exports;
+const {mergePrototypeDraft,prototypeMemberModel,validMapDocument,editMapLayout,projectWorkspaceToPrototype} = box.exports;
 const canvas = fs.readFileSync(path.join(root, 'vercel-api/public/member-map-canvas.html'), 'utf8');
 const runtimeStart = 'let memberWritable=', runtimeEnd = "memberPort.postMessage({type:'hydrated',...memberOriginStamp()});";
 assert.equal(canvas.split(runtimeStart).length, 2);
@@ -43,7 +43,7 @@ const graph = {
 }
 
 const prior = {
-    map_key: 'main',
+    map_key: 'main_v2',
     positions: [
         { node_id: 'company-tick', x: 420, y: 204 },
         { node_id: 'hidden-position', x: 1201, y: -51 },
@@ -58,6 +58,198 @@ const prior = {
 const state = (overrides = {}) => ({ phase: 'ready', holdings: [], unsupportedCount: 0, selectedTickers: ['TICK'], graph, privateState: { phase: 'ready', document: { layouts: [clone(prior)] }, revision: 3, dirty: false, error: null }, error: null, ...overrides })
 
 const draft = (overrides = {}) => ({ positions: [{ id: 'company-tick', x: .5 + 420 / 1000, y: .5 + 204 / 680 }], notes: [{ id: 'note-1', target: 'edge-1', x: .5 - 25 / 1000, y: .5 + 701 / 680, text: '기존 메모', done: false }], marks: {}, ...overrides })
+
+function legacyState() {
+    const current = state(), main = { ...clone(prior), map_key: 'main' }
+    main.positions.push({ node_id: 'document-1', x: -310, y: 120 })
+    current.privateState.document.layouts = [main]
+    return current
+}
+
+test('emitted legacy stock delta survives v2 migration, one-to-four documents and reconnect without rewriting main', () => {
+    const current = legacyState(), before = clone(current), model = prototypeMemberModel(current)
+    const oldStock = projectWorkspaceToPrototype(current).nodes.find(n => n.id === 'company-tick')
+    const unsaved = clone(current);unsaved.privateState.document.layouts = []
+    const oldBase = projectWorkspaceToPrototype(unsaved).nodes.find(n => n.id === oldStock.id)
+    const delta = { x: oldStock.x - oldBase.x, y: oldStock.y - oldBase.y }
+    const stock = model.nodes.find(n => n.id === 'company-tick'), source = model.nodes.find(n => n.id === 'document-1')
+    const assertStockDelta = (view, label) => {
+        const found = view.nodes.find(n => n.id === stock.id), base = view.layoutBases[stock.id]
+        assert.deepEqual(clone(base), { x: .5, y: .5 }, label)
+        assert.ok(Math.abs(found.x - base.x - delta.x) < 1e-12, `${label}: x delta is preserved`)
+        assert.ok(Math.abs(found.y - base.y - delta.y) < 1e-12, `${label}: y delta is preserved`)
+    }
+    assertStockDelta(model, 'first migration')
+    assert.deepEqual([source.x, source.y], [.5, .5])
+    assert.deepEqual(clone(model.layoutBases[source.id]), { x: .5, y: .5 })
+    assert.equal(model.notes['note-1'].text, prior.notes[0].text)
+    assert.equal(model.marks['document-1'].important, true)
+    assert.deepEqual(current, before)
+    const next = mergePrototypeDraft(current, { positions: [{ id: stock.id, x: stock.x, y: stock.y }], notes: Object.values(model.notes), marks: {} })
+    assert.ok(next);assert.equal(next.map_key, 'main_v2')
+    assert.equal(next.positions.length, 1)
+    assert.equal(next.positions[0].node_id, stock.id)
+    assert.ok(Math.abs(next.positions[0].x - delta.x * 1000) < 1e-10)
+    assert.ok(Math.abs(next.positions[0].y - delta.y * 680) < 1e-10)
+    assert.deepEqual(clone(next.notes), prior.notes);assert.deepEqual(clone(next.marks), prior.marks)
+    assert.deepEqual(current, before, 'merge does not mutate or delete the legacy layout')
+    const restored = clone(current);restored.privateState.document.layouts.push(clone(next))
+    assert.equal(validMapDocument(restored.privateState.document), true)
+    assert.deepEqual(restored.privateState.document.layouts[0], before.privateState.document.layouts[0])
+    assertStockDelta(prototypeMemberModel(restored), 'saved v2 with one document')
+    restored.graph.documents.push(...Array.from({ length: 3 }, (_, i) => ({ ...clone(graph.documents[0]), id: 'document-added-' + i })))
+    assert.equal(restored.graph.documents.length, 4)
+    const expandedUnsaved = clone(restored);expandedUnsaved.privateState.document.layouts = []
+    const changedOldBase = projectWorkspaceToPrototype(expandedUnsaved).nodes.find(n => n.id === stock.id)
+    assert.notDeepEqual({ x: changedOldBase.x, y: changedOldBase.y }, { x: oldBase.x, y: oldBase.y },
+        'the fixture crosses a real legacy fallback grid change')
+    assertStockDelta(prototypeMemberModel(restored), 'four documents')
+    const reconnected = clone(restored), reloaded = prototypeMemberModel(reconnected)
+    assertStockDelta(reloaded, 'reconnect after four documents')
+    const reloadedStock = reloaded.nodes.find(n => n.id === stock.id)
+    const again = mergePrototypeDraft(reconnected, { positions: [{ id: stock.id, x: reloadedStock.x, y: reloadedStock.y }],
+        notes: Object.values(reloaded.notes), marks: {} })
+    assert.ok(again)
+    assert.deepEqual(clone(again), clone(next), 'saving after reconnect does not convert v2 pixels again')
+    assert.deepEqual(reconnected.privateState.document.layouts[0], before.privateState.document.layouts[0])
+    assert.deepEqual(reconnected.privateState.document.layouts[1], clone(next))
+})
+
+test('emitted already-saved v2 stock pixels bypass legacy conversion as document count changes', () => {
+    const current = legacyState(), legacy = clone(current.privateState.document.layouts[0])
+    current.privateState.document.layouts.push(clone(prior))
+    for (const count of [1, 4]) {
+        current.graph = { ...clone(graph), documents: Array.from({ length: count }, (_, i) => ({ ...clone(graph.documents[0]), id: 'document-' + (i + 1) })) }
+        const reconnected = clone(current), model = prototypeMemberModel(reconnected)
+        const stock = model.nodes.find(n => n.id === 'company-tick')
+        assert.deepEqual(clone(model.layoutBases[stock.id]), { x: .5, y: .5 })
+        assert.equal(stock.x, .5 + prior.positions[0].x / 1000)
+        assert.equal(stock.y, .5 + prior.positions[0].y / 680)
+        const next = mergePrototypeDraft(reconnected, { positions: [{ id: stock.id, x: stock.x, y: stock.y }],
+            notes: Object.values(model.notes), marks: {} })
+        assert.ok(next)
+        assert.deepEqual(clone(next), prior, 'existing v2 coordinates and annotations remain byte-for-byte equivalent')
+        assert.deepEqual(reconnected.privateState.document.layouts[0], legacy)
+        assert.deepEqual(reconnected.privateState.document.layouts[1], prior)
+    }
+})
+
+test('emitted main_v2 source movement survives reload and count changes with legacy main recoverable', () => {
+    const current = legacyState(), legacy = clone(current.privateState.document.layouts[0])
+    const model = prototypeMemberModel(current)
+    const moved = mergePrototypeDraft(current, { positions: [{ id: 'document-1', x: .65, y: .4 }], notes: Object.values(model.notes), marks: {} })
+    assert.ok(moved)
+    const pixels = moved.positions.find(p => p.node_id === 'document-1')
+    assert.ok(Math.abs(pixels.x - 150) < 1e-12 && Math.abs(pixels.y + 68) < 1e-12)
+    current.privateState.document.layouts.push(clone(moved))
+    const restored = prototypeMemberModel(current).nodes.find(n => n.id === 'document-1')
+    assert.deepEqual([restored.x, restored.y], [.65, .4])
+    current.graph = { ...clone(graph), documents: [{ ...clone(graph.documents[0]), id: 'document-added' }, ...clone(graph.documents)] }
+    const refreshed = prototypeMemberModel(current), source = refreshed.nodes.find(n => n.id === 'document-1')
+    assert.deepEqual([source.x, source.y], [.65, .4])
+    const added = refreshed.nodes.find(n => n.id === 'document-added')
+    assert.deepEqual([added.x, added.y], [.5, .5])
+    assert.deepEqual(clone(refreshed.layoutBases['document-1']), { x: .5, y: .5 })
+    assert.deepEqual(current.privateState.document.layouts[0], legacy)
+    assert.equal(current.privateState.document.layouts[1].marks['hidden-document'].read_revision, 9)
+})
+
+test('emitted document, reviewed, candidate and market source bases are independent of graph size', () => {
+    const current = state(), expanded = clone(graph)
+    expanded.companies = [
+        { id: 'company-skh', ticker: '000660', name: 'SK하이닉스', market: 'KR' },
+        { id: 'company-tsm', ticker: 'TSM', name: 'Taiwan Semiconductor Manufacturing Company Ltd.', market: 'US' },
+    ]
+    expanded.documents = [{ ...clone(graph.documents[0]), id: 'document-extra', tickers: ['000660'] }]
+    expanded.links = [];expanded.coverage = { includedTickers: ['000660', 'TSM'], availableTickers: ['000660', 'TSM'], excluded: [] }
+    expanded.automaticRelations = [{ id: 'automatic:candidate:one', title: '관계 후보', participants: [{ id: 'KR:000660', name: 'SK하이닉스', role: 'from' }],
+        reported: false, reason: '검수 자료', source: '공시', asOf: '2026-10-01', url: 'https://example.test/candidate', read_revision: 1 }]
+    expanded.marketContext = [{ id: 'market:commodity:gold', kind: 'commodity', title: '금', summary: '시장 참고', source: '시장',
+        url: 'https://example.test/gold', as_of: '2026-10-01', observed_at: null, value: null, change_pct: null, unit: null,
+        company_ids: ['KR:000660'], basis: 'market-context', reason: '참고', read_revision: 1 }]
+    Object.assign(current, { graph: expanded, selectedTickers: ['000660', 'TSM'], holdings: [
+        { ticker: '000660', market: 'KR', shares: 1, avg_cost: 1, duplicate: false },
+        { ticker: 'TSM', market: 'US', shares: 1, avg_cost: 1, duplicate: false },
+    ] })
+    current.privateState.document.layouts = [{ map_key: 'main_v2', positions: [], notes: [], marks: {} }]
+    const first = prototypeMemberModel(current), sources = first.nodes.filter(n => n.kind !== 'stock')
+    const kinds = new Set(sources.map(n => n.recordKind))
+    for (const kind of ['document', 'event', 'relationship', 'market-context']) assert.ok(kinds.has(kind), kind)
+    assert.ok(first.nodes.some(n => n.layer === 'candidates'), 'candidate projector is exercised')
+    const next = clone(current);next.graph.documents.unshift({ ...clone(expanded.documents[0]), id: 'document-added' })
+    const refreshed = prototypeMemberModel(next)
+    for (const source of sources) {
+        assert.deepEqual(clone(first.layoutBases[source.id]), { x: .5, y: .5 }, source.id)
+        assert.deepEqual([source.x, source.y], [.5, .5], source.id)
+        const found = refreshed.nodes.find(n => n.id === source.id)
+        assert.ok(found, source.id)
+        assert.deepEqual([found.x, found.y], [.5, .5], source.id)
+        assert.deepEqual(clone(refreshed.layoutBases[source.id]), { x: .5, y: .5 }, source.id)
+    }
+})
+
+test('emitted native bridge creates v2 once through the real layout editor while retaining main', async () => {
+    const h = focusHarness(), current = legacyState(), legacy = clone(current.privateState.document.layouts[0])
+    h.emit(current)
+    try {
+        const port = h.connect();await h.hydrate(port)
+        const initial = h.messages.findLast(m => m.type === 'init').model
+        let edits = 0, saves = 0
+        h.workspace.editLayout = (key, change) => {
+            assert.equal(key, 'main_v2');edits++
+            const state = h.workspace.getState(), before = clone(state.privateState.document)
+            const document = editMapLayout(state.privateState.document, key, change)
+            assert.deepEqual(state.privateState.document, before, 'the real layout editor copies its input')
+            assert.deepEqual(clone(document.layouts[0]), legacy)
+            assert.equal(document.layouts.length, 2)
+            h.emit({ privateState: { ...state.privateState, document: clone(document), dirty: true } })
+            return true
+        }
+        h.workspace.save = async () => { saves++;return true }
+        for (const x of [.75, .8]) {
+            await port.onmessage({ data: { type: 'edit', originGeneration: initial.originGeneration,
+                draft: { positions: [{ id: 'document-1', x, y: .25 }], notes: Object.values(initial.notes), marks: {} } } })
+            await port.onmessage({ data: { type: 'save', originGeneration: initial.originGeneration } })
+        }
+        assert.equal(edits, 2);assert.equal(saves, 2)
+        const state = h.workspace.getState(), layouts = state.privateState.document.layouts
+        assert.deepEqual(layouts.map(layout => layout.map_key), ['main', 'main_v2'])
+        assert.deepEqual(layouts[0], legacy)
+        assert.deepEqual(layouts[1].notes, legacy.notes);assert.deepEqual(layouts[1].marks, legacy.marks)
+        const restored = prototypeMemberModel(state).nodes.find(n => n.id === 'document-1')
+        assert.deepEqual([restored.x, restored.y], [.8, .25])
+    } finally { h.bridge() }
+})
+
+test('emitted native bridge refuses first v2 edit and save when three slots are occupied', async () => {
+    const current = legacyState()
+    current.privateState.document.layouts.push({ ...clone(prior), map_key: 'other_1' }, { ...clone(prior), map_key: 'other_2' })
+    const before = clone(current), rejected = []
+    assert.equal(validMapDocument(current.privateState.document), true)
+    assert.equal(prototypeMemberModel(current).writable, false)
+    assert.equal(mergePrototypeDraft(current, draft(), reason => rejected.push(clone(reason))), null)
+    assert.deepEqual(rejected, [{ code: 'layout_limit', positions: 1, notes: 1, marks: 0 }])
+    assert.deepEqual(current, before)
+    const h = focusHarness();h.emit(current)
+    try {
+        const port = h.connect();await h.hydrate(port)
+        const originGeneration = h.messages.findLast(m => m.type === 'init').model.originGeneration
+        let edits = 0, saves = 0
+        h.workspace.editLayout = () => { edits++;return true }
+        h.workspace.save = async () => { saves++;return true }
+        await port.onmessage({ data: { type: 'save', originGeneration } })
+        await port.onmessage({ data: { type: 'edit', originGeneration, draft: draft() } })
+        await port.onmessage({ data: { type: 'save', originGeneration } })
+        assert.equal(edits, 0);assert.equal(saves, 0)
+        assert.equal(h.messages.at(-1).writable, false)
+        assert.match(h.messages.at(-1).message, /저장 슬롯/)
+        assert.deepEqual(h.workspace.getState().privateState.document, before.privateState.document)
+    } finally { h.bridge() }
+    // Three slots are legal when v2 already exists: replacement needs no fourth slot.
+    const existing = state();existing.privateState.document.layouts.push(...clone(current.privateState.document.layouts.slice(1)))
+    assert.equal(prototypeMemberModel(existing).writable, true)
+    assert.ok(mergePrototypeDraft(existing, draft()))
+})
 
 const rejectionCases = [
     ['state_unready', () => [state({ phase: 'signed-out' }), draft()], [1, 1, 0]],
@@ -251,7 +443,7 @@ function sparseFixture() {
     expanded.documents = Array.from({ length: 110 }, (_, i) => ({ ...clone(graph.documents[0]), id: 'document-' + (i + 1) }))
     current.graph = expanded
     current.privateState.document.layouts[0] = {
-        map_key: 'main',
+        map_key: 'main_v2',
         positions: Array.from({ length: 100 }, (_, i) => ({ node_id: 'offscreen-' + i, x: i, y: -(i + 1) })),
         notes: clone(prior.notes),
         marks: Object.fromEntries(Array.from({ length: 100 }, (_, i) => ['offscreen-' + i,
@@ -357,7 +549,8 @@ test('sparse refreshed graph bases omit only new defaults and preserve existing 
     const previousBase = prototypeMemberModel(current).layoutBases['document-2']
     current.graph.documents.unshift({ ...clone(graph.documents[0]), id: 'document-added' })
     const refreshed = prototypeMemberModel(current)
-    assert.notDeepEqual(clone(refreshed.layoutBases['document-2']), clone(previousBase))
+    assert.deepEqual(clone(previousBase), { x: .5, y: .5 })
+    assert.deepEqual(clone(refreshed.layoutBases['document-2']), clone(previousBase))
     const next = mergePrototypeDraft(current, sparseCanvasDraft(current))
     assert.ok(next);assert.deepEqual(clone(next), clone(saved))
     assert.equal(Object.hasOwn(next.marks, 'document-added'), false)

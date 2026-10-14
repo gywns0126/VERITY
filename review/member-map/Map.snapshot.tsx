@@ -5302,6 +5302,8 @@ function portfolioCompanyDisplayName(market2, ticker, formalName) {
 var plain = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 var point = (v) => plain(v) && Number.isFinite(v.x) && Number.isFinite(v.y);
 var pixel = (value, scale, prior) => prior !== void 0 && value === 0.5 + prior / scale ? prior : (value - 0.5) * scale;
+var PROTOTYPE_MAP_KEY = "main_v2";
+var emptyLayout = (map_key) => ({ map_key, positions: [], notes: [], marks: {} });
 function prototypeDraftRejection(value, code) {
   return {
     code,
@@ -5312,15 +5314,34 @@ function prototypeDraftRejection(value, code) {
 }
 function prototypeLayoutBases(state, extraNodes) {
   const base = projectWorkspaceToPrototype({ ...state, privateState: { ...state.privateState, document: { layouts: [] } } });
-  return new Map([...base.nodes, ...extraNodes].map((n) => [n.id, { x: n.x, y: n.y }]));
+  return new Map([...base.nodes, ...extraNodes].map((n) => [n.id, { x: 0.5, y: 0.5 }]));
 }
-function marketLayout(layout, market2) {
+function prototypeLayouts(state, market) {
+  const layouts = state.privateState.document?.layouts || [];
+  const legacy = marketLayout(layouts.find((l) => l.map_key === "main") || emptyLayout("main"), market);
+  const saved = layouts.find((l) => l.map_key === PROTOTYPE_MAP_KEY);
+  const stockIds = new Set(state.graph?.companies.map((n) => n.id) || []);
+  const oldBases = saved ? null : new Map(projectWorkspaceToPrototype({
+    ...state,
+    privateState: { ...state.privateState, document: { layouts: [] } }
+  }).nodes.filter((n) => n.kind === "stock").map((n) => [n.id, n]));
+  const layout = saved ? marketLayout(saved, market) : {
+    ...legacy,
+    map_key: PROTOTYPE_MAP_KEY,
+    positions: legacy.positions.filter((p) => stockIds.has(p.node_id)).map((p) => {
+      const base = oldBases?.get(p.node_id);
+      return base ? { ...p, x: p.x - (base.x - 0.5) * 1e3, y: p.y - (base.y - 0.5) * 680 } : p;
+    })
+  };
+  return { legacy, layout, saved: !!saved };
+}
+function marketLayout(layout, market) {
   const aliases = /* @__PURE__ */ new Map(), positions = new Map(layout.positions.map((p) => [p.node_id, p])), marks = { ...layout.marks };
-  for (const node of market2.nodes) {
+  for (const node of market.nodes) {
     const ids = node.legacyIds || [];
     for (const id of ids) {
       aliases.set(id, node.id);
-      for (const edge of market2.edges.filter((e) => e.from === node.id)) {
+      for (const edge of market.edges.filter((e) => e.from === node.id)) {
         if (edge.id.startsWith("market-link:")) aliases.set(`market-link:${id}:${edge.id.split(":").slice(-2).join(":")}`, edge.id);
         for (const old of edge.legacyIds || []) aliases.set(old, edge.id);
       }
@@ -5362,11 +5383,12 @@ function mergePrototypeDraft(state, value, onReject) {
   if (value.notes.length > 100) return reject("notes_limit");
   if (Object.keys(value.marks).length > 200) return reject("marks_limit");
   const reviewed = projectReviewedPrototype(state), automatic = projectAutomaticPrototype(state.graph), contracts = projectContractPrototype(state.graph), markets = projectMarketPrototype(state.graph);
-  const market2 = { nodes: [...markets.nodes, ...contracts.nodes], edges: [...markets.edges, ...contracts.edges], recordsMap: { ...markets.recordsMap, ...contracts.recordsMap } };
-  const prior = marketLayout(state.privateState.document.layouts.find((l) => l.map_key === "main") || { map_key: "main", positions: [], notes: [], marks: {} }, market2);
-  const layoutBases = prototypeLayoutBases(state, [...reviewed.nodes, ...automatic.nodes, ...market2.nodes]);
-  const allowed = new Set([...state.graph.companies, ...state.graph.documents, ...reviewed.nodes, ...automatic.nodes, ...market2.nodes].map((n) => n.id));
-  const edgeIds = /* @__PURE__ */ new Set([...state.graph.links.map((e) => e.id), ...reviewed.edges.map((e) => e.id), ...automatic.edges.map((e) => e.id), ...market2.edges.map((e) => e.id)]), positions = new Map(prior.positions.map((p) => [p.node_id, p]));
+  const market = { nodes: [...markets.nodes, ...contracts.nodes], edges: [...markets.edges, ...contracts.edges], recordsMap: { ...markets.recordsMap, ...contracts.recordsMap } };
+  const { layout: prior } = prototypeLayouts(state, market);
+  if (!state.privateState.document.layouts.some((l) => l.map_key === PROTOTYPE_MAP_KEY) && state.privateState.document.layouts.length >= 3) return reject("layout_limit");
+  const layoutBases = prototypeLayoutBases(state, [...reviewed.nodes, ...automatic.nodes, ...market.nodes]);
+  const allowed = new Set([...state.graph.companies, ...state.graph.documents, ...reviewed.nodes, ...automatic.nodes, ...market.nodes].map((n) => n.id));
+  const edgeIds = /* @__PURE__ */ new Set([...state.graph.links.map((e) => e.id), ...reviewed.edges.map((e) => e.id), ...automatic.edges.map((e) => e.id), ...market.edges.map((e) => e.id)]), positions = new Map(prior.positions.map((p) => [p.node_id, p]));
   const seen = /* @__PURE__ */ new Set();
   for (const p of value.positions) {
     if (!point(p)) return reject("position_coordinates");
@@ -5375,7 +5397,7 @@ function mergePrototypeDraft(state, value, onReject) {
     const previous = positions.get(p.id);
     const position = { node_id: p.id, x: pixel(p.x, 1e3, previous?.x), y: pixel(p.y, 680, previous?.y) };
     const base = layoutBases.get(p.id);
-    if (!previous && base && p.x === base.x && p.y === base.y && validMapDocument({ layouts: [{ map_key: "main", positions: [position], notes: [], marks: {} }] })) continue;
+    if (!previous && base && p.x === base.x && p.y === base.y && validMapDocument({ layouts: [{ map_key: PROTOTYPE_MAP_KEY, positions: [position], notes: [], marks: {} }] })) continue;
     positions.set(p.id, position);
   }
   const oldNotes = new Map(prior.notes.map((n) => [n.note_id, n]));
@@ -5390,7 +5412,7 @@ function mergePrototypeDraft(state, value, onReject) {
   }
   const marks = { ...prior.marks };
   for (const [id, mark] of Object.entries(value.marks)) {
-    const doc = state.graph.documents.find((d) => d.id === id) || reviewed.recordsMap[id] || automatic.recordsMap[id] || market2.recordsMap[id];
+    const doc = state.graph.documents.find((d) => d.id === id) || reviewed.recordsMap[id] || automatic.recordsMap[id] || market.recordsMap[id];
     if (!doc) return reject("mark_identity");
     if (!plain(mark) || ["read", "readTouched", "important", "later", "irrelevant"].some((key) => mark[key] !== void 0 && typeof mark[key] !== "boolean")) return reject("mark_shape");
     const old = prior.marks[id];
@@ -5399,32 +5421,33 @@ function mergePrototypeDraft(state, value, onReject) {
       important: !!mark.important,
       disposition: mark.irrelevant ? "irrelevant" : mark.later ? "later" : "inbox"
     };
-    if (!Object.hasOwn(prior.marks, id) && !mark.read && !mark.readTouched && !mark.important && !mark.later && !mark.irrelevant && validMapDocument({ layouts: [{ map_key: "main", positions: [], notes: [], marks: { [id]: nextMark } }] })) continue;
+    if (!Object.hasOwn(prior.marks, id) && !mark.read && !mark.readTouched && !mark.important && !mark.later && !mark.irrelevant && validMapDocument({ layouts: [{ map_key: PROTOTYPE_MAP_KEY, positions: [], notes: [], marks: { [id]: nextMark } }] })) continue;
     marks[id] = nextMark;
   }
-  const next = { map_key: "main", positions: [...positions.values()], notes, marks };
-  return validMapDocument({ layouts: [next] }) ? next : reject("final_schema", next);
+  const next = { map_key: PROTOTYPE_MAP_KEY, positions: [...positions.values()], notes, marks };
+  const layouts = state.privateState.document.layouts.filter((l) => l.map_key !== PROTOTYPE_MAP_KEY);
+  return validMapDocument({ layouts: [...layouts, next] }) ? next : reject("final_schema", next);
 }
 function prototypeMemberModel(state, explorationNotice = "", visitBaseline) {
   if (state.phase !== "ready" || !state.graph) return { nodes: [], edges: [], notes: {}, marks: {}, writable: false };
   const projected = projectWorkspaceToPrototype(state), graph = state.graph, reviewed = projectReviewedPrototype(state), automatic = projectAutomaticPrototype(state.graph), contracts = projectContractPrototype(state.graph), markets = projectMarketPrototype(state.graph);
-  const judgments = new Map(memberMapBoundBusinessJudgments(graph).map(row => [row.record_id, row]));
-  const market2 = { nodes: [...markets.nodes, ...contracts.nodes], edges: [...markets.edges, ...contracts.edges], recordsMap: { ...markets.recordsMap, ...contracts.recordsMap } };
-  const layoutBases = prototypeLayoutBases(state, [...reviewed.nodes, ...automatic.nodes, ...market2.nodes]);
+  const judgments = new Map(memberMapBoundBusinessJudgments(graph).map((row) => [row.record_id, row]));
+  const market = { nodes: [...markets.nodes, ...contracts.nodes], edges: [...markets.edges, ...contracts.edges], recordsMap: { ...markets.recordsMap, ...contracts.recordsMap } };
+  const layoutBases = prototypeLayoutBases(state, [...reviewed.nodes, ...automatic.nodes, ...market.nodes]);
   const stocks = new Map(workspaceStocks(state).map((stock) => [stock.ticker, stock]));
-  const savedLayout = state.privateState.document?.layouts.find((l) => l.map_key === "main");
-  const layout = savedLayout ? marketLayout(savedLayout, market2) : void 0;
-  const positions = new Map(layout?.positions.map((p) => [p.node_id, p]));
-  const evidence = (rows2) => rows2.map((s) => ({ url: s.sourceURL, source: s.publisher, asOf: s.publishedAt, explanation: s.statement }));
+  const { layout, saved } = prototypeLayouts(state, market);
+  const positions = new Map(layout.positions.map((p) => [p.node_id, p]));
+  const evidence = (rows) => rows.map((s) => ({ url: s.sourceURL, source: s.publisher, asOf: s.publishedAt, explanation: s.statement }));
   const reviewedNodes = reviewed.nodes.map((n) => ({
     ...n,
     kind: "event",
     recordKind: n.kind === "reviewed-event" ? "event" : "relationship",
     layer: n.kind === "reviewed-event" ? "events" : "relationships",
     evidence: evidence(n.evidence),
-    ...positions.has(n.id) ? { x: 0.5 + positions.get(n.id).x / 1e3, y: 0.5 + positions.get(n.id).y / 680 } : {}
+    x: positions.has(n.id) ? 0.5 + positions.get(n.id).x / 1e3 : 0.5,
+    y: positions.has(n.id) ? 0.5 + positions.get(n.id).y / 680 : 0.5
   }));
-  const records = [...graph.documents, ...Object.values(reviewed.recordsMap), ...Object.values(automatic.recordsMap), ...Object.values(market2.recordsMap)];
+  const records = [...graph.documents, ...Object.values(reviewed.recordsMap), ...Object.values(automatic.recordsMap), ...Object.values(market.recordsMap)];
   const visitRevisions = Object.fromEntries(records.filter((d) => !contracts.replacedDocumentIds.has(d.id)).map((d) => [d.id, d.read_revision]));
   const changes = Object.fromEntries(records.map((d) => {
     if (visitBaseline !== void 0) return [d.id, visitBaseline === null ? "기준없음" : !Object.hasOwn(visitBaseline.revisions, d.id) ? "새로" : visitBaseline.revisions[d.id] === d.read_revision ? "기존" : "변경"];
@@ -5439,8 +5462,11 @@ function prototypeMemberModel(state, explorationNotice = "", visitBaseline) {
       const company = n.kind === "stock" ? graph.companies.find((c) => c.id === n.id) : void 0;
       const stockMarket = company?.market || stocks.get(n.code)?.market;
       const formalName = company?.name || n.name;
+      const position = positions.get(n.id);
       return {
         ...n,
+        x: position ? 0.5 + position.x / 1e3 : 0.5,
+        y: position ? 0.5 + position.y / 680 : 0.5,
         ...company ? { name: portfolioCompanyDisplayName(stockMarket || "", company.ticker, formalName), formalName } : {},
         ticker: company?.ticker,
         priority: 2,
@@ -5457,24 +5483,26 @@ function prototypeMemberModel(state, explorationNotice = "", visitBaseline) {
         asOf: n.kind === "event" ? graph?.documents.find((d) => d.id === n.id)?.asOf : void 0,
         evidence: n.kind === "event" ? graph?.documents.find((d) => d.id === n.id)?.evidence : []
       };
-    }), ...reviewedNodes.map((n) => ({ ...n, changeStatus: changes[n.id] })), ...[...automatic.nodes, ...market2.nodes].map((n) => ({
+    }), ...reviewedNodes.map((n) => ({ ...n, changeStatus: changes[n.id] })), ...[...automatic.nodes, ...market.nodes].map((n) => ({
       ...n,
       changeStatus: changes[n.id],
+      // Explicit null withdraws old annotations on shallow graph updates.
       companyJudgment: judgments.get(n.id) || null,
-      ...positions.has(n.id) ? { x: 0.5 + positions.get(n.id).x / 1e3, y: 0.5 + positions.get(n.id).y / 680 } : {}
+      x: positions.has(n.id) ? 0.5 + positions.get(n.id).x / 1e3 : 0.5,
+      y: positions.has(n.id) ? 0.5 + positions.get(n.id).y / 680 : 0.5
     }))],
     edges: [
       ...projected.edges.filter((e) => !contracts.replacedDocumentIds.has(e.from)).map((e) => ({ ...e, type: "unknown", confirmation: "candidate", strength: 0, impact: "미확인", impactReason: "자료 연결만으로 실적이나 주가 영향을 판단하지 않아요.", verb: "자료 연결" })),
       ...reviewed.edges.map((e) => ({ ...e, evidence: evidence(e.evidence), type: "documented", confirmation: "confirmed", strength: 0, impact: "미확인", impactReason: "자료에 명시된 참여 관계이며, 현재 실적이나 주가 영향을 뜻하지 않아요.", verb: e.reason })),
       ...automatic.edges,
-      ...market2.edges
+      ...market.edges
     ],
     notes: Object.fromEntries((layout?.notes || []).map((n) => [n.note_id, { id: n.note_id, target: n.anchor?.id || "", x: 0.5 + n.x / 1e3, y: 0.5 + n.y / 680, text: n.text, done: n.done, todo: n.done, pinned: !!n.anchor }])),
     marks: Object.fromEntries(records.map((d) => {
       const m = layout?.marks[d.id];
       return [d.id, { read: m?.read_revision === d.read_revision, important: !!m?.important, later: m?.disposition === "later", irrelevant: m?.disposition === "irrelevant" }];
     })),
-    writable: state.privateState.phase === "ready" && !!state.privateState.document
+    writable: state.privateState.phase === "ready" && !!state.privateState.document && (saved || state.privateState.document.layouts.length < 3)
   };
 }
 function mountMemberPrototype(frame, template, workspace, options = {}) {
@@ -5503,9 +5531,9 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
   };
   const rememberVisit = () => {
     if (!options.onVisitDisplayed || !visitRevisions || rememberedVisitGeneration === originGeneration || current.privateState.phase !== "ready") return;
-    const stamp2 = originGeneration, member = owner, revisions = { ...visitRevisions };
-    rememberedVisitGeneration = stamp2;
-    const isCurrent = () => !disposed && hydrated && stamp2 === originGeneration && appliedOriginGeneration === stamp2 && member === owner && member === account() && current.phase === "ready" && current.privateState.phase === "ready";
+    const stamp = originGeneration, member = owner, revisions = { ...visitRevisions };
+    rememberedVisitGeneration = stamp;
+    const isCurrent = () => !disposed && hydrated && stamp === originGeneration && appliedOriginGeneration === stamp && member === owner && member === account() && current.phase === "ready" && current.privateState.phase === "ready";
     if (!isCurrent()) return;
     void Promise.resolve().then(() => isCurrent() && options.onVisitDisplayed(revisions, isCurrent)).then((persisted) => {
       if (isCurrent()) port?.postMessage({ type: "visit-status", persisted: persisted === true });
@@ -5527,19 +5555,19 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
     const version = generation, member = owner, signal = logoRequest.signal;
     for (const stock of stocks) {
       if (stock.market !== "KR" && stock.market !== "US") continue;
-      const identity2 = stock.market + ":" + stock.ticker;
-      if (requestedLogos.has(identity2)) continue;
-      requestedLogos.add(identity2);
+      const identity = stock.market + ":" + stock.ticker;
+      if (requestedLogos.has(identity)) continue;
+      requestedLogos.add(identity);
       void options.logoLoader({ ticker: stock.ticker, market: stock.market }, { signal }).then((dataURL) => {
         if (disposed || signal.aborted || version !== generation || member !== account() || typeof dataURL !== "string" || dataURL.length > 175e3 || !/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(dataURL)) return;
-        port?.postMessage({ type: "logo-update", identity: identity2, dataURL });
+        port?.postMessage({ type: "logo-update", identity, dataURL });
       }).catch(() => {
       });
     }
   };
   const focusWindowKey = (state) => JSON.stringify([
     state.selectedTickers,
-    state.graph?.companies.map((row5) => [row5.id, row5.ticker, row5.market])
+    state.graph?.companies.map((row) => [row.id, row.ticker, row.market])
   ]);
   let pendingFocus = null;
   const clearReturnFocus = () => {
@@ -5553,7 +5581,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
       clearReturnFocus();
       return;
     }
-    const company = state.graph?.companies.find((row5) => row5.ticker === pending.ticker);
+    const company = state.graph?.companies.find((row) => row.ticker === pending.ticker);
     if (!company) {
       clearReturnFocus();
       return;
@@ -5564,10 +5592,10 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
   };
   const prepareReturnFocus = () => {
     clearReturnFocus();
-    const member = account(), revision2 = focusRevision;
+    const member = account(), revision = focusRevision;
     return (ticker) => {
       const state = workspace.getState();
-      if (disposed || revision2 !== focusRevision || !member || member !== account() || member !== owner || state.phase !== "ready" || !state.selectedTickers.includes(ticker) || !state.graph?.companies.some((row5) => row5.ticker === ticker)) return;
+      if (disposed || revision !== focusRevision || !member || member !== account() || member !== owner || state.phase !== "ready" || !state.selectedTickers.includes(ticker) || !state.graph?.companies.some((row) => row.ticker === ticker)) return;
       focusRevision++;
       pendingFocus = { owner: member, windowKey: focusWindowKey(state), ticker, requested: false };
     };
@@ -5597,12 +5625,13 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
   const status = () => {
     const p = current.privateState;
     const originPending = appliedOriginGeneration !== originGeneration;
+    const layoutLimit = !!p.document && p.document.layouts.length >= 3 && !p.document.layouts.some((layout) => layout.map_key === PROTOTYPE_MAP_KEY);
     port?.postMessage({
       type: "status",
-      writable: p.phase === "ready" || p.phase === "saving",
+      writable: !layoutLimit && (p.phase === "ready" || p.phase === "saving"),
       saving: p.phase === "saving" || originPending,
       dataRefresh: options.enableDataRefresh ? { phase: current.dataRefresh?.phase || "idle", checked: !!current.dataRefresh?.checkedAt } : null,
-      message: originPending ? "새 자료의 배치를 적용 중이에요…" : rejectedDraft ? `배치·메모가 저장 범위를 벗어나 저장하지 않았어요. 현재 화면은 유지했어요. (${rejectedDraft.code}; positions=${rejectedDraft.positions ?? "?"}, notes=${rejectedDraft.notes ?? "?"}, marks=${rejectedDraft.marks ?? "?"})` : p.phase === "loading" ? "저장된 종목과 기록을 불러오는 중이에요…" : p.phase === "conflict" ? "다른 화면에서 기록이 바뀌었어요. 덮어쓰지 않았어요." : p.phase === "error" ? options.localSession && p.error ? p.error : "저장하지 못했어요. 변경 내용을 유지하고 있어요." : p.phase === "saving" ? "저장 중…" : p.dirty ? "아직 저장하지 않은 변경이 있어요" : "저장된 기록을 불러왔어요"
+      message: originPending ? "새 자료의 배치를 적용 중이에요…" : layoutLimit ? "지도 배치 저장 슬롯이 가득 차 변경을 저장할 수 없어요. 기존 기록은 유지했어요." : rejectedDraft ? `배치·메모가 저장 범위를 벗어나 저장하지 않았어요. 현재 화면은 유지했어요. (${rejectedDraft.code}; positions=${rejectedDraft.positions ?? "?"}, notes=${rejectedDraft.notes ?? "?"}, marks=${rejectedDraft.marks ?? "?"})` : p.phase === "loading" ? "저장된 종목과 기록을 불러오는 중이에요…" : p.phase === "conflict" ? "다른 화면에서 기록이 바뀌었어요. 덮어쓰지 않았어요." : p.phase === "error" ? options.localSession && p.error ? p.error : "저장하지 못했어요. 변경 내용을 유지하고 있어요." : p.phase === "saving" ? "저장 중…" : p.dirty ? "아직 저장하지 않은 변경이 있어요" : "저장된 기록을 불러왔어요"
     });
   };
   const ready = (event) => {
@@ -5687,18 +5716,20 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
         }
       } else if (command.type === "edit") {
         rejectedDraft = null;
-        const next = mergePrototypeDraft(state, command.draft, (reason) => { rejectedDraft = reason; });
+        const next = mergePrototypeDraft(state, command.draft, (reason) => {
+          rejectedDraft = reason;
+        });
         const hidden = command.draft?.hiddenStockIds;
-        const allowed = new Set(state.graph?.companies.map((row5) => "company:" + row5.ticker));
+        const allowed = new Set(state.graph?.companies.map((row) => "company:" + row.ticker));
         const validView = !options.localView || Array.isArray(hidden) && hidden.length <= 30 && new Set(hidden).size === hidden.length && hidden.every((id) => typeof id === "string" && allowed.has(id));
         if (next && !validView) rejectedDraft = prototypeDraftRejection(command.draft, "local_view");
         if (next && validView) {
-          if (workspace.editLayout("main", () => next) === false) rejectedDraft = prototypeDraftRejection(next, "workspace_rejected");
+          if (workspace.editLayout(next.map_key, () => next) === false) rejectedDraft = prototypeDraftRejection(next, "workspace_rejected");
           if (!rejectedDraft) options.localView?.setHiddenStockIds([...hidden]);
         }
         if (rejectedDraft) status();
       } else if (command.type === "save") {
-        if (rejectedDraft) status();
+        if (rejectedDraft || state.privateState.document?.layouts.length === 3 && !state.privateState.document.layouts.some((layout) => layout.map_key === PROTOTYPE_MAP_KEY)) status();
         else await workspace.save();
       } else if (command.type === "refresh-data" && options.enableDataRefresh && !exploration) {
         await workspace.refreshData();
@@ -5712,10 +5743,10 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
         const urls = /* @__PURE__ */ new Set([
           ...state.graph?.documents.flatMap((d) => [d.url, ...d.evidence.flatMap((e) => [e.url, ...e.sources.map((s) => s.url)])]) || [],
           ...state.graph?.companies.flatMap((c) => (c.sections || []).flatMap((s) => s.items.flatMap((i) => [i.url, ...(i.sources || []).map((source) => source.url)]))) || [],
-          ...Object.values(reviewed.recordsMap).flatMap((record8) => record8.sourceURLs),
-          ...Object.values(projectAutomaticPrototype(state.graph).recordsMap).flatMap((record8) => record8.sourceURLs),
-          ...Object.values(projectMarketPrototype(state.graph).recordsMap).flatMap((record8) => record8.sourceURLs),
-          ...Object.values(projectContractPrototype(state.graph).recordsMap).flatMap((record8) => record8.sourceURLs)
+          ...Object.values(reviewed.recordsMap).flatMap((record) => record.sourceURLs),
+          ...Object.values(projectAutomaticPrototype(state.graph).recordsMap).flatMap((record) => record.sourceURLs),
+          ...Object.values(projectMarketPrototype(state.graph).recordsMap).flatMap((record) => record.sourceURLs),
+          ...Object.values(projectContractPrototype(state.graph).recordsMap).flatMap((record) => record.sourceURLs)
         ]);
         try {
           const url = new URL(command.url);
