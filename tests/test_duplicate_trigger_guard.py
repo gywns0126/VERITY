@@ -218,15 +218,32 @@ def test_universe_scan_budget_untouched():
     assert d["concurrency"]["cancel-in-progress"] is False
 
 
-def test_universe_scan_push_exhaustion_is_failure():
-    """후보 산출물을 못 올린 실행을 성공으로 표시하면 하류가 오래된 입력을 계속 읽는다."""
-    src = _uni_src()
-    tail = src.split("for i in 1 2 3 4 5; do", 1)[1]
-    assert 'echo "::error::push 5회 실패 — universe_candidates 영속화 실패"' in tail
-    assert re.search(
-        r'echo "::error::push 5회 실패 — universe_candidates 영속화 실패"\s+exit 1',
-        tail,
-    ), "재시도 소진 뒤 exit 1이 없어 성공으로 오인될 수 있다"
+def test_universe_scan_push_exhaustion_is_failure(monkeypatch):
+    """Persistence failures must reach Actions, not look like successful scans."""
+    import importlib.util
+
+    steps = yaml.safe_load(_uni_src())["jobs"]["scan"]["steps"]
+    persist = steps[-1]
+    assert persist["run"] == 'python scripts/ci/persist_universe_scan.py "$TARGET_BRANCH"'
+    assert persist.get("continue-on-error", False) is False
+    assert steps[-2]["uses"] == "actions/upload-artifact@v4"
+    spec = importlib.util.spec_from_file_location(
+        "universe_persistence_exit_test",
+        os.path.join(_ROOT, "scripts", "ci", "persist_universe_scan.py"),
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    def exhausted(*args, **kwargs):
+        raise RuntimeError("Push retries exhausted")
+
+    monkeypatch.setattr(module, "persist", exhausted)
+    monkeypatch.setattr(sys, "argv", ["persist_universe_scan.py", "main"])
+    with pytest.raises(SystemExit) as exc:
+        module.main()
+    assert exc.value.code != 0
+    assert "::error::Universe persistence failed" in str(exc.value.code)
+    assert "Push retries exhausted" in str(exc.value.code)
 
 
 def test_each_workflow_queries_its_own_runs():
