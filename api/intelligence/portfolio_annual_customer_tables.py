@@ -53,6 +53,28 @@ def _cell_text(cell) -> str:
     return " ".join(cell.get_text(" ", strip=True).split())
 
 
+def _customer_names(value: str) -> list[str]:
+    """Split explicit lists, including adjacent suffix-qualified legal names.
+
+    Do not split arbitrary words or catalog substrings. Only an entire sequence
+    of names each ending in (주) supplies additional boundaries.
+    """
+    value = re.sub(r"\s*등\s*$", "", value.strip())
+    result = []
+    for part in _SEPARATOR.split(value):
+        part = part.strip()
+        if not part:
+            continue
+        normalized = unicodedata.normalize("NFKC", part)
+        suffix_names = re.findall(r"[^()]+\(주\)", normalized)
+        if (len(suffix_names) > 1
+                and "".join(suffix_names) == normalized):
+            result.extend(name.strip() for name in suffix_names)
+        else:
+            result.append(part)
+    return result
+
+
 def _span(cell, attribute: str) -> int:
     raw = cell.get(attribute, "1")
     if not isinstance(raw, str) or not re.fullmatch(r"[0-9]{1,3}", raw, re.ASCII):

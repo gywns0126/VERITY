@@ -198,17 +198,28 @@ def _sentence(value, doc):
 def _proposal_keys(row):
     # The v1 model schema/prompt and saved receipts remain unchanged. This is an
     # opt-in offline extension, not permission for another model call.
-    optional = {key for key in ("economic_v2", "period_context_v2") if type(row) is dict and key in row}
+    optional = {key for key in ("economic_v2", "period_context_v2", "period_context_v3") if type(row) is dict and key in row}
     _keys(row, _FIELDS | optional)
 
 
-def _period_context(row, source):
+def _period_context(row, source, *, period_archives=None, issuer_registry=None):
     """A bounded preceding sentence, not document-wide period inference.
 
     This opt-in local-review extension leaves the v1 model contract/cache alone.
     Literal adjacency is only evidence for review; it never authorizes a grade.
     """
     from . import portfolio_ai_fallback as base
+    if "period_context_v3" in row:
+        if "period_context_v2" in row:
+            raise ValueError("judgment-period-context-conflict")
+        from .portfolio_reported_period import validate_reported_customer_period
+        original = {key: value for key, value in source.items() if key != "source_version"}
+        context = validate_reported_customer_period(
+            row["period_context_v3"], original, row,
+            archives=period_archives, issuer_registry=issuer_registry)
+        if context["source_version"] != source["source_version"]:
+            raise ValueError("judgment-period-context-version")
+        return context["period_quote"]
     if "period_context_v2" not in row:
         return None
     context = row["period_context_v2"]
@@ -288,7 +299,8 @@ def _materiality_reasons(row, source):
     ) if failed})
 
 
-def _validate_row(row, source, as_of, *, allow_incomplete_quote=False):
+def _validate_row(row, source, as_of, *, allow_incomplete_quote=False,
+                  period_archives=None, issuer_registry=None):
     from . import portfolio_ai_fallback as base
     _proposal_keys(row)
     if (row["company_id"] != source["issuer_id"] or row["source_version"] != source["source_version"]):
@@ -304,7 +316,8 @@ def _validate_row(row, source, as_of, *, allow_incomplete_quote=False):
     name = parties[row["counterparty_id"]]
     if base._ambiguous_party_name(quote, name, parties.values()):
         raise ValueError("judgment-counterparty")
-    period_context = _period_context(row, source)
+    period_context = _period_context(row, source, period_archives=period_archives,
+                                     issuer_registry=issuer_registry)
     _span(row["scope_quote"], quote)
     _span(row["period_quote"], period_context or quote)
     for key in ("reason", "review_trigger"):
@@ -391,7 +404,7 @@ def _validate_row(row, source, as_of, *, allow_incomplete_quote=False):
               "review_reasons": sorted(set(issues)), "missing_evidence": sorted(missing),
               "verification": "literal-source-bound-only", "current_validity": "not-inferred",
               "display": {"degree": "unrated", "impact": "unknown", "importance": "unrated"}}
-    if period_context:
+    if period_context and "period_context_v2" in row:
         start = source["text"].index(period_context)
         result["evidence_refs"].append({"start": start, "end": start + len(period_context)})
     if "economic_v2" in row:
@@ -651,7 +664,8 @@ def _quality_findings(row, source):
     return findings + _omitted_exposure_findings(row, source)
 
 
-def validate_company_judgments(answer, documents, *, as_of):
+def validate_company_judgments(answer, documents, *, as_of, period_archives=None,
+                               issuer_registry=None):
     """Retain safe proposals with reasons, isolating malformed rows from siblings."""
     packet = prepare_judgment_packet(documents, as_of=as_of)
     _keys(answer, {"judgments", "remaining_count"}, "judgment-envelope")
@@ -665,7 +679,8 @@ def validate_company_judgments(answer, documents, *, as_of):
             _proposal_keys(row)
             if type(row["source_id"]) is not str or row["source_id"] not in sources:
                 raise ValueError("judgment-source")
-            result = _validate_row(row, sources[row["source_id"]], as_of)
+            result = _validate_row(row, sources[row["source_id"]], as_of,
+                                   period_archives=period_archives, issuer_registry=issuer_registry)
             if result["id"] in seen:
                 raise ValueError("judgment-duplicate")
             seen.add(result["id"])
@@ -692,14 +707,15 @@ def compare_company_judgments(previous, current):
             or previous.get("id") != current.get("id")):
         return {"status": "not-comparable", "changed_fields": []}
     left, right = previous["proposal"], current["proposal"]
-    fields = [k for k in sorted(_FIELDS | {"economic_v2", "period_context_v2"}) if left.get(k) != right.get(k)]
+    fields = [k for k in sorted(_FIELDS | {"economic_v2", "period_context_v2", "period_context_v3"}) if left.get(k) != right.get(k)]
     for field in ("status", "review_reasons", "missing_evidence", "display"):
         if previous.get(field) != current.get(field):
             fields.append(field)
     return {"status": "changed" if fields else "unchanged", "changed_fields": fields}
 
 
-def project_company_judgments(answer, documents, candidates, reviews, *, as_of):
+def project_company_judgments(answer, documents, candidates, reviews, *, as_of,
+                              period_archives=None, issuer_registry=None):
     """Bind a separate LOCAL review receipt to a source-validated proposal.
 
     Receipts are operator input, never fields accepted from a model answer or
@@ -708,7 +724,8 @@ def project_company_judgments(answer, documents, candidates, reviews, *, as_of):
     Changed source/proposal bytes invalidate the receipt, even on the same day.
     """
     from .portfolio_ai_public import validate_public_ai_review
-    result = validate_company_judgments(answer, documents, as_of=as_of)
+    result = validate_company_judgments(answer, documents, as_of=as_of,
+                                        period_archives=period_archives, issuer_registry=issuer_registry)
     if result["rejected"]:
         raise ValueError("judgment-projection-rejected-input")
     if type(candidates) is not list or len(candidates) > 400:
@@ -824,6 +841,9 @@ def project_company_judgments(answer, documents, candidates, reviews, *, as_of):
         if "period_context_v2" in proposal:
             item["period_context_v2"] = {**deepcopy(proposal["period_context_v2"]),
                                          "source_version": proposal["source_version"]}
+        if "period_context_v3" in proposal:
+            item["period_context_v3"] = deepcopy(proposal["period_context_v3"])
+            item["source_version"] = proposal["source_version"]
         if "economic_v2" in proposal:
             review = receipt.get("materiality_review") if receipt else None
             materiality = deepcopy(proposal["economic_v2"]["materiality"])
