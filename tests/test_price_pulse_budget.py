@@ -97,3 +97,14 @@ def test_work_step_is_tiny_relative_to_overhead():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_cdn_warm_only_runs_once_after_successful_changed_publication():
+    steps = _job()["steps"]
+    warm = next(s for s in steps if s["name"].startswith("Warm "))
+    assert warm["if"] == "success() && steps.commit.outputs.changed == '1'"
+    assert warm["continue-on-error"] is True
+    assert warm["run"].count("curl ") == 1
+    assert "?ticker=005930" in warm["run"]
+    assert "for tk" not in warm["run"]
+    assert "--max-time 20" in warm["run"]

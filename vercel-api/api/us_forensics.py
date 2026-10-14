@@ -28,6 +28,7 @@ import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler
+from threading import Lock
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -50,6 +51,10 @@ SOURCES = {
 
 TIMEOUT_SEC = 4          # vercel.json maxDuration=5 안전 마진 (병렬이라 벽시계 ≈ 1 fetch)
 CACHE_MAX_AGE = 3600     # 1시간 — 소스는 일/주 단위 갱신
+SOURCE_CACHE_TTL = 300  # Shared snapshot reuse; retain original generated_at.
+CDN_MAX_AGE = 300
+_SOURCE_CACHE = {}  # Fixed six filenames; independent of visitor ticker count.
+_SOURCE_LOCKS = {fname: Lock() for fname in SOURCES.values()}
 
 _TICKER_RE = re.compile(r"^[A-Z][A-Z0-9.\-]{0,9}$")
 
@@ -58,16 +63,43 @@ def _source_base() -> str:
     return (os.environ.get(SOURCE_BASE_ENV) or SOURCE_BASE_FALLBACK).strip().rstrip("/")
 
 
+def _load_source(fname: str):
+    url = f"{_source_base()}/{fname}"
+    # A second ticker must not download the same whole snapshot concurrently.
+    with _SOURCE_LOCKS[fname]:
+        hit = _SOURCE_CACHE.get(fname)
+        if hit and hit[0] != url:
+            hit = None
+        if hit and time.monotonic() < hit[1]:
+            return hit[2]
+        try:
+            r = requests.get(url, timeout=TIMEOUT_SEC, headers=hit[3] if hit else {})
+            if r.status_code == 304 and hit:
+                doc, validators = hit[2], hit[3]
+            elif r.status_code == 200:
+                doc = r.json()
+                if not isinstance(doc, dict):
+                    raise ValueError("source JSON must be an object")
+                stocks, meta = doc.get("stocks") or [], doc.get("_meta") or {}
+                if not isinstance(stocks, list) or any(not isinstance(row, dict) for row in stocks) or not isinstance(meta, dict):
+                    raise ValueError("source snapshot shape is invalid")
+                validators = {request_key: r.headers[response_key]
+                              for response_key, request_key in
+                              (("ETag", "If-None-Match"), ("Last-Modified", "If-Modified-Since"))
+                              if r.headers.get(response_key)}
+            else:
+                return None
+            _SOURCE_CACHE[fname] = (url, time.monotonic() + SOURCE_CACHE_TTL, doc, validators)
+            return doc
+        except (requests.RequestException, ValueError) as e:
+            _logger.error("us_forensics: %s fetch/parse 실패: %s", fname, e)
+            return None
+
+
 def _fetch_one(key: str, fname: str, ticker: str):
     """단일 소스 fetch → (key, entry|None, meta, status). entry = ticker 매칭 stock 또는 None."""
-    url = f"{_source_base()}/{fname}?_={int(time.time())}"
-    try:
-        r = requests.get(url, timeout=TIMEOUT_SEC)
-        if r.status_code != 200:
-            return key, None, None, "unavailable"
-        doc = r.json()
-    except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
-        _logger.error("us_forensics: %s fetch/parse 실패: %s", fname, e)
+    doc = _load_source(fname)
+    if doc is None:
         return key, None, None, "unavailable"
     entry = None
     for s in (doc.get("stocks") or []):
@@ -100,8 +132,10 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self._cors()
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        if cache:
-            self.send_header("Cache-Control", f"public, max-age={CACHE_MAX_AGE}")
+        if cache and code == 200:
+            self.send_header("Cache-Control", f"public, max-age={CACHE_MAX_AGE}, s-maxage={CDN_MAX_AGE}")
+        else:
+            self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
 
@@ -159,6 +193,6 @@ class handler(BaseHTTPRequestHandler):
                 "source_total_n": len(SOURCES),
                 "record_present_n": present_n,
             },
-        }, cache=True)
+        }, cache=ok_n == len(SOURCES))
 
 # redeploy-bump 2026-07-10 — dd5066df7 이 봇커밋 87개에 묻혀 ignoreCommand 창(50) 밖 = deploy skip 재발(3차). fresh HEAD 재트리거.

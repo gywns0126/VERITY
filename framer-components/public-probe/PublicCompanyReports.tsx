@@ -8,7 +8,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  *   링크 = 공식/공개 출처(DART·네이버 금융·SEC EDGAR). 클릭 시 원문으로 이동(새 탭).
  * 종목 = prop ticker → 없으면 URL ?q → verity_last_ticker. 숫자로 시작하는 6자리 영숫자=KRX / 그 외=US 소스 분기.
  *   리포트 페이지 in-page 전환(replaceState) 추종 위해 ?q 폴링(1s)으로 종목 동기화.
- * 이름 = stock_report_public(KR)/us_stock_report_public(US)에서 ticker→name 매핑(있으면). 없어도 링크는 ticker로 동작.
+ * 이름 = 경량 통합 universe_search에서 ticker→name 매핑(있으면). 없어도 링크는 ticker로 동작.
+ * 기존 인스턴스의 기본 KR/US 리포트 URL도 검색 목록으로 치환한다. 이름만 위해 전체 리포트를 받지 말 것.
  * 🚨 2026-08-21 테마 = 자체 내장 CSS 변수(--an-cr-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
  *   <style>{AN_PALETTE} 를 두 반환 분기 모두에 넣는다(조기 반환 누락 = 그 화면만 색 죽음).
  *   SVG 는 stroke 프레젠테이션 attribute 대신 style 로 준다 — 거기서는 CSS 변수가 해석되지 않는다.
@@ -22,9 +23,20 @@ interface Props {
     dark: boolean
 }
 const DEF_KR =
-    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json"
-const DEF_US =
-    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json"
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
+const DEF_US = DEF_KR
+
+function companyNameUrls(krUrl?: string, usUrl?: string): string[] {
+    const legacyDefaults = [
+        "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json",
+        "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_stock_report_public.json",
+    ]
+    return Array.from(new Set(
+        [krUrl ?? DEF_KR, usUrl ?? DEF_US]
+            .filter(Boolean)
+            .map((url) => legacyDefaults.includes(url) ? DEF_KR : url)
+    ))
+}
 
 const LIGHT = {
     bg: "#f2f4f6",
@@ -207,7 +219,7 @@ export default function PublicCompanyReports(props: Props) {
     useEffect(() => {
         if (onCanvas) return
         let alive = true
-        const urls = [krUniverseUrl, usUniverseUrl].filter(Boolean)
+        const urls = companyNameUrls(krUniverseUrl, usUniverseUrl)
         Promise.all(
             urls.map((u) =>
                 fetch(u)
