@@ -115,7 +115,7 @@ def _kis_publish_shared_token(token: str, expires_dt, issued_dt, app_key: str,
         logger.warning("KIS 공유 store publish 실패 (GH cache 는 유지): %s", e)
 
 
-def _kis_load_shared_token(app_key: str, broker: str = "operator"):
+def _kis_load_shared_token(app_key: str, broker: str = "operator", *, fail_closed: bool = False):
     """Supabase 공유 store 에서 최신 유효 토큰 read (GH 소비자용, cutover 완성 2026-06-03).
 
     배경: cutover(5/31)는 publish(GH→Supabase)만 만들고 GH 소비자 read 경로는 없었음. GH run 은
@@ -149,19 +149,32 @@ def _kis_load_shared_token(app_key: str, broker: str = "operator"):
         token = (row.get("access_token") or "").strip()
         expires_str = row.get("expires_at") or ""
         if not token or not expires_str:
+            if fail_closed:
+                raise ValueError("shared token row is incomplete")
             return None
         # app_key 일치 검증 (타 계정 토큰 사용 차단)
         fp = row.get("app_key_fp")
+        if fail_closed and (not fp or fp != _kis_app_key_fp(app_key)):
+            raise ValueError("shared token account fingerprint is missing or mismatched")
         if fp and fp != _kis_app_key_fp(app_key):
             logger.warning("KIS 공유 store app_key_fp 불일치 — 무시 (계정 정합)")
             return None
         expires_dt = datetime.fromisoformat(expires_str)
-        if datetime.now(KST) >= expires_dt:
-            return None  # 만료 토큰 — 사용 X
         issued_str = row.get("issued_at") or ""
         issued_dt = datetime.fromisoformat(issued_str) if issued_str else None
+        now = datetime.now(KST)
+        if fail_closed:
+            # Issuers need an authoritative timestamp even when their checkout is stale.
+            if issued_dt is None or issued_dt.tzinfo is None or issued_dt > now:
+                raise ValueError("shared token issue time is missing or invalid")
+            if now >= expires_dt and now - issued_dt < timedelta(hours=24):
+                raise ValueError("shared token expired within the 24h issuance interval")
+        if now >= expires_dt:
+            return None  # 만료 토큰 — 사용 X
         return (token, expires_dt, issued_dt)
     except Exception as e:
+        if fail_closed:
+            raise RuntimeError("KIS 발급 차단 (RULE 1): 공유 store의 발급 시각을 확인할 수 없음") from e
         logger.warning("KIS 공유 store read 실패 (file cache fallback 유지): %s", e)
         return None
 
@@ -476,6 +489,7 @@ class KISBroker:
              concurrency group 분리된 cron 도 차단.
         """
         import sys
+        self._last_auth_issued = False
         now = datetime.now(KST)
         today_str = now.strftime("%Y-%m-%d")
 
@@ -508,24 +522,17 @@ class KISBroker:
         if not force_refresh and self._token and self._token_expires and now < self._token_expires:
             return self._token
 
-        # 🚨 2026-08-02 RULE 1 이중발급 fix (7/21 01:26+01:32 · 6/26 16:13+16:31 실증 —
-        #   daily_realtime × daily_analysis(_full) 동시 발급). 로컬 file lock 은 동시 러너의
-        #   stale checkout 에 무력 = 각자 아직 커밋 안 된 lock 을 보고 발급 → 이중.
-        #   → 발급 결정 前 Supabase 공유 store(cross-runner 실시간 truth) 를 항상 확인.
-        #   최근(<24h) 유효 토큰이 이미 있으면 재사용하고 발급하지 않는다.
-        #   force_refresh(주 발급원 kis_token_refresh, KST 23:45) 만 예외 = 1일 1회 강제 발급 유지.
-        if not force_refresh and _kis_shared_enabled():
-            _loaded = _kis_load_shared_token(self.app_key, self.broker_slug)
+        # Force refresh only bypasses local cache, never the shared 24h issuance guard.
+        # Queued workflows can check out a commit preceding another runner's issuance.
+        if _kis_shared_enabled():
+            _loaded = _kis_load_shared_token(self.app_key, self.broker_slug, fail_closed=True)
             if _loaded:
                 _tok, _exp, _iss = _loaded
                 if _iss and _exp and (now - _iss) < timedelta(hours=24) and now < _exp:
                     self._token = _tok
                     self._token_expires = _exp
                     self._issued_date = _iss.strftime("%Y-%m-%d")
-                    logger.info(
-                        "KIS shared-store-first HIT — 최근(<24h) 공유 토큰 재사용, 발급 스킵 "
-                        "(RULE 1 cross-runner race guard, 2026-08-02)"
-                    )
+                    logger.info("KIS shared-store-first HIT — 최근(<24h) 공유 토큰 재사용, 발급 스킵")
                     return self._token
 
         # 2. 디스크 재로드
@@ -628,6 +635,7 @@ class KISBroker:
         resp.raise_for_status()
         data = resp.json()
         self._token = data["access_token"]
+        self._last_auth_issued = True
         expires_str = data.get("access_token_token_expired", "")
         if expires_str:
             self._token_expires = datetime.strptime(
