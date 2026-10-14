@@ -3938,9 +3938,9 @@ function memberCardSize(n){
   try{if(wasHidden){el.hidden=false;el.style.visibility='hidden';}return {width:el.offsetWidth||240,height:Math.max(el.offsetHeight||0,n.kind==='stock'?48:100)};}
   finally{if(wasHidden){el.hidden=true;el.style.visibility=visibility;}}
 }
-// Saved source positions can be far outside the camera. Reveal one new card
-// with the smallest pan only when none is already readable. Never auto-fit,
-// repack cards, clear saved movement or change the zoom on a group toggle.
+// Reveal a source together with its category and connected stocks. Camera-only:
+// retain the current zoom whenever this local context fits; zoom out only enough
+// when saved manual distances make panning alone insufficient.
 function keepRevealedMemberRecordsInView(group,beforeVisible){
   const canvas=space.getBoundingClientRect(),margin=12;
   const bottom=innerWidth<=700&&root.dataset.detail==='open'?Math.min(canvas.bottom,detail.getBoundingClientRect().top):canvas.bottom;
@@ -3948,9 +3948,16 @@ function keepRevealedMemberRecordsInView(group,beforeVisible){
   if(area.right<=area.left||area.bottom<=area.top)return;
   const cards=group.records.filter(n=>memberVisible.has(n.id)&&!beforeVisible.has(n.id))
     .map(n=>nodesEl.querySelector('[data-node="'+n.id+'"]')).filter(el=>el&&!el.hidden);
-  const boxes=cards.map(el=>el.getBoundingClientRect());
-  if(!boxes.length||boxes.some(b=>b.left>=area.left&&b.right<=area.right&&b.top>=area.top&&b.bottom<=area.bottom))return;
-  const b=boxes[0];
+  if(!cards.length)return;
+  const anchors=[group.button,group.more,...(group.stockIds||[]).map(id=>nodesEl.querySelector('[data-node="'+id+'"]'))].filter(el=>el&&!el.hidden);
+  const union=elements=>{const boxes=elements.map(el=>el.getBoundingClientRect());return {left:Math.min(...boxes.map(b=>b.left)),right:Math.max(...boxes.map(b=>b.right)),top:Math.min(...boxes.map(b=>b.top)),bottom:Math.max(...boxes.map(b=>b.bottom))};};
+  const fits=b=>b.left>=area.left&&b.right<=area.right&&b.top>=area.top&&b.bottom<=area.bottom;
+  const targets=[...anchors,...cards],before=union(targets);
+  if(fits(before))return;
+  const ratio=b=>Math.min(1,(area.right-area.left)/(b.right-b.left),(area.bottom-area.top)/(b.bottom-b.top));
+  const zoom=Math.max(.08,state.zoom*ratio(before));
+  if(zoom<state.zoom){state.zoom=zoom;renderMap();}
+  const b=union(targets);
   const delta=(start,end,min,max)=>end-start>max-min||start<min?min-start:end>max?max-end:0;
   state.panX+=delta(b.left,b.right,area.left,area.right);
   state.panY+=delta(b.top,b.bottom,area.top,area.bottom);
@@ -4178,7 +4185,8 @@ function arrangeMemberSections(){
     // not its saved/display position, and never retain it in the old category.
     const owned=new Set(g.sectionBlocks.flat());
     for(const n of g.records)if(focusOffsets.has(n.id)&&!owned.has(n.id))g.sectionBlocks.push([n.id]);
-    for(const ids of g.sectionBlocks){const b=bounds(ids.map(id=>recordRect(nodeById[id])));occupied.push({left:b.left-pad,right:b.right+pad,top:b.top-pad,bottom:b.bottom+pad});}
+    // Backing surfaces are not obstacles. A single manually displaced card must
+    // not reserve all the empty space between it and the rest of its category.
     if(g.morePositioned)occupied.push({...rect(g.morePoint.x*WORLD_WIDTH,g.morePoint.y*WORLD_HEIGHT,g.more.offsetWidth||120,g.more.offsetHeight||32),more:g.key});
   }
   function freeBlock(shape,x,y){
@@ -4211,27 +4219,28 @@ function arrangeMemberSections(){
       }
       continue;
     }
-    const columns=1,rows=children.length;
-    const widths=Array.from({length:columns},(_,col)=>Math.max(0,...sizes.filter((_,i)=>i%columns===col).map(s=>s.width)));
-    const heights=Array.from({length:rows},(_,row)=>Math.max(0,...sizes.slice(row*columns,(row+1)*columns).map(s=>s.height)));
-    const bodyWidth=widths.reduce((a,b)=>a+b,0)+Math.max(0,columns-1)*gap;
-    const slots=children.map((n,i)=>{
-      const col=i%columns,row=Math.floor(i/columns),origin=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n,inherited=g.recordShifts.get(n.id)||{x:0,y:0};
-      const x=-bodyWidth/2+widths.slice(0,col).reduce((a,b)=>a+b,0)+col*gap+widths[col]/2+(n.x-origin.x-inherited.x)*WORLD_WIDTH;
-      const y=heights.slice(0,row).reduce((a,b)=>a+b,0)+row*gap+heights[row]/2+(n.y-origin.y-inherited.y)*WORLD_HEIGHT;
-      return {n,x,y,box:rect(x,y,sizes[i].width,sizes[i].height)};
-    });
-    const body=bounds(slots.map(s=>s.box)),moreHeight=g.more.offsetHeight||32,moreY=body.bottom+gap+moreHeight/2;
-    const shape=bounds([...slots.map(s=>s.box),...(g.more.hidden?[]:[rect(0,moreY,g.more.offsetWidth||120,moreHeight)])]);
-    const cached=g.records.filter(n=>focusOffsets.has(n.id));
-    const top=Math.max(g.y*WORLD_HEIGHT+(g.button.offsetHeight||50)/2+30,...cached.map(n=>recordRect(n).bottom+gap+pad*2));
     // The old more button moves below this batch; it is not a permanent obstacle.
     for(let i=occupied.length-1;i>=0;i--)if(occupied[i].more===g.key)occupied.splice(i,1);
-    const slot=freeBlock({left:shape.left-pad,right:shape.right+pad,top:shape.top-pad,bottom:shape.bottom+pad},g.x*WORLD_WIDTH,top);
-    if(!slot){children.forEach(n=>memberVisible.delete(n.id));continue;}
-    for(const item of slots){const offset={x:(slot.x+item.x)/WORLD_WIDTH-item.n.x,y:(slot.y+item.y)/WORLD_HEIGHT-item.n.y};memberDisplayOffsets.set(item.n.id,offset);focusOffsets.set(item.n.id,offset);}
-    g.sectionBlocks.push(children.map(n=>n.id));occupied.push(slot.area);
-    if(!g.more.hidden)placeMore(g,slot.x,slot.y+moreY);
+    let top=g.y*WORLD_HEIGHT+(g.button.offsetHeight||50)/2+30;
+    const placed=[];
+    for(let i=0;i<children.length;i++){
+      const n=children[i],size=sizes[i],origin=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;
+      const inherited=g.recordShifts.get(n.id)||{x:0,y:0};
+      const dx=(n.x-origin.x-inherited.x)*WORLD_WIDTH,dy=(n.y-origin.y-inherited.y)*WORLD_HEIGHT;
+      const slot=freeBlock(rect(0,0,size.width,size.height),g.x*WORLD_WIDTH,top+size.height/2);
+      if(!slot){memberVisible.delete(n.id);continue;}
+      // Allocate the automatic slot independently, then apply this card's saved
+      // movement only to this card. Never rewrite n.x/y, marks, notes or history.
+      const offset={x:(slot.x+dx)/WORLD_WIDTH-n.x,y:(slot.y+dy)/WORLD_HEIGHT-n.y};
+      memberDisplayOffsets.set(n.id,offset);focusOffsets.set(n.id,offset);
+      occupied.push(recordRect(n));placed.push(n.id);top=slot.area.bottom+gap;
+    }
+    if(placed.length)g.sectionBlocks.push(placed);
+    if(!g.more.hidden){
+      const b=bounds(visible.filter(n=>focusOffsets.has(n.id)).map(recordRect)),h=g.more.offsetHeight||32;
+      const slot=freeBlock(rect(0,0,g.more.offsetWidth||120,h),g.x*WORLD_WIDTH,b.bottom+gap+h/2);
+      if(slot)placeMore(g,slot.x,slot.y);
+    }
   }
 }
 shown=function(n){return !!n&&ungroupedShown(n)&&(n.kind==='stock'||memberVisible.has(n.id));};
@@ -4266,12 +4275,19 @@ function drawMemberGroups(){
     for(const ids of g.sectionBlocks||[]){
       const cards=ids.filter(id=>memberVisible.has(id)).map(id=>nodesEl.querySelector('[data-node="'+id+'"]')).filter(el=>el&&!el.hidden);
       if(!cards.length)continue;
-      const area=document.createElement('div');area.className='an-member-section';area.dataset.section=g.key;
-      // Separate newly opened batches can use different free spaces. Do not draw
-      // a backing rectangle across unrelated headers/cards between those spaces.
-      const canvas=space.getBoundingClientRect(),bounds=cards.map(el=>el.getBoundingClientRect());
-      const pad=16*scale,left=Math.min(...bounds.map(b=>b.left))-canvas.left-pad,top=Math.min(...bounds.map(b=>b.top))-canvas.top-pad;
-      Object.assign(area.style,{left:left+'px',top:top+'px',width:(Math.max(...bounds.map(b=>b.right))-canvas.left-left+pad)+'px',height:(Math.max(...bounds.map(b=>b.bottom))-canvas.top-top+pad)+'px',borderRadius:20*scale+'px'});memberSectionLayer.append(area);
+      // Split the backing at manually created gaps as well as reveal batches.
+      // A displaced card must not create a tall empty panel behind other cards.
+      const canvas=space.getBoundingClientRect(),boxes=cards.map(el=>el.getBoundingClientRect()).sort((a,b)=>a.top-b.top),runs=[];
+      for(const box of boxes){
+        const last=runs.at(-1),prior=last?.at(-1);
+        if(prior&&box.top-prior.bottom<=48*scale&&box.left<prior.right&&box.right>prior.left)last.push(box);
+        else runs.push([box]);
+      }
+      for(const bounds of runs){
+        const area=document.createElement('div');area.className='an-member-section';area.dataset.section=g.key;
+        const pad=16*scale,left=Math.min(...bounds.map(b=>b.left))-canvas.left-pad,top=Math.min(...bounds.map(b=>b.top))-canvas.top-pad;
+        Object.assign(area.style,{left:left+'px',top:top+'px',width:(Math.max(...bounds.map(b=>b.right))-canvas.left-left+pad)+'px',height:(Math.max(...bounds.map(b=>b.bottom))-canvas.top-top+pad)+'px',borderRadius:20*scale+'px'});memberSectionLayer.append(area);
+      }
     }
     // Hover and keyboard focus reveal coverage paths without turning every
     // collapsed source category into a permanent fan of apparent relationships.
