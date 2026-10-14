@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-14T01:23:25+09:00",
+ "as_of": "2026-10-14T10:10:26+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -41,9 +41,30 @@
      ]
     },
     {
+     "key": "kis_credit_balance",
+     "modules": [
+      "red_flags.py"
+     ]
+    },
+    {
+     "key": "kis_financial_ratio",
+     "modules": [
+      "fact.py",
+      "graham.py",
+      "moat.py",
+      "red_flags.py"
+     ]
+    },
+    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
+     ]
+    },
+    {
+     "key": "kis_short_sale",
+     "modules": [
+      "red_flags.py"
      ]
     },
     {
@@ -59,24 +80,11 @@
      ]
     }
    ],
-   "thin_keys": [
-    {
-     "key": "kis_financial_ratio",
-     "coverage": "1/71"
-    },
-    {
-     "key": "kis_short_sale",
-     "coverage": "1/71"
-    },
-    {
-     "key": "kis_credit_balance",
-     "coverage": "1/71"
-    }
-   ],
+   "thin_keys": [],
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "71/71",
+     "coverage": "40/40",
      "via": [
       "current_price",
       "price"
@@ -87,7 +95,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "39/71",
+     "coverage": "31/40",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -98,7 +106,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "71/71",
+     "coverage": "40/40",
      "via": [
       "fscore_deltas"
      ],
@@ -108,7 +116,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "70/71",
+     "coverage": "40/40",
      "via": [
       "industry"
      ],
@@ -118,7 +126,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "36/71",
+     "coverage": "31/40",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -132,14 +140,14 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 10,
+     "events_scanned": 18,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
      ]
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 5종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 8종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
@@ -255,8 +263,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 56,
-    "scored": 56,
+    "with_pct": 25,
+    "scored": 25,
     "ok": true
    },
    "dead_guards": [],
