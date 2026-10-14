@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-10-15T00:19:49.586266+09:00",
+  "generated_at": "2026-10-15T04:32:18.142619+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 385894,
-    "python_modules": 1242,
+    "code_lines_tsx_py": 387754,
+    "python_modules": 1250,
     "tsx_components": 149,
-    "json_data_files": 2431,
-    "json_total_tracked": 2456,
+    "json_data_files": 2433,
+    "json_total_tracked": 2458,
     "workflows": 81,
     "scheduled_workflows": 62,
-    "cron_triggers": 73,
-    "git_tracked_files": 8578
+    "cron_triggers": 72,
+    "git_tracked_files": 8580
   },
   "subsystems": {
     "ingest": {
@@ -289,7 +289,6 @@
         {
           "name": "daily_analysis_full",
           "crons": [
-            "50 7 * * 1-5",
             "30 21 * * 2-5",
             "7 0 * * 6",
             "7 0 1 * *",
@@ -765,7 +764,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 2431
+      "count": 2433
     },
     "validation": {
       "label": "검증",
@@ -780,18 +779,18 @@
     }
   },
   "python_by_dir": {
-    "api": 484,
-    "tests": 455,
-    "scripts": 173,
+    "api": 485,
+    "tests": 461,
+    "scripts": 174,
     "vercel-api": 116,
     "server": 8,
     ".github": 6
   },
   "funnel": {
-    "investable_real": 2879,
+    "investable_real": 76,
     "cap": 5000,
     "stages": [
-      2879,
+      76,
       300,
       100,
       25
@@ -802,7 +801,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2879 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~76 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
