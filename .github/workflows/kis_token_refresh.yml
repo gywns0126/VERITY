@@ -94,11 +94,19 @@ jobs:
                   print(f"[{slug}] lock — 24h 이내 이미 발급됨. KIS API 호출 skip (1일 1토큰 가드).")
                   return False
 
-              # force_refresh=True — broker 내부 24h 가드 bypass. 위 workflow-level 24h 가드가
-              # 1일 1토큰 보장 (당일 미발급 시에만 여기 도달 = backup 발급).
-              token = broker.authenticate(force_refresh=True)
-              print(f"[{slug}] KIS 토큰 갱신 완료: {token[:8]}***")
-              return True
+              # Cache/shared reuse is not an issuance. Keep actual issuance reporting
+              # independent of lock persistence so the next step still detects missing locks.
+              try:
+                  broker.authenticate(force_refresh=True)
+              except Exception:
+                  if not broker._last_auth_issued:
+                      raise
+                  # Issuance already happened; the lock step must detect persistence failure.
+                  print(f"::error::[{slug}] 발급 후 저장 실패 — 신규 발급 건수에 포함")
+                  return True
+              issued = broker._last_auth_issued
+              print(f"[{slug}] KIS 인증 완료 — {'신규 발급' if issued else '기존 토큰 재사용'}")
+              return issued
 
           # 🚨 RULE 1 은 **앱키마다** 적용된다. 계좌가 늘어도 한 계좌가 하루 2토큰을 받으면
           #   그 계좌가 제재 대상이다. 그래서 슬러그마다 독립된 락 파일·store 행·24h 가드를
