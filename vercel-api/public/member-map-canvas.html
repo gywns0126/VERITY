@@ -3928,8 +3928,8 @@ function makeMemberGroup(key){
   button.onkeydown=e=>{memberMovingGroup=group;try{moveWithKeys(e,group.id);}finally{memberMovingGroup=null;}};
   button.onpointerenter=button.onfocus=()=>{memberHoveredGroup=key;drawMemberGroups();};
   button.onpointerleave=button.onblur=()=>{memberHoveredGroup='';drawMemberGroups();};
-  button.onclick=()=>{if(suppressClick){suppressClick=false;return;}if(cancelGesture)return;closePreview();memberGroupManual.add(key);memberReveal='';const closing=group.records.some(n=>memberVisible.has(n.id));if(closing)memberOpenGroups.delete(key);else memberOpenGroups.set(key,6);renderMap();};
-  more.onclick=()=>{if(cancelGesture)return;closePreview();memberGroupManual.add(key);memberOpenGroups.set(key,(memberOpenGroups.get(key)||0)+6);renderMap();};
+  button.onclick=()=>{if(suppressClick){suppressClick=false;return;}if(cancelGesture)return;closePreview();memberGroupManual.add(key);memberReveal='';const closing=group.records.some(n=>memberVisible.has(n.id)),beforeVisible=new Set(memberVisible);if(closing)memberOpenGroups.delete(key);else memberOpenGroups.set(key,6);renderMap();if(!closing)keepRevealedMemberRecordsInView(group,beforeVisible);};
+  more.onclick=()=>{if(cancelGesture)return;closePreview();const beforeVisible=new Set(memberVisible);memberGroupManual.add(key);memberOpenGroups.set(key,(memberOpenGroups.get(key)||0)+6);renderMap();keepRevealedMemberRecordsInView(group,beforeVisible);};
   memberGroupLayer.append(button,more);memberGroups.set(key,group);return group;
 }
 function memberCardSize(n){
@@ -3937,6 +3937,24 @@ function memberCardSize(n){
   const wasHidden=el.hidden,visibility=el.style.visibility;
   try{if(wasHidden){el.hidden=false;el.style.visibility='hidden';}return {width:el.offsetWidth||240,height:Math.max(el.offsetHeight||0,n.kind==='stock'?48:100)};}
   finally{if(wasHidden){el.hidden=true;el.style.visibility=visibility;}}
+}
+// Saved source positions can be far outside the camera. Reveal one new card
+// with the smallest pan only when none is already readable. Never auto-fit,
+// repack cards, clear saved movement or change the zoom on a group toggle.
+function keepRevealedMemberRecordsInView(group,beforeVisible){
+  const canvas=space.getBoundingClientRect(),margin=12;
+  const bottom=innerWidth<=700&&root.dataset.detail==='open'?Math.min(canvas.bottom,detail.getBoundingClientRect().top):canvas.bottom;
+  const area={left:canvas.left+margin,right:canvas.right-margin,top:canvas.top+margin,bottom:bottom-margin};
+  if(area.right<=area.left||area.bottom<=area.top)return;
+  const cards=group.records.filter(n=>memberVisible.has(n.id)&&!beforeVisible.has(n.id))
+    .map(n=>nodesEl.querySelector('[data-node="'+n.id+'"]')).filter(el=>el&&!el.hidden);
+  const boxes=cards.map(el=>el.getBoundingClientRect());
+  if(!boxes.length||boxes.some(b=>b.left>=area.left&&b.right<=area.right&&b.top>=area.top&&b.bottom<=area.bottom))return;
+  const b=boxes[0];
+  const delta=(start,end,min,max)=>end-start>max-min||start<min?min-start:end>max?max-end:0;
+  state.panX+=delta(b.left,b.right,area.left,area.right);
+  state.panY+=delta(b.top,b.bottom,area.top,area.bottom);
+  renderMap();saveZoomSoon();
 }
 function syncMemberScopedLayout(context,scope){
   if(memberGroups.layoutContext===context)return;
