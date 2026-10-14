@@ -14,7 +14,7 @@ from typing import Any
 from api.workflows.archiver import load_snapshots_range
 from api.config import now_kst
 from api.intelligence.tail_risk_digest import load_black_swan_ledger
-from api.intelligence.backtest_archive import _get_price_map_from_snapshot, _positive_price
+from api.intelligence.backtest_archive import _get_price_map_from_snapshot, _positive_price, _price_gap
 
 
 PERIOD_DAYS = {
@@ -91,9 +91,14 @@ def _measure_recommendation_performance(snapshots: list[dict]) -> dict:
 
     results = []
     unresolved = []
+    price_gaps = []
     for ticker, orig in first_recs.items():
         orig_price = _positive_price(orig)
         cur_price = last_prices.get(ticker)
+        if orig_price is None:
+            price_gaps.append(_price_gap(ticker, orig, first_snap, "start"))
+        if cur_price is None:
+            price_gaps.append(_price_gap(ticker, orig, last_snap, "evaluation"))
         if orig_price is None or cur_price is None:
             unresolved.append({"ticker": ticker, "name": orig.get("name", "?"),
                                "reason": "missing_start_price" if orig_price is None else "missing_evaluation_price"})
@@ -133,6 +138,8 @@ def _measure_recommendation_performance(snapshots: list[dict]) -> dict:
         "evaluated_count": total,
         "unresolved_count": len(unresolved),
         "unresolved": unresolved,
+        "price_gap_count": len(price_gaps),
+        "price_gaps": price_gaps,
         "evaluation_status": "complete" if complete else "partial" if first_recs else "no_recommendations",
         "hit_rate_pct": hit_rate if complete else None,
         "avg_return_pct": avg_ret if complete else None,
@@ -248,6 +255,7 @@ def _analyze_brain_accuracy(snapshots: list[dict]) -> dict:
     first_recs = {r["ticker"]: r for r in first_snap.get("recommendations", [])}
     last_prices = _get_price_map_from_snapshot(last_snap)
     unresolved = []
+    price_gaps = []
     cohort_by_grade = Counter()
 
     for ticker, orig in first_recs.items():
@@ -257,6 +265,10 @@ def _analyze_brain_accuracy(snapshots: list[dict]) -> dict:
         orig_price = _positive_price(orig)
         cur_price = last_prices.get(ticker)
 
+        if orig_price is None:
+            price_gaps.append(_price_gap(ticker, orig, first_snap, "start"))
+        if cur_price is None:
+            price_gaps.append(_price_gap(ticker, orig, last_snap, "evaluation"))
         if orig_price is None or cur_price is None:
             unresolved.append({"ticker": ticker, "grade": grade,
                                "reason": "missing_start_price" if orig_price is None else "missing_evaluation_price"})
@@ -294,6 +306,7 @@ def _analyze_brain_accuracy(snapshots: list[dict]) -> dict:
         "cohort_size": len(first_recs), "cohort_by_grade": dict(cohort_by_grade),
         "evaluated_count": sum(len(v) for v in grade_returns.values()),
         "unresolved_count": len(unresolved), "unresolved": unresolved,
+        "price_gap_count": len(price_gaps), "price_gaps": price_gaps,
         "evaluation_status": status, "insight": insight,
         "window": {"start": first_snap.get("_date"), "end": last_snap.get("_date")},
     }

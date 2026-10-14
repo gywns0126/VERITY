@@ -141,10 +141,10 @@ def test_analyze_job_gated_on_guard():
 
 def test_manual_dispatch_never_skipped():
     """수동 실행은 오퍼레이터 의도 — 가드 미적용."""
-    src = _wf_src()
-    assert 'github.event_name }}" = "workflow_dispatch"' in src
-    seg = src.split("workflow_dispatch")[2][:200] if src.count("workflow_dispatch") > 2 else src
-    assert "run=1" in seg
+    from scripts.ci.universe_analysis_gate import trigger_decision
+    from unittest.mock import patch
+    with patch.dict(os.environ, {"EVENT_NAME": "workflow_dispatch"}):
+        assert trigger_decision(None)[0] is True
 
 
 def test_workflow_calls_the_script_not_inline():
@@ -153,7 +153,9 @@ def test_workflow_calls_the_script_not_inline():
     2026-08-15 작성 중 실측: 인라인으로 두었더니 yaml.safe_load 가 ScannerError 를 냈다.
     """
     src = _wf_src()
-    assert "scripts/ci/duplicate_run_guard.py" in src
+    assert "scripts/ci/universe_analysis_gate.py" in src
+    gate = open(os.path.join(_ROOT, "scripts/ci/universe_analysis_gate.py"), encoding="utf-8").read()
+    assert "from scripts.ci.duplicate_run_guard import decide" in gate
     assert "python3 -c '" not in src, "판정 로직이 인라인으로 되돌아왔다"
     yaml.safe_load(src)  # 파싱 자체가 회귀 가드
 
@@ -248,7 +250,8 @@ def test_universe_scan_push_exhaustion_is_failure(monkeypatch):
 
 def test_each_workflow_queries_its_own_runs():
     """가드가 남의 워크플로 run 을 보고 판단하면 엉뚱하게 생략된다."""
-    assert "daily_analysis_full.yml/runs" in _wf_src()
+    gate = open(os.path.join(_ROOT, "scripts/ci/universe_analysis_gate.py"), encoding="utf-8").read()
+    assert "daily_analysis_full.yml/runs" in gate
     assert "universe_scan.yml/runs" not in _wf_src()
     assert "daily_analysis_full.yml/runs" not in _uni_src()
 

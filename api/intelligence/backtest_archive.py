@@ -48,6 +48,29 @@ def _positive_price(record: dict) -> Optional[float]:
     return None
 
 
+def _price_gap(ticker: str, reference: dict, snapshot: dict,
+               role: str, snapshot_date: Optional[str] = None) -> dict:
+    """Identify the exact historical requirement; an archive date alone cannot fill it.
+
+    updated_at can precede the canonical filename (weekend carry-forward). Keep both
+    so recovery never silently substitutes today's price or a later archive run.
+    Legacy snapshots do not record a quote timestamp or adjustment definition;
+    expose that limitation instead of guessing an adjusted/unadjusted price.
+    """
+    return {
+        "ticker": ticker,
+        "role": role,
+        "snapshot_date": snapshot_date or snapshot.get("_date"),
+        "snapshot_updated_at": snapshot.get("updated_at"),
+        "market": reference.get("market"),
+        "currency": reference.get("currency"),
+        "price_basis": reference.get("price_basis"),
+        "recovery_status": "unresolved",
+        "recovery_requires": ["matching_identity", "matching_quote_date_and_time",
+                              "matching_currency", "matching_adjustment_definition"],
+    }
+
+
 def _slippage_pct(market_cap_krw: Optional[float]) -> float:
     """왕복(매수+매도) 슬리피지 + 호가 spread 추정 (시총 tier 기반).
 
@@ -203,7 +226,9 @@ def evaluate_past_recommendations(
         # past_snap 의 price = 추천 발생 시점 가격 (사용자 매수 불가).
         # T+1 영업일 snapshot 가격 = 사실상 진입 가능 가격. 보정값으로 우선 사용.
         # T+1 snapshot 없는 추천 (= 너무 최신이라 다음날 cron 미발생) 은 skip.
-        t_plus_1_prices = _t_plus_1_price_map(past_snap, dates)
+        t_plus_1_date = _next_business_snapshot_date(past_snap, dates)
+        t_plus_1_snap = load_snapshot(t_plus_1_date) if t_plus_1_date else None
+        t_plus_1_prices = _get_price_map_from_snapshot(t_plus_1_snap or {})
 
         # Sprint 11 dual-track: gross (raw forward tracking) + net (slippage+TX 보정).
         # 결측을 숨긴 관측 부분집합을 전체 추천 성과로 보고하지 않는다.
@@ -213,17 +238,27 @@ def evaluate_past_recommendations(
         returns_net: List[float] = []
         skipped_no_t1 = 0
         unresolved: List[Dict[str, Any]] = []
+        price_gaps: List[Dict[str, Any]] = []
 
         for rec in buy_recs:
             ticker = rec.get("ticker", "")
             name = rec.get("name", "?")
             rec_price_t = _positive_price(rec)
             if rec_price_t is None or not ticker:
+                if ticker and rec_price_t is None:
+                    price_gaps.append(_price_gap(ticker, rec, past_data, "recommendation", past_snap))
                 unresolved.append({"ticker": ticker, "name": name, "reason": "invalid_recommendation_price_or_ticker"})
                 continue
 
             # T+1 시가 보정 — 사용자 매수 가능 가격
             rec_price_t1 = t_plus_1_prices.get(ticker)
+            cur_price = current_prices.get(ticker)
+            # Report both price requirements before the entry skip. One unresolved
+            # recommendation can lack entry AND exit; its cohort count stays one.
+            if rec_price_t1 is None:
+                price_gaps.append(_price_gap(ticker, rec, t_plus_1_snap or {}, "entry", t_plus_1_date))
+            if cur_price is None:
+                price_gaps.append(_price_gap(ticker, rec, today_snap, "evaluation", today_str))
             if rec_price_t1 is None or rec_price_t1 <= 0:
                 # T+1 snapshot 에 ticker 없음 = 다음날 분석에서 제외됨 또는 너무 최신
                 # 보수적으로 skip (alpha 부풀림 방지). Look-ahead bias 차단.
@@ -232,7 +267,6 @@ def evaluate_past_recommendations(
                 continue
             rec_price = rec_price_t1  # 다음 스냅샷 가격. 거래소 시가와 동일하다고 단정하지 않는다.
 
-            cur_price = current_prices.get(ticker)
             market_cap = rec.get("market_cap")
             slip = _slippage_pct(market_cap)
 
@@ -303,6 +337,9 @@ def evaluate_past_recommendations(
             "unresolved_count": len(unresolved),
             "coverage_pct": round(total_gross / len(buy_recs) * 100, 1) if buy_recs else None,
             "unresolved": unresolved,
+            "price_gap_count": len(price_gaps),
+            "price_gaps": price_gaps,
+            "entry_snapshot_date": t_plus_1_date,
             "observed": observed,
             "evaluation_date": today_str,
             # Net (보정 후 — 실거래 근사. 베테랑 결함 1 대응 후 실제 신뢰값)
@@ -463,6 +500,7 @@ def generate_verification_report() -> Dict[str, Any]:
             period: {key: row.get(key) for key in (
                 "evaluation_status", "cohort_size", "evaluated_count", "unresolved_count",
                 "coverage_pct", "unresolved", "evaluation_date", "snapshot_date",
+                "price_gap_count", "price_gaps", "entry_snapshot_date",
             )} for period, row in periods.items()
         },
         "factor_health": {

@@ -55,10 +55,10 @@ def test_us_close_slot_carries_full_us_mode():
     assert ev[0][1].get("mode") == "full_us", ev[0]
 
 
-def test_kr_close_slot_stays_default():
-    """KST 16:50 슬롯은 full(KR) — payload 없이 보내 기본값을 쓴다."""
+def test_kr_close_timer_does_not_race_scan_completion():
+    """KR full starts from persisted scan completion, not a fixed-time dispatch."""
     ev = _full_events(datetime(2026, 8, 20, 7, 50, tzinfo=timezone.utc))  # UTC 목 07:50
-    assert ev and not isinstance(ev[0], tuple), f"KR 슬롯에 모드가 붙었다: {ev}"
+    assert ev == []
 
 
 def test_workflow_reads_client_payload_before_cron():
@@ -126,16 +126,10 @@ def test_us_slot_wire_body_carries_mode():
     assert sent["status"] == 204
 
 
-def test_kr_slot_wire_body_omits_client_payload():
-    """KR 슬롯은 client_payload 키 자체가 없어야 한다 — 빈 dict 도 아니다.
-
-    빈 dict 를 보내면 워크플로의 `-n "$DISPATCH_MODE"` 는 어차피 거짓이라 결과는
-    같지만, '모드를 의도적으로 안 실었다' 와 '실었는데 비었다' 가 구분되지 않는다.
-    """
-    ev = _full_events(datetime(2026, 8, 20, 7, 50, tzinfo=timezone.utc))
-    sent = _capture_dispatch(ev[0])
+def test_non_payload_dispatch_keeps_existing_wire_contract():
+    sent = _capture_dispatch("universe_scan")
     assert "client_payload" not in sent["body"], sent["body"]
-    assert sent["body"] == {"event_type": "daily_analysis_full"}
+    assert sent["body"] == {"event_type": "universe_scan"}
 
 
 def test_split_event_handles_both_shapes():

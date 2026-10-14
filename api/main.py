@@ -268,28 +268,9 @@ def _to_float(value, default=0.0) -> float:
 
 
 def _fetch_watch_tickers() -> list:
-    """Supabase watch_group_items에서 모든 사용자의 관심종목 ticker/market를 반환."""
-    import requests as _req
-    url = os.environ.get("SUPABASE_URL", "").rstrip("/")
-    key = os.environ.get("SUPABASE_ANON_KEY", "")
-    if not url or not key:
-        return []
-    try:
-        r = _req.get(
-            f"{url}/rest/v1/watch_group_items",
-            headers={
-                "apikey": key,
-                "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json",
-            },
-            params={"select": "ticker,name,market", "limit": "200"},
-            timeout=8,
-        )
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        print(f"  관심종목 로드 실패: {e}")
-        return []
+    """Private console owner's watch items; server-only ownership-scoped collector."""
+    from api.collectors.operator_watchlist import fetch_operator_watch_items
+    return fetch_operator_watch_items()
 
 
 def _merge_watch_items_into_candidates(
@@ -2733,6 +2714,13 @@ def main():
         _u_snap = load_universe_candidates(max_stale_hours=max_stale_hours)
         if _u_snap and _u_snap.get("candidates"):
             candidates = _u_snap["candidates"]
+            portfolio["analysis_provenance"] = {
+                **_u_snap["_load_provenance"],
+                "analysis_run_id": os.environ.get("GITHUB_RUN_ID"),
+                "analysis_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+                "analysis_mode": mode,
+                "status": "started",
+            }
             print(
                 f"  candidates: snapshot cache hit ({_u_snap.get('collected_at')}) — "
                 f"{len(candidates)}개 (weekday max_stale={max_stale_hours}h)"
@@ -2747,7 +2735,7 @@ def main():
         # 재시도와 실행 이력만 남기고, 실제 연속 결함 알림은 cron_health_monitor 단일 경로가 맡는다.
         abort_msg = (
             f"⚠️ <b>VERITY daily_analysis 중단</b>\n"
-            f"universe_candidates.json 없음 또는 {max_stale_hours}h stale.\n"
+            f"universe_candidates.json 없음·미완료·producer 불일치 또는 {max_stale_hours}h stale.\n"
             f"universe_scan cron 결함 의심 → 진단 + 다음 cron 재시도.\n"
             f"(daily_analysis 는 5000 inline scan 안 함 — 분리 sprint 의도 정합)"
         )
@@ -2849,6 +2837,7 @@ def main():
         print(f"  [pool 13F] 스킵: {type(_sm_e).__name__}: {_sm_e}")
 
     # ── STEP 3: quick + full — 기술적 + 수급 + 컨센서스 ──
+    portfolio["analysis_provenance"]["analysis_candidate_count"] = len(candidates)
     print("\n[3] 기술적 분석 + 수급 + 컨센서스")
     macro_mood = macro.get("market_mood", {"score": 50, "label": "중립"})
     export_by_ticker = load_trade_export_by_ticker()
@@ -5711,6 +5700,13 @@ def main():
         )
     except Exception as e:
         print(f"  ⚠️ DART post-drain 스킵: {e}")
+
+    portfolio["analysis_provenance"].update({
+        "status": "completed",
+        "analysis_completed_at": now_kst().isoformat(timespec="seconds"),
+        "resulting_analysis_count": len(portfolio.get("recommendations") or []),
+    })
+    save_portfolio(portfolio)
 
 
 if __name__ == "__main__":

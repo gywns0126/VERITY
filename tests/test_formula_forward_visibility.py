@@ -34,3 +34,22 @@ def test_system_page_renders_formula_forward_card():
     assert "<FormulaRunCard run={pf?.exec_paper} status={pfStatus} />" in page
     assert "exec_paper?: FormulaRun" in types
     assert "price_snapshot?:" in types
+
+
+def test_terminal_preserves_scan_identity_and_zero_coverage_without_full_record(monkeypatch):
+    admin = _load_admin()
+    provenance = {"scan_id": "gh:123:1", "snapshot_sha256": "abc", "scan_candidate_count": 45}
+    scope = {"axis_measurement": {"graham_value": {"inputs": {"pbr": {"state": "substituted"}}}}}
+    payload = {"analysis_provenance": provenance, "recommendations": [{
+        "ticker": "TEST", "verity_brain": {"brain_score": 61, "grade": "WATCH",
+            "data_coverage": 0.0, "grade_confidence": "soft",
+            "fact_score": {"data_coverage": 0.0, "coverage_scope": scope, "large_source_record": "omit"}},
+        "private_unrelated_data": "omit",
+    }]}
+    monkeypatch.setattr(admin, "fetch_portfolio", lambda: payload)
+    body = admin.handle_portfolio_terminal(None)["_body"]
+    assert body["analysis_provenance"] == provenance
+    rec = body["recommendations"][0]
+    assert rec["verity_brain"]["data_coverage"] == 0.0
+    assert rec["verity_brain"]["fact_score"] == {"data_coverage": 0.0, "coverage_scope": scope}
+    assert "private_unrelated_data" not in rec

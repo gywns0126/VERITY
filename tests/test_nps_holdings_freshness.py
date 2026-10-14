@@ -240,21 +240,56 @@ def test_workflow_escalates_nps_failure_after_safe_publish():
 
 
 def test_workflow_keeps_nps_refresh_and_checkpoints_after_analysis_failure():
+    import re
+    from types import SimpleNamespace as Namespace
     import yaml
 
     workflow = yaml.safe_load((ROOT / ".github/workflows/daily_analysis_full.yml").read_text())
     steps = workflow["jobs"]["analyze"]["steps"]
+
+    def allowed(step, *, admitted=True, cancelled=False, nps_result="success",
+                commit_result="skipped", coverage_result="success", completed=False):
+        # Evaluate only the reviewed workflow's boolean condition. Simulate an
+        # earlier analysis failure, so success-only refresh would be rejected.
+        expression = step["if"].removeprefix("${{").removesuffix("}}")
+        expression = expression.replace("&&", " and ").replace("||", " or ")
+        expression = re.sub(r"!(?!=)", "not ", expression).strip()
+        context = {
+            "steps": Namespace(
+                writer_gate=Namespace(outputs=Namespace(run="1" if admitted else "0")),
+                nps_holdings=Namespace(outcome=nps_result),
+                commit_results=Namespace(outcome=commit_result),
+                coverage_gate=Namespace(outcome=coverage_result),
+                analysis_contract=Namespace(outputs=Namespace(valid="true" if completed else "")),
+            ),
+            "always": lambda: True, "cancelled": lambda: cancelled, "success": lambda: False,
+        }
+        return bool(eval(expression, {"__builtins__": {}}, context))
+
     nps_step = next(step for step in steps if step.get("id") == "nps_holdings")
-    assert nps_step["if"] == "${{ !cancelled() }}"
+    assert "!cancelled()" in nps_step["if"]
+    assert allowed(nps_step)  # Admitted scan: refresh survives analysis failure.
+    assert not allowed(nps_step, admitted=False)
+    assert not allowed(nps_step, cancelled=True)
     fallback = next(step for step in steps if step.get("name") == "Preserve independent NPS checkpoints after analysis failure")
     assert "steps.nps_holdings.outcome == 'success'" in fallback["if"]
     assert "steps.commit_results.outcome == 'skipped'" in fallback["if"]
     assert "steps.coverage_gate.outcome != 'failure'" in fallback["if"]
+    assert allowed(fallback)  # Independent checkpoints do not require analysis completion.
+    assert not allowed(fallback, admitted=False)
+    assert not allowed(fallback, nps_result="failure")
+    assert not allowed(fallback, commit_result="success")
+    assert not allowed(fallback, coverage_result="failure")
     assert "-- data/nps_holdings.json data/nps_history_cache.json" in fallback["run"]
     assert "data/metadata/nps_holdings_heartbeat.json" in fallback["run"]
     assert "--force" not in fallback["run"] and "-X " not in fallback["run"]
     verify = next(step for step in steps if step.get("name") == "Verify public NPS history delivery")
-    assert verify["if"].startswith("always()")
+    assert "always()" in verify["if"]
+    assert allowed(verify, completed=True)
+    assert not allowed(verify, completed=False)
+    assert not allowed(verify, admitted=False, completed=True)
+    assert not allowed(verify, nps_result="failure", completed=True)
+    assert not allowed(verify, coverage_result="failure", completed=True)
 
 
 def test_sla_tracks_success_heartbeat_as_p0():

@@ -51,10 +51,17 @@ def snap(tmp_path, monkeypatch):
 
     def _run(this_run, prev=None):
         if prev is not None:
+            # Existing normal source fixtures now use the completed v1 contract.
+            prev.setdefault("schema_version", "v1")
+            prev.setdefault("scan_id", "test:previous")
+            prev.setdefault("kr_source_scan_id", "test:original-kr")
+            prev.setdefault("completed_at", prev.get("collected_at"))
+            prev.setdefault("source_as_of", {"KR": (prev.get("diagnostics") or {}).get("kr_prev_collected_at") or prev.get("collected_at")})
+            prev.setdefault("diagnostics", {}).setdefault("ok", True)
             out.write_text(json.dumps(prev, ensure_ascii=False), encoding="utf-8")
         monkeypatch.setattr(
             "api.analyzers.stock_filter.run_filter_pipeline_with_ramp_up",
-            lambda market_scope="all": this_run,
+            lambda market_scope="all", _metrics=None: this_run,
         )
         return USB.build()
 
@@ -78,6 +85,8 @@ def test_kr_starvation_splices_prev_kr_and_keeps_fresh_us(snap):
     tickers = {c["ticker"] for c in res["candidates"]}
     assert {"ACN", "CTSH", "000660", "005930"} == tickers
     assert d["kr_prev_collected_at"] == fresh
+    assert res["source_as_of"]["KR"] == fresh
+    assert res["source_as_of"]["US"] == res["collected_at"]
 
 
 def test_normal_run_untouched(snap):
@@ -128,6 +137,8 @@ def test_total_zero_still_uses_full_prev(snap):
     assert d["used_prev_snapshot"] is True
     assert d["kr_used_prev"] is False       # 전체 승계라 KR 별도 splice 불필요
     assert d["kr_count"] == 1 and d["us_count"] == 1
+    assert res["collected_at"] == prev["collected_at"]
+    assert d["ok"] is False
 
 
 def test_no_prev_snapshot_marks_starved(snap):
@@ -135,3 +146,23 @@ def test_no_prev_snapshot_marks_starved(snap):
     res = snap([_us("ACN")])
     assert res["diagnostics"]["kr_starved"] is True
     assert res["diagnostics"]["kr_used_prev"] is False
+
+
+def test_legacy_or_failed_previous_cannot_mint_fresh_kr_source(snap):
+    for version, diagnostics in (("v0", {"ok": True}), ("v1", {"ok": False}),
+                                 ("v1", {"ok": True, "used_prev_snapshot": True})):
+        prev = {"schema_version": version, "collected_at": _ago(1),
+                "candidates": [_kr("000660")], "diagnostics": diagnostics}
+        res = snap([_us("ACN")], prev)
+        assert res["diagnostics"]["kr_starved"] is True
+        assert res["diagnostics"]["kr_used_prev"] is False
+
+
+def test_actual_producer_sha_and_run_attempt_recorded(snap, monkeypatch):
+    monkeypatch.setenv("GITHUB_RUN_ID", "123")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "2")
+    monkeypatch.setenv("GITHUB_SHA", "trigger-sha")
+    monkeypatch.setenv("UNIVERSE_PRODUCER_SHA", "executed-checkout-sha")
+    result = snap([_kr("000660"), _us("ACN")])
+    assert result["producer_sha"] == "executed-checkout-sha"
+    assert result["scan_id"] == "gh:123:2"

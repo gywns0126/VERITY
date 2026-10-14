@@ -485,6 +485,26 @@ def _us_market_cap_cached(ticker: str) -> Tuple[int, Optional[str]]:
     return (int(v), date) if v > 0 else (0, None)
 
 
+def _measured_stock_call(fn, *, label: str, metrics: Optional[Dict], kind: str):
+    """Observe existing Yahoo calls including retry/cooler time, without extra requests."""
+    from api.collectors.yfinance_safe import safe_yf_call
+    started = _perf.perf_counter()
+    failed = False
+    try:
+        result = safe_yf_call(fn, label=label, metrics=metrics)
+        failed = result is None
+        return result
+    except BaseException:
+        failed = True
+        raise
+    finally:
+        if metrics is not None:
+            prefix = f"yf_{kind}"
+            metrics[prefix + "_calls"] = metrics.get(prefix + "_calls", 0) + 1
+            metrics[prefix + "_failed"] = metrics.get(prefix + "_failed", 0) + int(failed)
+            metrics[prefix + "_elapsed_s"] = metrics.get(prefix + "_elapsed_s", 0.0) + _perf.perf_counter() - started
+
+
 def get_stock_data(
     ticker_yf: str,
     period: str = "1y",
@@ -518,10 +538,11 @@ def get_stock_data(
     try:
         t = yf.Ticker(ticker_yf)
         # rate limit 대응 wrapper — 429 retry + cooler pause + metric 적재
-        hist = safe_yf_call(
+        hist = _measured_stock_call(
             lambda: t.history(period=period),
             label=f"{ticker_yf}.history",
             metrics=_metrics,
+            kind="history",
         )
         if hist is None or hist.empty:
             return None
@@ -539,10 +560,11 @@ def get_stock_data(
         high_52w = float(hist["High"].max())
         drop_from_high = ((price - high_52w) / high_52w * 100) if high_52w > 0 else 0
 
-        info = safe_yf_call(
+        info = _measured_stock_call(
             lambda: t.info or {},
             label=f"{ticker_yf}.info",
             metrics=_metrics,
+            kind="info",
         ) or {}
 
         # name 보강: 정적 맵에도 없고 hint 도 없으면 yfinance 메타에서 보강 (Phase 2-A 확장 유니버스 케이스)
@@ -570,6 +592,15 @@ def get_stock_data(
         market_cap = info.get("marketCap", 0) or 0
         eps = info.get("trailingEps", 0) or 0
 
+        # Keep the existing scalar defaults while distinguishing unavailable
+        # vendor fields from an observed zero in downstream diagnostics.
+        fundamental_missing_fields = [
+            field for field, source_key in (
+                ("debt_ratio", "debtToEquity"),
+                ("roe", "returnOnEquity"),
+                ("operating_margin", "operatingMargins"),
+            ) if info.get(source_key) is None
+        ]
         debt_ratio = info.get("debtToEquity", 0) or 0
         operating_margin = (info.get("operatingMargins", 0) or 0) * 100
         profit_margin = (info.get("profitMargins", 0) or 0) * 100
@@ -627,6 +658,7 @@ def get_stock_data(
             "pbr": round(pbr, 2) if pbr else 0,
             "eps": round(eps, 2) if eps else 0,
             "div_yield": round(div_yield, 2) if div_yield else 0,
+            "fundamental_missing_fields": fundamental_missing_fields,
             "debt_ratio": round(debt_ratio, 1),
             "operating_margin": round(operating_margin, 1),
             "profit_margin": round(profit_margin, 1),

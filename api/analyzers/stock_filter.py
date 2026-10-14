@@ -9,12 +9,47 @@ Phase 2-A: run_extended_filter_pipeline — 정적 화이트리스트 85종목 �
   Hard Floor → 코어 fallback → step1/step2 호환성 유지.
 """
 import os
+import json
+import sys
+from time import perf_counter
 from typing import List, Optional
 from api.config import (
     FILTER_MIN_TRADING_VALUE, FILTER_MIN_TRADING_VALUE_US, FILTER_MAX_DEBT_RATIO,
     FILTER_TOP_N, FILTER_KR_TOP_N, FILTER_US_TOP_N, UNIVERSE_RAMP_UP_STAGE,
 )
 from api.collectors.stock_data import get_all_stock_data
+
+
+def _profile_call(metrics: Optional[dict], stage: str, fn, *args, **kwargs):
+    """Time existing stages without changing their inputs, result or exceptions."""
+    profile = (metrics if metrics is not None else {}).setdefault("pipeline_profile", {"stages": []})
+    row = {"stage": stage, "status": "running"}
+    profile["stages"].append(row)
+    print(f"[pipeline_profile] start stage={stage}", file=sys.stderr, flush=True)
+    started = perf_counter()
+    try:
+        result = fn(*args, **kwargs)
+        row["status"] = "ok"
+        if args and isinstance(args[0], list):
+            row["input_n"] = len(args[0])
+        if isinstance(result, list):
+            row["output_n"] = len(result)
+        elif isinstance(result, dict):
+            for key in ("input_n", "passed_n", "attached_n", "appended_n", "cache_hit", "skipped", "logged"):
+                if key in result:
+                    row[key] = result[key]
+        if stage == "stock_collection" and metrics is not None:
+            for key in ("yf_attempted", "yf_succeeded", "yf_failed", "yf_rate_limited",
+                        "yf_history_calls", "yf_history_failed", "yf_history_elapsed_s",
+                        "yf_info_calls", "yf_info_failed", "yf_info_elapsed_s"):
+                row[key] = metrics.get(key)
+        return result
+    except BaseException as exc:
+        row.update(status="error", error_type=type(exc).__name__)
+        raise
+    finally:
+        row["elapsed_s"] = round(perf_counter() - started, 4)
+        print("[pipeline_profile] " + json.dumps(row), file=sys.stderr, flush=True)
 
 
 def step1_trading_filter(stocks: list) -> list:
@@ -445,17 +480,18 @@ def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = No
     _metrics: ramp_up_monitor 가 yf_failure_rate 받아갈 dict (silent skip 차단).
     """
     print(f"[Filter] 전 종목 데이터 수집 중... (scope={market_scope})")
-    all_stocks = get_all_stock_data(market_scope=market_scope, _metrics=_metrics)
+    all_stocks = _profile_call(_metrics, "stock_collection", get_all_stock_data,
+                              market_scope=market_scope, _metrics=_metrics)
     print(f"[Filter] 수집 완료: {len(all_stocks)}개 종목")
 
     # Stage 1.5 — 금융업 제외 (sector 보유 후)
-    all_stocks = exclude_financial_sector(all_stocks)
+    all_stocks = _profile_call(_metrics, "financial_exclusion", exclude_financial_sector, all_stocks)
 
     # ── Phase 2-B wide_scan shadow (legacy core path 도 동일 hook) ──
     # WIDE_SCAN_MODE=DISABLED 면 즉시 skip. decision 영향 0.
     try:
         from api.analyzers.wide_scan import run_wide_scan_shadow
-        ws_result = run_wide_scan_shadow(all_stocks)
+        ws_result = _profile_call(_metrics, "wide_scan_shadow", run_wide_scan_shadow, all_stocks)
         if not ws_result.get("skipped"):
             print(
                 f"[Phase 2-B wide_scan {ws_result['mode']}] "
@@ -468,32 +504,33 @@ def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = No
     # ── Phase 2-B 분기 시계열 jsonl 누적 (legacy core path 도 동일 hook) ──
     try:
         from api.utils.quarterly_history import append_universe_snapshot
-        qh_result = append_universe_snapshot(all_stocks)
+        qh_result = _profile_call(_metrics, "quarterly_history_append", append_universe_snapshot, all_stocks)
         if qh_result.get("logged"):
             print(f"[quarterly_history] appended {qh_result['appended_n']}")
     except Exception as _qh_err:
         print(f"[quarterly_history] 실패(무시): {_qh_err}")
 
     print("[Filter] Step 1: 거래대금 필터")
-    step1 = step1_trading_filter(all_stocks)
+    step1 = _profile_call(_metrics, "trading_filter", step1_trading_filter, all_stocks)
     print(f"[Filter] Step 1 결과: {len(step1)}개 종목")
 
     print("[Filter] Step 2: 펀더멘털 필터 (PER/PBR/부채비율)")
-    step2 = step2_fundamental_filter(step1)
+    step2 = _profile_call(_metrics, "fundamental_filter", step2_fundamental_filter, step1)
     print(f"[Filter] Step 2 결과: {len(step2)}개 종목")
 
     for s in step2:
         s["safety_score"] = calculate_safety_score(s)
-    attach_safety_percentile(step2)
+    _profile_call(_metrics, "safety_percentile", attach_safety_percentile, step2)
     # 🚨 2026-08-17 — 같은 단면에서 팩터 하위신호 z 도 부착 (PREREG_FACTOR_V2 §5-1).
     #   여기서 한 번만 계산한다 — 소비처가 좁은 풀(~40)에서 재계산하면 의미가 사라진다
     #   (바로 위 함수 docstring 이 같은 이유로 경고하는 함정).
     #   현재는 **부착만** 한다. 점수 전환은 팩터 함수 쪽 별도 단계다.
-    attach_factor_zscores(step2)
+    _profile_call(_metrics, "factor_zscores", attach_factor_zscores, step2)
 
     # 지명 = staleness 순환 (안심상위 직선발 폐지 — PREREG_ANALYSIS_ROTATION, 측정 근거 PR #357).
     # 쿼터 KR 10 + US 15 는 5/11 PM 결정 그대로.
-    top = nominate_for_analysis(step2, market_scope=market_scope, label="Filter")
+    top = _profile_call(_metrics, "nomination", nominate_for_analysis, step2,
+                        market_scope=market_scope, label="Filter")
 
     for s in top:
         tag = " [턴어라운드]" if s.get("_turnaround") else ""
@@ -563,13 +600,15 @@ def run_extended_filter_pipeline(
 
     print(f"[Phase 2-A] 확장 유니버스 모드 (target={target_size}, scope={market_scope})")
 
-    custom = _build_custom_universe_for_phase_2a(market_scope, target_size)
+    custom = _profile_call(_metrics, "universe_build", _build_custom_universe_for_phase_2a,
+                           market_scope, target_size)
     if not custom:
         print(f"[Phase 2-A] custom universe 비어 있음 → 코어 fallback")
         return run_filter_pipeline(market_scope=market_scope, _metrics=_metrics)
 
     print(f"[Phase 2-A] Hard Floor 통과 {len(custom)}개 종목 데이터 수집 시작")
-    all_stocks = get_all_stock_data(market_scope=market_scope, custom_universe=custom, _metrics=_metrics)
+    all_stocks = _profile_call(_metrics, "stock_collection", get_all_stock_data,
+                              market_scope=market_scope, custom_universe=custom, _metrics=_metrics)
     print(f"[Phase 2-A] 수집 완료: {len(all_stocks)}개 종목")
 
     if not all_stocks:
@@ -577,14 +616,15 @@ def run_extended_filter_pipeline(
         return run_filter_pipeline(market_scope=market_scope, _metrics=_metrics)
 
     # Stage 1.5 — 금융업 제외 (sector 보유 후, DART/shadow/snapshot 전)
-    all_stocks = exclude_financial_sector(all_stocks)
+    all_stocks = _profile_call(_metrics, "financial_exclusion", exclude_financial_sector, all_stocks)
 
     # ── DART pre-attach (KR universe 주 1회 batch snapshot 주입) ──
     # dart_batch cron (일요일 KST 22:00) 가 dart_fundamentals_kr.json 적재.
     # cache hit 시 stock dict per/pbr/roe/debt_ratio/op_margin 보강 (DART 1순위, 메모리 결정 2).
     try:
         from api.utils.dart_pre_attach import attach_dart_to_stocks
-        dart_result = attach_dart_to_stocks(all_stocks, max_stale_days=8)
+        dart_result = _profile_call(_metrics, "dart_pre_attach", attach_dart_to_stocks,
+                                   all_stocks, max_stale_days=8)
         if dart_result.get("cache_hit"):
             print(f"  [DART pre-attach] {dart_result['attached_n']}/{dart_result['kr_total_n']} KR 종목 보강")
     except Exception as _dart_err:
@@ -595,7 +635,7 @@ def run_extended_filter_pipeline(
     # WIDE_SCAN_MODE=DISABLED 면 즉시 skip (config.py default). decision 영향 0 보장.
     try:
         from api.analyzers.wide_scan import run_wide_scan_shadow
-        ws_result = run_wide_scan_shadow(all_stocks)
+        ws_result = _profile_call(_metrics, "wide_scan_shadow", run_wide_scan_shadow, all_stocks)
         if not ws_result.get("skipped"):
             print(
                 f"[Phase 2-B wide_scan {ws_result['mode']}] "
@@ -610,31 +650,32 @@ def run_extended_filter_pipeline(
     # 13주 누적 후 F-Score Δ 항목 + Magic Formula 한국개선 정량 가능. decision 영향 0.
     try:
         from api.utils.quarterly_history import append_universe_snapshot
-        qh_result = append_universe_snapshot(all_stocks)
+        qh_result = _profile_call(_metrics, "quarterly_history_append", append_universe_snapshot, all_stocks)
         if qh_result.get("logged"):
             print(f"[quarterly_history] appended {qh_result['appended_n']}")
     except Exception as _qh_err:
         print(f"[quarterly_history] 실패(무시): {_qh_err}")
 
     print("[Phase 2-A] Step 1: 거래대금 필터")
-    step1 = step1_trading_filter(all_stocks)
+    step1 = _profile_call(_metrics, "trading_filter", step1_trading_filter, all_stocks)
     print(f"[Phase 2-A] Step 1 결과: {len(step1)}개")
 
     print("[Phase 2-A] Step 2: 펀더멘털 필터")
-    step2 = step2_fundamental_filter(step1)
+    step2 = _profile_call(_metrics, "fundamental_filter", step2_fundamental_filter, step1)
     print(f"[Phase 2-A] Step 2 결과: {len(step2)}개")
 
     for s in step2:
         s["safety_score"] = calculate_safety_score(s)
-    attach_safety_percentile(step2)
+    _profile_call(_metrics, "safety_percentile", attach_safety_percentile, step2)
     # 🚨 2026-08-17 — 같은 단면에서 팩터 하위신호 z 도 부착 (PREREG_FACTOR_V2 §5-1).
     #   여기서 한 번만 계산한다 — 소비처가 좁은 풀(~40)에서 재계산하면 의미가 사라진다
     #   (바로 위 함수 docstring 이 같은 이유로 경고하는 함정).
     #   현재는 **부착만** 한다. 점수 전환은 팩터 함수 쪽 별도 단계다.
-    attach_factor_zscores(step2)
+    _profile_call(_metrics, "factor_zscores", attach_factor_zscores, step2)
 
     # 지명 = staleness 순환 (동일 규칙 — PREREG_ANALYSIS_ROTATION)
-    top = nominate_for_analysis(step2, market_scope=market_scope, label="Phase 2-A")
+    top = _profile_call(_metrics, "nomination", nominate_for_analysis, step2,
+                        market_scope=market_scope, label="Phase 2-A")
 
     if not top:
         print(f"[Phase 2-A] step1/step2 통과 0건 → 코어 fallback")
@@ -655,7 +696,7 @@ def _is_within_phase2a_window() -> bool:
     return 6 <= hour < 22
 
 
-def run_filter_pipeline_with_ramp_up(market_scope: str = "all") -> List[dict]:
+def run_filter_pipeline_with_ramp_up(market_scope: str = "all", _metrics: Optional[dict] = None) -> List[dict]:
     """Phase 2-A dispatch — UNIVERSE_RAMP_UP_STAGE + KST 시간대 기반 자동 분기.
 
     main.py 가 호출하는 진입점. backward compatible:
@@ -669,7 +710,9 @@ def run_filter_pipeline_with_ramp_up(market_scope: str = "all") -> List[dict]:
     # 2026-05-10 fix (silent skip 차단): get_all_stock_data → run_filter_pipeline →
     # 여기까지 yf_failure_rate 흘러오게 _metrics dict 전달.
     # ramp_up_monitor 가 항상 0 으로 보고 → trigger dead 였던 결함 (5000 stage 첫 run 노출).
-    metrics: dict = {}
+    metrics: dict = _metrics if _metrics is not None else {}
+    from api.utils.fscore_delta import quarterly_snapshot_cache_metrics
+    cache_before = quarterly_snapshot_cache_metrics()
     # 2026-05-05: try/finally 보장. 5/1~5/4 mode=full 3건 schedule success 인데
     # jsonl entry 1건만 누적 — extended path 의 예외가 main.py tracer.step 에서
     # silently catch 되면 hook 도달 못 함. finally 로 어떤 경로에서도 측정 보장.
@@ -681,6 +724,12 @@ def run_filter_pipeline_with_ramp_up(market_scope: str = "all") -> List[dict]:
             return run_filter_pipeline(market_scope=market_scope, _metrics=metrics)
         return run_extended_filter_pipeline(market_scope=market_scope, target_size=stage, _metrics=metrics)
     finally:
+        profile = metrics.setdefault("pipeline_profile", {"stages": []})
+        profile["elapsed_s"] = round(perf_counter() - _t0, 4)
+        profile["quarterly_snapshot_cache"] = {
+            key: round(value - cache_before[key], 4) if isinstance(value, float) else value - cache_before[key]
+            for key, value in quarterly_snapshot_cache_metrics().items()
+        }
         _log_w1_runtime(stage=stage, elapsed=perf_counter() - _t0, market_scope=market_scope, metrics=metrics)
 
 
@@ -733,6 +782,7 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str, metrics: O
                 "dart_attempted": dart_snap["dart_attempted"],
                 "dart_failed": dart_snap["dart_failed"],
                 "dart_rate_limited": dart_snap["dart_rate_limited"],
+                "pipeline_profile": m.get("pipeline_profile"),
             },
         )
         # 2026-05-05: 5/1~5/4 mode=full 3건 success 인데 jsonl entry 1건만 누적.

@@ -15,6 +15,7 @@ stale 처리:
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 from datetime import datetime, timedelta, timezone
@@ -71,6 +72,14 @@ def load_dart_fundamentals_kr(
     return fundamentals
 
 
+def _clear_financial_missing(stock: dict, field: str, value) -> None:
+    """Clear a source-missing marker only for an actual finite replacement."""
+    missing = stock.get("fundamental_missing_fields")
+    if (isinstance(missing, list) and isinstance(value, (int, float))
+            and not isinstance(value, bool) and math.isfinite(value)):
+        stock["fundamental_missing_fields"] = [key for key in missing if key != field]
+
+
 def attach_dart_to_stocks(
     stocks: List[dict], *, max_stale_days: int = 8, path: Optional[Path] = None
 ) -> dict:
@@ -113,10 +122,13 @@ def attach_dart_to_stocks(
             s["pbr"] = d["pbr"]
         if d.get("roe") is not None and (not s.get("roe") or s.get("roe") == 0):
             s["roe"] = d["roe"]
+            _clear_financial_missing(s, "roe", d["roe"])
         if d.get("debt_ratio") is not None and (not s.get("debt_ratio") or s.get("debt_ratio") == 0):
             s["debt_ratio"] = d["debt_ratio"]
+            _clear_financial_missing(s, "debt_ratio", d["debt_ratio"])
         if d.get("op_margin") is not None and (not s.get("operating_margin") or s.get("operating_margin") == 0):
             s["operating_margin"] = d["op_margin"]
+            _clear_financial_missing(s, "operating_margin", d["op_margin"])
         # DART-only 필드는 항상 attach (yfinance 미커버) — Altman X1/X2 + F-Score 9/9 활성
         # (2026-05-20 sprint, fnlttSinglAcntAll CFS 우선 + 매출원가/CF 3종 추가)
         for field in ("roa", "current_ratio", "asset_turnover", "gross_margin",

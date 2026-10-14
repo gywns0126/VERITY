@@ -4,14 +4,14 @@
 #   - universe + filter 분리 → daily_analysis 는 candidate jsonl 만 읽음
 #
 # 결과: data/universe_candidates.json (collected_at + candidates + diagnostics)
-# daily_analysis_full STEP 2 = snapshot 읽기 fast path (max_stale 2h) + inline fallback.
+# daily_analysis_full KR run follows successful persistence via workflow_run; no inline scan.
 
 name: Universe Scan
 
 on:
   schedule:
     # 평일 KST 15:30 (= UTC 06:30 월~금). KR 시장 마감 (15:30) 직후 = 당일 종가 반영.
-    # daily_analysis_full (KST 16:07) 보다 37분 일찍 시작 → snapshot 1분 stale 로 fast path hit.
+    # Full analysis starts after this workflow completes and its snapshot is persisted.
     - cron: '30 6 * * 1-5'
   # 2026-05-18 — Vercel Cron fallback (GitHub Actions silent miss 회피).
   # 5/16~5/18 정기 cron 3일 silent miss 학습. dispatch_pulse.py 시각 매핑 → repository_dispatch.
@@ -32,6 +32,9 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  # Consumer only: kis_token_refresh/daily_realtime remain the single issuer.
+  KIS_SHARED_TOKEN: "1"
+  KIS_CACHE_ONLY: "1"
 
 permissions:
   contents: write   # main 에 universe_candidates.json commit
@@ -87,6 +90,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || 'main' }}
 
       - name: 같은 슬롯 성공분 확인
         id: check
@@ -124,6 +128,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || 'main' }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -160,6 +166,8 @@ jobs:
           # 2026-05-18 PM 옵션 C 결정 — wide_scan SHADOW 진입 (5000→1000 coarse filter).
           # default DISABLED → SHADOW 명시. PRODUCTION 게이트 = 자기 산식 8/10 + 학술 N≥30.
           WIDE_SCAN_MODE: ${{ vars.WIDE_SCAN_MODE || 'SHADOW' }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # KIS / DART / KRX (stock_filter 가 사용)
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY || vars.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET || vars.KIS_APP_SECRET }}
@@ -176,6 +184,7 @@ jobs:
           # 🚨 소요를 스스로 신고한다 — 8/19 정지는 "느려지는 중" 이 어디에도 안 남아서
           #   한도에 닿는 순간까지 아무도 몰랐다(8/18 마진 15초). 다음 잠식은 넘기 전에 보인다.
           _t0=$SECONDS
+          export UNIVERSE_PRODUCER_SHA="$(git rev-parse HEAD)"
           python -m api.builders.universe_scan_builder
           _el=$(( SECONDS - _t0 ))
           _budget=$(( 90 * 60 ))

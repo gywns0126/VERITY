@@ -543,7 +543,7 @@ def _compute_fact_score(
     #   그건 thin-data 소형주 과대평가 (feedback_seed_size_conservatism 위배). → 가중 로직 미변경.
     # data_coverage 는 저점수가 (데이터 부재) vs (실제 약신호) 인지 구분하는 진단 필드로만 노출.
     def _num(x):
-        return isinstance(x, (int, float)) and not (isinstance(x, float) and math.isnan(x))
+        return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
     # ── 🚨 2026-07-27 — 대체 신호(substitute) 를 '보유' 로 세지 않음 ────────────────
     # consensus_score 는 컨센서스가 없을 때 consensus_score.py 가 **수급(flow) 점수**를 넣고
     # score_source="flow_fallback" 으로 표기한다. 값이 숫자라 아래 _num() 검사를 통과해버려
@@ -576,21 +576,52 @@ def _compute_fact_score(
 
     # 현재 실제 가중치가 있는 4축의 입력 커버리지를 점수와 독립적으로 측정한다.
     # 중립 50이나 내부 재정규화를 실측 보유로 오독하지 않도록 원입력 분모를 같이 신고한다.
-    _sec_fin = stock.get("sec_financials") or {}
-    _kis_fin = stock.get("kis_financial_ratio") or {}
+    _is_us = stock.get("currency") == "USD"
+    _sec_fin = (stock.get("sec_financials") or {}) if _is_us else {}
+    _kis_fin = (stock.get("kis_financial_ratio") or {}) if not _is_us else {}
     _kis_fin = _kis_fin if _kis_fin.get("source") == "kis" else {}
 
     def _first_number(*values):
         return next((v for v in values if _num(v)), None)
 
+    # Mirror Graham's source selection before its default imputation. A
+    # different market's object or a later numeric alias is not a scored input.
+    _graham_per = stock.get("per") or stock.get("price_to_earnings")
+    _graham_pbr = stock.get("pbr") or stock.get("price_to_book")
+    _financial_source = _sec_fin if _is_us else _kis_fin
+    if _graham_per is None:
+        _graham_per = _financial_source.get("pe_ratio" if _is_us else "per")
+    if _graham_pbr is None:
+        _graham_pbr = _financial_source.get("price_to_book" if _is_us else "pbr")
+    _source_missing = set(stock.get("fundamental_missing_fields") or [])
+    _graham_top_level = set()
+    if _is_us:
+        if not _sec_fin.get("debt_ratio"):
+            _graham_top_level.add("debt_ratio")
+        if not _sec_fin.get("roe"):
+            _graham_top_level.add("roe")
+        _graham_debt = _sec_fin.get("debt_ratio") or stock.get("debt_ratio")
+        _graham_roe = _sec_fin.get("roe") or stock.get("roe")
+    elif _kis_fin:
+        _graham_debt = _kis_fin.get("debt_ratio")
+        _graham_roe = _kis_fin.get("roe")
+    else:
+        _graham_top_level.update(("debt_ratio", "roe"))
+        _graham_debt = stock.get("debt_ratio")
+        _graham_roe = stock.get("roe")
+    _graham_eps = stock.get("eps_quarterly_growth")
+    if _graham_eps is None:
+        _graham_eps = consensus.get("operating_profit_yoy_est_pct")
     _graham_inputs = {
-        "per": _first_number(stock.get("per"), stock.get("price_to_earnings"), _sec_fin.get("pe_ratio"), _kis_fin.get("per")),
-        "pbr": _first_number(stock.get("pbr"), stock.get("price_to_book"), _sec_fin.get("price_to_book"), _kis_fin.get("pbr")),
-        "debt_ratio": _first_number(_sec_fin.get("debt_ratio"), _kis_fin.get("debt_ratio"), stock.get("debt_ratio")),
-        "roe": _first_number(_sec_fin.get("roe"), _kis_fin.get("roe"), stock.get("roe")),
-        "current_ratio": _first_number(_sec_fin.get("current_ratio"), _kis_fin.get("current_ratio")),
-        "eps_growth": _first_number(stock.get("eps_quarterly_growth"), consensus.get("operating_profit_yoy_est_pct")),
+        "per": _graham_per,
+        "pbr": _graham_pbr,
+        "debt_ratio": _graham_debt,
+        "roe": _graham_roe,
+        "current_ratio": _financial_source.get("current_ratio"),
+        "eps_growth": _graham_eps,
     }
+    for field in _graham_top_level & _source_missing:
+        _graham_inputs[field] = None
     _canslim_inputs = {
         "current_eps_growth": _first_number(stock.get("eps_quarterly_growth")),
         "annual_growth": _first_number(consensus.get("operating_profit_yoy_est_pct")),
@@ -605,19 +636,25 @@ def _compute_fact_score(
     _raw_quant = stock.get("quant_factors") or {}
     _quality = _raw_quant.get("quality") if isinstance(_raw_quant, dict) else {}
     _quality = _quality if isinstance(_quality, dict) else {}
+    # A numeric F-Score is not proof that all nine tests were measurable.
     _f_meas = _safe_float(_quality.get("piotroski_measurable"), 0.0)
-    if _f_meas <= 0 and _num(_quality.get("piotroski_f")):
-        _f_meas = 9.0
+    if not _num(_quality.get("piotroski_f")) or _quality.get("piotroski_f", -1) < 0:
+        _f_meas = 0.0
     _quality_parts = {
         "piotroski_f": min(max(_f_meas / 9.0, 0.0), 1.0),
         "gross_profitability": 1.0 if _num(_quality.get("gross_profitability")) else 0.0,
         "altman_z": 1.0 if _num((_quality.get("altman") or {}).get("z_score")) else 0.0,
         "earning_quality": 1.0 if (
-            _num(((stock.get("dart_financials") or {}).get("cashflow") or {}).get("operating_cashflow")
-                 or stock.get("operating_cashflow"))
+            _num(_first_number(
+                ((stock.get("dart_financials") or {}).get("cashflow") or {}).get("operating_cashflow"),
+                stock.get("operating_cashflow"),
+            ))
             and _num(stock.get("net_income"))
         ) else 0.0,
-        "stability": 1.0 if _num(stock.get("roe")) and _num(stock.get("operating_margin")) else 0.0,
+        "stability": 1.0 if (
+            _num(stock.get("roe")) and _num(stock.get("operating_margin"))
+            and not {"roe", "operating_margin"} & _source_missing
+        ) else 0.0,
     }
     _quality_weights = {
         "piotroski_f": 0.35, "gross_profitability": 0.25, "altman_z": 0.20,
@@ -641,12 +678,73 @@ def _compute_fact_score(
     ):
         _volatility_coverage = 0.0
 
-    def _input_coverage(inputs):
-        return sum(1 for value in inputs.values() if _num(value)) / len(inputs) if inputs else 0.0
+    # Diagnostic states describe the inputs already used by the scorers. They
+    # never replace those inputs, change component values, or adjust weights.
+    def _input_states(inputs, substitutes=None, not_applicable=None):
+        substitutes = substitutes or {}
+        not_applicable = not_applicable or {}
+        states = {}
+        for key, value in inputs.items():
+            if key in not_applicable:
+                state, reason = "not_applicable", not_applicable[key]
+            elif key in substitutes:
+                state, reason = "substituted", substitutes[key]
+            elif _num(value):
+                state, reason = "measured", None
+            else:
+                state, reason = "missing", "no_finite_input"
+            states[key] = {"state": state, "reason": reason}
+        return states
+
+    _graham_substitutes = {}
+    if stock.get("pbr_normalized_neutral"):
+        _graham_substitutes["pbr"] = "neutral_pbr_normalization"
+    if stock.get("eps_quarterly_growth") is None and _num(_graham_eps):
+        _graham_substitutes["eps_growth"] = "operating_profit_growth_proxy"
+    _graham_states = _input_states(_graham_inputs, _graham_substitutes)
+    for field in _graham_top_level & _source_missing:
+        _graham_states[field]["reason"] = "source_missing_default_0"
+    _canslim_substitutes = {}
+    if _num(_canslim_inputs["annual_growth"]):
+        _canslim_substitutes["annual_growth"] = "operating_profit_growth_proxy"
+    if _num(_canslim_inputs["relative_strength"]):
+        _canslim_substitutes["relative_strength"] = "distance_from_52w_high_proxy"
+    _canslim_inputs.setdefault("institutional_change", None)
+    _canslim_states = _input_states(
+        _canslim_inputs, _canslim_substitutes,
+        {"institutional_change": "US_only_scoring_input"} if stock.get("currency") != "USD" else {},
+    )
+
+    def _input_coverage(states):
+        applicable = [s for s in states.values() if s["state"] != "not_applicable"]
+        return sum(s["state"] == "measured" for s in applicable) / len(applicable) if applicable else 0.0
+
+    _quality_states = _input_states({
+        key: share if share > 0 else None for key, share in _quality_parts.items()
+    })
+    for key, record in _quality_states.items():
+        record["measured_fraction"] = round(_quality_parts[key], 3)
+    if {"roe", "operating_margin"} & _source_missing:
+        _quality_states["stability"]["reason"] = "source_missing_default_0"
+    if _quality.get("piotroski_f") == -1:
+        _quality_states["piotroski_f"].update(state="not_applicable", reason="financial_or_reit_exclusion")
+    if (_quality.get("altman") or {}).get("model_variant") == "excluded_financial":
+        _quality_states["altman_z"].update(state="not_applicable", reason="financial_or_reit_exclusion")
+    _volatility_states = _input_states({
+        key: 1.0 if _volatility_coverage > 0 and key not in _vol_unmeasured else None
+        for key in _vol_weights
+    })
+    # The producer uses fixed market_vol=0.18, so this residual approximation
+    # is a substitute even when its volatility and beta inputs are present.
+    if _volatility_states["idiosyncratic"]["state"] == "measured":
+        _volatility_states["idiosyncratic"].update(
+            state="substituted", reason="fixed_market_volatility_approximation"
+        )
+        _volatility_coverage -= _vol_weights["idiosyncratic"]
 
     _axis_coverage = {
-        "graham_value": _input_coverage(_graham_inputs),
-        "canslim_growth": _input_coverage(_canslim_inputs),
+        "graham_value": _input_coverage(_graham_states),
+        "canslim_growth": _input_coverage(_canslim_states),
         "quant_quality": min(max(_quality_coverage, 0.0), 1.0),
         "quant_volatility": min(max(_volatility_coverage, 0.0), 1.0),
     }
@@ -686,12 +784,24 @@ def _compute_fact_score(
         "overlap_with_tracked": _overlap,
         "is_degenerate": len(_overlap) == 0,
         "axis_measurement": {
-            "graham_value": {"measured_inputs": sum(_num(v) for v in _graham_inputs.values()), "input_count": len(_graham_inputs), "coverage": round(_axis_coverage["graham_value"], 3)},
-            "canslim_growth": {"measured_inputs": sum(_num(v) for v in _canslim_inputs.values()), "input_count": len(_canslim_inputs), "coverage": round(_axis_coverage["canslim_growth"], 3)},
-            "quant_quality": {"measured_subaxis_weight": round(_axis_coverage["quant_quality"], 3), "subaxis_weight_total": 1.0, "coverage": round(_axis_coverage["quant_quality"], 3)},
-            "quant_volatility": {"measured_subaxis_weight": round(_axis_coverage["quant_volatility"], 3), "subaxis_weight_total": 1.0, "coverage": round(_axis_coverage["quant_volatility"], 3)},
+            "graham_value": {"measured_inputs": sum(s["state"] == "measured" for s in _graham_states.values()), "input_count": len(_graham_states), "coverage": round(_axis_coverage["graham_value"], 3), "inputs": _graham_states},
+            "canslim_growth": {"measured_inputs": sum(s["state"] == "measured" for s in _canslim_states.values()), "input_count": sum(s["state"] != "not_applicable" for s in _canslim_states.values()), "coverage": round(_axis_coverage["canslim_growth"], 3), "inputs": _canslim_states},
+            "quant_quality": {"measured_subaxis_weight": round(_axis_coverage["quant_quality"], 3), "subaxis_weight_total": 1.0, "coverage": round(_axis_coverage["quant_quality"], 3), "inputs": _quality_states},
+            "quant_volatility": {"measured_subaxis_weight": round(_axis_coverage["quant_volatility"], 3), "subaxis_weight_total": 1.0, "coverage": round(_axis_coverage["quant_volatility"], 3), "inputs": _volatility_states},
         },
-        "coverage_definition": "effective-weighted measured input share across active fact axes",
+        "component_states": {
+            key: ("not_applicable" if key == "us_fscore" and stock.get("currency") == "KRW"
+                  else "substituted" if key in _substituted else "missing" if key in _missing else "measured")
+            for key in _TRACKED_MISSING_AXES
+        },
+        "grade_confidence_definition": {
+            "method": "distance_to_grade_boundaries",
+            "margin_points": 5.0,
+            "is_statistical_confidence": False,
+        },
+        "measurement_basis": "finite input fields and existing producer measurement flags",
+        "primary_source_alignment_verified": False,
+        "coverage_definition": "effective-weighted measured input share across active fact axes; substitutions excluded; simple-input denominators exclude not-applicable inputs and quant denominators use nominal subaxis weights",
         "is_measurable": bool(_weighted_axes and _overlap),
         "note": "활성 가중 4축의 원입력과 하위축 분모로 측정한 진단값이며 점수에는 영향을 주지 않는다.",
     }

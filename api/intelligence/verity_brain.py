@@ -1804,7 +1804,7 @@ def analyze_stock(
         # 2026-06-03 P1-3: 정상 경로 confidence/coverage 실측 (이전엔 정상 return 에 부재 →
         # 소비단 default "firm"/1.0 placeholder 로 Brier 채점·리포트 신호 0 이던 것 정정).
         "grade_confidence": _grade_confidence(brain_score, grade),
-        "data_coverage": round(_safe_float(fact.get("data_coverage"), 1.0) or 1.0, 3),
+        "data_coverage": round(_safe_float(fact.get("data_coverage"), 0.0), 3),
         "fact_score": fact,
         "sentiment_score": sentiment,
         "vci": vci,
