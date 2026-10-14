@@ -57,10 +57,8 @@ permissions:
 #   universe_scan 은 **키스톤**이다 — funnel·추천·daily_analysis 전부 이 산출물에 의존한다.
 #   굶으면 안 되는 축이라 직렬화 편의보다 완주 보장을 택한다.
 #
-#   푸시 경합 안전 근거: 아래 commit 스텝이 **5회 재시도 + `pull --rebase --autostash -X ours`**
-#   를 갖고 있다. 또 `git add` 가 specific path 라 충돌 표면이 좁고, daily_analysis* 는
-#   universe_candidates.json 을 쓰지 않는다(5000 inline scan 분리, 위 주석 정합).
-#   🚨 N=2 관찰점 = 이 파일의 push 재시도 warning 이 뜨는지. 뜨면 직렬화 복귀 검토.
+#   Persistence uses a detached worktree, never autostashes scan byproducts.
+#   Exact selected outputs are archived before push; overlapping edits fail closed.
 concurrency:
   group: verity-universe-scan
   cancel-in-progress: false
@@ -218,7 +216,8 @@ jobs:
             && python scripts/upload_operator_data_to_supabase.py --only multibagger_picks \
             || echo "[multibagger] 선별 리스트 skip"
 
-      - name: Commit data/universe_candidates.json
+      - name: Prepare scan persistence and recovery bundle
+        id: persist_prepare
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
@@ -281,16 +280,41 @@ jobs:
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔍 universe_candidates ${TIME_KST}"
-          BRANCH="${{ github.ref_name }}"
-          for i in 1 2 3 4 5; do
-            git rebase --abort 2>/dev/null || true
-            # 2026-05-11 fix: --autostash 추가 — universe_scan 동안 builder 가 data_pipeline_health.json
-            # 같은 파일 부수적 update 시 unstaged changes 발생. rebase 가 fail 함.
-            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
-              exit 0
-            fi
-            echo "Push attempt $i failed, retrying in $((i * 10))s..."
-            sleep $((i * 10))
-          done
-          echo "::error::push 5회 실패 — universe_candidates 영속화 실패"
-          exit 1
+          # Only explicitly staged scan outputs; no credentials/cache/byproducts.
+          RECOVERY="$RUNNER_TEMP/universe-recovery"
+          mkdir -p "$RECOVERY"
+          git diff-tree --no-commit-id --name-only -r -z HEAD > "$RECOVERY/paths.nul"
+          git diff-tree --no-commit-id --name-only -r HEAD > "$RECOVERY/paths.txt"
+          git format-patch -1 HEAD --stdout --binary > "$RECOVERY/scan.patch"
+          git rev-parse HEAD HEAD^ > "$RECOVERY/commits.txt"
+          # Archive committed bytes, not unstaged or untracked producer files.
+          python - "$RECOVERY" <<'PY'
+          import pathlib, subprocess, sys, tarfile, io
+          root = pathlib.Path(sys.argv[1])
+          paths = root.joinpath("paths.nul").read_bytes().split(b"\0")
+          with tarfile.open(root / "outputs.tar.gz", "w:gz") as archive:
+              for raw in filter(None, paths):
+                  path = raw.decode("utf-8")
+                  blob = subprocess.run(["git", "show", f"HEAD:{path}"], capture_output=True)
+                  if blob.returncode:  # deletion is represented in scan.patch
+                      continue
+                  entry = tarfile.TarInfo(path)
+                  entry.size = len(blob.stdout)
+                  archive.addfile(entry, io.BytesIO(blob.stdout))
+          PY
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Preserve exact scan outputs before push
+        if: steps.persist_prepare.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: universe-scan-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/universe-recovery/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Persist prepared scan from isolated worktree
+        if: steps.persist_prepare.outputs.ready == 'true'
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: python scripts/ci/persist_universe_scan.py "$TARGET_BRANCH"
