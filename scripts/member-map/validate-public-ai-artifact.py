@@ -6,6 +6,7 @@ optional judgments must fail, not be silently removed during publication.
 """
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -62,7 +63,11 @@ def read_review_sources(directory):
     return sources
 
 
-def validate(artifact, expected_sha256, source_dir, output):
+def validate(artifact, expected_sha256, source_dir, output, *, period_input=None,
+             period_source_dir=None, issuer_registry_path=None):
+    period_args = (period_input, period_source_dir, issuer_registry_path)
+    if any(v is not None for v in period_args) and not all(v is not None for v in period_args):
+        raise ValueError("invalid-public-period-arguments")
     if (not re.fullmatch(r"[a-f0-9]{64}", expected_sha256)
             or any(p.is_symlink() for p in (artifact, *artifact.parents))
             or not artifact.is_file() or artifact.stat().st_size > 2_000_000
@@ -102,6 +107,29 @@ def validate(artifact, expected_sha256, source_dir, output):
         raise ValueError("stale-contract-judgment-source")
     if validate_public_ai_review(payload, catalog, contract_events=events, contract_sources=facts) != payload:
         raise ValueError("unsafe-optional-public-judgment")
+    rows = payload.get("company_judgments", {}).get("judgments", [])
+    period_rows = [row for row in rows if "period_context_v3" in row]
+    if bool(period_rows) != (period_input is not None):
+        raise ValueError("missing-or-unused-public-period-originals")
+    if period_rows:
+        # prepared wire의 해시 결속을 원문 진위 검증으로 대체하지 않는다.
+        spec = importlib.util.spec_from_file_location("member_map_period_export_reader",
+            Path(__file__).with_name("export-ai-candidates.py"))
+        reader = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(reader)
+        original = reader._read_judgment_input(period_input, period_original=True)
+        if type(original) is not dict or set(original) not in ({"documents"}, {"documents", "answer"}):
+            raise ValueError("invalid-public-period-input")
+        documents = original["documents"]
+        if (type(documents) is not list or
+                {d.get("source_id") for d in documents if type(d) is dict}
+                != {r["source_id"] for r in period_rows}):
+            raise ValueError("unbound-public-period-input")
+        originals = reader._period_originals(documents, period_source_dir, issuer_registry_path)
+        subset = {"schema": "local-company-judgments-v1", "judgments": period_rows}
+        if project_public_company_judgments(subset, payload["candidates"],
+                source_documents=documents, **originals) != subset:
+            raise ValueError("stale-public-period-original")
     output.write_bytes(body)
     return {"sha256": expected_sha256, "count": len(payload["candidates"]), "network_calls": 0}
 
@@ -112,9 +140,14 @@ def main():
     parser.add_argument("--sha256", required=True)
     parser.add_argument("--source-dir", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--period-input", type=Path, help="검수에 사용한 기존 공개 문서 묶음")
+    parser.add_argument("--period-source-dir", type=Path, help="기존 native ZIP 디렉터리; 원문 누락 시 거부")
+    parser.add_argument("--issuer-registry-path", type=Path, help="기존 issuer/corp_code 결속 자료")
     args = parser.parse_args()
     try:
-        result = validate(args.artifact, args.sha256, args.source_dir, args.output)
+        result = validate(args.artifact, args.sha256, args.source_dir, args.output,
+            period_input=args.period_input, period_source_dir=args.period_source_dir,
+            issuer_registry_path=args.issuer_registry_path)
     except (OSError, ValueError, TypeError, KeyError):
         print("public-ai-artifact-rejected", file=sys.stderr)
         return 1
