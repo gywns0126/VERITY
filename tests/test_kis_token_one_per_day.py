@@ -104,10 +104,13 @@ def test_gh_publishes_shared_token_on_issue(tmp_path, monkeypatch):
     fake = mock.Mock()
     fake.json.return_value = {"access_token": "NEW_TOKEN", "access_token_token_expired": "2099-01-01 00:00:00"}
     fake.raise_for_status = lambda: None
+    shared = mock.Mock()
+    shared.json.return_value = []
     with mock.patch.object(b, "_load_cached_token"), \
          mock.patch.object(b, "_save_cached_token"), \
          mock.patch.object(b, "_mark_issued_today"), \
          mock.patch.object(kb, "_kis_publish_shared_token") as mpub, \
+         mock.patch.object(kb.requests, "get", return_value=shared), \
          mock.patch.object(kb.requests, "post", return_value=fake) as mpost:
         token = b.authenticate(force_refresh=True)
     mpost.assert_called_once()           # 발급함

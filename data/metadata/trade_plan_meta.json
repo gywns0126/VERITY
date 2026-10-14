@@ -1,13 +1,13 @@
 {
   "version": "v0",
-  "computed_at": "2026-10-14T13:37:10.725482+00:00",
+  "computed_at": "2026-10-14T15:22:29.039090+00:00",
   "status": "active",
   "sample_size": {
     "total": 67,
     "open": 9,
     "closed": 58,
     "with_h5": 61,
-    "with_h14": 51,
+    "with_h14": 52,
     "with_h30": 38,
     "min_for_decompose": 30
   },
@@ -22,11 +22,11 @@
     },
     "h14": {
       "horizon_days": 14,
-      "n": 51,
-      "hit_rate_pct": 72.55,
-      "median_return_pct": 3.3,
-      "mean_return_pct": 3.21,
-      "ic": 0.212
+      "n": 52,
+      "hit_rate_pct": 73.08,
+      "median_return_pct": 3.38,
+      "mean_return_pct": 3.31,
+      "ic": 0.178
     },
     "h30": {
       "horizon_days": 30,
@@ -39,27 +39,27 @@
   },
   "feature_decomposition": {
     "rsi": {
-      "n": 51,
+      "n": 52,
       "boundaries": [
-        39.89,
+        40.12,
         43.73,
         46.05
       ],
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 13,
-          "mean_return_pct": -0.08
+          "n": 14,
+          "mean_return_pct": -0.52
         },
         {
           "q": 1,
-          "n": 14,
-          "mean_return_pct": 4.94
+          "n": 13,
+          "mean_return_pct": 5.79
         },
         {
           "q": 2,
-          "n": 13,
-          "mean_return_pct": 4.1
+          "n": 14,
+          "mean_return_pct": 4.41
         },
         {
           "q": 3,
@@ -69,22 +69,22 @@
       ]
     },
     "macd_hist": {
-      "n": 51,
+      "n": 52,
       "boundaries": [
-        -2.5,
+        -1.95,
         -0.13,
         0.5
       ],
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 13,
-          "mean_return_pct": -0.63
+          "n": 14,
+          "mean_return_pct": -0.41
         },
         {
           "q": 1,
           "n": 13,
-          "mean_return_pct": 5.42
+          "mean_return_pct": 5.88
         },
         {
           "q": 2,
@@ -99,22 +99,22 @@
       ]
     },
     "vol_ratio": {
-      "n": 51,
+      "n": 52,
       "boundaries": [
-        0.66,
+        0.72,
         0.91,
         1.31
       ],
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 13,
-          "mean_return_pct": 2.9
+          "n": 14,
+          "mean_return_pct": 1.92
         },
         {
           "q": 1,
           "n": 13,
-          "mean_return_pct": 4.44
+          "mean_return_pct": 5.92
         },
         {
           "q": 2,
@@ -129,7 +129,7 @@
       ]
     },
     "foreign_5d_sum": {
-      "n": 51,
+      "n": 52,
       "boundaries": [
         0.0,
         0.0,
@@ -138,8 +138,8 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 44,
-          "mean_return_pct": 3.29
+          "n": 45,
+          "mean_return_pct": 3.41
         },
         {
           "q": 1,
@@ -159,7 +159,7 @@
       ]
     },
     "technical_score": {
-      "n": 51,
+      "n": 52,
       "boundaries": [
         42.0,
         47.0,
@@ -168,8 +168,8 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 16,
-          "mean_return_pct": 0.51
+          "n": 17,
+          "mean_return_pct": 0.98
         },
         {
           "q": 1,
@@ -219,7 +219,7 @@
       ]
     },
     "flow_score": {
-      "n": 51,
+      "n": 52,
       "boundaries": [
         50.0,
         50.0,
@@ -228,8 +228,8 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 37,
-          "mean_return_pct": 2.99
+          "n": 38,
+          "mean_return_pct": 3.13
         },
         {
           "q": 1,
@@ -270,9 +270,9 @@
       "median_return_pct": 3.55
     },
     "Energy": {
-      "n": 18,
-      "hit_rate_pct": 83.33,
-      "median_return_pct": 4.03
+      "n": 19,
+      "hit_rate_pct": 84.21,
+      "median_return_pct": 4.59
     },
     "Basic Materials": {
       "n": 2,
@@ -288,7 +288,7 @@
     }
   },
   "verdict_strength": {
-    "n": 51,
+    "n": 52,
     "multi_score_boundaries": [
       50.0,
       55.0,
@@ -297,8 +297,8 @@
     "quartile_mean_return_pct": [
       {
         "q": 0,
-        "n": 14,
-        "mean_return_pct": 2.54
+        "n": 15,
+        "mean_return_pct": 2.93
       },
       {
         "q": 1,
@@ -331,8 +331,8 @@
         "median_return_pct": 6.15
       },
       "60d_plus": {
-        "n": 19,
-        "hit_rate_pct": 78.95,
+        "n": 20,
+        "hit_rate_pct": 80.0,
         "median_return_pct": 3.54
       }
     }
