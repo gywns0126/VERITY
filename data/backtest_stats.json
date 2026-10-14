@@ -100,11 +100,11 @@
       "observed": {
         "hit_rate_gross": 75.0,
         "hit_rate_net": 75.0,
-        "avg_return_gross": 3.42,
-        "avg_return_net": 2.92,
-        "max_return": 13.44,
+        "avg_return_gross": 2.57,
+        "avg_return_net": 2.06,
+        "max_return": 8.62,
         "min_return": -7.03,
-        "sharpe": 0.51,
+        "sharpe": 0.46,
         "sample": 8,
         "hits_gross": 6,
         "hits_net": 6
@@ -171,24 +171,6 @@
   },
   "recommendations": [
     {
-      "ticker": "080580",
-      "name": "오킨스전자",
-      "rec_date": "2026-09-30",
-      "rec_price": 26050.0,
-      "current_price": 29550.0,
-      "return_pct_gross": 13.44,
-      "return_pct_net": 12.71,
-      "slippage_pct": 0.7,
-      "hit_gross": true,
-      "hit_net": true,
-      "period": "14d",
-      "recommendation": "BUY",
-      "brain_score": null,
-      "source": "gemini",
-      "return_pct": 13.44,
-      "hit": true
-    },
-    {
       "ticker": "PARR",
       "name": "PARR",
       "rec_date": "2026-09-30",
@@ -222,6 +204,24 @@
       "brain_score": null,
       "source": "gemini",
       "return_pct": 8.39,
+      "hit": true
+    },
+    {
+      "ticker": "080580",
+      "name": "오킨스전자",
+      "rec_date": "2026-09-30",
+      "rec_price": 26050.0,
+      "current_price": 27750.0,
+      "return_pct_gross": 6.53,
+      "return_pct_net": 5.8,
+      "slippage_pct": 0.7,
+      "hit_gross": true,
+      "hit_net": true,
+      "period": "14d",
+      "recommendation": "BUY",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": 6.53,
       "hit": true
     },
     {
@@ -283,9 +283,9 @@
       "name": "삼성E&A",
       "rec_date": "2026-09-30",
       "rec_price": 47350.0,
-      "current_price": 45350.0,
-      "return_pct_gross": -4.22,
-      "return_pct_net": -4.55,
+      "current_price": 45400.0,
+      "return_pct_gross": -4.12,
+      "return_pct_net": -4.45,
       "slippage_pct": 0.3,
       "hit_gross": false,
       "hit_net": false,
@@ -293,7 +293,7 @@
       "recommendation": "WATCH",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": -4.22,
+      "return_pct": -4.12,
       "hit": false
     },
     {
@@ -315,10 +315,10 @@
       "hit": false
     }
   ],
-  "updated_at": "2026-10-14 09:53:04.785846+09:00",
+  "updated_at": "2026-10-14 17:25:16.458628+09:00",
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-10-14 09:53:04.785868+09:00",
+    "applied_at": "2026-10-14 17:25:16.458654+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -328,7 +328,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-10-14 09:53:04.785871+09:00"
+      "fixed_at": "2026-10-14 17:25:16.458658+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",

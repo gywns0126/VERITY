@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-14T10:10:26+09:00",
+ "as_of": "2026-10-14T17:44:21+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -8,7 +8,8 @@
  "known_unresolved": [
   "ledger_integrity",
   "rule_discrimination",
-  "flag_coverage"
+  "flag_coverage",
+  "input_constancy"
  ],
  "skipped": [],
  "checks": {
@@ -41,30 +42,9 @@
      ]
     },
     {
-     "key": "kis_credit_balance",
-     "modules": [
-      "red_flags.py"
-     ]
-    },
-    {
-     "key": "kis_financial_ratio",
-     "modules": [
-      "fact.py",
-      "graham.py",
-      "moat.py",
-      "red_flags.py"
-     ]
-    },
-    {
      "key": "kis_program_trade",
      "modules": [
       "fact.py"
-     ]
-    },
-    {
-     "key": "kis_short_sale",
-     "modules": [
-      "red_flags.py"
      ]
     },
     {
@@ -95,7 +75,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "31/40",
+     "coverage": "19/40",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -126,7 +106,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "31/40",
+     "coverage": "19/40",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -147,12 +127,12 @@
      ]
     }
    ],
-   "detail": "레코드에 한 번도 없는 키 8종 — 해당 채점 축이 조용히 죽어 있다",
+   "detail": "레코드에 한 번도 없는 키 5종 — 해당 채점 축이 조용히 죽어 있다",
    "status": "REGRESSION"
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 9,
+   "holdings_checked": 10,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -174,9 +154,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 24,
-   "days_without_any_cap_pct": 16.6,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.4%). cap 없는 날 24/145일",
+   "days_without_any_cap": 25,
+   "days_without_any_cap_pct": 17.2,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.4%). cap 없는 날 25/145일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -187,7 +167,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 15,
-   "stock_days": 8151,
+   "stock_days": 8120,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -235,30 +215,47 @@
    "status": "KNOWN"
   },
   "input_constancy": {
-   "ok": true,
+   "ok": false,
    "inputs_checked": 9,
-   "varying": 2,
-   "constant_inputs": [],
-   "detail": "입력 값 분산 정상",
-   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다."
+   "varying": 5,
+   "constant_inputs": [
+    {
+     "input": "kis_credit_balance.credit_rate",
+     "n_present": 16,
+     "constant_value": 0.0,
+     "severity": "high"
+    },
+    {
+     "input": "kis_financial_ratio.current_ratio",
+     "n_present": 16,
+     "constant_value": 0.0,
+     "severity": "high"
+    }
+   ],
+   "detail": "전 종목 동일값 입력 2종 — kis_credit_balance.credit_rate=0.0, kis_financial_ratio.current_ratio=0.0. 측정이 아니라 상위 공백 의심(규칙이 영원히 발동 못 한다).",
+   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다.",
+   "baseline": {
+    "constant_inputs": 2
+   },
+   "status": "KNOWN"
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 9,
+   "holdings_checked": 10,
    "coverage": {
     "sector": {
-     "filled": 9,
-     "total": 9,
+     "filled": 10,
+     "total": 10,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 9,
-     "total": 9,
+     "filled": 10,
+     "total": 10,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 9,
-     "total": 9,
+     "filled": 10,
+     "total": 10,
      "guard": "팩터 쏠림 차단"
     }
    },
@@ -272,7 +269,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 9,
+   "holdings_checked": 10,
    "no_profit_exit": [],
    "ladder_broken": [
     {
@@ -298,9 +295,17 @@
       "target_1": 1,
       "target_2": 0
      }
+    },
+    {
+     "name": "Microsoft",
+     "qty": 1.0,
+     "splittable": {
+      "target_1": 0,
+      "target_2": 0
+     }
     }
    ],
-   "detail": "확정 경로 정합 (사다리 불능 3건 — 고가주 잔존분)"
+   "detail": "확정 경로 정합 (사다리 불능 4건 — 고가주 잔존분)"
   },
   "as_of_staleness": {
    "ok": true,
