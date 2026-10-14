@@ -1,22 +1,43 @@
 #!/usr/bin/env bash
-# Vercel 수동 배포 — CLI 직접 (Hook 우회).
-# 선행: dashboard Settings → Build and Deployment → Root Directory 비어 있어야 함.
-# 사용: bash scripts/vercel_deploy.sh
+# Manual production deployment of the already-linked API project.
+# Usage: bash scripts/vercel_deploy.sh
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$PROJECT_ROOT"
-rm -rf .vercel vercel-api/.vercel
-
-export VERCEL_ORG_ID="team_8E84APoZieKhinFDdc64R1Qh"
-export VERCEL_PROJECT_ID="prj_0HzEuMfn7HlqOgpfRxsy4roV5thZ"
-
-# 자동 push (있으면)
-BRANCH="$(git branch --show-current)"
-if [ -n "$(git log "@{u}..HEAD" 2>/dev/null || echo unset)" ]; then
-  echo "▶ Pushing local commits..."
-  git push origin "$BRANCH" 2>&1 | tail -3
+TASK_VERCEL_REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TASK_VERCEL_APP_DIR="$TASK_VERCEL_REPO_ROOT/vercel-api"
+TASK_VERCEL_LINK="$TASK_VERCEL_APP_DIR/.vercel/project.json"
+if [[ ! -f "$TASK_VERCEL_LINK" ]]; then
+  echo "Missing vercel-api/.vercel/project.json; link the intended project first." >&2
+  exit 1
 fi
-
-echo "▶ Deploying vercel-api/ to production..."
-exec npx vercel@latest --cwd vercel-api --prod --yes
+TASK_VERCEL_PROJECT_ID="$(python3 - "$TASK_VERCEL_LINK" <<'PYLINK'
+import json, sys
+with open(sys.argv[1]) as f:
+    link = json.load(f)
+if link.get("projectName") != "verity-api" or not link.get("projectId") or not link.get("orgId"):
+    raise SystemExit("Expected the existing verity-api project link; refusing deployment.")
+print(link["projectId"])
+PYLINK
+)"
+TASK_VERCEL_CLI="${VERCEL_CLI:-}"
+if [[ -z "$TASK_VERCEL_CLI" ]]; then
+  TASK_VERCEL_CLI="$(command -v vercel || true)"
+fi
+if [[ -z "$TASK_VERCEL_CLI" && -x "$HOME/.npm-global/bin/vercel" ]]; then
+  TASK_VERCEL_CLI="$HOME/.npm-global/bin/vercel"
+fi
+if [[ -z "$TASK_VERCEL_CLI" && -x "$TASK_VERCEL_APP_DIR/node_modules/.bin/vercel" ]]; then
+  TASK_VERCEL_CLI="$TASK_VERCEL_APP_DIR/node_modules/.bin/vercel"
+fi
+if [[ -z "$TASK_VERCEL_CLI" || ! -x "$TASK_VERCEL_CLI" ]]; then
+  echo "No installed Vercel CLI found; refusing an automatic download." >&2
+  exit 1
+fi
+"$TASK_VERCEL_CLI" --version
+TASK_VERCEL_INSPECT="$("$TASK_VERCEL_CLI" --cwd "$TASK_VERCEL_APP_DIR" project inspect --non-interactive 2>&1)"
+printf '%s\n' "$TASK_VERCEL_INSPECT"
+if [[ "$TASK_VERCEL_INSPECT" != *"$TASK_VERCEL_PROJECT_ID"* ]]; then
+  echo "Resolved project differs from the local link; refusing deployment." >&2
+  exit 1
+fi
+exec "$TASK_VERCEL_CLI" deploy --cwd "$TASK_VERCEL_APP_DIR" --prod --yes

@@ -17,7 +17,9 @@ import logging
 import os
 import re
 import time
+from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler
+from threading import Lock
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -34,6 +36,13 @@ SOURCE_BASE_FALLBACK = (
 
 TIMEOUT_SEC = 4          # vercel.json maxDuration=5 안전 마진
 CACHE_MAX_AGE = 3600     # 1시간 — us_financials 는 월 1회 갱신 (분기 보고서)
+SOURCE_CACHE_TTL = 300
+CDN_MAX_AGE = 300
+SOURCE_CACHE_LIMIT = 64
+_SOURCE_CACHE = OrderedDict()
+_CACHE_LOCK = Lock()
+# Fixed-size stripes bound synchronization memory for arbitrary valid tickers.
+_SOURCE_LOCKS = tuple(Lock() for _ in range(16))
 
 _TICKER_RE = re.compile(r"^[A-Z][A-Z0-9.\-]{0,9}$")
 
@@ -43,23 +52,49 @@ def _source_base() -> str:
 
 
 def _fetch_json(rel_path: str):
-    """raw.githubusercontent read-through. (payload, http_status) — payload None 이면 실패."""
-    url = f"{_source_base()}/{rel_path}?_={int(time.time())}"
-    try:
-        r = requests.get(url, timeout=TIMEOUT_SEC)
-    except requests.RequestException as e:
-        _logger.error("us_financials: fetch failed %s: %s", rel_path, e)
-        return None, 503
-    if r.status_code == 404:
-        return None, 404
-    if r.status_code != 200:
-        _logger.error("us_financials: source %s returned %d", rel_path, r.status_code)
+    """Stable public Blob URL; success-only bounded read-through cache."""
+    url = f"{_source_base()}/{rel_path}"
+    deadline = time.monotonic() + TIMEOUT_SEC
+    lock = _SOURCE_LOCKS[hash(url) % len(_SOURCE_LOCKS)]
+    if not lock.acquire(timeout=max(0.0, deadline - time.monotonic())):
         return None, 503
     try:
-        return r.json(), 200
-    except (ValueError, json.JSONDecodeError) as e:
-        _logger.error("us_financials: invalid JSON %s: %s", rel_path, e)
-        return None, 503
+        with _CACHE_LOCK:
+            hit = _SOURCE_CACHE.get(url)
+            if hit:
+                _SOURCE_CACHE.move_to_end(url)
+                if time.monotonic() < hit[0]:
+                    return hit[1], 200
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None, 503
+        try:
+            r = requests.get(url, timeout=remaining, headers=hit[2] if hit else {})
+            if r.status_code == 304 and hit:
+                payload, validators = hit[1], hit[2]
+            elif r.status_code == 404:
+                return None, 404
+            elif r.status_code == 200:
+                payload = r.json()
+                if not isinstance(payload, dict):
+                    raise ValueError("source JSON must be an object")
+                validators = {request_key: r.headers[response_key]
+                              for response_key, request_key in
+                              (("ETag", "If-None-Match"), ("Last-Modified", "If-Modified-Since"))
+                              if r.headers.get(response_key)}
+            else:
+                return None, 503
+        except (requests.RequestException, ValueError) as e:
+            _logger.error("us_financials: source fetch/parse failed %s: %s", rel_path, e)
+            return None, 503
+        with _CACHE_LOCK:
+            _SOURCE_CACHE[url] = (time.monotonic() + SOURCE_CACHE_TTL, payload, validators)
+            _SOURCE_CACHE.move_to_end(url)
+            while len(_SOURCE_CACHE) > SOURCE_CACHE_LIMIT:
+                _SOURCE_CACHE.popitem(last=False)
+        return payload, 200
+    finally:
+        lock.release()
 
 
 class handler(BaseHTTPRequestHandler):
@@ -72,8 +107,10 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self._cors()
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        if cache:
-            self.send_header("Cache-Control", f"public, max-age={CACHE_MAX_AGE}")
+        if cache and code == 200:
+            self.send_header("Cache-Control", f"public, max-age={CACHE_MAX_AGE}, s-maxage={CDN_MAX_AGE}")
+        else:
+            self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
 
