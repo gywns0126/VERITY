@@ -474,12 +474,12 @@ test('public artifact mode validates exact bytes offline and cannot mix raw inpu
   await publish(f, { run: f.run, env: noSecrets, fetch: forbidden, put: forbidden });
   const artifact = path.join(path.dirname(f.input), NAME);
   fs.writeFileSync(artifact, f.body);
-  const args = { artifact: fs.realpathSync(artifact), artifactSha256: sha(f.body), sourceDir: f.sourceDir };
+  const args = { artifact: fs.realpathSync(artifact), artifactSha256: sha(f.body), sourceDir: fs.realpathSync(f.sourceDir) };
   const result = await publish(args, { env: noSecrets, fetch: forbidden, put: forbidden });
   assert.equal(result.sha256, args.artifactSha256);
   assert.equal(result.count, 1);
   assert.deepEqual(parseArgs(['--artifact', args.artifact, '--artifact-sha256', args.artifactSha256,
-    '--source-dir', f.sourceDir]), args);
+    '--source-dir', args.sourceDir]), args);
   for (const bad of [{ ...args, input: f.input }, { ...args, workerState: true },
     { ...args, artifactSha256: '0'.repeat(64) }, { ...args, judgmentInput: 'private.json' }]) {
     await assert.rejects(publish(bad, { env: noSecrets, fetch: forbidden, put: forbidden }),

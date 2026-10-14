@@ -14,7 +14,8 @@ const READBACK_DELAYS_MS = [0, 10000, 20000, 30000];
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function publish({ input, artifact: publicArtifact, artifactSha256, workerState = false, sourceDir, upload = false, replaceSha256,
-  judgmentInput, judgmentReviews, judgmentAsOf, judgmentPrevious }, deps = {}) {
+  judgmentInput, judgmentReviews, judgmentAsOf, judgmentPrevious,
+  periodInput, periodSourceDir, issuerRegistryPath }, deps = {}) {
   let stage = 'local-validation';
   try {
     const inputs = input === undefined ? [] : Array.isArray(input) ? input : [input];
@@ -29,6 +30,9 @@ async function publish({ input, artifact: publicArtifact, artifactSha256, worker
     const judgmentArgs = [judgmentInput, judgmentReviews, judgmentAsOf];
     if (judgmentArgs.some(v => v !== undefined) && !judgmentArgs.every(v => typeof v === 'string' && v)
         || judgmentPrevious !== undefined && (typeof judgmentPrevious !== 'string' || !judgmentPrevious || !judgmentInput)) throw Error();
+    const periodArgs = [periodInput, periodSourceDir, issuerRegistryPath];
+    if (periodArgs.some(v => v !== undefined) && (!publicArtifact
+        || !periodArgs.every(v => typeof v === 'string' && v))) throw Error();
     let body, artifact;
     function exportBody(retainedBody) {
       const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-candidates-publish-'));
@@ -39,6 +43,8 @@ async function publish({ input, artifact: publicArtifact, artifactSha256, worker
       const result = (deps.run || spawnSync)('python3', [path.join(__dirname,
         publicArtifact ? 'validate-public-ai-artifact.py' : 'export-ai-candidates.py'),
         ...(publicArtifact ? ['--artifact', path.resolve(publicArtifact), '--sha256', artifactSha256] : []),
+        ...(periodInput ? ['--period-input', path.resolve(periodInput), '--period-source-dir', path.resolve(periodSourceDir),
+          '--issuer-registry-path', path.resolve(issuerRegistryPath)] : []),
         ...(workerState ? ['--worker-state'] : inputs.flatMap(value => ['--input', path.resolve(value)])),
         ...(judgmentInput ? ['--judgment-input', path.resolve(judgmentInput), '--judgment-reviews', path.resolve(judgmentReviews),
           '--judgment-as-of', judgmentAsOf, ...(judgmentPrevious ? ['--judgment-previous', path.resolve(judgmentPrevious)] : [])] : []),
@@ -150,8 +156,9 @@ function parseArgs(args) {
     const flag = args.shift(), key = { '--input': 'input', '--artifact': 'artifact', '--artifact-sha256': 'artifactSha256', '--source-dir': 'sourceDir',
       '--upload': 'upload', '--worker-state': 'workerState', '--replace-sha256': 'replaceSha256',
       '--judgment-input': 'judgmentInput', '--judgment-reviews': 'judgmentReviews',
-      '--judgment-as-of': 'judgmentAsOf', '--judgment-previous': 'judgmentPrevious' }[flag];
-    if (!['input', 'artifact', 'artifactSha256', 'sourceDir', 'upload', 'workerState', 'replaceSha256', 'judgmentInput', 'judgmentReviews', 'judgmentAsOf', 'judgmentPrevious'].includes(key) || key in options && key !== 'input') throw Error('public-ai-publish-arguments-rejected');
+      '--judgment-as-of': 'judgmentAsOf', '--judgment-previous': 'judgmentPrevious',
+      '--period-input': 'periodInput', '--period-source-dir': 'periodSourceDir', '--issuer-registry-path': 'issuerRegistryPath' }[flag];
+    if (!['input', 'artifact', 'artifactSha256', 'sourceDir', 'upload', 'workerState', 'replaceSha256', 'judgmentInput', 'judgmentReviews', 'judgmentAsOf', 'judgmentPrevious', 'periodInput', 'periodSourceDir', 'issuerRegistryPath'].includes(key) || key in options && key !== 'input') throw Error('public-ai-publish-arguments-rejected');
     const value = key === 'upload' || key === 'workerState' ? true : args.shift();
     if (!value || typeof value === 'string' && value.startsWith('--') || Array.isArray(options[key])) throw Error('public-ai-publish-arguments-rejected');
     options[key] = key === 'input' && options.input ? [options.input, value] : value;
@@ -163,6 +170,9 @@ function parseArgs(args) {
   if (options.replaceSha256 !== undefined && !/^[a-f0-9]{64}$/.test(options.replaceSha256)) throw Error('public-ai-publish-arguments-rejected');
   const judgmentArgs = [options.judgmentInput, options.judgmentReviews, options.judgmentAsOf];
   if (judgmentArgs.some(Boolean) && !judgmentArgs.every(Boolean) || options.judgmentPrevious && !options.judgmentInput)
+    throw Error('public-ai-publish-arguments-rejected');
+  const periodArgs = [options.periodInput, options.periodSourceDir, options.issuerRegistryPath];
+  if (periodArgs.some(Boolean) && (!options.artifact || !periodArgs.every(Boolean)))
     throw Error('public-ai-publish-arguments-rejected');
   return options;
 }
