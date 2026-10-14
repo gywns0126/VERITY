@@ -95,8 +95,6 @@ def test_work_step_is_tiny_relative_to_overhead():
         "실측 근거 주석이 사라졌다 — 다음 사람이 같은 측정을 반복하게 된다")
 
 
-if __name__ == "__main__":
-    raise SystemExit(pytest.main([__file__, "-q"]))
 
 
 def test_cdn_warm_only_runs_once_after_successful_changed_publication():
@@ -108,3 +106,7 @@ def test_cdn_warm_only_runs_once_after_successful_changed_publication():
     assert "?ticker=005930" in warm["run"]
     assert "for tk" not in warm["run"]
     assert "--max-time 20" in warm["run"]
+
+
+if __name__ == "__main__":
+    raise SystemExit(pytest.main([__file__, "-q"]))
