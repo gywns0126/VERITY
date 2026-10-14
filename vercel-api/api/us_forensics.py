@@ -66,14 +66,23 @@ def _source_base() -> str:
 def _load_source(fname: str):
     url = f"{_source_base()}/{fname}"
     # A second ticker must not download the same whole snapshot concurrently.
-    with _SOURCE_LOCKS[fname]:
+    # Lock waiting and fetch share the same budget; a failed owner must not
+    # make its waiter spend another full network timeout.
+    deadline = time.monotonic() + TIMEOUT_SEC
+    lock = _SOURCE_LOCKS[fname]
+    if not lock.acquire(timeout=max(0.0, deadline - time.monotonic())):
+        return None
+    try:
         hit = _SOURCE_CACHE.get(fname)
         if hit and hit[0] != url:
             hit = None
         if hit and time.monotonic() < hit[1]:
             return hit[2]
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
         try:
-            r = requests.get(url, timeout=TIMEOUT_SEC, headers=hit[3] if hit else {})
+            r = requests.get(url, timeout=remaining, headers=hit[3] if hit else {})
             if r.status_code == 304 and hit:
                 doc, validators = hit[2], hit[3]
             elif r.status_code == 200:
@@ -94,6 +103,8 @@ def _load_source(fname: str):
         except (requests.RequestException, ValueError) as e:
             _logger.error("us_forensics: %s fetch/parse 실패: %s", fname, e)
             return None
+    finally:
+        lock.release()
 
 
 def _fetch_one(key: str, fname: str, ticker: str):

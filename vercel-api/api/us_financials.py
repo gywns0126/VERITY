@@ -54,15 +54,22 @@ def _source_base() -> str:
 def _fetch_json(rel_path: str):
     """Stable public Blob URL; success-only bounded read-through cache."""
     url = f"{_source_base()}/{rel_path}"
-    with _SOURCE_LOCKS[hash(url) % len(_SOURCE_LOCKS)]:
+    deadline = time.monotonic() + TIMEOUT_SEC
+    lock = _SOURCE_LOCKS[hash(url) % len(_SOURCE_LOCKS)]
+    if not lock.acquire(timeout=max(0.0, deadline - time.monotonic())):
+        return None, 503
+    try:
         with _CACHE_LOCK:
             hit = _SOURCE_CACHE.get(url)
             if hit:
                 _SOURCE_CACHE.move_to_end(url)
                 if time.monotonic() < hit[0]:
                     return hit[1], 200
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None, 503
         try:
-            r = requests.get(url, timeout=TIMEOUT_SEC, headers=hit[2] if hit else {})
+            r = requests.get(url, timeout=remaining, headers=hit[2] if hit else {})
             if r.status_code == 304 and hit:
                 payload, validators = hit[1], hit[2]
             elif r.status_code == 404:
@@ -86,6 +93,8 @@ def _fetch_json(rel_path: str):
             while len(_SOURCE_CACHE) > SOURCE_CACHE_LIMIT:
                 _SOURCE_CACHE.popitem(last=False)
         return payload, 200
+    finally:
+        lock.release()
 
 
 class handler(BaseHTTPRequestHandler):

@@ -5,6 +5,7 @@ import io
 import json
 from pathlib import Path
 import threading
+import time
 import unittest
 from unittest.mock import patch
 
@@ -213,6 +214,62 @@ class PublicSourceCacheTests(unittest.TestCase):
         with patch.object(module.requests, "get", return_value=Response(None, 404)):
             code, headers, body = invoke(module, "/api/us_financials?ticker=MSFT")
         self.assertEqual((code, headers["Cache-Control"], body["status"]), (404, "no-store", "not_found"))
+
+    def test_forensic_failed_owner_does_not_add_second_full_timeout(self):
+        module = self.forensics
+        filename = module.SOURCES["insider"]
+        entered = threading.Event()
+        def slow_failure(*args, **kwargs):
+            entered.set()
+            time.sleep(kwargs["timeout"])
+            raise module.requests.Timeout("simulated source timeout")
+        def timed():
+            start = time.monotonic()
+            value = module._fetch_one("insider", filename, "AAPL")
+            return time.monotonic() - start, value
+        with patch.object(module.requests, "get", side_effect=slow_failure), ThreadPoolExecutor(max_workers=2) as pool:
+            owner = pool.submit(timed)
+            self.assertTrue(entered.wait(1))
+            waiter = pool.submit(timed)
+            results = [future.result(timeout=10) for future in (owner, waiter)]
+        for duration, result in results:
+            self.assertLess(duration, 5.0)
+            self.assertEqual(result[3], "unavailable")
+        self.assertEqual(len(module._SOURCE_CACHE), 0)
+        with patch.object(module.requests, "get", return_value=Response(self.doc)):
+            self.assertEqual(module._fetch_one("insider", filename, "AAPL")[3], "ok")
+
+    def test_financial_stripe_collision_shares_wait_and_network_budget(self):
+        module = self.financials
+        seen, pair = {}, None
+        for index in range(100):
+            filename = f"T{index}.json"
+            stripe = hash(f"{module._source_base()}/{filename}") % len(module._SOURCE_LOCKS)
+            if stripe in seen:
+                pair = seen[stripe], filename
+                break
+            seen[stripe] = filename
+        self.assertIsNotNone(pair)
+        entered = threading.Event()
+        def slow_failure(*args, **kwargs):
+            entered.set()
+            time.sleep(kwargs["timeout"])
+            raise module.requests.Timeout("simulated source timeout")
+        def timed(filename):
+            start = time.monotonic()
+            value = module._fetch_json(filename)
+            return time.monotonic() - start, value
+        with patch.object(module.requests, "get", side_effect=slow_failure), ThreadPoolExecutor(max_workers=2) as pool:
+            owner = pool.submit(timed, pair[0])
+            self.assertTrue(entered.wait(1))
+            waiter = pool.submit(timed, pair[1])
+            results = [future.result(timeout=10) for future in (owner, waiter)]
+        for duration, result in results:
+            self.assertLess(duration, 5.0)
+            self.assertEqual(result, (None, 503))
+        self.assertEqual(len(module._SOURCE_CACHE), 0)
+        with patch.object(module.requests, "get", return_value=Response(self.doc)):
+            self.assertEqual(module._fetch_json(pair[1]), (self.doc, 200))
 
 
 if __name__ == "__main__":
