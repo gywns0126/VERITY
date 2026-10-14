@@ -48,6 +48,8 @@ jobs:
         with:
           # B-3: brain_evolution 의 git log 분석 위해 100 commit 보유
           fetch-depth: 100
+          # Read the persisted scan at job start, after any concurrency queue wait.
+          ref: main
 
       - name: Setup Python
         uses: actions/setup-python@v5

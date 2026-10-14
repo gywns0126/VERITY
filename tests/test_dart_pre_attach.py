@@ -116,3 +116,38 @@ def test_attach_dart_no_cache_returns_zero(tmp_path):
     result = attach_dart_to_stocks(stocks, path=tmp_path / "missing.json")
     assert result["cache_hit"] is False
     assert result["attached_n"] == 0
+
+
+def test_actual_dart_replacement_clears_only_replaced_source_flags(tmp_path):
+    p = tmp_path / "dart.json"
+    _write_snapshot(p, fundamentals={"005930": {
+        "roe": 0, "debt_ratio": 25, "op_margin": None, "source": "DART",
+    }})
+    stock = {"ticker": "005930", "currency": "KRW", "roe": 0,
+             "debt_ratio": 0, "operating_margin": 0,
+             "fundamental_missing_fields": ["roe", "debt_ratio", "operating_margin"]}
+    attach_dart_to_stocks([stock], path=p)
+    assert stock["roe"] == 0
+    assert stock["debt_ratio"] == 25
+    assert stock["operating_margin"] == 0
+    assert stock["fundamental_missing_fields"] == ["operating_margin"]
+
+
+def test_dart_does_not_clear_marker_without_actual_assignment(tmp_path):
+    p = tmp_path / "dart.json"
+    _write_snapshot(p, fundamentals={"005930": {"roe": 18, "source": "DART"}})
+    stock = {"ticker": "005930", "currency": "KRW", "roe": 15,
+             "fundamental_missing_fields": ["roe"]}
+    attach_dart_to_stocks([stock], path=p)
+    assert stock["roe"] == 15
+    assert stock["fundamental_missing_fields"] == ["roe"]
+
+
+def test_nonfinite_dart_assignment_does_not_claim_measured_replacement(tmp_path):
+    p = tmp_path / "dart.json"
+    _write_snapshot(p, fundamentals={"005930": {"roe": float("inf"), "source": "DART"}})
+    stock = {"ticker": "005930", "currency": "KRW", "roe": 0,
+             "fundamental_missing_fields": ["roe"]}
+    attach_dart_to_stocks([stock], path=p)
+    assert stock["roe"] == float("inf")  # Existing scalar behavior is preserved.
+    assert stock["fundamental_missing_fields"] == ["roe"]

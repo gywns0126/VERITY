@@ -41,14 +41,13 @@ _MARGIN_MIN = 10
 
 
 def test_kr_close_starts_after_universe_scan():
-    """🚨 핵심 — 스캔이 끝난 뒤 시작해야 대기 슬롯에 들어가지 않는다."""
-    scan = _crons(_read(".github/workflows/universe_scan.yml"))
-    full = _crons(_read(".github/workflows/daily_analysis_full.yml"))
-    scan_start = _to_min(scan[0])
-    kr_close = min(c for c in (_to_min(x) for x in full) if c > scan_start)
-    gap = kr_close - scan_start
-    assert gap >= _SCAN_WORST_MIN + _MARGIN_MIN, (
-        f"간격 {gap}분 < 최악 {_SCAN_WORST_MIN}+여유 {_MARGIN_MIN}분 — 대기 슬롯 충돌 재발")
+    """Only producer completion may trigger KR full; elapsed-time guesses race."""
+    import yaml
+    doc = yaml.safe_load(_read(".github/workflows/daily_analysis_full.yml"))
+    triggers = doc.get("on", doc.get(True))
+    assert "Universe Scan" in triggers["workflow_run"]["workflows"]
+    assert triggers["workflow_run"]["types"] == ["completed"]
+    assert not any(c["cron"].endswith("* * 1-5") for c in triggers["schedule"])
 
 
 def test_mode_detection_matches_actual_cron():
@@ -59,14 +58,17 @@ def test_mode_detection_matches_actual_cron():
 
 
 def test_vercel_fallback_matches_schedule():
-    """Vercel fallback 이 옛 시각으로 쏘면 같은 충돌이 재현된다."""
-    yml = _read(".github/workflows/daily_analysis_full.yml")
-    disp = _read("vercel-api/api/cron/dispatch_pulse.py")
-    kr = [c for c in _crons(yml) if c.endswith("* * 1-5")]
-    assert kr, "KR 마감 cron 미발견"
-    mm, hh = kr[0].split()[0], kr[0].split()[1]
-    assert re.search(rf"hour\s*==\s*{hh}\s+and\s+minute\s*==\s*{mm}", disp), (
-        f"dispatch_pulse 에 UTC {hh}:{mm} 매핑 없음 — 워크플로 cron 과 어긋난다")
+    """No KR full timer remains in the dispatcher; the US slot is preserved."""
+    import importlib.util
+    from datetime import datetime, timezone
+    spec = importlib.util.spec_from_file_location(
+        "schedule_dispatch", os.path.join(_ROOT, "vercel-api/api/cron/dispatch_pulse.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    kr = module._resolve_events(datetime(2026, 10, 14, 7, 50, tzinfo=timezone.utc))
+    us = module._resolve_events(datetime(2026, 10, 14, 21, 30, tzinfo=timezone.utc))
+    assert "daily_analysis_full" not in [e[0] if isinstance(e, tuple) else e for e in kr]
+    assert ("daily_analysis_full", {"mode": "full_us"}) in us
 
 
 def test_concurrency_group_still_serialized():

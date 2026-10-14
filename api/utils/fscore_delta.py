@@ -24,6 +24,9 @@ from __future__ import annotations
 import json
 import os
 import sys
+from copy import deepcopy
+from threading import RLock
+from time import perf_counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -32,6 +35,64 @@ KST = timezone(timedelta(hours=9))
 
 REPO_ROOT = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 QUARTERLY_SNAPSHOT_PATH = REPO_ROOT / "data" / "dart_quarterly_snapshots.jsonl"
+
+_SNAPSHOT_CACHE: dict = {}
+_SNAPSHOT_CACHE_LOCK = RLock()
+_SNAPSHOT_METRICS = {"lookups": 0, "cache_hits": 0, "file_reads": 0,
+                     "rows_scanned": 0, "parse_failures": 0, "load_failures": 0,
+                     "build_elapsed_s": 0.0}
+
+
+def quarterly_snapshot_cache_metrics() -> dict:
+    """Process counters for the existing scan profiler; no new output file."""
+    with _SNAPSHOT_CACHE_LOCK:
+        return dict(_SNAPSHOT_METRICS)
+
+
+def _snapshot_fingerprint(path: Path) -> tuple:
+    stat = path.stat()
+    return (str(path.resolve()), stat.st_dev, stat.st_ino, stat.st_size,
+            stat.st_mtime_ns, stat.st_ctime_ns)
+
+
+def _read_snapshot_index(path: Path) -> tuple:
+    """One file pass, keeping the original per-ticker dedupe and failure semantics."""
+    index: dict = {}
+    failed_tickers = set()
+    quarter_validity = {}
+    _SNAPSHOT_METRICS["file_reads"] += 1
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            _SNAPSHOT_METRICS["rows_scanned"] += 1
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                _SNAPSHOT_METRICS["parse_failures"] += 1
+                continue
+            # A non-object/non-string ticker also failed every legacy lookup.
+            ticker = row.get("ticker", "").upper()
+            if ticker in failed_tickers:
+                continue
+            qend = row.get("quarter_end", "")
+            if isinstance(qend, str) and qend not in quarter_validity:
+                quarter_validity[qend] = is_real_quarter_end(qend)
+            valid = quarter_validity.get(qend, False) if isinstance(qend, str) else is_real_quarter_end(qend)
+            if not qend or not valid:
+                continue
+            quarters = index.setdefault(ticker, {})
+            previous = quarters.get(qend)
+            try:
+                if previous is None or row.get("fetched_at", "") > previous.get("fetched_at", ""):
+                    quarters[qend] = row
+            except Exception:
+                # Bad fetched_at for one ticker must not invalidate other tickers.
+                failed_tickers.add(ticker)
+                index.pop(ticker, None)
+    return ({ticker: sorted(quarters.values(), key=lambda row: row.get("quarter_end", ""), reverse=True)
+             for ticker, quarters in index.items()}, failed_tickers)
 
 
 
@@ -65,32 +126,39 @@ def load_quarterly_snapshots(ticker: str) -> List[Dict[str, Any]]:
 
     Returns: 분기 desc 정렬 (최근부터). 부재 시 빈 list.
     """
-    if not QUARTERLY_SNAPSHOT_PATH.exists():
-        return []
-    try:
-        by_quarter: Dict[str, Dict[str, Any]] = {}
-        with open(QUARTERLY_SNAPSHOT_PATH, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
+    # Keep one index per exact file version, not a date/TTL cache. Appends,
+    # replacements and path changes invalidate it before the next lookup.
+    with _SNAPSHOT_CACHE_LOCK:
+        _SNAPSHOT_METRICS["lookups"] += 1
+        try:
+            fingerprint = _snapshot_fingerprint(QUARTERLY_SNAPSHOT_PATH)
+            if _SNAPSHOT_CACHE.get("fingerprint") != fingerprint:
+                _SNAPSHOT_CACHE.clear()
+                started = perf_counter()
                 try:
-                    s = json.loads(line)
-                    if s.get("ticker", "").upper() != ticker.upper():
-                        continue
-                    qend = s.get("quarter_end", "")
-                    if not qend or not is_real_quarter_end(qend):
-                        continue        # 수집일이 섞인 레거시 행 차단 (2026-08-07)
-                    prev = by_quarter.get(qend)
-                    if prev is None or (s.get("fetched_at", "") > prev.get("fetched_at", "")):
-                        by_quarter[qend] = s
-                except json.JSONDecodeError:
-                    continue
-        snapshots = sorted(by_quarter.values(), key=lambda x: x.get("quarter_end", ""), reverse=True)
-        return snapshots
-    except Exception as e:
-        print(f"[fscore_delta] {ticker} snapshot load fail: {e}", file=sys.stderr)
-        return []
+                    index, failed = _read_snapshot_index(QUARTERLY_SNAPSHOT_PATH)
+                finally:
+                    _SNAPSHOT_METRICS["build_elapsed_s"] += perf_counter() - started
+                # Do not reuse a read while a concurrent writer changed the file.
+                if _snapshot_fingerprint(QUARTERLY_SNAPSHOT_PATH) == fingerprint:
+                    _SNAPSHOT_CACHE.update(fingerprint=fingerprint, index=index, failed=failed)
+            else:
+                _SNAPSHOT_METRICS["cache_hits"] += 1
+                index, failed = _SNAPSHOT_CACHE["index"], _SNAPSHOT_CACHE["failed"]
+            if ticker.upper() in failed:
+                _SNAPSHOT_METRICS["load_failures"] += 1
+                return []
+            # Callers previously owned newly parsed dictionaries. Preserve that
+            # contract so one consumer cannot mutate another consumer's inputs.
+            return deepcopy(index.get(ticker.upper(), []))
+        except FileNotFoundError:
+            _SNAPSHOT_CACHE.clear()
+            return []
+        except Exception as e:
+            _SNAPSHOT_METRICS["load_failures"] += 1
+            _SNAPSHOT_CACHE.clear()
+            print(f"[fscore_delta] {ticker} snapshot load fail: {e}", file=sys.stderr)
+            return []
 
 
 def find_quarter_offset_prior(

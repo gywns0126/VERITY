@@ -5,22 +5,11 @@ name: Stock Analysis Pipeline (Full & Periodic)
 # 5~10분마다 도는 경량 cron 이 35분짜리 full 실행을 cancel 하지 못하게 한다.
 
 on:
+  workflow_run:
+    workflows: [Universe Scan]
+    types: [completed]
+    branches: [main]
   schedule:
-    # 장 마감 full 분석 (KST 16:50 = UTC 07:50), 월~금
-    # 🚨 2026-08-07 — 07:07 → 07:50 이동. universe_scan(06:30 시작)이 같은 concurrency
-    #   그룹(verity-data-write)에서 49~66분(중앙 55분) 돌아 07:07 슬롯을 항상 침범했다.
-    #   GitHub 는 그룹당 **대기 슬롯을 하나만** 유지하므로, 대기 중에 제3의 워크플로가
-    #   도착하면 밀려나 취소된다. 실측 2026-08-07:
-    #     Universe Scan 06:30→07:24 점유 · daily_full 07:07 대기 진입 ·
-    #     Export Trade 07:16 도착 → daily_full **취소(job 0개, 실행된 적 없음)**
-    #     = 당일 KST 16:07 장 마감 전체 분석 누락.
-    #   설계 주석(universe_scan.yml)은 "37분 일찍 시작"으로 ~35분 소요를 가정했는데
-    #   실제가 55분으로 드리프트했다.
-    #   부수 효과로 정확성도 개선된다 — 07:07 은 universe_scan 미완이라 어제 스냅샷을
-    #   읽어 max_stale 2h 초과 → 느린 인라인 폴백이었다. 07:50 이면 26분 stale = fast path.
-    #   ⚠️ vercel-api/api/cron/dispatch_pulse.py 의 시각 매핑도 **함께** 옮겨야 한다
-    #     (Vercel fallback 이 옛 시각으로 쏘면 같은 충돌이 재현된다).
-    - cron: '50 7 * * 1-5'
     # 미장 마감 full 분석 KST 06:30 (UTC 21:30), 화~금
     # 2026-05-18 fix: 옛 '2-6' (Tue-Sat UTC) 결함 — Sat UTC = KST Sun 06:30 = US 미장
     # 휴장 + KRX 일요일 휴장 = 분석할 세션 0 + KRX 빈 JSON 무한 fail. cron 자체 false trigger.
@@ -62,6 +51,11 @@ on:
         required: false
         default: false
         type: boolean
+      expected_scan_id:
+        description: 'Optional completed scan identity for explicit runtime validation (gh:run:attempt)'
+        required: false
+        default: ''
+        type: string
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)
 env:
@@ -75,11 +69,8 @@ env:
 permissions:
   contents: write
 
-# WARN-17: data/* 쓰기 워크플로 단일 그룹 직렬화 (realtime/quick/bond_etf/export_trade 공유).
-# cancel-in-progress: false → full/realtime 이 동시에 매치되면 큐잉.
-concurrency:
-  group: verity-data-write
-  cancel-in-progress: false
+# Writer jobs retain the shared lock. The read-only guard runs before queue admission,
+# so a skipped producer completion cannot evict a pending valid analysis.
 
 jobs:
   # ── 중복 트리거 가드 (2026-08-15 신설) ──────────────────────────────────────
@@ -95,12 +86,12 @@ jobs:
   #   🚨 설계상 중요한 점 — 중복이 우연히 재시도 역할을 했다. 08-14 는 dispatch 가 실패하고
   #     schedule 이 성공해 그날 산출물을 건졌다. 그래서 이 가드는 **선행이 성공했을 때만**
   #     건너뛴다. 선행이 실패·취소면 후행이 그대로 재시도로 남는다.
-  #     workflow-level concurrency(verity-data-write, cancel-in-progress:false) 가 직렬화하므로
-  #     이 job 이 시작하는 시점엔 선행 run 의 결론이 이미 나 있다.
+  #     The writer job rechecks this decision after acquiring the shared lock.
   #
   #   fail-open 원칙: 조회 실패·자기 run 미발견·판단 불가 = **무조건 실행**. 슬롯을 비우는 것이
   #     이 fallback 이 막으려던 사고이므로, 의심스러우면 도는 쪽이 맞다.
   guard:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -110,32 +101,25 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          ref: main
 
       - name: 같은 슬롯 성공분 확인
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SELF: ${{ github.run_id }}
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_MODE: ${{ github.event.client_payload.mode }}
+          UNIVERSE_EXPECTED_SCAN_ID: ${{ github.event_name == 'workflow_run' && format('gh:{0}:{1}', github.event.workflow_run.id, github.event.workflow_run.run_attempt) || inputs.expected_scan_id || '' }}
           WINDOW_MIN: '120'   # 관측 중복 간격 18.9~88.8분. 정규 슬롯 간격 13.7h 이상이라 안전
-        run: |
-          set -uo pipefail
-          # 수동 실행은 오퍼레이터 의도 — 가드 미적용
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "run=1" >> "$GITHUB_OUTPUT"; echo "수동 실행 — 가드 미적용"; exit 0
-          fi
-          JSON=$(gh api "repos/${{ github.repository }}/actions/workflows/daily_analysis_full.yml/runs?per_page=30" 2>/dev/null) || JSON=""
-          if [ -z "$JSON" ]; then
-            echo "run=1" >> "$GITHUB_OUTPUT"; echo "API 조회 실패 — fail-open 실행"; exit 0
-          fi
-          # 🚫 판정 로직을 여기 인라인으로 되돌리지 말 것 — YAML 블록 스칼라 들여쓰기가 깨져
-          #    워크플로가 통째로 무효가 된다(2026-08-15 실측). 스크립트 파일로 유지한다.
-          OUT=$(printf '%s' "$JSON" | python3 scripts/ci/duplicate_run_guard.py)
-          echo "$OUT"
-          echo "run=$(printf '%s' "$OUT" | grep -oE '^run=[01]$' | tail -1 | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+        run: python3 scripts/ci/universe_analysis_gate.py
 
   analyze:
     needs: guard
     if: needs.guard.outputs.run == '1' && inputs.nps_history_only != true
+    concurrency:
+      group: verity-data-write
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     # 🚨 2026-07-16 안전변 120 → 150. 평일 baseline 이 ~100~120분(고정, 크립 아님 — 프로파일 확인)
     #   이라 120 천장에 붙어 있어, 외부 API 무제한 호출이 가끔 멈추면 슬롯이 천장을 넘어 SIGTERM.
@@ -179,20 +163,35 @@ jobs:
           #   ref=main → 큐 대기 후 실행되므로 스캔 커밋이 반드시 포함된다. 요일 무관하게 경합 소멸.
           ref: main
 
+      - name: Recheck trigger after acquiring writer lock
+        id: writer_gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SELF: ${{ github.run_id }}
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_MODE: ${{ github.event.client_payload.mode }}
+          UNIVERSE_EXPECTED_SCAN_ID: ${{ github.event_name == 'workflow_run' && format('gh:{0}:{1}', github.event.workflow_run.id, github.event.workflow_run.run_attempt) || inputs.expected_scan_id || '' }}
+          WINDOW_MIN: '120'
+        run: python3 scripts/ci/universe_analysis_gate.py
+
       - name: Setup Python
+        if: success() && steps.writer_gate.outputs.run == '1'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
 
       - name: Install dependencies
+        if: success() && steps.writer_gate.outputs.run == '1'
         run: pip install -r requirements.txt
 
       - name: 현재 날짜 (KST)
+        if: success() && steps.writer_gate.outputs.run == '1'
         id: date
         run: echo "today=$(TZ=Asia/Seoul date +%Y-%m-%d)" >> $GITHUB_OUTPUT
 
       - name: KIS 토큰 캐시 복원 (하루 1회 재발급 보장)
+        if: success() && steps.writer_gate.outputs.run == '1'
         uses: actions/cache@v4
         with:
           path: ~/.cache/verity_kis_token.json
@@ -201,6 +200,7 @@ jobs:
             kis-token-v2-${{ runner.os }}-
 
       - name: Check optional trade/patent API secrets
+        if: success() && steps.writer_gate.outputs.run == '1'
         env:
           KIPRIS_API_KEY: ${{ secrets.KIPRIS_API_KEY || vars.KIPRIS_API_KEY }}
           KIPRIS_ACCESS_KEY: ${{ secrets.KIPRIS_ACCESS_KEY || vars.KIPRIS_ACCESS_KEY }}
@@ -218,6 +218,7 @@ jobs:
           fi
 
       - name: Ensure Korean font for PDF
+        if: success() && steps.writer_gate.outputs.run == '1'
         run: |
           mkdir -p api/reports/fonts
           if [ ! -f api/reports/fonts/NanumGothic.ttf ]; then
@@ -228,6 +229,7 @@ jobs:
           fi
 
       - name: Detect periodic schedule
+        if: success() && steps.writer_gate.outputs.run == '1'
         id: detect_mode
         run: |
           CRON="${{ github.event.schedule }}"
@@ -272,7 +274,9 @@ jobs:
       # 기존 흐름: analysis step (28분) 안에서 발급 → 끝나야 commit/push 발생.
       #           그 사이 KIS Token Refresh cron 이 stale lock 보고 재발급 위험 (5/3 사고 원인).
       # 본 step: lock 파일을 ~수초 안에 origin 에 push → 다음 cron 의 fresh checkout 이 즉시 인지.
+
       - name: KIS preflight (issue + immediate lock push)
+        if: success() && steps.writer_gate.outputs.run == '1'
         env:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
@@ -308,7 +312,7 @@ jobs:
           PYEOF
 
       - name: Daily lock immediate push (KIS [C])
-        if: always()
+        if: steps.writer_gate.outputs.run == '1' && (always())
         env:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
         run: |
@@ -343,6 +347,7 @@ jobs:
           echo "::warning::[lock push] 3회 실패 — 분석 끝 commit step 에서 재시도"
 
       - name: Refresh macro snapshot (신선도 보장 — GH */30 schedule throttle 우회)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # macro_collect cron(*/30) 이 GH schedule throttle 로 실제 ~5h 간격 실행 →
         # full 분석 시점 snapshot 이 자주 stale (feedback_gh_short_cron_silent_skip).
         # 분석-크리티컬 경로를 flaky schedule 에서 분리: 읽기 직전 inline 갱신 →
@@ -360,9 +365,11 @@ jobs:
         run: python -m api.builders.macro_collect_builder
 
       - name: Run analysis
+        if: success() && steps.writer_gate.outputs.run == '1'
         env:
           # 2026-05-11: VERITY_MODE 명시 — schedule cron = prod, manual dispatch = input (default staging).
           # cost 감축 (개발 manual 호출 시 LLM 자동 mock).
+          UNIVERSE_EXPECTED_SCAN_ID: ${{ github.event_name == 'workflow_run' && format('gh:{0}:{1}', github.event.workflow_run.id, github.event.workflow_run.run_attempt) || inputs.expected_scan_id || '' }}
           VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -414,8 +421,9 @@ jobs:
       #   문제는 예산 소진 신고(`data/metadata/runtime_cutoff.jsonl`)가 **바로 그때만 생기는데**
       #   같은 이유로 영영 커밋되지 않아, 어느 단계가 얼마나 잘리는지 근거가 안 쌓인다는 것이다.
       #   그래서 이 한 파일만 KIS 락 push 와 같은 문법으로 즉시 올린다. 다른 산출물은 건드리지 않는다.
+
       - name: 미처리 장부 즉시 push (런타임 예산 소진 기록)
-        if: ${{ !cancelled() }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled())
         run: |
           if [ ! -f data/metadata/runtime_cutoff.jsonl ]; then
             echo "[cutoff push] 기록 없음 — 완주했거나 예산 소진 전 종료. 정상"
@@ -461,11 +469,12 @@ jobs:
       #   stale 이면 적재 자체를 skip 한다. 그래서 `!cancelled()` 를 줘도 stale 값이 trail 에 안 들어간다.
       #   근거 사고 = 2026-08-14(금) full 3연속 실패로 그 주 관측 행이 영구 결손(주 1회 append-only).
       #   여전히 제외 = stock_report_public(recommendations.json 재가공 = 재발행 클래스) 계열.
+
       - name: 공개 공시속보 피드 빌드 (public-safe)
         # main.py STEP 5.78 이 data/dart_catalyst_alerts.jsonl 갱신 후 → public-safe JSON 변환.
         # 순수 변환 (외부호출/KIS 0). 다음 step git add data/ (broad) 자동 포함 = RULE 4.
         # 분석이 STEP 5.78 이전에 죽으면 입력이 옛것 — 그때는 같은 내용 재발행이라 손해는 없다.
-        if: ${{ !cancelled() }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled())
         continue-on-error: true
         run: python -m api.builders.public_disclosure_feed_builder
 
@@ -475,11 +484,12 @@ jobs:
         # krx_mktcap_snapshot 이 이 캐시를 읽어 universe_search 에 nv 필드로 실으므로 **직전**에 실행.
         # 외부 fetch(네이버 공개 basic). 다음 step git add data/ (broad) 자동 포함 = RULE 4.
         # in-run 의존 0 — 분석 성패와 무관하게 안전.
-        if: ${{ !cancelled() }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled())
         continue-on-error: true
         run: python -m api.collectors.us_naver_code
 
       - name: KRX 시총 스냅샷 (PER/PBR 자체계산 입력)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # KRX OpenAPI 공식 시총·상장주식수 → data/krx_mktcap.json. KIS 무관(KRX_API_KEY). 빌더 직전 실행.
         # 네트워크 호출. 다음 stock_report 빌더가 읽어 PER/PBR=시총÷순익·자본 자체계산.
         # 🚨 KRX_API_KEY env 필수 — 누락 시 krx_openapi 가 ("",[]) 반환→0행→기존 파일 동결(6/19~6/23 stale 사고). RULE 8.
@@ -489,6 +499,7 @@ jobs:
         run: python -m api.builders.krx_mktcap_snapshot
 
       - name: 공개 종목 리포트 빌드 (public-safe, allowlist)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # recommendations.json → RULE7 allowlist strip → data/stock_report_public.json.
         # 순수 변환 (krx_mktcap.json·sector_map 읽음, KIS 0). 다음 step git add data/ (broad) 자동 = RULE 4.
         # NAVER_* = 지분구조 인물 링크 생존성 검증 (빌더 _naver_news_total — 신규 인물만,
@@ -500,6 +511,7 @@ jobs:
         run: python -m api.builders.stock_report_public_builder
 
       - name: AI 사실 종합 빌드 (출처 기반, 평가·추천 0)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # stock_report_public.json 사실 → Gemini flash-lite 가 자연스럽게 다듬기만(grounded) → data/ai_synthesis.json.
         # 🚨 RULE 6 escape hatch(자기 trail 위 종합) + RULE 7/유사투자자문: verdict 단어 post-filter, 걸리면 결정론 fallback.
         # 키 없으면 결정론 종합. 다음 step git add data/ (broad) 자동 = RULE 4. publish-data 등재 완료.
@@ -511,7 +523,7 @@ jobs:
       - name: 국민연금 보유종목 집계 (NPS 공개 패널)
         id: nps_holdings
         # Independent official facts: a failed analysis must not skip NPS refresh.
-        if: ${{ !cancelled() }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled())
         # data.go.kr #15106890 분기 확정값을 바탕으로, 이후 DART 국민연금 지분공시 종목만 증분 조회한다.
         # 신규 공시 미해결·입력 무결성 실패 시 기존 정상본 보존 + 즉시 알림 + 마지막 step 에서 workflow 실패 확정.
         # 외부 사실 조회(KIS 0). RULE 7 = 대량보유 공시 사실(지분율)만, 점수·추천 0. 다음 step git add data/ (broad) 자동 = RULE 4. publish allowlist 등재 완료.
@@ -537,7 +549,7 @@ jobs:
         # 진짜 공매도잔고=KRX 봇차단으로 free 불가 → 대차잔고(빌려준 주식=공매도 재료) proxy. 키 없으면 graceful skip. → data/securities_lending.json.
         # 순수 fetch(KIS 0). RULE 7 = 대차잔고 금액·수량 사실만(점수·추천·스퀴즈예측 0). 다음 step git add data/ (broad) 자동 = RULE 4. publish allowlist 등재 완료.
         # in-run 의존 0(자기 산출만) — `!cancelled()` 가드 대상. 8/13 이후 48시간 정체였다.
-        if: ${{ !cancelled() }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled())
         continue-on-error: true
         env:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
@@ -557,7 +569,7 @@ jobs:
         # dart_catalyst_alerts.jsonl → 종목별 유상증자/감자/CB/정정 이벤트 빈도·타임라인 → data/disclosure_forensics.json.
         # 순수 변환(외부호출/KIS 0). RULE 7 = report_nm 사실·빈도만, 자체 위험점수 0. 다음 step git add data/ (broad) = RULE 4.
         # in-run 의존 = dart_catalyst_alerts(STEP 5.78) + 자기 산출뿐 — `!cancelled()` 가드 대상.
-        if: ${{ !cancelled() }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled())
         continue-on-error: true
         run: python -m api.builders.disclosure_forensics_builder
 
@@ -565,17 +577,19 @@ jobs:
         # dart_related_party_cache + dart_litigation_cache (by_ticker) → data/kr_forensics_public.json.
         # 순수 변환(외부호출 0). RULE 7/6 = 원문 사실 리스트만, 위험점수·심각도·터널링 의심서술·요약 0. 다음 step git add data/ (broad) = RULE 4.
         # in-run 의존 0 — `!cancelled()` 가드 대상.
-        if: ${{ !cancelled() }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled())
         continue-on-error: true
         run: python -m api.builders.kr_forensics_public_builder
 
       - name: 공개 원자재 노출 빌드 (원자재→KR 노출 산업/종목)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # kr_sector_map(yfinance industry) ⋈ stock_report_public(name·시총) → data/commodity_exposure.json.
         # 순수 변환(외부호출/KIS 0). RULE 7 = 산업 멤버십 사실만, 수혜·추천·점수 0. 다음 step git add data/ (broad) = RULE 4.
         continue-on-error: true
         run: python -m api.builders.commodity_exposure_public_builder
 
       - name: 공개 시장경보 빌드 (KRX 투자주의/경고/위험·단기과열·관리종목)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # recommendations KR → KIS inquire-price output 경보 플래그 → data/market_warnings.json.
         # 🚨 KISBroker(cache_only=True) — 신규 토큰 발급 절대 금지(RULE 1), 공유 토큰 read 전용. RULE7 = KRX 공식 지정 사실만.
         # 🚨 2026-06-27 P0 fix: KIS env 누락 → cache app_key mismatch(env empty) → 공유토큰 read 실패 → 전종목 skip →
@@ -599,7 +613,7 @@ jobs:
         #   continue-on-error 가 silent 마스킹. krx_mktcap KRX_API_KEY 누락(fab598aa2, 6/19~23 동결)과 동일 클래스.
         # 🚨 2026-08-20 `!cancelled()` 추가 — in-run 의존은 universe 목록뿐, payload 는 매 run DART 신규 수집.
         #   8/13~8/15 full 연속 실패 때 38~48시간 정체한 당사자다(위 헤더 주석 참조).
-        if: ${{ !cancelled() }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled())
         continue-on-error: true
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
@@ -615,7 +629,7 @@ jobs:
         # 검증된 파서(flow_observation_logger: 모바일 trend JSON→frgn HTML 폴백). 네이버 외부 fetch(KIS 0).
         # RULE 7 = 외국인/기관 순매매량(외부 사실)만. 다음 step git add data/ (broad) = RULE 4.
         # 🚨 2026-08-20 `!cancelled()` 추가 — in-run 의존은 universe 목록뿐, payload 는 매 run 네이버 신규 수집.
-        if: ${{ !cancelled() }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled())
         continue-on-error: true
         env:
           # 300 → 500 (2026-07-30). 재갱신 주기 1497/캡 = 약 5~6 거래일 → 약 3 거래일로 단축.
@@ -627,6 +641,7 @@ jobs:
         run: python api/builders/stock_flow_public_builder.py
 
       - name: KR 소형주 외국인 순매수 급증 관측 (RULE 7 관측 only)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 🚨 2026-08-09 제이엠티 094970 사례. 데이터는 늦지 않았다 — 급등 당일 21:44 KST 에
         #   외국인 +104,642주가 이미 수집돼 있었다. 갭은 표면화였다(파일에 있었는데 안 봤다).
         #   임계는 전부 기존 상수 재사용(flow 3.0x·move 7.0% = us_demand_chain,
@@ -652,11 +667,12 @@ jobs:
         # 공개 빌더(insider/flow/forensics/stock_report) 뒤. KIS 0. broad git add data/ = RULE 4(observations 디렉토리 자동).
         # 🚨 2026-08-20 `!cancelled()` 추가 — 2026-08-14(금) full 3연속 실패로 그 주 행이 영구 결손.
         #   빌더 자체 입력 신선도 게이트가 stale 값 적재를 막으므로 안전(위 헤더 주석 참조).
-        if: ${{ !cancelled() }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled())
         continue-on-error: true
         run: python -m api.builders.kr_observation_logger
 
       - name: 업종 진입 뷰 빌드 (섹터 집계, public-safe)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # stock_report+kr_sector_map+krx_mktcap+stock_flow_5d 순수 transform (외부호출/KIS 0). 위 수급 step 뒤.
         # RULE 7 = 섹터별 사실 중앙값·대표주·수급. 다음 broad git add data/ = RULE 4.
         continue-on-error: true
@@ -664,18 +680,21 @@ jobs:
 
 
       - name: 수급 종합 빌드 (공매도·신용잔고, public-safe)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # portfolio.json kis_snapshots 추출(공매도 FHPST04830000·신용 FHPST04760000). 🚨 KIS 호출 0=RULE 1 무관(로컬 읽기).
         # portfolio.json(main 분석 산출) 뒤. RULE 7 = KRX/KIS 외부 사실(공매도 비중·신용율)만. broad git add data/ = RULE 4.
         continue-on-error: true
         run: python -m api.builders.supply_demand_public_builder
 
       - name: 입구 지도 빌드 (공개 자산 count·기준시각 집계, public-safe)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 발행 중 공개 JSON 들의 count/generated_at 만 추출한 초경량 지도(~1KB). 외부호출/KIS 0 (로컬 읽기).
         # 위 빌더 step 들 전부 뒤(당일 산출 집계). RULE 7 = 사실(개수·시각)만. broad git add data/ = RULE 4. publish-data 등재 완료.
         continue-on-error: true
         run: python -m api.builders.entrance_map_builder
 
       - name: 커버리지(채움율) 감사 — 회귀 감시 + 핵심 필드 fail-closed 게이트
+        if: success() && steps.writer_gate.outputs.run == '1'
         id: coverage_gate
         # 리포트 필드·동반 파일 채움율 측정. 핵심 배수(PER/PBR)·재무·동반 급락(>30%p) 또는 절대 붕괴(<5%, N≥100)
         #   = exit 1 → 이 step outcome=failure. 아래 commit/publish step 이 outcome 검사로 차단(fail-closed).
@@ -684,12 +703,14 @@ jobs:
         run: python -m api.builders.coverage_report_builder
 
       - name: 관점 지도 빌드 (욕구·경기 체질·자사주 — 분류·집계 사실)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 업종 사실→욕구 계층 / 매출 YoY 변동성 실측 3분위 / 자기주식 공시 건수. 외부호출 0.
         # RULE 7 = 점수·랭킹 0, 기준 공개. broad git add data/ = RULE 4. publish-data 등재 완료.
         continue-on-error: true
         run: python -m api.builders.perspective_maps_builder
 
       - name: Brain audit baseline (PRE/POST 측정 영속화)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-05-18 확정 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
         # portfolio.json 의 brain_score 분포 + component fill + grade + quadrant 측정.
         # 결과: data/metadata/brain_audit.jsonl append (다음 step 의 git add data/ 자동 포함).
@@ -698,6 +719,7 @@ jobs:
         run: python scripts/audit_brain_score_baseline.py
 
       - name: Brain audit telegram push (자리 비움 시 핸드폰 알림)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-05-18 c-fix — workflow 자체 telegram push (Engineer wait/cron 의존 회피).
         # send_message 가 quiet hours (23:00~07:00 KST) + dedupe 자동 정합.
         # 16:07 KST 평일 daily_full = 통과 / 06:30 KST = quiet hours suppress.
@@ -709,6 +731,7 @@ jobs:
         run: python scripts/push_brain_audit_telegram.py
 
       - name: Generate predictions (Prediction Layer v0)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-06-01 — descriptive→predictive. recommendations.json + macro_industry_alignment.json
         # → data/metadata/prediction_trail.jsonl (forward-only cross-section). 채점은 별도 cron.
         # 다음 step 의 git add data/ (broad) 자동 포함 = RULE 4 정합.
@@ -717,6 +740,7 @@ jobs:
         run: python scripts/generate_predictions.py
 
       - name: Score predictions (Prediction Layer v0 채점 cron)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-06-01 — generate 직후 채점 (생성 → 채점 순서). eval_date 도달분(scored==false)을
         # 실현 시장 결과(history snapshot 가격 diff)로 채점 → trail scored=true rewrite +
         # data/prediction_ic_history.jsonl 집계 append. 다음 step git add data/ (broad) 자동 포함 = RULE 4.
@@ -740,6 +764,7 @@ jobs:
           python scripts/score_observations.py
 
       - name: Build validation summary (forward trail 검증 상태 집계 — 게이트 읽기 준비)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-06-13 — score 직후 실행 (채점 → 집계 순서). 기존 *_ic_history 산출물(brain/ml/
         # factor) + trail 원본(shadow/sector)을 read-only 재집계 → data/validation_summary.json.
         # 신규 산식 0 / 결정 피드백 0 (RULE 7). 모든 항목 "가설(N=X)" 라벨 + hit_rate 병기.
@@ -751,6 +776,7 @@ jobs:
         run: python scripts/build_validation_summary.py
 
       - name: ARENA 버서커 shadow (검증 진행도 status + 보수 vs 버서커 trail)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-06-08 — recommendations.json 생성 후 실행. berserker_status.json(공격 다이얼+잠금
         # 카운트다운) + berserker_shadow.jsonl(일별 목표 포트폴리오 trail) + score.json 산출.
         # 다음 step git add data/ (broad) + gitignore 카브(data/arena/* + 버서커 3파일 !) = RULE 4 정합.
@@ -761,6 +787,7 @@ jobs:
           python -m api.arena.berserker_shadow
 
       - name: 청산 MAE/MFE 계측 (관측 전용, 점수 입력 0)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-08-06 — 8/5 감사에서 손으로 계산해 집행 사슬을 규명한 지표(MFE +5.8% /
         # MAE −9.6% / 손절 −5% = 노이즈 안)를 상시화. 손절·익절 임계 재등록의 판정 근거가
         # 여기서 나오는데 일회성 계산이라 표본이 안 쌓였다.
@@ -770,6 +797,7 @@ jobs:
         run: python -c "from api.observability.excursion_trail import build; s=build(); print('[excursion]', 'N=' + str(s['n_episodes']), 'MFE', s['mfe']['mean'], 'MAE', s['mae']['mean'], '·', ' / '.join(s['labels']))"
 
       - name: 공매도 규칙 사후 수익률 관측 (관측 전용, 점수 입력 0)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-08-06 — PREREG_SHORT_SALE_AUTO_AVOID_2026_08_06 (PM 승인 안 (가)) 집행.
         # 공매도 auto_avoid 는 등급 산식 최강 조치(즉시 AVOID)인데 걸러낸 종목의 사후
         # 수익률을 기록하지 않아 규칙이 옳은지 판정할 데이터가 0 이었다. 임계·강도를
@@ -781,6 +809,7 @@ jobs:
         run: python -c "from api.observability.short_sale_trail import build; s=build(); k=s['KR']['auto_avoid']['fwd_20d']; print('[short_sale]', 'obs=' + str(s['n_observations']), 'auto_avoid 종목N=' + str(k['n_tickers']), '20d', k['mean'], '·', ' / '.join(s['labels']))"
 
       - name: 측정 오염 자동 검출 (원장 정합·키 커버리지·단위 스케일)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-08-05 — 8/4~5 감사에서 확정 결함을 실제로 잡아낸 세 대조를 상시화.
         # 사람이 478 모듈을 훑는 방식은 끝나지 않는다(그날 커버리지 3%). 검출력 실증:
         #   유령 매도 58건 · 죽은 채점 키 10종 · 통화 혼재 5종 — 전부 이 검사가 재현.
@@ -790,6 +819,7 @@ jobs:
         run: python -c "from api.observability.measurement_audit import run; r=run('.'); print('[measurement_audit]', r['status'], '· 신규:', r['failing'], '· KNOWN:', r['known_unresolved'])"
 
       - name: 측정 감사 신규 검출 telegram push
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 🚨 2026-08-06 — 경보가 로그에만 찍히면 아무도 읽지 않는다. 실제로 통화 혼재 3건이
         # 매일 신고되고 있었는데 8/6 PM 질문("자동 크론 만들었잖아? 아직도 3%야?")으로
         # 파다가 발견했다. status FAIL(=baseline 초과=신규)일 때만 발송, KNOWN/OK 는 침묵.
@@ -802,6 +832,7 @@ jobs:
         run: python scripts/push_measurement_audit_telegram.py
 
       - name: B3 F-Score/Accrual shadow IC trail (관측 전용, brain-input 0)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-08-05 — PREREG_FSCORE_ACCRUAL_B3_2026_07_12 (PM 승인 7/12 "굿임 고고") 집행.
         # recommendations.json 생성 후 실행: 당일 단면 관측 → eval 도달분 채점 → IC/ICIR 집계.
         # 🚨 검증축 분리 — 어떤 점수에도 입력되지 않는다(§3). 산출 = data/fscore_ic_shadow.jsonl
@@ -811,6 +842,7 @@ jobs:
         run: python scripts/fscore_shadow_trail.py
 
       - name: Pool rotation 주간 판정 (R6 v0 — 보고서만, 집행 없음)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-08-04 PREREG_POOL_ROTATION — 토요 KST 만 실 판정 (스크립트 자체 게이트, 평일 no-op).
         # 산출 = data/pool_rotation_report.json + pool_rotation_log.jsonl append — 다음 step
         # git add data/ (broad) 자동 포함 = RULE 4. publish allowlist 미등재 = 비공개 (RULE 7).
@@ -819,6 +851,7 @@ jobs:
         run: python scripts/pool_rotation_report.py
 
       - name: 손절 캡 변경 사후 감시 (사전등록 §4·§5)
+        if: success() && steps.writer_gate.outputs.run == '1'
         # 2026-08-09 PREREG_STOPLOSS_CAP — 손절 캡 −5%→−20% 의 되돌림 감시 + N=20 보고.
         # 🚨 되돌림 감시(MDD −17%)는 **매 run** 해야 한다 — 20거래를 기다리면 늦다.
         #   조건이 "20거래 **내**" 라 그 창 안에서 언제든 걸릴 수 있다.
@@ -828,8 +861,16 @@ jobs:
         run: python -m api.observability.stoploss_watch
 
       # Tranche B dual-write (#9 봉인) — daily_analysis.yml 동일 스텝 (설계 주석은 그쪽 참조).
+
+      - name: Verify completed analysis input before publication
+        id: analysis_contract
+        if: steps.writer_gate.outputs.run == '1' && !cancelled()
+        env:
+          UNIVERSE_EXPECTED_SCAN_ID: ${{ github.event_name == 'workflow_run' && format('gh:{0}:{1}', github.event.workflow_run.id, github.event.workflow_run.run_attempt) || inputs.expected_scan_id || '' }}
+        run: python3 scripts/ci/universe_analysis_gate.py --require-analysis
+
       - name: Private data sync (Tranche B)
-        if: always()
+        if: steps.writer_gate.outputs.run == '1' && (always()) && steps.analysis_contract.outputs.valid == 'true'
         continue-on-error: true
         env:
           PRIVATE_DATA_PAT: ${{ secrets.PRIVATE_DATA_PAT }}
@@ -845,7 +886,7 @@ jobs:
       - name: Commit & push results
         id: commit_results
         # 핵심 데이터 붕괴 시 커밋 차단 (coverage_gate fail-closed) — 결함본이 repo·사이트로 안 나감. 2026-07-12.
-        if: success() && steps.coverage_gate.outcome != 'failure'
+        if: steps.writer_gate.outputs.run == '1' && (success() && steps.coverage_gate.outcome != 'failure') && steps.analysis_contract.outputs.valid == 'true'
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
@@ -881,7 +922,7 @@ jobs:
           fi
 
       - name: Preserve independent NPS checkpoints after analysis failure
-        if: always() && steps.nps_holdings.outcome == 'success' && steps.commit_results.outcome == 'skipped' && steps.coverage_gate.outcome != 'failure'
+        if: steps.writer_gate.outputs.run == '1' && (always() && steps.nps_holdings.outcome == 'success' && steps.commit_results.outcome == 'skipped' && steps.coverage_gate.outcome != 'failure')
         run: |
           set -euo pipefail
           git config user.name "AI Stock Bot"
@@ -895,7 +936,7 @@ jobs:
         #   미채점(waiting)이고, 이 run 의 portfolio.json 이 brain_score·grade 를 갖는다.
         #   업로드는 아래 스텝(전체 업로드)이 이어받으므로 생성만 한다.
         # 실패해도 발행을 막지 않는다 — 부차 산출물이다.
-        if: always() && steps.coverage_gate.outcome != 'failure'
+        if: steps.writer_gate.outputs.run == '1' && (always() && steps.coverage_gate.outcome != 'failure') && steps.analysis_contract.outputs.valid == 'true'
         run: python3 api/builders/multibagger_picks_builder.py || echo "[multibagger_picks] skip"
 
       - name: Collect analyst metadata for private operator (no LLM)
@@ -903,7 +944,7 @@ jobs:
         # 2026-09-27 PM 승인. 7축: 기존 full 일정/직렬 그룹 유지, 새 secret/push/KIS/LLM 0.
         # 공개 빌더·git commit 이후 수집; data/.gitignore 봉인 + private upload만 허용.
         # requests/bs4는 기존 requirements. N=1 직접 실행/N=2 다음 full의 산출물 별도 감사.
-        if: ${{ !cancelled() && steps.detect_mode.outputs.mode == 'full' && steps.coverage_gate.outcome != 'failure' }}
+        if: steps.writer_gate.outputs.run == '1' && (!cancelled() && steps.detect_mode.outputs.mode == 'full' && steps.coverage_gate.outcome != 'failure') && steps.analysis_contract.outputs.valid == 'true'
         continue-on-error: true
         timeout-minutes: 10
         env:
@@ -923,7 +964,7 @@ jobs:
         # /api/admin(?type=portfolio_full, authed=is_admin/토큰) 이 서빙 → 오퍼레이터 콘솔이 공개 blob 대신
         # 이 authed 경로로 full fetch. 공개 blob(sanitize 예정, Stage 3)과 별도 = 크라운주얼 사설화.
         # 실패해도 발행 계속(admin.py fallback=공개 blob). SUPABASE_SERVICE_ROLE_KEY 기존 등록.
-        if: always() && steps.coverage_gate.outcome != 'failure'
+        if: steps.writer_gate.outputs.run == '1' && (always() && steps.coverage_gate.outcome != 'failure') && steps.analysis_contract.outputs.valid == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -933,7 +974,7 @@ jobs:
         # Phase A: dual-write — main 에도 commit (위), gh-pages 에도 force-orphan push.
         # 검증 후 Phase B 에서 fetch URL 마이그레이션, Phase C 에서 main commit 제거.
         # 핵심 데이터 붕괴 시 발행 차단 (coverage_gate fail-closed) — 결함 Blob 이 CDN 으로 안 나감. 2026-07-12.
-        if: always() && steps.coverage_gate.outcome != 'failure'
+        if: steps.writer_gate.outputs.run == '1' && (always() && steps.coverage_gate.outcome != 'failure') && steps.analysis_contract.outputs.valid == 'true'
         uses: ./.github/actions/publish-data
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -941,24 +982,28 @@ jobs:
           blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
 
       - name: Verify public NPS history delivery
-        if: always() && steps.nps_holdings.outcome == 'success' && steps.coverage_gate.outcome != 'failure'
+        if: steps.writer_gate.outputs.run == '1' && (always() && steps.nps_holdings.outcome == 'success' && steps.coverage_gate.outcome != 'failure') && steps.analysis_contract.outputs.valid == 'true'
         run: node scripts/nps_history_publish.cjs --verify-only
 
       - name: 국민연금 보유 신선도 실패 확정
-        if: always() && steps.nps_holdings.outcome == 'failure'
+        if: steps.writer_gate.outputs.run == '1' && (always() && steps.nps_holdings.outcome == 'failure') && steps.analysis_contract.outputs.valid == 'true'
         run: |
           echo "::error::국민연금 보유 수집 실패 — 기존 정상본 유지, 즉시 알림 전송"
           exit 1
 
       - name: Fail on missing operator analyst refresh
-        if: always() && steps.operator_analyst.outcome == 'failure'
+        if: steps.writer_gate.outputs.run == '1' && (always() && steps.operator_analyst.outcome == 'failure') && steps.analysis_contract.outputs.valid == 'true'
         run: |
           echo "::error::Operator analyst metadata refresh failed; do not treat old private data as fresh"
           exit 1
 
   # 기존 스케줄·직렬 그룹 유지. N=1 검증을 위해 전체 분석/토큰 경로를 실행하지 않는다.
+
   nps_history_only:
     if: github.event_name == 'workflow_dispatch' && inputs.nps_history_only == true
+    concurrency:
+      group: verity-data-write
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

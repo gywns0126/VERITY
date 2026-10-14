@@ -23,6 +23,7 @@ import logging
 import os
 import sys
 import time
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -77,9 +78,10 @@ def build() -> Dict[str, Any]:
     started = time.time()
     candidates: List[Dict[str, Any]] = []
     error: str | None = None
+    metrics: Dict[str, Any] = {}
 
     try:
-        candidates = run_filter_pipeline_with_ramp_up(market_scope="all") or []
+        candidates = run_filter_pipeline_with_ramp_up(market_scope="all", _metrics=metrics) or []
     except BaseException as e:
         error = f"{type(e).__name__}: {str(e)[:200]}"
         sys.stderr.write(f"[universe_scan] FAIL: {error}\n")
@@ -111,15 +113,17 @@ def build() -> Dict[str, Any]:
     # 즉 상류 일시 장애 1회가 그날 KR 판단 대상을 통째로 삭제. 신선한 US 를 버릴 이유는 없으므로
     # **시장별로** 직전 정상분을 잇는다. 선례 = 채움율 급락 publish 차단 게이트(2026-07-13).
     _prev_cands = prev.get("candidates") if isinstance(prev.get("candidates"), list) else []
+    from api.utils.universe_candidates import snapshot_rejection
+    prev_rejection = snapshot_rejection(prev, _KR_FALLBACK_MAX_STALE_H, now)
     kr_used_prev = False
     kr_prev_at: str | None = None
     if not used_prev and kr_count == 0 and _prev_cands:
         prev_kr = [c for c in _prev_cands if c.get("currency") != "USD"]
         # 직전 snapshot 이 이미 splice 본이면 원 스캔 시각을 승계 — 무한 연쇄 방지.
-        _pd = prev.get("diagnostics") or {}
-        origin_at = _pd.get("kr_prev_collected_at") or prev.get("collected_at")
+        origin_at = (prev.get("source_as_of") or {}).get("KR")
         age_h = _snapshot_age_hours(origin_at, now)
-        if prev_kr and age_h is not None and age_h <= _KR_FALLBACK_MAX_STALE_H:
+        if (prev_kr and not prev_rejection and prev.get("kr_source_scan_id")
+                and age_h is not None and 0 <= age_h <= _KR_FALLBACK_MAX_STALE_H):
             candidates = candidates + prev_kr
             kr_count = len(prev_kr)
             kr_used_prev = True
@@ -143,7 +147,10 @@ def build() -> Dict[str, Any]:
     #   가장 높은 분위이기도 하다 — 하방 배제는 PM 결정으로 미뤄졌다. 조용히 넣지 않고
     #   `promoted_by` 태그 + 진단으로 **분리 집계 가능**하게 남긴다.
     # 추가만 한다 — 기존 후보를 밀어내지 않고, red_flags·auto_avoid·채점은 그대로 받는다.
-    candidates, promoted_n, promote_meta = merge_promoted(candidates)
+    if used_prev:
+        promoted_n, promote_meta = 0, {}
+    else:
+        candidates, promoted_n, promote_meta = merge_promoted(candidates)
     kr_count += promoted_n if promoted_n else 0
 
     # US 유니버스 소스 de-silence — 캐시 부재 시 fallback(S&P100+core) 명시.
@@ -152,7 +159,7 @@ def build() -> Dict[str, Any]:
     us_universe_source = "cache" if os.path.exists(_us_cache) else "static_fallback"
 
     diagnostics = {
-        "ok": error is None and bool(candidates),
+        "ok": error is None and bool(candidates) and not used_prev and not kr_starved,
         "candidates_count": len(candidates),
         "kr_count": kr_count,
         "us_count": us_count,
@@ -170,13 +177,29 @@ def build() -> Dict[str, Any]:
         "multibagger_promoted": promoted_n,
         "multibagger_promote_meta": promote_meta,
         "error": error,
+        "pipeline_profile": metrics.get("pipeline_profile"),
     }
 
+    collected_at = prev.get("collected_at") if used_prev else now.isoformat(timespec="seconds")
+    scan_id = (prev.get("scan_id") if used_prev else
+               f"gh:{os.environ['GITHUB_RUN_ID']}:{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}"
+               if os.environ.get("GITHUB_RUN_ID") else f"local:{uuid.uuid4()}")
+    previous_sources = prev.get("source_as_of") or {}
     return {
-        "collected_at": now.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "collected_at": collected_at,
+        "completed_at": prev.get("completed_at") if used_prev else _now_kst().isoformat(timespec="seconds"),
+        "scan_id": scan_id,
+        "producer_sha": prev.get("producer_sha") if used_prev else os.environ.get("UNIVERSE_PRODUCER_SHA"),
+        "scan_mode": prev.get("scan_mode") if used_prev else os.environ.get("VERITY_MODE", "prod"),
+        "timestamp_basis": "scan_collection_started_at; not a quote timestamp; report dates, where present, retained per record",
+        "source_as_of": previous_sources if used_prev else {
+            "KR": kr_prev_at if kr_used_prev else collected_at,
+            "US": collected_at if us_count else None,
+        },
+        "kr_source_scan_id": (prev.get("kr_source_scan_id") or prev.get("scan_id")) if kr_used_prev else scan_id,
         "candidates": candidates,
         "diagnostics": diagnostics,
-        "schema_version": "v0",
+        "schema_version": "v1",
     }
 
 
@@ -227,8 +250,10 @@ def _atomic_write(path: str, data: Dict[str, Any]) -> None:
 
 def main() -> int:
     snapshot = build()
-    _atomic_write(OUTPUT_PATH, snapshot)
     diag = snapshot.get("diagnostics", {})
+    # A failed attempt must leave the last completed bytes and source time intact.
+    if diag.get("ok"):
+        _atomic_write(OUTPUT_PATH, snapshot)
     sys.stderr.write(
         f"[universe_scan] snapshot OK at={snapshot.get('collected_at')} "
         f"candidates={diag.get('candidates_count')} (KR {diag.get('kr_count')} + US {diag.get('us_count')}) "

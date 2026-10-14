@@ -50,12 +50,55 @@ def test_missing_entry_is_in_denominator(monkeypatch, tmp_path):
     assert row["avg_return"] is None
 
 
+def test_entry_skip_still_reports_missing_evaluation_requirement(monkeypatch, tmp_path):
+    row = evaluate(monkeypatch, tmp_path,
+                   [rec("A", market="NYSE", currency="USD")], [], [])
+    assert row["cohort_size"] == row["unresolved_count"] == 1
+    assert row["price_gap_count"] == 2
+    assert row["entry_snapshot_date"] == "2026-09-02"
+    assert [(g["ticker"], g["snapshot_date"], g["role"]) for g in row["price_gaps"]] == [
+        ("A", "2026-09-02", "entry"), ("A", "2026-09-08", "evaluation"),
+    ]
+    assert all(g["currency"] == "USD" and g["market"] == "NYSE" for g in row["price_gaps"])
+    assert all(g["recovery_status"] == "unresolved" for g in row["price_gaps"])
+    assert row["observed"]["sample"] == 0
+
+
+def test_periodic_gap_preserves_filename_and_actual_snapshot_timestamp():
+    snaps = [
+        {"_date": "2026-10-03", "updated_at": "2026-10-02T23:22:48+09:00",
+         "recommendations": [rec("A", market="NASDAQ", currency="USD")]},
+        {"_date": "2026-10-10", "updated_at": "2026-10-09T23:46:08+09:00",
+         "recommendations": []},
+    ]
+    for fn in (periodic._analyze_brain_accuracy, periodic._measure_recommendation_performance):
+        row = fn(snaps)
+        assert row["cohort_size"] == row["unresolved_count"] == row["price_gap_count"] == 1
+        gap = row["price_gaps"][0]
+        assert gap["snapshot_date"] == "2026-10-10"
+        assert gap["snapshot_updated_at"] == "2026-10-09T23:46:08+09:00"
+        assert gap["price_basis"] is None  # Legacy metadata must not be invented.
+        assert "matching_adjustment_definition" in gap["recovery_requires"]
+
+
+def test_periodic_missing_both_prices_keeps_single_cohort_observation():
+    snaps = [{"recommendations": [rec("A", None)]}, {"recommendations": []}]
+    for fn in (periodic._analyze_brain_accuracy, periodic._measure_recommendation_performance):
+        row = fn(snaps)
+        assert row["cohort_size"] == row["unresolved_count"] == 1
+        assert row["evaluated_count"] == 0
+        assert row["price_gap_count"] == 2
+        assert [gap["role"] for gap in row["price_gaps"]] == ["start", "evaluation"]
+
+
 def test_complete_cohort_keeps_existing_cost_math(monkeypatch, tmp_path):
     row = evaluate(monkeypatch, tmp_path, [rec("A")], [rec("A", 100)], [rec("A", 110)])
     assert row["evaluation_status"] == "complete"
     assert row["avg_return"] == 10
     assert row["avg_return_net"] == 9.27
     assert row["unresolved_count"] == 0
+    assert row["price_gap_count"] == 0
+    assert row["price_gaps"] == []
 
 
 @pytest.mark.parametrize("bad", [None, 0, -1, float("nan"), float("inf"), "NaN", "bad", True])
@@ -139,4 +182,6 @@ def test_verification_preserves_coverage_without_misleading_ci(monkeypatch, tmp_
     assert report["performance"]["hit_rate_14d"] is report["performance"]["hit_rate_14d_ci95"] is None
     assert report["evaluation_coverage"]["14d"]["unresolved_count"] == 1
     assert report["evaluation_coverage"]["14d"]["cohort_size"] == 2
+    assert report["evaluation_coverage"]["14d"]["price_gap_count"] == 1
+    assert report["evaluation_coverage"]["14d"]["price_gaps"] == row["price_gaps"]
     assert report["feedback_loop_status"] == expected

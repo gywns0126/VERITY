@@ -1489,7 +1489,7 @@ def handle_portfolio_full(request_handler) -> dict:
 
 # 터미널 화면이 실제 쓰는 키만 — full(3.57MB) 대비 ≈ 4~6%. (2026-08-03 Safari 메모리 킬 대응)
 _TERMINAL_KEYS = (
-    "updated_at", "vams", "briefing", "sector_rotation", "global_events",
+    "updated_at", "analysis_provenance", "vams", "briefing", "sector_rotation", "global_events",
     "headlines", "bloomberg_google_headlines", "market_horizon", "daily_report",
     "sectors", "macro",
     "system_action",  # 2026-08-03 /macro 시스템 작용 패널 (VERITY #267 — 작은 dict, 슬림 무해)
@@ -1518,8 +1518,14 @@ def handle_portfolio_terminal(request_handler) -> dict:
         vb = r.get("verity_brain")
         if isinstance(vb, dict):
             s["verity_brain"] = {
-                k: vb.get(k) for k in ("brain_score", "grade_label", "grade") if vb.get(k) is not None
+                k: vb.get(k) for k in ("brain_score", "grade_label", "grade", "data_coverage", "grade_confidence")
+                if vb.get(k) is not None
             }
+            fact = vb.get("fact_score")
+            if isinstance(fact, dict):
+                s["verity_brain"]["fact_score"] = {
+                    k: fact[k] for k in ("data_coverage", "coverage_scope") if k in fact
+                }
         fl = r.get("flow")
         if isinstance(fl, dict) and fl.get("foreign_net") is not None:
             s["flow"] = {"foreign_net": fl.get("foreign_net")}

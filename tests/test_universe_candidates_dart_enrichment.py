@@ -18,7 +18,12 @@ def test_cached_candidates_reapply_dart_after_kr_previous_snapshot(monkeypatch, 
         json.dumps(
             {
                 "collected_at": now.isoformat(),
+                "completed_at": now.isoformat(),
+                "schema_version": "v1",
+                "scan_id": "test:dart",
+                "source_as_of": {"KR": now.isoformat(), "US": now.isoformat()},
                 "diagnostics": {
+                    "ok": True,
                     "kr_count": 1,
                     "us_count": 1,
                     "kr_used_prev": True,
@@ -81,7 +86,10 @@ def test_dart_enrichment_failure_keeps_cached_candidates(monkeypatch, tmp_path):
         json.dumps(
             {
                 "collected_at": now.isoformat(),
-                "diagnostics": {"kr_count": 1, "us_count": 0},
+                "completed_at": now.isoformat(),
+                "schema_version": "v1",
+                "scan_id": "test:dart",
+                "diagnostics": {"ok": True, "kr_count": 1, "us_count": 0},
                 "candidates": [{"ticker": "005930", "currency": "KRW"}],
             }
         ),

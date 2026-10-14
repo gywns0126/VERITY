@@ -106,9 +106,11 @@ def test_shadow_mode_appends_jsonl(tmp_path, monkeypatch):
     import importlib
     import api.config as _cfg
     importlib.reload(_cfg)
+    monkeypatch.setattr(_cfg, "DATA_DIR", str(tmp_path))
     import api.analyzers.wide_scan as ws
     importlib.reload(ws)
     monkeypatch.setattr(ws, "WIDE_SCAN_LOG_PATH", log_path)
+    monkeypatch.setattr("api.intelligence.multibagger_watch.run_watch", lambda stocks: 0)
 
     stocks = _sample_stocks()
     result = ws.run_wide_scan_shadow(stocks, run_at_iso="2026-05-10T13:00:00+09:00")
