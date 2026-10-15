@@ -138,6 +138,35 @@ test('group title collision search stays above its screen anchor', () => {
     assert.deepEqual(items, before)
 })
 
+test('summary icons are reset before measuring original fit dimensions and overview mode clears at .65', () => {
+    const { box, stockButtons, leader, baseCalls } = harness(1280, 720, .2)
+    const n = { id: 'stock', kind: 'stock', x: .5, y: .5 }
+    const button = element(160, 60)
+    Object.defineProperties(button, {
+        offsetWidth: { get() { return this.dataset.summaryIcon === 'true' ? 44 : this.dataset.overviewTitle === 'true' ? 104 : 160 } },
+        offsetHeight: { get() { return this.dataset.summaryIcon === 'true' ? 44 : this.dataset.overviewTitle === 'true' ? 36 : 60 } },
+    })
+    stockButtons.set(n.id, button);box.holdings.push(n)
+    button.dataset.summaryIcon = 'true'
+    assert.equal(button.offsetWidth, 44);assert.equal(button.offsetHeight, 44)
+    // The base draw preserves summaryIcon, so the real wrapper must clear it before measuring.
+    box.renderMap()
+    assert.equal(baseCalls.groups, 1)
+    assert.equal(button.dataset.summaryIcon, 'false')
+    assert.equal(button.dataset.overviewWidth, '160')
+    assert.equal(button.dataset.overviewHeight, '60')
+    assert.equal(button.dataset.overviewTitle, 'true')
+    assert.equal(button.offsetWidth, 104);assert.equal(button.offsetHeight, 36)
+    box.state.zoom = .65
+    box.renderMap()
+    for (const key of ['overviewTitle', 'overviewWidth', 'overviewHeight']) {
+        assert.equal(Object.hasOwn(button.dataset, key), false)
+    }
+    assert.equal(button.offsetWidth, 160);assert.equal(button.offsetHeight, 60)
+    assert.equal(button.style.transform, 'translate(-50%,-50%) scale(0.65)')
+    assert.equal(leader.children.length, 0)
+})
+
 test('real stock/group buttons stay interactive, above source cards, and keep canonical and fit data unchanged', () => {
     const { box, stockButtons, eventButtons, leader, baseCalls } = harness(390, 720, .2)
     const clicks = []

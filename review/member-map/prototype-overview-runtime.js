@@ -61,8 +61,9 @@ function drawMemberOverviewTitles(){
   // Stable identity order keeps hover/selection redraws from changing title rows.
   entries.sort((a,b)=>Number(a.n.kind!=='stock')-Number(b.n.kind!=='stock')||a.id.localeCompare(b.id));
   const items=entries.map(({n,el})=>{
+    el.dataset.summaryIcon='false';
     const p=point(n),w=el.offsetWidth,h=el.offsetHeight;
-    el.dataset.overviewWidth=String(w);el.dataset.overviewHeight=String(h);el.dataset.summaryIcon='false';
+    el.dataset.overviewWidth=String(w);el.dataset.overviewHeight=String(h);
     memberOverviewElements.set(el,{left:el.style.left,top:el.style.top,transform:el.style.transform});el.dataset.overviewTitle='true';
     const group=n.kind!=='stock',height=el.offsetHeight;
     return {x:p.x,y:group?p.y-height/2-h*state.zoom/2-6:p.y,w:el.offsetWidth,h:height,group,anchor:p};
