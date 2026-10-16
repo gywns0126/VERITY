@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-10-16T17:32:38+09:00",
+  "collected_at": "2026-10-16T16:05:38+09:00",
   "macro": {
     "usd_krw": {
       "value": 1331.67,
@@ -13833,7 +13833,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-10-16T17:32:55+09:00",
+    "updated_at": "2026-10-16T16:06:38+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.84,
       "us_ig_risk": "LOW",
@@ -13842,8 +13842,8 @@
       "us_hy_risk": "MODERATE"
     },
     "kr_corp_spreads": {
-      "date": "20261016",
-      "collected_at": "2026-10-16T17:32:55+09:00",
+      "date": "20261015",
+      "collected_at": "2026-10-16T16:06:38+09:00",
       "grades": {
         "AA-": {
           "yield": 4.541,
@@ -13978,23 +13978,6 @@
       "d_day": 13
     },
     {
-      "name": "미국 PCE 물가지수",
-      "severity": "high",
-      "impact_area": [
-        "물가",
-        "금리기대"
-      ],
-      "impact": "Fed 선호 인플레 지표. CPI와 유사하나 실질 정책 영향 큼",
-      "action": "CPI와 교차 확인, 인플레 추세 판단",
-      "date": "2026-10-29",
-      "country": "미국",
-      "source": "FRED",
-      "release_id": 54,
-      "source_url": "https://fred.stlouisfed.org/release?rid=54",
-      "source_kind": "release",
-      "d_day": 13
-    },
-    {
       "name": "미국 주간 실업수당 청구",
       "severity": "medium",
       "impact_area": [
@@ -14031,12 +14014,16 @@
     }
   ],
   "diagnostics": {
-    "macro_ok": true,
+    "macro_ok": false,
     "bonds_ok": true,
     "events_ok": true,
-    "errors": [],
-    "used_prev_snapshot": [],
-    "elapsed_s": 35.61
+    "errors": [
+      "macro: timeout_60s"
+    ],
+    "used_prev_snapshot": [
+      "macro"
+    ],
+    "elapsed_s": 105.01
   },
   "schema_version": "v0"
 }
