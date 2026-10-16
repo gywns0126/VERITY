@@ -57,6 +57,18 @@ jobs:
           CAP: ${{ github.event.inputs.cap || '60' }}
         run: python -m api.builders.us_financials_incremental --cap "$CAP"
 
+      - name: Preserve incremental financial evidence
+        id: evidence
+        if: ${{ !cancelled() && steps.incr.outcome != 'skipped' && steps.incr.outcome != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: us-financials-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            data/us_financials/*.json
+            data/metadata/us_fin_incremental_state.json
+
       - name: 리포트 재빌드 (재수집 반영)
         id: report
         # 재수집 per-ticker 는 이 run 로컬에만 존재(gitignore) — 같은 run 안에서 즉시 소비.

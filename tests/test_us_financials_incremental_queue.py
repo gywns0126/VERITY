@@ -277,3 +277,28 @@ def test_persist_shell_stages_only_allowed_outputs(tmp_path, ready):
               if line.startswith("git add -- ")]
     assert staged == (paths if ready == "true" else paths[-1:])
     assert ("--requeue-run" in result.stdout) == (ready == "false")
+
+
+@pytest.mark.parametrize("cancelled,outcome,expected", [
+    (False, "success", True), (False, "failure", True),
+    (False, "skipped", False), (False, "", False),
+    (True, "success", False), (True, "failure", False),
+])
+def test_evidence_retained_before_report_for_attempted_collection(cancelled, outcome, expected):
+    root = Path(__file__).resolve().parents[1]
+    workflow = yaml.safe_load((root / ".github/workflows/us_financials_incremental.yml").read_text())
+    steps = workflow["jobs"]["incremental"]["steps"]
+    index = next(i for i, step in enumerate(steps) if step.get("id") == "incr")
+    evidence = steps[index + 1]
+    assert evidence["id"] == "evidence"
+    assert steps[index + 2]["id"] == "report"
+    assert evidence["uses"] == "actions/upload-artifact@v4"
+    assert evidence["if"] == "${{ !cancelled() && steps.incr.outcome != 'skipped' && steps.incr.outcome != '' }}"
+    assert ((not cancelled) and outcome not in ("skipped", "")) == expected
+    assert evidence["with"] == {
+        "name": "us-financials-evidence-${{ github.run_id }}-${{ github.run_attempt }}",
+        "retention-days": 7,
+        "if-no-files-found": "error",
+        "path": "data/us_financials/*.json\ndata/metadata/us_fin_incremental_state.json\n",
+    }
+    assert not evidence.get("continue-on-error")
