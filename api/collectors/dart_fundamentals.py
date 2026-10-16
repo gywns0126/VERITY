@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import functools
 import json
+import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout, as_completed
@@ -43,12 +44,59 @@ def _parse_int(value) -> int:
         return 0
 
 
-def _extract_pl_bs_from_dart(data: dict, *, source_rows=None) -> dict:
+def _sga_split_identity(row: dict, request_context: dict | None) -> tuple | None:
+    """응답의 공시·사업연도·당기명과 실제 요청의 연결 범위를 대조한다."""
+    if not isinstance(request_context, dict) or any(
+            not request_context.get(key) for key in
+            ("ticker", "corp_code", "bsns_year", "reprt_code", "fs_div")):
+        return None
+    if request_context["fs_div"] not in ("CFS", "OFS"):
+        return None
+    keys = ("corp_code", "bsns_year", "reprt_code", "rcept_no",
+            "sj_div", "thstrm_nm", "currency")
+    if any(not row.get(key) for key in keys) or row["sj_div"] not in ("IS", "CIS"):
+        return None
+    if row["currency"] != "KRW" or any(
+            str(row[key]) != str(request_context[key]) for key in
+            ("corp_code", "bsns_year", "reprt_code")):
+        return None
+    # 이 API의 공식 응답에는 ticker/fs_div가 없다. 있다면 요청과 모순되는지만 검사한다.
+    if ((row.get("stock_code") and str(row["stock_code"]) != str(request_context["ticker"]))
+            or (row.get("fs_div") and row["fs_div"] != request_context["fs_div"])):
+        return None
+    if not re.fullmatch(r"\d{14}", str(row["rcept_no"])):
+        return None
+    if row.get("thstrm_dt"):
+        dates = re.findall(r"20\d{2}[.\-/]\d{2}[.\-/]\d{2}", str(row["thstrm_dt"]))
+        if len(dates) != 2:
+            return None
+        try:
+            start, end = (datetime.strptime(re.sub(r"[.\-/]", "", date), "%Y%m%d") for date in dates)
+            if start > end:
+                return None
+        except ValueError:
+            return None
+    return tuple(str(row[key]).strip() for key in keys) + (
+        str(row.get("thstrm_dt") or "").strip(),
+        str(row.get("account_detail") or "").strip(),
+    )
+
+
+def _sga_split_amount(row: dict) -> int | None:
+    value = row.get("thstrm_amount")
+    raw = str(value).strip() if value is not None else ""
+    if not re.fullmatch(r"-?(?:\d+|\d{1,3}(?:,\d{3})+)", raw):
+        return None
+    return int(raw.replace(",", ""))
+
+
+def _extract_pl_bs_from_dart(data: dict, *, source_rows=None, request_context: dict | None = None) -> dict:
     """DART fnlttSinglAcntAll.json 응답에서 PL/BS/CF 핵심 항목 추출.
 
     2026-05-20 확장 (실호출 audit 005930 2024 CFS 213 항목 기준):
       BS 9 + IS 5 + CF 3 (영업/투자/재무 활동 현금흐름) + 매출원가/매출총이익.
       fnlttSinglAcnt (단일계정) 30 항목 → fnlttSinglAcntAll (전체) 213 항목 전환.
+    분리 SG&A 합산에는 응답에 없는 ticker/fs_div를 실제 request_context로만 확인한다.
 
     Returns: {
       total_assets, total_liabilities, equity,
@@ -91,7 +139,11 @@ def _extract_pl_bs_from_dart(data: dict, *, source_rows=None) -> dict:
         out[field] = amount
         if source_rows is not None:
             source_rows[field] = dict(item)
+            if field == "sga" and request_context is not None:
+                source_rows[field]["request_context"] = dict(request_context)
 
+    sga_total_seen = False
+    sga_parts = {"판매비": [], "관리비": []}
     for item in data.get("list", []):
         sj = item.get("sj_div", "")
         acct = item.get("account_nm", "")
@@ -161,6 +213,10 @@ def _extract_pl_bs_from_dart(data: dict, *, source_rows=None) -> dict:
                 _assign("pretax_income", amount, item)
             elif "판매비와관리비" in acct:
                 _assign("sga", amount, item)
+                sga_total_seen = True
+            elif re.fullmatch(r"\s*(판매비|관리비)\s*(?:\(\s*주\s*[\d,\s]+\))?\s*", acct):
+                part = "판매비" if acct.strip().startswith("판매비") else "관리비"
+                sga_parts[part].append(item)
             elif acct in ("금융수익", "금융이익"):
                 out["finance_income"] = max(out["finance_income"], amount)
             elif acct in ("금융원가", "금융비용"):
@@ -180,6 +236,18 @@ def _extract_pl_bs_from_dart(data: dict, *, source_rows=None) -> dict:
                 _assign("investing_cashflow", amount, item)
             elif aid == "ifrs-full_CashFlowsFromUsedInFinancingActivities" or "재무활동현금흐름" in acct or acct == "재무활동으로 인한 현금흐름":
                 _assign("financing_cashflow", amount, item)
+    if not sga_total_seen and all(len(rows) == 1 for rows in sga_parts.values()):
+        selling, administrative = sga_parts["판매비"][0], sga_parts["관리비"][0]
+        identity = _sga_split_identity(selling, request_context)
+        selling_amount = _sga_split_amount(selling)
+        administrative_amount = _sga_split_amount(administrative)
+        if (identity is not None and identity == _sga_split_identity(administrative, request_context)
+                and selling_amount is not None and administrative_amount is not None):
+            out["sga"] = selling_amount + administrative_amount
+            if source_rows is not None:
+                source_rows["sga"] = [dict(selling), dict(administrative)]
+                for row in source_rows["sga"]:
+                    row["request_context"] = dict(request_context)
     out["equity"] = out["total_assets"] - out["total_liabilities"]
     out["working_capital"] = out["current_assets"] - out["current_liabilities"]
     out["free_cashflow"] = out["operating_cashflow"] + out["investing_cashflow"]
@@ -359,7 +427,11 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
                 if data.get("status") != "000":
                     continue
                 source_rows = {}
-                pl_bs = _extract_pl_bs_from_dart(data, source_rows=source_rows)
+                request_context = {"ticker": ticker, "corp_code": corp_code,
+                                   "bsns_year": bsns_year, "reprt_code": reprt_code,
+                                   "fs_div": fs_div}
+                pl_bs = _extract_pl_bs_from_dart(
+                    data, source_rows=source_rows, request_context=request_context)
                 if pl_bs.get("total_assets", 0) <= 0:
                     continue
                 ratios = _compute_ratios(pl_bs)
@@ -393,6 +465,17 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
                         definition=definitions.get(field, "annual_" + field),
                         unit="ratio" if field == "current_ratio" else "percent" if field in dependencies else "KRW",
                         inputs=[dart_input(source_rows[k]) if k in source_rows else None for k in keys])
+                sga_rows = source_rows.get("sga")
+                if sga_rows and (isinstance(sga_rows, list)
+                                 or _sga_split_amount(sga_rows) is not None):
+                    if isinstance(sga_rows, dict):
+                        sga_rows = [sga_rows]
+                    evidence["sga"] = field_evidence(
+                        base["sga"], source="DART", ticker=ticker, issuer_id=corp_code,
+                        definition=("selling_plus_administrative_expense" if len(sga_rows) == 2
+                                    else "reported_sga_total"), unit="KRW",
+                        inputs=[{**dart_input(row), "request_context": row.get("request_context")}
+                                for row in sga_rows])
                 base["source"] = "DART"
                 base["fs_div"] = fs_div
                 base["report_date"] = bsns_year

@@ -100,6 +100,8 @@
       #v(2mm)#text(size: 7pt, fill: sub)[#translation-note]
     ]
     #v(3mm)#text(size: 7.5pt, weight: 700, fill: sub)[영문 원문 대조]
+  ] else if D.market == "KR" [
+    #text(size: 7.5pt, weight: 700, fill: sub)[공시 한국어 원문]
   ] else [
     #text(size: 7.5pt, weight: 700, fill: sub)[한국어 번역 미준비 · 영문 원문]
   ]
@@ -212,7 +214,7 @@
 #v(4mm)
 == 회사는 변화를 어떻게 설명했나
 #text(size: 7.5pt, fill: sub)[회사 공시의 설명입니다. 독립적으로 입증한 원인을 뜻하지 않습니다. 설명 미확보는 영향 없음과 다릅니다.]
-#if G.company.excerpts.len() == 0 [#v(1mm)#text(size: 7.5pt, fill: sub)[#G.company.note]]
+#v(1mm)#text(size: 7.5pt, fill: sub)[#G.company.note]
 #if D.translation_coverage.total > 0 [#v(1mm)#text(size: 7.5pt, fill: sub)[이 리포트의 영문 발췌 번역: #(D.translation_coverage.translated)/#(D.translation_coverage.total)개. 전체 공시의 번역 범위는 아닙니다.]]
 #v(2mm)
 #if G.company.excerpts.len() > 0 [#report-table(("설명 항목", "현재 연결 상태"), G.company.topics.map(t => (t.label, if t.refs.len() > 0 { t.refs.join(" · ") + " 문단에 관련 표현 수신" } else { "해당 기간 설명 미확보" })), (1, 3))]

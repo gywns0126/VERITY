@@ -1,0 +1,97 @@
+{
+  "084010": {
+    "ticker": "084010",
+    "name": "대한제강",
+    "corp_code": "00113225",
+    "reviewed_at": "2026-10-16",
+    "max_review_age_days": 180,
+    "period": {
+      "start": "2026-01-01",
+      "end": "2026-06-30",
+      "period_kind": "ytd",
+      "fs_div": "CFS",
+      "accession": "20260814003201"
+    },
+    "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814003201&dcmNo=11536243&eleId=9&offset=113305&length=188649&dtd=dart4.xsd",
+    "overview_excerpt": "연결회사는 철근의 제조ㆍ판매를 주업으로 하고 있으며 물류 매출, 고철 및 비철 상품매출 또한 발생하고 있습니다. 전체 연결 매출의 90% 이상이 철근 제조ㆍ판매부문에서 발생하고 있어 해당 사업부문과 이외의 기타 사업부문으로 구분하여 아래와 같이 주요 제품을 요약합니다.",
+    "company": {
+      "excerpts": [
+        {
+          "id": "M1",
+          "metric": "영업이익",
+          "quote": "특히, 주요 사업인 제강/압연 부문의 수출 판매량 증가와 수익성 중심의 운영을 기반으로 전년 동기대비 75억원 증가한 영업이익 168억원을 기록하였습니다.",
+          "period": "2026-01-01/2026-06-30",
+          "translation": null
+        },
+        {
+          "id": "M2",
+          "metric": "계속영업이익",
+          "quote": "다만, 지분법이익 감소 등의 영향으로 계속영업이익은 64억원 감소한 104억원을 실현하였습니다.",
+          "period": "2026-01-01/2026-06-30",
+          "translation": null
+        }
+      ],
+      "topics": [
+        {"label": "가격", "refs": []},
+        {"label": "물량", "refs": ["M1"]},
+        {"label": "제품구성", "refs": []},
+        {"label": "비용", "refs": []}
+      ],
+      "note": "II.7의 회사 설명은 2026년 상반기 연결 누계에 관한 것이며 2분기 단독 실적의 원인으로 전용하지 않는다. 회사의 설명을 독립적으로 검증한 결과가 아니다."
+    },
+    "observations": [
+      {
+        "label": "제품구성",
+        "text": "2026년 반기 매출표에서 대한제강(주)의 철근·바인코일은 409,564,181천원, 빌릿은 250,404천원이고, 와이케이스틸(주)의 철근·바인코일은 160,685,732천원이다. 회사별 매출이며 연결매출로 단순 합산하지 않는다.",
+        "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814003201&dcmNo=11536243&eleId=9&offset=113305&length=188649&dtd=dart4.xsd",
+        "period": "2026-01-01/2026-06-30"
+      },
+      {
+        "label": "가격",
+        "text": "2026년 반기 철근 평균판매단가는 대한제강(주) 823천원/톤, 와이케이스틸(주) 807천원/톤이다. 공시는 품목별 매출액을 판매량으로 나눈 평균가격으로 정의한다.",
+        "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814003201&dcmNo=11536243&eleId=9&offset=113305&length=188649&dtd=dart4.xsd",
+        "period": "2026-01-01/2026-06-30"
+      },
+      {
+        "label": "비용",
+        "text": "2026년 반기 철스크랩 평균매입단가는 대한제강(주) 480천원/톤, 와이케이스틸(주) 478천원/톤이다. 이는 구매금액÷구매량이며 매출원가나 철근 판매단가와의 차이를 이익률로 해석할 수 없다.",
+        "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814003201&dcmNo=11536243&eleId=9&offset=113305&length=188649&dtd=dart4.xsd",
+        "period": "2026-01-01/2026-06-30"
+      }
+    ],
+    "peers": [
+      {
+        "ticker": "104700",
+        "company": "한국철강",
+        "source_url": "https://kind.krx.co.kr/external/2026/05/15/002515/20260515005686/11013.htm",
+        "reason": "전기로·압연설비로 철근을 생산해 건설사·유통상·조달청에 판매하는 단일 영업부문으로, 대한제강의 주력 철근사업과 직접 겹친다.",
+        "limitation": "별도 상장 운영회사이며 대한제강의 와이케이스틸·물류 종속사업을 포함하는 연결 범위와 동일하지 않다."
+      },
+      {
+        "ticker": "460860",
+        "company": "동국제강",
+        "source_url": "https://kind.krx.co.kr/external/2026/03/13/000713/20260313002050/11011.htm",
+        "reason": "2025년 사업보고서가 철근을 포함한 봉형강류를 주력 제품으로 명시해 제품·건설 수요가 겹친다.",
+        "limitation": "형강·후판도 주력으로 생산하므로 회사 전체 실적을 철근 단일사업과 동일시할 수 없다."
+      }
+    ],
+    "peer_note": "와이케이스틸은 연결 자회사라 중복되고, 현대제철은 사업 범위가 넓으며, KISCO홀딩스는 한국철강을 포함하는 지주사라 제외했습니다.",
+    "excluded": [
+      {
+        "name": "와이케이스틸",
+        "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814003201&dcmNo=11536243&eleId=9&offset=113305&length=188649&dtd=dart4.xsd",
+        "reason": "대한제강 연결대상 자회사이므로 독립 비교기업으로 세면 사업 표본이 중복된다."
+      },
+      {
+        "name": "현대제철",
+        "source_url": "https://www.hyundai-steel.com/kr/product-tech/product-tech-home",
+        "reason": "철근 제품은 겹치지만 열연·냉연·자동차 소재·후판·특수강까지 영위하므로 핵심 철근 비교기업군에서는 제외한다. 업황 참고 대상으로는 사용할 수 있다."
+      },
+      {
+        "name": "KISCO홀딩스",
+        "source_url": "https://kind.krx.co.kr/external/2026/03/19/002034/20260319008488/11011.htm",
+        "reason": "한국철강을 포함하는 지주회사 연결 범위이므로 한국철강과 함께 독립 비교기업으로 세지 않는다."
+      }
+    ]
+  }
+}

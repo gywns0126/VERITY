@@ -153,7 +153,22 @@ def _financials(fund: Dict[str, Any]) -> Dict[str, Any] | None:
             fv = fmt(v)
             if fv is None:
                 continue
-            rows.append({"k": label, "v": fv})
+            row = {"k": label, "v": fv}
+            if key == "sga" and float(v) == 0:
+                # 수집기는 확인된 SG&A 행을 _source_evidence에 싣지만, 기존 발행 입력의 0에는
+                # 그 근거가 없을 수 있다. 이 표시 단계에서 원천 확인 없는 0을 실측으로 승격하지 않는다.
+                try:
+                    gross = float(fund.get("gross_profit"))
+                    operating = float(fund.get("operating_profit"))
+                    discrepancy = math.isfinite(gross) and math.isfinite(operating) and gross != operating
+                except (TypeError, ValueError, OverflowError):
+                    discrepancy = False
+                row["status"] = "conflict" if discrepancy else "unverified_zero"
+                row["reason"] = ("매출총이익과 영업이익이 달라 판매비와관리비 0의 원천 확인 필요"
+                                 if discrepancy else "이 발행 입력에서 원천 확인되지 않은 0: 실제 0인지 미확인")
+                if discrepancy:
+                    row["v"] = "미확인"
+            rows.append(row)
         return {"title": title, "rows": rows} if rows else None
 
     groups = []
@@ -831,22 +846,29 @@ def _apply_multiple_evidence(stock: Dict[str, Any], val: Dict[str, Any], market_
         market_label = "주식수" if metric == "BPS" else "시총"
         basis.append(f"{market_label} KRX {market_date} 기준" if market_date
                      else f"{market_label} 기준일 미확인")
+        estimated_equity = metric in {"PBR", "BPS"} and inputs.get("equity_basis") == "assets_debt_ratio"
+        equity_label = "추정 자기자본" if estimated_equity else "자기자본"
         if metric == "BPS":
-            formula = f"자기자본 {_fmt_won_signed(numerator)} ÷ 발행주식수 {int(denominator):,}주"
+            formula = f"{equity_label} {_fmt_won_signed(numerator)} ÷ 발행주식수 {int(denominator):,}주"
         else:
-            label = "자기자본" if metric == "PBR" else "매출"
+            label = equity_label if metric == "PBR" else "매출"
             formula = f"시가총액 {_fmt_cap(numerator)} ÷ {label} {_fmt_won_signed(denominator)}"
         calculations[metric] = formula + " (" + " · ".join(basis) + ")"
-        if metric in {"PBR", "BPS"} and inputs.get("equity_basis") == "assets_debt_ratio":
-            calculations[metric] += " · 자기자본은 총자산 ÷ (1 + 부채비율 / 100)로 산출"
+        if estimated_equity:
+            calculations[metric] += (" · 추정 자기자본은 총자산 ÷ (1 + 부채비율 / 100)로 산출"
+                                     " · 지배주주 귀속 자본 여부 미확인")
+        elif metric in {"PBR", "BPS"}:
+            calculations[metric] += " · 지배주주 귀속 자본 여부 미확인"
+        if metric == "BPS":
+            calculations[metric] += " · 발행주식수의 자기주식 차감 여부 미확인"
         notes[metric] = "자체계산"  # 기존 Framer 직접계산 배지의 정확 일치 계약
 
 
 def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
                    fin_series: Optional[Dict[str, List[Dict[str, Any]]]] = None,
                    panel_facts: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Dict[str, Any]]:
-    """PER/PBR/BPS 자체계산: KRX 공식 시총·발행주식수 ÷ DART 순이익·자기자본.
-    (자기자본 = 자산/(1+부채비율/100), BPS = 자기자본/발행주식수).
+    """PER/PBR/BPS 자체계산: KRX 시총·발행주식수와 DART 재무 입력.
+    연간 자본은 자산/(1+부채비율/100) 추정치이며 지배주주 귀속 자본으로 검증되지 않았다.
 
     fin_series 를 주면 fundamentals 결측 종목도 **시총 + PER 까지는** 채운다
     (2026-08-08). 근거는 동일하다 — KRX 공식 시총 ÷ DART 공시 순이익. 다만 자기자본
@@ -901,14 +923,17 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
                 if equity > 0:
                     v["PBR"] = round(mktcap / equity, 2)
                     v["_pbr_in"] = {"mktcap": mktcap, "equity": equity,
-                                    "equity_basis": "assets_debt_ratio", **reported}
+                                    "equity_basis": "assets_debt_ratio",
+                                    "equity_scope": "ownership_unverified", **reported}
                     # BPS = 자기자본 ÷ 발행주식수 (KRX 공식 주식수 · DART 자본).
                     # 🚨 주가÷PBR 역산 금지 — rec["pbr"] 은 placeholder 1.0 로 정규화되는 경우가 있어
                     #    BPS 가 주가 그대로 나온다 (2026-08-03 rich 14종목 전수 오염 확인).
                     if shares > 0:
                         v["BPS"] = equity / shares
                         v["_bps_in"] = {"equity": equity, "shares": shares,
-                                        "equity_basis": "assets_debt_ratio", **reported}
+                                        "equity_basis": "assets_debt_ratio",
+                                        "equity_scope": "ownership_unverified",
+                                        "share_basis": "issued_shares_treasury_unverified", **reported}
         except (TypeError, ValueError):
             pass
         if v:

@@ -16,18 +16,22 @@ if __package__:
     from .report_context import annual_context, business_profile, compare_annual, first_page, format_money
     from .report_reader import reader_financials, period_label
     from .report_us_financials import us_periods
-    from .report_business import filing_business, reviewed_overview, company_explanation
+    from .report_business import filing_business, reviewed_overview, company_explanation, reviewed_kr_business
     from .report_reading import reading_guide
     from .report_translation import attach_translations
     from .report_news import related_news
+    from .report_integrity import financial_display, cash_receipt, valuation_display, quarter_missing_fields
+    from .report_kr_review import reviewed_entry, reviewed_financials
 else:
     from report_context import annual_context, business_profile, compare_annual, first_page, format_money
     from report_reader import reader_financials, period_label
     from report_us_financials import us_periods
-    from report_business import filing_business, reviewed_overview, company_explanation
+    from report_business import filing_business, reviewed_overview, company_explanation, reviewed_kr_business
     from report_reading import reading_guide
     from report_translation import attach_translations
     from report_news import related_news
+    from report_integrity import financial_display, cash_receipt, valuation_display, quarter_missing_fields
+    from report_kr_review import reviewed_entry, reviewed_financials
 
 VERSION = "evidence-report-v7"
 KST = timezone(timedelta(hours=9))
@@ -159,7 +163,11 @@ def build_report(ticker, fetch, now=None):
             doc = doc if isinstance(doc, dict) else {}
             error = type(exc).__name__  # never expose credentials or raw provider errors
         meta = doc.get("_meta") or {}
-        stamp = meta.get("generated_at") or doc.get("generated_at") or doc.get("fetched_at") or "미수신"
+        stamp = meta.get("generated_at") or doc.get("generated_at") or doc.get("fetched_at") or ""
+        if not stamp and ident == "E" and isinstance(rec, list):
+            latest_filed = max((str(r.get("filed") or "") for r in rec), default="")
+            stamp = "최신 제출 " + latest_filed if latest_filed else ""
+        stamp = stamp or "갱신 시각 미수신"
         status = "수신" if rec else "조회 실패" if error else "해당 종목 자료 미수신"
         return ident, rec or {}, doc, {"id": ident, "label": label, "file": filename,
             "status": status, "published": text(stamp), "artifact_url": "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/" + filename, "source": text(meta.get("source") or doc.get("source")),
@@ -179,6 +187,9 @@ def build_report(ticker, fetch, now=None):
     coverage.append(news_coverage)
     sections, issues, gaps = [], [], []
     periods = (s.get("financial_evidence") or {}).get("periods") or []
+    primary_review = reviewed_entry(ticker, s, now) if kr else None
+    if primary_review:
+        periods = reviewed_financials(ticker, s, periods, now)
     business_record = s.get("business_evidence") or records.get("B") or {}
     financial_sector = False
     document, filing, cik = None, {}, ""
@@ -219,6 +230,23 @@ def build_report(ticker, fetch, now=None):
                 except Exception as exc:
                     b["reason"] = type(exc).__name__
     reader = reader_financials(periods, financial_sector)
+    kr_business = reviewed_kr_business(ticker, s, reader, now) if kr else None
+    if primary_review:
+        coverage.append({'id': 'RF', 'label': 'DART 재무 원문 직접 검수',
+                         'file': '공개 표·기간 검수 기록', 'status': '수신',
+                         'published': '검수 ' + primary_review['reviewed_at'],
+                         'source': 'DART 공개 HTML · API 원응답 아님',
+                         'reason': '종목·이름 일치. 입력에 법인코드가 없으면 검수 기록의 법인 식별을 사용합니다.',
+                         'artifact_url': reader['current']['source_url'] if reader['current'] else ''})
+        gaps.extend(primary_review.get('notes', []))
+        for row in reader['periods']:
+            if row.get('start_basis') and row is reader['current']:
+                reader['observations'].append(row['start_basis'])
+    if kr_business and kr_business.get('overview_excerpt'):
+        business_record = {'text': kr_business['overview_excerpt'], 'url': kr_business['source_url'],
+                           'fiscal_year': kr_business['period']['end'][:4], 'report': '반기보고서 사업 개요',
+                           'filed_at': next(r['filed'] for r in reader['periods'] if r.get('accession') == kr_business['period']['accession']),
+                           'truncated': True}
 
     def table(ident, title, headers, rows, note="", limit=None, widths=None, recent=False):
         if not rows:
@@ -231,12 +259,25 @@ def build_report(ticker, fetch, now=None):
     def issue(title, observation, question, refs):
         issues.append({"title": title, "observation": observation, "question": question, "refs": refs})
 
-    fin = s.get("financials") or {}
+    fin, integrity_warnings = financial_display(s.get("financials") or {})
+    gaps.extend(integrity_warnings)
+    cash_status = cash_receipt(fin, reader)
+    reader["cash_status"] = cash_status
+    if not reader["cash"]:
+        reader["cash_notes"] = [cash_status["note"]]
+    elif not cash_status["source_linked"]:
+        reader["cash_notes"].append(cash_status["note"])
     profile = business_profile(business_record, s, source_cell)
     profile["overview"] = reviewed_overview(ticker, cik, now)
     company = company_explanation(document, filing, cik, reader["current"])
+    if kr_business:
+        company = kr_business['company']
+        coverage.append({'id': 'BR', 'label': 'DART 사업·비교기업 원문 검수',
+                         'file': '공개 원문 검수 기록', 'status': '수신',
+                         'published': '검수 ' + kr_business['reviewed_at'], 'source': 'DART·기업 공시',
+                         'reason': company['note'], 'artifact_url': kr_business['source_url']})
     translation_coverage = attach_translations(ticker, profile, company, now, kr=kr)
-    if company["excerpts"]:
+    if company["excerpts"] and not kr:
         b.update(label="SEC 사업·실적 설명 원문", status="수신", reason="")
     if profile["overview"]:
         overview = profile["overview"]
@@ -250,6 +291,10 @@ def build_report(ticker, fetch, now=None):
               profile["label"] + " · 제출 " + day(profile["filed_at"]) + (" · 일부 발췌" if profile["truncated"] else ""), widths=[3.4, 0.6])
     else:
         gaps.append("최신 SEC 사업·부문 설명 발췌 미확보. 기업 소개는 별도 공식 소개의 검수본입니다." if profile["overview"] else "제품·사업부 설명 원문이 이 리포트에 연결되지 않았습니다. 업종 분류로 수익 구조를 추정하지 않습니다.")
+    if kr_business:
+        table('B3', '사업 원인과 확인할 제약', ['항목', '공시에서 확인한 내용', '원문'],
+              [[r['label'], r['text'], source_cell(r)] for r in kr_business.get('observations', [])],
+              company['basis_label'] + ' · 회사별 제품표와 연결재무를 구분합니다. 판매단가와 원재료 매입단가의 차이는 영업마진이 아닙니다.', widths=[0.8, 3, 0.6])
     # Preserve reporting currency and expose the limits of each annual comparison.
     proven_annual = [r for r in reader["periods"] if r["period_kind"] == "annual"]
     annual = sorted(proven_annual or [r for r in s.get("fin_series", []) if str(r.get("year", "")).isdigit()], key=lambda r: int(r["year"]))
@@ -261,6 +306,25 @@ def build_report(ticker, fetch, now=None):
     table("R1", "연간 실적 흐름" if proven_annual else "원문 기준 보강 전 연간 수집값", ["결산연도", "매출", "영업이익", "순이익"],
           [[str(r["year"]), *[money(r.get(k), kr, c["currency"]) for k in ("revenue", "op", "net")]] for r, c in zip(annual, basis)],
           "각 행의 보고 통화 유지 · M/B/T=백만/십억/조 단위. " + ("보고 기간·연결/별도·공시 원문 연결." if proven_annual else "기간·연결/별도·원문 근거가 불충분하여 본문 비교에서 제외."), limit=10, recent=True)
+    if primary_review:
+        table('RF', '직접 검수한 재무 표의 범위', ['기간', '구분', '확인 사항'],
+              [[period_label(r), r['fs_div'] + ' · ' + r['currency'],
+                (r.get('start_basis') or '원문 표의 기간') + ' · ' + ', '.join({'revenue': '매출', 'op': '영업이익', 'net': '순이익', 'ocf': '영업현금', 'capex': '유형자산 취득'}.get(k, k) for k in r.get('metric_sources', {}))]
+               for r in reader['periods'] if any(m.get('reviewed_at') == primary_review['reviewed_at'] for m in (r.get('metric_sources') or {}).values())],
+              ' · '.join(primary_review.get('notes', [])), widths=[1.4, 0.6, 2])
+    # Keep received years visible even when only some years have attribution.
+    proven_years = {int(r["year"]) for r in proven_annual}
+    unlinked_annual = sorted([r for r in s.get("fin_series", [])
+                             if str(r.get("year", "")).isdigit() and int(r["year"]) not in proven_years],
+                            key=lambda r: int(r["year"])) if proven_annual else []
+    table("R1U", "연간 수집값 · 분석 연결 대기", ["결산연도", "매출", "영업이익", "순이익", "표시 통화 기준"],
+          [[str(r["year"]), *[money(r.get(k), kr, r.get("currency")) for k in ("revenue", "op", "net")],
+            r.get("currency") or ("KRW 피드 기본값" if kr else "USD 피드 기본값")] for r in unlinked_annual],
+          "수신된 연간 값을 보존했습니다. 원문·기간·통화·연결/별도 대조가 끝나지 않아 본문 증감률에는 사용하지 않습니다.", limit=10, recent=True)
+    if unlinked_annual:
+        gaps.append("연간 수집값은 있으나 분석 근거 연결이 미완료인 연도: " + ", ".join(str(r["year"]) for r in unlinked_annual) + ". 부록 R1U에서 확인할 수 있습니다.")
+        if not comparison["usable"] and "누락 연도" in comparison["reason"]:
+            comparison["reason"] = "연간 수집값 중 원문·기간·통화·연결 기준이 연결되지 않은 연도가 있어 전년 대비 증감률을 보류했습니다. 미연결 수집값은 부록 R1U에 보존했습니다."
     if comparison["usable"] and comparison["changes"]:
         old, new = annual[-2:]
         opposite = all(number(r.get(k)) is not None for r in (old, new) for k in ("revenue", "op")) and number(new["revenue"]) > number(old["revenue"]) and number(new["op"]) < number(old["op"])
@@ -275,18 +339,28 @@ def build_report(ticker, fetch, now=None):
     period = text(fin.get("period"))
     rows = [[g.get("title", ""), text(r.get("k")), text(r.get("v"))] for g in fin.get("groups", []) for r in g.get("rows", []) if not re.search(r"FCF|잉여.*현금|free.?cash", str(r.get("k")), re.I)]
     table("R2", "최근 결산 재무", ["구분", "항목", "값"], rows, f"기준기간 {period} · 단위는 각 항목에 표시")
+    reviewed_sga = [(r, (r.get('derived_metrics') or {}).get('sga')) for r in proven_annual]
+    table('R2S', '판매비와 관리비 · 원문 구성행 합산', ['연도', '판매비', '관리비', '자체합산', '원문'],
+          [[str(r['year']), *[money(c['value'], kr, r['currency']) for c in v['components']],
+            money(v['value'], kr, r['currency']), source_cell(v)] for r, v in reviewed_sga if v],
+          '원문의 별도 두 행을 더한 값이며 단일 보고 계정이 아닙니다. 수집 요약의 0 또는 미확인과 구분합니다.', widths=[0.5, 0.9, 0.9, 0.9, 0.6])
     facts, notes = s.get("facts") or {}, s.get("facts_note") or {}
-    calculations = s.get("facts_calc") or {}
+    facts, calculations, valuation_warnings = valuation_display(facts, notes, s.get("facts_calc") or {})
+    gaps.extend(valuation_warnings)
     table("R3", "주요 지표와 계산 기준", ["지표", "값", "기준·정의"],
           [[k, text(v), " · ".join(dict.fromkeys(str(x) for x in (notes.get(k), calculations.get(k)) if x)) or "기간·계산 기준 미수신"] for k, v in facts.items() if not re.search(r"FCF|잉여.*현금|free.?cash", k, re.I)],
           "가격이 반영된 지표는 실시간 값이 아닙니다. 기간·계산 기준 미수신인 항목은 추가 확인이 필요합니다.", widths=[0.8, 0.9, 2.3])
     peer = s.get("peer") or {}
     prows = peer.get("rows") or []
-    table("R4", "동종업계 지표 비교", ["지표", "종목", "업종 중앙값"],
-          [[text(r.get("key")), text(r.get("value")), text(r.get("median"))] for r in prows],
-          f"{peer.get('sector') or '업종 미상'} · 비교 집단 {peer.get('n', '미상')}개 · 중앙값은 순서상 가운데 값. 종목별 결산기간·산식 일치 미확인.")
+    if kr_business:
+        table('R4', '사업이 겹치는 비교기업 · 선정 근거', ['기업', '비교하는 이유', '차이·주의점', '원문'],
+              [[r['company'] + ' (' + r['ticker'] + ')', r['reason'], r['limitation'], source_cell(r)] for r in kr_business.get('peers', [])],
+              '검수 ' + kr_business['reviewed_at'] + ' · 사업 유사성 비교이며 가치평가 배수 순위가 아닙니다. ' + kr_business.get('peer_note', ''), widths=[1, 1.4, 2, 0.5])
+    table("R4G" if kr_business else "R4", "넓은 업종 지표 · 참고용" if kr_business else "동종업계 지표 비교", ["지표", "종목", "업종 중앙값"],
+          [[text(r.get("key")), text(facts.get(r.get("key"))) if str(facts.get(r.get("key"), "")).startswith("추정 ") else text(r.get("value")), text(r.get("median"))] for r in prows],
+          f"{peer.get('sector') or '업종 미상'} · 비교 집단 {peer.get('n', '미상')}개 · 중앙값은 순서상 가운데 값. 종목별 결산기간·산식 일치 미확인." + (' 위에서 선정한 직접 비교기업의 중앙값이 아닙니다.' if kr_business else ''))
     valuation = next((r for r in prows if r.get("key") == "PER"), None)
-    if valuation:
+    if valuation and not kr_business:
         issue("수익성과 가격을 함께 볼 근거는 충분한가?",
               f"표시 PER {text(valuation.get('value'))}, 업종 중앙값 {text(valuation.get('median'))}. PER은 이익 대비 가격 배수입니다. 두 값의 기간·계산 기준 일치 여부는 미확인입니다.",
               "이익의 지속성·부채·성장 차이를 확인한 뒤 비교하세요. PER만으로 싸다거나 비싸다고 결론내릴 수 없습니다.", "R3 · R4")
@@ -303,7 +377,18 @@ def build_report(ticker, fetch, now=None):
     quarters = sorted(records["Q"].get("quarters") or [], key=lambda q: str(q.get("q", "")))
     latest_feed_period = str(quarters[-1].get("q") or "") if quarters else ""
     if latest_feed_period and (not reader["current"] or latest_feed_period > reader["current"]["end"]):
-        reader["observations"].append(f"분기 피드에는 {latest_feed_period} 자료가 있으나 기간·통화·원문 근거가 충분하지 않아 본문 수치에서 제외했습니다.")
+        missing = quarter_missing_fields(quarters[-1])
+        reason = "·".join(missing) if missing else "본문 손익 근거 연결"
+        reader["observations"].append(f"분기 피드에는 {latest_feed_period} 자료가 있으나 {reason}이 미확인이라 본문 수치에서 제외했습니다.")
+    cash_rows_status = [["결산 요약 영업현금흐름", cash_status["status"], "기간 기준 비교 가능" if cash_status["analysis_usable"] else "요약값 비교 보류",
+                         " · ".join(cash_status["missing_fields"]) or cash_status["note"]]]
+    if reader['cash'] and not cash_status['analysis_usable']:
+        cash_rows_status.append(['본문 영업현금흐름', period_label(reader['cash']) + ' · 원문 연결',
+                                 '동일 기간 순이익과 비교 가능' if number(reader['cash'].get('net')) is not None else '순이익 비교 보류',
+                                 '결산 요약값과 별도. CF1의 실제 기간·보고 범위를 사용합니다.'])
+    table("DQ1", "재무 데이터 연결 상태", ["항목", "수신 상태", "분석 사용", "추가 확인"],
+          cash_rows_status,
+          "자료 수신·기간 식별·원문 연결·계산 가능을 구분합니다. 원문 링크가 있다는 것만으로 수치를 대조 완료했다고 표시하지 않습니다.", widths=[0.8, 1.2, 0.8, 2])
     table("Q1", "분기말 재무 비율", ["기간", "부채비율", "ROA", "유동비율", "매출총이익률", "원문"],
           [[text(q.get("q")), fmt(q.get("debt_ratio"), 1, "%"), fmt(q.get("roa"), 2, "%"),
             fmt(q.get("current_ratio"), 2, "배" if kr else "%"), fmt(q.get("gross_margin"), 1, "%"), source_cell(q)] for q in quarters],
@@ -399,11 +484,11 @@ def build_report(ticker, fetch, now=None):
     calendar = s.get("calendar") or []
     calendar_rows = []
     for c in calendar:
-        label, basis = text(c.get("event")), text(c.get("basis") or "확정 여부 미확인")
+        label, calendar_basis = text(c.get("event")), text(c.get("basis") or "확정 여부 미확인")
         date = day(c.get("date"))
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) and date < now.strftime("%Y-%m-%d"):
             label += " · 지난 일정 / 새 공시 확인"
-        calendar_rows.append([label, text(c.get("date")), basis])
+        calendar_rows.append([label, text(c.get("date")), calendar_basis])
     table("C1", "실적 일정과 확인 근거", ["일정", "일자", "근거"], calendar_rows,
           "과거 제출 패턴으로 계산된 예상 창은 확정 실적 발표일이 아닙니다. 이미 지난 날짜를 다음 일정으로 사용하지 않습니다.", widths=[1.3, 0.7, 2])
     con = s.get("consensus") or {}
