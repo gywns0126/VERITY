@@ -9,6 +9,9 @@ from datetime import datetime
 import hashlib
 import json
 import math
+import sys
+
+from numpy import bool_ as numpy_bool
 
 
 _OUTPUTS = frozenset({
@@ -20,22 +23,38 @@ _OUTPUTS = frozenset({
 })
 _DISCLOSURES = frozenset({"sec_financials", "dart_financials", "fundamental_source_evidence",
                            "dart_business_report", "dart_report_analysis"})
+# Only fixed producer field names may appear in public runtime diagnostics.
+_DIAGNOSTIC_FIELDS = frozenset({"technical", "quant_factors", "backtest", "prediction",
+                                "timing", "sec_financials", "dart_financials",
+                                "fundamental_source_evidence"})
 
 
 def _dict(value):
     return value if isinstance(value, dict) else {}
 
 
-def _json_value(value):
+class _UnsupportedInputType(TypeError):
+    def __init__(self, value, path):
+        self.type_name = f"{type(value).__module__}.{type(value).__name__}"
+        self.path = path
+        super().__init__("analysis evidence requires supported JSON input types")
+
+
+def _json_value(value, path="$"):
+    # backtest_stock emits numpy.bool_ for recent_trades[].win (ret > 0).
+    # Convert only this proven scalar; bool remains distinct from numeric 0/1.
+    if isinstance(value, numpy_bool):
+        return bool(value)
     if isinstance(value, float) and not math.isfinite(value):
         return {"nonfinite": str(value)}
     if isinstance(value, dict):
-        return {str(k): _json_value(v) for k, v in value.items()}
+        return {str(k): _json_value(v, f"{path}.field[{i}]")
+                for i, (k, v) in enumerate(value.items())}
     if isinstance(value, (list, tuple)):
-        return [_json_value(v) for v in value]
+        return [_json_value(v, f"{path}[{i}]") for i, v in enumerate(value)]
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
-    raise TypeError("analysis evidence requires JSON input values")
+    raise _UnsupportedInputType(value, path)
 
 
 def _hash(value):
@@ -85,13 +104,23 @@ def capture_analysis_inputs(records, portfolio):
     """
     unique, duplicates = _index(records)
     snapshots = {}
-    context = {key: _json_value(portfolio.get(key)) for key in ("macro", "market_summary")}
-    for key, record in unique.items():
-        inputs = {name: _json_value(value) for name, value in record.items() if name not in _OUTPUTS}
-        snapshot = {"candidate": inputs, "context": context}
-        snapshots[key] = {"input_hash": _hash(snapshot), "input_snapshot": snapshot,
-                          "input_field_hashes": {name: _hash(value) for name, value in inputs.items()},
-                          "context_hash": _hash(context)}
+    try:
+        context = {key: _json_value(portfolio.get(key), f"context.{key}")
+                   for key in ("macro", "market_summary")}
+        for key, record in unique.items():
+            inputs = {name: _json_value(value, f"candidate.{name}" if name in _DIAGNOSTIC_FIELDS
+                                       else f"candidate.field[{i}]")
+                      for i, (name, value) in enumerate(record.items()) if name not in _OUTPUTS}
+            snapshot = {"candidate": inputs, "context": context}
+            snapshots[key] = {"input_hash": _hash(snapshot), "input_snapshot": snapshot,
+                              "input_field_hashes": {name: _hash(value) for name, value in inputs.items()},
+                              "context_hash": _hash(context)}
+    except _UnsupportedInputType as exc:
+        # No value repr, ticker, record identity, or source body in diagnostics.
+        print("[analysis_evidence] unsupported_input " + json.dumps({
+            "type": exc.type_name, "path": exc.path,
+        }, ensure_ascii=True), file=sys.stderr)
+        raise
     return {"records": snapshots, "duplicates": duplicates, "candidate_count": len(records)}
 
 
