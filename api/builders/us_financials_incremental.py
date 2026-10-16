@@ -99,14 +99,37 @@ def _universe_cik_map() -> Dict[int, List[str]]:
     return out
 
 
+# SEC EDGAR closures, explicitly verified for 2026 ONLY on 2026-10-17 KST.
+# https://www.sec.gov/submit-filings/filer-support-resources/edgar-calendar
+# Not a stock-exchange calendar; do not extrapolate these dates to other years.
+EDGAR_CLOSED_DATES_2026 = {
+    "2026-01-01": "New Year's Day",
+    "2026-01-19": "Birthday of Martin Luther King, Jr.",
+    "2026-02-16": "Washington's Birthday",
+    "2026-05-25": "Memorial Day",
+    "2026-06-19": "Juneteenth",
+    "2026-07-03": "Independence Day (observed)",
+    "2026-09-07": "Labor Day",
+    "2026-10-12": "Columbus Day",
+    "2026-11-11": "Veterans Day",
+    "2026-11-26": "Thanksgiving Day",
+    "2026-12-25": "Christmas Day",
+}
+
+
 def _fetch_day_filers(d: date) -> Optional[List[Tuple[int, str, str]]]:
-    """해당 일 master.idx → [(CIK, form, accession)]. 미발행 = None."""
+    """master.idx rows; verified closure = [], unavailable/failed = None."""
+    holiday = EDGAR_CLOSED_DATES_2026.get(d.isoformat())
+    if holiday:
+        print(f"[us_fin_incr] {d} official EDGAR holiday: {holiday} — no HTTP", file=sys.stderr)
+        return []
     try:
         r = requests.get(_idx_url(d), headers={"User-Agent": SEC_USER_AGENT}, timeout=IDX_TIMEOUT)
     except requests.RequestException as e:
         print(f"[us_fin_incr] {d} idx fetch 실패: {e!r}", file=sys.stderr)
         return None
     if r.status_code != 200:
+        print(f"[us_fin_incr] {d} idx HTTP {r.status_code} — 보류", file=sys.stderr)
         return None
     out: List[Tuple[int, str, str]] = []
     for line in r.text.splitlines():

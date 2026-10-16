@@ -95,6 +95,83 @@ def test_index_failure_does_not_block_existing_queue_or_advance_cursor(isolated,
     assert inc._load_state()["pending"] == []
 
 
+@pytest.mark.parametrize("day", [
+    "2026-01-01", "2026-01-19", "2026-02-16", "2026-05-25",
+    "2026-06-19", "2026-07-03", "2026-09-07", "2026-10-12",
+    "2026-11-11", "2026-11-26", "2026-12-25",
+])
+def test_verified_edgar_2026_holidays_do_not_request_http(day, monkeypatch, capsys):
+    monkeypatch.setattr(inc.requests, "get", lambda *a, **kw: pytest.fail("holiday HTTP"))
+    assert inc._fetch_day_filers(date.fromisoformat(day)) == []
+    log = capsys.readouterr().err
+    assert day in log and "official EDGAR holiday" in log and "no HTTP" in log
+    assert len(inc.EDGAR_CLOSED_DATES_2026) == 11
+
+
+@pytest.mark.parametrize("day", [
+    "2026-10-09", "2026-10-13",  # adjacent filing days
+    "2026-04-03",  # exchange Good Friday is not an EDGAR holiday
+    "2027-01-01",  # outside the explicitly verified year
+])
+@pytest.mark.parametrize("outcome", [403, 404, "timeout"])
+def test_unverified_dates_keep_http_failures_pending(day, outcome, monkeypatch, capsys):
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append(url)
+        if outcome == "timeout":
+            raise inc.requests.Timeout("test timeout")
+        return SimpleNamespace(status_code=outcome)
+
+    monkeypatch.setattr(inc.requests, "get", get)
+    assert inc._fetch_day_filers(date.fromisoformat(day)) is None
+    assert calls == [inc._idx_url(date.fromisoformat(day))]
+    log = capsys.readouterr().err
+    assert day in log
+    assert ("Timeout" if outcome == "timeout" else f"HTTP {outcome}") in log
+    assert "official EDGAR holiday" not in log
+
+
+@pytest.mark.parametrize("outcome", [200, 403, 404, "timeout"])
+def test_cursor_crosses_verified_holiday_but_not_unavailable_filing_day(
+        tmp_path, monkeypatch, outcome):
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            value = cls(2026, 10, 14, 18, tzinfo=timezone.utc)
+            return value.astimezone(tz) if tz else value.replace(tzinfo=None)
+
+    monkeypatch.setattr(inc, "datetime", Clock)
+    for name in ("STATE_PATH", "EARN_PATTERN_PATH", "EVENT_PATH", "QUARTERLY_PATH"):
+        monkeypatch.setattr(inc, name, str(tmp_path / (name + ".json")))
+    monkeypatch.setattr(inc, "_universe_cik_map", lambda: {2: ["Z"]})
+    monkeypatch.setattr(inc.time, "sleep", lambda _: None)
+    monkeypatch.setattr(inc.sys, "argv", ["incremental", "--cap", "2"])
+    calls, refreshed = [], []
+
+    def get(url, **kwargs):
+        calls.append(url)
+        assert url == inc._idx_url(date(2026, 10, 13))
+        if outcome == "timeout":
+            raise inc.requests.Timeout("test timeout")
+        return SimpleNamespace(status_code=outcome, text=(
+            "2|Issuer|10-Q|2026-10-13|edgar/data/2/0000000002-26-000001.txt\n"))
+
+    monkeypatch.setattr(inc.requests, "get", get)
+    monkeypatch.setattr(inc, "_refresh", lambda t, c: (refreshed.append(dict(c)) or [], False))
+    inc._save_state({"last_processed": "2026-10-11"})
+    assert inc.main() == 0
+    assert calls == [inc._idx_url(date(2026, 10, 13))]
+    state = inc._load_state()
+    assert state["last_processed"] == ("2026-10-13" if outcome == 200 else "2026-10-12")
+    assert state["last_run_tickers"] == (["Z"] if outcome == 200 else [])
+    if outcome == 200:
+        assert refreshed[0]["filed"] == "2026-10-13"
+        assert refreshed[0]["accession"] == "0000000002-26-000001"
+    else:
+        assert refreshed == []
+
+
 def test_downstream_failure_requeues_success_and_restores_announcement(isolated, monkeypatch):
     row = {"ticker": "Z", "earnings_date": "2026-10-01", "attempts": 1}
     inc._save_state({"pending": [{"ticker": "A"}], "last_run_candidates": [row],
