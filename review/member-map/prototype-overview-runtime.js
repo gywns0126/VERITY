@@ -25,7 +25,7 @@ function memberOverviewTitleSlots(items,obstacles,width,height){
   const visible=items.filter(item=>item.x>=0&&item.y>=0&&item.x<=width&&item.y<=height);
   const maxWidth=Math.max(0,...visible.map(item=>item.w)),maxHeight=Math.max(0,...visible.map(item=>item.h));
   const columns=Math.max(1,Math.floor((width-margin*2+gap)/(maxWidth+gap)));
-  const crowded=visible.length*(maxHeight+gap)>height-margin*2;
+  const crowded=visible.length*(maxHeight+gap)>height-margin*2||visible.length>columns*2;
   const centers=Array.from({length:columns},(_,i)=>margin+(width-margin*2)/columns*(i+.5));
   const intersects=(a,b)=>a.left<b.right+gap&&a.right>b.left-gap&&a.top<b.bottom+gap&&a.bottom>b.top-gap;
   for(const item of items){
@@ -37,13 +37,23 @@ function memberOverviewTitleSlots(items,obstacles,width,height){
     const rows=Math.ceil(height/(h+gap));
     for(let row=0;row<=rows&&!slot;row++)for(const sign of row?(item.group?[-1]:[-1,1]):[0]){
       const py=cy+row*(h+gap)*sign;
-      const xs=crowded&&columns>1?[cx,...centers.filter(c=>c!==cx)]:[cx,cx-(w+gap),cx+w+gap];
+      const xs=crowded&&columns>1?[cx,...centers.filter(c=>c!==cx)]:[cx,cx-(w+gap),cx+w+gap,...centers.filter(c=>c!==cx)];
       for(const px of xs){
         const r={left:px-w/2,right:px+w/2,top:py-h/2,bottom:py+h/2};
         if(r.left<margin||r.right>width-margin||r.top<margin||r.bottom>height-margin||occupied.some(o=>intersects(r,o)))continue;
         slot={x:px,y:py,...r};occupied.push(r);break;
       }
       if(slot)break;
+    }
+    // Nearby search can miss a free row when different anchors use different
+    // vertical phases. Try the shared screen grid before giving up a title.
+    for(let py=margin+h/2;!slot&&py<=height-margin-h/2;py+=gap){
+      if(item.group&&py>cy)break;
+      for(const px of centers){
+        const r={left:px-w/2,right:px+w/2,top:py-h/2,bottom:py+h/2};
+        if(r.left<margin||r.right>width-margin||occupied.some(o=>intersects(r,o)))continue;
+        slot={x:px,y:py,...r};occupied.push(r);break;
+      }
     }
     result.push(slot);
   }
@@ -52,6 +62,7 @@ function memberOverviewTitleSlots(items,obstacles,width,height){
 function drawMemberOverviewTitles(){
   if(state.zoom>=.65)return;
   const entries=[...holdings.filter(shown).map(n=>({id:n.id,n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')})),
+    ...(typeof memberRelationshipOverviewNodes==='function'?memberRelationshipOverviewNodes():[]),
     ...[...memberGroups.values()].filter(g=>g.records.length&&!g.button.hidden).map(g=>({id:g.id,n:g,el:g.button}))]
     .filter(({el})=>el&&!el.hidden);
   // Group titles occupy the band above their anchors. Sources expand below it;
@@ -65,7 +76,7 @@ function drawMemberOverviewTitles(){
     const p=point(n),w=el.offsetWidth,h=el.offsetHeight;
     el.dataset.overviewWidth=String(w);el.dataset.overviewHeight=String(h);
     memberOverviewElements.set(el,{left:el.style.left,top:el.style.top,transform:el.style.transform});el.dataset.overviewTitle='true';
-    const group=n.kind!=='stock',height=el.offsetHeight;
+    const group=n.kind!=='stock'&&n.kind!=='event',height=el.offsetHeight;
     return {x:p.x,y:group?p.y-height/2-h*state.zoom/2-6:p.y,w:el.offsetWidth,h:height,group,anchor:p};
   });
   const slots=memberOverviewTitleSlots(items,obstacles,space.clientWidth,space.clientHeight);
