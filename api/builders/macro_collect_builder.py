@@ -28,6 +28,7 @@ import logging
 import os
 import sys
 import time
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict
 
@@ -77,9 +78,22 @@ def _load_existing() -> Dict[str, Any]:
         return {}
     try:
         with open(OUTPUT_PATH, "r", encoding="utf-8") as f:
-            return json.load(f) or {}
+            payload = json.load(f)
+            return payload if isinstance(payload, dict) else {}
     except (OSError, json.JSONDecodeError):
         return {}
+
+
+def _mark_reused(value: Any) -> Any:
+    """Copy fallback data without advancing any observation/fetch/success clock."""
+    if isinstance(value, list):
+        return [_mark_reused(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    result = {key: _mark_reused(item) for key, item in value.items()}
+    if any(key in value for key in ("source", "as_of", "source_as_of", "value")):
+        result.update(stale=True, reused=True)
+    return result
 
 
 def build() -> Dict[str, Any]:
@@ -106,38 +120,66 @@ def build() -> Dict[str, Any]:
 
     elapsed = round(time.time() - started, 2)
 
-    # 직전 snapshot — 이번 run 의 partial fail 시 누락 collector 만 prev 사용
+    # Collection attempts are not successful refreshes. Legacy collected_at remains
+    # the build clock; collector_meta and each quote carry their own provenance.
     prev = _load_existing()
-    prev_macro = prev.get("macro") if isinstance(prev, dict) else None
-    prev_bonds = prev.get("bonds") if isinstance(prev, dict) else None
-    prev_events = prev.get("global_events") if isinstance(prev, dict) else None
-
-    final_macro = macro if macro else prev_macro
-    final_bonds = bonds if bonds else prev_bonds
-    final_events = events if events else prev_events
-
+    stamp = _now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+    final = {}
+    collector_meta = {}
     used_prev = []
-    if not macro and prev_macro is not None:
-        used_prev.append("macro")
-    if not bonds and prev_bonds is not None:
-        used_prev.append("bonds")
-    if not events and prev_events is not None:
-        used_prev.append("global_events")
+    for name, result, error in (("macro", macro, macro_err), ("bonds", bonds, bonds_err),
+                                ("global_events", events, events_err)):
+        # An empty event list is a valid successful collection, not a cache miss.
+        ok = result is not None and not error and (bool(result) or name == "global_events")
+        previous = prev.get(name)
+        reused = not ok and previous is not None
+        if reused:
+            used_prev.append(name)
+        final[name] = deepcopy(result) if ok else _mark_reused(previous)
+        old_meta = (prev.get("collector_meta") or {}).get(name) or {}
+        collector_meta[name] = {
+            "last_attempted_at": stamp,
+            "fetched_at": stamp if ok else old_meta.get("fetched_at"),
+            "last_successful_at": stamp if ok else old_meta.get("last_successful_at"),
+            "stale": not ok,
+            "reused": reused,
+        }
+
+    # A collector can return a partial dict with failed quotes. Preserve only the
+    # failed quote's previous payload; do not relabel it as newly collected.
+    reused_fields = []
+    if macro and not macro_err and isinstance(final["macro"], dict):
+        previous_macro = prev.get("macro") or {}
+        for key, row in final["macro"].items():
+            if isinstance(row, dict) and row.get("stale"):
+                collector_meta["macro"]["stale"] = True
+            if isinstance(row, dict) and row.get("status") == "fail":
+                previous_row = previous_macro.get(key)
+                if isinstance(previous_row, dict) and previous_row.get("status") != "fail":
+                    final["macro"][key] = _mark_reused(previous_row)
+                    reused_fields.append(key)
+                collector_meta["macro"]["stale"] = True
+        if collector_meta["macro"]["stale"]:
+            old_meta = (prev.get("collector_meta") or {}).get("macro") or {}
+            collector_meta["macro"]["last_successful_at"] = old_meta.get("last_successful_at")
+            collector_meta["macro"]["reused"] = bool(reused_fields)
 
     diagnostics = {
-        "macro_ok": macro is not None and not macro_err,
-        "bonds_ok": bonds is not None and not bonds_err,
+        "macro_ok": not collector_meta["macro"]["stale"],
+        "bonds_ok": bool(bonds) and not bonds_err,
         "events_ok": events is not None and not events_err,
         "errors": errors,
         "used_prev_snapshot": used_prev,
+        "reused_macro_fields": reused_fields,
         "elapsed_s": elapsed,
     }
 
     return {
         "collected_at": now.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
-        "macro": final_macro or {},
-        "bonds": final_bonds or {},
-        "global_events": final_events or [],
+        "macro": final["macro"] or {},
+        "bonds": final["bonds"] or {},
+        "global_events": final["global_events"] or [],
+        "collector_meta": collector_meta,
         "diagnostics": diagnostics,
         "schema_version": "v0",
     }

@@ -118,6 +118,7 @@ def _is_fresh_dart(rec: Any, bsns_year: str) -> bool:
         and str(rec.get("source", "")).startswith("DART")
         and str(rec.get("report_date", "")) == str(bsns_year)
         and (rec.get("total_assets") or 0) > 0
+        and rec.get("collection_status") != "retained_after_failure"
     ):
         return False
     # 자산 有 · 영업/투자/재무 현금흐름 전부 0 = 파싱 미스 → 재추출(수정 파서가 소급 채움)
@@ -167,7 +168,9 @@ def build() -> Dict[str, Any]:
     # 증분: 직전 snapshot 에서 현 bsns_year DART 정식분 재사용, 누락분만 fetch.
     prev = _load_existing()
     prev_funds = prev.get("fundamentals") if isinstance(prev.get("fundamentals"), dict) else {}
-    reuse: Dict[str, Dict] = {t: prev_funds[t] for t in tickers if _is_fresh_dart(prev_funds.get(t), bsns_year)}
+    reuse: Dict[str, Dict] = {t: {**prev_funds[t], "collection_status": "reused"}
+                              for t in tickers if _is_fresh_dart(prev_funds.get(t), bsns_year)
+                              and (_fiscal_month(t) == "12" or prev_funds[t].get("period_basis") == "source_reported")}
     to_fetch = [t for t in tickers if t not in reuse]
     sys.stderr.write(
         f"[dart_batch] 증분: 재사용 {len(reuse)} / fetch 대상 {len(to_fetch)} (bsns_year={bsns_year})\n"
@@ -182,14 +185,18 @@ def build() -> Dict[str, Any]:
             error = f"{type(e).__name__}: {str(e)[:200]}"
             sys.stderr.write(f"[dart_batch] fetch 일부 실패 (graceful): {error}\n")
 
-    fundamentals: Dict[str, Dict] = {**reuse, **fetched}
+    # A single failed issuer must not disappear when other issuers succeeded.
+    failed = [t for t in to_fetch if not str(fetched.get(t, {}).get("source", "")).startswith("DART")]
+    retained = {t: {**prev_funds[t], "collection_status": "retained_after_failure"}
+                for t in failed if t in prev_funds}
+    fundamentals: Dict[str, Dict] = {**reuse, **fetched, **retained}
 
     elapsed = round(time.time() - started, 2)
 
     # 0건 fallback — 직전 snapshot 보존
     used_prev = False
     if not fundamentals and prev_funds:
-        fundamentals = prev_funds
+        fundamentals = {t: {**r, "collection_status": "retained_after_failure"} for t, r in prev_funds.items()}
         used_prev = True
         sys.stderr.write(
             f"[dart_batch] used_prev=True (이번 run 0건, 직전 snapshot {len(fundamentals)}건)\n"
@@ -206,6 +213,10 @@ def build() -> Dict[str, Any]:
         "tickers_attempted": len(tickers),
         "reused_count": len(reuse),
         "fetched_count": len(fetched),
+        "failed_tickers": failed,
+        "partial_failure": bool(failed),
+        "fetched_success_count": sum(str(f.get("source", "")).startswith("DART") for f in fetched.values()),
+        "retained_after_failure": len(retained),
         "fundamentals_count": len(fundamentals),
         "source_counts": source_counts,
         "elapsed_s": elapsed,
@@ -330,8 +341,17 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
         with open(snapshots_path, "a", encoding="utf-8") as f:
             for ticker, fund in fundamentals.items():
                 reprt_code = fund.get("reprt_code") or "11011"  # 연간 default
-                quarter_end = _quarter_end_iso(fund.get("report_date"), reprt_code, fetched_at, ticker)
+                from api.utils.dart_period import valid_period_end
+                quarter_end = fund.get("period_end") if fund.get("period_basis") == "source_reported" else ""
+                if not quarter_end and _fiscal_month(ticker) == "12" and fund.get("period_basis") != "unverified":
+                    quarter_end = _quarter_end_iso(fund.get("report_date"), reprt_code, fetched_at, ticker)
                 if not quarter_end:
+                    skipped_no_qend += 1
+                    continue
+                success_at = fund.get("last_successful_at") or fund.get("fetched_at")
+                if not success_at and fund.get("collection_status") not in {"reused", "retained_after_failure"}:
+                    success_at = fetched_at  # legacy fresh callers only; never refresh a reused timestamp
+                if not success_at or not valid_period_end(quarter_end, as_of=min(str(success_at), _now_kst().isoformat())):
                     skipped_no_qend += 1
                     continue        # 분기말 미산출 = 시계열에 넣지 않는다(가짜 날짜 금지)
                 entry = {
@@ -361,7 +381,12 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
                     "operating_profit": fund.get("operating_profit"),
                     "operating_cashflow": fund.get("operating_cashflow"),
                     "net_income": fund.get("net_income"),
-                    "fetched_at": fetched_at,
+                    "fetched_at": success_at,
+                    "last_successful_at": success_at,
+                    "recorded_at": fetched_at,
+                    "source_as_of": quarter_end,
+                    "period_basis": fund.get("period_basis") or "calendar_inferred",
+                    **{k: fund[k] for k in ("period_start", "rcept_no", "source_url") if fund.get(k)},
                 }
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
                 written += 1

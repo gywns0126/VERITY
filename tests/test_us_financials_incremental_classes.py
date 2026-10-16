@@ -44,14 +44,11 @@ def test_main_fans_out_classes_with_ticker_cap_and_safe_cursor(
 
     def fetch_day(day):
         index_reads.append(day)
-        return [(CIK, "10-K"), (CIK, "10-Q"), (999999, "10-K")]
+        return [(CIK, "10-K", "a"), (CIK, "10-Q", "b"), (999999, "10-K", "c")]
 
-    def collect(command, **kwargs):
-        assert command[-2] == "--ticker"
-        ticker = command[-1]
+    def collect(ticker, candidate):
         builds.append(ticker)
-        return SimpleNamespace(returncode=int(ticker == failed), stdout="",
-                               stderr="ERROR" if ticker == failed else "saved snapshot")
+        return (["collector_failed"] if ticker == failed else []), False
 
     def unexpected_network(*args, **kwargs):
         pytest.fail("Network calls are forbidden in this regression")
@@ -60,8 +57,9 @@ def test_main_fans_out_classes_with_ticker_cap_and_safe_cursor(
     monkeypatch.setattr(incremental, "_load_state", lambda: {"last_processed": "2026-09-30"})
     monkeypatch.setattr(incremental, "_fetch_day_filers", fetch_day)
     monkeypatch.setattr(incremental, "_append_patterns", patterns.extend)
-    monkeypatch.setattr(incremental, "_save_state", states.append)
-    monkeypatch.setattr(incremental.subprocess, "run", collect)
+    monkeypatch.setattr(incremental, "_save_state", lambda st: states.append(json.loads(json.dumps(st))))
+    monkeypatch.setattr(incremental, "_local_candidates", lambda *args: {})
+    monkeypatch.setattr(incremental, "_refresh", collect)
     monkeypatch.setattr(incremental.requests, "get", unexpected_network)
     monkeypatch.setattr(incremental.time, "sleep", lambda seconds: None)
     args = ["incremental", "--cap", str(cap)] + (["--dry-run"] if dry_run else [])
@@ -78,10 +76,12 @@ def test_main_fans_out_classes_with_ticker_cap_and_safe_cursor(
             ("GOOG", "10-K", "2026-10-01"), ("GOOGL", "10-K", "2026-10-01"),
             ("GOOG", "10-Q", "2026-10-01"), ("GOOGL", "10-Q", "2026-10-01"),
         ]
-        assert len(states) == 1
-        assert states[0]["last_run_tickers"] == [tk for tk in expected if tk != failed]
-        assert states[0]["last_processed"] == (
-            "2026-10-01" if cap == 2 and failed is None else "2026-09-30")
+        assert len(states) == 2
+        assert states[-1]["last_run_tickers"] == [tk for tk in expected if tk != failed]
+        # Cursor means discovered and durably queued; overflow no longer repeats.
+        assert states[-1]["last_processed"] == "2026-10-01"
+        assert {row["ticker"] for row in states[-1]["pending"]} == (
+            {"GOOG", "GOOGL"} - set(states[-1]["last_run_tickers"]))
 
 
 def test_daily_index_request_once_even_with_multiple_forms(monkeypatch):
@@ -95,7 +95,7 @@ def test_daily_index_request_once_even_with_multiple_forms(monkeypatch):
             f"{CIK}|Alphabet|8-K|2026-10-01|c.txt\n"))
 
     monkeypatch.setattr(incremental.requests, "get", get)
-    assert incremental._fetch_day_filers(date(2026, 10, 1)) == [(CIK, "10-K"), (CIK, "10-Q")]
+    assert incremental._fetch_day_filers(date(2026, 10, 1)) == [(CIK, "10-K", "a"), (CIK, "10-Q", "b")]
     assert len(requests) == 1
 
 
@@ -111,5 +111,5 @@ def test_foreign_annual_forms_refresh_without_admitting_6k(monkeypatch, form):
             f"{CIK}|Foreign issuer|6-K/A|2026-10-01|c.txt\n"))
 
     monkeypatch.setattr(incremental.requests, "get", get)
-    assert incremental._fetch_day_filers(date(2026, 10, 1)) == [(CIK, form)]
+    assert incremental._fetch_day_filers(date(2026, 10, 1)) == [(CIK, form, "a")]
     assert len(calls) == 1
