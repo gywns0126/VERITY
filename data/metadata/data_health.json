@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-10-16T19:31:07.186660+09:00",
+  "generated_at": "2026-10-17T00:08:07.758945+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
@@ -12,20 +12,20 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-10-16T19:31:07.127064+09:00",
+  "generated_at": "2026-10-17T00:08:07.715004+09:00",
   "ok": true,
   "failed": 0,
-  "max_cdn_age_s": 42551,
+  "max_cdn_age_s": 85144,
   "files": [
    {
     "file": "stock_report_public.json",
     "ok": true,
     "pct": {
-     "PER": 61.4,
+     "PER": 61.5,
      "PBR": 96.0
     },
-    "total": 2544,
-    "cdn_age_s": 854,
+    "total": 2545,
+    "cdn_age_s": 3089,
     "error": null
    },
    {
@@ -36,7 +36,7 @@
      "PBR": 73.6
     },
     "total": 5271,
-    "cdn_age_s": 42551,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -47,7 +47,7 @@
      "PBR": 75.2
     },
     "total": 3972,
-    "cdn_age_s": 42547,
+    "cdn_age_s": 85144,
     "error": null
    },
    {
@@ -61,12 +61,12 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-10-16T17:39:51.711071+09:00",
-  "kr_total": 2544,
+  "generated_at": "2026-10-17T00:00:19.431579+09:00",
+  "kr_total": 2545,
   "us_total": 5271,
   "core_fill_pct": {
    "fields.facts.PBR": 96.0,
-   "fields.facts.PER": 61.4,
+   "fields.facts.PER": 61.5,
    "us_fields.facts.PBR": 73.6,
    "us_fields.facts.PER": 45.2
   },
@@ -75,29 +75,29 @@
   "last_run_warns": 0
  },
  "freshness": {
-  "generated_at": "2026-10-16T19:31:02.190343+09:00",
+  "generated_at": "2026-10-17T00:08:00.468238+09:00",
   "summary": {
-   "fresh": 59,
+   "fresh": 30,
    "stale": 1,
-   "closed": 2,
+   "closed": 31,
    "discontinued": 3,
    "p0": {
     "total": 7,
-    "fresh": 5,
-    "closed": 2,
-    "active": 5
+    "fresh": 2,
+    "closed": 5,
+    "active": 2
    },
    "p1": {
     "total": 22,
-    "fresh": 20,
-    "closed": 0,
-    "active": 20
+    "fresh": 8,
+    "closed": 12,
+    "active": 8
    },
    "p2": {
     "total": 36,
-    "fresh": 34,
-    "closed": 0,
-    "active": 35
+    "fresh": 20,
+    "closed": 14,
+    "active": 21
    }
   },
   "stale_p0": [],
