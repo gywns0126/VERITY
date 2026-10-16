@@ -374,7 +374,11 @@ def _fetch_fnltt_all_cached(corp_code: str, bsns_year: str, fs_div: str, reprt_c
         resp.raise_for_status()
         text = resp.text
         try:
-            status = json.loads(text).get("status", "")
+            payload = json.loads(text)
+            status = payload.get("status", "")
+            if status == "000":
+                payload["_retrieved_at"] = datetime.now(ZoneInfo("Asia/Seoul")).isoformat()
+                text = json.dumps(payload, ensure_ascii=False)
         except Exception:
             status = ""
         record_dart_call(status)
@@ -386,6 +390,26 @@ def _fetch_fnltt_all_cached(corp_code: str, bsns_year: str, fs_div: str, reprt_c
 
 def _get_fnltt_all_data(corp_code: str, bsns_year: str, fs_div: str = "CFS", reprt_code: str = "11011") -> dict:
     return json.loads(_fetch_fnltt_all_cached(corp_code, bsns_year, fs_div, reprt_code))
+
+
+@functools.lru_cache(maxsize=512)
+def _get_principal_accounts(corp_code: str, bsns_year: str, reprt_code: str) -> dict:
+    """Additional period lookup only for non-calendar issuers; no credential logging."""
+    from api.config import DART_API_KEY
+    from api.observability.dart_metrics import record_dart_call
+    import requests
+    try:
+        response = requests.get("https://opendart.fss.or.kr/api/fnlttSinglAcnt.json",
+                                params={"crtfc_key": DART_API_KEY, "corp_code": corp_code,
+                                        "bsns_year": bsns_year, "reprt_code": reprt_code},
+                                timeout=(10, 30))
+        response.raise_for_status()
+        data = response.json()
+        record_dart_call(data.get("status", ""))
+        return data
+    except Exception:
+        record_dart_call("error")
+        return {"status": "error", "list": []}
 
 
 def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = "11011") -> dict:
@@ -479,6 +503,22 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
                 base["source"] = "DART"
                 base["fs_div"] = fs_div
                 base["report_date"] = bsns_year
+                # Dates belong to the filing, not to the batch that later reuses it.
+                now = datetime.now(ZoneInfo("Asia/Seoul")).isoformat()
+                base["fetched_at"] = base["last_successful_at"] = data.get("_retrieved_at") or now
+                base["collection_status"] = "collected"
+                from api.builders.dart_batch_builder import _fiscal_month
+                if _fiscal_month(ticker) != "12":
+                    from api.utils.dart_period import verified_period
+                    receipts = {str(r.get("rcept_no") or "") for r in data.get("list", [])}
+                    period = verified_period(
+                        _get_principal_accounts(corp_code, bsns_year, reprt_code),
+                        corp_code=corp_code, bsns_year=bsns_year, reprt_code=reprt_code,
+                        fs_div=fs_div, receipt=next(iter(receipts)) if len(receipts) == 1 else "",
+                        total_assets=base["total_assets"], as_of=now)
+                    base.update(period or {"period_basis": "unverified"})
+                else:
+                    base["period_basis"] = "calendar_inferred"
                 break
             except Exception:
                 continue

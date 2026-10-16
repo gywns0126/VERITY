@@ -19,6 +19,7 @@ publish: data/dart_quarterly_public.json (publish-data action 등재 필요).
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 from datetime import datetime, timedelta, timezone
@@ -97,6 +98,9 @@ def build() -> Dict[str, Any]:
     # ticker -> {q: (fetched_at, quarter_dict)} — 중복은 fetched_at 최신 1건
     by_ticker: Dict[str, Dict[str, Any]] = {}
     bad_dates = 0
+    invalid_or_future_dates = 0
+    nonfinite_values = 0
+    as_of = _now_kst().date().isoformat()
     magnitude_dropped = 0   # 정의·물리 불가능으로 null 처리한 ratio-value 수 (관측)
     with open(INPUT_PATH, "r", encoding="utf-8") as f:
         for line in f:
@@ -111,7 +115,14 @@ def build() -> Dict[str, Any]:
             qe = str(row.get("quarter_end") or "").strip()
             if not ticker or len(qe) < 10:
                 continue
-            if qe[5:10] not in _allowed_ends(ticker):   # fetch-날짜 junk 제거(결산월 반영)
+            from api.utils.dart_period import valid_period_end
+            collected_days = [str(row.get(k) or "")[:10] for k in ("last_successful_at", "fetched_at")]
+            valid_days = [day for day in collected_days if valid_period_end(day, as_of=as_of)]
+            if not valid_days or not valid_period_end(qe, as_of=min(valid_days)):
+                invalid_or_future_dates += 1
+                continue
+            allowed = _allowed_ends(ticker)
+            if qe[5:10] not in allowed and not (qe[5:10] == "02-29" and "02-28" in allowed):
                 bad_dates += 1
                 continue
             q: Dict[str, Any] = {"q": qe}
@@ -122,6 +133,9 @@ def build() -> Dict[str, Any]:
                 try:
                     fv = round(float(v), 2)
                 except (TypeError, ValueError):
+                    continue
+                if not math.isfinite(fv):
+                    nonfinite_values += 1
                     continue
                 lo_hi = RATIO_BOUNDS.get(k)
                 if lo_hi is not None:
@@ -138,12 +152,15 @@ def build() -> Dict[str, Any]:
                     continue
                 try:
                     q[k] = int(v)
-                except (TypeError, ValueError):
+                except (TypeError, ValueError, OverflowError):
                     continue
             # 🚨 종전 조건은 "비율 전부 null 이면 행 폐기" 였다. 손익만 있는 행이
             #   통째로 버려져 왔다 — 021820 이 분기 4개 미만으로 탈락한 원인 중 하나다.
             if len(q) <= 1:   # q 키 하나뿐 = 비율·손익 모두 없음
                 continue
+            for key in ("period_start", "period_basis", "rcept_no", "source_url", "last_successful_at"):
+                if row.get(key):
+                    q[key] = row[key]
             fetched = str(row.get("fetched_at") or "")
             slot = by_ticker.setdefault(ticker, {})
             prev = slot.get(qe)
@@ -168,6 +185,8 @@ def build() -> Dict[str, Any]:
             "source": "OpenDART (dart_quarterly_snapshots.jsonl, fiscal-end만)",
             "count": len(stocks),
             "dropped_nonfiscal_rows": bad_dates,
+            "dropped_invalid_or_future_rows": invalid_or_future_dates,
+            "dropped_nonfinite_values": nonfinite_values,
             "dropped_magnitude_values": magnitude_dropped,
             "note": "분기/연 재무 비율 사실(부채비율/ROA/유동비율/매출총이익률/자산회전율) — 점수·등급 0 (RULE 7). fiscal-end 행만.",
         },
@@ -179,17 +198,16 @@ def main() -> int:
     ok = False
     try:
         if not os.path.isfile(INPUT_PATH):
-            print(f"[dart_quarterly_public] {INPUT_PATH} 부재 — skip", file=sys.stderr)
-            return 0
+            print(f"[dart_quarterly_public] {INPUT_PATH} 부재 — 발행 차단", file=sys.stderr)
+            return 1
         out = build()
         if not out["stocks"]:
             # 0종목 = 상류 단일기간(현 dart_quarterly_snapshots 2025-only). 빈 파일 발행 방지 — 아예 안 씀.
             # 기존 파일 있으면 그대로 보존(덮어쓰지 않음). 상류 분기수집 확장되면 자동으로 실데이터 기록.
-            print("[dart_quarterly_public] 0 stocks — skip(빈 파일 발행 안 함)", file=sys.stderr)
-            ok = True
-            return 0
+            print("[dart_quarterly_public] 0 stocks — 발행 차단(기존 파일 보존)", file=sys.stderr)
+            return 1
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-            json.dump(out, f, ensure_ascii=False)
+            json.dump(out, f, ensure_ascii=False, allow_nan=False)
         print(f"[dart_quarterly_public] logged=True · {len(out['stocks'])} 종목 "
               f"(non-fiscal {out['_meta']['dropped_nonfiscal_rows']}행 · "
               f"magnitude-null {out['_meta']['dropped_magnitude_values']}값 제거) -> "

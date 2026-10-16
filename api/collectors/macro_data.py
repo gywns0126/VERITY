@@ -8,12 +8,14 @@
 feedback_data_collection_verification_mandatory 정합 (silent skip 절대 금지).
 feedback_macro_timestamp_policy 정합 (각 지표에 source + as_of 메타 의무).
 """
+from __future__ import annotations
+
 import logging
 import sys
 import yfinance as yf
 import requests
 import re
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 from bs4 import BeautifulSoup
 
 from api.collectors.fred_macro import get_fred_macro_block
@@ -41,6 +43,42 @@ COMMODITY_SPECS = {
 
 def _now_kst_iso() -> str:
     return datetime.now(_KST).strftime("%Y-%m-%dT%H:%M:%S+09:00")
+
+
+def _source_day(value, *, as_of: str | None = None) -> str | None:
+    """Daily observations retain their source calendar day, without timezone conversion."""
+    if isinstance(value, (date, datetime)):
+        value = value.isoformat()[:10]
+    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return None
+    try:
+        day = date.fromisoformat(value)
+        today = date.fromisoformat((as_of or _now_kst_iso())[:10])
+        return day.isoformat() if day <= today else None
+    except ValueError:
+        return None
+
+
+def _quote_meta(source: str, source_date=None, *, successful=False) -> dict:
+    """Keep legacy as_of as fetch time; source_as_of is the daily observation date.
+
+    A successful value fetch does not prove that its observation date is known.
+    Never substitute the collection clock for a missing/invalid source date.
+    """
+    fetched_at = _now_kst_iso()
+    source_as_of = _source_day(source_date, as_of=fetched_at) if successful else None
+    date_status = "ok" if source_as_of else "missing" if source_date is None else "invalid"
+    return {
+        "source": source,
+        "as_of": fetched_at,
+        "as_of_kind": "fetched_at",
+        "source_as_of": source_as_of,
+        "source_date_status": date_status,
+        "fetched_at": fetched_at,
+        "last_successful_at": fetched_at if successful else None,
+        "stale": not successful or source_as_of is None,
+        "reused": False,
+    }
 
 
 def _log_collector_fail(fn: str, ticker: str, err: Exception) -> None:
@@ -93,8 +131,9 @@ def get_macro_indicators() -> dict:
         result["us_10y"] = {
             "value": round(v, 3),
             "change_pct": chg_pct,
-            "source": "fred",
+            **_quote_meta("fred", d.get("date"), successful=True),
             "as_of": d.get("date"),
+            "as_of_kind": "source_as_of",
         }
     # 🚨 us_2y = ^IRX(13주=3개월물) 오라벨 → FRED DGS2(진짜 2년물)로 정정 (us_10y 동일 패턴).
     #   이 정정이 _calc_yield_spread(us_10y−us_2y)를 bonds.spread_2y_10y 와 정합화(구 0.87 자기모순 제거).
@@ -111,8 +150,9 @@ def get_macro_indicators() -> dict:
         result["us_2y"] = {
             "value": round(v2, 3),
             "change_pct": chg2,
-            "source": "fred",
+            **_quote_meta("fred", d2.get("date"), successful=True),
             "as_of": d2.get("date"),
+            "as_of_kind": "source_as_of",
         }
 
     spread_10_2 = _calc_yield_spread(result)
@@ -175,11 +215,14 @@ def get_macro_indicators() -> dict:
 
 def _get_usd_krw() -> dict:
     # period=1mo: 30일 sparkline(공개 시세 보드 추세선용) + week_high/low 는 최근 5거래일 유지(의미 보존).
-    meta = {"source": "yfinance", "as_of": _now_kst_iso()}
+    meta = _quote_meta("yfinance")
     try:
         t = yf.Ticker("KRW=X")
         hist = t.history(period="1mo")
-        closes = [float(v) for v in hist["Close"].tolist() if v == v]
+        series = hist["Close"].dropna()
+        closes = [float(v) for v in series.tolist()]
+        if closes:
+            meta = _quote_meta("yfinance", series.index[-1], successful=True)
         if len(closes) >= 2:
             current = closes[-1]
             prev = closes[-2]
@@ -199,14 +242,16 @@ def _get_usd_krw() -> dict:
 
 
 def _get_fx(ticker: str, name: str) -> dict:
-    meta = {"source": "yfinance", "as_of": _now_kst_iso()}
+    meta = _quote_meta("yfinance")
     try:
         t = yf.Ticker(ticker)
         hist = t.history(period="5d")
-        if len(hist) >= 2:
-            current = float(hist["Close"].iloc[-1])
-            prev = float(hist["Close"].iloc[-2])
+        closes = hist["Close"].dropna()
+        if len(closes) >= 2:
+            current = float(closes.iloc[-1])
+            prev = float(closes.iloc[-2])
             pct = round((current - prev) / prev * 100, 2) if prev else 0
+            meta = _quote_meta("yfinance", closes.index[-1], successful=True)
             return {"value": round(current, 4), "change_pct": pct, **meta, "status": "ok"}
     except Exception as e:
         _log_collector_fail("_get_fx", ticker, e)
@@ -215,18 +260,21 @@ def _get_fx(ticker: str, name: str) -> dict:
 
 def _get_commodity(ticker: str, name: str) -> dict:
     """원자재/금리/변동성 시세 + 30일 sparkline(공개 시세 보드 추세선용). change_pct = 직전 종가 대비(기존 동일)."""
-    meta = {"source": "yfinance", "as_of": _now_kst_iso()}
+    meta = _quote_meta("yfinance")
     try:
         t = yf.Ticker(ticker)
         hist = t.history(period="1mo")
-        if len(hist) >= 2:
-            current = float(hist["Close"].iloc[-1])
-            prev = float(hist["Close"].iloc[-2])
-            change_pct = round(((current - prev) / prev) * 100, 2)
-            sparkline = [round(float(v), 2) for v in hist["Close"].tolist() if v == v][-30:]
+        closes = hist["Close"].dropna()
+        if len(closes) >= 2:
+            current = float(closes.iloc[-1])
+            prev = float(closes.iloc[-2])
+            change_pct = round(((current - prev) / prev) * 100, 2) if prev else 0
+            sparkline = [round(float(v), 2) for v in closes.tolist()][-30:]
+            meta = _quote_meta("yfinance", closes.index[-1], successful=True)
             return {"value": round(current, 2), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
-        elif len(hist) == 1:
-            v = round(float(hist["Close"].iloc[-1]), 2)
+        elif len(closes) == 1:
+            v = round(float(closes.iloc[-1]), 2)
+            meta = _quote_meta("yfinance", closes.index[-1], successful=True)
             return {"value": v, "change_pct": 0, "sparkline": [v], **meta, "status": "ok"}
     except Exception as e:
         _log_collector_fail("_get_commodity", ticker, e)
@@ -239,8 +287,9 @@ def _round_market(value: float) -> float:
 
 def _commodity_payload(hist, ticker: str, name: str) -> dict:
     """1년 일봉을 공개 차트 계약으로 변환한다."""
-    meta = {"source": "yfinance", "as_of": _now_kst_iso()}
     closes = hist["Close"].dropna()
+    meta = _quote_meta("yfinance", closes.index[-1] if len(closes) else None,
+                       successful=bool(len(closes)))
     if len(closes) >= 2:
         current = float(closes.iloc[-1])
         prev = float(closes.iloc[-2])
@@ -248,7 +297,7 @@ def _commodity_payload(hist, ticker: str, name: str) -> dict:
         recent30 = closes.iloc[-30:]
         history_daily = [
             {
-                "date": idx.strftime("%Y-%m-%d"),
+                "date": _source_day(idx),
                 "close": _round_market(float(value)),
             }
             for idx, value in closes.iloc[-260:].items()
@@ -263,13 +312,13 @@ def _commodity_payload(hist, ticker: str, name: str) -> dict:
             "high_52w": _round_market(float(closes.max())),
             "low_52w": _round_market(float(closes.min())),
             "observations": len(history_daily),
-            "data_date": closes.index[-1].strftime("%Y-%m-%d"),
+            "data_date": meta["source_as_of"],
             **meta,
             "status": "ok",
         }
     if len(closes) == 1:
         value = _round_market(float(closes.iloc[-1]))
-        date = closes.index[-1].strftime("%Y-%m-%d")
+        date = meta["source_as_of"]
         return {
             "value": value,
             "change_pct": 0,
@@ -360,8 +409,7 @@ def _get_commodity_with_history(ticker: str, name: str) -> dict:
             "low_52w": 0,
             "observations": 0,
             "data_date": None,
-            "source": "yfinance",
-            "as_of": _now_kst_iso(),
+            **_quote_meta("yfinance"),
             "status": "fail",
         }
 
@@ -369,7 +417,7 @@ def _get_commodity_with_history(ticker: str, name: str) -> dict:
 def _get_index_change_fred(series_id: str, name: str) -> dict:
     """지수 시세 + 30일 sparkline — FRED(세인트루이스 연준) 일별 종가. yfinance 대체(공식 무료 소스, 야후 ToS 회색 제거, 2026-07-16).
     yfinance 도 daily(history 1mo) 였어 신선도 동일. 지수 레벨 = 사실. S&P/DJIA 저작권('Pre-Approval')은 소스 무관 = 법률 큐(권리감사 B1)."""
-    meta = {"source": "fred", "as_of": _now_kst_iso()}
+    meta = _quote_meta("fred")
     try:
         from api.config import FRED_API_KEY
         r = requests.get(
@@ -380,11 +428,13 @@ def _get_index_change_fred(series_id: str, name: str) -> dict:
         )
         r.raise_for_status()
         obs = r.json().get("observations", []) or []
-        closes = [float(o["value"]) for o in obs if o.get("value") not in (".", "", None)][::-1]  # 오래된→최신
+        observations = [o for o in obs if o.get("value") not in (".", "", None)][::-1]
+        closes = [float(o["value"]) for o in observations]  # 오래된→최신
         if len(closes) >= 2:
             current, prev = closes[-1], closes[-2]
             change_pct = round(((current - prev) / prev) * 100, 2) if prev else 0
             sparkline = [round(c, 2) for c in closes][-30:]
+            meta = _quote_meta("fred", observations[-1].get("date"), successful=True)
             return {"value": round(current, 2), "change_pct": change_pct, "sparkline": sparkline, **meta, "status": "ok"}
     except Exception as e:  # noqa: BLE001
         _log_collector_fail("_get_index_change_fred", series_id, e)
@@ -398,7 +448,7 @@ def _get_index_change(ticker: str, name: str) -> dict:
     프론트가 '언제 종가'인지 정직 라벨 가능(수집 시각을 데이터 날짜로 오인 방지, 2026-07-17).
     NaN 종가(yfinance 반환)는 dropna 로 선제거 = value/change_pct NaN 전파 차단.
     """
-    meta = {"source": "yfinance", "as_of": _now_kst_iso()}
+    meta = _quote_meta("yfinance")
     try:
         t = yf.Ticker(ticker)
         hist = t.history(period="1mo")
@@ -408,7 +458,8 @@ def _get_index_change(ticker: str, name: str) -> dict:
             prev = float(closes.iloc[-2])
             change_pct = round(((current - prev) / prev) * 100, 2) if prev else 0
             sparkline = [round(float(v), 2) for v in closes.tolist()][-30:]
-            data_date = closes.index[-1].strftime("%Y%m%d")
+            meta = _quote_meta("yfinance", closes.index[-1], successful=True)
+            data_date = meta["source_as_of"].replace("-", "") if meta["source_as_of"] else None
             return {"value": round(current, 2), "change_pct": change_pct, "sparkline": sparkline,
                     "data_date": data_date, **meta, "status": "ok"}
     except Exception as e:

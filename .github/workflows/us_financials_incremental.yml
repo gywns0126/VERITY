@@ -5,9 +5,9 @@ name: US Financials Incremental (10-K/Q 이벤트 기반 재무 신선도)
 # → 리포트/분기/커버리지 재빌드 → publish. state 커서(멱등·이월)로 어닝 피크에도 안전.
 #
 # 7축 audit:
-#  1 env: 없음 (SEC UA 하드코드, EDGAR 키 불요)
+#  1 env: SEC UA / EDGAR 키 불요. publish-data: VERITY_DATA_PAT + VERCEL_BLOB_TOKEN.
 #  2 push trigger: vercel-api/ 미변경 — Vercel deploy 무관 (RULE 2)
-#  3 concurrency: verity-data-write (data commit 직렬화). 평일 UTC 10:30 = KST 19:30 — KST 01시대 러시 회피
+#  3 concurrency: verity-us-incremental (전용). 평일 UTC 10:30 = KST 19:30
 #  4 cron: 평일 1회. EDGAR 일자(ET) 기준 전일 인덱스 완성 후 처리
 #  5 KIS: 0 (RULE 1 무관)
 #  6 pip: requirements.txt
@@ -53,7 +53,9 @@ jobs:
 
       - name: 10-K/Q 이벤트 감지 + 해당 종목 재수집
         id: incr
-        run: python -m api.builders.us_financials_incremental --cap ${{ github.event.inputs.cap || '60' }}
+        env:
+          CAP: ${{ github.event.inputs.cap || '60' }}
+        run: python -m api.builders.us_financials_incremental --cap "$CAP"
 
       - name: 리포트 재빌드 (재수집 반영)
         id: report
@@ -62,18 +64,34 @@ jobs:
         # (2026-07-04 실사고 수리 — 이전 주석 '유실 없음' 은 오판이었음, 압축본 도입으로 실제 보장).
         run: python -m api.builders.us_stock_report_public_builder
 
-      - name: 분기·커버리지 재빌드
-        continue-on-error: true
-        run: |
-          python -m api.builders.us_quarterly_public_builder
-          python -m api.builders.coverage_report_builder
+      - name: 분기 재빌드
+        id: quarterly
+        run: python -m api.builders.us_quarterly_public_builder
+
+      - name: 커버리지 발행 검사 (WARN 허용, 핵심 결함 차단)
+        id: quality
+        run: python -m api.builders.coverage_report_builder
 
       - name: Commit + push (변경 시만)
         id: persist
+        # Failure saves only retry state; invalid financial artifacts never enter main.
+        if: ${{ !cancelled() && steps.incr.outcome != 'skipped' && steps.incr.outcome != '' }}
+        env:
+          READY: ${{ steps.incr.outcome == 'success' && steps.report.outcome == 'success' && steps.quarterly.outcome == 'success' && steps.quality.outcome == 'success' }}
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/
+          if [ "$READY" != "true" ]; then
+            python -m api.builders.us_financials_incremental --requeue-run
+          else
+            for path in data/us_financials/_summary.json data/us_earnings_pattern.json \
+                        data/us_stock_report_public.json data/us_fin_annual_compact.json \
+                        data/us_quarterly_public.json data/cross_gics_us.json \
+                        data/metadata/coverage_report.json data/metadata/coverage_history.jsonl; do
+              if [ -f "$path" ]; then git add -- "$path"; fi
+            done
+          fi
+          git add -- data/metadata/us_fin_incremental_state.json
           git diff --staged --quiet && { echo "변경 없음"; exit 0; }
           git commit -m "data(alpha-nest): 미장 재무 증분 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') (10-K/Q 이벤트)"
           BRANCH="${{ github.ref_name }}"
@@ -88,7 +106,7 @@ jobs:
 
       - name: Publish (VERITY-data + Vercel Blob)
         # publish-data stages origin/main, so commit/push must finish first.
-        if: success() && steps.persist.outcome == 'success'
+        if: success() && steps.quality.outcome == 'success' && steps.persist.outcome == 'success'
         uses: ./.github/actions/publish-data
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
