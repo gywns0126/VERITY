@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-10-16T23:21:09.033139+09:00",
+  "generated_at": "2026-10-17T03:15:10.726608+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 392682,
-    "python_modules": 1274,
+    "code_lines_tsx_py": 395572,
+    "python_modules": 1285,
     "tsx_components": 150,
-    "json_data_files": 2438,
-    "json_total_tracked": 2465,
+    "json_data_files": 2442,
+    "json_total_tracked": 2469,
     "workflows": 81,
     "scheduled_workflows": 62,
     "cron_triggers": 72,
-    "git_tracked_files": 8620
+    "git_tracked_files": 8634
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 85,
+      "count": 87,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -78,6 +78,7 @@
         "api/observability/dart_metrics.py",
         "api/trading/kis_broker.py",
         "api/trading/mock_kis_broker.py",
+        "api/utils/dart_period.py",
         "api/utils/dart_pre_attach.py",
         "api/utils/dart_private_evidence.py",
         "api/utils/macro_meta.py",
@@ -97,6 +98,7 @@
         "scripts/macro_h2_valuation_cross_section.py",
         "scripts/macro_h3_saturation_neutrality.py",
         "scripts/macro_yield_form_comparison.py",
+        "scripts/repair_dart_future_periods.py",
         "scripts/scout_penny.py",
         "server/kis_rest_client.py",
         "server/kis_ws_client.py",
@@ -765,7 +767,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 2438
+      "count": 2442
     },
     "validation": {
       "label": "검증",
@@ -780,10 +782,10 @@
     }
   },
   "python_by_dir": {
-    "api": 490,
-    "tests": 476,
-    "scripts": 176,
-    "vercel-api": 118,
+    "api": 491,
+    "tests": 483,
+    "scripts": 177,
+    "vercel-api": 120,
     "server": 8,
     ".github": 6
   },
