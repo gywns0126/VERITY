@@ -104,7 +104,60 @@ export type Vams = {
     }
 }
 
-export type Brain = { brain_score?: number; grade_label?: string; grade?: string }
+export type SourceAlignment = {
+    status?: string
+    aligned_fields?: number
+    field_count?: number
+    fields?: Record<string, {
+        status?: string
+        reasons?: string[]
+        source?: string | null
+        unit?: string
+        contexts?: Array<{ document_id?: string | null; start?: string | null; end?: string | null; unit?: string | null }>
+    }>
+}
+
+export type Brain = {
+    brain_score?: number
+    grade_label?: string
+    grade?: string
+    fact_score?: { coverage_scope?: { source_alignment?: SourceAlignment } }
+}
+
+export type AnalysisRun = { run_id?: string; run_attempt?: string; mode?: string; scan_id?: string; scan_as_of?: string }
+export type EvidenceSnapshot = {
+    ticker?: string; currency?: string; captured_at?: string; analysis_as_of?: string
+    input_hash?: string; hash_scope?: string; run?: AnalysisRun
+    price?: { value?: number | null; as_of?: string | null; source?: string | null; adjustment?: string | boolean | null; status?: string; reasons?: string[] }
+}
+export type RecPriceEvidence = {
+    value?: number | null; status?: string; captured_at?: string | null; quote_as_of?: string | null
+    source?: string | null; adjustment?: string | boolean | null; reason?: string; quote_reasons?: string[]; run?: AnalysisRun
+}
+export type AnalysisMeasurement = {
+    data_coverage?: number | null
+    component_states?: Record<string, string>
+    fundamental_missing_fields?: string[] | null
+    source_alignment_status?: string
+    source_alignment_counts?: Record<string, number>
+}
+export type AnalysisChanges = {
+    current_count?: number; compared_count?: number; unresolved_count?: number
+    price_compared_count?: number; input_compared_count?: number; input_snapshot_count?: number
+    baseline_source?: string; baseline_reason?: string | null
+}
+export type AnalysisChange = {
+    status?: string; previous_completed_at?: string; reasons?: string[]
+    changes?: {
+        grade?: { before?: string | null; after?: string | null }
+        recommendation?: { before?: string | null; after?: string | null }
+        price?: { before?: number | null; after?: number | null }
+        scores?: { before?: Record<string, number | null>; after?: Record<string, number | null> }
+        measurement?: { before?: AnalysisMeasurement; after?: AnalysisMeasurement }
+        inputs?: { changed_fields?: string[]; context_changed?: boolean }
+        disclosures?: { changed_fields?: string[] }
+    }
+}
 
 export type Rec = {
     name?: string
@@ -122,6 +175,9 @@ export type Rec = {
     flow?: { foreign_net?: number }
     lynch_kr?: { label?: string }
     dart_disclosure_events?: { severity?: number }
+    evidence_snapshot?: EvidenceSnapshot
+    rec_price_evidence?: RecPriceEvidence
+    analysis_change?: AnalysisChange
 }
 
 export type Headline = { title?: string; link?: string }
@@ -284,6 +340,7 @@ export type FormulaRun = {
 
 export type PortfolioFull = {
     updated_at?: string
+    analysis_changes?: AnalysisChanges
     vams?: Vams
     recommendations?: Rec[]
     // 거시(숲) — portfolio.json 실측 shape (2026-08-03). 별도 fetch 불요.

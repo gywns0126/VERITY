@@ -260,6 +260,27 @@ from api.quant.factors.mean_reversion import compute_mean_reversion_score
 from api.utils.safe_collect import safe_collect
 
 
+def _attach_source_alignment_to_records(records: list) -> dict:
+    """Attach private provenance diagnostics without changing selected inputs."""
+    attached = 0
+    for stock in records:
+        try:
+            from api.utils.source_alignment import attach_source_alignment
+            attach_source_alignment(stock)
+            attached += 1
+        except Exception as exc:
+            # A failed refresh must not retain an earlier 'aligned' diagnostic.
+            stock["source_alignment"] = {
+                "schema": "source-alignment-v1", "status": "unknown",
+                "aligned_fields": 0, "field_count": 0, "fields": {},
+                "reason": "source_alignment_validation_failed",
+                "error_type": type(exc).__name__,
+                "diagnostic_only": True, "is_truth_verified": False,
+            }
+            print(f"[source_alignment] validation failed: {type(exc).__name__}", file=sys.stderr)
+    return {"processed": len(records), "attached": attached, "failed": len(records) - attached}
+
+
 def _to_float(value, default=0.0) -> float:
     try:
         return float(value)
@@ -1795,6 +1816,13 @@ def main():
         return
 
     portfolio = load_portfolio()
+    from api.utils.analysis_evidence import (
+        capture_analysis_inputs, attach_analysis_evidence,
+        mark_analysis_evidence_unavailable,
+    )
+    from api.utils.analysis_baseline import load_previous_analysis_baseline
+    _previous_analysis_evidence = (load_previous_analysis_baseline(portfolio)
+                                   if mode in ("full", "full_us", "quick") else {})
     portfolio["updated_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
     portfolio["market_summary"] = market_summary
     portfolio["macro"] = macro
@@ -4311,6 +4339,15 @@ def main():
     except Exception as _vg_e:  # noqa: BLE001
         print(f"  [value_guards] 스킵(채점 무영향): {type(_vg_e).__name__}: {_vg_e}")
 
+    # Diagnose the actual post-overlay records passed to Brain. Pure metadata only.
+    _alignment_counts = _attach_source_alignment_to_records(candidates)
+    print(f"  [source_alignment] pre-brain {_alignment_counts}")
+    try:
+        _analysis_input_evidence = capture_analysis_inputs(candidates, portfolio)
+    except Exception as _evidence_error:
+        _analysis_input_evidence = {"records": {}, "duplicates": set(), "candidate_count": len(candidates)}
+        print(f"  [analysis_evidence] input capture unavailable: {type(_evidence_error).__name__}")
+
     try:
         from api.intelligence.verity_brain import reset_ic_cache
         reset_ic_cache()
@@ -4790,6 +4827,8 @@ def main():
 
     # ── STEP 7: VAMS ──
     print(f"\n[7] VAMS 가상 투자")
+    # Analysis providers may return new record objects; refresh before persistence.
+    _attach_source_alignment_to_records(analyzed)
     portfolio["recommendations"] = analyzed
 
     # ── 필드 커버리지 측정 (데이터 품질 = breadth × 정확성 × 신선도 × 커버리지) ──
@@ -4824,6 +4863,7 @@ def main():
     except Exception:
         _prev_rec_price_map = {}
 
+    _new_rec_price_ids = set()
     for _rec in analyzed:
         _price = _rec.get("price")
         if _price is None:
@@ -4835,9 +4875,24 @@ def main():
         #   이월분의 current_price 가 그대로 따라와 no-op 이 영구화된다.
         #   이 줄이 있어야 다음 full run 에서 기존 오염분까지 자가 복구된다.
         _rec["current_price"] = _price
+        if "rec_price" not in _rec and _rec.get("ticker") not in _prev_rec_price_map:
+            _new_rec_price_ids.add((_rec.get("ticker"), _rec.get("currency")))
         # rec_price 는 setdefault 유지 — 추천 시점 진입가 고정이 **설계**다
         # (같은 테스트 35행 "유지됨 — 추천 시점 고정"). 절대 명시 대입으로 바꾸지 말 것.
         _rec.setdefault("rec_price", _prev_rec_price_map.get(_rec.get("ticker"), _price))
+
+    try:
+        portfolio["analysis_changes"] = attach_analysis_evidence(
+            analyzed, _previous_analysis_evidence, _analysis_input_evidence,
+            portfolio.get("analysis_provenance") or {}, now_kst().isoformat(timespec="seconds"),
+            mode, _new_rec_price_ids,
+        )
+    except Exception as _evidence_error:
+        portfolio["analysis_changes"] = mark_analysis_evidence_unavailable(
+            analyzed, portfolio.get("analysis_provenance") or {},
+            now_kst().isoformat(timespec="seconds"), mode, type(_evidence_error).__name__,
+        )
+        print(f"  [analysis_evidence] unavailable: {type(_evidence_error).__name__}")
 
     # ── trade_plan v0_heuristic 산출 + 진입 후보 로깅 ──
     # 결정 룰은 단순(BB/MA/RSI), 자동 액션은 verdict 상태 전이만. 본인 운영 참고용.

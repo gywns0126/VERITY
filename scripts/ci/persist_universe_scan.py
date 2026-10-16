@@ -16,6 +16,9 @@ import time
 # Non-append-only outputs are compared as whole blobs. A textual merge can
 # silently mix fields from different scan generations even without conflicts.
 CANDIDATES_PATH = 'data/universe_candidates.json'
+# Shared status aggregation is written by universe, macro, and DART builders;
+# it is not a candidate generation. Preserve a concurrent remote writer exactly.
+SHARED_DIAGNOSTIC_PATHS = frozenset({'data/metadata/data_pipeline_health.json'})
 
 
 def git(repo, *args, check=True):
@@ -51,10 +54,14 @@ def persist(repo, branch, attempts=5, retry_delay=10):
                        check=False).returncode == 0:
                     print(f'Already persisted: {source}')
                     return
+                preserve_shared = set()
                 for path in sorted(generation_paths):
                     before, after, incoming = (oid(worktree, ref, path)
                                                for ref in (base, source, remote))
                     if incoming not in (before, after):
+                        if path in SHARED_DIAGNOSTIC_PATHS:
+                            preserve_shared.add(path)
+                            continue
                         raise RuntimeError(f'Remote scan generation changed: {path}; '
                                            'preserve remote and recover from artifact')
                 # Reapply only the scan commit to the latest remote each attempt.
@@ -62,10 +69,10 @@ def persist(repo, branch, attempts=5, retry_delay=10):
                 git(worktree, 'checkout', '--detach', remote)
                 result = git(worktree, '-c', 'core.hooksPath=/dev/null',
                              '-c', 'rerere.enabled=false',
-                             'cherry-pick', source, check=False)
+                             'cherry-pick', '--no-commit', source, check=False)
                 if result.returncode:
-                    conflicts = git(worktree, 'diff', '--name-only',
-                                    '--diff-filter=U').stdout.strip()
+                    conflicts = set(git(worktree, 'diff', '--name-only',
+                                        '--diff-filter=U').stdout.splitlines())
                     active = git(worktree, 'rev-parse', '--verify',
                                  'CHERRY_PICK_HEAD', check=False).returncode == 0
                     if active and not conflicts and git(worktree, 'diff', '--cached', '--quiet',
@@ -74,7 +81,19 @@ def persist(repo, branch, attempts=5, retry_delay=10):
                         git(worktree, 'cherry-pick', '--abort')
                         print('Scan delta already present on remote')
                         return
-                    raise RuntimeError(f'Conflicting scan outputs: {conflicts}\n{result.stderr}')
+                    if not conflicts or conflicts - preserve_shared:
+                        raise RuntimeError(f'Conflicting scan outputs: {sorted(conflicts)}\n{result.stderr}')
+                for path in sorted(preserve_shared):
+                    if oid(worktree, remote, path) is None:
+                        git(worktree, 'rm', '-f', '--ignore-unmatch', '--', path)
+                    else:
+                        git(worktree, 'restore', f'--source={remote}', '--staged', '--worktree', '--', path)
+                    print(f'Preserved concurrent shared diagnostic: {path}', flush=True)
+                if git(worktree, 'diff', '--cached', '--quiet', check=False).returncode == 0:
+                    git(worktree, 'cherry-pick', '--abort', check=False)
+                    print('Scan delta already present on remote')
+                    return
+                git(worktree, '-c', 'core.hooksPath=/dev/null', 'commit', '-C', source)
                 result = git(worktree, 'push', 'origin', f'HEAD:refs/heads/{branch}',
                              check=False)
                 if result.returncode == 0:

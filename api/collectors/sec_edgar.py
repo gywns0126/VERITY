@@ -182,6 +182,8 @@ def get_financial_facts(ticker: str, user_agent: str) -> Dict:
         facts = data.get("facts", {})
         us_gaap = facts.get("us-gaap", {})
 
+        selected_rows = {}
+
         def _latest_annual(concept: str) -> Optional[float]:
             entry = us_gaap.get(concept, {})
             units = entry.get("units", {})
@@ -190,6 +192,7 @@ def get_financial_facts(ticker: str, user_agent: str) -> Dict:
             if not annuals:
                 return None
             annuals.sort(key=lambda x: x.get("end", ""), reverse=True)
+            selected_rows[concept] = dict(annuals[0])
             val = annuals[0].get("val")
             return float(val) if val is not None else None
 
@@ -226,6 +229,33 @@ def get_financial_facts(ticker: str, user_agent: str) -> Dict:
             result["working_capital"] = _ca - _cl  # Altman X1 분자
             if _cl > 0:
                 result["current_ratio"] = round(_ca / _cl * 100, 1)  # % 스케일 (graham 200 임계·KIS crnt_rate 정합)
+
+        from api.utils.source_alignment import field_evidence, sec_input
+        result["_source_identity"] = {"ticker": ticker, "cik": cik,
+                                      "response_cik": data.get("cik"),
+                                      "ticker_basis": "SEC company_tickers mapping",
+                                      "source": "SEC companyfacts"}
+        evidence = result["_source_evidence"] = {}
+        def _evidence(field, concepts, definition, unit, instant=False):
+            evidence[field] = field_evidence(
+                result.get(field), source="SEC", ticker=ticker, issuer_id=cik,
+                definition=definition, unit=unit,
+                inputs=[sec_input(selected_rows[c], ticker=ticker, cik=data.get("cik"),
+                                  concept=c, instant=instant) if c in selected_rows else None
+                        for c in concepts])
+        rev_tag = "Revenues" if selected_rows.get("Revenues", {}).get("val") else "RevenueFromContractWithCustomerExcludingAssessedTax"
+        debt_tag = "LongTermDebt" if selected_rows.get("LongTermDebt", {}).get("val") else "LongTermDebtNoncurrent"
+        _evidence("net_income", ["NetIncomeLoss"], "annual_net_income", "USD")
+        _evidence("revenue", [rev_tag], "annual_revenue", "USD")
+        _evidence("operating_income", ["OperatingIncomeLoss"], "annual_operating_income", "USD")
+        _evidence("fcf", ["NetCashProvidedByUsedInOperatingActivities", "PaymentsToAcquirePropertyPlantAndEquipment"], "annual_operating_cf_minus_ppe_capex", "USD")
+        _evidence("debt_ratio", [debt_tag, "ShortTermBorrowings", "StockholdersEquity"], "long_term_plus_short_borrowings_over_equity", "percent", True)
+        _evidence("current_ratio", ["AssetsCurrent", "LiabilitiesCurrent"], "current_assets_over_current_liabilities", "percent", True)
+        for field, concept in (("total_assets", "Assets"), ("total_equity", "StockholdersEquity"),
+                               ("retained_earnings", "RetainedEarningsAccumulatedDeficit"),
+                               ("current_assets", "AssetsCurrent"), ("current_liabilities", "LiabilitiesCurrent")):
+            if field in result:
+                _evidence(field, [concept], "instant_" + field, "USD", True)
 
         # 2026-06-16 — 부동산 앵커 (XBRL 구조화 장부가, 10-K Item 2 narrative 보완).
         # KR DART 투자부동산과 대칭. REIT 는 RealEstateInvestmentPropertyNet 사용.

@@ -365,6 +365,7 @@ jobs:
         run: python -m api.builders.macro_collect_builder
 
       - name: Run analysis
+        id: run_analysis
         if: success() && steps.writer_gate.outputs.run == '1'
         env:
           # 2026-05-11: VERITY_MODE 명시 — schedule cron = prod, manual dispatch = input (default staging).
@@ -378,6 +379,7 @@ jobs:
           VAMS_INITIAL_CASH: ${{ vars.VAMS_INITIAL_CASH || '10000000' }}
           VAMS_MAX_PER_STOCK: ${{ vars.VAMS_MAX_PER_STOCK || '2000000' }}
           ANALYSIS_MODE: ${{ steps.detect_mode.outputs.mode }}
+          DART_PRIVATE_EVIDENCE: ${{ (steps.detect_mode.outputs.mode == 'full' || steps.detect_mode.outputs.mode == 'full_us') && (github.event.inputs.verity_mode || 'prod') == 'prod' && '1' || '0' }}
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
@@ -415,6 +417,20 @@ jobs:
           # SERVICE_ROLE_KEY: api/health.py _check_reports_signed_url 가 signed URL 발급 검증할 때 필요 (write 권한).
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python api/main.py
+
+      - name: Deliver completed operator analysis before postprocessing
+        id: early_operator_upload
+        # main.py has completed Observatory and saved its completion identity.
+        # Public companion builders/scoring do not modify this portfolio contract.
+        if: success() && !cancelled() && steps.writer_gate.outputs.run == '1' && steps.run_analysis.outcome == 'success' && (steps.detect_mode.outputs.mode == 'full' || steps.detect_mode.outputs.mode == 'full_us') && (github.event.inputs.verity_mode || 'prod') == 'prod'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          UNIVERSE_EXPECTED_SCAN_ID: ${{ github.event_name == 'workflow_run' && format('gh:{0}:{1}', github.event.workflow_run.id, github.event.workflow_run.run_attempt) || inputs.expected_scan_id || '' }}
+          ANALYSIS_MODE: ${{ steps.detect_mode.outputs.mode }}
+          VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
+        run: python scripts/upload_operator_data_to_supabase.py --only portfolio_full --require-completed-analysis --delivery-phase analysis_complete
 
       # 🚨 미처리 장부만 따로 커밋 (2026-08-15). 본 커밋 스텝(`Commit & push results`)은
       #   `success()` fail-closed 라 분석이 죽으면 안 돈다 — 그 설계는 그대로 둔다(결함본 차단이 목적).
@@ -535,7 +551,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set -euo pipefail
-          python -m api.collectors.nps_holdings
+          python -m api.collectors.nps_holdings --diagnostics "$RUNNER_TEMP/nps-holdings-diagnostic.json"
           python -m api.collectors.nps_history \
             --input data/nps_holdings.json \
             --annual-input data/nps_full_holdings_annual.json \
@@ -543,6 +559,15 @@ jobs:
             --cache data/nps_history_cache.json \
             --collect --maxcalls 20 --ttl-hours 168 --resume
           mv "$RUNNER_TEMP/nps_holdings-history.json" data/nps_holdings.json
+
+      - name: Preserve sanitized NPS collection diagnostics
+        if: steps.writer_gate.outputs.run == '1' && (always() && steps.nps_holdings.outcome != 'skipped')
+        uses: actions/upload-artifact@v4
+        with:
+          name: nps-holdings-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/nps-holdings-diagnostic.json
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: 증권 대차잔고 집계 (공매도 압력 proxy, 금융위 공개패널)
         # data.go.kr #1160100(금융위 대차거래, serviceKey=PUBLIC_DATA_API_KEY 공통) → 전종목 ~2,769개 대차잔고.
@@ -887,7 +912,13 @@ jobs:
         id: commit_results
         # 핵심 데이터 붕괴 시 커밋 차단 (coverage_gate fail-closed) — 결함본이 repo·사이트로 안 나감. 2026-07-12.
         if: steps.writer_gate.outputs.run == '1' && (success() && steps.coverage_gate.outcome != 'failure') && steps.analysis_contract.outputs.valid == 'true'
+        env:
+          UNIVERSE_EXPECTED_SCAN_ID: ${{ github.event_name == 'workflow_run' && format('gh:{0}:{1}', github.event.workflow_run.id, github.event.workflow_run.run_attempt) || inputs.expected_scan_id || '' }}
+          ANALYSIS_MODE: ${{ steps.detect_mode.outputs.mode }}
+          VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
         run: |
+          set -euo pipefail
+          python3 scripts/ci/private_analysis_files.py --capture-final
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/
@@ -960,15 +991,26 @@ jobs:
           PY
 
       - name: Upload operator full data to private Supabase Storage
+        id: final_operator_upload
         # VERITY↔AlphaNest 분리 Stage 1 (2026-07-23): full portfolio.json → verity-reports private bucket.
         # /api/admin(?type=portfolio_full, authed=is_admin/토큰) 이 서빙 → 오퍼레이터 콘솔이 공개 blob 대신
         # 이 authed 경로로 full fetch. 공개 blob(sanitize 예정, Stage 3)과 별도 = 크라운주얼 사설화.
-        # 실패해도 발행 계속(admin.py fallback=공개 blob). SUPABASE_SERVICE_ROLE_KEY 기존 등록.
-        if: steps.writer_gate.outputs.run == '1' && (always() && steps.coverage_gate.outcome != 'failure') && steps.analysis_contract.outputs.valid == 'true'
+        # 비공개 보존·전달 실패는 non-zero. 공개 발행은 아래의 기존 검증 게이트를 유지한다.
+        if: steps.writer_gate.outputs.run == '1' && (always() && !cancelled() && steps.coverage_gate.outcome != 'failure') && steps.analysis_contract.outputs.valid == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python scripts/upload_operator_data_to_supabase.py
+          UNIVERSE_EXPECTED_SCAN_ID: ${{ github.event_name == 'workflow_run' && format('gh:{0}:{1}', github.event.workflow_run.id, github.event.workflow_run.run_attempt) || inputs.expected_scan_id || '' }}
+          ANALYSIS_MODE: ${{ steps.detect_mode.outputs.mode }}
+          VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
+        run: |
+          if [ "$ANALYSIS_MODE" = "full" ] || [ "$ANALYSIS_MODE" = "full_us" ]; then
+            python scripts/upload_operator_data_to_supabase.py --require-completed-analysis --delivery-phase final \
+              --portfolio-source "$RUNNER_TEMP/operator-final-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/portfolio.json" \
+              --snapshot-source "$RUNNER_TEMP/operator-final-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/universe_candidates.json"
+          else
+            python scripts/upload_operator_data_to_supabase.py
+          fi
 
       - name: Publish hot data to VERITY-data
         # Phase A: dual-write — main 에도 commit (위), gh-pages 에도 force-orphan push.

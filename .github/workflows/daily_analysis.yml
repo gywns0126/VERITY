@@ -280,6 +280,8 @@ jobs:
 
       - name: Commit & push results
         run: |
+          set -euo pipefail
+          python3 scripts/ci/private_analysis_files.py
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/

@@ -83,7 +83,8 @@ def test_private_request_memo_does_not_survive_collection(private_source, monkey
 
 
 def test_upload_registry_contains_exact_approved_routes():
-    selected = {(src, dest) for src, dest, _ in publisher.UPLOADS if dest in publisher.APPROVED_PRIVATE_DESTS}
+    selected = {(src, dest) for src, dest, _ in publisher.UPLOADS
+                if dest in publisher.APPROVED_PRIVATE_DESTS and dest not in publisher.EXPLICIT_ONLY_DESTS}
     assert selected == {(rel, dest) for rel, dest in tf.PRIVATE_LOCAL_FALLBACKS.items()
                         if rel != "data/recommendations.json"}
 

@@ -10,9 +10,10 @@ import { useQuotes } from "@/lib/quotes"
 import StockLogo from "./StockLogo"
 import ProChart, { type Candle } from "./ProChart"
 import TVChart, { tvSupported } from "./TVChart"
-import type { Rec, Holding } from "@/lib/types"
+import type { Rec, Holding, AnalysisChanges } from "@/lib/types"
 import OrderTicket from "./OrderTicket"
 import AnalysisReviewPanel from "./AnalysisReviewPanel"
+import AnalysisEvidencePanel from "./AnalysisEvidencePanel"
 
 type Level = { price?: number; volume?: number }
 type Trade = { time?: string; price?: number; volume?: number; side?: string }
@@ -38,11 +39,13 @@ export default function Workspace({
     names,
     recs = [],
     holdings = [],
+    analysisChanges,
 }: {
     defaultTicker: string
     names: Record<string, string>
     recs?: Rec[]
     holdings?: Holding[]
+    analysisChanges?: AnalysisChanges
 }) {
     const dark = useDark()
     const c = palette(dark)
@@ -229,6 +232,7 @@ export default function Workspace({
 
             {/* 저장된 판단을 먼저 표시. 종목 선택·만료·오류 경계는 기존 패널이 소유한다. */}
             <AnalysisReviewPanel key={ticker} ticker={ticker} />
+            <AnalysisEvidencePanel key={`evidence-${ticker}`} rec={recs.find(r => r.ticker === ticker)} summary={analysisChanges} c={c} />
 
             <details key={`tools-${ticker}`} className="af-console-disclosure">
                 <summary>종목 상세 · 차트{isKR ? " · 호가 · 주문" : ""}</summary>

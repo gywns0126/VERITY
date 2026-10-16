@@ -180,6 +180,11 @@ def build() -> Dict[str, Any]:
         "pipeline_profile": metrics.get("pipeline_profile"),
     }
 
+    # Candidate bytes are the producer contract: omit private metadata before
+    # creating a new identity/envelope, never rewrite a persisted scan afterward.
+    from scripts.ci.private_analysis_files import strip_private_fields
+    candidates = strip_private_fields(candidates)
+
     collected_at = prev.get("collected_at") if used_prev else now.isoformat(timespec="seconds")
     scan_id = (prev.get("scan_id") if used_prev else
                f"gh:{os.environ['GITHUB_RUN_ID']}:{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}"

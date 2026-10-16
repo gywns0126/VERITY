@@ -777,6 +777,8 @@ def _compute_fact_score(
     # 2026-08-31 resolved: 활성 4축을 _missing과 원입력 분모에 연결해 상수 1.0 상태를 종료했다.
     _weighted_axes = sorted(k for k, value in w.items() if isinstance(value, (int, float)) and value > 0)
     _overlap = sorted(set(_weighted_axes) & set(_TRACKED_MISSING_AXES))
+    from api.utils.source_alignment import source_alignment
+
     coverage_scope = {
         "weighted_axes": _weighted_axes,
         "weighted_axis_count": len(_weighted_axes),
@@ -801,6 +803,7 @@ def _compute_fact_score(
         },
         "measurement_basis": "finite input fields and existing producer measurement flags",
         "primary_source_alignment_verified": False,
+        "source_alignment": source_alignment(stock),
         "coverage_definition": "effective-weighted measured input share across active fact axes; substitutions excluded; simple-input denominators exclude not-applicable inputs and quant denominators use nominal subaxis weights",
         "is_measurable": bool(_weighted_axes and _overlap),
         "note": "활성 가중 4축의 원입력과 하위축 분모로 측정한 진단값이며 점수에는 영향을 주지 않는다.",

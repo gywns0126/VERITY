@@ -143,7 +143,7 @@ export default function Home() {
                         </PanelBoundary>
                         <div id="console-analysis" style={{ scrollMarginTop: 16 }}>
                         <PanelBoundary name="워크스페이스">
-                            <Workspace defaultTicker={holdT.find((t) => /^\d{6}$/.test(t)) || "005930"} names={names} recs={recs} holdings={holdings} />
+                            <Workspace defaultTicker={holdT.find((t) => /^\d{6}$/.test(t)) || "005930"} names={names} recs={recs} holdings={holdings} analysisChanges={pf?.analysis_changes} />
                         </PanelBoundary>
                         </div>
                         <details className="af-console-disclosure" style={{ background: c.card, borderRadius: 16, padding: 12 }}>

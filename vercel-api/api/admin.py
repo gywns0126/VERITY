@@ -1484,7 +1484,15 @@ def handle_portfolio_full(request_handler) -> dict:
     portfolio = fetch_portfolio()
     if not portfolio:
         return {"_status": 503, "_body": {"error": "portfolio_unavailable"}}
-    return {"_status": 200, "_body": portfolio}
+    # Full input originals belong to private Storage, not HTTP screen responses.
+    # Keep the existing full fields while bounding the newly added evidence.
+    body = dict(portfolio)
+    if isinstance(portfolio.get("recommendations"), list):
+        body["recommendations"] = [
+            {**rec, **_terminal_analysis_evidence(rec)} if isinstance(rec, dict) else rec
+            for rec in portfolio["recommendations"]
+        ]
+    return {"_status": 200, "_body": body}
 
 
 # 터미널 화면이 실제 쓰는 키만 — full(3.57MB) 대비 ≈ 4~6%. (2026-08-03 Safari 메모리 킬 대응)
@@ -1504,17 +1512,71 @@ _TERMINAL_REC_FIELDS = (
 )
 
 
+def _terminal_analysis_evidence(rec: dict) -> dict:
+    """Keep private evidence references while excluding full input snapshots."""
+    def pick(value, keys):
+        return {key: value[key] for key in keys if key in value} if isinstance(value, dict) else {}
+
+    out = {}
+    run_keys = ("run_id", "run_attempt", "mode", "scan_id", "scan_as_of", "scan_completed_at", "scan_snapshot_sha256")
+    snapshot = rec.get("evidence_snapshot")
+    if isinstance(snapshot, dict):
+        slim = pick(snapshot, ("schema", "ticker", "currency", "captured_at", "analysis_as_of", "input_hash", "hash_scope"))
+        slim["price"] = pick(snapshot.get("price"), ("value", "as_of", "source", "adjustment", "status", "reasons"))
+        slim["run"] = pick(snapshot.get("run"), run_keys)
+        out["evidence_snapshot"] = slim
+    entry = rec.get("rec_price_evidence")
+    if isinstance(entry, dict):
+        slim = pick(entry, ("schema", "ticker", "currency", "value", "status", "captured_at", "quote_as_of", "source", "adjustment", "reason", "quote_reasons"))
+        slim["run"] = pick(entry.get("run"), run_keys)
+        out["rec_price_evidence"] = slim
+    change = rec.get("analysis_change")
+    if isinstance(change, dict):
+        slim = pick(change, ("schema", "status", "previous_completed_at", "reasons", "observed_differences_only"))
+        changes = change.get("changes")
+        slim["changes"] = {}
+        if isinstance(changes, dict):
+            for name in ("grade", "recommendation", "price"):
+                if isinstance(changes.get(name), dict):
+                    slim["changes"][name] = pick(changes[name], ("before", "after"))
+            scores = changes.get("scores")
+            if isinstance(scores, dict):
+                slim["changes"]["scores"] = {
+                    side: pick(scores.get(side), ("brain_score", "fact_score", "sentiment_score"))
+                    for side in ("before", "after")
+                }
+            measurement = changes.get("measurement")
+            if isinstance(measurement, dict):
+                slim["changes"]["measurement"] = {
+                    side: pick(measurement.get(side), ("data_coverage", "component_states", "fundamental_missing_fields", "source_alignment_status", "source_alignment_counts"))
+                    for side in ("before", "after")
+                }
+            for name in ("inputs", "disclosures"):
+                if isinstance(changes.get(name), dict):
+                    slim["changes"][name] = pick(changes[name], ("changed_fields", "changed_field_count", "context_changed"))
+        out["analysis_change"] = slim
+    return out
+
+
 def handle_portfolio_terminal(request_handler) -> dict:
     """오퍼레이터 터미널 슬림 페이로드 — 추천은 필드 화이트리스트(개당 ~27KB → ~0.7KB)."""
     portfolio = fetch_portfolio()
     if not portfolio:
         return {"_status": 503, "_body": {"error": "portfolio_unavailable"}}
     out = {k: portfolio.get(k) for k in _TERMINAL_KEYS if k in portfolio}
+    changes = portfolio.get("analysis_changes")
+    if isinstance(changes, dict):
+        out["analysis_changes"] = {key: changes[key] for key in (
+            "schema", "previous_status", "current_count", "previous_count", "compared_count",
+            "changed_count", "unchanged_count", "unresolved_count", "new_count", "removed_count", "reasons",
+            "price_compared_count", "input_compared_count", "input_snapshot_count", "baseline_source", "baseline_reason",
+        ) if key in changes}
     slim_recs = []
     for r in portfolio.get("recommendations") or []:
         if not isinstance(r, dict):
             continue
         s = {k: r.get(k) for k in _TERMINAL_REC_FIELDS if r.get(k) is not None}
+        s.update(_terminal_analysis_evidence(r))
         vb = r.get("verity_brain")
         if isinstance(vb, dict):
             s["verity_brain"] = {

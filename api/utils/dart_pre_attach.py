@@ -28,7 +28,7 @@ DART_KR_PATH = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.absp
 
 
 def load_dart_fundamentals_kr(
-    *, max_stale_days: int = 8, path: Optional[Path] = None
+    *, max_stale_days: int = 8, path: Optional[Path] = None, restore_private: bool = False
 ) -> Optional[Dict[str, Dict]]:
     """DART batch snapshot 로드. stale 시 None.
 
@@ -65,6 +65,11 @@ def load_dart_fundamentals_kr(
         return None
 
     fundamentals = snap.get("fundamentals") or {}
+    if restore_private:
+        from api.utils.dart_private_evidence import restore_source_evidence
+        fundamentals, restored = restore_source_evidence(fundamentals)
+        if restored:
+            print(f"[dart_pre_attach] private metadata matched rows={restored}", file=sys.stderr, flush=True)
     print(
         f"[dart_pre_attach] cache hit at={collected} fundamentals={len(fundamentals)} age={age.days}일",
         file=sys.stderr, flush=True,
@@ -101,7 +106,10 @@ def attach_dart_to_stocks(
       yfinance 가 정확히 채워져 있으면 (가격 의존 — per 매일 갱신) 그대로 유지.
       DART 만 있는 필드 (예: 분기 보고일 report_date) 는 항상 attach.
     """
-    fundamentals = load_dart_fundamentals_kr(max_stale_days=max_stale_days, path=path)
+    fundamentals = load_dart_fundamentals_kr(
+        max_stale_days=max_stale_days, path=path,
+        restore_private=any((s.get("currency") or "").upper() != "USD" for s in stocks),
+    )
     if not fundamentals:
         return {"attached_n": 0, "kr_total_n": 0, "cache_hit": False}
 
@@ -115,19 +123,31 @@ def attach_dart_to_stocks(
         if not ticker or ticker not in fundamentals:
             continue
         d = fundamentals[ticker]
+        def _record(field, source_field):
+            import copy
+            proof = (d.get("_source_evidence") or {}).get(source_field)
+            s.setdefault("fundamental_source_evidence", {})[field] = copy.deepcopy(proof) if isinstance(proof, dict) else {
+                "value": s.get(field), "source": d.get("source"), "ticker": ticker,
+                "definition": None, "inputs": [],
+            }
         # boost weak yfinance fields with DART (DART 1순위)
         if d.get("per") is not None and not s.get("per"):
             s["per"] = d["per"]
+            _record("per", "per")
         if d.get("pbr") is not None and not s.get("pbr"):
             s["pbr"] = d["pbr"]
+            _record("pbr", "pbr")
         if d.get("roe") is not None and (not s.get("roe") or s.get("roe") == 0):
             s["roe"] = d["roe"]
+            _record("roe", "roe")
             _clear_financial_missing(s, "roe", d["roe"])
         if d.get("debt_ratio") is not None and (not s.get("debt_ratio") or s.get("debt_ratio") == 0):
             s["debt_ratio"] = d["debt_ratio"]
+            _record("debt_ratio", "debt_ratio")
             _clear_financial_missing(s, "debt_ratio", d["debt_ratio"])
         if d.get("op_margin") is not None and (not s.get("operating_margin") or s.get("operating_margin") == 0):
             s["operating_margin"] = d["op_margin"]
+            _record("operating_margin", "op_margin")
             _clear_financial_missing(s, "operating_margin", d["op_margin"])
         # DART-only 필드는 항상 attach (yfinance 미커버) — Altman X1/X2 + F-Score 9/9 활성
         # (2026-05-20 sprint, fnlttSinglAcntAll CFS 우선 + 매출원가/CF 3종 추가)
@@ -140,6 +160,7 @@ def attach_dart_to_stocks(
             v = d.get(field)
             if v is not None and (s.get(field) in (None, 0)):
                 s[field] = v
+                _record(field, field)
         if d.get("report_date"):
             s["dart_report_date"] = d["report_date"]
         if d.get("fs_div"):

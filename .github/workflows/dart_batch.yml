@@ -48,6 +48,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Restore matching private DART source evidence
+        env:
+          DART_PRIVATE_EVIDENCE: "1"
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python -m api.utils.dart_private_evidence --restore-batch-cache data/dart_fundamentals_kr.json
+
       - name: Run DART batch
         env:
           UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
@@ -66,7 +73,17 @@ jobs:
           # 순수 변환·외부호출 0. backfill 완주 전까지 0종목 = graceful no-op (컴포넌트 series<4 자동숨김).
           python -m api.builders.dart_quarterly_public_builder
 
+      - name: Preserve private DART evidence before public Git
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          python scripts/upload_operator_data_to_supabase.py --only dart_fundamentals_kr
+          python scripts/ci/private_analysis_files.py
+
       - name: Commit data/dart_fundamentals_kr.json
+        if: success()
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
