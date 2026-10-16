@@ -11,6 +11,25 @@ from api.utils.universe_candidates import snapshot_rejection
 KST = timezone(timedelta(hours=9))
 
 
+def compact_portfolio_source(body: bytes) -> tuple:
+    """Preserve every JSON value while making transport whitespace explicit.
+
+    The archive preserves these compact bytes, not the producer's disk formatting.
+    Input evidence hashes use their own canonical scope and remain unchanged.
+    """
+    document = json.loads(body)
+    if not isinstance(document, dict):
+        raise ValueError("portfolio source must be an object")
+    compact = json.dumps(document, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return compact, {
+        "format": "compact-json-utf8-v1",
+        "producer_original_sha256": hashlib.sha256(body).hexdigest(),
+        "producer_original_bytes": len(body),
+        "archive_compact_sha256": hashlib.sha256(compact).hexdigest(),
+        "archive_compact_bytes": len(compact),
+    }
+
+
 def portfolio_archive(body: bytes, *, run_id: str, run_attempt: str) -> dict:
     """Private content-addressed copy of all records from this completed run."""
     if not re.fullmatch(r"[0-9]+", run_id) or not re.fullmatch(r"[0-9]+", run_attempt):
@@ -74,4 +93,4 @@ def prepare_portfolio_delivery(body: bytes, snapshot_body: bytes, *, run_id: str
             "source_portfolio_sha256": hashlib.sha256(body).hexdigest(),
         },
     }
-    return json.dumps(portfolio, ensure_ascii=False, indent=2).encode("utf-8")
+    return json.dumps(portfolio, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
