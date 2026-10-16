@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-10-16T09:36:46.744167+09:00",
+  "generated_at": "2026-10-16T14:00:44.121918+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 387754,
-    "python_modules": 1250,
-    "tsx_components": 149,
-    "json_data_files": 2436,
-    "json_total_tracked": 2461,
+    "code_lines_tsx_py": 391286,
+    "python_modules": 1267,
+    "tsx_components": 150,
+    "json_data_files": 2437,
+    "json_total_tracked": 2462,
     "workflows": 81,
     "scheduled_workflows": 62,
     "cron_triggers": 72,
-    "git_tracked_files": 8583
+    "git_tracked_files": 8604
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 84,
+      "count": 85,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -79,6 +79,7 @@
         "api/trading/kis_broker.py",
         "api/trading/mock_kis_broker.py",
         "api/utils/dart_pre_attach.py",
+        "api/utils/dart_private_evidence.py",
         "api/utils/macro_meta.py",
         "api/utils/macro_snapshot.py",
         "scripts/audit/macro_field_audit.py",
@@ -747,10 +748,10 @@
     },
     "surface": {
       "label": "출력",
-      "count": 149,
+      "count": 150,
       "by_group": {
         "framer-components/public-probe": 78,
-        "operator-web/app/components": 39,
+        "operator-web/app/components": 40,
         "admin": 15,
         "framer-components/crypto-public": 7,
         "review/member-map": 3,
@@ -764,33 +765,33 @@
     },
     "data": {
       "label": "데이터",
-      "count": 2436
+      "count": 2437
     },
     "validation": {
       "label": "검증",
-      "n_trading_days": 102,
-      "n_calendar_days": 151,
+      "n_trading_days": 103,
+      "n_calendar_days": 152,
       "next_milestone": {
         "next_n": 252,
-        "days_remaining": 150,
+        "days_remaining": 149,
         "label": "IC 의미 게이트 (Fama-MacBeth 1973, 1년 거래일)"
       },
-      "as_of": "2026-10-15T13:56:07+09:00"
+      "as_of": "2026-10-16T13:46:23+09:00"
     }
   },
   "python_by_dir": {
-    "api": 485,
-    "tests": 461,
-    "scripts": 174,
+    "api": 490,
+    "tests": 471,
+    "scripts": 176,
     "vercel-api": 116,
     "server": 8,
     ".github": 6
   },
   "funnel": {
-    "investable_real": 76,
+    "investable_real": 2885,
     "cap": 5000,
     "stages": [
-      76,
+      2885,
       300,
       100,
       25
@@ -801,7 +802,7 @@
       "brain100",
       "Top 25"
     ],
-    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~76 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
+    "status": "5000=cap(상한)·도달 불가. 실 투자가능 ~2885 → 25. US=S&P100 fallback (universe_us.json 부재). 산식=가설, 검증 N 진행 중."
   },
   "health": {
     "infra_summary": {
@@ -809,7 +810,7 @@
       "warn": 0,
       "alert": 0
     },
-    "infra_as_of": "2026-10-15T11:12:00+09:00",
+    "infra_as_of": "2026-10-16T11:01:44+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
