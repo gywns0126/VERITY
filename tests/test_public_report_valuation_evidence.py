@@ -116,9 +116,23 @@ class PublicValuationEvidenceTests(unittest.TestCase):
     def test_main_equity_method_and_share_date_are_distinct(self):
         row = self.build_fixture()["000660"]
         for key in ["PBR", "BPS"]:
-            self.assertIn("자기자본은 총자산 ÷ (1 + 부채비율 / 100)로 산출", row["facts_calc"][key])
+            self.assertIn("추정 자기자본은 총자산 ÷ (1 + 부채비율 / 100)로 산출", row["facts_calc"][key])
+            self.assertIn("지배주주 귀속 자본 여부 미확인", row["facts_calc"][key])
         self.assertIn("주식수 KRX 2026-09-11 기준", row["facts_calc"]["BPS"])
+        self.assertIn("자기주식 차감 여부 미확인", row["facts_calc"]["BPS"])
         self.assertNotIn("시총", row["facts_calc"]["BPS"])
+
+    def test_derived_equity_is_marked_estimated_without_changing_values(self):
+        value = builder._valuation_map(
+            {"084010": {"total_assets": 125e10, "debt_ratio": 34.4}},
+            {"084010": {"mktcap": 3465e8, "shares": 34_371_596}},
+        )["084010"]
+        for key in ("_pbr_in", "_bps_in"):
+            self.assertEqual(value[key]["equity_basis"], "assets_debt_ratio")
+            self.assertEqual(value[key]["equity_scope"], "ownership_unverified")
+        self.assertEqual(value["_bps_in"]["share_basis"], "issued_shares_treasury_unverified")
+        self.assertGreater(value["PBR"], 0)
+        self.assertGreater(value["BPS"], 0)
 
     def test_main_panel_pbr_is_point_in_time_not_ttm(self):
         row = self.build_fixture()["466410"]
@@ -126,6 +140,7 @@ class PublicValuationEvidenceTests(unittest.TestCase):
         self.assertIn("DART 분기 패널", row["facts_calc"]["PBR"])
         self.assertNotIn("TTM", row["facts_calc"]["PBR"])
         self.assertNotIn("부채비율", row["facts_calc"]["PBR"])
+        self.assertIn("지배주주 귀속 자본 여부 미확인", row["facts_calc"]["PBR"])
         self.assertNotIn("BPS", row["facts"])
 
     def test_main_annual_fallback_psr_carries_its_own_period(self):
@@ -135,6 +150,41 @@ class PublicValuationEvidenceTests(unittest.TestCase):
         self.assertIn("DART 연간 재무", row["facts_calc"]["PSR"])
         self.assertNotIn("PBR", row["facts"])
 
+
+class FinancialRowStatusTests(unittest.TestCase):
+    @staticmethod
+    def sga_row(fund):
+        statement = next(g for g in builder._financials(fund)["groups"] if g["title"] == "손익계산서")
+        return next(r for r in statement["rows"] if r["k"] == "판매비와관리비")
+
+    def test_conflicting_default_zero_is_not_a_known_amount(self):
+        row = self.sga_row({"revenue": 125e10, "gross_profit": 702e8,
+                            "operating_profit": -29e8, "sga": 0})
+        self.assertEqual(row["v"], "미확인")
+        self.assertEqual(row["status"], "conflict")
+        self.assertIn("원천 확인 필요", row["reason"])
+        self.assertNotIn("731", json.dumps(row, ensure_ascii=False))
+
+    def test_uncontradicted_zero_retains_value_with_unverified_state(self):
+        for zero in (0, "0"):
+            with self.subTest(zero=zero):
+                row = self.sga_row({"revenue": 100e8, "gross_profit": 30e8,
+                                    "operating_profit": 30e8, "sga": zero})
+                self.assertEqual(row["v"], "0")
+                self.assertEqual(row["status"], "unverified_zero")
+
+    def test_unverified_metadata_cannot_promote_zero_to_reported(self):
+        base = {"revenue": 100e8, "gross_profit": 30e8, "operating_profit": 20e8}
+        row = self.sga_row({**base, "sga": 0,
+                            "_source_evidence": {"sga": {"inputs": [{"account_id": "sga"}]}}})
+        self.assertEqual(row["v"], "미확인")
+        self.assertEqual(row["status"], "conflict")
+
+    def test_nonzero_sga_is_preserved(self):
+        base = {"revenue": 100e8, "gross_profit": 30e8, "operating_profit": 20e8}
+        nonzero = self.sga_row({**base, "sga": 10e8})
+        self.assertEqual(nonzero["v"], "10억")
+        self.assertNotIn("status", nonzero)
 
 class ValuationEvidenceEdgeTests(unittest.TestCase):
     def apply(self, pin=None, cap_as_of=None):

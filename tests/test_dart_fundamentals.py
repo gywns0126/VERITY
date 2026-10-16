@@ -13,6 +13,96 @@ from api.collectors import dart_fundamentals as df
 # ─────────────────────────────────────────────────────────────────────
 
 class TestExtractPLBS:
+    _request = {"ticker": "084010", "corp_code": "00123456",
+                "bsns_year": "2025", "reprt_code": "11011", "fs_div": "CFS"}
+
+    @staticmethod
+    def _sga_row(name, amount, **changes):
+        row = {
+            "sj_div": "IS", "account_nm": name, "thstrm_amount": amount,
+            "corp_code": "00123456", "bsns_year": "2025",
+            "rcept_no": "20260318000780", "reprt_code": "11011",
+            "thstrm_nm": "제 25 기", "currency": "KRW",
+        }
+        row.update(changes)
+        return row
+
+    def test_split_sga_sums_same_filing_rows_and_preserves_inputs(self):
+        selling = self._sga_row("판매비 (주23,24)", "22,821,576,676")
+        administrative = self._sga_row("관리비 (주23,24)", "50,293,694,325")
+        sources = {}
+        out = df._extract_pl_bs_from_dart(
+            {"list": [selling, administrative]}, source_rows=sources, request_context=self._request)
+        assert out["sga"] == 73_115_271_001
+        assert sources["sga"] == [
+            {**selling, "request_context": self._request},
+            {**administrative, "request_context": self._request},
+        ]
+        assert sources["sga"][0] is not selling
+        assert "stock_code" not in sources["sga"][0]
+        assert "fs_div" not in sources["sga"][0]
+        assert "thstrm_dt" not in sources["sga"][0]
+
+    def test_reported_sga_total_precedes_split_in_any_order(self):
+        selling = self._sga_row("판매비", "22,821,576,676")
+        administrative = self._sga_row("관리비", "50,293,694,325")
+        total = self._sga_row("판매비와관리비", "70,000,000,000")
+        for rows in ([total, selling, administrative], [selling, administrative, total]):
+            sources = {}
+            out = df._extract_pl_bs_from_dart(
+                {"list": rows}, source_rows=sources, request_context=self._request)
+            assert out["sga"] == 70_000_000_000
+            assert sources["sga"] == {**total, "request_context": self._request}
+
+    def test_split_sga_requires_both_unique_rows_and_same_identity(self):
+        selling = self._sga_row("판매비", "22,821,576,676")
+        administrative = self._sga_row("관리비", "50,293,694,325")
+        for rows in (
+            [selling],
+            [selling, administrative, administrative],
+            [selling, self._sga_row("관리비", "50,293,694,325", bsns_year="2024")],
+            [selling, self._sga_row("관리비", "50,293,694,325", reprt_code="11012")],
+            [selling, self._sga_row("관리비", "50,293,694,325", thstrm_nm="제 24 기")],
+            [selling, self._sga_row("관리비", "50,293,694,325", rcept_no="20260318000781")],
+            [selling, self._sga_row("관리비", "50,293,694,325", currency="USD")],
+            [self._sga_row("판매비", "22,821,576,676", currency="USD"),
+             self._sga_row("관리비", "50,293,694,325", currency="USD")],
+            [selling, self._sga_row("관리비", "50,293,694,325", fs_div="OFS")],
+            [selling, self._sga_row("관리비", "50,293,694,325", stock_code="000001")],
+            [self._sga_row("판매비", "22,821,576,676", thstrm_dt="2025.01.01 ~ 2025.12.31"), administrative],
+            [self._sga_row("판매비", "22,821,576,676", thstrm_dt="2025.01.01 ~ 2025.12.31"),
+             self._sga_row("관리비", "50,293,694,325", thstrm_dt="2024.01.01 ~ 2024.12.31")],
+            [self._sga_row("판매비", "22,821,576,676", thstrm_dt="2025.99.01 ~ 2025.12.31"),
+             self._sga_row("관리비", "50,293,694,325", thstrm_dt="2025.99.01 ~ 2025.12.31")],
+            [selling, self._sga_row("관리비", "50,293,694,325", rcept_no=None)],
+            [selling, self._sga_row("관리비", "-")],
+        ):
+            sources = {}
+            out = df._extract_pl_bs_from_dart(
+                {"list": rows}, source_rows=sources, request_context=self._request)
+            assert out["sga"] == 0
+            assert "sga" not in sources
+
+    def test_split_sga_requires_matching_request_context(self):
+        rows = [self._sga_row("판매비", "1"), self._sga_row("관리비", "2")]
+        for context in (None, {**self._request, "corp_code": "87654321"},
+                        {**self._request, "bsns_year": "2024"},
+                        {**self._request, "reprt_code": "11012"}):
+            sources = {}
+            out = df._extract_pl_bs_from_dart(
+                {"list": rows}, source_rows=sources, request_context=context)
+            assert out["sga"] == 0
+            assert "sga" not in sources
+
+    def test_split_sga_accepts_raw_zero_without_treating_it_as_missing(self):
+        selling = self._sga_row("판매비", 0)
+        administrative = self._sga_row("관리비", "50,293,694,325")
+        sources = {}
+        out = df._extract_pl_bs_from_dart(
+            {"list": [selling, administrative]}, source_rows=sources, request_context=self._request)
+        assert out["sga"] == 50_293_694_325
+        assert [row["thstrm_amount"] for row in sources["sga"]] == [0, "50,293,694,325"]
+
     def test_extract_basic(self):
         data = {
             "list": [
@@ -165,6 +255,35 @@ class TestYfFallback:
 # ─────────────────────────────────────────────────────────────────────
 
 class TestFetchOneFundamentals:
+    @patch("api.collectors.dart_fundamentals._yf_fallback_for_ticker")
+    @patch("api.collectors.dart_fundamentals._get_fnltt_all_data")
+    @patch("api.collectors.dart_corp_code.get_corp_code")
+    def test_split_sga_real_api_shape_reaches_fetch_evidence(self, mock_corp, mock_dart, mock_yf):
+        mock_corp.return_value = "00123456"
+        row = TestExtractPLBS._sga_row
+        mock_dart.return_value = {"status": "000", "list": [
+            row("자산총계", "100,000,000,000", sj_div="BS"),
+            row("판매비", "22,821,576,676"),
+            row("관리비", "50,293,694,325"),
+        ]}
+        mock_yf.return_value = {"per": None, "pbr": None, "roe": None,
+                                "debt_ratio": None, "op_margin": None}
+
+        out = df._fetch_one_dart_fundamentals("084010", "2025")
+        assert out["sga"] == 73_115_271_001
+        assert out["fs_div"] == "CFS"
+        mock_dart.assert_called_once_with("00123456", "2025", fs_div="CFS", reprt_code="11011")
+        evidence = out["_source_evidence"]["sga"]
+        assert evidence["value"] == out["sga"]
+        assert evidence["definition"] == "selling_plus_administrative_expense"
+        assert [item["raw_value"] for item in evidence["inputs"]] == [
+            "22,821,576,676", "50,293,694,325"]
+        assert [item["concept"] for item in evidence["inputs"]] == ["판매비", "관리비"]
+        for item in evidence["inputs"]:
+            assert item["request_context"] == TestExtractPLBS._request
+            assert item["ticker"] is None and item["fs_div"] is None
+            assert item["start"] is None and item["end"] is None
+
     @patch("api.collectors.dart_fundamentals._yf_fallback_for_ticker")
     @patch("api.collectors.dart_fundamentals._get_fnltt_all_data")
     @patch("api.collectors.dart_corp_code.get_corp_code")
