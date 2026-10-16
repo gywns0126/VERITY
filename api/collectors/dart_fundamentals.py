@@ -43,7 +43,7 @@ def _parse_int(value) -> int:
         return 0
 
 
-def _extract_pl_bs_from_dart(data: dict) -> dict:
+def _extract_pl_bs_from_dart(data: dict, *, source_rows=None) -> dict:
     """DART fnlttSinglAcntAll.json 응답에서 PL/BS/CF 핵심 항목 추출.
 
     2026-05-20 확장 (실호출 audit 005930 2024 CFS 213 항목 기준):
@@ -87,6 +87,11 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
         "financing_cashflow": 0,
         "free_cashflow": 0,
     }
+    def _assign(field, amount, item):
+        out[field] = amount
+        if source_rows is not None:
+            source_rows[field] = dict(item)
+
     for item in data.get("list", []):
         sj = item.get("sj_div", "")
         acct = item.get("account_nm", "")
@@ -99,20 +104,20 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
             #   부분일치 금지 유지 — '자본과부채총계'(=ifrs-full_EquityAndLiabilities, 별 id) 오염 0
             #   (2026-07-06 부채비율 5.8% 사고 가드 계승).
             if aid in ("ifrs-full_Assets", "ifrs_Assets") or acct == "자산총계":
-                out["total_assets"] = amount
+                _assign("total_assets", amount, item)
             elif aid in ("ifrs-full_Liabilities", "ifrs_Liabilities") or acct == "부채총계":
-                out["total_liabilities"] = amount
+                _assign("total_liabilities", amount, item)
             elif aid in ("ifrs-full_Equity", "ifrs_Equity") or acct == "자본총계":
                 # 구 택소노미 접두사 'ifrs_'(언더스코어) 포함 — 자본 분모 붕괴→debt_ratio 폭발 방어.
-                out["equity"] = amount
+                _assign("equity", amount, item)
             elif aid == "ifrs-full_CurrentAssets" or acct == "유동자산":
-                out["current_assets"] = amount
+                _assign("current_assets", amount, item)
             elif aid == "ifrs-full_CurrentLiabilities" or acct == "유동부채":
-                out["current_liabilities"] = amount
+                _assign("current_liabilities", amount, item)
             elif aid == "ifrs-full_RetainedEarnings" or "이익잉여금" in acct:
-                out["retained_earnings"] = amount
+                _assign("retained_earnings", amount, item)
             elif aid == "ifrs-full_IssuedCapital" or acct == "자본금":
-                out["capital"] = amount
+                _assign("capital", amount, item)
             elif "투자부동산" in acct:
                 out["investment_property"] = max(out["investment_property"], amount)
             elif acct.strip() == "유형자산" or item.get("account_id") == "ifrs-full_PropertyPlantAndEquipment":
@@ -127,35 +132,35 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
                 #   '수익(매출액)'/'매출 및 지분법손익' 어떤 변형이든 id 불변. 구 substring '수익(매출액)' 은
                 #   '기타수익(매출액)'(ifrs-full_OtherRevenue)을 잡아 revenue 오염(차바이오텍 240B vs 1.27조)·
                 #   top-line '매출' 누락(LG화학 revenue=0)이라 제거.
-                out["revenue"] = amount
+                _assign("revenue", amount, item)
             elif out["revenue"] == 0 and acct in ("매출액", "영업수익", "매출", "매출 및 지분법손익"):
                 # id 부재(구 비표준) fallback — 정확일치만.
-                out["revenue"] = amount
+                _assign("revenue", amount, item)
             elif acct == "매출원가":
-                out["cogs"] = amount
+                _assign("cogs", amount, item)
             elif acct == "매출총이익" or "매출총이익" in acct:
-                out["gross_profit"] = amount
+                _assign("gross_profit", amount, item)
             elif aid == "dart_OperatingIncomeLoss" or acct in ("영업이익", "영업이익(손실)"):
                 # 🚨 account_id 우선(dart_ 확장, BS/IS/CF 동일 정책) + 정확일치 유지. 부분일치 절대 금지 —
                 #   '계속영업이익(손실)'(세후≈순이익)·'중단영업이익(손실)'·'주당…계속영업이익(손실)'(EPS)을 흡수해
                 #   op 를 자릿수/부호 파탄내던 구버그(LGES op 5,287원 vs 2.16조·GS 부호역전) 방어.
-                out["operating_profit"] = amount
+                _assign("operating_profit", amount, item)
             elif item.get("account_id") == "ifrs-full_ProfitLoss":
                 # 🚨 순이익 총계 정본 = account_id ifrs-full_ProfitLoss (NCI 포함 총계). 부호 보존
                 #   (손실=음수), max 제거. 이전 max(0,음수) 클램프가 적자기업 순이익을 0으로 왜곡 →
                 #   roa/roe null + LG화학류 wrong-sign. eq=자산-부채(NCI 포함) 분모와 정합.
                 #   (2026-07-17: 분기순이익/반기순이익 라벨도 이 정본에 흡수 — 분기 roa 복원 유지)
-                out["net_income"] = amount
+                _assign("net_income", amount, item)
             elif out["net_income"] == 0 and "지분" not in acct and "차감전" not in acct and (
                     "당기순이익" in acct or "당기순손실" in acct or "당기순손익" in acct
                     or "분기순이익" in acct or "분기순손실" in acct or "분기순손익" in acct
                     or "반기순이익" in acct or "반기순손실" in acct or "반기순손익" in acct):
                 # account_id 부재(구 K-GAAP/비표준) fallback. '지분'(지배/비지배 소분해)·'차감전'(pretax) 배제.
-                out["net_income"] = amount
+                _assign("net_income", amount, item)
             elif "법인세차감전" in acct or "법인세비용차감전" in acct:
-                out["pretax_income"] = amount
+                _assign("pretax_income", amount, item)
             elif "판매비와관리비" in acct:
-                out["sga"] = amount
+                _assign("sga", amount, item)
             elif acct in ("금융수익", "금융이익"):
                 out["finance_income"] = max(out["finance_income"], amount)
             elif acct in ("금융원가", "금융비용"):
@@ -163,18 +168,18 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
             elif aid == "ifrs-full_IncomeTaxExpenseContinuingOperations" or acct == "법인세비용":
                 # account_id 우선(BS/IS/CF 와 동일 정책) — '법인세비용(수익)'(삼성·SK)·'계속영업법인세효익'(SK이노)
                 # 라벨변형이 account_nm 정확일치를 빠져나가 income_tax=0 스퓨리어스 발생하던 것 복구.
-                out["income_tax"] = amount
+                _assign("income_tax", amount, item)
         elif sj == "CF":
             # 🚨 총계류 = account_id(IFRS 표준) 우선 매칭 + 한글 fallback (BS/IS 와 동일 정책 #87 을 CF 에도 적용).
             #   2025 사업보고서부터 라벨 변형 다수('영업활동 현금흐름' 공백·'영업활동순현금흐름' 등) →
             #   한글 텍스트-only 매칭이 놓쳐 현금흐름 0 (SK하이닉스·삼성전기·코웨이 실증). account_id 는 전 회사·전 연도 불변.
             #   exact id — '영업활동에서 창출된 현금'(ifrs-full_...InOperations, 소분해)과 구분해 오염 방지.
             if aid == "ifrs-full_CashFlowsFromUsedInOperatingActivities" or "영업활동현금흐름" in acct or acct == "영업활동으로 인한 현금흐름":
-                out["operating_cashflow"] = amount
+                _assign("operating_cashflow", amount, item)
             elif aid == "ifrs-full_CashFlowsFromUsedInInvestingActivities" or "투자활동현금흐름" in acct or acct == "투자활동으로 인한 현금흐름":
-                out["investing_cashflow"] = amount
+                _assign("investing_cashflow", amount, item)
             elif aid == "ifrs-full_CashFlowsFromUsedInFinancingActivities" or "재무활동현금흐름" in acct or acct == "재무활동으로 인한 현금흐름":
-                out["financing_cashflow"] = amount
+                _assign("financing_cashflow", amount, item)
     out["equity"] = out["total_assets"] - out["total_liabilities"]
     out["working_capital"] = out["current_assets"] - out["current_liabilities"]
     out["free_cashflow"] = out["operating_cashflow"] + out["investing_cashflow"]
@@ -353,7 +358,8 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
                 data = _get_fnltt_all_data(corp_code, bsns_year, fs_div=fs_div, reprt_code=reprt_code)
                 if data.get("status") != "000":
                     continue
-                pl_bs = _extract_pl_bs_from_dart(data)
+                source_rows = {}
+                pl_bs = _extract_pl_bs_from_dart(data, source_rows=source_rows)
                 if pl_bs.get("total_assets", 0) <= 0:
                     continue
                 ratios = _compute_ratios(pl_bs)
@@ -366,6 +372,27 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
                           "operating_cashflow", "investing_cashflow",
                           "financing_cashflow", "free_cashflow"):
                     base[k] = pl_bs.get(k, 0)
+                from api.utils.source_alignment import dart_input, field_evidence
+                evidence = base["_source_evidence"] = {}
+                dependencies = {
+                    "roe": ("net_income", "total_assets", "total_liabilities"),
+                    "debt_ratio": ("total_liabilities", "total_assets"),
+                    "roa": ("net_income", "total_assets"),
+                    "op_margin": ("operating_profit", "revenue"),
+                    "current_ratio": ("current_assets", "current_liabilities"),
+                }
+                definitions = {"roe": "annual_net_income_over_closing_equity",
+                               "debt_ratio": "total_liabilities_over_assets_minus_liabilities",
+                               "op_margin": "annual_operating_profit_over_revenue",
+                               "current_ratio": "current_assets_over_current_liabilities"}
+                for field in ("roe", "debt_ratio", "op_margin", "current_ratio", "roa",
+                              "revenue", "operating_profit", "net_income", "operating_cashflow"):
+                    keys = dependencies.get(field, (field,))
+                    evidence[field] = field_evidence(
+                        base.get(field), source="DART", ticker=ticker, issuer_id=corp_code,
+                        definition=definitions.get(field, "annual_" + field),
+                        unit="ratio" if field == "current_ratio" else "percent" if field in dependencies else "KRW",
+                        inputs=[dart_input(source_rows[k]) if k in source_rows else None for k in keys])
                 base["source"] = "DART"
                 base["fs_div"] = fs_div
                 base["report_date"] = bsns_year

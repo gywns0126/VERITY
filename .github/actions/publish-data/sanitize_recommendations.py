@@ -46,6 +46,9 @@ STRIP_KEYS = {
     "external_risk", "commodity_margin", "niche_data", "insider_sentiment",
     "social_sentiment", "equity_research_brief", "_gemini_model", "rec_price",
     "account_route",
+    # Source-alignment diagnostics stay in the authenticated operator payload.
+    "source_alignment", "fundamental_source_evidence", "_source_evidence", "_source_identity",
+    "analysis_change", "evidence_snapshot", "rec_price_evidence", "analysis_changes",
     # 2026-08-03 display_verdict 게이트 — LLM 합의 원본(참고 관측)은 비공개.
     # display_verdict 자체는 STRIP_PAT(r"verdict") 자동 포착. recommendation 문자열만 공개.
     "analyst_view",
@@ -80,6 +83,10 @@ _SENTIMENT_KEEP = {"score", "positive", "negative", "neutral", "headline_count",
 def _sanitize_rec(rec: dict) -> dict:
     out = {k: v for k, v in rec.items()
            if k not in STRIP_KEYS and not STRIP_PAT.search(k)}
+    sec = out.get("sec_financials")
+    if isinstance(sec, dict):
+        out["sec_financials"] = {k: v for k, v in sec.items()
+                                 if k not in ("_source_evidence", "_source_identity")}
     s = out.get("sentiment")
     if isinstance(s, dict):
         out["sentiment"] = {k: v for k, v in s.items() if k in _SENTIMENT_KEEP}

@@ -11,20 +11,27 @@ private bucket 에 올려 /api/admin(authed, ?type=portfolio_full) 이 서빙. �
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import requests
 
 BUCKET = os.environ.get("OPERATOR_BUCKET", "verity-reports")
 APPROVED_PRIVATE_DESTS = frozenset({
     "_operator/analyst_reports.json", "_operator/dart_kr_backfill_result.json",
+    "_operator/dart_fundamentals_kr.json",
 })
+EXPLICIT_ONLY_DESTS = frozenset({"_operator/dart_fundamentals_kr.json"})
 
 # (로컬 소스, bucket 내 경로, content-type).
 # 2026-07-23 분리 Stage 3 후속: 오퍼레이터 전용 파일(public-probe 소비 0)을 private bucket 으로.
 # 공개 발행 제거(action.yml)와 짝 — authed /api/admin?type=<name> 라우트로 서빙.
 UPLOADS = [
+    # Sole producer: dart_batch --only dart_fundamentals_kr. Consumers never write this object.
+    ("data/dart_fundamentals_kr.json", "_operator/dart_fundamentals_kr.json", "application/json"),
     # PM 승인 2026-09-27: 오퍼레이터 조인의 배포 결손 복구. 공개 발행 금지.
     ("data/analyst_reports.json", "_operator/analyst_reports.json", "application/json"),
     ("data/dart_kr_backfill_result.json", "_operator/dart_kr_backfill_result.json", "application/json"),
@@ -130,6 +137,26 @@ def _backfill_preserves_coverage(doc: dict, previous: requests.Response) -> bool
         return False
 
 
+def _preserve_analysis_archive(supabase_url: str, key: str, body: bytes, archive: dict) -> bool:
+    """Create without replacement; accept duplicates only after exact private readback."""
+    url = f"{supabase_url}/storage/v1/object/{BUCKET}/{archive['object']}"
+    headers = {"apikey": key, "Authorization": f"Bearer {key}",
+               "Content-Type": "application/json", "x-upsert": "false",
+               "Cache-Control": "no-store"}
+    try:
+        response = requests.post(url, headers=headers, data=body, timeout=60, allow_redirects=False)
+        # Standard Storage uploads report existing assets as HTTP400 or409.
+        # No error body proves preservation: only authenticated exact bytes do.
+        if response.status_code not in (200, 201, 400, 409):
+            return False
+        readback = requests.get(url, headers={"apikey": key, "Authorization": f"Bearer {key}"},
+                                timeout=60, allow_redirects=False)
+        return (readback.status_code == 200 and readback.content == body
+                and hashlib.sha256(readback.content).hexdigest() == archive["sha256"])
+    except requests.RequestException:
+        return False
+
+
 def main() -> int:
     supabase_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -144,9 +171,53 @@ def main() -> int:
         if i + 1 < len(sys.argv):
             only = sys.argv[i + 1]
 
-    uploads = [u for u in UPLOADS if (only is None or only in u[0] or only in u[1])]
+    uploads = [u for u in UPLOADS
+               if (u[1] not in EXPLICIT_ONLY_DESTS or only == "dart_fundamentals_kr")
+               and (only is None or only in u[0] or only in u[1])]
+    require_analysis = "--require-completed-analysis" in sys.argv
+    prepared_portfolio = None
+    archive = None
+    source_portfolio = None
+    if require_analysis:
+        # Validate once and upload those exact bytes, even if another local file changes.
+        if BUCKET != "verity-reports" or not any(dest == "_operator/portfolio_full.json" for _, dest, _ in uploads):
+            print("ERROR: completed analysis requires the private portfolio destination", file=sys.stderr)
+            return 2
+        try:
+            phase = sys.argv[sys.argv.index("--delivery-phase") + 1]
+            sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+            from scripts.ci.operator_portfolio_delivery import prepare_portfolio_delivery, portfolio_archive
+            portfolio_path, snapshot_path = Path("data/portfolio.json"), Path("data/universe_candidates.json")
+            source_options = ("--portfolio-source", "--snapshot-source")
+            if any(flag in sys.argv for flag in source_options):
+                from scripts.ci.private_analysis_files import final_source_paths
+                if phase != "final" or not all(flag in sys.argv for flag in source_options):
+                    raise ValueError("paired final sources required")
+                supplied = tuple(Path(sys.argv[sys.argv.index(flag) + 1]) for flag in source_options)
+                expected_paths = final_source_paths(Path.cwd(), os.environ.get("RUNNER_TEMP", ""),
+                    os.environ.get("GITHUB_RUN_ID", ""), os.environ.get("GITHUB_RUN_ATTEMPT", ""))
+                if any(path.is_symlink() or path.resolve() != expected.resolve()
+                       for path, expected in zip(supplied, expected_paths)):
+                    raise ValueError("foreign private final source path")
+                portfolio_path, snapshot_path = supplied
+            source_portfolio = portfolio_path.read_bytes()
+            prepared_portfolio = prepare_portfolio_delivery(
+                source_portfolio, snapshot_path.read_bytes(),
+                run_id=os.environ.get("GITHUB_RUN_ID", ""),
+                run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+                expected_scan_id=os.environ.get("UNIVERSE_EXPECTED_SCAN_ID", ""),
+                analysis_mode=os.environ.get("ANALYSIS_MODE", ""),
+                verity_mode=os.environ.get("VERITY_MODE", ""), phase=phase,
+                now=datetime.now(timezone(timedelta(hours=9))),
+            )
+            archive = portfolio_archive(source_portfolio, run_id=os.environ.get("GITHUB_RUN_ID", ""),
+                                        run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT", ""))
+        except (OSError, ValueError, TypeError, KeyError, IndexError):
+            # Never print exception text or payloads from the private contract.
+            print("ERROR: completed analysis delivery contract failed", file=sys.stderr)
+            return 2
     # These newly authorized payloads must never follow an accidental public-bucket override.
-    if any(dest in APPROVED_PRIVATE_DESTS and os.path.isfile(src) for src, dest, _ in uploads):
+    if require_analysis or any(dest in APPROVED_PRIVATE_DESTS and os.path.isfile(src) for src, dest, _ in uploads):
         if BUCKET != "verity-reports":
             print("ERROR: approved operator facts require verity-reports", file=sys.stderr)
             return 2
@@ -154,6 +225,7 @@ def main() -> int:
             check = requests.get(
                 f"{supabase_url}/storage/v1/bucket/{BUCKET}",
                 headers={"apikey": key, "Authorization": f"Bearer {key}"}, timeout=20,
+                allow_redirects=False,
             )
             private = check.status_code == 200 and check.json().get("public") is False
         except (requests.RequestException, ValueError, AttributeError):
@@ -161,6 +233,16 @@ def main() -> int:
         if not private:
             print("ERROR: private bucket verification failed; upload blocked", file=sys.stderr)
             return 2
+    archive_ok = True
+    if archive is not None:
+        archive_ok = _preserve_analysis_archive(supabase_url, key, source_portfolio, archive)
+        prepared_doc = json.loads(prepared_portfolio)
+        prepared_doc["analysis_provenance"]["delivery"]["archive"] = {
+            **archive, "status": "preserved" if archive_ok else "failed",
+        }
+        prepared_portfolio = json.dumps(prepared_doc, ensure_ascii=False, indent=2).encode("utf-8")
+        if not archive_ok:
+            print("ERROR: private analysis archive not preserved; current delivery still attempted", file=sys.stderr)
     ok = 0
     approved_expected = {dest for src, dest, _ in uploads
                          if dest in APPROVED_PRIVATE_DESTS and (only is not None or os.path.isfile(src))}
@@ -169,8 +251,11 @@ def main() -> int:
         if not os.path.isfile(src):
             print(f"WARN: {src} 부재 — skip")
             continue
-        with open(src, "rb") as f:
-            body = f.read()
+        if prepared_portfolio is not None and dest == "_operator/portfolio_full.json":
+            body = prepared_portfolio
+        else:
+            with open(src, "rb") as f:
+                body = f.read()
         # JSON parse 검증 — 깨진 파일 업로드 차단(오퍼레이터 콘솔 파손 방지)
         if ctype == "application/json":
             try:
@@ -203,20 +288,33 @@ def main() -> int:
                 },
                 data=body,
                 timeout=60,
+                allow_redirects=False,
             )
+            if r.status_code in (200, 201) and dest in EXPLICIT_ONLY_DESTS:
+                readback = requests.get(
+                    f"{supabase_url}/storage/v1/object/{BUCKET}/{dest}",
+                    headers={"apikey": key, "Authorization": f"Bearer {key}", "Cache-Control": "no-store"},
+                    timeout=60, allow_redirects=False,
+                )
+                if readback.status_code != 200 or readback.content != body:
+                    print("ERROR: private DART readback mismatch; publication blocked", file=sys.stderr)
+                    continue
         except requests.RequestException as e:
-            print(f"  ✗ {src} → 요청 실패: {e}", file=sys.stderr)
+            detail = "request failed" if require_analysis or dest in EXPLICIT_ONLY_DESTS else str(e)
+            print(f"  ✗ {src} → 요청 실패: {detail}", file=sys.stderr)
             continue
         if r.status_code in (200, 201):
             print(f"  ✓ {src} → {BUCKET}/{dest} ({len(body):,} bytes)")
             ok += 1
             approved_ok.add(dest)
         else:
-            print(f"  ✗ {src} → {r.status_code} {r.text[:150]}", file=sys.stderr)
+            detail = "" if require_analysis or dest in EXPLICIT_ONLY_DESTS else r.text[:150]
+            print(f"  ✗ {src} → {r.status_code} {detail}", file=sys.stderr)
 
     print(f"operator upload: {ok}/{len(uploads)}")
     # 새 private 입력에는 공개 fallback이 없다. 실패를 성공 종료로 숨기지 않는다.
-    return 1 if approved_expected - approved_ok else 0
+    return 1 if (not archive_ok or approved_expected - approved_ok or
+                 (require_analysis and "_operator/portfolio_full.json" not in approved_ok)) else 0
 
 
 if __name__ == "__main__":

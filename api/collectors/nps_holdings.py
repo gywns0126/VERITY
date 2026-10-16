@@ -182,7 +182,8 @@ def _nps_catalyst_events() -> Tuple[Dict[str, Dict[str, str]], Dict[str, Any]]:
                     continue
                 prev = out.get(tk)
                 if prev is None or dt > prev.get("event_date", ""):
-                    out[tk] = {"ticker": tk, "name": str(nm or tk), "event_date": dt}
+                    out[tk] = {"ticker": tk, "name": str(nm or tk), "event_date": dt,
+                               "event_receipt": re.sub(r"\D", "", str(o.get("rcept_no") or ""))[:14]}
     except Exception as exc:  # noqa: BLE001
         audit["event_source_error"] = type(exc).__name__
         return out, audit
@@ -214,7 +215,7 @@ def _float_or_none(value: Any) -> Optional[float]:
 
 
 def _latest_nps_from_payloads(
-    major_rows: List[Dict[str, Any]], officer_rows: List[Dict[str, Any]]
+    major_rows: List[Dict[str, Any]], officer_rows: List[Dict[str, Any]], *, with_identity=False
 ) -> Optional[Dict[str, Any]]:
     """majorstock·elestock 응답에서 국민연금의 가장 최근 신고값을 고른다."""
     candidates: List[Dict[str, Any]] = []
@@ -222,6 +223,7 @@ def _latest_nps_from_payloads(
         if NPS_NAME not in str(row.get("repror") or ""):
             continue
         candidates.append({
+            "_receipt": re.sub(r"\D", "", str(row.get("rcept_no") or ""))[:14],
             "pct": _float_or_none(row.get("stkrt")),
             "qty_change": _float_or_none(row.get("stkqy_irds")),
             "date": _iso_date(row.get("rcept_dt")),
@@ -231,6 +233,7 @@ def _latest_nps_from_payloads(
         if NPS_NAME not in str(row.get("repror") or ""):
             continue
         candidates.append({
+            "_receipt": re.sub(r"\D", "", str(row.get("rcept_no") or ""))[:14],
             "pct": _float_or_none(row.get("sp_stock_lmp_rate")),
             "qty_change": _float_or_none(row.get("sp_stock_lmp_irds_cnt")),
             "date": _iso_date(row.get("rcept_dt")),
@@ -239,7 +242,10 @@ def _latest_nps_from_payloads(
     candidates = [r for r in candidates if r.get("date") and r.get("pct") is not None]
     if not candidates:
         return None
-    return max(candidates, key=lambda r: (_date_key(r.get("date")), _SOURCE_PRIORITY.get(r.get("src"), 0)))
+    latest = max(candidates, key=lambda r: (_date_key(r.get("date")), _SOURCE_PRIORITY.get(r.get("src"), 0)))
+    if not with_identity:
+        latest.pop("_receipt", None)
+    return latest
 
 
 def _dart_api_key() -> str:
@@ -254,79 +260,107 @@ def _dart_api_key() -> str:
 
 
 def _from_dart_live(
-    name2tk: Dict[str, str], baseline: Dict[str, Dict[str, Any]]
+    name2tk: Dict[str, str], baseline: Dict[str, Dict[str, Any]], *,
+    only_events=None, corp_codes=None,
 ) -> Tuple[Dict[str, Dict[str, Any]], set, Dict[str, Any]]:
-    """분기 자료 이후 국민연금 공시가 생긴 종목만 DART 원문으로 증분 갱신한다."""
+    """Normal incremental collection, or one explicitly bound target-only pass."""
+    import math
+    from api.collectors.nps_diagnostics import target_record, endpoint_record
     dart_api_key = _dart_api_key()
     events, source_audit = _nps_catalyst_events()
-    candidates = {
-        tk: event for tk, event in events.items()
-        if event.get("event_date", "") > _date_key((baseline.get(tk) or {}).get("date"))
-    }
-    audit: Dict[str, Any] = {
-        **source_audit,
-        "event_tickers": len(events),
-        "candidate_tickers": len(candidates),
-        "updated_tickers": 0,
-        "retired_tickers": 0,
-        "unresolved_tickers": 0,
-        "api_calls": 0,
-    }
+    candidates = {tk: event for tk, event in events.items()
+                  if event.get("event_date", "") > _date_key((baseline.get(tk) or {}).get("date"))
+                  and (only_events is None or tk in only_events)}
+    details = []
+    audit = {**source_audit, "event_tickers": len(events),
+             "candidate_tickers": len(candidates), "updated_tickers": 0,
+             "retired_tickers": 0, "unresolved_tickers": 0, "api_calls": 0,
+             "_target_diagnostics": details, "_resolved_updates": {}, "_resolved_retired": []}
     if not dart_api_key or not candidates:
         audit["unresolved_tickers"] = len(candidates) if not dart_api_key else 0
+        if not dart_api_key:
+            details.extend(target_record(tk, ev, stage="api_key_missing") for tk, ev in sorted(candidates.items()))
         return {}, set(), audit
-
     import requests
     from api.collectors.dart_corp_code import get_corp_code
-
     session = requests.Session()
-    out: Dict[str, Dict[str, Any]] = {}
-    retired = set()
+    out, retired = {}, set()
     for tk, event in sorted(candidates.items()):
-        corp_code = get_corp_code(tk)
+        detail = target_record(tk, event, stage="corp_mapping")
+        details.append(detail)
+        try:
+            corp_code = corp_codes.get(tk) if corp_codes is not None else get_corp_code(tk)
+        except Exception as exc:
+            detail["exception_class"] = type(exc).__name__
+            corp_code = None
+        detail["corp_code"] = str(corp_code) if re.fullmatch(r"\d{8}", str(corp_code or "")) else None
         if not corp_code:
             audit["unresolved_tickers"] += 1
             continue
-        payloads: Dict[str, List[Dict[str, Any]]] = {"major": [], "officer": []}
+        payloads = {"major": [], "officer": []}
         failed = False
-        for kind, url in (
-            ("major", "https://opendart.fss.or.kr/api/majorstock.json"),
-            ("officer", "https://opendart.fss.or.kr/api/elestock.json"),
-        ):
+        for kind, endpoint in (("major", "majorstock"), ("officer", "elestock")):
+            item = endpoint_record(endpoint)
+            detail["endpoints"].append(item)
             try:
-                response = session.get(
-                    url,
-                    params={"crtfc_key": dart_api_key, "corp_code": corp_code},
-                    timeout=15,
-                )
                 audit["api_calls"] += 1
+                response = session.get("https://opendart.fss.or.kr/api/" + endpoint + ".json",
+                                       params={"crtfc_key": dart_api_key, "corp_code": corp_code}, timeout=15,
+                                       **({"allow_redirects": False} if only_events is not None else {}))
+                http = getattr(response, "status_code", None)
+                item["http_status"] = http if isinstance(http, int) and not isinstance(http, bool) else None
+                if isinstance(http, int) and not 200 <= http < 300:
+                    failed = True
                 time.sleep(0.08)
+                item["stage"] = "json_parse"
                 body = response.json()
                 status = str(body.get("status") or "")
-                if status == "000":
+                item["api_status"] = status if re.fullmatch(r"\d{3}", status) else "invalid_status"
+                item["stage"] = "api_status"
+                if status == "000" and isinstance(body.get("list") or [], list):
                     payloads[kind] = body.get("list") or []
-                elif status not in ("013",):
+                    item["stage"] = "received"
+                elif status == "013":
+                    item["stage"] = "empty"
+                else:
                     failed = True
-            except Exception:  # noqa: BLE001
+            except Exception as exc:
+                item["exception_class"] = type(exc).__name__
                 failed = True
+        try:
+            latest = _latest_nps_from_payloads(payloads["major"], payloads["officer"], with_identity=True)
+        except Exception as exc:
+            detail.update(stage="row_parse", exception_class=type(exc).__name__)
+            latest, failed = None, True
+        if latest:
+            detail["last_parsed_date"] = latest.get("date")
+            detail["last_parsed_receipt"] = latest.pop("_receipt", None)
         if failed:
-            audit["unresolved_tickers"] += 1
+            detail["stage"] = "endpoint_failure" if detail["stage"] != "row_parse" else "row_parse"
+        elif latest is None:
+            detail["stage"] = "no_usable_nps_row"
+        elif not isinstance(latest.get("pct"), (int, float)) or not math.isfinite(latest["pct"]):
+            detail["stage"] = "nonfinite_ownership"
+        elif latest["pct"] > 100:
+            detail["stage"] = "ownership_out_of_range"
+        elif _date_key(latest.get("date")) < event.get("event_date", ""):
+            detail["stage"] = "stale_parsed_date"
+        elif only_events is not None and detail.get("last_parsed_receipt") != event.get("event_receipt"):
+            detail["stage"] = "receipt_identity_mismatch"
+        else:
+            detail.update(stage="resolved", status="resolved")
+            if (latest.get("pct") or 0) <= 0:
+                retired.add(tk)
+                audit["retired_tickers"] += 1
+                audit["_resolved_retired"].append(tk)
+                continue
+            latest.update(ticker=tk, name=str((baseline.get(tk) or {}).get("name") or event.get("name") or tk))
+            out[tk] = latest
+            audit["_resolved_updates"][tk] = dict(latest)
+            audit["updated_tickers"] += 1
+            time.sleep(0.05)
             continue
-        latest = _latest_nps_from_payloads(payloads["major"], payloads["officer"])
-        if latest is None or _date_key(latest.get("date")) < event.get("event_date", ""):
-            audit["unresolved_tickers"] += 1
-            continue
-        if (latest.get("pct") or 0) <= 0:
-            retired.add(tk)
-            audit["retired_tickers"] += 1
-            continue
-        latest.update({
-            "ticker": tk,
-            "name": str((baseline.get(tk) or {}).get("name") or event.get("name") or tk),
-        })
-        out[tk] = latest
-        audit["updated_tickers"] += 1
-        time.sleep(0.05)
+        audit["unresolved_tickers"] += 1
     return out, retired, audit
 
 
@@ -829,12 +863,15 @@ def _notify_failure(reason: str, audit: Dict[str, Any]) -> bool:
         return False
 
 
-def main() -> int:
+def _main(*, diagnostics_path=None) -> int:
+    from api.collectors.nps_diagnostics import begin_diagnostic, finish_diagnostic
+    diagnostic = begin_diagnostic()
     current_audit: Dict[str, Any] = {}
     try:
         previous = _load_json(OUTPUT_PATH, {}) or {}
         out = build_nps_holdings()
         current_audit = out.get("dart_refresh") or {}
+        finish_diagnostic(diagnostic, current_audit, diagnostics_path)
         failures = []
         if current_audit.get("event_source_ok", True) is False:
             failures.append(
@@ -866,10 +903,26 @@ def main() -> int:
         print(f"[nps_holdings] {out['count']}종목 ({out['coverage']}) → {OUTPUT_PATH}")
         return 0
     except Exception as e:  # noqa: BLE001
-        print(f"[nps_holdings] FAIL: {e}")
+        diagnostic["exception_class"] = type(e).__name__
+        finish_diagnostic(diagnostic, current_audit, diagnostics_path)
+        print(f"[nps_holdings] FAIL: {type(e).__name__}")
         _notify_failure(f"실행 예외: {type(e).__name__}", current_audit)
         return 1
 
 
+def main(*, diagnostics_path=None) -> int:
+    from api.collectors.nps_diagnostics import collection_lock, begin_diagnostic, finish_diagnostic
+    try:
+        with collection_lock():
+            return _main(diagnostics_path=diagnostics_path)
+    except BlockingIOError:
+        doc = begin_diagnostic()
+        doc["exception_class"] = "BlockingIOError"
+        finish_diagnostic(doc, {}, diagnostics_path)
+        print("[nps_holdings] collection lock busy; existing output preserved")
+        return 3
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    from api.collectors.nps_diagnostics import cli
+    raise SystemExit(cli())

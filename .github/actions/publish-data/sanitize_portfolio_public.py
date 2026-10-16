@@ -43,6 +43,8 @@ STRIP_KEYS = {
     # 운영·인프라 텔레메트리
     "system_health", "cost_monitor", "observability", "trail_integrity",
     "field_coverage", "price_pulse_meta", "krx_openapi", "daily_actions",
+    "source_alignment", "fundamental_source_evidence", "_source_evidence", "_source_identity",
+    "analysis_change", "evidence_snapshot", "rec_price_evidence", "analysis_changes",
     # 내러티브 리포트 (등급 분포·실현손익 embed)
     "daily_report", "daily_report_us", "weekly_report", "monthly_report",
     "quarterly_report", "semi_report",
