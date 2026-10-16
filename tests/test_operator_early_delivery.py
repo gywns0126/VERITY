@@ -15,6 +15,10 @@ from scripts.ci.operator_portfolio_delivery import prepare_portfolio_delivery, p
 NOW = datetime(2026, 10, 15, 2, 0, tzinfo=timezone(timedelta(hours=9)))
 
 
+def compact(body):
+    return json.dumps(json.loads(body), ensure_ascii=False, separators=(",", ":")).encode()
+
+
 def artifacts(age=2):
     source = (NOW - timedelta(hours=age)).isoformat()
     scan = {"schema_version": "v1", "scan_id": "gh:123:1", "scan_mode": "prod",
@@ -102,20 +106,21 @@ def upload_case(tmp_path, monkeypatch):
     monkeypatch.setattr(uploader.sys, "argv", ["upload", "--only", "portfolio_full",
                                               "--require-completed-analysis", "--delivery-phase", "analysis_complete"])
     calls = []
-    monkeypatch.setattr(uploader.requests, "get", lambda *a, **kw: SimpleNamespace(status_code=200, json=lambda: {"public": False}, content=body))
+    monkeypatch.setattr(uploader.requests, "get", lambda *a, **kw: SimpleNamespace(status_code=200, json=lambda: {"public": False}, content=compact(body)))
     monkeypatch.setattr(uploader.requests, "post", lambda url, **kw: calls.append((url, kw)) or SimpleNamespace(status_code=200))
     return data, body, calls
 
 
-def test_only_exact_portfolio_uploaded_privately_with_no_source_mutation(upload_case):
+def test_compact_portfolio_preserves_values_and_original_manifest_without_source_mutation(upload_case):
     data, body, calls = upload_case
     assert uploader.main() == 0
     assert (data / "portfolio.json").read_bytes() == body
     assert len(calls) == 2
     archive_url, archive_request = calls[0]
-    assert archive_url.endswith("/" + portfolio_archive(body, run_id="456", run_attempt="2")["object"])
+    assert archive_url.endswith("/" + portfolio_archive(compact(body), run_id="456", run_attempt="2")["object"])
     assert archive_request["headers"]["x-upsert"] == "false"
-    assert archive_request["data"] == body
+    assert archive_request["data"] == compact(body)
+    assert json.loads(archive_request["data"]) == json.loads(body)
     url, request = calls[-1]
     assert url == "https://private.example.test/storage/v1/object/verity-reports/_operator/portfolio_full.json"
     assert "/public/" not in url and request["allow_redirects"] is False
@@ -124,6 +129,12 @@ def test_only_exact_portfolio_uploaded_privately_with_no_source_mutation(upload_
     proof = json.loads(request["data"])["analysis_provenance"]["delivery"]
     assert proof["archive"]["status"] == "preserved"
     assert proof["archive"]["sha256"] == proof["source_portfolio_sha256"]
+    assert proof["source_serialization"] == {
+        "format": "compact-json-utf8-v1",
+        "producer_original_sha256": hashlib.sha256(body).hexdigest(), "producer_original_bytes": len(body),
+        "archive_compact_sha256": hashlib.sha256(compact(body)).hexdigest(),
+        "archive_compact_bytes": len(compact(body)),
+    }
 
 
 @pytest.mark.parametrize("public,status", [(True, 200), (None, 200), (False, 403), (False, 302)])
@@ -165,10 +176,10 @@ def test_bytes_verified_before_bucket_probe_are_the_uploaded_bytes(upload_case, 
     data, body, calls = upload_case
     def bucket(*args, **kwargs):
         (data / "portfolio.json").write_text('{"foreign":"changed during request"}')
-        return SimpleNamespace(status_code=200, json=lambda: {"public": False}, content=body)
+        return SimpleNamespace(status_code=200, json=lambda: {"public": False}, content=compact(body))
     monkeypatch.setattr(uploader.requests, "get", bucket)
     assert uploader.main() == 0
-    assert calls[0][1]["data"] == body
+    assert calls[0][1]["data"] == compact(body)
     assert json.loads(calls[-1][1]["data"])["analysis_provenance"]["analysis_run_id"] == "456"
 
 
@@ -183,7 +194,7 @@ def test_archive_duplicate_requires_exact_readback_before_claiming_preservation(
     def get(url, **kwargs):
         assert kwargs["allow_redirects"] is False
         return SimpleNamespace(status_code=200, json=lambda: {"public": False},
-                               content=body if identical else b'{"foreign":true}')
+                               content=compact(body) if identical else b'{"foreign":true}')
     monkeypatch.setattr(uploader.requests, "post", post)
     monkeypatch.setattr(uploader.requests, "get", get)
     assert uploader.main() == (0 if identical else 1)
@@ -211,9 +222,9 @@ def test_archive_keeps_every_evidence_record_and_separate_final_content(upload_c
         "evidence_snapshot": {"source": "unknown"}, "rec_price_evidence": {"status": "unknown"}})
     body = json.dumps(portfolio).encode()
     (data / "portfolio.json").write_bytes(body)
-    monkeypatch.setattr(uploader.requests, "get", lambda *a, **kw: SimpleNamespace(status_code=200, json=lambda: {"public": False}, content=body))
+    monkeypatch.setattr(uploader.requests, "get", lambda *a, **kw: SimpleNamespace(status_code=200, json=lambda: {"public": False}, content=compact(body)))
     assert uploader.main() == 0
-    assert calls[0][1]["data"] == body
+    assert calls[0][1]["data"] == compact(body)
     archived = json.loads(calls[0][1]["data"])
     current = json.loads(calls[-1][1]["data"])
     assert archived["recommendations"] == current["recommendations"] == portfolio["recommendations"]
@@ -225,7 +236,7 @@ def test_archive_keeps_every_evidence_record_and_separate_final_content(upload_c
     monkeypatch.setattr(uploader.sys, "argv", ["upload", "--only", "portfolio_full", "--require-completed-analysis", "--delivery-phase", "final"])
     assert uploader.main() == 0
     assert calls[2][0] != first_archive
-    assert calls[2][1]["data"] == body
+    assert calls[2][1]["data"] == compact(body)
     assert all(call[1]["headers"]["x-upsert"] == "false" for call in (calls[0], calls[2]))
 
 
@@ -256,9 +267,9 @@ def test_actual_input_snapshot_survives_slim_disk_save_and_private_archive(uploa
     canonical = json.dumps(snapshot["input_snapshot"], sort_keys=True, ensure_ascii=False,
                            separators=(",", ":"), allow_nan=False).encode()
     assert hashlib.sha256(canonical).hexdigest() == original["input_hash"] == snapshot["input_hash"]
-    monkeypatch.setattr(uploader.requests, "get", lambda *a, **kw: SimpleNamespace(status_code=200, json=lambda: {"public": False}, content=body))
+    monkeypatch.setattr(uploader.requests, "get", lambda *a, **kw: SimpleNamespace(status_code=200, json=lambda: {"public": False}, content=compact(body)))
     assert uploader.main() == 0
-    assert calls[0][1]["data"] == body
+    assert calls[0][1]["data"] == compact(body)
     archived = json.loads(calls[0][1]["data"])["recommendations"][0]["evidence_snapshot"]
     current = json.loads(calls[-1][1]["data"])["recommendations"][0]["evidence_snapshot"]
     assert archived == current == snapshot
@@ -284,9 +295,9 @@ def test_final_upload_uses_captured_postprocessing_source_after_git_strip(upload
     monkeypatch.setattr(uploader.sys, "argv", ["upload", "--only", "portfolio_full",
         "--require-completed-analysis", "--delivery-phase", "final",
         "--portfolio-source", str(paths[0]), "--snapshot-source", str(paths[1])])
-    monkeypatch.setattr(uploader.requests, "get", lambda *a, **kw: SimpleNamespace(status_code=200, json=lambda: {"public": False}, content=body))
+    monkeypatch.setattr(uploader.requests, "get", lambda *a, **kw: SimpleNamespace(status_code=200, json=lambda: {"public": False}, content=compact(body)))
     assert uploader.main() == 0
-    assert calls[0][1]["data"] == body
+    assert calls[0][1]["data"] == compact(body)
     delivered = json.loads(calls[-1][1]["data"])
     assert delivered["postprocessing"] == {"verified_after_analysis": True}
     assert delivered["recommendations"][0]["evidence_snapshot"]["input_snapshot"] == {"private": 42}

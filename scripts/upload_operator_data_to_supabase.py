@@ -27,6 +27,11 @@ APPROVED_PRIVATE_DESTS = frozenset({
 })
 EXPLICIT_ONLY_DESTS = frozenset({"_operator/dart_fundamentals_kr.json"})
 PORTFOLIO_DEST = "_operator/portfolio_full.json"
+STORAGE_ERROR_CODES = frozenset({
+    "EntityTooLarge", "InvalidMimeType", "InvalidRequest", "InvalidKey", "InvalidBucketName",
+    "InvalidJWT", "AccessDenied", "NoSuchKey", "NoSuchBucket", "ResourceAlreadyExists",
+    "KeyAlreadyExists", "AlreadyExists", "already_exists", "not_found", "unauthorized",
+})
 
 # (로컬 소스, bucket 내 경로, content-type).
 # 2026-07-23 분리 Stage 3 후속: 오퍼레이터 전용 파일(public-probe 소비 0)을 private bucket 으로.
@@ -139,6 +144,27 @@ def _backfill_preserves_coverage(doc: dict, previous: requests.Response) -> bool
         return False
 
 
+def _storage_diagnostic(stage: str, response, byte_count: int):
+    """Log fixed metadata and known codes only; never response messages or bodies."""
+    code = "unknown"
+    if response is not None:
+        try:
+            payload = response.json()
+            for field in ("code", "error"):
+                value = payload.get(field)
+                if isinstance(value, str) and value in STORAGE_ERROR_CODES:
+                    code = value
+                    break
+        except (ValueError, AttributeError, TypeError):
+            pass
+    else:
+        code = "request_failed"
+    print("[operator_storage] " + json.dumps({
+        "stage": stage, "http_status": response.status_code if response is not None else None,
+        "bytes": byte_count, "code": code,
+    }, separators=(",", ":")), file=sys.stderr)
+
+
 def _preserve_analysis_archive(supabase_url: str, key: str, body: bytes, archive: dict) -> bool:
     """Create without replacement; accept duplicates only after exact private readback."""
     url = f"{supabase_url}/storage/v1/object/{BUCKET}/{archive['object']}"
@@ -147,15 +173,21 @@ def _preserve_analysis_archive(supabase_url: str, key: str, body: bytes, archive
                "Cache-Control": "no-store"}
     try:
         response = requests.post(url, headers=headers, data=body, timeout=60, allow_redirects=False)
+        if response.status_code not in (200, 201):
+            _storage_diagnostic("archive_upload", response, len(body))
         # Standard Storage uploads report existing assets as HTTP400 or409.
         # No error body proves preservation: only authenticated exact bytes do.
         if response.status_code not in (200, 201, 400, 409):
             return False
         readback = requests.get(url, headers={"apikey": key, "Authorization": f"Bearer {key}"},
                                 timeout=60, allow_redirects=False)
-        return (readback.status_code == 200 and readback.content == body
-                and hashlib.sha256(readback.content).hexdigest() == archive["sha256"])
+        preserved = (readback.status_code == 200 and readback.content == body
+                     and hashlib.sha256(readback.content).hexdigest() == archive["sha256"])
+        if not preserved:
+            _storage_diagnostic("archive_readback", readback, len(body))
+        return preserved
     except requests.RequestException:
+        _storage_diagnostic("archive_request", None, len(body))
         return False
 
 
@@ -211,7 +243,7 @@ def _merge_paper_summary(private_body: bytes, summary: dict, now: datetime) -> b
             or (previous and summary_time == _time(previous.get("as_of")) and previous != summary)):
         raise ValueError("stale or conflicting paper summary")
     document["exec_paper"] = summary
-    return json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False).encode("utf-8")
+    return json.dumps(document, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
 def main() -> int:
@@ -241,6 +273,7 @@ def main() -> int:
     prepared_portfolio = None
     archive = None
     source_portfolio = None
+    source_serialization = None
     summary = None
     if merge_paper:
         try:
@@ -256,7 +289,9 @@ def main() -> int:
         try:
             phase = sys.argv[sys.argv.index("--delivery-phase") + 1]
             sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-            from scripts.ci.operator_portfolio_delivery import prepare_portfolio_delivery, portfolio_archive
+            from scripts.ci.operator_portfolio_delivery import (
+                compact_portfolio_source, prepare_portfolio_delivery, portfolio_archive,
+            )
             portfolio_path, snapshot_path = Path("data/portfolio.json"), Path("data/universe_candidates.json")
             source_options = ("--portfolio-source", "--snapshot-source")
             if any(flag in sys.argv for flag in source_options):
@@ -270,7 +305,7 @@ def main() -> int:
                        for path, expected in zip(supplied, expected_paths)):
                     raise ValueError("foreign private final source path")
                 portfolio_path, snapshot_path = supplied
-            source_portfolio = portfolio_path.read_bytes()
+            source_portfolio, source_serialization = compact_portfolio_source(portfolio_path.read_bytes())
             prepared_portfolio = prepare_portfolio_delivery(
                 source_portfolio, snapshot_path.read_bytes(),
                 run_id=os.environ.get("GITHUB_RUN_ID", ""),
@@ -322,7 +357,8 @@ def main() -> int:
         prepared_doc["analysis_provenance"]["delivery"]["archive"] = {
             **archive, "status": "preserved" if archive_ok else "failed",
         }
-        prepared_portfolio = json.dumps(prepared_doc, ensure_ascii=False, indent=2).encode("utf-8")
+        prepared_doc["analysis_provenance"]["delivery"]["source_serialization"] = source_serialization
+        prepared_portfolio = json.dumps(prepared_doc, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         if not archive_ok:
             print("ERROR: private analysis archive not preserved; current delivery still attempted", file=sys.stderr)
     ok = 0
@@ -345,8 +381,13 @@ def main() -> int:
                 if isinstance(parsed, dict) and not merge_paper:
                     guarded = guard_legacy_performance(parsed, dest)
                     if guarded != parsed:
-                        body = json.dumps(guarded, ensure_ascii=False, indent=2).encode("utf-8")
+                        parsed = guarded
+                        if dest != PORTFOLIO_DEST:
+                            body = json.dumps(guarded, ensure_ascii=False, indent=2).encode("utf-8")
                         print(f"  cached performance invalidated before publishing: {dest}")
+                if dest == PORTFOLIO_DEST:
+                    body = json.dumps(parsed, ensure_ascii=False, separators=(",", ":"),
+                                      allow_nan=not merge_paper).encode("utf-8")
             except ValueError as e:
                 print(f"ERROR: {src} JSON parse 실패 — skip: {e}", file=sys.stderr)
                 continue
@@ -379,9 +420,12 @@ def main() -> int:
                     timeout=60, allow_redirects=False,
                 )
                 if readback.status_code != 200 or readback.content != body:
+                    _storage_diagnostic("object_readback", readback, len(body))
                     print("ERROR: private object readback mismatch; publication blocked", file=sys.stderr)
                     continue
         except requests.RequestException as e:
+            if require_analysis or merge_paper:
+                _storage_diagnostic("current_request", None, len(body))
             detail = "request failed" if require_analysis or merge_paper or dest in EXPLICIT_ONLY_DESTS else str(e)
             print(f"  ✗ {src} → 요청 실패: {detail}", file=sys.stderr)
             continue
@@ -390,6 +434,8 @@ def main() -> int:
             ok += 1
             approved_ok.add(dest)
         else:
+            if require_analysis or merge_paper or dest in EXPLICIT_ONLY_DESTS:
+                _storage_diagnostic("current_upload", r, len(body))
             detail = "" if require_analysis or merge_paper or dest in EXPLICIT_ONLY_DESTS else r.text[:150]
             print(f"  ✗ {src} → {r.status_code} {detail}", file=sys.stderr)
 

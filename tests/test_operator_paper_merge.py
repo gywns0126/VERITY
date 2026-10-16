@@ -82,6 +82,7 @@ def test_merges_only_current_summary_into_latest_private_full(quick_case):
     assert uploader.main() == 0
     saved = json.loads(network["body"])
     assert saved == {**before, "exec_paper": summary}
+    assert network["body"] == json.dumps(saved, ensure_ascii=False, separators=(",", ":")).encode()
     assert saved["analysis_provenance"] == before["analysis_provenance"]
     assert saved["recommendations"][0]["ticker"] == "PRIVATE"
     assert {path.name: path.read_bytes() for path in data.iterdir()} == local_before
