@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import hashlib
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -25,6 +26,7 @@ APPROVED_PRIVATE_DESTS = frozenset({
     "_operator/dart_fundamentals_kr.json",
 })
 EXPLICIT_ONLY_DESTS = frozenset({"_operator/dart_fundamentals_kr.json"})
+PORTFOLIO_DEST = "_operator/portfolio_full.json"
 
 # (로컬 소스, bucket 내 경로, content-type).
 # 2026-07-23 분리 Stage 3 후속: 오퍼레이터 전용 파일(public-probe 소비 0)을 private bucket 으로.
@@ -157,6 +159,61 @@ def _preserve_analysis_archive(supabase_url: str, key: str, body: bytes, archive
         return False
 
 
+def _validated_paper_summary() -> dict:
+    """Recheck the existing promotion contract; staging never supplies a full document."""
+    if (os.environ.get("ANALYSIS_MODE") != "quick" or os.environ.get("VERITY_MODE") != "staging"
+            or not re.fullmatch(r"[0-9]+", os.environ.get("GITHUB_RUN_ID", ""))
+            or not re.fullmatch(r"[0-9]+", os.environ.get("GITHUB_RUN_ATTEMPT", ""))):
+        raise ValueError("quick staging context required")
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from scripts.promote_exec_paper_to_portfolio import _validate, PromotionError
+    staging = json.loads(Path("data/portfolio.dev.json").read_bytes())
+    state = json.loads(Path("data/exec_paper_state.json").read_bytes())
+    promoted = json.loads(Path("data/portfolio.json").read_bytes())
+    if not all(isinstance(doc, dict) for doc in (staging, state, promoted)):
+        raise ValueError("paper source objects required")
+    summary = staging.get("exec_paper")
+    if not isinstance(summary, dict) or promoted.get("exec_paper") != summary:
+        raise ValueError("current promoted paper summary missing")
+    try:
+        _validate(summary, state, staging.get("updated_at"))
+    except (PromotionError, TypeError, ValueError, AttributeError):
+        raise ValueError("paper promotion contract failed") from None
+    return summary
+
+
+def _merge_paper_summary(private_body: bytes, summary: dict, now: datetime) -> bytes:
+    """Patch only exec_paper on the latest complete private full-analysis document."""
+    from scripts.ci.operator_portfolio_delivery import _time
+    document = json.loads(private_body)
+    if not isinstance(document, dict):
+        raise ValueError("private portfolio object required")
+    proof = document.get("analysis_provenance") or {}
+    delivery = proof.get("delivery") or {}
+    archive = delivery.get("archive") or {}
+    run, attempt = str(proof.get("analysis_run_id") or ""), str(proof.get("analysis_run_attempt") or "")
+    digest = archive.get("sha256") or ""
+    records = document.get("recommendations")
+    if (proof.get("status") != "completed" or proof.get("analysis_mode") not in ("full", "full_us")
+            or not re.fullmatch(r"[0-9]+", run) or not re.fullmatch(r"[0-9]+", attempt)
+            or archive.get("status") != "preserved" or delivery.get("phase") not in ("analysis_complete", "final")
+            or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)
+            or archive.get("object") != f"_operator/analysis_runs/{run}/{attempt}/{digest}.json"
+            or digest != delivery.get("source_portfolio_sha256")
+            or not isinstance(records, list) or proof.get("resulting_analysis_count") != len(records)
+            or not isinstance(document.get("analysis_changes"), dict)
+            or any(not isinstance(row, dict) or not isinstance(row.get("evidence_snapshot"), dict) for row in records)):
+        raise ValueError("complete preserved private analysis required")
+    summary_time = _time(summary.get("as_of"))
+    previous = document.get("exec_paper") or {}
+    if (summary_time > now or summary_time < _time(proof.get("analysis_completed_at"))
+            or (previous and summary_time < _time(previous.get("as_of")))
+            or (previous and summary_time == _time(previous.get("as_of")) and previous != summary)):
+        raise ValueError("stale or conflicting paper summary")
+    document["exec_paper"] = summary
+    return json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False).encode("utf-8")
+
+
 def main() -> int:
     supabase_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -171,13 +228,26 @@ def main() -> int:
         if i + 1 < len(sys.argv):
             only = sys.argv[i + 1]
 
+    require_analysis = "--require-completed-analysis" in sys.argv
+    merge_paper = "--merge-exec-paper" in sys.argv
+    if ((merge_paper and (require_analysis or only != "portfolio_full"))
+            or (only == "portfolio_full" and not require_analysis and not merge_paper)):
+        print("ERROR: portfolio delivery requires an explicit completed-analysis or paper-merge contract", file=sys.stderr)
+        return 2
     uploads = [u for u in UPLOADS
                if (u[1] not in EXPLICIT_ONLY_DESTS or only == "dart_fundamentals_kr")
+               and (u[1] != PORTFOLIO_DEST or require_analysis or merge_paper)
                and (only is None or only in u[0] or only in u[1])]
-    require_analysis = "--require-completed-analysis" in sys.argv
     prepared_portfolio = None
     archive = None
     source_portfolio = None
+    summary = None
+    if merge_paper:
+        try:
+            summary = _validated_paper_summary()
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            print("ERROR: current quick paper promotion contract failed", file=sys.stderr)
+            return 2
     if require_analysis:
         # Validate once and upload those exact bytes, even if another local file changes.
         if BUCKET != "verity-reports" or not any(dest == "_operator/portfolio_full.json" for _, dest, _ in uploads):
@@ -217,7 +287,7 @@ def main() -> int:
             print("ERROR: completed analysis delivery contract failed", file=sys.stderr)
             return 2
     # These newly authorized payloads must never follow an accidental public-bucket override.
-    if require_analysis or any(dest in APPROVED_PRIVATE_DESTS and os.path.isfile(src) for src, dest, _ in uploads):
+    if require_analysis or merge_paper or any(dest in APPROVED_PRIVATE_DESTS and os.path.isfile(src) for src, dest, _ in uploads):
         if BUCKET != "verity-reports":
             print("ERROR: approved operator facts require verity-reports", file=sys.stderr)
             return 2
@@ -232,6 +302,18 @@ def main() -> int:
             private = False
         if not private:
             print("ERROR: private bucket verification failed; upload blocked", file=sys.stderr)
+            return 2
+    if merge_paper:
+        try:
+            current = requests.get(f"{supabase_url}/storage/v1/object/{BUCKET}/{PORTFOLIO_DEST}",
+                headers={"apikey": key, "Authorization": f"Bearer {key}", "Cache-Control": "no-cache"},
+                timeout=60, allow_redirects=False)
+            if current.status_code != 200:
+                raise ValueError("private current analysis unavailable")
+            prepared_portfolio = _merge_paper_summary(current.content, summary,
+                datetime.now(timezone(timedelta(hours=9))))
+        except (requests.RequestException, ValueError, TypeError, KeyError, AttributeError):
+            print("ERROR: private full baseline rejected; paper merge blocked", file=sys.stderr)
             return 2
     archive_ok = True
     if archive is not None:
@@ -260,7 +342,7 @@ def main() -> int:
         if ctype == "application/json":
             try:
                 parsed = json.loads(body)
-                if isinstance(parsed, dict):
+                if isinstance(parsed, dict) and not merge_paper:
                     guarded = guard_legacy_performance(parsed, dest)
                     if guarded != parsed:
                         body = json.dumps(guarded, ensure_ascii=False, indent=2).encode("utf-8")
@@ -290,17 +372,17 @@ def main() -> int:
                 timeout=60,
                 allow_redirects=False,
             )
-            if r.status_code in (200, 201) and dest in EXPLICIT_ONLY_DESTS:
+            if r.status_code in (200, 201) and (dest in EXPLICIT_ONLY_DESTS or merge_paper):
                 readback = requests.get(
                     f"{supabase_url}/storage/v1/object/{BUCKET}/{dest}",
                     headers={"apikey": key, "Authorization": f"Bearer {key}", "Cache-Control": "no-store"},
                     timeout=60, allow_redirects=False,
                 )
                 if readback.status_code != 200 or readback.content != body:
-                    print("ERROR: private DART readback mismatch; publication blocked", file=sys.stderr)
+                    print("ERROR: private object readback mismatch; publication blocked", file=sys.stderr)
                     continue
         except requests.RequestException as e:
-            detail = "request failed" if require_analysis or dest in EXPLICIT_ONLY_DESTS else str(e)
+            detail = "request failed" if require_analysis or merge_paper or dest in EXPLICIT_ONLY_DESTS else str(e)
             print(f"  ✗ {src} → 요청 실패: {detail}", file=sys.stderr)
             continue
         if r.status_code in (200, 201):
@@ -308,13 +390,13 @@ def main() -> int:
             ok += 1
             approved_ok.add(dest)
         else:
-            detail = "" if require_analysis or dest in EXPLICIT_ONLY_DESTS else r.text[:150]
+            detail = "" if require_analysis or merge_paper or dest in EXPLICIT_ONLY_DESTS else r.text[:150]
             print(f"  ✗ {src} → {r.status_code} {detail}", file=sys.stderr)
 
     print(f"operator upload: {ok}/{len(uploads)}")
     # 새 private 입력에는 공개 fallback이 없다. 실패를 성공 종료로 숨기지 않는다.
     return 1 if (not archive_ok or approved_expected - approved_ok or
-                 (require_analysis and "_operator/portfolio_full.json" not in approved_ok)) else 0
+                 ((require_analysis or merge_paper) and PORTFOLIO_DEST not in approved_ok)) else 0
 
 
 if __name__ == "__main__":

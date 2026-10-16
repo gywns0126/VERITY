@@ -315,13 +315,16 @@ jobs:
 
       - name: Upload operator portfolio to private Supabase Storage
         # /system 은 private portfolio_full 을 우선 읽는다. 승격된 Quick 요약도 origin/main 커밋 뒤
-        # 즉시 동기화해 정본과 오퍼레이터 화면 사이의 stale 간격을 없앤다.
-        # portfolio_full 1개만 선택해 다른 저빈도 오퍼레이터 산출물을 되돌리지 않는다.
+        # 최신 private full 원문을 읽고 검증된 exec_paper 한 필드만 병합한다.
+        # 공개 Git 정제본으로 full 근거·delivery 메타데이터를 덮어쓰지 않는다.
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANALYSIS_MODE: ${{ steps.detect_mode.outputs.mode }}
+          VERITY_MODE: staging
         run: |
-          python scripts/upload_operator_data_to_supabase.py --only portfolio_full 2>&1 | tee /tmp/operator_portfolio_upload.log
+          set -euo pipefail
+          python scripts/upload_operator_data_to_supabase.py --only portfolio_full --merge-exec-paper 2>&1 | tee /tmp/operator_portfolio_upload.log
           grep -qx "operator upload: 1/1" /tmp/operator_portfolio_upload.log
 
       - name: Publish hot data to VERITY-data
