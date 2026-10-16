@@ -33,8 +33,12 @@ def test_quick_uploads_operator_portfolio_after_origin_push_before_public_publis
     assert upload["env"] == {
         "SUPABASE_URL": "${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}",
         "SUPABASE_SERVICE_ROLE_KEY": "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}",
+        "ANALYSIS_MODE": "${{ steps.detect_mode.outputs.mode }}",
+        "VERITY_MODE": "staging",
     }
     assert "--only portfolio_full" in upload["run"]
+    assert "--merge-exec-paper" in upload["run"]
+    assert "set -euo pipefail" in upload["run"]
     assert 'grep -qx "operator upload: 1/1"' in upload["run"]
 
 
@@ -47,3 +51,11 @@ def test_portfolio_full_selector_matches_one_private_object_only():
     assert selected == [
         ("data/portfolio.json", "_operator/portfolio_full.json", "application/json")
     ]
+
+
+def test_full_and_quick_portfolio_writers_remain_serialized_without_cancellation():
+    quick = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    full = yaml.safe_load((WORKFLOW.parent / "daily_analysis_full.yml").read_text(encoding="utf-8"))
+    assert quick["concurrency"] == full["jobs"]["analyze"]["concurrency"] == {
+        "group": "verity-data-write", "cancel-in-progress": False,
+    }
