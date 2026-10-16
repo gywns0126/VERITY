@@ -1,4 +1,5 @@
 """Public Git staging never receives the newly private evidence fields."""
+import gzip
 import json
 from pathlib import Path
 import subprocess
@@ -70,6 +71,56 @@ def test_data_symlink_is_rejected(repository, tmp_path):
     (repository / "data/link.json").symlink_to(outside)
     with pytest.raises(ValueError):
         guard.sanitize_changed_data(repository)
+
+
+@pytest.mark.parametrize("extension", ["json.gz", "jsonl.gz"])
+def test_compressed_nested_evidence_is_removed_with_deterministic_gzip(repository, extension):
+    private = {"brain_details": {"ABC": {"fact_score": {"score": 71,
+        "coverage_scope": {"source_alignment": {"private_canary": "SECRET_SOURCE"}}}}},
+        "evidence_snapshot": {"input_snapshot": {"private_canary": "SECRET_INPUT"}}}
+    original = json.dumps(private).encode() + (b'\n\n{"unchanged":42}\n' if extension == "jsonl.gz" else b"")
+    paths = [repository / "data/runs" / (name + "." + extension) for name in ("staged", "untracked")]
+    for path in paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(gzip.compress(original, mtime=123456))
+    subprocess.run(["git", "-C", str(repository), "add", str(paths[0])], check=True)
+    assert guard.sanitize_changed_data(repository) == 2
+    assert paths[0].read_bytes() == paths[1].read_bytes()
+    assert paths[0].read_bytes()[4:8] == b"\0\0\0\0"  # Fixed gzip mtime.
+    clean = gzip.decompress(paths[0].read_bytes())
+    assert b"SECRET" not in clean and b"source_alignment" not in clean
+    first = json.loads(clean.splitlines()[0]) if extension == "jsonl.gz" else json.loads(clean)
+    assert first == {"brain_details": {"ABC": {"fact_score": {"score": 71, "coverage_scope": {}}}}}
+    if extension == "jsonl.gz":
+        assert clean.endswith(b'\n\n{"unchanged":42}\n')
+    before = paths[0].read_bytes()
+    assert guard.sanitize_changed_data(repository) == 0 and paths[0].read_bytes() == before
+    subprocess.run(["git", "-C", str(repository), "add", "data/"], check=True)
+    indexed = subprocess.check_output(["git", "-C", str(repository), "show", ":data/runs/staged." + extension])
+    assert b"SECRET" not in gzip.decompress(indexed)
+
+
+@pytest.mark.parametrize("extension", ["json.gz", "jsonl.gz"])
+def test_unchanged_compressed_data_keeps_exact_original_bytes(repository, extension):
+    path = repository / ("data/unchanged." + extension)
+    body = gzip.compress(b'{ "score": 71, "price": 42 }\n', compresslevel=1, mtime=987654321)
+    path.write_bytes(body)
+    assert guard.sanitize_changed_data(repository) == 0
+    assert path.read_bytes() == body
+
+
+@pytest.mark.parametrize("invalid", [b"not gzip", gzip.compress(b'{"broken":'),
+    gzip.compress(b'{"ok":1}\n{"broken":'), gzip.compress(b'{}')[:-4]])
+def test_invalid_compression_or_json_blocks_commit_before_any_rewrite(repository, tmp_path, monkeypatch, invalid):
+    write(repository / "data/a.json", {"evidence_snapshot": {"private": True}, "score": 71})
+    before = (repository / "data/a.json").read_bytes()
+    (repository / "data/b.jsonl.gz").write_bytes(invalid)
+    monkeypatch.chdir(repository)
+    monkeypatch.setattr(guard.sys, "argv", ["guard"])
+    output = tmp_path / "outputs"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    assert guard.main() == 1 and not output.exists()
+    assert (repository / "data/a.json").read_bytes() == before
 
 
 def context(root, tmp_path):

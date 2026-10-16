@@ -7,6 +7,7 @@ copy is ever restored into the tracked tree.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import gzip
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import zlib
 
 PRIVATE_ANALYSIS_KEYS = frozenset({
     "source_alignment", "fundamental_source_evidence", "_source_evidence", "_source_identity",
@@ -92,15 +94,25 @@ def sanitize_changed_data(root: Path) -> int:
             continue  # Staged/unstaged deletion has no body to publish.
         body = path.read_bytes()
         suffix = path.suffix.lower()
+        compressed = suffix == ".gz"
+        if compressed:
+            suffix = Path(path.stem).suffix.lower()
+            if suffix not in (".json", ".jsonl"):
+                raise ValueError("unsupported compressed data format")
+            try:
+                body = gzip.decompress(body)
+            except (OSError, EOFError, zlib.error):
+                raise ValueError("invalid compressed data") from None
         if suffix not in (".json", ".jsonl"):
             if any((f'"{key}"').encode() in body for key in PRIVATE_ANALYSIS_KEYS):
                 raise ValueError("private evidence in unsupported data format")
             continue
+        clean_body = None
         if suffix == ".json":
             document = json.loads(body)
             clean = strip_private_fields(document)
             if clean != document:
-                writes.append((path, json.dumps(clean, ensure_ascii=False, indent=2).encode("utf-8")))
+                clean_body = json.dumps(clean, ensure_ascii=False, indent=2).encode("utf-8")
         else:
             clean_lines, changed = [], False
             for line in body.splitlines(keepends=True):
@@ -115,7 +127,9 @@ def sanitize_changed_data(root: Path) -> int:
                 else:
                     clean_lines.append(line)
             if changed:
-                writes.append((path, b"".join(clean_lines)))
+                clean_body = b"".join(clean_lines)
+        if clean_body is not None:
+            writes.append((path, gzip.compress(clean_body, mtime=0) if compressed else clean_body))
     # Parse and validate every path before changing any body.
     for path, body in writes:
         temporary = None
