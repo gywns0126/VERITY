@@ -72,7 +72,7 @@ def reading_guide(reader, company, events, issues, is_financial=False):
         'next': ('같은 기간의 현금흐름표를 확인. 금융업의 대출·조달 구조를 함께 읽으며 일반 기업식 FCF로 평가하지 않음.' if is_financial else '같은 기간·공시의 순이익, 영업현금흐름, 유형자산 취득 지출을 대조. 누락 항목부터 확인.'),
         'source': {'text': '현재 근거', 'url': cash['source_url']} if cash else '미확보'})
     checklist.append({'item': '변화의 원인',
-        'state': f"현재 실적과 기간이 맞는 회사 설명 {len(company['excerpts'])}개 문단. " + ' / '.join(r['label'] + (' 연결' if r['refs'] else ' 미확보') for r in company['topics']),
+        'state': (company.get('basis_label', '현재 실적과 기간이 맞는') + f" 회사 설명 {len(company['excerpts'])}개 문단. " + ('단일 분기의 원인으로 전용하지 않음. ' if company.get('period_matches_current') is False else '') + ' / '.join(r['label'] + (' 연결' if r['refs'] else ' 미확보') for r in company['topics'])),
         'next': '가격·물량·구성·비용 설명과 항목별 기여 금액을 원문에서 확인. 반복 가능한 변화와 일회성 항목 구분.',
         'source': company['source'] or '미확보'})
     if events:

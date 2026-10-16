@@ -7,6 +7,49 @@ import html
 import re
 
 
+def reviewed_kr_business(ticker, stock, reader, now):
+    """Use a dated, issuer-bound primary review, not an evergreen company story."""
+    import copy
+    import json
+    from datetime import date
+    from pathlib import Path
+    from urllib.parse import urlparse, parse_qs
+    try:
+        entries = json.loads((Path(__file__).parent / '_content' / 'report_kr_business_reviews.json').read_text())
+        entry = entries.get(ticker)
+        if not isinstance(entry, dict) or entry.get('ticker') != ticker:
+            return None
+        name = str(stock.get('name_ko') or stock.get('name') or '').replace(' ', '')
+        if name != str(entry.get('name', '')).replace(' ', ''):
+            return None
+        corp = stock.get('corp_code')
+        if corp and corp != entry.get('corp_code'):
+            return None
+        if not 0 <= (now.date() - date.fromisoformat(entry['reviewed_at'])).days <= 180:
+            return None
+        basis = entry['period']
+        current = reader.get('current')
+        if not current or current['end'] != basis['end']:
+            return None
+        matching = next((r for r in reader['periods'] if all(r.get(k) == basis.get(k)
+                        for k in ('start', 'end', 'period_kind', 'fs_div', 'accession'))), None)
+        if not matching:
+            return None
+        source = urlparse(entry['source_url'])
+        if (source.scheme != 'https' or source.hostname != 'dart.fss.or.kr'
+                or parse_qs(source.query).get('rcpNo') != [basis['accession']]):
+            return None
+        result = copy.deepcopy(entry)
+        company = result['company']
+        company['basis_label'] = basis['start'] + ' ~ ' + basis['end'] + ' · 반기 누적'
+        company['source'] = {'text': '반기 사업 내용 원문', 'url': entry['source_url']}
+        company['period_matches_current'] = all(current.get(k) == basis.get(k)
+                                               for k in ('start', 'end', 'period_kind'))
+        return result
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
 def filing_business(document, filing, cik):
     accession = str(filing.get("accession") or "")
     name = str(filing.get("primary_document") or "")
