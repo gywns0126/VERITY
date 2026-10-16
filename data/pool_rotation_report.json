@@ -1,47 +1,44 @@
 {
- "as_of": "2026-10-10T15:06:29+09:00",
+ "as_of": "2026-10-17T08:05:09+09:00",
  "version": "v0 (PREREG_POOL_ROTATION_2026_08_04 — 보고서만, 집행 없음)",
  "evidence_days": 40,
  "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 40일. 미달 임계는 발동하지 않음",
  "pool": {
-  "size": 36,
-  "kr": 15,
+  "size": 66,
+  "kr": 37,
   "kr_floor": 20,
-  "kr_deficit": 5,
-  "size_note": "정원 미달 36 < 55",
-  "sector_over_cap": {
-   "Technology": 36.1
-  }
+  "kr_deficit": 0,
+  "size_note": null,
+  "sector_over_cap": {}
  },
  "r1_held": [
-  "000270",
   "003550",
-  "012330",
-  "017670",
   "028050",
+  "065710",
   "068270",
-  "080580",
   "257720",
-  "GOOGL",
+  "DORM",
+  "GOOG",
+  "MSFT",
   "PARR"
  ],
  "r1_held_out_of_pool": [],
  "exits": [
   {
    "ticker": "V",
-   "reason": "R2a 배지 AVOID 39일 연속",
-   "avoid_streak": 39,
+   "reason": "R2a 배지 AVOID 40일 연속",
+   "avoid_streak": 40,
    "pollution_streak": 0,
    "lowliq_streak": 0,
-   "evidence_days": 39
+   "evidence_days": 40
   },
   {
    "ticker": "CME",
-   "reason": "R2a 배지 AVOID 39일 연속",
-   "avoid_streak": 39,
+   "reason": "R2a 배지 AVOID 40일 연속",
+   "avoid_streak": 40,
    "pollution_streak": 0,
    "lowliq_streak": 0,
-   "evidence_days": 39
+   "evidence_days": 40
   }
  ],
  "entries": [
@@ -49,46 +46,38 @@
    "ticker": "317850",
    "name": "대모",
    "source": "smallcap",
-   "trading_value": 1787693486
+   "trading_value": 1804102259
   },
   {
    "ticker": "372910",
    "name": "한컴라이프케어",
    "source": "smallcap",
-   "trading_value": 2519991569
+   "trading_value": 2561094710
   },
   {
    "ticker": "483350",
    "name": "딜리셔스",
    "source": "smallcap",
-   "trading_value": 2038344347
+   "trading_value": 1841529055
   },
   {
    "ticker": "228340",
    "name": "동양파일",
    "source": "smallcap",
-   "trading_value": 10652518259
+   "trading_value": 7066038519
   },
   {
-   "ticker": "048430",
-   "name": "유라테크",
+   "ticker": "282620",
+   "name": "기도산업",
    "source": "smallcap",
-   "trading_value": 1105062555
+   "trading_value": 1120936185
   }
  ],
- "watch_streaks": [
-  {
-   "ticker": "ADBE",
-   "avoid_streak": 11,
-   "pollution_streak": 0,
-   "lowliq_streak": 0,
-   "evidence_days": 16
-  }
- ],
+ "watch_streaks": [],
  "candidate_supply": {
-  "funnel_total": 22,
+  "funnel_total": 45,
   "funnel_kr_out_of_pool": 0,
-  "smallcap_total": 1677,
+  "smallcap_total": 1689,
   "smallcap_liquidity_field_missing": false
  },
  "swap_cap": 5,
