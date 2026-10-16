@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-16T17:49:05+09:00",
+ "as_of": "2026-10-16T22:35:29+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -64,7 +64,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "90/90",
+     "coverage": "106/106",
      "via": [
       "current_price",
       "price"
@@ -75,7 +75,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "61/90",
+     "coverage": "68/106",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -86,7 +86,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "90/90",
+     "coverage": "106/106",
      "via": [
       "fscore_deltas"
      ],
@@ -96,7 +96,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "89/90",
+     "coverage": "105/106",
      "via": [
       "industry"
      ],
@@ -106,7 +106,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "60/90",
+     "coverage": "68/106",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -120,7 +120,7 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 17,
+     "events_scanned": 19,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
@@ -167,7 +167,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 15,
-   "stock_days": 8247,
+   "stock_days": 8263,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -221,13 +221,13 @@
    "constant_inputs": [
     {
      "input": "kis_credit_balance.credit_rate",
-     "n_present": 20,
+     "n_present": 21,
      "constant_value": 0.0,
      "severity": "high"
     },
     {
      "input": "kis_financial_ratio.current_ratio",
-     "n_present": 20,
+     "n_present": 21,
      "constant_value": 0.0,
      "severity": "high"
     }
@@ -260,8 +260,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 51,
-    "scored": 51,
+    "with_pct": 65,
+    "scored": 65,
     "ok": true
    },
    "dead_guards": [],
