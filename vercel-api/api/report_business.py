@@ -123,10 +123,12 @@ Only complete paragraphs are retained, including any offsetting explanation.
     clean = re.sub(r'(?is)<(script|style|ix:header)\b[^>]*>.*?</\1>', ' ', document)
     clean = re.sub(r'(?i)</(?:p|div|tr|h[1-6])>', '\n', clean)
     paragraphs = [re.sub(r'\s+', ' ', p).strip() for p in html.unescape(re.sub(r'<[^>]+>', ' ', clean)).splitlines() if p.strip()]
-    anchors = [i for i, p in enumerate(paragraphs) if len(p) < 160 and re.search(r'item\s*2\.?\s*management.s discussion', p, re.I)]
+    # Annual 10-K MD&A is Item 7; interim 10-Q MD&A is Item 2.
+    item = '7' if filing.get('form') in ('10-K', '10-K/A') else '2'
+    anchors = [i for i, p in enumerate(paragraphs) if len(p) < 160 and re.search(r'item\s*' + item + r'\.?\s*management.s discussion', p, re.I)]
     if not anchors:
         return result
-    # Table-of-contents hits precede the actual Item 2; use its final heading.
+    # Table-of-contents hits precede the actual MD&A; use its final heading.
     body = paragraphs[anchors[-1]+1:]
     from datetime import date
     end = date.fromisoformat(current['end'])
@@ -147,9 +149,9 @@ Only complete paragraphs are retained, including any offsetting explanation.
         period_pattern = rf'{count} months ended\s+{date_pattern}'
     seen_metrics = set()
     for paragraph in body:
-        if re.match(r'Item\s*[3-9]\b', paragraph, re.I):
+        if re.match(r'Item\s*(?:7A|8|9)\b' if item == '7' else r'Item\s*[3-9]\b', paragraph, re.I):
             break
-        metric = re.match(r'^(?:Total |Consolidated )?(sales and revenues|revenues?|net sales|operating profit|operating income|net income)\b', paragraph, re.I)
+        metric = re.match(r'^(?:Total |Consolidated )?(sales and revenues|revenues?|net sales|sales|operating profit|operating income|net income)\b', paragraph, re.I)
         reported = re.split(r'\bcompared\b', paragraph, maxsplit=1, flags=re.I)[0]
         if not metric or len(paragraph) > 1600 or not re.search(period_pattern, reported, re.I):
             continue
@@ -157,6 +159,17 @@ Only complete paragraphs are retained, including any offsetting explanation.
             continue
         cause = re.search(r'\b(?:due to|driven by|reflect(?:s|ed|ing)?|result(?:ed|ing) from)\b', paragraph, re.I)
         if not cause:
+            continue
+        # An aggregate-looking opening can still refer to a segment/region.
+        if re.search(r'\b(segment|division|regional|region|North America|South America|Latin America|Europe|Asia|EMEA|APAC)\b', paragraph, re.I):
+            continue
+        if re.search(r'\b(?:not|never|unrelated|rather than)\s*$', paragraph[:cause.start()], re.I):
+            continue
+        causal_sentences = [p for p in re.split(r'(?<=[.!?])\s+(?=[A-Z])', paragraph)
+                            if re.search(r'\b(?:due to|driven by|reflect(?:s|ed|ing)?|result(?:ed|ing) from)\b', p, re.I)]
+        if any(any(int(y) != end.year for y in re.findall(r'\b20\d{2}\b', p))
+               or re.search(r'\b(?:prior|previous|last) (?:year|quarter|period)\b', p, re.I)
+               for p in causal_sentences):
             continue
         group = '영업손익' if metric[1].lower().startswith('operating') else '순이익' if metric[1].lower() == 'net income' else '매출'
         if group in seen_metrics:
