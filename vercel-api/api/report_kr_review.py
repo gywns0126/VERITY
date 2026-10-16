@@ -69,8 +69,9 @@ def reviewed_entry(ticker, stock, now):
     if entry.get("ticker") != str(ticker) or entry.get("name") != (stock.get("name_ko") or stock.get("name")):
         return None
     evidence = stock.get("financial_evidence") or {}
-    supplied_corp = stock.get("corp_code") or stock.get("dart_corp_code") or evidence.get("corp_code")
-    if supplied_corp and str(supplied_corp) != str(entry.get("corp_code")):
+    supplied_corps = (stock.get("corp_code"), stock.get("dart_corp_code"), evidence.get("corp_code"))
+    supplied_corp = any(supplied_corps)
+    if any(corp and str(corp) != str(entry.get("corp_code")) for corp in supplied_corps):
         return None
     today = now.date() if isinstance(now, datetime) else now
     reviewed = _date(entry.get("reviewed_at"))

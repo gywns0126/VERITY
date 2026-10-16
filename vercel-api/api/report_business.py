@@ -17,13 +17,14 @@ def reviewed_kr_business(ticker, stock, reader, now):
     try:
         entries = json.loads((Path(__file__).parent / '_content' / 'report_kr_business_reviews.json').read_text())
         entry = entries.get(ticker)
-        if not isinstance(entry, dict) or entry.get('ticker') != ticker:
+        if not isinstance(entry, dict) or entry.get('ticker') != ticker or stock.get('ticker') != ticker:
             return None
         name = str(stock.get('name_ko') or stock.get('name') or '').replace(' ', '')
         if name != str(entry.get('name', '')).replace(' ', ''):
             return None
-        corp = stock.get('corp_code')
-        if corp and corp != entry.get('corp_code'):
+        corps = (stock.get('corp_code'), stock.get('dart_corp_code'),
+                 (stock.get('financial_evidence') or {}).get('corp_code'))
+        if any(corp and str(corp) != entry.get('corp_code') for corp in corps):
             return None
         if not 0 <= (now.date() - date.fromisoformat(entry['reviewed_at'])).days <= 180:
             return None

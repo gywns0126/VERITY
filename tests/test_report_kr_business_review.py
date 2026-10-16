@@ -32,6 +32,8 @@ def test_half_year_cause_is_not_quarter_cause():
 def test_identity_expiry_and_newer_period_do_not_reuse_old_cause():
     assert reviewed_kr_business('084010', {**STOCK, 'name': '다른회사'}, reader(), NOW) is None
     assert reviewed_kr_business('084010', {**STOCK, 'corp_code': '00000000'}, reader(), NOW) is None
+    for supplied in ({'dart_corp_code': '00000000'}, {'financial_evidence': {'corp_code': '00000000'}}, {'ticker': '005930'}):
+        assert reviewed_kr_business('084010', {**STOCK, **supplied}, reader(), NOW) is None
     assert reviewed_kr_business('084010', STOCK, reader(), datetime(2027, 5, 1)) is None
     assert reviewed_kr_business('084010', STOCK, reader(), datetime(2026, 10, 15)) is None
     newer = deepcopy(reader())

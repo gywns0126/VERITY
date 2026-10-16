@@ -24,6 +24,8 @@ def test_review_entry_requires_name_ticker_and_supplied_corp_code():
     assert review.reviewed_entry("000000", STOCK, NOW) is None
     assert review.reviewed_entry("084010", {**STOCK, "name": "다른회사"}, NOW) is None
     assert review.reviewed_entry("084010", {**STOCK, "corp_code": "99999999"}, NOW) is None
+    assert review.reviewed_entry("084010", {**STOCK, "dart_corp_code": "99999999"}, NOW) is None
+    assert review.reviewed_entry("084010", {**STOCK, "financial_evidence": {"corp_code": "99999999"}}, NOW) is None
     assert review.reviewed_entry("084010", {"ticker": "084010", "name": "대한제강"}, NOW)["corp_code_match"] == "registry_only_input_missing"
 
 
