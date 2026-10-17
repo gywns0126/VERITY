@@ -1,6 +1,534 @@
 {
   "schema_version": "dart-html-independent-review-v1",
   "entries": {
+    "214270": {
+      "ticker": "214270",
+      "name": "FSN",
+      "corp_code": "01061497",
+      "reviewed_at": "2026-10-17",
+      "max_review_age_days": 180,
+      "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
+      "notes": [
+        "2025 영업이익 이력은 중단영업 손실, 순이익 이력은 비지배지분 귀속액이었다. 2023 전체 순손실은 원문과 일치하므로 0으로 바꾸지 않는다. 2024·2023 매출·영업이익 역사 원본과 최신 중단사업 재분류 비교열을 분리한다. 영업비용을 판관비로 전용하거나 별도 판관비 미표시를 0으로 만들지 않는다. 305억원은 정상 반올림이다.",
+        "과거 API 실행 경로·원인은 미확정이다."
+      ],
+      "documents": {
+        "annual_income": {
+          "accession": "20260323001739",
+          "filed": "2026-03-23",
+          "section": "연결 포괄손익계산서",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260323001739&dcmNo=11170257&eleId=21&offset=242895&length=32213&dtd=dart4.xsd",
+          "sha256": "df823d537213a8aae28f68c3da17cd2a3142fb869b941e99fb27dae3e9cd6775",
+          "headers": [
+            "연결 포괄손익계산서",
+            "제 11 기 2025.01.01 부터 2025.12.31 까지",
+            "제 10 기 2024.01.01 부터 2024.12.31 까지",
+            "제 9 기 2023.01.01 부터 2023.12.31 까지",
+            "(단위 : 원)"
+          ]
+        }
+      },
+      "periods": [
+        {
+          "year": 2023,
+          "start": "2023-01-01",
+          "end": "2023-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260323001739",
+          "filed": "2026-03-23",
+          "metrics": {
+            "revenue": {
+              "value": 139427020037,
+              "raw": "139,427,020,037",
+              "account": "영업수익",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": -3937067297,
+              "raw": "(3,937,067,297)",
+              "account": "영업이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -24785408918,
+              "raw": "(24,785,408,918)",
+              "account": "당기순이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2024,
+          "start": "2024-01-01",
+          "end": "2024-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260323001739",
+          "filed": "2026-03-23",
+          "metrics": {
+            "revenue": {
+              "value": 185400336138,
+              "raw": "185,400,336,138",
+              "account": "영업수익",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 11081071741,
+              "raw": "11,081,071,741",
+              "account": "영업이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -60942952307,
+              "raw": "(60,942,952,307)",
+              "account": "당기순이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2025,
+          "start": "2025-01-01",
+          "end": "2025-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260323001739",
+          "filed": "2026-03-23",
+          "metrics": {
+            "revenue": {
+              "value": 272289535445,
+              "raw": "272,289,535,445",
+              "account": "영업수익",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 30518488142,
+              "raw": "30,518,488,142",
+              "account": "영업이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -15863077578,
+              "raw": "(15,863,077,578)",
+              "account": "당기순이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            }
+          }
+        }
+      ]
+    },
+    "033640": {
+      "ticker": "033640",
+      "name": "네패스",
+      "corp_code": "00227333",
+      "reviewed_at": "2026-10-17",
+      "max_review_age_days": 180,
+      "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
+      "notes": [
+        "2025 영업이익 이력은 중단영업 손실이었다. 2023 역사 원본 매출·영업이익과 최신 중단영업 재분류 비교열을 분리해 보존한다. 영업이익 표시 238억원은 정상 반올림이다.",
+        "과거 API 실행 경로·원인은 미확정이다."
+      ],
+      "documents": {
+        "annual_income": {
+          "accession": "20260318001666",
+          "filed": "2026-03-18",
+          "section": "연결 포괄손익계산서",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260318001666&dcmNo=11144732&eleId=21&offset=314510&length=38627&dtd=dart4.xsd",
+          "sha256": "99544b74f7a5ec7c1458b4a5267871931f95b5a78a0bf05656161a737396297d",
+          "headers": [
+            "연결 포괄손익계산서",
+            "제 36 기 2025.01.01 부터 2025.12.31 까지",
+            "제 35 기 2024.01.01 부터 2024.12.31 까지",
+            "제 34 기 2023.01.01 부터 2023.12.31 까지",
+            "(단위 : 원)"
+          ]
+        }
+      },
+      "periods": [
+        {
+          "year": 2023,
+          "start": "2023-01-01",
+          "end": "2023-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260318001666",
+          "filed": "2026-03-18",
+          "metrics": {
+            "revenue": {
+              "value": 468982672122,
+              "raw": "468,982,672,122",
+              "account": "매출액 (주6,28)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 10069328909,
+              "raw": "10,069,328,909",
+              "account": "영업이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -109458165882,
+              "raw": "(109,458,165,882)",
+              "account": "당기순이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2024,
+          "start": "2024-01-01",
+          "end": "2024-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260318001666",
+          "filed": "2026-03-18",
+          "metrics": {
+            "revenue": {
+              "value": 464331506206,
+              "raw": "464,331,506,206",
+              "account": "매출액 (주6,28)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 3401796348,
+              "raw": "3,401,796,348",
+              "account": "영업이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -79400160862,
+              "raw": "(79,400,160,862)",
+              "account": "당기순이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2025,
+          "start": "2025-01-01",
+          "end": "2025-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260318001666",
+          "filed": "2026-03-18",
+          "metrics": {
+            "revenue": {
+              "value": 521439287008,
+              "raw": "521,439,287,008",
+              "account": "매출액 (주6,28)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 23761125843,
+              "raw": "23,761,125,843",
+              "account": "영업이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": 20158821632,
+              "raw": "20,158,821,632",
+              "account": "당기순이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            }
+          }
+        }
+      ]
+    },
+    "009580": {
+      "ticker": "009580",
+      "name": "무림P&P",
+      "corp_code": "00119007",
+      "reviewed_at": "2026-10-17",
+      "max_review_age_days": 180,
+      "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
+      "notes": [
+        "2025·2023 순이익 이력은 관계기업 순이익에 대한 지분과 일치하며 연결 전체 순이익과 다르다. 2023 추가 오류는 원래 큐 밖에서 별도로 확인했다. 최신 비교열과 전기 원문 매출·영업이익·총 순이익은 대조한 기간에서 일치한다.",
+        "과거 API 실행 경로·원인은 미확정이다."
+      ],
+      "documents": {
+        "annual_income": {
+          "accession": "20260313001288",
+          "filed": "2026-03-13",
+          "section": "연결 포괄손익계산서",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260313001288&dcmNo=11122426&eleId=26&offset=467492&length=29410&dtd=dart4.xsd",
+          "sha256": "7c00abe45ddd7b5787fec718360fc061d1c3a3599c3056f7fb0a807f2629b31a",
+          "headers": [
+            "연결 포괄손익계산서",
+            "제 52 기 2025.01.01 부터 2025.12.31 까지",
+            "제 51 기 2024.01.01 부터 2024.12.31 까지",
+            "제 50 기 2023.01.01 부터 2023.12.31 까지",
+            "(단위 : 원)"
+          ]
+        }
+      },
+      "periods": [
+        {
+          "year": 2023,
+          "start": "2023-01-01",
+          "end": "2023-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260313001288",
+          "filed": "2026-03-13",
+          "metrics": {
+            "revenue": {
+              "value": 768920159344,
+              "raw": "768,920,159,344",
+              "account": "매출액",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 11609909605,
+              "raw": "11,609,909,605",
+              "account": "영업이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -21635976438,
+              "raw": "(21,635,976,438)",
+              "account": "당기순이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2024,
+          "start": "2024-01-01",
+          "end": "2024-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260313001288",
+          "filed": "2026-03-13",
+          "metrics": {
+            "revenue": {
+              "value": 811651367990,
+              "raw": "811,651,367,990",
+              "account": "매출액",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 36472102186,
+              "raw": "36,472,102,186",
+              "account": "영업이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": 22596860341,
+              "raw": "22,596,860,341",
+              "account": "당기순이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2025,
+          "start": "2025-01-01",
+          "end": "2025-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260313001288",
+          "filed": "2026-03-13",
+          "metrics": {
+            "revenue": {
+              "value": 731620027887,
+              "raw": "731,620,027,887",
+              "account": "매출액",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": -24460014863,
+              "raw": "(24,460,014,863)",
+              "account": "영업이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -33085743414,
+              "raw": "(33,085,743,414)",
+              "account": "당기순이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            }
+          }
+        }
+      ]
+    },
+    "035080": {
+      "ticker": "035080",
+      "name": "그래디언트",
+      "corp_code": "00244561",
+      "reviewed_at": "2026-10-17",
+      "max_review_age_days": 180,
+      "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
+      "notes": [
+        "2024·2025 순이익 이력은 비지배지분 귀속 이익이었다. 연결 전체는 두 연도 모두 순손실이다. 최신 비교열과 전기 원문 매출·영업이익·총 순이익은 대조한 기간에서 일치한다.",
+        "과거 API 실행 경로·원인은 미확정이다."
+      ],
+      "documents": {
+        "annual_income": {
+          "accession": "20260323001520",
+          "filed": "2026-03-23",
+          "section": "연결 포괄손익계산서",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260323001520&dcmNo=11168252&eleId=21&offset=375388&length=41630&dtd=dart4.xsd",
+          "sha256": "f51dddc0ec733a2df478dcfe3bbbb99e049e4d349e7c54bd36465a1cf84f4e47",
+          "headers": [
+            "연결 포괄손익계산서",
+            "제 29 기 2025.01.01 부터 2025.12.31 까지",
+            "제 28 기 2024.01.01 부터 2024.12.31 까지",
+            "제 27 기 2023.01.01 부터 2023.12.31 까지",
+            "(단위 : 원)"
+          ]
+        }
+      },
+      "periods": [
+        {
+          "year": 2023,
+          "start": "2023-01-01",
+          "end": "2023-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260323001520",
+          "filed": "2026-03-23",
+          "metrics": {
+            "revenue": {
+              "value": 3423866580408,
+              "raw": "3,423,866,580,408",
+              "account": "매출액 (주5,27,37)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 2909640608,
+              "raw": "2,909,640,608",
+              "account": "영업이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -6023332663,
+              "raw": "(6,023,332,663)",
+              "account": "당기순이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2024,
+          "start": "2024-01-01",
+          "end": "2024-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260323001520",
+          "filed": "2026-03-23",
+          "metrics": {
+            "revenue": {
+              "value": 3317910394761,
+              "raw": "3,317,910,394,761",
+              "account": "매출액 (주5,27,37)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": -5512716880,
+              "raw": "(5,512,716,880)",
+              "account": "영업이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -25955494157,
+              "raw": "(25,955,494,157)",
+              "account": "당기순이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2025,
+          "start": "2025-01-01",
+          "end": "2025-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260323001520",
+          "filed": "2026-03-23",
+          "metrics": {
+            "revenue": {
+              "value": 3061593068748,
+              "raw": "3,061,593,068,748",
+              "account": "매출액 (주5,27,37)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": -29581406856,
+              "raw": "(29,581,406,856)",
+              "account": "영업이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -24705775927,
+              "raw": "(24,705,775,927)",
+              "account": "당기순이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            }
+          }
+        }
+      ]
+    },
     "290650": {
       "ticker": "290650",
       "name": "엘앤씨바이오",
