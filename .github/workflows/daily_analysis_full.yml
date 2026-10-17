@@ -1144,8 +1144,20 @@ jobs:
           git add -f data/kr_earnings_calendar.json
           if ! git diff --staged --quiet; then
             git commit -m "data: refresh official earnings calendar checkpoint"
-            git pull --rebase --autostash origin main
-            git push origin HEAD:main
+            for attempt in 1 2 3 4 5; do
+              if ! git pull --rebase --autostash origin main; then
+                echo "::error::Calendar checkpoint rebase failed; manual conflict review required"
+                exit 1
+              fi
+              if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+                echo "::error::Calendar checkpoint has unresolved conflicts"
+                exit 1
+              fi
+              if git push origin HEAD:main; then exit 0; fi
+              if [ "$attempt" -lt 5 ]; then sleep $((attempt * 2 + RANDOM % 3)); fi
+            done
+            echo "::error::Calendar checkpoint push failed after 5 attempts"
+            exit 1
           fi
       - name: Preserve collection evidence
         if: always()
@@ -1179,10 +1191,24 @@ jobs:
           sparse-checkout-cone-mode: false
       - name: Apply the same calendar fields to public fallback
         run: |
+          set -euo pipefail
           node scripts/publish_earnings_calendar.cjs --github-file
           git -C _report_published add stock_report_public.json
           if git -C _report_published diff --cached --quiet; then exit 0; fi
           git -C _report_published config user.name "AI Stock Bot"
           git -C _report_published config user.email "gywns0126@gmail.com"
           git -C _report_published commit -m "data(reports): refresh official earnings calendar"
-          git -C _report_published push origin HEAD:main
+          for attempt in 1 2 3 4 5; do
+            if ! git -C _report_published pull --rebase --autostash origin main; then
+              echo "::error::Calendar fallback rebase failed; manual conflict review required"
+              exit 1
+            fi
+            if [ -n "$(git -C _report_published diff --name-only --diff-filter=U)" ]; then
+              echo "::error::Calendar fallback has unresolved conflicts"
+              exit 1
+            fi
+            if git -C _report_published push origin HEAD:main; then exit 0; fi
+            if [ "$attempt" -lt 5 ]; then sleep $((attempt * 2 + RANDOM % 3)); fi
+          done
+          echo "::error::Calendar fallback push failed after 5 attempts"
+          exit 1
