@@ -318,6 +318,22 @@ runs:
         echo "Source ref: $(git rev-parse origin/main)" >> _public_dist/_manifest.txt
         ls -lh _public_dist/
 
+    - name: Reconcile reviewed report cells before both public writes
+      shell: bash
+      run: |
+        # A long-running report builder can commit an older full stock report after a
+        # reviewed correction. Fetch current main now; the reviewed repair validates
+        # known before/after cells and changes only those cells in the shared staging file.
+        # Missing or invalid correction inputs stop both VERITY-data and Blob publication.
+        # This full snapshot must retain stock_report_public.json: force_orphan removes
+        # files missing from staging, so a failed extraction cannot silently delete it.
+        test -s _public_dist/stock_report_public.json || {
+          echo "::error::stock_report_public.json missing from full publish staging"
+          exit 1
+        }
+        node --version
+        node "${{ github.workspace }}/scripts/publish_report_financials.cjs" --staged-public
+
     - name: Deploy to VERITY-data main branch (옵션 B, P0)
       id: publish_primary
       continue-on-error: true

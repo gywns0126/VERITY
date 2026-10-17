@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const NAME = 'stock_report_public.json';
 const URL = 'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/' + NAME;
 const MANIFEST = 'data/metadata/report_fin_history_corrections_20261017.json';
+const HISTORY = 'data/dart_kr_fin_history.json';
 
 function repair(doc, manifest, history) {
     assert(['reviewed-kr-annual-net-corrections-v1', 'reviewed-kr-annual-financial-corrections-v2'].includes(manifest.schema));
@@ -52,9 +53,32 @@ function repair(doc, manifest, history) {
     return {next, changed};
 }
 
+function latestReviewedSources(exec = cp.execFileSync) {
+    // Fetch immediately before the shared publish boundary. Read both inputs from one commit.
+    exec('git', ['fetch', 'origin', 'main', '--depth=1', '--quiet']);
+    const ref = exec('git', ['rev-parse', 'origin/main'], {encoding: 'utf8'}).trim();
+    assert(/^[a-f0-9]{40}$/.test(ref), 'invalid main ref');
+    const read = file => JSON.parse(exec('git', ['show', `${ref}:${file}`], {maxBuffer: 15000000}));
+    return {manifest: read(MANIFEST), history: read(HISTORY), ref};
+}
+
+function repairStagedFile(file, loadSources = latestReviewedSources) {
+    // Other callers may have no stock report. Do not fetch or change their staged files.
+    if (!fs.existsSync(file)) return {skipped: true, changed: []};
+    const {manifest, history, ref} = loadSources();
+    const result = repair(JSON.parse(fs.readFileSync(file)), manifest, history);
+    if (result.changed.length) fs.writeFileSync(file, JSON.stringify(result.next));
+    return {ref, reviewed: manifest.rows.length, changed: result.changed};
+}
+
 async function main() {
+    if (process.argv[2] === '--staged-public') {
+        const result = repairStagedFile('_public_dist/' + NAME);
+        console.log(JSON.stringify({target: '_public_dist/' + NAME, ...result}));
+        return;
+    }
     const manifest = JSON.parse(fs.readFileSync(MANIFEST));
-    const history = JSON.parse(fs.readFileSync('data/dart_kr_fin_history.json'));
+    const history = JSON.parse(fs.readFileSync(HISTORY));
     if (process.argv[2] === '--github-file') {
         const path = '_report_published/' + NAME;
         const result = repair(JSON.parse(fs.readFileSync(path)), manifest, history);
@@ -90,7 +114,7 @@ async function main() {
     }
     throw Error('public readback differs; no repeated write');
 }
-module.exports = {repair};
+module.exports = {repair, repairStagedFile, latestReviewedSources};
 if (require.main === module) main().catch(e => {
     console.error('report correction publish failed: ' + e.constructor.name);
     process.exitCode = 1;
