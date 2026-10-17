@@ -55,6 +55,7 @@ def mock_ledger_dir(tmp_path, monkeypatch):
     )
     (metadata_dir / "data_health.json").write_text(
         json.dumps({
+            "_meta": {"generated_at": _ts_kst(0.5)},
             "status": "green",
             "reasons": [],
             "publish_verify": {
@@ -234,8 +235,9 @@ def test_build_cockpit_state_with_missing_ledgers(tmp_path, monkeypatch):
     from scripts.cockpit_aggregate import build_cockpit_state
     state = build_cockpit_state()
 
-    # 결손 input → 모든 reducer 가 빈 dict 박음 → severity rule = GREEN (입력 None)
-    assert state["severity"] == "GREEN"
+    # 결손 aggregate 는 stale/결손 health evidence 로 YELLOW 처리한다.
+    assert state["severity"] == "YELLOW"
+    assert any("data delivery AMBER" in reason for reason in state["severity_reasons"])
     # N=0 (validation 결손) → to_50 = 50
     assert state["n_verification_days"] == 0
     assert state["n_milestones"]["to_50"] == 50
@@ -244,6 +246,213 @@ def test_build_cockpit_state_with_missing_ledgers(tmp_path, monkeypatch):
     assert state["alert_volume_24h"] == {
         "sent": 0, "dedupe_skip": 0, "quiet_skip": 0, "fp_repeat_max": 0,
     }
+
+
+@pytest.mark.parametrize("aggregate_text", [None, "{", json.dumps({"status": "green", "reasons": []})])
+def test_missing_unreadable_or_incomplete_data_health_is_yellow(
+    mock_ledger_dir, monkeypatch, aggregate_text
+):
+    _data_dir, metadata_dir = mock_ledger_dir
+    path = metadata_dir / "data_health.json"
+    if aggregate_text is None:
+        path.unlink()
+    else:
+        path.write_text(aggregate_text, encoding="utf-8")
+
+    from scripts.cockpit_aggregate import build_cockpit_state
+    state = build_cockpit_state()
+    assert state["severity"] == "YELLOW"
+    assert any("data delivery AMBER" in reason for reason in state["severity_reasons"])
+
+
+def test_old_data_health_build_timestamp_is_yellow(mock_ledger_dir, monkeypatch):
+    _data_dir, metadata_dir = mock_ledger_dir
+    now = datetime(2026, 10, 18, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("scripts.cockpit_aggregate._now_utc", lambda: now)
+    (metadata_dir / "data_health.json").write_text(
+        json.dumps({
+            "_meta": {"generated_at": (now - timedelta(hours=3, seconds=1)).isoformat()},
+            "generated_at": now.isoformat(),  # _meta is authoritative over the legacy field.
+            "status": "green",
+            "reasons": [],
+            "publish_verify": {"ok": True, "failed": 0},
+        }), encoding="utf-8",
+    )
+
+    from scripts.cockpit_aggregate import build_cockpit_state
+    state = build_cockpit_state()
+    assert state["severity"] == "YELLOW"
+    assert "data_health aggregate stale" in state["severity_reasons"][0]
+    assert state["_inputs_snapshot"]["delivery_generated_at"] == (now - timedelta(hours=3, seconds=1)).isoformat()
+
+
+@pytest.mark.parametrize("candidate", [17, ["2026-10-18T00:00:00+00:00"]])
+def test_non_string_data_health_timestamp_is_yellow_without_crashing(
+    mock_ledger_dir, monkeypatch, candidate
+):
+    _data_dir, metadata_dir = mock_ledger_dir
+    now = datetime(2026, 10, 18, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("scripts.cockpit_aggregate._now_utc", lambda: now)
+    (metadata_dir / "data_health.json").write_text(
+        json.dumps({
+            "_meta": {"generated_at": candidate},
+            "status": "green",
+            "reasons": [],
+            "publish_verify": {"ok": True, "failed": 0},
+        }), encoding="utf-8",
+    )
+
+    from scripts.cockpit_aggregate import build_cockpit_state
+    state = build_cockpit_state()
+    assert state["severity"] == "YELLOW"
+    assert "data_health aggregate generated_at missing or invalid" in state["severity_reasons"][-1]
+
+
+def test_invalid_authoritative_meta_timestamp_does_not_fall_back_to_legacy(
+    mock_ledger_dir, monkeypatch
+):
+    _data_dir, metadata_dir = mock_ledger_dir
+    now = datetime(2026, 10, 18, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("scripts.cockpit_aggregate._now_utc", lambda: now)
+    legacy_generated_at = now.isoformat()
+    (metadata_dir / "data_health.json").write_text(
+        json.dumps({
+            "_meta": {"generated_at": "not-a-timestamp"},
+            "generated_at": legacy_generated_at,
+            "status": "green",
+            "reasons": [],
+            "publish_verify": {"ok": True, "failed": 0},
+        }), encoding="utf-8",
+    )
+
+    from scripts.cockpit_aggregate import build_cockpit_state
+    state = build_cockpit_state()
+    assert state["severity"] == "YELLOW"
+    assert "data_health aggregate generated_at missing or invalid" in state["severity_reasons"][-1]
+    assert state["_inputs_snapshot"]["delivery_generated_at"] == "not-a-timestamp"
+
+
+def test_publish_verify_timestamp_cannot_substitute_for_aggregate_timestamp(
+    mock_ledger_dir, monkeypatch
+):
+    _data_dir, metadata_dir = mock_ledger_dir
+    now = datetime(2026, 10, 18, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("scripts.cockpit_aggregate._now_utc", lambda: now)
+    (metadata_dir / "data_health.json").write_text(
+        json.dumps({
+            "status": "green",
+            "reasons": [],
+            "publish_verify": {
+                "generated_at": now.isoformat(),
+                "ok": True,
+                "failed": 0,
+            },
+        }), encoding="utf-8",
+    )
+
+    from scripts.cockpit_aggregate import build_cockpit_state
+    state = build_cockpit_state()
+    assert state["severity"] == "YELLOW"
+    assert "data_health aggregate generated_at missing or invalid" in state["severity_reasons"][-1]
+    assert state["_inputs_snapshot"]["delivery_generated_at"] is None
+
+
+@pytest.mark.parametrize("meta", [[], {}, None])
+def test_malformed_meta_cannot_use_legacy_clock(mock_ledger_dir, meta):
+    _data_dir, metadata_dir = mock_ledger_dir
+    (metadata_dir / "data_health.json").write_text(json.dumps({
+        "_meta": meta, "generated_at": _ts_kst(0.1), "status": "green", "reasons": [],
+        "publish_verify": {"ok": True, "failed": 0},
+    }))
+    from scripts.cockpit_aggregate import build_cockpit_state
+    assert build_cockpit_state()["severity"] == "YELLOW"
+
+
+def test_future_data_health_build_timestamp_over_five_minutes_is_yellow(
+    mock_ledger_dir, monkeypatch
+):
+    _data_dir, metadata_dir = mock_ledger_dir
+    now = datetime(2026, 10, 18, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("scripts.cockpit_aggregate._now_utc", lambda: now)
+    generated_at = (now + timedelta(minutes=5, seconds=1)).isoformat()
+    (metadata_dir / "data_health.json").write_text(
+        json.dumps({
+            "_meta": {"generated_at": generated_at},
+            "status": "green",
+            "reasons": [],
+            "publish_verify": {"ok": True, "failed": 0},
+        }), encoding="utf-8",
+    )
+
+    from scripts.cockpit_aggregate import build_cockpit_state
+    state = build_cockpit_state()
+    assert state["severity"] == "YELLOW"
+    assert "data_health aggregate generated_at is in the future (>5m)" in state["severity_reasons"][-1]
+
+
+def test_legacy_top_level_generated_at_remains_supported(mock_ledger_dir, monkeypatch):
+    _data_dir, metadata_dir = mock_ledger_dir
+    now = datetime(2026, 10, 18, 0, 0, tzinfo=timezone.utc)
+    generated_at = (now - timedelta(hours=1)).isoformat()
+    monkeypatch.setattr("scripts.cockpit_aggregate._now_utc", lambda: now)
+    (metadata_dir / "data_health.json").write_text(
+        json.dumps({
+            "generated_at": generated_at,
+            "status": "green",
+            "reasons": [],
+            "publish_verify": {"ok": True, "failed": 0},
+        }), encoding="utf-8",
+    )
+
+    from scripts.cockpit_aggregate import build_cockpit_state
+    state = build_cockpit_state()
+    assert state["severity"] == "GREEN"
+    assert state["_inputs_snapshot"]["delivery_generated_at"] == generated_at
+
+
+def test_actual_data_health_builder_amber_reaches_consumer_as_yellow(tmp_path, monkeypatch):
+    data_dir = tmp_path / "data"
+    metadata_dir = data_dir / "metadata"
+    metadata_dir.mkdir(parents=True)
+
+    import api.builders.data_health_builder as health_builder
+    import scripts.cockpit_aggregate as agg
+
+    monkeypatch.setattr(health_builder, "_META", str(metadata_dir))
+    monkeypatch.setattr(health_builder, "_DATA", str(data_dir))
+    monkeypatch.setattr(agg, "DATA_DIR", data_dir)
+    monkeypatch.setattr(agg, "METADATA_DIR", metadata_dir)
+    monkeypatch.setattr(agg, "COCKPIT_PATH", metadata_dir / "cockpit_state.json")
+
+    aggregate = health_builder.build()
+    assert aggregate["status"] == "amber"
+    (metadata_dir / "data_health.json").write_text(
+        json.dumps(aggregate), encoding="utf-8",
+    )
+
+    state = agg.build_cockpit_state()
+    assert state["severity"] == "YELLOW"
+    assert state["_inputs_snapshot"]["delivery_status"] == "amber"
+    assert any(reason.startswith("data delivery AMBER:") for reason in state["severity_reasons"])
+
+
+def test_stale_data_health_does_not_downgrade_existing_red(mock_ledger_dir, monkeypatch):
+    _data_dir, metadata_dir = mock_ledger_dir
+    now = datetime(2026, 10, 18, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("scripts.cockpit_aggregate._now_utc", lambda: now)
+    (metadata_dir / "data_health.json").write_text(
+        json.dumps({
+            "_meta": {"generated_at": (now - timedelta(hours=4)).isoformat()},
+            "status": "red",
+            "reasons": ["기존 전달 검증 실패"],
+            "publish_verify": {"ok": False, "failed": 1},
+        }), encoding="utf-8",
+    )
+
+    from scripts.cockpit_aggregate import build_cockpit_state
+    state = build_cockpit_state()
+    assert state["severity"] == "RED"
+    assert state["severity_reasons"] == ["data delivery RED: 기존 전달 검증 실패"]
 
 
 def test_alert_volume_24h_empty_shape_when_only_stale_entries(tmp_path, monkeypatch):

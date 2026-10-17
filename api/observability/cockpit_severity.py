@@ -79,6 +79,13 @@ def _check_red(inputs: Dict[str, Any]) -> List[str]:
 def _check_yellow(inputs: Dict[str, Any]) -> List[str]:
     reasons: List[str] = []
 
+    # 공개 산출물 health aggregate 가 amber 면 consumer 단독 호출도 YELLOW.
+    data_health = inputs.get("data_health") or {}
+    if str(data_health.get("delivery_status") or "").lower() == "amber":
+        details = data_health.get("delivery_reasons") or []
+        detail = str(details[0]) if isinstance(details, list) and details else "health evidence incomplete"
+        reasons.append(f"data delivery AMBER: {detail}")
+
     # KIS lock = 2 (RULE 1 임박)
     kis_lock = inputs.get("kis_lock_commits_24h")
     if isinstance(kis_lock, (int, float)) and kis_lock == 2:
