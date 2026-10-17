@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-10-17T23:09:49.973722+09:00",
+  "generated_at": "2026-10-18T02:13:30.499752+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 397275,
-    "python_modules": 1289,
+    "code_lines_tsx_py": 400003,
+    "python_modules": 1300,
     "tsx_components": 150,
-    "json_data_files": 2444,
-    "json_total_tracked": 2471,
+    "json_data_files": 2446,
+    "json_total_tracked": 2473,
     "workflows": 82,
     "scheduled_workflows": 62,
     "cron_triggers": 72,
-    "git_tracked_files": 8658
+    "git_tracked_files": 8673
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 87,
+      "count": 89,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -82,6 +82,8 @@
         "api/utils/dart_pre_attach.py",
         "api/utils/dart_private_evidence.py",
         "api/utils/macro_meta.py",
+        "api/utils/macro_provenance.py",
+        "api/utils/macro_runtime.py",
         "api/utils/macro_snapshot.py",
         "scripts/audit/macro_field_audit.py",
         "scripts/collect/dart_cb_bw_detail.py",
@@ -772,7 +774,7 @@
     },
     "data": {
       "label": "데이터",
-      "count": 2444
+      "count": 2446
     },
     "validation": {
       "label": "검증",
@@ -787,8 +789,8 @@
     }
   },
   "python_by_dir": {
-    "api": 491,
-    "tests": 486,
+    "api": 494,
+    "tests": 494,
     "scripts": 177,
     "vercel-api": 121,
     "server": 8,
