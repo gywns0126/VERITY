@@ -486,3 +486,61 @@ def test_same_filing_evidence_never_overwrites_conflicting_or_already_detailed_s
     wrong={**primary,'net':777,'metric_sources':{}}
     result=_by_period(review.reviewed_financials('086960',stock,[wrong],now),2025,'annual')
     assert result['net']==777 and 'net' not in result['metric_sources']
+
+
+def _inception_review_entry(base=None):
+    entry = deepcopy(base if base is not None else review._registry()['489790'])
+    entry['documents']['inception_income'] = {
+        'accession':'20250317000812','filed':'2025-03-17','unit':'원',
+        'currency':'KRW','fs_div':'CFS','section':'연결 포괄손익계산서',
+        'url':'https://dart.fss.or.kr/report/viewer.do?rcpNo=20250317000812&dcmNo=10415585&eleId=21&offset=273070&length=19363&dtd=dart4.xsd',
+        'sha256':'3adf9e10ce84dc053c73264f9721f14d4a306da7ca828cb3f6eaf83846d01bf3',
+        'headers':['연결 포괄손익계산서','제 1 기 2024.09.01 부터 2024.12.31 까지','(단위 : 원)'],
+    }
+    entry['partial_periods'] = [{
+        'year':2024,'start':'2024-09-01','end':'2024-12-31','period_kind':'inception_partial',
+        'currency':'KRW','fs_div':'CFS','accession':'20250317000812','filed':'2025-03-17',
+        'metrics':{
+            'revenue':{'value':493322362934,'raw':'493,322,362,934','account':'I.매출 (주25,26,32)','column':'제 1 기','document':'inception_income'},
+            'op':{'value':-120362075,'raw':'(120,362,075)','account':'VI.영업이익(손실)','column':'제 1 기','document':'inception_income'},
+            'net':{'value':3210792631,'raw':'3,210,792,631','account':'XV.당기순이익','column':'제 1 기','document':'inception_income'},
+        },
+    }]
+    return entry
+
+
+def test_489790_original_first_close_is_separate_from_annual_and_one_column(monkeypatch):
+    base = deepcopy(review._registry()['489790'])
+    entry = _inception_review_entry(base)
+    monkeypatch.setattr(review, '_registry', lambda: {'489790': entry})
+    stock = {'ticker':'489790','name':'한화비전','corp_code':'01867758'}
+    now = datetime(2026,10,17,tzinfo=KST)
+    before = deepcopy(stock)
+    reviewed = review.reviewed_entry('489790',stock,now)
+    assert [r['year'] for r in reviewed['periods']] == [2025]
+    assert len(reviewed['partial_periods']) == 1
+    first = reviewed['partial_periods'][0]
+    assert (first['start'],first['end'],first['period_kind']) == ('2024-09-01','2024-12-31','inception_partial')
+    assert (first['revenue'],first['op'],first['net']) == (493322362934,-120362075,3210792631)
+    assert {m['column'] for m in first['metric_sources'].values()} == {'제 1 기'}
+    assert {m['sha256'] for m in first['metric_sources'].values()} == {entry['documents']['inception_income']['sha256']}
+    assert [r['year'] for r in review.reviewed_financials('489790',stock,[],now)] == [2025]
+    assert stock == before
+    for alter in [
+        lambda e:e['documents']['inception_income'].update(sha256='a'*64),
+        lambda e:e['documents']['inception_income'].update(url=e['documents']['annual_income']['url']),
+        lambda e:e['partial_periods'][0].update(start='2024-01-01'),
+        lambda e:e['partial_periods'][0].update(period_kind='annual'),
+        lambda e:e['partial_periods'][0].update(currency='USD'),
+        lambda e:e['partial_periods'][0].update(fs_div='OFS'),
+        lambda e:e['partial_periods'][0].update(accession='20260316001204'),
+        lambda e:e['partial_periods'][0].update(filed='2026-03-16'),
+        lambda e:e['partial_periods'][0]['metrics']['revenue'].update(column='제 2 기'),
+        lambda e:e['partial_periods'][0]['metrics']['op'].update(value=5466174056,raw='5,466,174,056'),
+        lambda e:e['partial_periods'][0]['metrics']['net'].update(value=31701255717,raw='31,701,255,717'),
+    ]:
+        bad = _inception_review_entry(base)
+        alter(bad)
+        monkeypatch.setattr(review,'_registry',lambda bad=bad:{'489790':bad})
+        assert review.reviewed_entry('489790',stock,now)['partial_periods'] == []
+    assert review.reviewed_entry('489790',{**stock,'corp_code':'00000000'},now) is None

@@ -74,12 +74,19 @@ def _dps(rows) -> Optional[float]:
 
 def build() -> Dict[str, Any]:
     from api.intelligence.lynch_classifier import classify_lynch_kr
+    from api.builders.stock_report_public_builder import _checked_489790_first_close
 
     mk = (_load("krx_mktcap.json", {}) or {}).get("map") or {}
     fund = (_load("dart_fundamentals_kr.json", {}) or {}).get("fundamentals") or {}
     sec = (_load("kr_sector_map.json", {}) or {}).get("map") or {}
     dv = _load("dividends_kr.json", {}) or {}
     hist = (_load("dart_kr_fin_history.json", {}) or {}).get("rows") or []
+    try:
+        inception = _checked_489790_first_close(hist)
+        quarantined = False
+    except ValueError as exc:
+        print(f"[kr_lynch_class] quarantine 489790: {exc}", file=sys.stderr)
+        inception, quarantined = False, True
 
     rev: Dict[str, Dict[int, float]] = defaultdict(dict)
     op: Dict[str, Dict[int, float]] = defaultdict(dict)
@@ -89,6 +96,8 @@ def build() -> Dict[str, Any]:
         y = r.get("fiscal_year")
         if not t or y is None:
             continue
+        if t == "489790" and (quarantined or (inception and y == 2024)):
+            continue  # A four-month first close is not an annual YoY denominator.
         if f.get("revenue") is not None:
             rev[t][y] = f["revenue"]
         if f.get("operating_profit") is not None:
@@ -98,6 +107,8 @@ def build() -> Dict[str, Any]:
     cls_count: Counter = Counter()
     low = 0
     for tk, m in mk.items():
+        if quarantined and tk == "489790":
+            continue
         if not (isinstance(tk, str) and tk.isdigit() and len(tk) == 6):
             continue
         fu = fund.get(tk) or {}

@@ -30,6 +30,7 @@ sys.path.insert(0, _ROOT)
 from api.config import DATA_DIR
 from api.collectors.dart_corp_code import get_corp_code
 from api.collectors.dart_fundamentals import _fetch_fnltt_all_cached, _extract_pl_bs_from_dart
+from api.builders.stock_report_public_builder import _checked_489790_first_close
 
 OUT_PATH = os.path.join(DATA_DIR, "dart_kr_fin_history.json")
 DONE_PATH = os.path.join(DATA_DIR, "dart_kr_fin_history_done.json")
@@ -164,6 +165,8 @@ def main() -> int:
     done = _load_done()
     missing = _load_missing()
     rows = _load_rows()
+    first_close_required = 2024 in years and any(t == "489790" for t, _ in universe)
+    first_close_present = _checked_489790_first_close(rows) if first_close_required else False
     def _row_clean(r):
         # 재수집 불요 조건: net 존재 AND op 비오염. 하나라도 어기면 stale → 재수집.
         f = r.get("fundamentals") or {}
@@ -176,6 +179,8 @@ def main() -> int:
 
     # 정상 행만 seen — 오염/null 행은 재수집 대상. dedup 멱등이라 양호분기 손실 0.
     seen = {(r.get("ticker"), r.get("fiscal_year")) for r in rows if _row_clean(r)}
+    if first_close_required and (not first_close_present or ("489790", 2024) not in seen):
+        raise ValueError("489790 first close requires reviewed history before collection")
     rows_by_key = {(r.get("ticker"), r.get("fiscal_year")): r for r in rows}
 
     # 🚨 todo = **셀**에서 계산한다 (2026-08-23). 종전 `t not in done or t in gap_tickers` 는

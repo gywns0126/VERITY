@@ -573,3 +573,49 @@ def test_us_financial_classification_still_comes_from_sec_metadata(is_financial)
         rows = section(report, ident)['rows']
         assert any('영업이익률' in row for row in rows) is not is_financial
     assert any(row[1] == '매출원가' for row in section(report, 'R2')['rows']) is not is_financial
+
+
+@pytest.mark.parametrize('render_pdf', [False, True], ids=['semantic', 'pdf'])
+def test_489790_first_four_months_are_visible_only_as_a_labeled_source_appendix(monkeypatch, render_pdf):
+    if render_pdf:
+        pytest.importorskip('typst')
+    import report_kr_review as review
+    base = copy.deepcopy(review._registry()['489790'])
+    entry = copy.deepcopy(base)
+    entry['documents']['inception_income'] = copy.deepcopy(review._INCEPTION_489790_DOC)
+    entry['partial_periods'] = [{**review._INCEPTION_489790, 'metrics': {
+        key: {'value': value, 'raw': raw, 'account': account,
+              'column': '제 1 기', 'document': 'inception_income'}
+        for key, (value, raw, account) in review._INCEPTION_489790_METRICS.items()}}]
+    monkeypatch.setattr(review, '_registry', lambda: {'489790': entry})
+    stock = {'ticker':'489790','name':'한화비전','corp_code':'01867758',
+             'financials':{'period':'2025'},
+             'fin_series':[{'year':2024,'revenue':None,'op':-120362075,'net':31701255717},
+                           {'year':2025,'revenue':None,'op':162267204336,'net':42619753835}]}
+    before = copy.deepcopy(stock)
+    docs = {'stock_report_public.json': {'stocks': {'489790': stock}}}
+    now = datetime(2026,10,17,tzinfo=timezone.utc)
+    report = build_report('489790', lambda name: docs.get(name, {}), now)
+    first = section(report, 'R1P')
+    assert first['total'] == 1
+    assert first['rows'][0][0] == '2024-09-01 ~ 2024-12-31'
+    assert '4개월' in first['title'] and '12개월' in first['note']
+    assert first['rows'][0][1:4] == ['493,322,362,934', '(120,362,075)', '3,210,792,631']
+    assert first['rows'][0][-1]['url'] == entry['documents']['inception_income']['url']
+    assert all(raw in str(report) for raw in first['rows'][0][1:4])
+    assert [row[0] for row in section(report, 'R1')['rows']] == ['2025']
+    assert not any(s['id'] == 'R1U' for s in report['sections'])
+    assert all('2024' not in row[0] for row in report['annual_core'])
+    assert not report['comparison']['usable'] and not any(s['id'] == 'R5' for s in report['sections'])
+    assert report['reader']['current']['year'] == 2025
+    assert any('2024-09-01~12-31' in gap for gap in report['gaps'])
+    if render_pdf:
+        assert fact_report._render(report).startswith(b'%PDF')
+    assert stock == before
+
+    bad = copy.deepcopy(entry)
+    bad['documents']['inception_income']['sha256'] = 'a' * 64
+    monkeypatch.setattr(review, '_registry', lambda: {'489790': bad})
+    held = build_report('489790', lambda name: docs.get(name, {}), now)
+    assert not any(s['id'] in ('R1P', 'R1U') for s in held['sections'])
+    assert [row[0] for row in section(held, 'R1')['rows']] == ['2025']

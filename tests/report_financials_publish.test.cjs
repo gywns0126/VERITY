@@ -1,7 +1,7 @@
 const {test} = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const cp = require('node:child_process');
-const {repair, repairStagedFile, latestReviewedSources} = require('../scripts/publish_report_financials.cjs');
+const {repair, repairStagedFile, latestReviewedSources, publishBlob} = require('../scripts/publish_report_financials.cjs');
 const c = require('../data/metadata/report_fin_history_corrections_20261017.json').rows.find(r => !r.metric || r.metric === 'net');
 const manifest = {schema: 'reviewed-kr-annual-net-corrections-v1', rows: [c]};
 const history = {rows: [{ticker:c.ticker,name:c.name,fiscal_year:c.year,period:'annual',fundamentals:{net_income:c.after}}]};
@@ -371,4 +371,99 @@ test('staged CLI uses the remote committed correction, not stale local inputs', 
     fs.writeFileSync(file,JSON.stringify(bad));
     assert.equal(command().status,1);
     assert.deepEqual(JSON.parse(fs.readFileSync(file)),bad);
+});
+
+const firstClose = {
+    ticker:'489790',name:'한화비전',corp_code:'01867758',year:2024,
+    start:'2024-09-01',end:'2024-12-31',period_kind:'inception_partial',
+    currency:'KRW',fs_div:'CFS',accession:'20250317000812',filed:'2025-03-17',
+    source_column:'제 1 기',
+    source_url:'https://dart.fss.or.kr/report/viewer.do?rcpNo=20250317000812&dcmNo=10415585&eleId=21&offset=273070&length=19363&dtd=dart4.xsd',
+    source_sha256:'3adf9e10ce84dc053c73264f9721f14d4a306da7ca828cb3f6eaf83846d01bf3',
+};
+const firstManifest={schema:'reviewed-kr-annual-financial-corrections-v3',rows:[
+    {...firstClose,metric:'revenue',before:null,after:493322362934,account_name:'I.매출 (주25,26,32)',raw_text:'493,322,362,934',reported_unit:'원',unit_multiplier:1,publication_target:'history_only'},
+    {...firstClose,metric:'net',before:31701255717,after:3210792631,account_name:'XV.당기순이익',raw_text:'3,210,792,631',reported_unit:'원',unit_multiplier:1,publication_target:'history_only'},
+]};
+const firstHistory={rows:[{...firstClose,period:'annual',fiscal_year:2024,
+    fundamentals:{revenue:493322362934,operating_profit:-120362075,net_income:3210792631,investment_property:null}}]};
+const firstPublic={_meta:{generated_at:'old-full-run'},stocks:[
+    {ticker:'489790',name:'한화비전',facts:{PER:'keep'},fin_series:[
+        {year:2024,revenue:null,op:-120362075,net:31701255717},
+        {year:2025,revenue:null,op:162267204336,net:42619753835}]},
+    {ticker:'000001',fin_series:[{year:2024,net:-7}],other:'keep'}]};
+
+test('exact first-close authority removes only the known four-month public row',()=>{
+    const result=repair(firstPublic,firstManifest,firstHistory);
+    assert.deepEqual(result.changed,['489790:2024:remove_partial']);
+    const expected=structuredClone(firstPublic);
+    expected.stocks[0].fin_series.shift();
+    assert.deepEqual(result.next,expected);
+    assert.deepEqual(firstPublic.stocks[0].fin_series[0],{year:2024,revenue:null,op:-120362075,net:31701255717});
+    assert.deepEqual(repair(result.next,firstManifest,firstHistory),{next:expected,changed:[]});
+    for(const modify of [
+        d=>d.stocks[0].fin_series[0].net=3210792631,
+        d=>d.stocks[0].fin_series[0].revenue=493322362934,
+        d=>d.stocks[0].fin_series[0].extra='unknown',
+        d=>d.stocks[0].fin_series.push({...d.stocks[0].fin_series[0]}),
+    ]) {const bad=structuredClone(firstPublic);modify(bad);assert.throws(()=>repair(bad,firstManifest,firstHistory));}
+    for(const modify of [
+        r=>r.source_sha256='a'.repeat(64),r=>r.source_column='제 2 기',
+        r=>r.start='2024-01-01',r=>r.corp_code='00000000',
+        r=>r.accession='20260316001204',r=>r.after=31701255717,
+        r=>r.publication_target='public',
+        r=>r.account_name='WRONG ACCOUNT',r=>r.raw_text='493322362934',
+    ]) {const bad=structuredClone(firstManifest);modify(bad.rows[0]);assert.throws(()=>repair(firstPublic,bad,firstHistory));}
+    for(const modify of [r=>r.account_name='귀속 순이익',r=>r.raw_text='3210792631']) {
+        const bad=structuredClone(firstManifest);modify(bad.rows[1]);assert.throws(()=>repair(firstPublic,bad,firstHistory));
+    }
+    for(const modify of [
+        h=>h.rows[0].source_sha256='a'.repeat(64),h=>h.rows[0].period_kind='annual',
+        h=>h.rows[0].fundamentals.operating_profit=5466174056,
+        h=>h.rows[0].fundamentals.net_income=31701255717,
+    ]) {const bad=structuredClone(firstHistory);modify(bad);assert.throws(()=>repair(firstPublic,firstManifest,bad));}
+    assert.throws(()=>repair(firstPublic,{...firstManifest,rows:firstManifest.rows.slice(0,1)},firstHistory));
+    const quarantined=structuredClone(firstPublic);
+    quarantined._meta.review_quarantine=['489790'];
+    assert.throws(()=>repair(quarantined,firstManifest,firstHistory),/quarantined first close/);
+});
+
+test('staged exact removal and mocked Blob CAS preserve every other field',async t=>{
+    const dir=fs.mkdtempSync(path.join(os.tmpdir(),'report-inception-stage-'));
+    t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+    const file=path.join(dir,'stock_report_public.json');
+    fs.writeFileSync(file,JSON.stringify(firstPublic));
+    const sources=()=>({manifest:firstManifest,history:firstHistory,ref:'same-reviewed-ref'});
+    assert.deepEqual(repairStagedFile(file,sources).changed,['489790:2024:remove_partial']);
+    const expected=repair(firstPublic,firstManifest,firstHistory).next;
+    assert.deepEqual(JSON.parse(fs.readFileSync(file)),expected);
+    const bytes=fs.readFileSync(file);
+    assert.deepEqual(repairStagedFile(file,sources).changed,[]);
+    assert.deepEqual(fs.readFileSync(file),bytes);
+    const wrong=structuredClone(firstHistory);wrong.rows[0].start='2024-01-01';
+    assert.throws(()=>repairStagedFile(file,()=>({...sources(),history:wrong})));
+    assert.deepEqual(fs.readFileSync(file),bytes);
+
+    let stored=Buffer.from(JSON.stringify(firstPublic)),writes=0,reads=0;
+    const blob=await publishBlob({
+        head:async()=>({etag:'old-etag'}),
+        put:async(name,body,options)=>{
+            assert.equal(name,'stock_report_public.json');
+            assert.equal(options.ifMatch,'old-etag');
+            assert.deepEqual(JSON.parse(body),expected);
+            writes++;stored=Buffer.from(body);
+            return {url:'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/stock_report_public.json'};
+        },
+        fetcher:async()=>({ok:true,headers:{get:()=>reads++===0?'old-etag':'new-etag'},arrayBuffer:async()=>stored}),
+        loadSources:sources,
+    });
+    assert.deepEqual(blob.changed,['489790:2024:remove_partial']);
+    assert.equal(blob.readback,'matched');
+    assert.equal(writes,1);
+    const staleSources=()=>({manifest:firstManifest,history:wrong,ref:'changed-ref'});
+    await assert.rejects(()=>publishBlob({head:async()=>({etag:'old-etag'}),
+        put:async()=>{throw Error('must not write');},
+        fetcher:async()=>({ok:true,headers:{get:()=> 'old-etag'},arrayBuffer:async()=>Buffer.from(JSON.stringify(firstPublic))}),
+        loadSources:(()=>{let n=0;return ()=>n++?staleSources():sources();})(),
+    }));
 });

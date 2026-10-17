@@ -21,6 +21,23 @@ REGISTRY_PATH = Path(__file__).parent / "_content" / "report_kr_primary_reviews.
 METRICS = ("revenue", "op", "net", "ocf", "capex", "cost_of_sales", "sga")
 UNIT_MULTIPLIERS = {"원": 1, "천원": 1000, "백만원": 1000000}
 _DART = "https://dart.fss.or.kr/"
+_INCEPTION_489790 = {
+    "year": 2024, "start": "2024-09-01", "end": "2024-12-31",
+    "period_kind": "inception_partial", "currency": "KRW", "fs_div": "CFS",
+    "accession": "20250317000812", "filed": "2025-03-17",
+}
+_INCEPTION_489790_DOC = {
+    "accession": "20250317000812", "filed": "2025-03-17", "unit": "원",
+    "currency": "KRW", "fs_div": "CFS",
+    "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20250317000812&dcmNo=10415585&eleId=21&offset=273070&length=19363&dtd=dart4.xsd",
+    "sha256": "3adf9e10ce84dc053c73264f9721f14d4a306da7ca828cb3f6eaf83846d01bf3",
+    "headers": ["연결 포괄손익계산서", "제 1 기 2024.09.01 부터 2024.12.31 까지", "(단위 : 원)"],
+}
+_INCEPTION_489790_METRICS = {
+    "revenue": (493322362934, "493,322,362,934", "I.매출 (주25,26,32)"),
+    "op": (-120362075, "(120,362,075)", "VI.영업이익(손실)"),
+    "net": (3210792631, "3,210,792,631", "XV.당기순이익"),
+}
 
 
 @lru_cache(maxsize=1)
@@ -84,14 +101,18 @@ def reviewed_entry(ticker, stock, now):
     result["corp_code_match"] = "input_verified" if supplied_corp else "registry_only_input_missing"
     result["documents"] = {key: doc for key, doc in result["documents"].items() if _document_ok(doc, today)}
     result["periods"] = [row for row in result["periods"] if _period_ok(row, result["documents"], today)]
+    partial = result.pop("partial_periods", [])
+    if str(ticker) == "489790" and result.get("corp_code") == "01867758" and isinstance(partial, list):
+        result["partial_periods"] = [_materialize(row, result["documents"], result["reviewed_at"])
+                                     for row in partial if _inception_489790_ok(row, result["documents"], today)]
     business_doc = result.get("business_context", {}).get("document")
     if business_doc not in result["documents"]:
         result.pop("business_context", None)
     return result if result["periods"] else None
 
 
-def _period_ok(row, documents, today):
-    if not isinstance(row, dict) or row.get("period_kind") not in ("annual", "quarter", "ytd"):
+def _period_ok(row, documents, today, allowed_kinds=("annual", "quarter", "ytd")):
+    if not isinstance(row, dict) or row.get("period_kind") not in allowed_kinds:
         return False
     filed = _date(row.get("filed"))
     start, end = _date(row.get("start")), _date(row.get("end"))
@@ -124,6 +145,22 @@ def _period_ok(row, documents, today):
                 or sum(part["value"] for part in parts) != derived.get("value")):
             return False
     return True
+
+
+def _inception_489790_ok(row, documents, today):
+    if not _period_ok(row, documents, today, allowed_kinds=("inception_partial",)):
+        return False
+    if any(row.get(key) != value for key, value in _INCEPTION_489790.items()):
+        return False
+    doc = documents.get("inception_income")
+    if not isinstance(doc, dict) or any(doc.get(key) != value for key, value in _INCEPTION_489790_DOC.items()):
+        return False
+    metrics = row.get("metrics") or {}
+    if set(metrics) != set(_INCEPTION_489790_METRICS):
+        return False
+    return all(metrics[key] == {"value": value, "raw": raw, "account": account,
+                                "column": "제 1 기", "document": "inception_income"}
+               for key, (value, raw, account) in _INCEPTION_489790_METRICS.items())
 
 
 def _materialize(row, documents, reviewed_at):

@@ -5449,7 +5449,7 @@
       "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
       "notes": [
         "과거 API 원응답·실행 원인은 미확정이다. 원본 연차와 최신 재표시 비교열을 구분한다.",
-        "2024는 9월 1일~12월 31일 신설 회계기간이다. 12개월 비교연도로 쓰거나 시작일을 1월 1일로 바꾸지 않는다. 본 registry는 2025만 포함한다."
+        "연간 periods는 2025만 포함한다. 2024-09-01~12-31 첫 결산은 별도 inception_partial이며 12개월 비교연도나 1월 1일 시작 연도로 쓰지 않는다."
       ],
       "documents": {
         "annual_income": {
@@ -5464,6 +5464,21 @@
           "headers": [
             "연결 포괄손익계산서",
             "제 2 기 2025.01.01 부터 2025.12.31 까지",
+            "제 1 기 2024.09.01 부터 2024.12.31 까지",
+            "(단위 : 원)"
+          ]
+        },
+        "inception_income": {
+          "accession": "20250317000812",
+          "filed": "2025-03-17",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "section": "연결 포괄손익계산서",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20250317000812&dcmNo=10415585&eleId=21&offset=273070&length=19363&dtd=dart4.xsd",
+          "sha256": "3adf9e10ce84dc053c73264f9721f14d4a306da7ca828cb3f6eaf83846d01bf3",
+          "headers": [
+            "연결 포괄손익계산서",
             "제 1 기 2024.09.01 부터 2024.12.31 까지",
             "(단위 : 원)"
           ]
@@ -5514,6 +5529,41 @@
               "account": "IV.판매비와관리비 (주27,28)",
               "column": "제 2 기",
               "document": "annual_income"
+            }
+          }
+        }
+      ],
+      "partial_periods": [
+        {
+          "start": "2024-09-01",
+          "end": "2024-12-31",
+          "period_kind": "inception_partial",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20250317000812",
+          "filed": "2025-03-17",
+          "year": 2024,
+          "metrics": {
+            "revenue": {
+              "value": 493322362934,
+              "raw": "493,322,362,934",
+              "account": "I.매출 (주25,26,32)",
+              "column": "제 1 기",
+              "document": "inception_income"
+            },
+            "op": {
+              "value": -120362075,
+              "raw": "(120,362,075)",
+              "account": "VI.영업이익(손실)",
+              "column": "제 1 기",
+              "document": "inception_income"
+            },
+            "net": {
+              "value": 3210792631,
+              "raw": "3,210,792,631",
+              "account": "XV.당기순이익",
+              "column": "제 1 기",
+              "document": "inception_income"
             }
           }
         }
