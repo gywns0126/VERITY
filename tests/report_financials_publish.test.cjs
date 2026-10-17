@@ -22,3 +22,9 @@ test('uncorrected history and duplicate instructions are rejected',()=>{
     assert.throws(()=>repair(doc,manifest,bad));
     assert.throws(()=>repair(doc,{...manifest,rows:[c,c]},history));
 });
+test('raw unit mismatch cannot publish a differently scaled amount',()=>{
+    assert.throws(()=>repair(doc,{...manifest,rows:[{...c,reported_unit:'천원',unit_multiplier:1000}]},history));
+    assert.throws(()=>repair(doc,{...manifest,rows:[{...c,reported_unit:'미확인'}]},history));
+    assert.throws(()=>repair(doc,{...manifest,rows:[{...c,reported_unit:undefined}]},history));
+    assert.throws(()=>repair(doc,{...manifest,rows:[{...c,unit_multiplier:undefined}]},history));
+});

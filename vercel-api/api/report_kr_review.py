@@ -18,6 +18,7 @@ else:
 
 REGISTRY_PATH = Path(__file__).parent / "_content" / "report_kr_primary_reviews.json"
 METRICS = ("revenue", "op", "net", "ocf", "capex", "cost_of_sales", "sga")
+UNIT_MULTIPLIERS = {"원": 1, "천원": 1000, "백만원": 1000000}
 _DART = "https://dart.fss.or.kr/"
 
 
@@ -103,7 +104,10 @@ def _period_ok(row, documents, today):
     for key, metric in metrics.items():
         doc = documents.get(metric.get("document")) if isinstance(metric, dict) else None
         raw = _amount(metric.get("raw")) if isinstance(metric, dict) else None
-        expected = -raw if key == "capex" and raw is not None else raw
+        multiplier = UNIT_MULTIPLIERS.get((doc or {}).get("unit"))
+        expected = raw * multiplier if raw is not None and multiplier is not None else None
+        if key == "capex" and expected is not None:
+            expected = -expected
         if (not doc or doc.get("filed") != row.get("filed")
                 or doc.get("accession") != row.get("accession")
                 or doc.get("currency") != row.get("currency")
@@ -137,6 +141,7 @@ def _materialize(row, documents, reviewed_at):
             "source_url": doc["url"], "source_type": "DART 공개 HTML 직접 검수 · API 원응답 아님",
             "sha256": doc["sha256"], "reviewed_at": reviewed_at,
             "start": row["start"], "end": row["end"], "currency": row["currency"], "fs_div": row["fs_div"],
+            "reported_unit": doc["unit"], "unit_multiplier": UNIT_MULTIPLIERS[doc["unit"]],
         }
         if metric.get("normalization"):
             result["metric_sources"][key]["normalization"] = metric["normalization"]
