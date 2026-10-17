@@ -91,6 +91,56 @@ test('explicit reviewed missing op may be filled; unknown and zero values never 
     assert.throws(()=>repair(d,{...newer,rows:[{...op,after:null}]},h));
     assert.throws(()=>repair(d,{...newer,rows:[{...op,metric:'net'}]},h));
 });
+test('v3 fills explicitly sourced missing revenue and op, preserving net and other fields',()=>{
+    const rows=require('../data/metadata/report_fin_history_corrections_20261017.json').rows.filter(r=>r.ticker==='092200' && r.before===null);
+    assert.equal(rows.length,6);
+    const newer={schema:'reviewed-kr-annual-financial-corrections-v3',rows};
+    const h={rows:[]},d={_meta:{asof:'preserve'},stocks:[{ticker:'092200',name:'디아이씨',fin_series:[]}]};
+    for (const year of [2023,2024,2025]) {
+        const f={revenue:null,operating_profit:null,net_income:123};
+        for (const r of rows.filter(r=>r.year===year)) f[r.metric==='op'?'operating_profit':'revenue']=r.after;
+        h.rows.push({ticker:'092200',name:'디아이씨',fiscal_year:year,period:'annual',fundamentals:f});
+        d.stocks[0].fin_series.push({year,revenue:null,op:null,net:123,extra:'keep'});
+    }
+    const result=repair(d,newer,h);
+    assert.equal(result.changed.length,6);
+    assert.deepEqual(repair(result.next,newer,h).changed,[]);
+    for (const p of result.next.stocks[0].fin_series) { assert.equal(p.net,123);assert.equal(p.extra,'keep'); }
+    assert.deepEqual(result.next._meta,d._meta);
+    assert.throws(()=>repair(d,{...newer,schema:'reviewed-kr-annual-financial-corrections-v2'},h));
+    for (const value of [0,123,undefined]) {
+        const bad=structuredClone(d);bad.stocks[0].fin_series[0].revenue=value;
+        assert.throws(()=>repair(bad,newer,h));
+    }
+    const bad=structuredClone(h);bad.rows[0].fundamentals.revenue=null;
+    assert.throws(()=>repair(d,newer,bad));
+    assert.throws(()=>repair(d,{...newer,rows:[...rows,rows[0]]},h));
+    assert.throws(()=>repair(d,{...newer,rows:rows.map(r=>({...r,metric:'sga'}))},h));
+});
+
+test('staged full v3 manifest preserves all reviewed cells including the exact renamed issuer',t=>{
+    const root=path.resolve(__dirname,'..');
+    const m=JSON.parse(fs.readFileSync(path.join(root,'data/metadata/report_fin_history_corrections_20261017.json')));
+    const h=JSON.parse(fs.readFileSync(path.join(root,'data/dart_kr_fin_history.json')));
+    const published=JSON.parse(fs.readFileSync(path.join(root,'data/stock_report_public.json')));
+    assert.equal(m.schema,'reviewed-kr-annual-financial-corrections-v3');
+    assert.equal(m.rows.length,54);
+    const stale=structuredClone(published);
+    for (const r of m.rows.filter(r=>r.ticker==='092200' && r.before===null)) {
+        stale.stocks.find(s=>s.ticker===r.ticker).fin_series.find(p=>p.year===r.year)[r.metric]=null;
+    }
+    const dir=fs.mkdtempSync(path.join(os.tmpdir(),'report-v3-full-'));
+    t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+    const file=path.join(dir,'stock_report_public.json');fs.writeFileSync(file,JSON.stringify(stale));
+    const sources=()=>({manifest:m,history:h,ref:'same-verified-ref'});
+    assert.equal(repairStagedFile(file,sources).changed.length,6);
+    assert.deepEqual(JSON.parse(fs.readFileSync(file)),published);
+    assert.deepEqual(repairStagedFile(file,sources).changed,[]);
+    const bad=structuredClone(m);bad.rows.find(r=>r.ticker==='282880').name_change.source_sha256='a'.repeat(64);
+    const bytes=fs.readFileSync(file);
+    assert.throws(()=>repairStagedFile(file,()=>({manifest:bad,history:h,ref:'bad'})));
+    assert.deepEqual(fs.readFileSync(file),bytes);
+});
 
 test('staged full report reconciles seven stale cells and preserves all other data', t => {
     const rows = require('../data/metadata/report_fin_history_corrections_20261017.json').rows.slice(0, 7);

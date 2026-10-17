@@ -21,7 +21,7 @@ def test_fin_series_prefers_corrected_history_and_preserves_other_rows(monkeypat
     assert isinstance(corrections, list) and corrections
     assert isinstance(history_rows, list)
 
-    metric_fields = {"net": "net_income", "op": "operating_profit"}
+    metric_fields = {"net": "net_income", "op": "operating_profit", "revenue": "revenue"}
     tickers = {str(row["ticker"]) for row in corrections}
     annual_history = [
         row for row in history_rows
