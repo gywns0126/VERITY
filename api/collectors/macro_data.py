@@ -21,6 +21,8 @@ from bs4 import BeautifulSoup
 from api.collectors.fred_macro import get_fred_macro_block
 from api.collectors.ecos_macro import get_ecos_macro_block, merge_ecos_into_fred
 from api.config import MACRO_DGS10_DEFENSE_PCT
+from api.utils.macro_provenance import copy_meta, derived_meta
+from api.utils.macro_runtime import CollectionDeadline, request_timeout, timed_source
 
 logger = logging.getLogger(__name__)
 _KST = timezone(timedelta(hours=9))
@@ -87,9 +89,16 @@ def _log_collector_fail(fn: str, ticker: str, err: Exception) -> None:
     sys.stderr.write(f"[macro_data] outcome=fail fn={fn} ticker={ticker} logged=True\n")
 
 
+def _stage(label, fn, default):
+    try:
+        return timed_source(label, fn)
+    except CollectionDeadline:
+        return default
+
+
 def get_macro_indicators() -> dict:
     """주요 매크로 지표 수집"""
-    commodity_quotes = _get_commodity_bundle()
+    commodity_quotes = _stage("commodities", _get_commodity_bundle, {})
     result = {
         "usd_krw": _get_usd_krw(),
         "usd_jpy": _get_fx("JPY=X", "USD/JPY"),
@@ -113,8 +122,8 @@ def get_macro_indicators() -> dict:
         # (bybit/okx/coingecko) 사용. 업비트 수집 소비처 부재로 orphan → 제거.
     }
 
-    fred = get_fred_macro_block()
-    ecos = get_ecos_macro_block()
+    fred = _stage("fred", get_fred_macro_block, {"available": False})
+    ecos = _stage("ecos", get_ecos_macro_block, {"available": False})
     merge_ecos_into_fred(fred, ecos)
     result["fred"] = fred
     result["ecos"] = ecos
@@ -131,7 +140,8 @@ def get_macro_indicators() -> dict:
         result["us_10y"] = {
             "value": round(v, 3),
             "change_pct": chg_pct,
-            **_quote_meta("fred", d.get("date"), successful=True),
+            "source": "fred",
+            **copy_meta(d),
             "as_of": d.get("date"),
             "as_of_kind": "source_as_of",
         }
@@ -150,7 +160,8 @@ def get_macro_indicators() -> dict:
         result["us_2y"] = {
             "value": round(v2, 3),
             "change_pct": chg2,
-            **_quote_meta("fred", d2.get("date"), successful=True),
+            "source": "fred",
+            **copy_meta(d2),
             "as_of": d2.get("date"),
             "as_of_kind": "source_as_of",
         }
@@ -163,7 +174,7 @@ def get_macro_indicators() -> dict:
     # 정도 진단 — decoupled / normal / all_correlated. VAMS 한도 강제는 다음 단계.
     try:
         from api.quant.cross_asset_corr import compute_cross_asset_corr
-        result["cross_asset_corr"] = compute_cross_asset_corr()
+        result["cross_asset_corr"] = _stage("cross_asset_corr", compute_cross_asset_corr, {"available": False})
     except Exception as e:  # noqa: BLE001
         result["cross_asset_corr"] = {"available": False, "error": str(e)[:100]}
 
@@ -179,6 +190,7 @@ def get_macro_indicators() -> dict:
                 "change_5d_pp": hy.get("change_5d_pp"),
                 "source": "fred",
                 "series_id": "BAMLH0A0HYM2",
+                **copy_meta(hy),
             }
         be = fred.get("breakeven_inflation_10y")
         if isinstance(be, dict) and isinstance(be.get("pct"), (int, float)):
@@ -188,6 +200,7 @@ def get_macro_indicators() -> dict:
                 "change_5d_pp": be.get("change_5d_pp"),
                 "source": "fred",
                 "series_id": "T10YIE",
+                **copy_meta(be),
             }
         fb = fred.get("fed_balance_sheet")
         if isinstance(fb, dict) and isinstance(fb.get("trillions_usd"), (int, float)):
@@ -198,13 +211,14 @@ def get_macro_indicators() -> dict:
                 "source": "fred",
                 "series_id": "WALCL",
                 "unit": "trillions_usd",
+                **copy_meta(fb),
             }
 
     result["market_mood"] = _assess_market_mood(result, market="kr")
     result["macro_diagnosis"] = _build_diagnosis(result, market="kr")
     result["market_mood_us"] = _assess_market_mood(result, market="us")
     result["macro_diagnosis_us"] = _build_diagnosis(result, market="us")
-    result["micro_signals"] = _get_micro_signals()
+    result["micro_signals"] = _stage("micro_signals", _get_micro_signals, [])
     result["capital_flow"] = _compute_capital_flow(result)
 
     if "source" not in result.get("us_10y", {}):
@@ -218,7 +232,7 @@ def _get_usd_krw() -> dict:
     meta = _quote_meta("yfinance")
     try:
         t = yf.Ticker("KRW=X")
-        hist = t.history(period="1mo")
+        hist = t.history(period="1mo", timeout=request_timeout(10))
         series = hist["Close"].dropna()
         closes = [float(v) for v in series.tolist()]
         if closes:
@@ -245,7 +259,7 @@ def _get_fx(ticker: str, name: str) -> dict:
     meta = _quote_meta("yfinance")
     try:
         t = yf.Ticker(ticker)
-        hist = t.history(period="5d")
+        hist = t.history(period="5d", timeout=request_timeout(10))
         closes = hist["Close"].dropna()
         if len(closes) >= 2:
             current = float(closes.iloc[-1])
@@ -263,7 +277,7 @@ def _get_commodity(ticker: str, name: str) -> dict:
     meta = _quote_meta("yfinance")
     try:
         t = yf.Ticker(ticker)
-        hist = t.history(period="1mo")
+        hist = t.history(period="1mo", timeout=request_timeout(10))
         closes = hist["Close"].dropna()
         if len(closes) >= 2:
             current = float(closes.iloc[-1])
@@ -375,6 +389,7 @@ def _get_commodity_bundle() -> dict:
             auto_adjust=False,
             progress=False,
             threads=True,
+            timeout=request_timeout(10),
         )
         for key, (ticker, name) in COMMODITY_SPECS.items():
             frame = _frame_for_ticker(raw, ticker)
@@ -394,7 +409,7 @@ def _get_commodity_bundle() -> dict:
 def _get_commodity_with_history(ticker: str, name: str) -> dict:
     """배치 결손 종목의 1년 일봉 개별 재시도."""
     try:
-        hist = yf.Ticker(ticker).history(period="1y", interval="1d")
+        hist = yf.Ticker(ticker).history(period="1y", interval="1d", timeout=request_timeout(10))
         return _commodity_payload(hist, ticker, name)
     except Exception as e:
         _log_collector_fail("_get_commodity_with_history", ticker, e)
@@ -424,7 +439,7 @@ def _get_index_change_fred(series_id: str, name: str) -> dict:
             "https://api.stlouisfed.org/fred/series/observations",
             params={"series_id": series_id, "api_key": FRED_API_KEY, "file_type": "json",
                     "sort_order": "desc", "limit": 40},
-            timeout=15,
+            timeout=request_timeout(15),
         )
         r.raise_for_status()
         obs = r.json().get("observations", []) or []
@@ -451,7 +466,7 @@ def _get_index_change(ticker: str, name: str) -> dict:
     meta = _quote_meta("yfinance")
     try:
         t = yf.Ticker(ticker)
-        hist = t.history(period="1mo")
+        hist = t.history(period="1mo", timeout=request_timeout(10))
         closes = hist["Close"].dropna()
         if len(closes) >= 2:
             current = float(closes.iloc[-1])
@@ -483,7 +498,11 @@ def _calc_yield_spread(data: dict) -> dict:
         signal = "역전 (침체 경고)"
     elif spread < 0.3:
         signal = "축소 (경기둔화 신호)"
-    return {"value": spread, "signal": signal}
+    failed = any(row.get("status") == "fail" or row.get("value") is None
+                 for row in (data.get("us_10y", {}), data.get("us_2y", {})))
+    return {"value": spread, "signal": signal,
+            "status": "fail" if failed else "ok",
+            **derived_meta(data.get("us_10y", {}), data.get("us_2y", {}))}
 
 
 def _assess_market_mood(data: dict, market: str = "kr") -> dict:
@@ -884,7 +903,7 @@ def _get_micro_signals() -> list:
     try:
         url = "https://finance.naver.com/sise/sise_group.naver?type=upjong"
         headers = {"User-Agent": "Mozilla/5.0"}
-        resp = requests.get(url, headers=headers, timeout=5)
+        resp = requests.get(url, headers=headers, timeout=request_timeout(5))
         resp.encoding = "euc-kr"
         soup = BeautifulSoup(resp.text, "html.parser")
         rows = soup.select("table.type_1 tr")

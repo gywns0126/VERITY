@@ -14,17 +14,27 @@ import json
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
 from api.config import FRED_API_KEY, DATA_DIR
+from api.utils.macro_provenance import copy_meta, now_iso, observation_meta
+from api.utils.macro_runtime import request_timeout, timed_source
 
 FRED_OBS_URL = "https://api.stlouisfed.org/fred/series/observations"
 FRED_HEALTH_PATH = os.path.join(DATA_DIR, "metadata", "fred_health.jsonl")
 
 _TREND_DAYS = {"1m": 30, "3m": 90, "6m": 180, "1y": 365}
+_NATIVE_SERIES = (
+    ("VIXCLS", 260), ("DGS10", 260), ("DGS2", 260), ("CPILFESL", 16),
+    ("M2SL", 60), ("IRLTLT01KRA156N", 36), ("INTDSRKRM193N", 24),
+    ("RECPROUSM156N", 8), ("UNRATE", 16), ("UMCSENT", 16),
+    ("BAMLH0A0HYM2", 260), ("T10YIE", 260), ("WALCL", 12),
+)
 
 
 def _log_fred_health(series_id: str, status: str, reason: str = "",
@@ -65,7 +75,7 @@ def _log_fred_health(series_id: str, status: str, reason: str = "",
         if status not in ("ok", "empty"):
             sys.stderr.write(f"[fred_health] {series_id} {status}: {reason[:160]}\n")
     except Exception as _e:
-        sys.stderr.write(f"[fred_health] ledger write fail: {_e}\n")
+        sys.stderr.write(f"[fred_health] ledger write fail: {type(_e).__name__}\n")
 
 
 def _parse_observations(payload: dict) -> List[Tuple[str, float]]:
@@ -127,12 +137,12 @@ def _fetch_series(series_id: str, limit: int) -> List[Tuple[str, float]]:
                 "sort_order": "desc",
                 "limit": int(limit),
             },
-            timeout=20,
+            timeout=request_timeout(20),
         )
         elapsed_ms = int((time.time() - t0) * 1000)
         if r.status_code != 200:
             _log_fred_health(series_id, "http_error",
-                             f"status={r.status_code} body={r.text[:120]}",
+                             f"status={r.status_code}",
                              elapsed_ms=elapsed_ms)
             return []
         points = _parse_observations(r.json())
@@ -146,12 +156,12 @@ def _fetch_series(series_id: str, limit: int) -> List[Tuple[str, float]]:
         return points
     except requests.exceptions.Timeout:
         elapsed_ms = int((time.time() - t0) * 1000)
-        _log_fred_health(series_id, "network_error", "timeout 20s",
+        _log_fred_health(series_id, "network_error", "Timeout",
                          elapsed_ms=elapsed_ms)
         return []
     except Exception as e:
         elapsed_ms = int((time.time() - t0) * 1000)
-        _log_fred_health(series_id, "network_error", str(e),
+        _log_fred_health(series_id, "network_error", type(e).__name__,
                          elapsed_ms=elapsed_ms)
         return []
 
@@ -215,7 +225,38 @@ def get_fred_macro_block() -> Dict[str, Any]:
 
     out: Dict[str, Any] = {"available": False}
 
-    vix_c = _fetch_series("VIXCLS", 260)
+    receipts: Dict[str, dict] = {}
+
+    def worker(series_id: str, limit: int):
+        def collect():
+            points = _fetch_series(series_id, limit)
+            metadata = observation_meta(
+                "fred", points[0][0], fetched_at=now_iso(),
+            ) if points else {}
+            return points, metadata
+
+        try:
+            return timed_source(f"fred:{series_id}", collect)
+        except Exception as error:
+            sys.stderr.write(f"[fred_worker] source=fred:{series_id} error={type(error).__name__}\n")
+            return [], {}
+
+    # Cooperative deadline only: exiting the executor waits for running requests;
+    # it cannot forcibly cancel a socket call already in progress.
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = {
+            spec: executor.submit(copy_context().run, worker, *spec)
+            for spec in _NATIVE_SERIES
+        }
+        prefetched = {spec: future.result() for spec, future in futures.items()}
+
+    def fetch(native_key: str, series_id: str, limit: int) -> List[Tuple[str, float]]:
+        points, metadata = prefetched[(series_id, limit)]
+        if points:
+            receipts[native_key] = metadata
+        return points
+
+    vix_c = fetch("vix_close", "VIXCLS", 260)
     if len(vix_c) >= 1:
         vd, vv = vix_c[0]
         v_ch5: Optional[float] = None
@@ -230,7 +271,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
             **vix_trend,
         }
 
-    dgs = _fetch_series("DGS10", 260)
+    dgs = fetch("dgs10", "DGS10", 260)
     if len(dgs) >= 1:
         latest_d, latest_v = dgs[0]
         ch5: Optional[float] = None
@@ -245,7 +286,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
         }
 
     # 2년물 — us_2y 를 ^IRX(=3개월물 오라벨) 대신 FRED DGS2 로 정정 + yield_spread(2s10s) 정합화.
-    dgs2 = _fetch_series("DGS2", 260)
+    dgs2 = fetch("dgs2", "DGS2", 260)
     if len(dgs2) >= 1:
         latest_d2, latest_v2 = dgs2[0]
         ch5_2: Optional[float] = None
@@ -258,7 +299,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
             **_compute_series_trend(dgs2),
         }
 
-    cpi = _fetch_series("CPILFESL", 16)
+    cpi = fetch("core_cpi", "CPILFESL", 16)
     if len(cpi) >= 13:
         cur_d, cur_v = cpi[0]
         _, yago_v = cpi[12]
@@ -270,7 +311,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
                 "yoy_pct": yoy,
             }
 
-    m2 = _fetch_series("M2SL", 60)
+    m2 = fetch("m2", "M2SL", 60)
     if len(m2) >= 53:
         cur_d, cur_v = m2[0]
         _, yago_v = m2[52]
@@ -282,7 +323,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
                 "yoy_pct": yoy,
             }
 
-    kr10 = _fetch_series("IRLTLT01KRA156N", 36)
+    kr10 = fetch("korea_gov_10y", "IRLTLT01KRA156N", 36)
     if len(kr10) >= 1:
         kd, kv = kr10[0]
         yoy_pp = _value_minus_approx_12m_prior(kr10)
@@ -294,7 +335,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
             "source_note": "OECD Main Economic Indicators (빈도·시차 ECOS와 다를 수 있음)",
         }
 
-    krd = _fetch_series("INTDSRKRM193N", 24)
+    krd = fetch("korea_discount_rate", "INTDSRKRM193N", 24)
     if len(krd) >= 1:
         dd, dv = krd[0]
         d_yoy: Optional[float] = None
@@ -308,7 +349,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
             "source_note": "IMF IFS (BOK 기준금리와 시차·정의 다를 수 있음)",
         }
 
-    rec = _fetch_series("RECPROUSM156N", 8)
+    rec = fetch("us_recession_smoothed_prob", "RECPROUSM156N", 8)
     if len(rec) >= 1:
         rd, rv = rec[0]
         mom: Optional[float] = None
@@ -323,7 +364,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
         }
 
     # 실업률 (UNRATE)
-    unr = _fetch_series("UNRATE", 16)
+    unr = fetch("unemployment_rate", "UNRATE", 16)
     if len(unr) >= 1:
         ud, uv = unr[0]
         u_mom: Optional[float] = None
@@ -341,7 +382,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
         }
 
     # 미시간 소비자 심리지수 (UMCSENT)
-    umc = _fetch_series("UMCSENT", 16)
+    umc = fetch("consumer_sentiment", "UMCSENT", 16)
     if len(umc) >= 1:
         cd, cv = umc[0]
         c_mom: Optional[float] = None
@@ -355,7 +396,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
         }
 
     # 하이일드 스프레드 (ICE BofA, BAMLH0A0HYM2)
-    hy = _fetch_series("BAMLH0A0HYM2", 260)
+    hy = fetch("hy_spread", "BAMLH0A0HYM2", 260)
     if len(hy) >= 1:
         hd, hv = hy[0]
         h_ch5: Optional[float] = None
@@ -371,7 +412,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
         }
 
     # 10년 기대인플레이션 (T10YIE)
-    t10ie = _fetch_series("T10YIE", 260)
+    t10ie = fetch("breakeven_inflation_10y", "T10YIE", 260)
     if len(t10ie) >= 1:
         id_, iv = t10ie[0]
         i_ch5: Optional[float] = None
@@ -387,7 +428,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
         }
 
     # Fed 대차대조표 총자산 (WALCL, 주간)
-    wal = _fetch_series("WALCL", 12)
+    wal = fetch("fed_balance_sheet", "WALCL", 12)
     if len(wal) >= 1:
         wd, wv = wal[0]
         w_ch4: Optional[float] = None
@@ -403,17 +444,30 @@ def get_fred_macro_block() -> Dict[str, Any]:
     # 2026-05-07: Shiller CAPE — FRED 시리즈 없어 multpl.com 스크래핑 (별 collector)
     try:
         from api.collectors.cape_multpl import fetch_cape
+        request_timeout(8)
         cape_data = fetch_cape()
         if cape_data:
-            out["cape"] = cape_data
-    except Exception:  # noqa: BLE001
-        pass  # 스크래핑 실패는 무시 (market_horizon 가 cape_pctile=None 처리)
+            # Legacy as_of is a collection clock, not a source observation day.
+            out["cape"] = {
+                **cape_data,
+                **observation_meta(
+                    cape_data.get("source", "multpl.com (Shiller PE)"),
+                    None, fetched_at=now_iso(),
+                ),
+            }
+    except Exception as error:  # noqa: BLE001
+        sys.stderr.write(f"[fred_cape] error={type(error).__name__}\n")
 
     # ── 2026-05-18 F1+F2 (PM 승인) — detect_economic_quadrant 입력 키 derivation ──
     # docs/QUADRANT_REGRESSION_AUDIT_20260518.md 참조. 함수가 찾는 fred.cpi_yoy /
     # fred.gdp_growth 키가 부재해 fallback (cpi=2.5 하드코드 + gdp=mood proxy) 영구 trip,
     # growth_down_inflation_down 25/25 종목 단일 강제로 constitution 5분면 차등 무효화.
     # 실데이터 (core_cpi.yoy_pct + us_recession_smoothed_prob.pct) 는 정상 수집됨 — 매핑만 추가.
+    # Preserve each receipt even though other series have finished since then.
+    for native_key, metadata in receipts.items():
+        if native_key in out:
+            out[native_key].update(metadata)
+
     cpi_block = out.get("core_cpi") or {}
     cpi_yoy_val = cpi_block.get("yoy_pct")
     if cpi_yoy_val is not None:
@@ -422,6 +476,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
             "date": cpi_block.get("date"),
             "series_id": "CPILFESL",
             "source_note": "derived from core_cpi.yoy_pct (F1 2026-05-18)",
+            **copy_meta(cpi_block),
         }
 
     rec_block = out.get("us_recession_smoothed_prob") or {}
@@ -443,6 +498,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
                 f"proxy from us_recession_smoothed_prob.pct={rec_prob} "
                 "(F2 2026-05-18, 산식 2.5 - 0.08×rp)"
             ),
+            **copy_meta(rec_block),
         }
 
     out["available"] = bool(
