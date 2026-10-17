@@ -108,6 +108,36 @@ test('reviewed Hancom rename preserves old annual names and binds the exact fili
         assert.throws(()=>repair(otherD,borrowed,otherH));
     }
 });
+test('SFA listed short name is not a legal rename and binds only its reviewed source',()=>{
+    const rows=require('../data/metadata/report_fin_history_corrections_20261017.json').rows.filter(r=>r.ticker==='056190' && r.history_name);
+    assert.equal(rows.length,2);
+    for (const row of rows) {
+        assert.equal(row.history_name,'에스에프에이');assert.equal(row.name,'SFA');
+        const key=row.metric==='revenue'?'revenue':'net_income';
+        const m={schema:'reviewed-kr-annual-financial-corrections-v3',rows:[row]};
+        const h={rows:[{ticker:row.ticker,name:row.history_name,fiscal_year:row.year,period:'annual',fundamentals:{[key]:row.after}}]};
+        const d={stocks:[{ticker:row.ticker,name:row.name,fin_series:[{year:row.year,[row.metric]:row.before,extra:'preserve'}]}]};
+        const result=repair(d,m,h);
+        assert.equal(result.next.stocks[0].fin_series[0][row.metric],row.after);
+        assert.equal(result.next.stocks[0].fin_series[0].extra,'preserve');
+        assert.equal(h.rows[0].name,'에스에프에이');assert.equal(result.next.stocks[0].name,'SFA');
+        assert.deepEqual(repair(result.next,m,h).changed,[]);
+        for (const modify of [r=>delete r.name_change,r=>r.name_change.kind='legal_name',
+            r=>r.name_change.corp_code='00160843',r=>r.name_change.old_name='다른회사',
+            r=>r.name_change.new_name='다른회사',r=>r.name_change.ticker='000000',
+            r=>r.name_change.filed='2026-06-25',r=>r.name_change.listing_effective_date='2026-06-22',
+            r=>r.name_change.legal_effective_date='2026-06-25',r=>r.name_change.shareholders_meeting_date='2026-06-22',
+            r=>r.name_change.accession='20260622900508',r=>r.name_change.source_sha256='a'.repeat(64),
+            r=>r.name_change.source_url=r.name_change.source_url.replace('11441645','11441646'),
+            r=>r.name_change.source_url+='&unreviewed=1']) {
+            const bad=structuredClone(m);modify(bad.rows[0]);assert.throws(()=>repair(d,bad,h));
+        }
+        const borrowed=structuredClone(m);borrowed.rows[0].ticker='000000';borrowed.rows[0].name_change.ticker='000000';
+        const otherH=structuredClone(h),otherD=structuredClone(d);
+        otherH.rows[0].ticker='000000';otherD.stocks[0].ticker='000000';
+        assert.throws(()=>repair(otherD,borrowed,otherH));
+    }
+});
 test('two-stage legal and listed short name evidence is exact and cannot be borrowed',()=>{
     const row=require('../data/metadata/report_fin_history_corrections_20261017.json').rows.find(r=>r.ticker==='242040');
     assert(row && row.history_name==='나무기술' && row.name==='나무AX');

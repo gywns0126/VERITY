@@ -8,6 +8,11 @@ const HISTORY = 'data/dart_kr_fin_history.json';
 // Directly reviewed issuer-specific renames, not a general alias resolver. Additional issuers
 // require a new primary-source review before this publication identity gate expands.
 const REVIEWED_RENAMES = {
+    '056190': {corp_code:'00358271',old_name:'에스에프에이',new_name:'SFA',
+        accession:'20260622900507',filed:'2026-06-22',kind:'market_short_name',
+        listing_effective_date:'2026-06-25',shareholders_meeting_date:null,legal_effective_date:null,
+        source_url:'https://dart.fss.or.kr/report/viewer.do?rcpNo=20260622900507&dcmNo=11441645&eleId=0&offset=0&length=0&dtd=HTML',
+        source_sha256:'b7548875f2112d4b5ddc707d0c0ef8f29c56c5d3ed13a555ca48b80dd0b5ae3f'},
     '030520': {corp_code:'00204262',old_name:'한글과컴퓨터',new_name:'한컴',
         accession:'20260702900166',filed:'2026-07-02',
         source_url:'https://dart.fss.or.kr/report/viewer.do?rcpNo=20260702900166&dcmNo=11459671&eleId=0&offset=0&length=0&dtd=HTML',
