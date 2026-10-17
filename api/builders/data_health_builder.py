@@ -8,6 +8,7 @@ read-only aggregate (판정·수정 0, RULE 7). 입력 파일 결손 = 해당 �
   - publish_verify.json   — 발행 후 실물 검증(P2: 배달 채움율 + 배달 시각)
   - coverage_report.json  + coverage_history.jsonl — 필드 채움율 + 회귀/차단 추이
   - freshness_board.json  — 신선도 SLA 상태(스트림별 fresh/stale/paused)
+  - dart_kr_fin_history_missing.json — 연간 재무 수집 시도·오류 원장(자료 기준일 아님)
 출력: data/metadata/data_health.json
 상태: red(가드 HOLD 24h / 검증 실패 / P0 stale) > amber(증거 결손·지연·회귀) > green.
 """
@@ -26,7 +27,8 @@ _META = os.path.join(_ROOT, "data", "metadata")
 _DATA = os.path.join(_ROOT, "data")
 OUT = os.path.join(_META, "data_health.json")
 # Hourly monitor tolerates two missed slots. Daily coverage allows the weekend gap.
-_EVIDENCE_MAX_AGE_H = {"publish_verify": 3, "freshness": 3, "coverage": 96}
+_EVIDENCE_MAX_AGE_H = {"publish_verify": 3, "freshness": 3, "coverage": 96,
+                       "annual_backfill": 48}
 _EXPECTED_VERIFY_FILES = set(GUARD) | {"_verity_data_push_recency"}
 
 def _load_json(path: str) -> Optional[Any]:
@@ -150,6 +152,34 @@ def _freshness_section() -> Optional[Dict[str, Any]]:
     }
 
 
+def _annual_backfill_section() -> Optional[Dict[str, Any]]:
+    doc = _load_json(os.path.join(_DATA, "dart_kr_fin_history_missing.json"))
+    if not doc or not isinstance(doc.get("_meta"), dict) or not isinstance(doc.get("cells"), dict):
+        return None
+    run = doc["_meta"].get("last_run")
+    if not isinstance(run, dict):
+        return None
+    fields = ("requested", "attempted", "success", "empty", "error", "deferred", "touched", "requests")
+    counts = {key: run.get(key) for key in fields}
+    valid = all(type(value) is int and value >= 0 for value in counts.values())
+    if valid:
+        completed = counts["success"] + counts["empty"] + counts["error"]
+        valid = (counts["requested"] == completed + counts["deferred"]
+                 and completed <= counts["attempted"] <= counts["requested"]
+                 and counts["touched"] <= counts["attempted"]
+                 and (not counts["attempted"] or counts["touched"] > 0)
+                 and counts["success"] + 2 * counts["empty"] <= counts["requests"]
+                 and counts["requests"] <= 2 * counts["attempted"])
+    cells = list(doc["cells"].values())
+    return {
+        # This alias is only for evidence age checks; it is NOT a financial as-of date.
+        "generated_at": run.get("attempted_at"), "clock_kind": "collection_attempt",
+        "attempted_at": run.get("attempted_at"), "counts_valid": valid, **counts,
+        "unresolved_error_cells": sum(isinstance(cell, dict) and cell.get("status") == "error" for cell in cells),
+        "unclassified_cells": sum(not isinstance(cell, dict) or cell.get("status") not in ("error", "013") for cell in cells),
+    }
+
+
 def _evidence_status(section: Optional[dict], now: datetime, max_age_h: int) -> dict:
     stamp = section.get("generated_at") if section else None
     ts = _parse_ts(stamp)
@@ -167,14 +197,27 @@ def build() -> Dict[str, Any]:
     verify = _verify_section()
     coverage = _coverage_section()
     freshness = _freshness_section()
+    annual_backfill = _annual_backfill_section()
 
     reds, ambers = [], []
-    sections = {"publish_verify": verify, "coverage": coverage, "freshness": freshness}
+    sections = {"publish_verify": verify, "coverage": coverage, "freshness": freshness,
+                "annual_backfill": annual_backfill}
     evidence = {name: _evidence_status(section, now, _EVIDENCE_MAX_AGE_H[name])
                 for name, section in sections.items()}
     for name, item in evidence.items():
         if item["status"] != "fresh":
             ambers.append(f"감시 근거 {name}: {item['status']}")
+    if annual_backfill:
+        if not annual_backfill["counts_valid"]:
+            ambers.append("연간 재무 수집 시도·결과 집계 불일치")
+        elif annual_backfill["error"]:
+            ambers.append(f"연간 재무 수집 실패 {annual_backfill['error']}/{annual_backfill['requested']}칸")
+        elif annual_backfill["requested"] and not annual_backfill["attempted"]:
+            ambers.append("연간 재무 수집 대상이 있으나 실행된 셀 없음")
+        if annual_backfill["unresolved_error_cells"]:
+            ambers.append(f"연간 재무 미해결 수집 오류 {annual_backfill['unresolved_error_cells']}칸")
+        if annual_backfill["unclassified_cells"]:
+            ambers.append(f"연간 재무 미분류 수집 기록 {annual_backfill['unclassified_cells']}칸")
     if verify and (not isinstance(verify.get("ok"), bool)
                    or verify.get("checked") != len(_EXPECTED_VERIFY_FILES)
                    or len(verify.get("files", [])) != len(_EXPECTED_VERIFY_FILES)
@@ -216,6 +259,7 @@ def build() -> Dict[str, Any]:
         "publish_verify": verify,
         "coverage": coverage,
         "freshness": freshness,
+        "annual_backfill": annual_backfill,
     }
 
 

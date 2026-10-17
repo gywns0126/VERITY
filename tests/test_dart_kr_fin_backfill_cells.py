@@ -23,7 +23,7 @@ import importlib.util
 import json
 import os
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest
@@ -160,7 +160,7 @@ def test_collected_zero_and_loss_are_preserved(bf, monkeypatch, values):
     rows = [{"sj_div": "IS", "account_id": aid, "account_nm": label,
              "thstrm_amount": str(values[field])}
             for field, (aid, label) in accounts.items() if values[field] is not None]
-    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: json.dumps({"list": rows}))
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: json.dumps({"status": "000", "list": rows}))
     monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
     assert bf.main() == 0
     output = json.loads(Path(bf.OUT_PATH).read_text())
@@ -173,25 +173,237 @@ def test_all_missing_metrics_remain_missing_without_a_synthetic_zero(bf, monkeyp
     _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST])
     monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
     # An unrelated row leaves the legacy extractor's PL fields at their zero defaults.
-    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: '{"list":[{"sj_div":"BS","account_nm":"자본금","thstrm_amount":"100"}]}')
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: '{"status":"000","list":[{"sj_div":"BS","account_nm":"자본금","thstrm_amount":"100"}]}')
     monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
     assert bf.main() == 0
     output = json.loads(Path(bf.OUT_PATH).read_text())
     assert not any(row["fiscal_year"] == YEARS[0] for row in output["rows"])
-    assert json.loads(Path(bf.MISSING_PATH).read_text())["cells"][f"005930|{YEARS[0]}"]["n"] == 1
+    missing = json.loads(Path(bf.MISSING_PATH).read_text())
+    cell = missing["cells"][f"005930|{YEARS[0]}"]
+    assert cell["status"] == "error"
+    assert cell["last_error"] == "no_target_metrics"
+    assert cell["n"] == 0
 
 
 @pytest.mark.parametrize("amount", ["", "-", " ", "N/A"])
 def test_blank_selected_account_is_not_promoted_to_reported_zero(bf, monkeypatch, amount):
     _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST])
     monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
-    raw = json.dumps({"list": [{"sj_div": "IS", "account_id": "ifrs-full_ProfitLoss",
+    raw = json.dumps({"status": "000", "list": [{"sj_div": "IS", "account_id": "ifrs-full_ProfitLoss",
                                 "account_nm": "당기순이익", "thstrm_amount": amount}]})
     monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: raw)
     monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
     assert bf.main() == 0
     output = json.loads(Path(bf.OUT_PATH).read_text())
     assert not any(row["fiscal_year"] == YEARS[0] for row in output["rows"])
+
+
+def test_only_official_013_falls_back_to_ofs_and_consumes_empty_attempt(bf, monkeypatch):
+    _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST])
+    monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
+    calls = []
+
+    def fetch(_corp, year, fs_div):
+        calls.append((year, fs_div))
+        return json.dumps({"status": "013", "message": "no data", "list": []})
+
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", fetch)
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "2"])
+    assert bf.main() == 0
+
+    assert calls == [(str(YEARS[0]), "CFS"), (str(YEARS[0]), "OFS")]
+    missing = json.loads(Path(bf.MISSING_PATH).read_text())
+    empty_cell = missing["cells"][f"005930|{YEARS[0]}"]
+    assert empty_cell["n"] == 1
+    assert empty_cell["status"] == "013"
+    run = missing["_meta"]["last_run"]
+    assert run["requested"] == 1
+    assert run["attempted"] == 1
+    assert run["success"] == 0
+    assert run["empty"] == 1
+    assert run["error"] == 0
+    assert run["deferred"] == 0
+    assert run["requests"] == 2
+    assert run["touched"] == 1
+    assert datetime.fromisoformat(run["attempted_at"]).utcoffset() is not None
+
+
+def test_cfs_source_error_does_not_fallback_and_preserves_existing_row(bf, monkeypatch):
+    old = {**_row(YEARS[0]), "fundamentals": {
+        "revenue": 1000, "operating_profit": -200, "net_income": None,
+        "investment_property": None,
+    }}
+    _write(bf, rows=[old, *[_row(y) for y in ALL_BUT_FIRST]])
+    key = f"005930|{YEARS[0]}"
+    with open(bf.MISSING_PATH, "w", encoding="utf-8") as f:
+        json.dump({"cells": {key: {"n": 2, "last": "2026-10-01", "status": "error"}}}, f)
+    monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
+    calls = []
+
+    def fetch(_corp, _year, fs_div):
+        calls.append(fs_div)
+        return json.dumps({"status": "error", "message": "SECRET_URL?key=secret", "list": []})
+
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", fetch)
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
+    assert bf.main() == 0
+
+    output = json.loads(Path(bf.OUT_PATH).read_text())
+    assert output["rows"][0] == old
+    assert calls == ["CFS"]
+    missing = json.loads(Path(bf.MISSING_PATH).read_text())
+    cell = missing["cells"][key]
+    assert cell["n"] == 2  # source failure does not consume no-data attempts
+    assert cell["status"] == "error"
+    assert cell["error_count"] == 1
+    assert cell["no_data_attempts"] == 0
+    assert cell["last_error"] == "unexpected_status"
+    assert "SECRET_URL" not in Path(bf.MISSING_PATH).read_text()
+    run = missing["_meta"]["last_run"]
+    assert (run["requested"], run["attempted"], run["error"], run["empty"]) == (1, 1, 1, 0)
+    assert run["requested"] == run["success"] + run["empty"] + run["error"] + run["deferred"]
+
+
+def test_partial_replacement_preserves_existing_row_and_remains_retryable(bf, monkeypatch):
+    old = {**_row(YEARS[0]), "fundamentals": {
+        "revenue": 100, "operating_profit": -20, "net_income": None,
+        "investment_property": None,
+    }}
+    _write(bf, rows=[old, *[_row(y) for y in ALL_BUT_FIRST]])
+    monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
+    raw = json.dumps({"status": "000", "list": [{
+        "sj_div": "IS", "account_id": "ifrs-full_ProfitLoss",
+        "account_nm": "당기순이익", "thstrm_amount": "10",
+    }]})
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: raw)
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
+    assert bf.main() == 0
+
+    output = json.loads(Path(bf.OUT_PATH).read_text())
+    assert output["rows"][0] == old
+    missing = json.loads(Path(bf.MISSING_PATH).read_text())
+    cell = missing["cells"][f"005930|{YEARS[0]}"]
+    assert cell["status"] == "error"
+    assert cell["last_error"] == "partial_replacement"
+    run = missing["_meta"]["last_run"]
+    assert (run["success"], run["error"], run["requested"]) == (0, 1, 1)
+
+
+def test_complete_replacement_accepts_zero_and_negative_values(bf, monkeypatch):
+    old = {**_row(YEARS[0]), "fundamentals": {
+        "revenue": 100, "operating_profit": -20, "net_income": None,
+        "investment_property": None,
+    }}
+    _write(bf, rows=[old, *[_row(y) for y in ALL_BUT_FIRST]])
+    monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
+    accounts = [
+        ("ifrs-full_Revenue", "매출액", "0"),
+        ("dart_OperatingIncomeLoss", "영업이익", "-30"),
+        ("ifrs-full_ProfitLoss", "당기순이익", "10"),
+    ]
+    raw = json.dumps({"status": "000", "list": [
+        {"sj_div": "IS", "account_id": account_id, "account_nm": label,
+         "thstrm_amount": amount}
+        for account_id, label, amount in accounts
+    ]})
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: raw)
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
+    assert bf.main() == 0
+
+    output = json.loads(Path(bf.OUT_PATH).read_text())
+    assert output["rows"][0]["fundamentals"] == {
+        "revenue": 0, "operating_profit": -30, "net_income": 10,
+        "investment_property": None,
+    }
+    missing = json.loads(Path(bf.MISSING_PATH).read_text())
+    assert f"005930|{YEARS[0]}" not in missing["cells"]
+    assert missing["_meta"]["last_run"]["success"] == 1
+
+
+def test_legacy_error_attempts_do_not_exhaust_first_confirmed_no_data(bf, monkeypatch):
+    _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST],
+           cells={f"005930|{YEARS[0]}": {"n": 2, "status": "error"}})
+    monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
+    responses = iter([
+        '{"status":"error","list":[]}',
+        '{"status":"013","list":[]}',
+        '{"status":"013","list":[]}',
+    ])
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: next(responses))
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
+    assert bf.main() == 0
+
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "2"])
+    assert bf.main() == 0
+    key = f"005930|{YEARS[0]}"
+    missing = json.loads(Path(bf.MISSING_PATH).read_text())
+    cell = missing["cells"][key]
+    assert cell["n"] == 3  # Legacy total attempts remain compatible.
+    assert cell["no_data_attempts"] == 1
+    assert cell["status"] == "013"
+    assert not bf._is_exhausted_no_data(cell)
+    run = missing["_meta"]["last_run"]
+    assert run["requested"] == run["success"] + run["empty"] + run["error"] + run["deferred"]
+
+
+def test_typed_error_preserves_prior_official_no_data_budget(bf):
+    cells = {"005930|2023": {"n": 1, "status": "013"}}
+    bf._record_error(cells, "005930|2023", "unexpected_status")
+    assert cells["005930|2023"]["no_data_attempts"] == 1
+    bf._record_empty(cells, "005930|2023")
+    assert cells["005930|2023"]["no_data_attempts"] == 2
+    assert bf._is_exhausted_no_data(cells["005930|2023"])
+
+
+def test_corp_code_failure_counts_cell_attempt_and_ticker_touch(bf, monkeypatch, capsys):
+    _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST])
+    lookups = []
+    monkeypatch.setattr(bf, "get_corp_code", lambda ticker: lookups.append(ticker) or None)
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
+    assert bf.main() == 0
+    missing = json.loads(Path(bf.MISSING_PATH).read_text())
+    run = missing["_meta"]["last_run"]
+    assert lookups == ["005930"]
+    assert (run["requested"], run["attempted"], run["error"], run["deferred"], run["touched"]) == (1, 1, 1, 0, 1)
+    assert run["requests"] == 0  # No DART financial endpoint was called.
+    assert run["requested"] == run["success"] + run["empty"] + run["error"] + run["deferred"]
+    assert run["attempted"] >= run["success"] + run["empty"] + run["error"]
+
+
+def test_cfs_013_without_quota_for_ofs_is_deferred_not_exhausted(bf, monkeypatch):
+    _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST])
+    monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
+    calls = []
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda _corp, _year, fs_div:
+                        calls.append(fs_div) or '{"status":"013","list":[]}')
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
+    assert bf.main() == 0
+
+    missing = json.loads(Path(bf.MISSING_PATH).read_text())
+    run = missing["_meta"]["last_run"]
+    assert calls == ["CFS"]
+    assert (run["requested"], run["attempted"], run["empty"], run["error"], run["deferred"]) == (1, 1, 0, 0, 1)
+    assert f"005930|{YEARS[0]}" not in missing["cells"]
+
+
+@pytest.mark.parametrize(("raw", "reason"), [
+    ("not-json", "invalid_json"),
+    ('{"status":"000"}', "invalid_payload"),
+])
+def test_malformed_cfs_response_is_retryable_without_ofs_fallback(bf, monkeypatch, raw, reason):
+    _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST])
+    monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
+    calls = []
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda _corp, _year, fs_div:
+                        calls.append(fs_div) or raw)
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
+    assert bf.main() == 0
+
+    cell = json.loads(Path(bf.MISSING_PATH).read_text())["cells"][f"005930|{YEARS[0]}"]
+    assert calls == ["CFS"]
+    assert cell["n"] == 0
+    assert cell["status"] == "error"
+    assert cell["last_error"] == reason
 
 
 def test_first_four_months_cannot_be_recollected_without_reviewed_history(bf, monkeypatch):
