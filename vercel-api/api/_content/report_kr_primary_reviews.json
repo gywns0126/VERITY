@@ -1,6 +1,657 @@
 {
   "schema_version": "dart-html-independent-review-v1",
   "entries": {
+    "000480": {
+      "ticker": "000480",
+      "name": "시알홀딩스",
+      "corp_code": "00148984",
+      "reviewed_at": "2026-10-17",
+      "max_review_age_days": 180,
+      "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
+      "notes": [
+        "2025 및 2024 역사 순이익의 기존값은 비지배지분 귀속액이다. 2024 역사 원장은 당시 전체 총계 2,470,935,000원으로 정정하고, 본 보고서 비교열은 2025 공시가 재작성한 -1,278,597,000원을 사용한다. 같은 최신 공시의 매출·영업이익·판관비를 함께 사용한다.",
+        "회사는 주석40에서 관계기업 가결산 재무제표 사용과 비지배지분 계산 오류를 설명한다. 이는 회사의 회계 수정이며 과거 수집 코드 실행 원인을 입증하지 않는다. 2023 당시 원 단위와 최신 천원 단위의 표시 정밀도 차이는 오류로 덮어쓰지 않는다. 2026 반기 정정·반기 비교열을 연간 실적으로 전용하지 않았다.",
+        "과거 API 원응답과 실행 원인은 미확정이다."
+      ],
+      "documents": {
+        "annual_income": {
+          "accession": "20260319000043",
+          "filed": "2026-03-19",
+          "section": "연결 손익계산서",
+          "unit": "천원",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260319000043&dcmNo=11145810&eleId=21&offset=475852&length=21884&dtd=dart4.xsd",
+          "sha256": "acc3bf6a71c026116c9fa29ca374b0b019c627ed17a21d40209ac078b055ec10",
+          "headers": [
+            "연결 손익계산서",
+            "제 78 기 2025.01.01 부터 2025.12.31 까지",
+            "제 77 기 2024.01.01 부터 2024.12.31 까지",
+            "제 76 기 2023.01.01 부터 2023.12.31 까지",
+            "(단위 : 천원)"
+          ]
+        }
+      },
+      "periods": [
+        {
+          "year": 2023,
+          "start": "2023-01-01",
+          "end": "2023-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260319000043",
+          "filed": "2026-03-19",
+          "metrics": {
+            "revenue": {
+              "value": 816904445000,
+              "raw": "816,904,445",
+              "account": "매출액 (주28)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 39415273000,
+              "raw": "39,415,273",
+              "account": "영업이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": 26857674000,
+              "raw": "26,857,674",
+              "account": "당기순이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 673199955000,
+              "raw": "673,199,955",
+              "account": "매출원가 (주29)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 104289217000,
+              "raw": "104,289,217",
+              "account": "판매비와관리비 (주29,30)",
+              "column": "2023년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2024,
+          "start": "2024-01-01",
+          "end": "2024-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260319000043",
+          "filed": "2026-03-19",
+          "metrics": {
+            "revenue": {
+              "value": 810831515000,
+              "raw": "810,831,515",
+              "account": "매출액 (주28)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 17438364000,
+              "raw": "17,438,364",
+              "account": "영업이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -1278597000,
+              "raw": "(1,278,597)",
+              "account": "당기순이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 690510398000,
+              "raw": "690,510,398",
+              "account": "매출원가 (주29)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 102882753000,
+              "raw": "102,882,753",
+              "account": "판매비와관리비 (주29,30)",
+              "column": "2024년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2025,
+          "start": "2025-01-01",
+          "end": "2025-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260319000043",
+          "filed": "2026-03-19",
+          "metrics": {
+            "revenue": {
+              "value": 827752427000,
+              "raw": "827,752,427",
+              "account": "매출액 (주28)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 27823631000,
+              "raw": "27,823,631",
+              "account": "영업이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -18803450000,
+              "raw": "(18,803,450)",
+              "account": "당기순이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 697700578000,
+              "raw": "697,700,578",
+              "account": "매출원가 (주29)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 102228218000,
+              "raw": "102,228,218",
+              "account": "판매비와관리비 (주29,30)",
+              "column": "2025년",
+              "document": "annual_income"
+            }
+          }
+        }
+      ]
+    },
+    "001130": {
+      "ticker": "001130",
+      "name": "대한제분",
+      "corp_code": "00113243",
+      "reviewed_at": "2026-10-17",
+      "max_review_age_days": 180,
+      "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
+      "notes": [
+        "2025 역사 순이익의 양수는 비지배지분 귀속액이다. 연결 전체 순손실과 구분했다. 2024·2023 최신 비교열의 총계와 전기 원문은 일치한다. 이미 정정본과 일치하는 2023 원장값은 유지했다.",
+        "과거 API 원응답과 실행 원인은 미확정이다."
+      ],
+      "documents": {
+        "annual_income": {
+          "accession": "20260319001278",
+          "filed": "2026-03-19",
+          "section": "연결 포괄손익계산서",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260319001278&dcmNo=11152875&eleId=21&offset=299119&length=35210&dtd=dart4.xsd",
+          "sha256": "310ad968a4a6b7475b30dc3ea1df6b58f98cf91fe83daa15e441ffa479f24ffa",
+          "headers": [
+            "연결 포괄손익계산서",
+            "제 75 기 2025.01.01 부터 2025.12.31 까지",
+            "제 74 기 2024.01.01 부터 2024.12.31 까지",
+            "제 73 기 2023.01.01 부터 2023.12.31 까지",
+            "(단위 : 원)"
+          ]
+        }
+      },
+      "periods": [
+        {
+          "year": 2023,
+          "start": "2023-01-01",
+          "end": "2023-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260319001278",
+          "filed": "2026-03-19",
+          "metrics": {
+            "revenue": {
+              "value": 1441458547512,
+              "raw": "1,441,458,547,512",
+              "account": "매출액",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 54859482247,
+              "raw": "54,859,482,247",
+              "account": "영업이익",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": 81242498761,
+              "raw": "81,242,498,761",
+              "account": "당기순이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 1183348997432,
+              "raw": "1,183,348,997,432",
+              "account": "매출원가",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 203250067833,
+              "raw": "203,250,067,833",
+              "account": "판매비와관리비",
+              "column": "2023년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2024,
+          "start": "2024-01-01",
+          "end": "2024-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260319001278",
+          "filed": "2026-03-19",
+          "metrics": {
+            "revenue": {
+              "value": 1374735359151,
+              "raw": "1,374,735,359,151",
+              "account": "매출액",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 72306706525,
+              "raw": "72,306,706,525",
+              "account": "영업이익",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": 48829120223,
+              "raw": "48,829,120,223",
+              "account": "당기순이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 1095971147941,
+              "raw": "1,095,971,147,941",
+              "account": "매출원가",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 206457504685,
+              "raw": "206,457,504,685",
+              "account": "판매비와관리비",
+              "column": "2024년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2025,
+          "start": "2025-01-01",
+          "end": "2025-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260319001278",
+          "filed": "2026-03-19",
+          "metrics": {
+            "revenue": {
+              "value": 1375199649054,
+              "raw": "1,375,199,649,054",
+              "account": "매출액",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 62256836691,
+              "raw": "62,256,836,691",
+              "account": "영업이익",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -25137525435,
+              "raw": "(25,137,525,435)",
+              "account": "당기순이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 1102206656086,
+              "raw": "1,102,206,656,086",
+              "account": "매출원가",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 210736156277,
+              "raw": "210,736,156,277",
+              "account": "판매비와관리비",
+              "column": "2025년",
+              "document": "annual_income"
+            }
+          }
+        }
+      ]
+    },
+    "000680": {
+      "ticker": "000680",
+      "name": "LS네트웍스",
+      "corp_code": "00104698",
+      "reviewed_at": "2026-10-17",
+      "max_review_age_days": 180,
+      "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
+      "notes": [
+        "2024·2025 역사 순이익의 양수는 비지배지분 귀속액이다. 2024 역사 원장은 당시 원가모형 총계 -31,890,828,301원으로 정정하고, 최신 비교에는 공정가치모형으로 재작성한 -17,593,580,482원과 같은 공시의 영업이익 30,187,565,175원을 사용한다. 과거 원장의 매출·영업이익을 부분 교체하지 않는다.",
+        "회사는 투자부동산 측정 모형 변경을 설명하며 2023에는 소급하지 않았다고 명시한다. 최신 2023 총계와 귀속분 합계의 1,112,102,292원 차이가 해결되지 않아 2023은 이 검수 비교열에 추가하지 않았다. 2024 당시 표의 총계와 귀속 합계에도 923,447,500원 차이가 있어 귀속분 합산으로 총계를 임의 보정하지 않았다.",
+        "과거 API 원응답과 실행 원인은 미확정이다."
+      ],
+      "documents": {
+        "annual_income": {
+          "accession": "20260318001521",
+          "filed": "2026-03-18",
+          "section": "연결 포괄손익계산서",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260318001521&dcmNo=11143452&eleId=26&offset=747708&length=29710&dtd=dart4.xsd",
+          "sha256": "dac3ee548e959cd5f7052f9b6b1ebcb9505a4799f197583318730faafb247652",
+          "headers": [
+            "연결 포괄손익계산서",
+            "제 76 기 2025.01.01 부터 2025.12.31 까지",
+            "제 75 기 2024.01.01 부터 2024.12.31 까지",
+            "제 74 기 2023.01.01 부터 2023.12.31 까지",
+            "(단위 : 원)"
+          ]
+        }
+      },
+      "periods": [
+        {
+          "year": 2024,
+          "start": "2024-01-01",
+          "end": "2024-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260318001521",
+          "filed": "2026-03-18",
+          "metrics": {
+            "revenue": {
+              "value": 1933813959649,
+              "raw": "1,933,813,959,649",
+              "account": "수익(매출액) (주5,29,36)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 30187565175,
+              "raw": "30,187,565,175",
+              "account": "영업이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -17593580482,
+              "raw": "(17,593,580,482)",
+              "account": "당기순이익(손실) (주27,35)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 1645642842654,
+              "raw": "1,645,642,842,654",
+              "account": "매출원가 (주29,30,36)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 257983551820,
+              "raw": "257,983,551,820",
+              "account": "판매 및 일반관리비 (주6,30,31,36)",
+              "column": "2024년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2025,
+          "start": "2025-01-01",
+          "end": "2025-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260318001521",
+          "filed": "2026-03-18",
+          "metrics": {
+            "revenue": {
+              "value": 2615245130367,
+              "raw": "2,615,245,130,367",
+              "account": "수익(매출액) (주5,29,36)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 22287447432,
+              "raw": "22,287,447,432",
+              "account": "영업이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -19102992842,
+              "raw": "(19,102,992,842)",
+              "account": "당기순이익(손실) (주27,35)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 2315505285520,
+              "raw": "2,315,505,285,520",
+              "account": "매출원가 (주29,30,36)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 277452397415,
+              "raw": "277,452,397,415",
+              "account": "판매 및 일반관리비 (주6,30,31,36)",
+              "column": "2025년",
+              "document": "annual_income"
+            }
+          }
+        }
+      ]
+    },
+    "241590": {
+      "ticker": "241590",
+      "name": "화승엔터프라이즈",
+      "corp_code": "01128613",
+      "reviewed_at": "2026-10-17",
+      "max_review_age_days": 180,
+      "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
+      "notes": [
+        "2025 역사 순이익의 양수는 비지배지분 귀속액이며 연결 전체는 순손실이다. 2024·2023 비교열은 전기 원문과 일치한다. 2026 분기 기재정정은 연간 원본과 구분했다.",
+        "과거 API 원응답과 실행 원인은 미확정이다."
+      ],
+      "documents": {
+        "annual_income": {
+          "accession": "20260312000443",
+          "filed": "2026-03-12",
+          "section": "연결 포괄손익계산서",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260312000443&dcmNo=11113121&eleId=21&offset=233915&length=32959&dtd=dart4.xsd",
+          "sha256": "b6b7bf638e52c84a29c129a13a436333dab86b8f973744f9d8361ab23b26d1ba",
+          "headers": [
+            "연결 포괄손익계산서",
+            "제 11 기 2025.01.01 부터 2025.12.31 까지",
+            "제 10 기 2024.01.01 부터 2024.12.31 까지",
+            "제 9 기 2023.01.01 부터 2023.12.31 까지",
+            "(단위 : 원)"
+          ]
+        }
+      },
+      "periods": [
+        {
+          "year": 2023,
+          "start": "2023-01-01",
+          "end": "2023-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260312000443",
+          "filed": "2026-03-12",
+          "metrics": {
+            "revenue": {
+              "value": 1213831937248,
+              "raw": "1,213,831,937,248",
+              "account": "매출액",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 12961781973,
+              "raw": "12,961,781,973",
+              "account": "영업이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -25283145952,
+              "raw": "(25,283,145,952)",
+              "account": "당기순이익(손실)",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 1050489568393,
+              "raw": "1,050,489,568,393",
+              "account": "매출원가",
+              "column": "2023년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 150380586882,
+              "raw": "150,380,586,882",
+              "account": "판매비와관리비",
+              "column": "2023년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2024,
+          "start": "2024-01-01",
+          "end": "2024-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260312000443",
+          "filed": "2026-03-12",
+          "metrics": {
+            "revenue": {
+              "value": 1609616611391,
+              "raw": "1,609,616,611,391",
+              "account": "매출액",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 82566443170,
+              "raw": "82,566,443,170",
+              "account": "영업이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": 34359170263,
+              "raw": "34,359,170,263",
+              "account": "당기순이익(손실)",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 1387852643642,
+              "raw": "1,387,852,643,642",
+              "account": "매출원가",
+              "column": "2024년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 139197524579,
+              "raw": "139,197,524,579",
+              "account": "판매비와관리비",
+              "column": "2024년",
+              "document": "annual_income"
+            }
+          }
+        },
+        {
+          "year": 2025,
+          "start": "2025-01-01",
+          "end": "2025-12-31",
+          "period_kind": "annual",
+          "currency": "KRW",
+          "fs_div": "CFS",
+          "accession": "20260312000443",
+          "filed": "2026-03-12",
+          "metrics": {
+            "revenue": {
+              "value": 1564379181881,
+              "raw": "1,564,379,181,881",
+              "account": "매출액",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "op": {
+              "value": 35691758682,
+              "raw": "35,691,758,682",
+              "account": "영업이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "net": {
+              "value": -27121361108,
+              "raw": "(27,121,361,108)",
+              "account": "당기순이익(손실)",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "cost_of_sales": {
+              "value": 1379690321204,
+              "raw": "1,379,690,321,204",
+              "account": "매출원가",
+              "column": "2025년",
+              "document": "annual_income"
+            },
+            "sga": {
+              "value": 148997101995,
+              "raw": "148,997,101,995",
+              "account": "판매비와관리비",
+              "column": "2025년",
+              "document": "annual_income"
+            }
+          }
+        }
+      ]
+    },
     "214270": {
       "ticker": "214270",
       "name": "FSN",
