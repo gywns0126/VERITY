@@ -52,6 +52,40 @@ def test_annual_growth_has_period_operands_and_opposite_direction():
     assert '-33.3%' in first['observation'] and '자체계산' in first['observation']
 
 
+def test_qualified_per_does_not_return_as_an_unqualified_r4_question():
+    ticker, data, stock = fixture(True)
+    stock['facts']['PER'] = '10'
+    stock['facts_note']['PER'] = '자체계산'
+    stock['facts_calc'] = {'PER': '시가총액 100억 ÷ 순이익 10억 (2025년 연간)'}
+    stock['peer']['rows'][0].update(value='10', median='12')
+    before = copy.deepcopy(stock)
+    report = build(data, ticker)
+    assert next(row for row in section(report, 'R3')['rows'] if row[0] == 'PER')[1] == '비교 보류 · 수집값 10'
+    assert next(row for row in section(report, 'R4')['rows'] if row[0] == 'PER')[1:] == ['비교 보류 · 수집값 10', '12']
+    assert not any(issue['refs'] == 'R3 · R4' for issue in report['issues'])
+    assert stock == before
+
+    stock['facts_calc']['PER'] = '주가 10,000원 ÷ 보통주 EPS 1,000원'
+    report = build(data, ticker)
+    assert next(row for row in section(report, 'R3')['rows'] if row[0] == 'PER')[1] == '10'
+    assert any(issue['refs'] == 'R3 · R4' and '표시 PER 10, 업종 중앙값 12' in issue['observation']
+               for issue in report['issues'])
+
+
+def test_qualified_per_is_carried_into_reviewed_business_r4g():
+    stock = {'ticker': '084010', 'name': '대한제강', 'corp_code': '00113225',
+             'facts': {'PER': '10'}, 'facts_note': {'PER': '자체계산'},
+             'facts_calc': {'PER': '시가총액 100억 ÷ 순이익 10억 (2025년 연간)'},
+             'financials': {'period': '2025'},
+             'peer': {'sector': '철강', 'n': 164, 'rows': [{'key': 'PER', 'value': '10', 'median': '12'}]}}
+    data = {'stock_report_public.json': {'stocks': {'084010': stock}}}
+    report = build_report('084010', lambda name: data.get(name, {}), datetime(2026, 10, 17, tzinfo=timezone.utc))
+    assert report['business_profile']['available']
+    assert next(row for row in section(report, 'R3')['rows'] if row[0] == 'PER')[1] == '비교 보류 · 수집값 10'
+    assert next(row for row in section(report, 'R4G')['rows'] if row[0] == 'PER')[1:] == ['비교 보류 · 수집값 10', '12']
+    assert not any(issue['refs'] == 'R3 · R4' for issue in report['issues'])
+
+
 def test_nonconsecutive_years_and_negative_denominator_not_growth():
     ticker, data, s = fixture()
     s['fin_series'][0]['year'] = 2022

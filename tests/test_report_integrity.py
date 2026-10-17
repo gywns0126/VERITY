@@ -58,6 +58,49 @@ def test_estimate_value_and_original_formula_are_both_preserved():
     assert valuation_display({'PBR': '1'}, {}, {'PBR': '직접 자기자본 기준'})[0]['PBR'] == '1'
 
 
+def test_generic_calculated_per_keeps_received_number_but_holds_comparison():
+    cases = (
+        ('064550', '120.2', '시가총액 2052억 ÷ 순이익 17억 (2025년 연간 · 시총 2026-10-16 기준)'),
+        ('000370', '2.6', '시가총액 7646억 ÷ 순이익 2923억 (2025년 연간 · 시총 2026-10-16 기준)'),
+        ('005880', '3.8', '시가총액 6600억 ÷ 순이익 1733억 (2025년 연간 · 시총 2026-10-16 기준)'),
+    )
+    for ticker, received, formula in cases:
+        facts, notes, calculations = {'PER': received}, {'PER': '자체계산'}, {'PER': formula}
+        before = copy.deepcopy((facts, notes, calculations))
+        values, descriptions, warnings = valuation_display(facts, notes, calculations)
+        assert values['PER'] == '비교 보류 · 수집값 ' + received, ticker
+        assert descriptions['PER'].startswith(formula), ticker
+        assert '귀속 기준' in descriptions['PER'] and '보통주 EPS 정합 미검수' in descriptions['PER']
+        assert '총당기순이익' not in descriptions['PER']
+        assert len(warnings) == 1 and '비교를 보류' in warnings[0]
+        assert (facts, notes, calculations) == before
+
+
+def test_per_without_generic_calculated_formula_is_not_auto_qualified():
+    for note, formula in (
+        ('외부 수신', ''),
+        ('자체계산', '주가 20,000원 ÷ 지배주주 EPS 1,000원'),
+        ('자체계산', '시가총액 100억 ÷ 지배주주 순이익 10억 (2025년 연간)'),
+        ('자체계산', '시가총액 100억 ÷ 순이익 10억 (보통주 EPS 원문 검수)'),
+        ('외부 수신', '시가총액 100억 ÷ 순이익 10억 (2025년 연간)'),
+    ):
+        values, descriptions, warnings = valuation_display({'PER': '10'}, {'PER': note}, {'PER': formula})
+        assert values['PER'] == '10' and descriptions['PER'] == formula and not warnings
+
+
+def test_r4_reference_uses_qualified_per_from_r3_without_peer_recalculation():
+    stock = {'ticker': '084010', 'name': 'fixture', 'facts': {'PER': '10'},
+             'facts_note': {'PER': '자체계산'},
+             'facts_calc': {'PER': '시가총액 100억 ÷ 순이익 10억 (2025년 연간)'},
+             'peer': {'sector': 'fixture', 'rows': [{'key': 'PER', 'value': '10', 'median': '12'}]}}
+    report = build_report('084010', lambda name: {'stocks': [stock]} if name == 'stock_report_public.json' else {})
+    r3 = next(section for section in report['sections'] if section['id'] == 'R3')
+    r4 = next(section for section in report['sections'] if section['id'] == 'R4')
+    assert next(row for row in r3['rows'] if row[0] == 'PER')[1] == '비교 보류 · 수집값 10'
+    assert next(row for row in r4['rows'] if row[0] == 'PER')[1:] == ['비교 보류 · 수집값 10', '12']
+    assert stock['facts']['PER'] == '10' and stock['peer']['rows'][0]['value'] == '10'
+
+
 def test_older_cash_period_does_not_validate_latest_display_summary():
     fin = {'period': '2025', 'currency': 'KRW', 'fs_div': 'CFS',
            'groups': [{'title': '현금흐름표', 'rows': [{'k': '영업활동', 'v': '396억'}]}]}
