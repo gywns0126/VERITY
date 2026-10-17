@@ -1,30 +1,30 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-17T00:00:11Z",
+  "generatedAt": "2026-10-17T23:32:19Z",
   "scope": {
     "mode": "published-automatic-evidence-catalog",
     "runtimeFreshness": "not-automatically-reverified",
     "note": "Generated from declared received source snapshots; source timestamps are reported separately and are not automatically reverified."
   },
   "artifactTimestamps": {
-    "universeGeneratedAt": "2026-10-17T07:33:36.423753+09:00",
-    "chainSnippetsUpdatedAt": "2026-10-17T08:59:37.594058+09:00",
+    "universeGeneratedAt": "2026-10-17T13:19:30.630725+09:00",
+    "chainSnippetsUpdatedAt": "2026-10-18T08:32:08.025508+09:00",
     "groupStructureUpdatedAt": "2026-10-16T21:58:10.712405+09:00"
   },
   "sourceDateCoverage": {
-    "dartDocumentsWithReceiptDate": 1734,
+    "dartDocumentsWithReceiptDate": 1783,
     "earliestDartReceiptDate": "2025-09-12",
     "latestDartReceiptDate": "2026-10-07",
     "groupStructurePerDocumentSourceDate": null
   },
   "inputs": {
     "universe": {
-      "bytes": 2236709,
-      "sha256": "295e9b34513b6ce11d963dac827c40755db54e518203817fd6a9d8a8ead71660"
+      "bytes": 2236702,
+      "sha256": "19c39c76e5485ae20dce10665cbb001b24e9aa4f212aae93170201a1dfbc9e9d"
     },
     "chainSnippets": {
-      "bytes": 6015872,
-      "sha256": "e3078170f0f474874afbe59e361c6ef06ea6db7ae9f4df636b0b4275e8ce33cc"
+      "bytes": 6177797,
+      "sha256": "11c553ac2188918a6a70075c7339649a452672e45c0ba4bac577e9aaaced2e54"
     },
     "groupStructure": {
       "bytes": 496042,
@@ -42,11 +42,11 @@
   "denominators": {
     "issuersInput": 15256,
     "issuersIndexed": 15256,
-    "documentsInput": 1735,
-    "documentsAccepted": 1734,
-    "excerptsInput": 9627,
-    "excerptsAccepted": 1426,
-    "excerptsRejected": 8201,
+    "documentsInput": 1784,
+    "documentsAccepted": 1783,
+    "excerptsInput": 9887,
+    "excerptsAccepted": 1452,
+    "excerptsRejected": 8435,
     "relationsInput": 852,
     "relationsAccepted": 16,
     "relationsRejected": 836
@@ -55,7 +55,7 @@
     "ambiguous_alias_only": 13,
     "derived_parent_not_explicit_role": 35,
     "missing_exact_symbol": 796,
-    "no_unique_other_company_mention": 8177,
+    "no_unique_other_company_mention": 8411,
     "self_descriptive_ownership_role": 5,
     "unknown_document_issuer": 11
   },
@@ -65993,7 +65993,9 @@
         "market": "KR",
         "name": "삼양홀딩스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260323001299"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -66032,6 +66034,7 @@
         "source:dart:20260312001236",
         "source:dart:20260313001124",
         "source:dart:20260318000757",
+        "source:dart:20260318001639",
         "source:dart:20260323000660",
         "source:dart:20260323000941"
       ],
@@ -66040,6 +66043,8 @@
         "event:dart:20260313001124:50049-50254:19681422",
         "event:dart:20260313001124:91397-91602:ac2fb6ab",
         "event:dart:20260318000757:18641-18844:bf67a527",
+        "event:dart:20260318001639:105750-105956:874e8dcd",
+        "event:dart:20260318001639:105753-105956:04e77b71",
         "event:dart:20260323000660:16776-16982:f39be670",
         "event:dart:20260323000660:16779-16982:6a1b2a2c",
         "event:dart:20260323000660:16797-17003:f9c9fd64",
@@ -66459,14 +66464,22 @@
       "issuer": {
         "ticker": "000640",
         "market": "KR",
-        "name": "동아쏘시오홀딩스"
+        "name": "동아제약"
       },
       "sourceCandidates": [
-        "source:dart:20260318001307"
+        "source:dart:20260318001307",
+        "source:dart:20260320001142",
+        "source:dart:20260619000626"
       ],
       "eventCandidates": [
         "event:dart:20260318001307:139390-139595:000592da",
-        "event:dart:20260318001307:351822-352027:fb9463df"
+        "event:dart:20260318001307:351822-352027:fb9463df",
+        "event:dart:20260320001142:65586-65791:6b46a5f2",
+        "event:dart:20260320001142:65588-65791:4d5277c9",
+        "event:dart:20260320001142:65642-65848:ecaa26e4",
+        "event:dart:20260320001142:65645-65848:01b54d14",
+        "event:dart:20260619000626:28234-28440:b9662497",
+        "event:dart:20260619000626:28237-28440:77ca97f5"
       ],
       "relationCandidates": []
     },
@@ -66497,11 +66510,13 @@
         "source:dart:20260316001567",
         "source:dart:20260317000635",
         "source:dart:20260318000059",
+        "source:dart:20260318000451",
         "source:dart:20260318000738",
         "source:dart:20260318001118",
         "source:dart:20260318001246",
         "source:dart:20260318001251",
         "source:dart:20260318001527",
+        "source:dart:20260318001643",
         "source:dart:20260319000032",
         "source:dart:20260319000253",
         "source:dart:20260319000264",
@@ -66551,6 +66566,7 @@
         "event:dart:20260317000635:212616-212821:ca40ac99",
         "event:dart:20260318000059:1081-1286:1a5f1882",
         "event:dart:20260318000059:6548-6753:772918c1",
+        "event:dart:20260318000451:16162-16367:c9ab1247",
         "event:dart:20260318000738:183959-184164:3e11ae19",
         "event:dart:20260318001118:77793-77999:9e90062a",
         "event:dart:20260318001118:77796-77999:9f74096c",
@@ -66566,6 +66582,8 @@
         "event:dart:20260318001527:12904-13107:7880ceb5",
         "event:dart:20260318001527:1335-1540:5420d6ce",
         "event:dart:20260318001527:1421-1626:b0a4dbcf",
+        "event:dart:20260318001643:48067-48272:af3ee09d",
+        "event:dart:20260318001643:97476-97681:e850c27d",
         "event:dart:20260319000032:37104-37309:d9b31ee2",
         "event:dart:20260319000253:26255-26460:985e2186",
         "event:dart:20260319000264:28266-28471:dc7baa50",
@@ -66967,7 +66985,7 @@
       "issuer": {
         "ticker": "001080",
         "market": "KR",
-        "name": "만호제강"
+        "name": "MH머트리얼즈"
       },
       "sourceCandidates": [
         "source:dart:20260910000496"
@@ -67623,7 +67641,9 @@
         "market": "KR",
         "name": "아세아"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260326000458"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -67735,7 +67755,9 @@
         "market": "KR",
         "name": "고려제강"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260319001226"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -67925,8 +67947,8 @@
         "source:dart:20260619000626"
       ],
       "eventCandidates": [
-        "event:dart:20260619000626:28234-28440:2414e11a",
-        "event:dart:20260619000626:28237-28440:29c88686",
+        "event:dart:20260619000626:28234-28440:b9662497",
+        "event:dart:20260619000626:28237-28440:77ca97f5",
         "event:dart:20260619000626:28427-28631:33e3faf7"
       ],
       "relationCandidates": []
@@ -68219,7 +68241,9 @@
         "market": "KR",
         "name": "세아제강지주"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260316000062"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -68414,7 +68438,9 @@
         "market": "KR",
         "name": "흥아해운"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318000745"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -68936,6 +68962,7 @@
         "source:dart:20260306000369",
         "source:dart:20260316000444",
         "source:dart:20260319000934",
+        "source:dart:20260323000909",
         "source:dart:20260323000923",
         "source:dart:20260323001550",
         "source:dart:20260323001724",
@@ -68953,6 +68980,7 @@
         "event:dart:20260319000934:145364-145567:d2bc9146",
         "event:dart:20260319000934:145462-145667:f4a8a88f",
         "event:dart:20260319000934:145464-145667:73378d3c",
+        "event:dart:20260323000909:168034-168239:ad8e2b31",
         "event:dart:20260323000923:33082-33286:6e4b0db3",
         "event:dart:20260323001550:113145-113351:f079d88c",
         "event:dart:20260323001550:113148-113351:7cccf0e8",
@@ -69306,7 +69334,9 @@
         "market": "KR",
         "name": "조광피혁"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260319000650"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -70110,6 +70140,7 @@
         "source:dart:20260317000896",
         "source:dart:20260318000059",
         "source:dart:20260318000446",
+        "source:dart:20260318000451",
         "source:dart:20260318000687",
         "source:dart:20260318000699",
         "source:dart:20260318000738",
@@ -70126,6 +70157,7 @@
         "source:dart:20260318001527",
         "source:dart:20260318001546",
         "source:dart:20260318001554",
+        "source:dart:20260318001643",
         "source:dart:20260318001666",
         "source:dart:20260319000006",
         "source:dart:20260319000032",
@@ -70150,6 +70182,7 @@
         "source:dart:20260320000683",
         "source:dart:20260320000831",
         "source:dart:20260320000879",
+        "source:dart:20260320001115",
         "source:dart:20260320001380",
         "source:dart:20260320001412",
         "source:dart:20260323000520",
@@ -70286,6 +70319,7 @@
         "event:dart:20260318000059:6548-6753:772918c1",
         "event:dart:20260318000446:93093-93296:82f8e9db",
         "event:dart:20260318000446:93135-93339:c1eb9c12",
+        "event:dart:20260318000451:16162-16367:c9ab1247",
         "event:dart:20260318000687:13659-13862:a65162bd",
         "event:dart:20260318000699:20356-20561:73bc18d5",
         "event:dart:20260318000699:20358-20561:e203a18e",
@@ -70333,6 +70367,9 @@
         "event:dart:20260318001554:107702-107908:fc82ce95",
         "event:dart:20260318001554:107705-107908:f9970a69",
         "event:dart:20260318001554:107738-107943:b9532c31",
+        "event:dart:20260318001643:120848-121051:2d9e7c5c",
+        "event:dart:20260318001643:48067-48272:af3ee09d",
+        "event:dart:20260318001643:97476-97681:e850c27d",
         "event:dart:20260318001666:297018-297222:05731c8b",
         "event:dart:20260318001666:297052-297256:d941ed58",
         "event:dart:20260318001666:74980-75185:48151dba",
@@ -70399,6 +70436,11 @@
         "event:dart:20260320000831:171530-171733:5d60e84f",
         "event:dart:20260320000831:172997-173202:0fd10f6b",
         "event:dart:20260320000879:35273-35478:e39966de",
+        "event:dart:20260320001115:187404-187610:959acfea",
+        "event:dart:20260320001115:187407-187610:7f38df0c",
+        "event:dart:20260320001115:187414-187620:a38e8716",
+        "event:dart:20260320001115:187417-187620:933928b8",
+        "event:dart:20260320001115:187484-187687:c6afe6ff",
         "event:dart:20260320001380:247101-247305:de9bc378",
         "event:dart:20260320001380:73044-73248:54be7cea",
         "event:dart:20260320001412:53472-53675:6761c98b",
@@ -71492,7 +71534,9 @@
         "market": "KR",
         "name": "대덕"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260319001087"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -71647,6 +71691,7 @@
       "sourceCandidates": [
         "source:dart:20260311003892",
         "source:dart:20260318000860",
+        "source:dart:20260318001210",
         "source:dart:20260318001362",
         "source:dart:20260319000253"
       ],
@@ -71657,6 +71702,7 @@
         "event:dart:20260318000860:75605-75811:13482289",
         "event:dart:20260318000860:75608-75811:ba528305",
         "event:dart:20260318000860:75660-75866:2c45c618",
+        "event:dart:20260318001210:4564-4767:520a2669",
         "event:dart:20260318001362:30923-31128:df63e19c",
         "event:dart:20260319000253:26255-26460:985e2186"
       ],
@@ -72184,9 +72230,12 @@
         "name": "명신산업"
       },
       "sourceCandidates": [
+        "source:dart:20260323000909",
         "source:group-structure:2026-10-16:KR:009900"
       ],
-      "eventCandidates": [],
+      "eventCandidates": [
+        "event:dart:20260323000909:168034-168239:ad8e2b31"
+      ],
       "relationCandidates": [
         "relation:group-structure:e9d442cd"
       ]
@@ -72499,8 +72548,12 @@
         "market": "KR",
         "name": "아이에스동서"
       },
-      "sourceCandidates": [],
-      "eventCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318001565"
+      ],
+      "eventCandidates": [
+        "event:dart:20260318001565:275236-275440:888d758d"
+      ],
       "relationCandidates": []
     },
     "KR:010820": {
@@ -74556,7 +74609,9 @@
         "market": "KR",
         "name": "브이티"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260319001002"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -74881,7 +74936,9 @@
         "market": "KR",
         "name": "한섬"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260313001074"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -75842,6 +75899,7 @@
         "name": "아난티"
       },
       "sourceCandidates": [
+        "source:dart:20260311003981",
         "source:dart:20260318000695"
       ],
       "eventCandidates": [
@@ -76097,6 +76155,7 @@
         "source:dart:20260317000766",
         "source:dart:20260319000635",
         "source:dart:20260407003303",
+        "source:dart:20260602000219",
         "source:group-structure:2026-10-16:KR:028050"
       ],
       "eventCandidates": [
@@ -76119,7 +76178,11 @@
         "event:dart:20260317000766:34379-34582:e40aa330",
         "event:dart:20260319000635:80440-80645:c55d1ffc",
         "event:dart:20260407003303:204983-205187:40c59bbd",
-        "event:dart:20260407003303:83416-83620:c27ff67f"
+        "event:dart:20260407003303:83416-83620:c27ff67f",
+        "event:dart:20260602000219:14628-14834:afa789f8",
+        "event:dart:20260602000219:14631-14834:f1c4f5a3",
+        "event:dart:20260602000219:14652-14858:3a460991",
+        "event:dart:20260602000219:14655-14858:098ac083"
       ],
       "relationCandidates": [
         "relation:group-structure:1ab80f9d"
@@ -76176,6 +76239,7 @@
         "name": "케이씨"
       },
       "sourceCandidates": [
+        "source:dart:20260316001307",
         "source:group-structure:2026-10-16:KR:029460"
       ],
       "eventCandidates": [],
@@ -76916,7 +76980,9 @@
         "market": "KR",
         "name": "엠케이전자"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260508000660"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -76982,6 +77048,7 @@
         "name": "자화전자"
       },
       "sourceCandidates": [
+        "source:dart:20260318000870",
         "source:group-structure:2026-10-16:KR:187870"
       ],
       "eventCandidates": [],
@@ -77237,6 +77304,7 @@
         "source:dart:20260316001408",
         "source:dart:20260316001567",
         "source:dart:20260318000446",
+        "source:dart:20260318000451",
         "source:dart:20260318000734",
         "source:dart:20260318001251",
         "source:dart:20260318001666",
@@ -77264,6 +77332,7 @@
         "event:dart:20260316001567:89617-89820:1a9669b8",
         "event:dart:20260318000446:93135-93339:c1eb9c12",
         "event:dart:20260318000446:93149-93354:c23549e8",
+        "event:dart:20260318000451:16162-16367:c9ab1247",
         "event:dart:20260318000734:27203-27408:2169a96a",
         "event:dart:20260318001251:97249-97455:a8b9721d",
         "event:dart:20260318001251:97252-97455:6f8631fe",
@@ -77343,6 +77412,7 @@
       },
       "sourceCandidates": [
         "source:dart:20260313001207",
+        "source:dart:20260323000907",
         "source:dart:20260407003694"
       ],
       "eventCandidates": [
@@ -77422,7 +77492,9 @@
         "market": "KR",
         "name": "한국기업평가"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260326001257"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -77659,7 +77731,8 @@
         "name": "서희건설"
       },
       "sourceCandidates": [
-        "source:dart:20260323001724"
+        "source:dart:20260323001724",
+        "source:dart:20260324000013"
       ],
       "eventCandidates": [
         "event:dart:20260323001724:246110-246314:6dac7636",
@@ -78193,7 +78266,9 @@
         "market": "KR",
         "name": "삼지전자"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260317000862"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -78498,7 +78573,9 @@
         "market": "KR",
         "name": "하나투어"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260319001345"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -79822,7 +79899,9 @@
         "market": "KR",
         "name": "HLB제약"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260319000010"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -80471,7 +80550,9 @@
         "market": "KR",
         "name": "에스티큐브"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318001399"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -80527,7 +80608,9 @@
         "market": "KR",
         "name": "코나아이"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260311003779"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -81549,9 +81632,12 @@
         "name": "인선이엔티"
       },
       "sourceCandidates": [
+        "source:dart:20260318001565",
         "source:dart:20260319001290"
       ],
-      "eventCandidates": [],
+      "eventCandidates": [
+        "event:dart:20260318001565:275236-275440:888d758d"
+      ],
       "relationCandidates": []
     },
     "KR:060230": {
@@ -83129,8 +83215,16 @@
         "market": "KR",
         "name": "빛과전자"
       },
-      "sourceCandidates": [],
-      "eventCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260320001115"
+      ],
+      "eventCandidates": [
+        "event:dart:20260320001115:187404-187610:959acfea",
+        "event:dart:20260320001115:187407-187610:7f38df0c",
+        "event:dart:20260320001115:187414-187620:a38e8716",
+        "event:dart:20260320001115:187417-187620:933928b8",
+        "event:dart:20260320001115:187484-187687:c6afe6ff"
+      ],
       "relationCandidates": []
     },
     "KR:069620": {
@@ -83454,10 +83548,14 @@
         "name": "농심홀딩스"
       },
       "sourceCandidates": [
-        "source:dart:20260311003892"
+        "source:dart:20260311003892",
+        "source:dart:20260318001210"
       ],
       "eventCandidates": [
-        "event:dart:20260311003892:88868-89071:aafad9f8"
+        "event:dart:20260311003892:88868-89071:aafad9f8",
+        "event:dart:20260318001210:4564-4767:520a2669",
+        "event:dart:20260318001210:47463-47668:6bf2c251",
+        "event:dart:20260318001210:47482-47688:4ed8336e"
       ],
       "relationCandidates": []
     },
@@ -83714,7 +83812,9 @@
         "market": "KR",
         "name": "세진중공업"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260323001183"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -84367,7 +84467,9 @@
         "market": "KR",
         "name": "젬백스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260320001156"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -84781,7 +84883,12 @@
       "sourceCandidates": [
         "source:dart:20260320001142"
       ],
-      "eventCandidates": [],
+      "eventCandidates": [
+        "event:dart:20260320001142:65586-65791:6b46a5f2",
+        "event:dart:20260320001142:65588-65791:4d5277c9",
+        "event:dart:20260320001142:65642-65848:ecaa26e4",
+        "event:dart:20260320001142:65645-65848:01b54d14"
+      ],
       "relationCandidates": []
     },
     "KR:085310": {
@@ -85246,7 +85353,9 @@
         "market": "KR",
         "name": "켐트로닉스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318000934"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -85392,7 +85501,9 @@
         "market": "KR",
         "name": "코세스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260323001563"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -85561,9 +85672,13 @@
         "name": "비에이치"
       },
       "sourceCandidates": [
+        "source:dart:20260318001382",
         "source:dart:20260323001134"
       ],
-      "eventCandidates": [],
+      "eventCandidates": [
+        "event:dart:20260318001382:86704-86910:b6856597",
+        "event:dart:20260318001382:86707-86910:767966a1"
+      ],
       "relationCandidates": []
     },
     "KR:090470": {
@@ -86027,7 +86142,9 @@
         "market": "KR",
         "name": "동운아나텍"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260319000936"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -86586,7 +86703,9 @@
         "market": "KR",
         "name": "아이센스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318001657"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -86869,8 +86988,14 @@
         "market": "KR",
         "name": "월덱스"
       },
-      "sourceCandidates": [],
-      "eventCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318001643"
+      ],
+      "eventCandidates": [
+        "event:dart:20260318001643:120848-121051:2d9e7c5c",
+        "event:dart:20260318001643:48067-48272:af3ee09d",
+        "event:dart:20260318001643:97476-97681:e850c27d"
+      ],
       "relationCandidates": []
     },
     "KR:101170": {
@@ -87253,8 +87378,12 @@
         "market": "KR",
         "name": "원익머트리얼즈"
       },
-      "sourceCandidates": [],
-      "eventCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318000451"
+      ],
+      "eventCandidates": [
+        "event:dart:20260318000451:16162-16367:c9ab1247"
+      ],
       "relationCandidates": []
     },
     "KR:105330": {
@@ -88656,8 +88785,8 @@
         "source:dart:20260619000626"
       ],
       "eventCandidates": [
-        "event:dart:20260619000626:28234-28440:2414e11a",
-        "event:dart:20260619000626:28237-28440:29c88686"
+        "event:dart:20260619000626:28234-28440:b9662497",
+        "event:dart:20260619000626:28237-28440:77ca97f5"
       ],
       "relationCandidates": []
     },
@@ -89539,7 +89668,9 @@
         "market": "KR",
         "name": "삼양사"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318001585"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -91432,7 +91563,9 @@
         "market": "KR",
         "name": "글로벌텍스프리"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260323001065"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -92233,7 +92366,9 @@
         "market": "KR",
         "name": "타이거일렉"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260317000532"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -92766,10 +92901,16 @@
         "name": "에치에프알"
       },
       "sourceCandidates": [
-        "source:dart:20260319001383"
+        "source:dart:20260319001383",
+        "source:dart:20260320001115"
       ],
       "eventCandidates": [
-        "event:dart:20260319001383:73872-74077:bf79df70"
+        "event:dart:20260319001383:73872-74077:bf79df70",
+        "event:dart:20260320001115:187404-187610:959acfea",
+        "event:dart:20260320001115:187407-187610:7f38df0c",
+        "event:dart:20260320001115:187414-187620:a38e8716",
+        "event:dart:20260320001115:187417-187620:933928b8",
+        "event:dart:20260320001115:187484-187687:c6afe6ff"
       ],
       "relationCandidates": []
     },
@@ -93429,7 +93570,9 @@
         "market": "KR",
         "name": "일동제약"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318000787"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -94618,7 +94761,9 @@
         "market": "KR",
         "name": "천보"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260316001151"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -95026,8 +95171,13 @@
         "market": "KR",
         "name": "디케이티"
       },
-      "sourceCandidates": [],
-      "eventCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318001382"
+      ],
+      "eventCandidates": [
+        "event:dart:20260318001382:86704-86910:b6856597",
+        "event:dart:20260318001382:86707-86910:767966a1"
+      ],
       "relationCandidates": []
     },
     "KR:290560": {
@@ -97159,7 +97309,9 @@
         "market": "KR",
         "name": "엔켐"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260326001049"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -97412,7 +97564,9 @@
         "market": "KR",
         "name": "엑스게이트"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318000875"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -97547,8 +97701,13 @@
         "market": "KR",
         "name": "지아이이노베이션"
       },
-      "sourceCandidates": [],
-      "eventCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318001639"
+      ],
+      "eventCandidates": [
+        "event:dart:20260318001639:105750-105956:874e8dcd",
+        "event:dart:20260318001639:105753-105956:04e77b71"
+      ],
       "relationCandidates": []
     },
     "KR:359090": {
@@ -97731,8 +97890,15 @@
         "market": "KR",
         "name": "성일하이텍"
       },
-      "sourceCandidates": [],
-      "eventCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260602000219"
+      ],
+      "eventCandidates": [
+        "event:dart:20260602000219:14628-14834:afa789f8",
+        "event:dart:20260602000219:14631-14834:f1c4f5a3",
+        "event:dart:20260602000219:14652-14858:3a460991",
+        "event:dart:20260602000219:14655-14858:098ac083"
+      ],
       "relationCandidates": []
     },
     "KR:365550": {
@@ -98086,7 +98252,9 @@
         "market": "KR",
         "name": "디어유"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260316001246"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -98238,7 +98406,9 @@
         "market": "KR",
         "name": "바이오노트"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318001576"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -98864,7 +99034,9 @@
         "market": "KR",
         "name": "가온칩스"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260319001147"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -100160,9 +100332,12 @@
       },
       "sourceCandidates": [
         "source:dart:20260316001009",
+        "source:dart:20260318001210",
         "source:dart:20260323000048"
       ],
       "eventCandidates": [
+        "event:dart:20260318001210:47463-47668:6bf2c251",
+        "event:dart:20260318001210:47482-47688:4ed8336e",
         "event:dart:20260323000048:19642-19848:6998fc15",
         "event:dart:20260323000048:19645-19848:abbd9f27"
       ],
@@ -100476,6 +100651,7 @@
       },
       "sourceCandidates": [
         "source:dart:20260312000811",
+        "source:dart:20260313000519",
         "source:dart:20260316001310",
         "source:dart:20260318000823",
         "source:dart:20260323000923",
@@ -101120,7 +101296,9 @@
         "market": "KR",
         "name": "토모큐브"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260320000110"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -101477,7 +101655,9 @@
         "market": "KR",
         "name": "엠앤씨솔루션"
       },
-      "sourceCandidates": [],
+      "sourceCandidates": [
+        "source:dart:20260318000447"
+      ],
       "eventCandidates": [],
       "relationCandidates": []
     },
@@ -161527,6 +161707,15 @@
       "documentIssuer": "KR:101140",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260331002681"
     },
+    "source:dart:20260318001643": {
+      "id": "source:dart:20260318001643",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318001643",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:101160",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001643"
+    },
     "source:dart:20260323000743": {
       "id": "source:dart:20260323000743",
       "kind": "dart-filing-excerpt",
@@ -161733,6 +161922,15 @@
       "reportName": "사업보고서 (2025.12)",
       "documentIssuer": "KR:104620",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001206"
+    },
+    "source:dart:20260318000451": {
+      "id": "source:dart:20260318000451",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318000451",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:104830",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000451"
     },
     "source:dart:20260311003815": {
       "id": "source:dart:20260311003815",
@@ -162796,6 +162994,15 @@
       "documentIssuer": "KR:145720",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260928000355"
     },
+    "source:dart:20260318001585": {
+      "id": "source:dart:20260318001585",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318001585",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:145990",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001585"
+    },
     "source:dart:20260316000912": {
       "id": "source:dart:20260316000912",
       "kind": "dart-filing-excerpt",
@@ -163651,6 +163858,15 @@
       "documentIssuer": "KR:204610",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260312000986"
     },
+    "source:dart:20260323001065": {
+      "id": "source:dart:20260323001065",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260323001065",
+      "sourceDate": "2026-03-23",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:204620",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260323001065"
+    },
     "source:dart:20260318001300": {
       "id": "source:dart:20260318001300",
       "kind": "dart-filing-excerpt",
@@ -164046,6 +164262,15 @@
       "reportName": "[기재정정]사업보고서 (2025.12)",
       "documentIssuer": "KR:218410",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260331004907"
+    },
+    "source:dart:20260317000532": {
+      "id": "source:dart:20260317000532",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260317000532",
+      "sourceDate": "2026-03-17",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:219130",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260317000532"
     },
     "source:dart:20260430001895": {
       "id": "source:dart:20260430001895",
@@ -164568,6 +164793,15 @@
       "reportName": "[기재정정]사업보고서 (2025.12)",
       "documentIssuer": "KR:248170",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260515000077"
+    },
+    "source:dart:20260318000787": {
+      "id": "source:dart:20260318000787",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318000787",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:249420",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000787"
     },
     "source:dart:20260327001315": {
       "id": "source:dart:20260327001315",
@@ -165118,6 +165352,15 @@
       "documentIssuer": "KR:277880",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260323001468"
     },
+    "source:dart:20260316001151": {
+      "id": "source:dart:20260316001151",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260316001151",
+      "sourceDate": "2026-03-16",
+      "reportName": "[첨부정정]사업보고서 (2025.12)",
+      "documentIssuer": "KR:278280",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260316001151"
+    },
     "source:dart:20260323001257": {
       "id": "source:dart:20260323001257",
       "kind": "dart-filing-excerpt",
@@ -165261,6 +165504,15 @@
       "reportName": "사업보고서 (2025.12)",
       "documentIssuer": "KR:290120",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260331004980"
+    },
+    "source:dart:20260318001382": {
+      "id": "source:dart:20260318001382",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318001382",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:290550",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001382"
     },
     "source:dart:20260324000006": {
       "id": "source:dart:20260324000006",
@@ -166270,6 +166522,15 @@
       "documentIssuer": "KR:348350",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260313000682"
     },
+    "source:dart:20260326001049": {
+      "id": "source:dart:20260326001049",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260326001049",
+      "sourceDate": "2026-03-26",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:348370",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260326001049"
+    },
     "source:dart:20260320000738": {
       "id": "source:dart:20260320000738",
       "kind": "dart-filing-excerpt",
@@ -166378,6 +166639,15 @@
       "documentIssuer": "KR:355690",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001384"
     },
+    "source:dart:20260318000875": {
+      "id": "source:dart:20260318000875",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318000875",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:356680",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000875"
+    },
     "source:dart:20260320000683": {
       "id": "source:dart:20260320000683",
       "kind": "dart-filing-excerpt",
@@ -166422,6 +166692,15 @@
       "reportName": "사업보고서 (2025.12)",
       "documentIssuer": "KR:357880",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260323001292"
+    },
+    "source:dart:20260318001639": {
+      "id": "source:dart:20260318001639",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318001639",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:358570",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001639"
     },
     "source:dart:20260316001549": {
       "id": "source:dart:20260316001549",
@@ -166503,6 +166782,15 @@
       "reportName": "사업보고서 (2025.12)",
       "documentIssuer": "KR:365330",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001671"
+    },
+    "source:dart:20260602000219": {
+      "id": "source:dart:20260602000219",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260602000219",
+      "sourceDate": "2026-06-02",
+      "reportName": "[기재정정]사업보고서 (2025.12)",
+      "documentIssuer": "KR:365340",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260602000219"
     },
     "source:dart:20260814004149": {
       "id": "source:dart:20260814004149",
@@ -166612,6 +166900,15 @@
       "documentIssuer": "KR:376290",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260323001411"
     },
+    "source:dart:20260316001246": {
+      "id": "source:dart:20260316001246",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260316001246",
+      "sourceDate": "2026-03-16",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:376300",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260316001246"
+    },
     "source:dart:20260602000529": {
       "id": "source:dart:20260602000529",
       "kind": "dart-filing-excerpt",
@@ -166656,6 +166953,15 @@
       "reportName": "사업보고서 (2025.12)",
       "documentIssuer": "KR:377480",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319000767"
+    },
+    "source:dart:20260318001576": {
+      "id": "source:dart:20260318001576",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318001576",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:377740",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001576"
     },
     "source:dart:20260316001654": {
       "id": "source:dart:20260316001654",
@@ -166998,6 +167304,15 @@
       "reportName": "사업보고서 (2025.12)",
       "documentIssuer": "KR:397810",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260323000938"
+    },
+    "source:dart:20260319001147": {
+      "id": "source:dart:20260319001147",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260319001147",
+      "sourceDate": "2026-03-19",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:399720",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319001147"
     },
     "source:dart:20260317000830": {
       "id": "source:dart:20260317000830",
@@ -167863,6 +168178,15 @@
       "documentIssuer": "KR:460850",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260317000766"
     },
+    "source:dart:20260313000519": {
+      "id": "source:dart:20260313000519",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260313000519",
+      "sourceDate": "2026-03-13",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:460860",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260313000519"
+    },
     "source:dart:20260319000844": {
       "id": "source:dart:20260319000844",
       "kind": "dart-filing-excerpt",
@@ -168124,6 +168448,15 @@
       "documentIssuer": "KR:475580",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001466"
     },
+    "source:dart:20260320000110": {
+      "id": "source:dart:20260320000110",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260320000110",
+      "sourceDate": "2026-03-20",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:475960",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260320000110"
+    },
     "source:dart:20260318001661": {
       "id": "source:dart:20260318001661",
       "kind": "dart-filing-excerpt",
@@ -168240,6 +168573,15 @@
       "reportName": "[기재정정]사업보고서 (2025.12)",
       "documentIssuer": "KR:484810",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319000270"
+    },
+    "source:dart:20260318000447": {
+      "id": "source:dart:20260318000447",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318000447",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:484870",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000447"
     },
     "source:dart:20260312001348": {
       "id": "source:dart:20260312001348",
@@ -177025,6 +177367,285 @@
       "documentIssuer": "KR:086900",
       "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319001223"
     },
+    "source:dart:20260318001399": {
+      "id": "source:dart:20260318001399",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318001399",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:052020",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001399"
+    },
+    "source:dart:20260323001563": {
+      "id": "source:dart:20260323001563",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260323001563",
+      "sourceDate": "2026-03-23",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:089890",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260323001563"
+    },
+    "source:dart:20260311003779": {
+      "id": "source:dart:20260311003779",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260311003779",
+      "sourceDate": "2026-03-11",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:052400",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260311003779"
+    },
+    "source:dart:20260318001657": {
+      "id": "source:dart:20260318001657",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318001657",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:099190",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001657"
+    },
+    "source:dart:20260323001183": {
+      "id": "source:dart:20260323001183",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260323001183",
+      "sourceDate": "2026-03-23",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:075580",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260323001183"
+    },
+    "source:dart:20260318000870": {
+      "id": "source:dart:20260318000870",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318000870",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:033240",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000870"
+    },
+    "source:dart:20260326001257": {
+      "id": "source:dart:20260326001257",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260326001257",
+      "sourceDate": "2026-03-26",
+      "reportName": "[기재정정]사업보고서 (2025.12)",
+      "documentIssuer": "KR:034950",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260326001257"
+    },
+    "source:dart:20260319000010": {
+      "id": "source:dart:20260319000010",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260319000010",
+      "sourceDate": "2026-03-19",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:047920",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319000010"
+    },
+    "source:dart:20260319001345": {
+      "id": "source:dart:20260319001345",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260319001345",
+      "sourceDate": "2026-03-19",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:039130",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319001345"
+    },
+    "source:dart:20260317000862": {
+      "id": "source:dart:20260317000862",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260317000862",
+      "sourceDate": "2026-03-17",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:037460",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260317000862"
+    },
+    "source:dart:20260320001156": {
+      "id": "source:dart:20260320001156",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260320001156",
+      "sourceDate": "2026-03-20",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:082270",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260320001156"
+    },
+    "source:dart:20260313001074": {
+      "id": "source:dart:20260313001074",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260313001074",
+      "sourceDate": "2026-03-13",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:020000",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260313001074"
+    },
+    "source:dart:20260319001002": {
+      "id": "source:dart:20260319001002",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260319001002",
+      "sourceDate": "2026-03-19",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:018290",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319001002"
+    },
+    "source:dart:20260318000745": {
+      "id": "source:dart:20260318000745",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318000745",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:003280",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000745"
+    },
+    "source:dart:20260320001115": {
+      "id": "source:dart:20260320001115",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260320001115",
+      "sourceDate": "2026-03-20",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:069540",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260320001115"
+    },
+    "source:dart:20260323000909": {
+      "id": "source:dart:20260323000909",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260323000909",
+      "sourceDate": "2026-03-23",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:009900",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260323000909"
+    },
+    "source:dart:20260319000650": {
+      "id": "source:dart:20260319000650",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260319000650",
+      "sourceDate": "2026-03-19",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:004700",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319000650"
+    },
+    "source:dart:20260323000907": {
+      "id": "source:dart:20260323000907",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260323000907",
+      "sourceDate": "2026-03-23",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:034310",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260323000907"
+    },
+    "source:dart:20260319001087": {
+      "id": "source:dart:20260319001087",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260319001087",
+      "sourceDate": "2026-03-19",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:008060",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319001087"
+    },
+    "source:dart:20260319001226": {
+      "id": "source:dart:20260319001226",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260319001226",
+      "sourceDate": "2026-03-19",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:002240",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319001226"
+    },
+    "source:dart:20260318001565": {
+      "id": "source:dart:20260318001565",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318001565",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:010780",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001565"
+    },
+    "source:dart:20260324000013": {
+      "id": "source:dart:20260324000013",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260324000013",
+      "sourceDate": "2026-03-24",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:035890",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260324000013"
+    },
+    "source:dart:20260316001307": {
+      "id": "source:dart:20260316001307",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260316001307",
+      "sourceDate": "2026-03-16",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:029460",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260316001307"
+    },
+    "source:dart:20260319000936": {
+      "id": "source:dart:20260319000936",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260319000936",
+      "sourceDate": "2026-03-19",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:094170",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260319000936"
+    },
+    "source:dart:20260508000660": {
+      "id": "source:dart:20260508000660",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260508000660",
+      "sourceDate": "2026-05-08",
+      "reportName": "[첨부정정]사업보고서 (2025.12)",
+      "documentIssuer": "KR:033160",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260508000660"
+    },
+    "source:dart:20260326000458": {
+      "id": "source:dart:20260326000458",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260326000458",
+      "sourceDate": "2026-03-26",
+      "reportName": "[기재정정]사업보고서 (2025.12)",
+      "documentIssuer": "KR:002030",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260326000458"
+    },
+    "source:dart:20260323001299": {
+      "id": "source:dart:20260323001299",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260323001299",
+      "sourceDate": "2026-03-23",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:000070",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260323001299"
+    },
+    "source:dart:20260311003981": {
+      "id": "source:dart:20260311003981",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260311003981",
+      "sourceDate": "2026-03-11",
+      "reportName": "[첨부추가]사업보고서 (2025.12)",
+      "documentIssuer": "KR:025980",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260311003981"
+    },
+    "source:dart:20260316000062": {
+      "id": "source:dart:20260316000062",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260316000062",
+      "sourceDate": "2026-03-16",
+      "reportName": "[기재정정]사업보고서 (2025.12)",
+      "documentIssuer": "KR:003030",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260316000062"
+    },
+    "source:dart:20260318000934": {
+      "id": "source:dart:20260318000934",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318000934",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:089010",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000934"
+    },
+    "source:dart:20260318001210": {
+      "id": "source:dart:20260318001210",
+      "kind": "dart-filing-excerpt",
+      "receiptNo": "20260318001210",
+      "sourceDate": "2026-03-18",
+      "reportName": "사업보고서 (2025.12)",
+      "documentIssuer": "KR:072710",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001210"
+    },
     "source:group-structure:2026-10-16:KR:137310": {
       "id": "source:group-structure:2026-10-16:KR:137310",
       "kind": "local-structured-relation-candidate",
@@ -177422,6 +178043,59 @@
         "excerpt": "706 2,893,552 (*) 투자주식, 사용권자산, 리스부채 등으로 구성되어 있습니다. (3) 당기 및 전기 중 고객으로부터의 매출액이 당사의 매출액의 10% 이상을 차지하는 주요고객은 없습니다. 29. 보고기간 후 사건 (1) 당사의 최상위지배기업인 이니셜1호투자조합, 관계기업 ㈜비덴트 및 주요경영진 강지연은 ㈜와비사비홀딩스와 지배기업 ㈜버킷스튜디오의 보통주"
       }
     },
+    "event:dart:20260318001643:120848-121051:2d9e7c5c": {
+      "id": "event:dart:20260318001643:120848-121051:2d9e7c5c",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001643",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:101160",
+      "mentionedCompanies": [
+        "KR:005930"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 120848,
+        "charEnd": 121051,
+        "excerpt": "따른 최적의 가공조건을 구축최적의 Silicon Surface Grinding 가공 기술개발 삼성전자하이닉스수입대체효과 (자체개발) 연구과제 연구기관 결과 및 기대효과 반영내용(매출처) 12\" Shower Head 개발 (주)월덱스부설연구소 삼성 12\" Wafer Etching장비로 개발 제품 양산화 삼성전자 매출 12\" L-전극 이체형 개발 (주)월덱스부설연"
+      }
+    },
+    "event:dart:20260318001643:48067-48272:af3ee09d": {
+      "id": "event:dart:20260318001643:48067-48272:af3ee09d",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001643",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:101160",
+      "mentionedCompanies": [
+        "KR:000660",
+        "KR:005930"
+      ],
+      "evidence": {
+        "anchor": "주요 고객",
+        "charStart": 48067,
+        "charEnd": 48272,
+        "excerpt": "연결실체는 한국채택기업회계기준 제1108호 (영업부문)에 따른 보고부문이 단일 부문이므로 부문별 정보를 공시하지 않습니다. 26.1 사업부문의 일반정보 구 분 주요 재화 및 용역 주요 고객 정보 반도체용 장비재료 실리콘 전극 및 링 등 삼성전자(주), SK하이닉스(주) 26.2 연결실체 수익의 상세내역 (단위: 천원) 구 분 당기 전기 제품매출 291,757,068"
+      }
+    },
+    "event:dart:20260318001643:97476-97681:e850c27d": {
+      "id": "event:dart:20260318001643:97476-97681:e850c27d",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001643",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:101160",
+      "mentionedCompanies": [
+        "KR:000660",
+        "KR:005930"
+      ],
+      "evidence": {
+        "anchor": "주요 고객",
+        "charStart": 97476,
+        "charEnd": 97681,
+        "excerpt": "문 정보회사는 한국채택국제회계기준 제1108호(영업부문)에 따른 보고부문이 단일 부문이므로 부문별 정보를 공시하지 않습니다.27.1 사업부문의 일반정보 구 분 주요 재화 및 용역 주요 고객 정보 반도체용 장비재료 실리콘 전극 및 링 등 삼성전자(주), SK하이닉스(주) 27.2 수익의 상세내역 (단위: 천원) 구 분 당기 전기 제품매출 248,222,123 277,"
+      }
+    },
     "event:dart:20260319000751:66592-66795:6f16fc39": {
       "id": "event:dart:20260319000751:66592-66795:6f16fc39",
       "type": "co-mention",
@@ -177681,6 +178355,25 @@
         "charStart": 17917,
         "charEnd": 18120,
         "excerpt": "주요 매출처는 생수판매업체인 제주특별자치도개발공사(삼다수), 코카콜라음료(동원시스템즈,삼양패키징,해태HTB 등), 스파클, 포스코인터내셔널, 효성티앤씨 등 입니다.전자부문의 주요 매출처는 에스제이아이(삼성 1차 벤더사), 삼성전자, 엘지디스플레이 등 입니다. 6) 수주상황 (단위 : 백만원 ) 발주처 공사명 계약일자 완공예정일 수주총액 완성공사액 계약잔액 자체분"
+      }
+    },
+    "event:dart:20260318000451:16162-16367:c9ab1247": {
+      "id": "event:dart:20260318000451:16162-16367:c9ab1247",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318000451",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:104830",
+      "mentionedCompanies": [
+        "KR:000660",
+        "KR:005930",
+        "KR:034220"
+      ],
+      "evidence": {
+        "anchor": "주요 고객",
+        "charStart": 16162,
+        "charEnd": 16367,
+        "excerpt": "LG디스플레이 등 LED 삼성전자 LED사업부 등 기타 SK실트론 등 20nm 이하급의 초 미세화 공정을 통해 제품을 생산하고 있는 국내의 삼성반도체 및 SK하이닉스 등 당사의 주요 고객사들은 공정 안정화를 위해 엄격한 품질검증 및 품질관리 절차를 운영하고 있어 신규 경쟁자에게는 높은 진입장벽으로 작용하고 있습니다.(2) 회사의 성장과정 구 분 시장여건 생산 및"
       }
     },
     "event:dart:20260316000413:42245-42448:e742e26e": {
@@ -182456,6 +183149,40 @@
         "excerpt": "같습니다. (단위: 원) 제공자 제공내역 보증제공처 한도금액 실행금액 서울보증보험(주) 생활안정자금보증보험 임직원 3,080,000,000 3,080,000,000 지급보증보험 매출처 29,342,943,430 29,342,943,430 하자보증보험 매입처 784,159,486 784,159,486 Maintenance Bond 트윔(*1) 15,000,000"
       }
     },
+    "event:dart:20260318001382:86704-86910:b6856597": {
+      "id": "event:dart:20260318001382:86704-86910:b6856597",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001382",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:290550",
+      "mentionedCompanies": [
+        "KR:090460"
+      ],
+      "evidence": {
+        "anchor": "주요 매출처",
+        "charStart": 86704,
+        "charEnd": 86910,
+        "excerpt": "차 전장 응용 제품 확대 ·차량용 스마트폰 무선충전기 이외 추가될 수 있는 전장 품목 확대 전략 응용 시장 확대 ·자동차 전기밧데리 시장, 무선안테나 부품 등 응용시장 확대 다. 주요 매출처 현황 (단위 : 천원) 매출 품 목 매 출 처 2025년(제14기) 2024년(제13기) 2023년(제12기) 제품 스마트폰 국내 (주)비에이치 외 830,471 635,054"
+      }
+    },
+    "event:dart:20260318001382:86707-86910:767966a1": {
+      "id": "event:dart:20260318001382:86707-86910:767966a1",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001382",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:290550",
+      "mentionedCompanies": [
+        "KR:090460"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 86707,
+        "charEnd": 86910,
+        "excerpt": "장 응용 제품 확대 ·차량용 스마트폰 무선충전기 이외 추가될 수 있는 전장 품목 확대 전략 응용 시장 확대 ·자동차 전기밧데리 시장, 무선안테나 부품 등 응용시장 확대 다. 주요 매출처 현황 (단위 : 천원) 매출 품 목 매 출 처 2025년(제14기) 2024년(제13기) 2023년(제12기) 제품 스마트폰 국내 (주)비에이치 외 830,471 635,054"
+      }
+    },
     "event:dart:20260630001121:30124-30329:dfa47678": {
       "id": "event:dart:20260630001121:30124-30329:dfa47678",
       "type": "co-mention",
@@ -183751,6 +184478,40 @@
         "excerpt": "있는 경우, 그로 인한 현금 유입액을 고려)- 집합적 손상검토채권매출채권 및 기타채권의 전체 기간에 대해 기대신용손실을 측정하여 대손충당금을 인식하고 있습니다. - 회사의 주요 매출처는 삼성전자㈜, SK하이닉스㈜, 엘지디스플레이㈜ 및 삼성SDI㈜ 등 입니다. (4) 당해 사업연도말 현재 경과기간별 매출채권 잔액 현황 (단위 : 천원) 구 분 3월 이하 3월 초"
       }
     },
+    "event:dart:20260318001639:105750-105956:874e8dcd": {
+      "id": "event:dart:20260318001639:105750-105956:874e8dcd",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001639",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:358570",
+      "mentionedCompanies": [
+        "KR:000100"
+      ],
+      "evidence": {
+        "anchor": "주요 매출처",
+        "charStart": 105750,
+        "charEnd": 105956,
+        "excerpt": "- - 기타매출 - 내수 - - 24,281 100.00 187,899 3.53 합계 5,838,087 100.00 24,281 100.00 5,318,849 100.00 나. 주요 매출처 설립 이후부터 보고서 작성기준일 현재까지 당사의 매출은 대부분 신약 후보물질 기술이전에서 발생하였습니다. 당사의 매출 구조상 특정 거래처는 없으나, 2020년 7월 (주)유한양행"
+      }
+    },
+    "event:dart:20260318001639:105753-105956:04e77b71": {
+      "id": "event:dart:20260318001639:105753-105956:04e77b71",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001639",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:358570",
+      "mentionedCompanies": [
+        "KR:000100"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 105753,
+        "charEnd": 105956,
+        "excerpt": "- 기타매출 - 내수 - - 24,281 100.00 187,899 3.53 합계 5,838,087 100.00 24,281 100.00 5,318,849 100.00 나. 주요 매출처 설립 이후부터 보고서 작성기준일 현재까지 당사의 매출은 대부분 신약 후보물질 기술이전에서 발생하였습니다. 당사의 매출 구조상 특정 거래처는 없으나, 2020년 7월 (주)유한양행"
+      }
+    },
     "event:dart:20260320001122:84464-84669:81149f86": {
       "id": "event:dart:20260320001122:84464-84669:81149f86",
       "type": "co-mention",
@@ -183817,6 +184578,74 @@
         "charStart": 82480,
         "charEnd": 82683,
         "excerpt": "78,010 제품매출 수출 - - - 상품매출 - 54,640 - 합계 97,366,910 116,983,650 119,756,583 나. 주요 매출처 (단위 : 천원) 매출유형 매출처 제11기(2025년) 제10기(2024년) 제9기(2023년) 금액 비중 금액 비중 금액 비중 제품매출 신세계건설(주) 2,919,711 3.0% 541,302 0.5% 647,"
+      }
+    },
+    "event:dart:20260602000219:14628-14834:afa789f8": {
+      "id": "event:dart:20260602000219:14628-14834:afa789f8",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260602000219",
+      "sourceDate": "2026-06-02",
+      "documentIssuer": "KR:365340",
+      "mentionedCompanies": [
+        "KR:028260"
+      ],
+      "evidence": {
+        "anchor": "주요 매출처",
+        "charStart": 14628,
+        "charEnd": 14834,
+        "excerpt": "122,001 수출 92,778,088 31,964,327 44,245,786 합계 194,629,131 136,215,013 247,367,787 나. 판매경로, 방법, 전략, 주요 매출처 등 (1) 판매경로, 방법 및 주요 매출처당사는 주력 제품군인 코발트, 니켈 제품에 대해 삼성물산과 독점 판매계약을 체결하였으며, 판매계약 체결 기업은 당사의 제품 판매를 위해"
+      }
+    },
+    "event:dart:20260602000219:14652-14858:3a460991": {
+      "id": "event:dart:20260602000219:14652-14858:3a460991",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260602000219",
+      "sourceDate": "2026-06-02",
+      "documentIssuer": "KR:365340",
+      "mentionedCompanies": [
+        "KR:028260"
+      ],
+      "evidence": {
+        "anchor": "주요 매출처",
+        "charStart": 14652,
+        "charEnd": 14858,
+        "excerpt": ",964,327 44,245,786 합계 194,629,131 136,215,013 247,367,787 나. 판매경로, 방법, 전략, 주요 매출처 등 (1) 판매경로, 방법 및 주요 매출처당사는 주력 제품군인 코발트, 니켈 제품에 대해 삼성물산과 독점 판매계약을 체결하였으며, 판매계약 체결 기업은 당사의 제품 판매를 위해 시장조사, 기업내 보유한 영업망과 판매조직을"
+      }
+    },
+    "event:dart:20260602000219:14631-14834:f1c4f5a3": {
+      "id": "event:dart:20260602000219:14631-14834:f1c4f5a3",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260602000219",
+      "sourceDate": "2026-06-02",
+      "documentIssuer": "KR:365340",
+      "mentionedCompanies": [
+        "KR:028260"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 14631,
+        "charEnd": 14834,
+        "excerpt": ",001 수출 92,778,088 31,964,327 44,245,786 합계 194,629,131 136,215,013 247,367,787 나. 판매경로, 방법, 전략, 주요 매출처 등 (1) 판매경로, 방법 및 주요 매출처당사는 주력 제품군인 코발트, 니켈 제품에 대해 삼성물산과 독점 판매계약을 체결하였으며, 판매계약 체결 기업은 당사의 제품 판매를 위해"
+      }
+    },
+    "event:dart:20260602000219:14655-14858:098ac083": {
+      "id": "event:dart:20260602000219:14655-14858:098ac083",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260602000219",
+      "sourceDate": "2026-06-02",
+      "documentIssuer": "KR:365340",
+      "mentionedCompanies": [
+        "KR:028260"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 14655,
+        "charEnd": 14858,
+        "excerpt": "4,327 44,245,786 합계 194,629,131 136,215,013 247,367,787 나. 판매경로, 방법, 전략, 주요 매출처 등 (1) 판매경로, 방법 및 주요 매출처당사는 주력 제품군인 코발트, 니켈 제품에 대해 삼성물산과 독점 판매계약을 체결하였으며, 판매계약 체결 기업은 당사의 제품 판매를 위해 시장조사, 기업내 보유한 영업망과 판매조직을"
       }
     },
     "event:dart:20260323001475:152482-152687:1e999385": {
@@ -189741,6 +190570,74 @@
         "excerpt": "종속기업이 소유하고 있거나 국내에 소재하고있기 때문에 해외 귀속 혹은 소재하고 있는 비유동자산은 중요하지 않으므로, 부문별정보 중 지역별 비유동자산 정보를 기재하지 아니합니다. 주요 고객에 대한 공시 (5) 주요 고객에 대한 의존도 연결실체의 수익 10% 이상을 차지하고 있는 단일의 고객은 메가스터디교육(주)과 그종속기업으로 매출액은 각각 25,332,603천원("
       }
     },
+    "event:dart:20260320001142:65642-65848:ecaa26e4": {
+      "id": "event:dart:20260320001142:65642-65848:ecaa26e4",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260320001142",
+      "sourceDate": "2026-03-20",
+      "documentIssuer": "KR:084990",
+      "mentionedCompanies": [
+        "KR:000640"
+      ],
+      "evidence": {
+        "anchor": "주요 매출처",
+        "charStart": 65642,
+        "charEnd": 65848,
+        "excerpt": "행- 건강기능식품 브랜드 큐비앤(cubyN)을 운영하여 B2C 사업 강화 마. 주요매출처 당사의 주요 매출은 원료공급 및 여러 온라인 쇼핑몰을 통한 위탁판매로 이루어지며, 그 중 주요 매출처는 Nutramax Laboratories(37.7%), 동아제약(20.1%), H.Holstein Co., Ltd.(10.3%), 뉴트리얼(5.3%) 등입니다. 바. 수주상황 공"
+      }
+    },
+    "event:dart:20260320001142:65586-65791:6b46a5f2": {
+      "id": "event:dart:20260320001142:65586-65791:6b46a5f2",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260320001142",
+      "sourceDate": "2026-03-20",
+      "documentIssuer": "KR:084990",
+      "mentionedCompanies": [
+        "KR:000640"
+      ],
+      "evidence": {
+        "anchor": "주요매출처",
+        "charStart": 65586,
+        "charEnd": 65791,
+        "excerpt": "연물 기능성소재의 원료판매와 함께 건강기능식품에 대한 직/간접판매(자사 온라인몰 및 제휴쇼핑몰)를 진행- 건강기능식품 브랜드 큐비앤(cubyN)을 운영하여 B2C 사업 강화 마. 주요매출처 당사의 주요 매출은 원료공급 및 여러 온라인 쇼핑몰을 통한 위탁판매로 이루어지며, 그 중 주요 매출처는 Nutramax Laboratories(37.7%), 동아제약(20.1%)"
+      }
+    },
+    "event:dart:20260320001142:65588-65791:4d5277c9": {
+      "id": "event:dart:20260320001142:65588-65791:4d5277c9",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260320001142",
+      "sourceDate": "2026-03-20",
+      "documentIssuer": "KR:084990",
+      "mentionedCompanies": [
+        "KR:000640"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 65588,
+        "charEnd": 65791,
+        "excerpt": "기능성소재의 원료판매와 함께 건강기능식품에 대한 직/간접판매(자사 온라인몰 및 제휴쇼핑몰)를 진행- 건강기능식품 브랜드 큐비앤(cubyN)을 운영하여 B2C 사업 강화 마. 주요매출처 당사의 주요 매출은 원료공급 및 여러 온라인 쇼핑몰을 통한 위탁판매로 이루어지며, 그 중 주요 매출처는 Nutramax Laboratories(37.7%), 동아제약(20.1%)"
+      }
+    },
+    "event:dart:20260320001142:65645-65848:01b54d14": {
+      "id": "event:dart:20260320001142:65645-65848:01b54d14",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260320001142",
+      "sourceDate": "2026-03-20",
+      "documentIssuer": "KR:084990",
+      "mentionedCompanies": [
+        "KR:000640"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 65645,
+        "charEnd": 65848,
+        "excerpt": "건강기능식품 브랜드 큐비앤(cubyN)을 운영하여 B2C 사업 강화 마. 주요매출처 당사의 주요 매출은 원료공급 및 여러 온라인 쇼핑몰을 통한 위탁판매로 이루어지며, 그 중 주요 매출처는 Nutramax Laboratories(37.7%), 동아제약(20.1%), H.Holstein Co., Ltd.(10.3%), 뉴트리얼(5.3%) 등입니다. 바. 수주상황 공"
+      }
+    },
     "event:dart:20260312000811:17205-17411:0acd09ef": {
       "id": "event:dart:20260312000811:17205-17411:0acd09ef",
       "type": "co-mention",
@@ -194265,14 +195162,15 @@
         "excerpt": "5% - 에스케이 플래닛(주) 1,268 2.06% - (주)예림교육 1,002 1.63% - 기타 47,519 77.18% - 합계 61,567 100.00% - ※ 상기 주요 매출처 현황은 연결재무제표 기준입니다. 라. 수주상황 (단위 : 백만원) 품목 수주일자 납기 수주총액 기납품액 수주잔고 수량 금액 수량 금액 수량 금액 지능망, 메세징 등 - - - 1"
       }
     },
-    "event:dart:20260619000626:28234-28440:2414e11a": {
-      "id": "event:dart:20260619000626:28234-28440:2414e11a",
+    "event:dart:20260619000626:28234-28440:b9662497": {
+      "id": "event:dart:20260619000626:28234-28440:b9662497",
       "type": "co-mention",
       "explicitRole": false,
       "sourceId": "source:dart:20260619000626",
       "sourceDate": "2026-06-19",
       "documentIssuer": "KR:002630",
       "mentionedCompanies": [
+        "KR:000640",
         "KR:128940"
       ],
       "evidence": {
@@ -194282,14 +195180,15 @@
         "excerpt": "강화, 지식영업 정착, 현장중심 영업2) 세미나 및 학술활동 강화3) 제품의 차별화 전략 4) 매출 분석을 통한 시장분석 및 마케팅 품목 선별, 시장 조사를 통한 제품 분석 마. 주요 매출처 회사명 사업부문 주요거래처 ㈜오리엔트바이오 생물소재 대형제약사( 한미약품, 동아제약 등), 연구소(안전성평가연구소, 한국생명공학연구원 등), 대학(서울대, 고려대, 연세대 등),"
       }
     },
-    "event:dart:20260619000626:28237-28440:29c88686": {
-      "id": "event:dart:20260619000626:28237-28440:29c88686",
+    "event:dart:20260619000626:28237-28440:77ca97f5": {
+      "id": "event:dart:20260619000626:28237-28440:77ca97f5",
       "type": "co-mention",
       "explicitRole": false,
       "sourceId": "source:dart:20260619000626",
       "sourceDate": "2026-06-19",
       "documentIssuer": "KR:002630",
       "mentionedCompanies": [
+        "KR:000640",
         "KR:128940"
       ],
       "evidence": {
@@ -202391,6 +203290,181 @@
         "charEnd": 269024,
         "excerpt": "정보는 각각의 재화와 용역에 대한 고객 유형에 초점이 맞추어져 있습니다.기업회계기준서 제1108호에 따른 당사의 보고부문은 다음과 같습니다. 구 분 수익을 창출하는 재화와 용역 주요고객 엔지니어링사업부 반도체설비, 배관 삼성전자(주) 외 시스템사업부 CCSS장치, 클린룸 등 삼성전자(주) 외 (2) 부문수익 및 이익당기 및 전기 당사의 영업이익에 대한 보고부문별"
       }
+    },
+    "event:dart:20260320001115:187404-187610:959acfea": {
+      "id": "event:dart:20260320001115:187404-187610:959acfea",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260320001115",
+      "sourceDate": "2026-03-20",
+      "documentIssuer": "KR:069540",
+      "mentionedCompanies": [
+        "KR:005930",
+        "KR:230240"
+      ],
+      "evidence": {
+        "anchor": "주요 매출처",
+        "charStart": 187404,
+        "charEnd": 187610,
+        "excerpt": "에도 힘쓰고 있습니다. 해외 파트너사와의 제휴를 통해 글로벌 수출 시장을 적극적으로 개척하고, 주요 업체들과의 신제품 공동 개발을 통해 비즈니스 시너지를 극대화하겠습니다. (3) 주요 매출처당사의 주요 매출처는 삼성전자, 에치에프알,휴맥스네트웍스 등 국내외 통신장비업체와 국내 이동통신 사업자 등입니다. 당사의 주요 5대 매출처에 대한 매출 비중은 전체 매출액 대비 약"
+      }
+    },
+    "event:dart:20260320001115:187414-187620:a38e8716": {
+      "id": "event:dart:20260320001115:187414-187620:a38e8716",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260320001115",
+      "sourceDate": "2026-03-20",
+      "documentIssuer": "KR:069540",
+      "mentionedCompanies": [
+        "KR:005930",
+        "KR:230240"
+      ],
+      "evidence": {
+        "anchor": "주요 매출처",
+        "charStart": 187414,
+        "charEnd": 187620,
+        "excerpt": "다. 해외 파트너사와의 제휴를 통해 글로벌 수출 시장을 적극적으로 개척하고, 주요 업체들과의 신제품 공동 개발을 통해 비즈니스 시너지를 극대화하겠습니다. (3) 주요 매출처당사의 주요 매출처는 삼성전자, 에치에프알,휴맥스네트웍스 등 국내외 통신장비업체와 국내 이동통신 사업자 등입니다. 당사의 주요 5대 매출처에 대한 매출 비중은 전체 매출액 대비 약 85%수준입니다."
+      }
+    },
+    "event:dart:20260320001115:187407-187610:7f38df0c": {
+      "id": "event:dart:20260320001115:187407-187610:7f38df0c",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260320001115",
+      "sourceDate": "2026-03-20",
+      "documentIssuer": "KR:069540",
+      "mentionedCompanies": [
+        "KR:005930",
+        "KR:230240"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 187407,
+        "charEnd": 187610,
+        "excerpt": "힘쓰고 있습니다. 해외 파트너사와의 제휴를 통해 글로벌 수출 시장을 적극적으로 개척하고, 주요 업체들과의 신제품 공동 개발을 통해 비즈니스 시너지를 극대화하겠습니다. (3) 주요 매출처당사의 주요 매출처는 삼성전자, 에치에프알,휴맥스네트웍스 등 국내외 통신장비업체와 국내 이동통신 사업자 등입니다. 당사의 주요 5대 매출처에 대한 매출 비중은 전체 매출액 대비 약"
+      }
+    },
+    "event:dart:20260320001115:187417-187620:933928b8": {
+      "id": "event:dart:20260320001115:187417-187620:933928b8",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260320001115",
+      "sourceDate": "2026-03-20",
+      "documentIssuer": "KR:069540",
+      "mentionedCompanies": [
+        "KR:005930",
+        "KR:230240"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 187417,
+        "charEnd": 187620,
+        "excerpt": "해외 파트너사와의 제휴를 통해 글로벌 수출 시장을 적극적으로 개척하고, 주요 업체들과의 신제품 공동 개발을 통해 비즈니스 시너지를 극대화하겠습니다. (3) 주요 매출처당사의 주요 매출처는 삼성전자, 에치에프알,휴맥스네트웍스 등 국내외 통신장비업체와 국내 이동통신 사업자 등입니다. 당사의 주요 5대 매출처에 대한 매출 비중은 전체 매출액 대비 약 85%수준입니다."
+      }
+    },
+    "event:dart:20260320001115:187484-187687:c6afe6ff": {
+      "id": "event:dart:20260320001115:187484-187687:c6afe6ff",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260320001115",
+      "sourceDate": "2026-03-20",
+      "documentIssuer": "KR:069540",
+      "mentionedCompanies": [
+        "KR:005930",
+        "KR:230240"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 187484,
+        "charEnd": 187687,
+        "excerpt": "시너지를 극대화하겠습니다. (3) 주요 매출처당사의 주요 매출처는 삼성전자, 에치에프알,휴맥스네트웍스 등 국내외 통신장비업체와 국내 이동통신 사업자 등입니다. 당사의 주요 5대 매출처에 대한 매출 비중은 전체 매출액 대비 약 85%수준입니다. 다. 수주상황 (단위 : 백만원) 품목 수주일자 납기 수주총액 기납품액 수주잔고 수량 금액 수량 금액 수량 금액 광모듈"
+      }
+    },
+    "event:dart:20260323000909:168034-168239:ad8e2b31": {
+      "id": "event:dart:20260323000909:168034-168239:ad8e2b31",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260323000909",
+      "sourceDate": "2026-03-23",
+      "documentIssuer": "KR:009900",
+      "mentionedCompanies": [
+        "KR:004020"
+      ],
+      "evidence": {
+        "anchor": "주요 고객",
+        "charStart": 168034,
+        "charEnd": 168239,
+        "excerpt": "고객사가 지정하는 장소에 입고하는 날로부터 30일 이내에 현금을 수령하고 있습니다. 당사는 위탁, 할부, 시용, 예약 매출 등 특수한 판매방법은 없습니다. (4) 판매전략 국내 주요 고객인 현대자동차그룹과 기술 품질, 가격 경쟁력을 확보하여 영업활동을 강화하고 있습니다. 특히 당사 종속회사인 (주)심원개발이 현대제철의 핫스탬핑제품위탁생산을 통해 긴밀한 관계를 유지"
+      }
+    },
+    "event:dart:20260318001565:275236-275440:888d758d": {
+      "id": "event:dart:20260318001565:275236-275440:888d758d",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001565",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:010780",
+      "mentionedCompanies": [
+        "KR:060150"
+      ],
+      "evidence": {
+        "anchor": "주요고객",
+        "charStart": 275236,
+        "charEnd": 275440,
+        "excerpt": "탄산리튬 회수 기술 적용 공정개선 7. 기타 참고사항 가. 사업의 현황 당사 및 종속회사의 사업부문별 현황은 아래와 같습니다. 사업부문명 회 사 명 주요 생산 및 판매제품 유형 주요고객 콘크리트사업부문 아이에스동서(주), 중앙레미콘(주) PC 부재 외 SK에코플랜트 외 건설사업부문 아이에스동서(주) 토목, 건축공사 및 분양공사 외 - 환경사업부문 인선이엔티(주)"
+      }
+    },
+    "event:dart:20260318001210:47482-47688:4ed8336e": {
+      "id": "event:dart:20260318001210:47482-47688:4ed8336e",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001210",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:072710",
+      "mentionedCompanies": [
+        "KR:453340"
+      ],
+      "evidence": {
+        "anchor": "주요 매출처",
+        "charStart": 47482,
+        "charEnd": 47688,
+        "excerpt": "64,389 507,337 ※ 당사의 종속법인 TK America, Inc.의 재무정보가 포함되어 있습니다. 2. 제품 또는 서비스의 판매경로와 주요매출처 등 (1) 판매경로 및 주요 매출처 경로구분 주요 거래처 유형 매출비중 비 고 직판 ㈜농심, ㈜현대그린푸드 등 57.4% - 유통 농축수산물 도소매상 등 42.5% - 기타(보관/임대) ㈜농심 등 0.1% - (2"
+      }
+    },
+    "event:dart:20260318001210:47463-47668:6bf2c251": {
+      "id": "event:dart:20260318001210:47463-47668:6bf2c251",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001210",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:072710",
+      "mentionedCompanies": [
+        "KR:453340"
+      ],
+      "evidence": {
+        "anchor": "주요매출처",
+        "charStart": 47463,
+        "charEnd": 47668,
+        "excerpt": "361 매출 총계 582,108 564,389 507,337 ※ 당사의 종속법인 TK America, Inc.의 재무정보가 포함되어 있습니다. 2. 제품 또는 서비스의 판매경로와 주요매출처 등 (1) 판매경로 및 주요 매출처 경로구분 주요 거래처 유형 매출비중 비 고 직판 ㈜농심, ㈜현대그린푸드 등 57.4% - 유통 농축수산물 도소매상 등 42.5% - 기타(보관"
+      }
+    },
+    "event:dart:20260318001210:4564-4767:520a2669": {
+      "id": "event:dart:20260318001210:4564-4767:520a2669",
+      "type": "co-mention",
+      "explicitRole": false,
+      "sourceId": "source:dart:20260318001210",
+      "sourceDate": "2026-03-18",
+      "documentIssuer": "KR:072710",
+      "mentionedCompanies": [
+        "KR:008730"
+      ],
+      "evidence": {
+        "anchor": "매출처",
+        "charStart": 4564,
+        "charEnd": 4767,
+        "excerpt": "식회사농심으로 사명을 변경하여 글로벌 식문화 선도기업으로 성장하고 있습니다. 중요한 사업 및 매출은 ①라면류 ②스낵류 ③음료 및 기타류 등으로부터 발생하며, 각 주요 판매경로 및 매출처는 신유통(대형마트, 슈퍼체인, CVS), 특약점, 온라인 등으로 구성됩니다. 계열회사의 총수는 42개사로 상장된 법인은 ㈜농심홀딩스, 율촌화학㈜이 있습니다. \"인생을 맛있게, 농"
+      }
     }
   },
   "relations": {
@@ -202690,9 +203764,25 @@
       "lineage": "not-provided-by-source"
     },
     {
+      "stableId": "correction:20260316000062",
+      "sourceId": "source:dart:20260316000062",
+      "issuer": "KR:003030",
+      "disposition": "kept-distinct",
+      "reason": "explicit-correction-title-distinct-receipt",
+      "lineage": "not-provided-by-source"
+    },
+    {
       "stableId": "correction:20260316000476",
       "sourceId": "source:dart:20260316000476",
       "issuer": "KR:067280",
+      "disposition": "kept-distinct",
+      "reason": "explicit-correction-title-distinct-receipt",
+      "lineage": "not-provided-by-source"
+    },
+    {
+      "stableId": "correction:20260316001151",
+      "sourceId": "source:dart:20260316001151",
+      "issuer": "KR:278280",
       "disposition": "kept-distinct",
       "reason": "explicit-correction-title-distinct-receipt",
       "lineage": "not-provided-by-source"
@@ -203202,6 +204292,14 @@
       "lineage": "not-provided-by-source"
     },
     {
+      "stableId": "correction:20260326000458",
+      "sourceId": "source:dart:20260326000458",
+      "issuer": "KR:002030",
+      "disposition": "kept-distinct",
+      "reason": "explicit-correction-title-distinct-receipt",
+      "lineage": "not-provided-by-source"
+    },
+    {
       "stableId": "correction:20260326001003",
       "sourceId": "source:dart:20260326001003",
       "issuer": "KR:052690",
@@ -203213,6 +204311,14 @@
       "stableId": "correction:20260326001251",
       "sourceId": "source:dart:20260326001251",
       "issuer": "KR:484590",
+      "disposition": "kept-distinct",
+      "reason": "explicit-correction-title-distinct-receipt",
+      "lineage": "not-provided-by-source"
+    },
+    {
+      "stableId": "correction:20260326001257",
+      "sourceId": "source:dart:20260326001257",
+      "issuer": "KR:034950",
       "disposition": "kept-distinct",
       "reason": "explicit-correction-title-distinct-receipt",
       "lineage": "not-provided-by-source"
@@ -203746,6 +204852,14 @@
       "lineage": "not-provided-by-source"
     },
     {
+      "stableId": "correction:20260508000660",
+      "sourceId": "source:dart:20260508000660",
+      "issuer": "KR:033160",
+      "disposition": "kept-distinct",
+      "reason": "explicit-correction-title-distinct-receipt",
+      "lineage": "not-provided-by-source"
+    },
+    {
       "stableId": "correction:20260512000411",
       "sourceId": "source:dart:20260512000411",
       "issuer": "KR:432320",
@@ -203925,6 +205039,14 @@
       "stableId": "correction:20260602000117",
       "sourceId": "source:dart:20260602000117",
       "issuer": "KR:004430",
+      "disposition": "kept-distinct",
+      "reason": "explicit-correction-title-distinct-receipt",
+      "lineage": "not-provided-by-source"
+    },
+    {
+      "stableId": "correction:20260602000219",
+      "sourceId": "source:dart:20260602000219",
+      "issuer": "KR:365340",
       "disposition": "kept-distinct",
       "reason": "explicit-correction-title-distinct-receipt",
       "lineage": "not-provided-by-source"
@@ -213968,6 +215090,532 @@
       "counterparty_company_id": null,
       "verified_common_event": false,
       "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261016800872",
+      "issuer": {
+        "id": "KR:025560",
+        "name": "미래산업"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-16",
+        "source_title": "[기재정정]단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261016800872",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261016800872&dcmNo=11617780&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-17T23:32:29.173288+00:00",
+        "content_sha256": "c215361ac40ac198ad98da0057e0f019a6f6ad23fdab3fae08b40085b75bf770",
+        "bytes": 11252
+      },
+      "contract": {
+        "type": {
+          "label": "1. 판매ㆍ공급계약 구분",
+          "value": "기타 판매ㆍ공급계약"
+        },
+        "name": {
+          "label": "- 체결계약명",
+          "value": "반도체 검사 장비 공급 계약"
+        },
+        "counterparty": {
+          "label": "3. 계약상대",
+          "value": "YILING TRADING"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2026-06-23"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2026-11-30"
+          }
+        },
+        "signed_on": {
+          "label": "7. 계약(수주)일자",
+          "value": "2026-06-23"
+        },
+        "financial_terms": {
+          "amount": {
+            "label": "계약금액(원)",
+            "value": "6,219,585,000"
+          },
+          "recent_revenue": {
+            "label": "최근매출액(원)",
+            "value": "50,777,866,585"
+          },
+          "revenue_ratio": {
+            "label": "매출액대비(%)",
+            "value": "12.25"
+          }
+        },
+        "financial_notes": {
+          "label": "9. 기타 투자판단과 관련한 중요사항",
+          "value": "1. 본 건의 총 계약금액은 USD 4,050,000이며 해외 수출 건으로 부가세를 포함하지 않습니다. 2. 상기 계약금액 및 계약기간 등은 거래처와 협의에 의해 변경될 수 있습니다. 3. 상기 계약기간의 종료일은 최종 납품되는 납품일자입니다. 4. 계약금액은 발주일인 2026년 6월 23일 매매기준율을 기준으로 환산한 금액입니다.(1,535.70원/$) 5.상기 최근매출액은 한국채택국제회계기준(K-IFRS)에 따라 작성된 2025년 연결재무제표상 매출액 입니다."
+        }
+      },
+      "correction": {
+        "corrected_on": {
+          "label": "정정일자",
+          "value": "2026-10-16"
+        },
+        "related_filing_date": {
+          "label": "2. 정정관련 공시서류제출일",
+          "value": "2026-06-23"
+        },
+        "reason": {
+          "label": "3. 정정사유",
+          "value": "납품일자 변경에 따른 정정"
+        },
+        "changes": [
+          {
+            "field": "5. 계약기간 종료일",
+            "before": "2026-11-20",
+            "after": "2026-11-30"
+          }
+        ]
+      },
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261016800871",
+      "issuer": {
+        "id": "KR:025560",
+        "name": "미래산업"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-16",
+        "source_title": "[기재정정]단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261016800871",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261016800871&dcmNo=11617753&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-17T23:32:29.173288+00:00",
+        "content_sha256": "56a3ff33d304862d8399aa3035392c472a83134ff025252193e30c06c3557564",
+        "bytes": 12986
+      },
+      "contract": {
+        "type": {
+          "label": "1. 판매ㆍ공급계약 구분",
+          "value": "기타 판매ㆍ공급계약"
+        },
+        "name": {
+          "label": "- 체결계약명",
+          "value": "반도체 검사 장비 공급 계약"
+        },
+        "counterparty": {
+          "label": "3. 계약상대",
+          "value": "YILING TRADING"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2026-07-29"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2027-04-10"
+          }
+        },
+        "signed_on": {
+          "label": "7. 계약(수주)일자",
+          "value": "2026-07-29"
+        },
+        "financial_terms": {
+          "amount": {
+            "label": "계약금액(원)",
+            "value": "10,523,650,500"
+          },
+          "recent_revenue": {
+            "label": "최근매출액(원)",
+            "value": "50,777,866,585"
+          },
+          "revenue_ratio": {
+            "label": "매출액대비(%)",
+            "value": "20.72"
+          }
+        },
+        "financial_notes": {
+          "label": "9. 기타 투자판단과 관련한 중요사항",
+          "value": "1. 본 건의 총 계약금액은 USD 7,177,500이며 해외 수출 건으로 부가세를 포함하지 않습니다. 2. 상기 계약은 3건으로 상기 5. 계약기간 종료일은 계약건 중 늦은건을 기준으로 명시 하였습니다. 가) 장비1 계약기간 : 2026-07-29 ~ 2027-01-25 나) 장비1 계약기간 : 2026-07-29 ~ 2027-04-10(마지막 납기일) 다) 장비2 계약기간 : 2026-07-29 ~ 2026-12-20 3. 상기 계약금액 및 계약기간 등은 거래처와 협의에 의해 변경될 수 있습니다. 4. 상기 계약 일자는 거래처로부터 발주서를 이메일로 수령한 날짜입니다. 5. 계약금액은 2026년 07월 29일 매매기준율을 기준으로 환산한 금액입니다.(1,466.20원/$) 6.상기 최근매출액은 한국채택국제회계기준(K-IFRS)에 따라 작성된 2025년 연결재무제표상 매출액 입니다."
+        }
+      },
+      "correction": {
+        "corrected_on": {
+          "label": "정정일자",
+          "value": "2026-10-16"
+        },
+        "related_filing_date": {
+          "label": "2. 정정관련 공시서류제출일",
+          "value": "2026-07-29"
+        },
+        "reason": {
+          "label": "3. 정정사유",
+          "value": "납품일자 변경에 따른 정정"
+        },
+        "changes": [
+          {
+            "field": "9. 기타투자판단과 관련한 중요사항",
+            "before": "2. 상기 계약은 3건으로 상기 5. 계약기간 종료일은 계약건 중 늦은건을 기준으로 명시 하였습니다. 가) 장비1 계약기간 : 2026-07-29 ~ 2026-10-15 나) 장비1 계약기간 : 2026-07-29 ~ 2027-04-10(마지막 납기일) 다) 장비2 계약기간 : 2026-07-29 ~ 2026-12-10",
+            "after": "2. 상기 계약은 3건으로 상기 5. 계약기간 종료일은 계약건 중 늦은건을 기준으로 명시 하였습니다. 가) 장비1 계약기간 : 2026-07-29 ~ 2027-01-25 나) 장비1 계약기간 : 2026-07-29 ~ 2027-04-10(마지막 납기일) 다) 장비2 계약기간 : 2026-07-29 ~ 2026-12-20"
+          }
+        ]
+      },
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261016800813",
+      "issuer": {
+        "id": "KR:028100",
+        "name": "동아지질"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-16",
+        "source_title": "[기재정정]단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261016800813",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261016800813&dcmNo=11617630&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-17T23:32:29.173288+00:00",
+        "content_sha256": "bdab6fdceacd347b853fc51f48a8962d0216c1868410533713761cd1a04b680e",
+        "bytes": 12033
+      },
+      "contract": {
+        "type": {
+          "label": "1. 판매ㆍ공급계약 구분",
+          "value": "공사수주"
+        },
+        "name": {
+          "label": "- 체결계약명",
+          "value": "상계노원전력구 SHIELD TBM 공사"
+        },
+        "counterparty": {
+          "label": "3. 계약상대",
+          "value": "남광토건(주)"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2024-05-20"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2027-12-30"
+          }
+        },
+        "signed_on": {
+          "label": "7. 계약(수주)일자",
+          "value": "2024-06-03"
+        },
+        "financial_terms": {
+          "amount": {
+            "label": "계약금액(원)",
+            "value": "21,787,700,000"
+          },
+          "recent_revenue": {
+            "label": "최근매출액(원)",
+            "value": "344,964,131,490"
+          },
+          "revenue_ratio": {
+            "label": "매출액대비(%)",
+            "value": "6.3"
+          }
+        },
+        "financial_notes": {
+          "label": "9. 기타 투자판단과 관련한 중요사항",
+          "value": "- 사업개요: 서울시 노원구 도시환경개선 및 지역주민 숙원사업의 일환으로 가설 송전선로 지중화공사 중 연장 약 2.9km에 해당하는 SHIELD TBM 공사입니다. - 상기계약금액은 부가가치세(VAT)를 포함한 금액입니다. - 최근매출액은 '23년도 연결재무제표 기준 금액입니다. - 상기 계약기간 및 계약금액은 향후 공사 진행과정에서 변경 될 수 있습니다."
+        }
+      },
+      "correction": {
+        "corrected_on": {
+          "label": "정정일자",
+          "value": "2026-10-16"
+        },
+        "related_filing_date": {
+          "label": "2. 정정관련 공시서류제출일",
+          "value": "2026-02-06"
+        },
+        "reason": {
+          "label": "3. 정정사유",
+          "value": "계약금액 및 계약기간 변경"
+        },
+        "changes": [
+          {
+            "field": "2. 계약금액(원)",
+            "before": "21,520,400,000",
+            "after": "21,787,700,000"
+          },
+          {
+            "field": "2. 매출액대비(%)",
+            "before": "6.2",
+            "after": "6.3"
+          },
+          {
+            "field": "5. 계약기간(종료일)",
+            "before": "2027-05-12",
+            "after": "2027-12-30"
+          }
+        ]
+      },
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261016800313",
+      "issuer": {
+        "id": "KR:047040",
+        "name": "대우건설"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-16",
+        "source_title": "단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261016800313",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261016800313&dcmNo=11616442&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-17T23:32:29.173288+00:00",
+        "content_sha256": "2c9a0cd15cabb567aa4da60e637f4a45dfe5a944bb6f4f744cb572ad9a563bfc",
+        "bytes": 8221
+      },
+      "contract": {
+        "type": {
+          "label": "1. 판매ㆍ공급계약 구분",
+          "value": "공사수주"
+        },
+        "name": {
+          "label": "- 체결계약명",
+          "value": "상도15구역 주택정비형 재개발사업"
+        },
+        "counterparty": {
+          "label": "3. 계약상대",
+          "value": "대신자산신탁 주식회사"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "-"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "-"
+          }
+        },
+        "signed_on": {
+          "label": "7. 계약(수주)일자",
+          "value": "2026-10-16"
+        },
+        "financial_terms": {
+          "amount": {
+            "label": "계약금액(원)",
+            "value": "1,436,748,589,480"
+          },
+          "recent_revenue": {
+            "label": "최근매출액(원)",
+            "value": "8,054,627,137,857"
+          },
+          "revenue_ratio": {
+            "label": "매출액대비(%)",
+            "value": "17.84"
+          }
+        },
+        "financial_notes": {
+          "label": "9. 기타 투자판단과 관련한 중요사항",
+          "value": "- 공사 개요: 지하8층~지상35층 30개동 3,207세대 및 근린생활시설 - 상기 2의 계약금액은 부가세 제외 금액임 - 상기 2의 최근 매출액은 2025년말 연결 재무제표 기준임 - 상기 5의 계약기간은 실착공일로부터 54개월임 - 공사도급계약서 조건 등에 따라 계약금액 및 계약기간 등은 변동될 수 있음"
+        }
+      },
+      "correction": null,
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261015900396",
+      "issuer": {
+        "id": "KR:347700",
+        "name": "스피어"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-15",
+        "source_title": "[기재정정]단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261015900396",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261015900396&dcmNo=11615115&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-17T23:32:29.173288+00:00",
+        "content_sha256": "5223feb86d8d32cee1b3ef9400aec6de4dc1819efb868f20ea766956d6dda34c",
+        "bytes": 16156
+      },
+      "contract": {
+        "type": {
+          "label": "공시 유형",
+          "value": "단일판매ㆍ공급계약체결"
+        },
+        "name": {
+          "label": "1. 판매ㆍ공급계약 내용",
+          "value": "특수합금 공급계약"
+        },
+        "counterparty": {
+          "label": "3. 계약상대방",
+          "value": "미국 글로벌 우주항공 발사업체"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2025-04-11"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2026-11-15"
+          }
+        },
+        "signed_on": {
+          "label": "8. 계약(수주)일자",
+          "value": "2025-04-11"
+        },
+        "financial_terms": {
+          "amount": {
+            "label": "계약금액 총액(원)",
+            "value": "1,462,732,560"
+          },
+          "recent_revenue": {
+            "label": "최근 매출액(원)",
+            "value": "2,557,761,611"
+          },
+          "revenue_ratio": {
+            "label": "매출액 대비(%)",
+            "value": "57.19"
+          }
+        },
+        "financial_notes": {
+          "label": "10. 기타 투자판단에 참고할 사항",
+          "value": "- 상기2. 계약내역의 계약금액은 USD 1,008,969.60 이며, 2025년 4월 10일자 서울외국환중개 고시 매매기준환율 1,482.90KRW/USD을 적용하여 환산한 금액입니다. - 상기2. 계약내역의 최근 매출액은 2024년 사업연도 연결 재무제표 기준의 매출액입니다. - 상기3. 계약상대방 정보(계약상대방의 기업명, 계약상대방의 최근 매출액, 회사와의 관계, 납품 품목)는 계약상대방의 영업기밀 준수 요청에 따라 기재하지 않았습니다. - 상기5. 계약기간의 종료일은 납기 후 대금 예상 일정을 감안한 종료 예정일이며, 추후 일정 변경시 정정공시 하겠습니다. - 상기5. 계약기간 시작일과 상기 8. 계약(수주)일은 P/O 문서 수령일 기준입니다. - 상기 계약내용은 진행상황에 따라 계약상대방과의 협의에 의해 변경될 수 있습니다."
+        }
+      },
+      "correction": {
+        "corrected_on": {
+          "label": "정정일자",
+          "value": "2026-10-15"
+        },
+        "related_filing_date": {
+          "label": "2. 정정관련 공시서류제출일",
+          "value": "2026-08-11"
+        },
+        "reason": {
+          "label": "3. 정정사유",
+          "value": "계약종료일 변경 등에 따른 기재사항 정정"
+        },
+        "changes": [
+          {
+            "field": "5. 계약기간 - 종료일",
+            "before": "2026-10-15",
+            "after": "2026-11-15"
+          },
+          {
+            "field": "9. 공시유보 관련내용 - 유보기간",
+            "before": "2026-10-15",
+            "after": "2026-11-15"
+          },
+          {
+            "field": "※ 관련 공시",
+            "before": "2025-04-11 단일판매·공급계약체결 2026-04-28 단일판매·공급계약체결 2026-06-01 단일판매·공급계약체결 2026-06-30 단일판매·공급계약체결",
+            "after": "2025-04-11 단일판매·공급계약체결 2026-04-28 단일판매·공급계약체결 2026-06-01 단일판매·공급계약체결 2026-06-30 단일판매·공급계약체결 2026-08-11 단일판매·공급계약체결"
+          }
+        ]
+      },
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
+    },
+    {
+      "schema": "dart-contract-fact-v1",
+      "receipt_no": "20261015900382",
+      "issuer": {
+        "id": "KR:046970",
+        "name": "우리로"
+      },
+      "filing": {
+        "title": "단일판매ㆍ공급계약체결",
+        "filed_on": "2026-10-15",
+        "source_title": "단일판매ㆍ공급계약체결"
+      },
+      "source": {
+        "main_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261015900382",
+        "viewer_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20261015900382&dcmNo=11615202&eleId=0&offset=0&length=0&dtd=HTML",
+        "observed_at": "2026-10-17T23:32:29.173288+00:00",
+        "content_sha256": "cc01bc7a3e3167262cf5e664441aebaaf11baa7a0db602c07c665d9dba47e3ff",
+        "bytes": 9905
+      },
+      "contract": {
+        "type": {
+          "label": "공시 유형",
+          "value": "단일판매ㆍ공급계약체결"
+        },
+        "name": {
+          "label": "1. 판매ㆍ공급계약 내용",
+          "value": "데이터센터용 광반도체 공급계약"
+        },
+        "counterparty": {
+          "label": "3. 계약상대방",
+          "value": "Wuhan ETERN Optoelectronics Group Limited"
+        },
+        "period": {
+          "label": "5. 계약기간",
+          "start": {
+            "label": "시작일",
+            "value": "2026-10-14"
+          },
+          "end": {
+            "label": "종료일",
+            "value": "2029-02-13"
+          }
+        },
+        "signed_on": {
+          "label": "8. 계약(수주)일자",
+          "value": "2026-10-14"
+        },
+        "financial_terms": {
+          "amount": {
+            "label": "계약금액 총액(원)",
+            "value": "22,777,776,000"
+          },
+          "recent_revenue": {
+            "label": "최근 매출액(원)",
+            "value": "42,474,837,788"
+          },
+          "revenue_ratio": {
+            "label": "매출액 대비(%)",
+            "value": "53.6"
+          }
+        },
+        "financial_notes": {
+          "label": "10. 기타 투자판단에 참고할 사항",
+          "value": "- 상기 2.계약내용의 최근 매출액은 2025년말 연결재무제표 기준입니다. - 상기 2.계약내용의 계약금액은 USD 16,992,000 이며, 계약금액 총액은 2026년 10월 14일 서울외국환중개 매매기준율로 산정(1달러 1,340.50)하였습니다. - 상기 5.계약기간 종료일은 납품완료(2028년 12월 30일)로부터 45일내 납품대금이 지급된다는 계약사항을 반영하여 산정하였습니다. - 상기 8.계약(수주)일자는 계약상대방과의 계약 체결일 기준입니다. - 상기 계약은 주요원자재의 조달원가 변동에 따라서 계약금액이 변경될 수 있습니다."
+        }
+      },
+      "correction": null,
+      "counterparty_company_id": null,
+      "verified_common_event": false,
+      "current_contract_status": "not-inferred"
     }
   ],
   "documentFamilies": [
@@ -217605,6 +219253,168 @@
           "title": "단일판매ㆍ공급계약체결",
           "published_on": "2026-10-16",
           "amendment": true
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:025560",
+      "issuer_name": "미래산업",
+      "corp_code": "00197759",
+      "receipt_no": "20261016800872",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261016800872",
+      "observed_at": "2026-10-17T23:32:29.173288+00:00",
+      "content_sha256": "cf270efb68b57444fb0cd78aa0ccdefda3135799ce401e1de42676c829bbef4b",
+      "members": [
+        {
+          "receipt_no": "20260623800231",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-06-23",
+          "amendment": false
+        },
+        {
+          "receipt_no": "20261016800872",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-16",
+          "amendment": true
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:025560",
+      "issuer_name": "미래산업",
+      "corp_code": "00197759",
+      "receipt_no": "20261016800871",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261016800871",
+      "observed_at": "2026-10-17T23:32:29.173288+00:00",
+      "content_sha256": "d412b9b7906e9bc99a5fc4baabc7373190a6d56329bc3ba747df36f1a9be613a",
+      "members": [
+        {
+          "receipt_no": "20260729800496",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-07-29",
+          "amendment": false
+        },
+        {
+          "receipt_no": "20261016800871",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-16",
+          "amendment": true
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:028100",
+      "issuer_name": "동아지질",
+      "corp_code": "00178754",
+      "receipt_no": "20261016800813",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261016800813",
+      "observed_at": "2026-10-17T23:32:29.173288+00:00",
+      "content_sha256": "bf22ac2039eb3905be98442bde8bcbec96f532237c1d66be9a1205041d2ad97c",
+      "members": [
+        {
+          "receipt_no": "20240603800216",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2024-06-03",
+          "amendment": false
+        },
+        {
+          "receipt_no": "20250923800143",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2025-09-23",
+          "amendment": true
+        },
+        {
+          "receipt_no": "20260206801693",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-02-06",
+          "amendment": true
+        },
+        {
+          "receipt_no": "20261016800813",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-16",
+          "amendment": true
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:047040",
+      "issuer_name": "대우건설",
+      "corp_code": "00124540",
+      "receipt_no": "20261016800313",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261016800313",
+      "observed_at": "2026-10-17T23:32:29.173288+00:00",
+      "content_sha256": "2ef3ccc2f600ae2705e6d0425f04506190bcc6b172eeee5a493f841a37d102f2",
+      "members": [
+        {
+          "receipt_no": "20261016800313",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-16",
+          "amendment": false
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:347700",
+      "issuer_name": "스피어",
+      "corp_code": "01336762",
+      "receipt_no": "20261015900396",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261015900396",
+      "observed_at": "2026-10-17T23:32:29.173288+00:00",
+      "content_sha256": "6a99b505e0e6de7aa85af284212794e35a513e77ef7e5e2f52ec3773d1d85d09",
+      "members": [
+        {
+          "receipt_no": "20250411900564",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2025-04-11",
+          "amendment": false
+        },
+        {
+          "receipt_no": "20260428900800",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-04-28",
+          "amendment": true
+        },
+        {
+          "receipt_no": "20260601901296",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-06-01",
+          "amendment": true
+        },
+        {
+          "receipt_no": "20260630900803",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-06-30",
+          "amendment": true
+        },
+        {
+          "receipt_no": "20260811900841",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-08-11",
+          "amendment": true
+        },
+        {
+          "receipt_no": "20261015900396",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-15",
+          "amendment": true
+        }
+      ]
+    },
+    {
+      "issuer_id": "KR:046970",
+      "issuer_name": "우리로",
+      "corp_code": "00296005",
+      "receipt_no": "20261015900382",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261015900382",
+      "observed_at": "2026-10-17T23:32:29.173288+00:00",
+      "content_sha256": "8fcd9703bba946f61bd7fc17f34184663da25d2bc587f2750c5bdf9ea3fa1359",
+      "members": [
+        {
+          "receipt_no": "20261015900382",
+          "title": "단일판매ㆍ공급계약체결",
+          "published_on": "2026-10-15",
+          "amendment": false
         }
       ]
     }
