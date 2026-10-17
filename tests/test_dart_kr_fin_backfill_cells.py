@@ -143,3 +143,52 @@ def test_output_carries_self_reported_meta(bf, monkeypatch, capsys):
     assert out["_meta"]["tickers_n"] == 1
     assert out["_meta"]["years_per_ticker_hist"] == {str(len(YEARS)): 1}
     assert len(out["rows"]) == len(YEARS)      # 소비자 계약 — rows 키 불변
+
+
+@pytest.mark.parametrize("values", [
+    {"revenue": 0, "operating_profit": 0, "net_income": 0, "investment_property": None},
+    {"revenue": 100, "operating_profit": 0, "net_income": -20, "investment_property": None},
+    {"revenue": None, "operating_profit": -10, "net_income": 0, "investment_property": None},
+])
+def test_collected_zero_and_loss_are_preserved(bf, monkeypatch, values):
+    """Exercise collection through persisted rows; never call DART or mapping refresh."""
+    _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST])
+    monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
+    accounts = {"revenue": ("ifrs-full_Revenue", "매출액"),
+                "operating_profit": ("dart_OperatingIncomeLoss", "영업이익"),
+                "net_income": ("ifrs-full_ProfitLoss", "당기순이익")}
+    rows = [{"sj_div": "IS", "account_id": aid, "account_nm": label,
+             "thstrm_amount": str(values[field])}
+            for field, (aid, label) in accounts.items() if values[field] is not None]
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: json.dumps({"list": rows}))
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
+    assert bf.main() == 0
+    output = json.loads(Path(bf.OUT_PATH).read_text())
+    collected = next(row for row in output["rows"] if row["fiscal_year"] == YEARS[0])
+    assert collected["fundamentals"] == values
+    assert f"005930|{YEARS[0]}" not in json.loads(Path(bf.MISSING_PATH).read_text())["cells"]
+
+
+def test_all_missing_metrics_remain_missing_without_a_synthetic_zero(bf, monkeypatch):
+    _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST])
+    monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
+    # An unrelated row leaves the legacy extractor's PL fields at their zero defaults.
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: '{"list":[{"sj_div":"BS","account_nm":"자본금","thstrm_amount":"100"}]}')
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
+    assert bf.main() == 0
+    output = json.loads(Path(bf.OUT_PATH).read_text())
+    assert not any(row["fiscal_year"] == YEARS[0] for row in output["rows"])
+    assert json.loads(Path(bf.MISSING_PATH).read_text())["cells"][f"005930|{YEARS[0]}"]["n"] == 1
+
+
+@pytest.mark.parametrize("amount", ["", "-", " ", "N/A"])
+def test_blank_selected_account_is_not_promoted_to_reported_zero(bf, monkeypatch, amount):
+    _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST])
+    monkeypatch.setattr(bf, "get_corp_code", lambda _ticker: "00126380")
+    raw = json.dumps({"list": [{"sj_div": "IS", "account_id": "ifrs-full_ProfitLoss",
+                                "account_nm": "당기순이익", "thstrm_amount": amount}]})
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_args: raw)
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2023", "--quota-cap", "1"])
+    assert bf.main() == 0
+    output = json.loads(Path(bf.OUT_PATH).read_text())
+    assert not any(row["fiscal_year"] == YEARS[0] for row in output["rows"])
