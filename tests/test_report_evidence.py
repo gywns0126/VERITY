@@ -575,7 +575,10 @@ def test_us_financial_classification_still_comes_from_sec_metadata(is_financial)
     assert any(row[1] == '매출원가' for row in section(report, 'R2')['rows']) is not is_financial
 
 
-def test_489790_first_four_months_are_visible_only_as_a_labeled_source_appendix(monkeypatch):
+@pytest.mark.parametrize('render_pdf', [False, True], ids=['semantic', 'pdf'])
+def test_489790_first_four_months_are_visible_only_as_a_labeled_source_appendix(monkeypatch, render_pdf):
+    if render_pdf:
+        pytest.importorskip('typst')
     import report_kr_review as review
     base = copy.deepcopy(review._registry()['489790'])
     entry = copy.deepcopy(base)
@@ -606,7 +609,8 @@ def test_489790_first_four_months_are_visible_only_as_a_labeled_source_appendix(
     assert not report['comparison']['usable'] and not any(s['id'] == 'R5' for s in report['sections'])
     assert report['reader']['current']['year'] == 2025
     assert any('2024-09-01~12-31' in gap for gap in report['gaps'])
-    assert fact_report._render(report).startswith(b'%PDF')
+    if render_pdf:
+        assert fact_report._render(report).startswith(b'%PDF')
     assert stock == before
 
     bad = copy.deepcopy(entry)

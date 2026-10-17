@@ -160,24 +160,27 @@ class FinancialRowStatusTests(unittest.TestCase):
     def test_conflicting_default_zero_is_not_a_known_amount(self):
         row = self.sga_row({"revenue": 125e10, "gross_profit": 702e8,
                             "operating_profit": -29e8, "sga": 0})
-        self.assertEqual(row["v"], "미확인")
+        self.assertEqual(row["v"], "미확인 (수신값 0)")
+        self.assertEqual(row["received_value"], "0")
         self.assertEqual(row["status"], "conflict")
         self.assertIn("원천 확인 필요", row["reason"])
         self.assertNotIn("731", json.dumps(row, ensure_ascii=False))
 
-    def test_uncontradicted_zero_retains_value_with_unverified_state(self):
+    def test_uncontradicted_zero_preserves_received_value_without_displaying_known_zero(self):
         for zero in (0, "0"):
             with self.subTest(zero=zero):
                 row = self.sga_row({"revenue": 100e8, "gross_profit": 30e8,
                                     "operating_profit": 30e8, "sga": zero})
-                self.assertEqual(row["v"], "0")
+                self.assertEqual(row["v"], "미확인 (수신값 0)")
+                self.assertEqual(row["received_value"], "0")
                 self.assertEqual(row["status"], "unverified_zero")
 
     def test_unverified_metadata_cannot_promote_zero_to_reported(self):
         base = {"revenue": 100e8, "gross_profit": 30e8, "operating_profit": 20e8}
         row = self.sga_row({**base, "sga": 0,
                             "_source_evidence": {"sga": {"inputs": [{"account_id": "sga"}]}}})
-        self.assertEqual(row["v"], "미확인")
+        self.assertEqual(row["v"], "미확인 (수신값 0)")
+        self.assertEqual(row["received_value"], "0")
         self.assertEqual(row["status"], "conflict")
 
     def test_nonzero_sga_is_preserved(self):
