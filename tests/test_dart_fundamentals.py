@@ -182,6 +182,70 @@ class TestExtractPLBS:
         out = df._extract_pl_bs_from_dart(data)
         assert out["operating_profit"] == 2_163_234
 
+    @pytest.mark.parametrize("amount", ["0", "99379167000"])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_ifrs_operating_total_outranks_exact_label_fallback(self, amount, reverse):
+        total = {"sj_div": "CIS", "account_nm": "III. 영업이익(손실)",
+                 "account_id": "ifrs-full_ProfitLossFromOperatingActivities", "thstrm_amount": amount}
+        fallback = {"sj_div": "IS", "account_nm": "영업이익",
+                    "account_id": "issuer_CustomOperatingIncome", "thstrm_amount": "999"}
+        rows = [total, fallback]
+        if reverse:
+            rows.reverse()
+        sources = {}
+        out = df._extract_pl_bs_from_dart({"list": rows}, source_rows=sources)
+        assert out["operating_profit"] == int(amount)
+        assert sources["operating_profit"] == total
+        assert "_conflicts" not in sources
+
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_ifrs_and_dart_operating_totals_conflict_at_same_tier(self, reverse):
+        totals = [
+            {"sj_div": "CIS", "account_nm": "III. 영업이익(손실)",
+             "account_id": "ifrs-full_ProfitLossFromOperatingActivities", "thstrm_amount": "0"},
+            {"sj_div": "IS", "account_nm": "영업이익",
+             "account_id": "dart_OperatingIncomeLoss", "thstrm_amount": "200"},
+        ]
+        fallback = {"sj_div": "IS", "account_nm": "영업이익", "thstrm_amount": "100"}
+        rows = totals + [fallback]
+        if reverse:
+            rows.reverse()
+        sources = {}
+        out = df._extract_pl_bs_from_dart({"list": rows}, source_rows=sources)
+        assert out["operating_profit"] is None
+        assert "operating_profit" not in sources
+        assert sources["_conflicts"]["operating_profit"] == [r for r in rows if r in totals]
+
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_equal_ifrs_and_dart_operating_totals_keep_source(self, reverse):
+        rows = [
+            {"sj_div": "CIS", "account_nm": "III. 영업이익(손실)",
+             "account_id": "ifrs-full_ProfitLossFromOperatingActivities", "thstrm_amount": "200"},
+            {"sj_div": "IS", "account_nm": "영업이익",
+             "account_id": "dart_OperatingIncomeLoss", "thstrm_amount": "200"},
+        ]
+        if reverse:
+            rows.reverse()
+        sources = {}
+        out = df._extract_pl_bs_from_dart({"list": rows}, source_rows=sources)
+        assert out["operating_profit"] == 200
+        assert sources["operating_profit"] == rows[0]
+        assert "_conflicts" not in sources
+
+    @pytest.mark.parametrize("aid", [
+        "ifrs-full_ProfitLossFromOperatingActivitiesOther",
+        "ifrs-full_ProfitLossFromOperatingActivitiesContinuingOperations",
+        "ifrs_ProfitLossFromOperatingActivities",
+        "ifrs-full_ProfitLossFromDiscontinuedOperations",
+    ])
+    def test_similar_ifrs_operating_ids_are_not_totals(self, aid):
+        row = {"sj_div": "CIS", "account_nm": "영업이익", "account_id": aid,
+               "thstrm_amount": "999"}
+        sources = {}
+        out = df._extract_pl_bs_from_dart({"list": [row]}, source_rows=sources)
+        assert out["operating_profit"] == 0
+        assert "operating_profit" not in sources
+
     def test_extract_handles_missing(self):
         data = {"list": []}
         out = df._extract_pl_bs_from_dart(data)
@@ -459,6 +523,42 @@ class TestYfFallback:
 # ─────────────────────────────────────────────────────────────────────
 
 class TestFetchOneFundamentals:
+    @patch("api.collectors.dart_fundamentals._yf_fallback_for_ticker")
+    @patch("api.collectors.dart_fundamentals._get_fnltt_all_data")
+    @patch("api.collectors.dart_corp_code.get_corp_code")
+    def test_yuanta_2025_cfs_ifrs_operating_total_reaches_source_evidence(
+            self, mock_corp, mock_dart, mock_yf):
+        # Compact rows from the saved 2025 CFS API response, not a live request.
+        common = {"rcept_no": "20260312000253", "reprt_code": "11011",
+                  "bsns_year": "2025", "corp_code": "00117601", "currency": "KRW"}
+        mock_corp.return_value = "00117601"
+        mock_dart.return_value = {"status": "000", "list": [
+            {**common, "sj_div": "BS", "account_nm": "자산총계",
+             "account_id": "ifrs-full_Assets", "thstrm_amount": "20030123636000"},
+            {**common, "sj_div": "CIS", "account_nm": "I. 영업수익",
+             "account_id": "ifrs-full_Revenue", "thstrm_amount": "3461272611000"},
+            {**common, "sj_div": "CIS", "account_nm": "III. 영업이익(손실)",
+             "account_id": "ifrs-full_ProfitLossFromOperatingActivities",
+             "thstrm_amount": "99379167000"},
+            {**common, "sj_div": "CIS", "account_nm": "VIII. 당기순이익(손실)",
+             "account_id": "ifrs-full_ProfitLoss", "thstrm_amount": "95631538000"},
+        ]}
+        mock_yf.return_value = {"per": None, "pbr": None, "roe": None,
+                                "debt_ratio": None, "op_margin": None}
+
+        out = df._fetch_one_dart_fundamentals("003470", "2025")
+        assert (out["source"], out["fs_div"], out["report_date"]) == ("DART", "CFS", "2025")
+        assert (out["revenue"], out["operating_profit"], out["net_income"]) == (
+            3461272611000, 99379167000, 95631538000)
+        assert out["op_margin"] == round(99379167000 / 3461272611000 * 100, 2)
+        evidence = out["_source_evidence"]["operating_profit"]
+        assert evidence["value"] == 99379167000
+        assert evidence["inputs"][0]["concept"] == "ifrs-full_ProfitLossFromOperatingActivities"
+        assert evidence["inputs"][0]["document_id"] == "20260312000253"
+        assert evidence["inputs"][0]["raw_value"] == "99379167000"
+        assert out["_source_evidence"]["op_margin"]["inputs"][0] == evidence["inputs"][0]
+        mock_dart.assert_called_once_with("00117601", "2025", fs_div="CFS", reprt_code="11011")
+
     @patch("api.collectors.dart_fundamentals._yf_fallback_for_ticker")
     @patch("api.collectors.dart_fundamentals._get_fnltt_all_data")
     @patch("api.collectors.dart_corp_code.get_corp_code")

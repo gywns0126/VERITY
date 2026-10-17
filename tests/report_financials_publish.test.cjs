@@ -50,6 +50,36 @@ test('a reviewed exact issuer rename preserves historical and public names separ
     const bad=structuredClone(h);bad.rows[0].name='비슷한회사';assert.throws(()=>repair(d,newer,bad));
     assert.throws(()=>repair(doc,manifest,h));
 });
+test('reviewed Xcure rename binds exact issuer and source document without changing historical names',()=>{
+    const rows=require('../data/metadata/report_fin_history_corrections_20261017.json').rows.filter(r=>r.ticker==='070300');
+    assert.equal(rows.length,2);
+    for (const row of rows) {
+        assert.equal(row.history_name,'엑스큐어');
+        assert.equal(row.name,'퀀텀레일');
+        const m={schema:'reviewed-kr-annual-financial-corrections-v3',rows:[row]};
+        const key=row.metric==='op'?'operating_profit':'net_income';
+        const h={rows:[{ticker:row.ticker,name:row.history_name,fiscal_year:row.year,period:'annual',fundamentals:{[key]:row.after}}]};
+        const d={stocks:[{ticker:row.ticker,name:row.name,fin_series:[{year:row.year,[row.metric]:row.before}]}]};
+        const result=repair(d,m,h);
+        assert.equal(result.next.stocks[0].fin_series[0][row.metric],row.after);
+        assert.equal(h.rows[0].name,'엑스큐어');
+        assert.deepEqual(repair(result.next,m,h).changed,[]);
+        for (const modify of [r=>r.name_change.corp_code='00111234',
+            r=>r.name_change.old_name='다른회사',r=>r.name_change.new_name='다른회사',
+            r=>r.name_change.ticker='000000',r=>r.name_change.filed='2026-07-23',
+            r=>r.name_change.accession='20260722900411',
+            r=>r.name_change.source_sha256='a'.repeat(64),
+            r=>r.name_change.source_url=r.name_change.source_url.replace('dcmNo=11489311','dcmNo=11489312'),
+            r=>r.name_change.source_url+='&extra=unreviewed']) {
+            const bad=structuredClone(m);modify(bad.rows[0]);assert.throws(()=>repair(d,bad,h));
+        }
+        const borrowed=structuredClone(m);borrowed.rows[0].ticker='000000';
+        borrowed.rows[0].name_change.ticker='000000';
+        const otherH=structuredClone(h),otherD=structuredClone(d);
+        otherH.rows[0].ticker='000000';otherD.stocks[0].ticker='000000';
+        assert.throws(()=>repair(otherD,borrowed,otherH));
+    }
+});
 test('two-stage legal and listed short name evidence is exact and cannot be borrowed',()=>{
     const row=require('../data/metadata/report_fin_history_corrections_20261017.json').rows.find(r=>r.ticker==='242040');
     assert(row && row.history_name==='나무기술' && row.name==='나무AX');

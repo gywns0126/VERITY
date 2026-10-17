@@ -356,8 +356,46 @@ def build_report(ticker, fetch, now=None):
     if any(r.get("op") is not None and r.get("op") == r.get("net") for r in annual):
         gaps.append("영업이익과 순이익이 동일한 연도가 있습니다. 원문 대조 전 값 복제 오류인지 우연한 일치인지 확정할 수 없습니다.")
     period = text(fin.get("period"))
-    rows = [[g.get("title", ""), text(r.get("k")), text(r.get("v"))] for g in fin.get("groups", []) for r in g.get("rows", []) if not re.search(r"FCF|잉여.*현금|free.?cash", str(r.get("k")), re.I)]
-    table("R2", "최근 결산 재무", ["구분", "항목", "값"], rows, f"기준기간 {period} · 단위는 각 항목에 표시")
+    reviewed_income, reviewed_income_keys = None, []
+    # Use one complete, currently eligible reviewed income column. Never promote
+    # the remaining formatted balance/cash rows to that column's provenance.
+    if primary_review:
+        for candidate in proven_annual:
+            if str(candidate['year']) != period:
+                continue
+            registered = next((r for r in primary_review['periods']
+                               if all(r.get(k) == candidate.get(k) for k in
+                                      ('start', 'end', 'period_kind', 'currency', 'fs_div', 'accession', 'filed'))), None)
+            if (not registered or any(fin.get(k) not in (None, '', candidate[k])
+                                      for k in ('start', 'end', 'period_kind', 'currency', 'fs_div'))):
+                continue
+            confirmed = []
+            for key, fact in registered['metrics'].items():
+                if key not in ('revenue', 'op', 'net', 'cost_of_sales', 'sga'):
+                    continue
+                source = candidate.get('metric_sources', {}).get(key) or {}
+                doc = primary_review['documents'][fact['document']]
+                if (candidate.get(key) == fact['value'] and source.get('raw_text') == fact['raw']
+                        and source.get('reviewed_at') == primary_review['reviewed_at']
+                        and source.get('sha256') == doc['sha256'] and source.get('source_url') == doc['url']):
+                    confirmed.append(key)
+            if {'revenue', 'op', 'net'}.issubset(confirmed):
+                reviewed_income = candidate
+                reviewed_income_keys = confirmed
+                break
+    rows = []
+    if reviewed_income:
+        for key, label in [('revenue', '매출'), ('op', '영업이익'), ('net', '순이익'),
+                           ('cost_of_sales', '매출원가'), ('sga', '판매비와관리비')]:
+            if key in reviewed_income_keys:
+                rows.append(['손익계산서 · 원문 검수', label, money(reviewed_income[key], kr, reviewed_income['currency'])])
+        rows.append(['손익계산서 · 원문 검수', '원문', source_cell(reviewed_income)])
+    rows.extend([g.get('title', '') + (' · 수집 요약' if reviewed_income else ''), text(r.get('k')), text(r.get('v'))]
+                for g in fin.get('groups', []) if not (reviewed_income and g.get('title') == '손익계산서')
+                for r in g.get('rows', []) if not re.search(r'FCF|잉여.*현금|free.?cash', str(r.get('k')), re.I))
+    income_note = (f"손익: {period_label(reviewed_income)} · {reviewed_income['currency']} · {reviewed_income['fs_div']} · 원문 검수. "
+                   "기존 손익 요약·비율은 이 표에서 제외했으며 다른 수집 요약의 원문 연결을 뜻하지 않습니다. ") if reviewed_income else ''
+    table("R2", "최근 결산 재무", ["구분", "항목", "값"], rows, income_note + f"기준기간 {period} · 단위는 각 항목에 표시")
     reviewed_sga = [(r, (r.get('derived_metrics') or {}).get('sga')) for r in proven_annual]
     table('R2S', '판매비와 관리비 · 원문 구성행 합산', ['연도', '판매비', '관리비', '자체합산', '원문'],
           [[str(r['year']), *[money(c['value'], kr, r['currency']) for c in v['components']],
@@ -366,6 +404,9 @@ def build_report(ticker, fetch, now=None):
     facts, notes = s.get("facts") or {}, s.get("facts_note") or {}
     facts, calculations, valuation_warnings = valuation_display(facts, notes, s.get("facts_calc") or {})
     gaps.extend(valuation_warnings)
+    if reviewed_income and '영업이익률' in facts and not (notes.get('영업이익률') or calculations.get('영업이익률')):
+        facts['영업이익률'] = '비교 보류 · 수집값 ' + text(facts['영업이익률'])
+        calculations['영업이익률'] = '수집 비율의 기간·산식 미연결. R2 원문 손익으로 검수하거나 재계산한 비율이 아닙니다.'
     table("R3", "주요 지표와 계산 기준", ["지표", "값", "기준·정의"],
           [[k, text(v), " · ".join(dict.fromkeys(str(x) for x in (notes.get(k), calculations.get(k)) if x)) or "기간·계산 기준 미수신"] for k, v in facts.items() if not re.search(r"FCF|잉여.*현금|free.?cash", k, re.I)],
           "가격이 반영된 지표는 실시간 값이 아닙니다. 기간·계산 기준 미수신인 항목은 추가 확인이 필요합니다.", widths=[0.8, 0.9, 2.3])

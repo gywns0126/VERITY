@@ -1,4 +1,5 @@
 """Report meaning and retirement regressions; synthetic data avoids market drift."""
+import copy
 import io
 import json
 import sys
@@ -264,3 +265,71 @@ def test_sec_fetch_does_not_hold_global_cache_lock_during_io(monkeypatch):
         return io.BytesIO(b'{"cik":18230}')
     monkeypatch.setattr(fact_report.urllib.request, 'urlopen', response)
     assert fact_report._fetch_sec('sec-companyfacts/0000018230.json') == {'cik': 18230}
+
+
+def _reviewed_income_fixture():
+    s = {'ticker': '000650', 'name': '천일고속', 'facts': {'영업이익률': '0%'}, 'financials': {'period': '2025', 'groups': [
+        {'title': '손익계산서', 'rows': [{'k': k, 'v': '0'} for k in ('매출', '영업이익', '순이익', '영업이익률')]},
+        {'title': '현금흐름표', 'rows': [{'k': '영업활동', 'v': '3억'}]},
+    ]}}
+    return s, {'stock_report_public.json': {'stocks': [s]}}
+
+
+def test_reviewed_income_reaches_summary_without_claiming_cash_provenance():
+    s, docs = _reviewed_income_fixture()
+    before = copy.deepcopy(s)
+    report = build_report('000650', lambda name: docs.get(name, {}), datetime(2026, 10, 17, tzinfo=timezone.utc))
+    r2 = section(report, 'R2')
+    assert r2['rows'][:3] == [['손익계산서 · 원문 검수', '매출', '455.50억원'],
+                              ['손익계산서 · 원문 검수', '영업이익', '-59.41억원'],
+                              ['손익계산서 · 원문 검수', '순이익', '-56.24억원']]
+    assert r2['rows'][3:5] == [['손익계산서 · 원문 검수', '매출원가', '437.27억원'],
+                             ['손익계산서 · 원문 검수', '판매비와관리비', '77.63억원']]
+    assert r2['rows'][5][2]['url'].endswith('rcpNo=20260319000972')
+    assert r2['rows'][6] == ['현금흐름표 · 수집 요약', '영업활동', '3억']
+    assert not any(row[1] == '영업이익률' for row in r2['rows'])
+    assert 'OFS' in r2['note'] and '다른 수집 요약의 원문 연결을 뜻하지' in r2['note']
+    assert not report['reader']['cash_status']['source_linked']
+    margin = next(r for r in section(report, 'R3')['rows'] if r[0] == '영업이익률')
+    assert margin[1] == '비교 보류 · 수집값 0%' and '재계산한 비율이 아닙니다' in margin[2]
+    assert s == before
+
+
+@pytest.mark.parametrize('field,value', [('period', '2026'), ('period_kind', 'quarter'),
+                                         ('currency', 'USD'), ('fs_div', 'CFS'),
+                                         ('start', '2025-04-01'), ('end', '2025-09-30')])
+def test_summary_does_not_borrow_reviewed_income_for_a_different_basis(field, value):
+    s, docs = _reviewed_income_fixture()
+    s['financials'][field] = value
+    report = build_report('000650', lambda name: docs.get(name, {}), datetime(2026, 10, 17, tzinfo=timezone.utc))
+    assert section(report, 'R2')['rows'][0] == ['손익계산서', '매출', '0']
+    assert '원문 검수' not in section(report, 'R2')['note']
+
+
+@pytest.mark.parametrize('newer', [False, True])
+def test_summary_preserves_a_newer_or_conflicting_collected_income_version(newer):
+    import report_kr_review
+    s, docs = _reviewed_income_fixture()
+    entry = report_kr_review._registry()['000650']
+    raw = next(r for r in entry['periods'] if r['year'] == 2025)
+    row = report_kr_review._materialize(raw, entry['documents'], entry['reviewed_at'])
+    if newer:
+        row.update(filed='2026-04-01', accession='20260401000001', source_url='https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260401000001')
+    row['revenue'] = 999
+    row['metric_sources']['revenue'] = {'raw_text': '999', 'sha256': 'a' * 64,
+                                      'source_url': row['source_url']}
+    s['financial_evidence'] = {'periods': [row]}
+    report = build_report('000650', lambda name: docs.get(name, {}), datetime(2026, 10, 17, tzinfo=timezone.utc))
+    assert section(report, 'R2')['rows'][0] == ['손익계산서', '매출', '0']
+
+
+def test_summary_rejects_a_wrong_document_url_even_with_the_reviewed_hash():
+    import report_kr_review
+    s, docs = _reviewed_income_fixture()
+    entry = report_kr_review._registry()['000650']
+    raw = next(r for r in entry['periods'] if r['year'] == 2025)
+    row = report_kr_review._materialize(raw, entry['documents'], entry['reviewed_at'])
+    row['metric_sources']['revenue']['source_url'] += '&wrong-document=1'
+    s['financial_evidence'] = {'periods': [row]}
+    report = build_report('000650', lambda name: docs.get(name, {}), datetime(2026, 10, 17, tzinfo=timezone.utc))
+    assert section(report, 'R2')['rows'][0] == ['손익계산서', '매출', '0']
