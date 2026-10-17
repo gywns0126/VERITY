@@ -22,6 +22,12 @@ function repair(doc, manifest, history) {
         assert(correction.source_url.startsWith('https://dart.fss.or.kr/report/viewer.do?'));
         assert(correction.source_url.includes('rcpNo=' + correction.accession));
         assert(/^[a-f0-9]{64}$/.test(correction.source_sha256));
+        const unit = correction.reported_unit;
+        const multiplier = {원:1, 천원:1000, 백만원:1000000}[unit];
+        assert(multiplier && multiplier === correction.unit_multiplier, 'unknown source unit');
+        let raw = correction.raw_text.replaceAll(',', '');
+        if (/^\(\d+\)$/.test(raw)) raw = '-' + raw.slice(1, -1);
+        assert(/^-?\d+$/.test(raw) && Number(raw) * multiplier === correction.after, 'source amount/unit mismatch');
         const source = history.rows.filter(r => r.ticker === correction.ticker && r.fiscal_year === correction.year && r.period === 'annual');
         assert.equal(source.length, 1, 'history identity');
         assert.equal(source[0].name, correction.name);

@@ -153,3 +153,50 @@ def test_latest_peer_reviews_preserve_quarter_ytd_scope_and_source():
             assert annual['net'] == 8231853074 and annual['sga'] == 214066943596
             assert annual['revenue'] - annual['cost_of_sales'] - annual['sga'] == annual['op']
             assert not any(r['year'] == 2023 for r in rows)  # First seven-month year is not a full annual.
+
+
+def test_total_net_review_does_not_reuse_noncontrolling_or_parent_amounts():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    for ticker, name, expected in [('018880', '한온시스템', {2024: -358595798106, 2025: -197268294891}),
+                                    ('331920', '셀레믹스', {2024: 12266469564, 2025: -4036458382})]:
+        rows = review.reviewed_financials(ticker, {'ticker': ticker, 'name': name}, [], now)
+        assert len(rows) == 2
+        for row in rows:
+            assert row['net'] == expected[row['year']] and row['fs_div'] == 'CFS'
+            assert row['metric_sources']['net']['name'] == '당기순이익(손실)'
+            assert row['metric_sources']['net']['sha256']
+
+
+def test_table_units_are_converted_once_with_raw_cells_preserved(monkeypatch):
+    from datetime import date
+    for unit, multiplier in [('천원', 1000), ('백만원', 1000000)]:
+        fixture = deepcopy(review._registry())
+        entry = fixture['018880']
+        entry['documents']['annual_income']['unit'] = unit
+        for row in entry['periods']:
+            for metric in row['metrics'].values():
+                metric['value'] = review._amount(metric['raw']) * multiplier
+        monkeypatch.setattr(review, '_registry', lambda: fixture)
+        row = review.reviewed_financials('018880', {'ticker':'018880','name':'한온시스템'}, [], date(2026,10,17))[0]
+        source = row['metric_sources']['net']
+        assert row['net'] == review._amount(source['raw_text']) * multiplier
+        assert source['reported_unit'] == unit and source['unit_multiplier'] == multiplier
+        entry['periods'][0]['metrics']['net']['value'] //= multiplier
+        assert len(review.reviewed_entry('018880', {'ticker':'018880','name':'한온시스템'}, date(2026,10,17))['periods']) == 1
+        entry['documents']['annual_income']['unit'] = '단위 미확인'
+        assert review.reviewed_entry('018880', {'ticker':'018880','name':'한온시스템'}, date(2026,10,17)) is None
+
+
+def test_large_issuer_losses_and_rewritten_comparatives_use_reported_totals():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    cases = [('051910','LG화학',-977063000000,515011000000,1000000),
+             ('011170','롯데케미칼',-2476176326250,-1825555752135,1),
+             ('097950','CJ제일제당',-416955408000,345925769000,1000),
+             ('000070','삼양홀딩스',-298132876106,89491916474,1)]
+    for ticker,name,current,prior,multiplier in cases:
+        rows=review.reviewed_financials(ticker,{'ticker':ticker,'name':name},[],now)
+        assert len(rows)==2
+        assert _by_period(rows,2025,'annual')['net']==current
+        assert _by_period(rows,2024,'annual')['net']==prior
+        assert all(r['metric_sources']['net']['unit_multiplier']==multiplier for r in rows)
+        assert all(r['metric_sources']['net']['name'] in ('당기순이익(손실)','당기순손실') for r in rows)
