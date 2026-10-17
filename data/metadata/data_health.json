@@ -1,16 +1,20 @@
 {
  "_meta": {
-  "generated_at": "2026-10-18T02:35:18.286678+09:00",
+  "generated_at": "2026-10-18T04:01:04.140390+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
  "reasons": [
+  "감시 근거 annual_backfill: invalid_timestamp",
+  "연간 재무 수집 시도·결과 집계 불일치",
+  "연간 재무 미해결 수집 오류 7칸",
+  "연간 재무 미분류 수집 기록 5칸",
   "신선도 감시 대상 누락·미측정",
   "비P0 stale 1건"
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-10-18T02:35:18.198070+09:00",
+   "generated_at": "2026-10-18T04:01:04.066088+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -18,14 +22,20 @@
   "coverage": {
    "generated_at": "2026-10-17T13:29:12.055407+09:00",
    "max_age_h": 96,
-   "age_h": 13.102,
+   "age_h": 14.531,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-10-18T02:35:04.742259+09:00",
+   "generated_at": "2026-10-18T04:00:54.959646+09:00",
    "max_age_h": 3,
-   "age_h": 0.004,
+   "age_h": 0.003,
    "status": "fresh"
+  },
+  "annual_backfill": {
+   "generated_at": null,
+   "max_age_h": 48,
+   "age_h": null,
+   "status": "invalid_timestamp"
   }
  },
  "publish_guard": {
@@ -33,11 +43,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-10-18T02:35:18.198070+09:00",
+  "generated_at": "2026-10-18T04:01:04.066088+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 0,
+  "max_cdn_age_s": 32332,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -58,7 +68,7 @@
      "PBR": 73.6
     },
     "total": 5271,
-    "cdn_age_s": 0,
+    "cdn_age_s": 32332,
     "error": null
    },
    {
@@ -69,7 +79,7 @@
      "PBR": 75.2
     },
     "total": 3972,
-    "cdn_age_s": 0,
+    "cdn_age_s": 7906,
     "error": null
    },
    {
@@ -98,7 +108,7 @@
   "last_run_at": "2026-10-17T13:29:12.179624+09:00"
  },
  "freshness": {
-  "generated_at": "2026-10-18T02:35:04.742259+09:00",
+  "generated_at": "2026-10-18T04:00:54.959646+09:00",
   "summary": {
    "fresh": 30,
    "stale": 1,
@@ -129,5 +139,21 @@
   "stale_other": [
    "logo_map"
   ]
+ },
+ "annual_backfill": {
+  "generated_at": null,
+  "clock_kind": "collection_attempt",
+  "attempted_at": null,
+  "counts_valid": false,
+  "requested": null,
+  "attempted": null,
+  "success": null,
+  "empty": null,
+  "error": null,
+  "deferred": null,
+  "touched": null,
+  "requests": 153,
+  "unresolved_error_cells": 7,
+  "unclassified_cells": 5
  }
 }
