@@ -19,11 +19,15 @@ def healthy_sections(monkeypatch):
                      "last_run_blocked": False, "last_run_warns": 0},
         "freshness": {"generated_at": ts, "stream_count": 1, "skipped_count": 0,
                       "stale_p0": [], "stale_other": []},
+        "annual_backfill": {"generated_at": ts, "counts_valid": True, "error": 0,
+                            "requested": 0, "attempted": 0,
+                            "unresolved_error_cells": 0, "unclassified_cells": 0},
     }
     monkeypatch.setattr(data_health_builder, "_guard_section", lambda now: {"held_24h": 0, "recent": []})
     monkeypatch.setattr(data_health_builder, "_verify_section", lambda: sections["publish_verify"])
     monkeypatch.setattr(data_health_builder, "_coverage_section", lambda: sections["coverage"])
     monkeypatch.setattr(data_health_builder, "_freshness_section", lambda: sections["freshness"])
+    monkeypatch.setattr(data_health_builder, "_annual_backfill_section", lambda: sections["annual_backfill"])
     return sections
 
 
@@ -34,7 +38,7 @@ def test_cdn_cache_age_does_not_change_health_status(healthy_sections):
     assert doc["reasons"] == []
 
 
-@pytest.mark.parametrize("name", ["publish_verify", "coverage", "freshness"])
+@pytest.mark.parametrize("name", ["publish_verify", "coverage", "freshness", "annual_backfill"])
 def test_missing_monitor_evidence_is_not_green(healthy_sections, name):
     healthy_sections[name] = None
     doc = data_health_builder.build()
@@ -42,7 +46,7 @@ def test_missing_monitor_evidence_is_not_green(healthy_sections, name):
     assert doc["evidence"][name]["status"] == "missing"
 
 
-@pytest.mark.parametrize("name,hours", [("publish_verify", 4), ("freshness", 4), ("coverage", 97)])
+@pytest.mark.parametrize("name,hours", [("publish_verify", 4), ("freshness", 4), ("coverage", 97), ("annual_backfill", 49)])
 def test_rebuilt_aggregate_does_not_refresh_old_evidence(healthy_sections, name, hours):
     stamp = (datetime.now(data_health_builder.KST) - timedelta(hours=hours)).isoformat()
     healthy_sections[name]["generated_at"] = stamp
@@ -123,3 +127,69 @@ def test_stream_without_measured_status_is_not_valid_evidence(tmp_path, monkeypa
         "streams": [{"id": "stock_report_public"}], "_skipped_count": 0,
     }))
     assert data_health_builder._freshness_section() is None
+
+
+_annual_reader = data_health_builder._annual_backfill_section
+
+
+def _annual_ledger(tmp_path, monkeypatch, run_overrides=None, cells=None):
+    monkeypatch.setattr(data_health_builder, "_DATA", str(tmp_path))
+    run = {"attempted_at": datetime.now(data_health_builder.KST).isoformat(),
+           "requested": 2, "attempted": 2, "success": 1, "empty": 1,
+           "error": 0, "deferred": 0, "touched": 1, "requests": 3}
+    run.update(run_overrides or {})
+    (tmp_path / "dart_kr_fin_history_missing.json").write_text(json.dumps({
+        "_meta": {"last_run": run}, "cells": cells or {}}))
+    return run
+
+
+def test_actual_annual_failure_reaches_health_without_relabeling_financial_date(tmp_path, monkeypatch, healthy_sections):
+    run = _annual_ledger(tmp_path, monkeypatch, {"success": 0, "error": 1},
+                         {"005930|2023": {"status": "error"}})
+    healthy_sections["annual_backfill"] = _annual_reader()
+    doc = data_health_builder.build()
+    assert doc["status"] == "amber"
+    assert "연간 재무 수집 실패 1/2칸" in doc["reasons"]
+    assert doc["annual_backfill"]["clock_kind"] == "collection_attempt"
+    assert doc["annual_backfill"]["attempted_at"] == run["attempted_at"]
+
+
+def test_old_error_outside_latest_batch_remains_visible(tmp_path, monkeypatch, healthy_sections):
+    _annual_ledger(tmp_path, monkeypatch, cells={"005930|2020": {"status": "error"}})
+    healthy_sections["annual_backfill"] = _annual_reader()
+    doc = data_health_builder.build()
+    assert "연간 재무 미해결 수집 오류 1칸" in doc["reasons"]
+    assert doc["status"] == "amber"
+
+
+@pytest.mark.parametrize("overrides", [
+    {"requested": 0}, {"attempted": 0}, {"success": True}, {"error": -1},
+    {"touched": 3}, {"touched": 0}, {"requests": None}, {"requests": 0},
+    {"requests": 5}, {"attempted_at": None},
+    {"attempted_at": "2026-10-18T00:00:00"},
+])
+def test_invalid_annual_counters_or_clock_cannot_be_green(tmp_path, monkeypatch, healthy_sections, overrides):
+    _annual_ledger(tmp_path, monkeypatch, overrides)
+    healthy_sections["annual_backfill"] = _annual_reader()
+    assert data_health_builder.build()["status"] == "amber"
+
+
+def test_normal_no_data_and_quota_defer_are_distinct_from_failures(tmp_path, monkeypatch, healthy_sections):
+    _annual_ledger(tmp_path, monkeypatch, {"requested": 3, "deferred": 1},
+                   {"005930|2010": {"status": "013", "no_data_attempts": 2}})
+    healthy_sections["annual_backfill"] = _annual_reader()
+    assert data_health_builder.build()["status"] == "green"
+
+
+@pytest.mark.parametrize("cells", [{"x": None}, {"x": {"status": "000"}}])
+def test_unknown_legacy_cell_outcomes_remain_unmeasured(tmp_path, monkeypatch, healthy_sections, cells):
+    _annual_ledger(tmp_path, monkeypatch, cells=cells)
+    healthy_sections["annual_backfill"] = _annual_reader()
+    assert data_health_builder.build()["status"] == "amber"
+
+
+def test_zero_quota_pending_work_cannot_look_successful(tmp_path, monkeypatch, healthy_sections):
+    _annual_ledger(tmp_path, monkeypatch, {"attempted": 0, "success": 0, "empty": 0,
+                   "deferred": 2, "touched": 0, "requests": 0})
+    healthy_sections["annual_backfill"] = _annual_reader()
+    assert "연간 재무 수집 대상이 있으나 실행된 셀 없음" in data_health_builder.build()["reasons"]

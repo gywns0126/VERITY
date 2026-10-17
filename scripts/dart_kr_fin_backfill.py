@@ -21,7 +21,7 @@ import json
 import os
 import re
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 _ROOT = str(Path(__file__).resolve().parent.parent)
@@ -45,8 +45,8 @@ DONE_PATH = os.path.join(DATA_DIR, "dart_kr_fin_history_done.json")
 #   성공하면 항목을 지운다. `done` 은 하위호환으로 계속 쓰되 **차단권은 없다**.
 MISSING_PATH = os.path.join(DATA_DIR, "dart_kr_fin_history_missing.json")
 DEFAULT_UNIVERSE = os.path.join(DATA_DIR, "stock_report_public.json")
-# 빈 응답 셀 재시도 상한. DART 가 status 013(자료없음)을 주는 상장 전 연도는 영원히 비어 있다 —
-# 2회까지만 두드리고 접는다. 전수 재시도를 원하면 --retry-exhausted.
+# 공식 status 013(자료없음) 응답의 셀 재시도 상한. source/status/parse 오류는
+# 이 횟수를 소비하지 않고 계속 재시도한다. 전수 no-data 재시도는 --retry-exhausted.
 MAX_CELL_ATTEMPTS = 2
 
 
@@ -89,16 +89,87 @@ def _load_missing():
         return {}
 
 
+def _response_kind(raw):
+    """DART status 계약을 분류한다. 반환 reason은 제한된 enum만 사용한다."""
+    if not isinstance(raw, str) or not raw:
+        return "error", None, "invalid_response"
+    try:
+        payload = json.loads(raw)
+    except (TypeError, ValueError):
+        return "error", None, "invalid_json"
+    if not isinstance(payload, dict):
+        return "error", None, "invalid_payload"
+
+    status = payload.get("status")
+    if status == "013":
+        rows = payload.get("list", [])
+        if rows not in (None, []) or not isinstance(rows, list):
+            return "error", None, "invalid_payload"
+        return "empty", payload, None
+    if status != "000":
+        return "error", None, "unexpected_status"
+    if not isinstance(payload.get("list"), list):
+        return "error", None, "invalid_payload"
+    return "ok", payload, None
+
+
+def _record_error(cells, key, reason):
+    previous = cells.get(key) or {}
+    cells[key] = {
+        "n": _nonnegative_int(previous.get("n", 0)),
+        "last": date.today().isoformat(),
+        "status": "error",
+        "error_count": _nonnegative_int(previous.get("error_count", 0)) + 1,
+        "no_data_attempts": _no_data_attempts(previous),
+        "last_error": reason,
+    }
+
+
+def _nonnegative_int(value):
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _no_data_attempts(record):
+    if "no_data_attempts" in record:
+        return _nonnegative_int(record.get("no_data_attempts"))
+    # Migrate legacy rows only when their last recorded outcome was official 013.
+    # An old `error` row's n may count transport/parse failures, not no-data.
+    return _nonnegative_int(record.get("n", 0)) if record.get("status") == "013" else 0
+
+
+def _record_empty(cells, key):
+    previous = cells.get(key) or {}
+    cells[key] = {
+        "n": _nonnegative_int(previous.get("n", 0)) + 1,
+        "last": date.today().isoformat(),
+        "status": "013",
+        "no_data_attempts": _no_data_attempts(previous) + 1,
+        "error_count": _nonnegative_int(previous.get("error_count", 0)),
+    }
+
+
+def _is_exhausted_no_data(record):
+    if record.get("status") != "013":
+        return False
+    try:
+        return _no_data_attempts(record) >= MAX_CELL_ATTEMPTS
+    except (TypeError, ValueError):
+        return False
+
+
 def _save_missing(cells, stats=None):
     tmp = MISSING_PATH + ".tmp"
     payload = {
         "_meta": {
             "artifact": "dart_kr_fin_history_missing",
             "updated_at": date.today().isoformat(),
-            "note": "(티커,연도) 셀 시도 원장 — n >= MAX_CELL_ATTEMPTS 면 재시도 중단",
+            "note": "(티커,연도) 셀 원장 — 공식 status 013만 no-data 시도 횟수에 반영",
             "max_cell_attempts": MAX_CELL_ATTEMPTS,
             "cells_n": len(cells),
-            "exhausted_n": sum(1 for v in cells.values() if v.get("n", 0) >= MAX_CELL_ATTEMPTS),
+            "exhausted_n": sum(1 for v in cells.values() if _is_exhausted_no_data(v)),
             **(stats or {}),
         },
         "cells": cells,
@@ -191,7 +262,10 @@ def main() -> int:
     def _exhausted(t, y):
         if args.retry_exhausted:
             return False
-        return (missing.get(_cell(t, y)) or {}).get("n", 0) >= MAX_CELL_ATTEMPTS
+        record = missing.get(_cell(t, y)) or {}
+        # Only confirmed official no-data is exhaustible. Legacy `error` entries
+        # with n>=2 and unknown historical statuses remain retryable.
+        return _is_exhausted_no_data(record)
 
     pending_by_tk = {}
     for t, n in universe:
@@ -200,39 +274,97 @@ def main() -> int:
             pending_by_tk[t] = ys
     todo = [(t, n) for (t, n) in universe if t in pending_by_tk]
     _pending_cells = sum(len(v) for v in pending_by_tk.values())
-    _exh = sum(1 for v in missing.values() if v.get("n", 0) >= MAX_CELL_ATTEMPTS)
+    _exh = sum(1 for v in missing.values() if _is_exhausted_no_data(v))
     print(f"[fin-bf] universe {len(universe)} | 대상종목 {len(todo)} | 대상칸 {_pending_cells} "
           f"| 시도포기칸 {_exh} | done(참고) {len(done)} | years {years[0]}~{years[-1]} "
           f"| cap {args.quota_cap}", file=sys.stderr)
 
-    new_n, req_n, empty_n = 0, 0, 0
+    attempted_at = datetime.now(timezone.utc).isoformat()
+    new_n = req_n = empty_n = error_n = attempted_cells = 0
+    touched_tickers = set()
+
+    def _last_run():
+        deferred_n = max(0, _pending_cells - new_n - empty_n - error_n)
+        return {
+            "attempted_at": attempted_at,
+            "requested": _pending_cells,
+            "attempted": attempted_cells,
+            "success": new_n,
+            "empty": empty_n,
+            "error": error_n,
+            "deferred": deferred_n,
+            "touched": len(touched_tickers),
+            # Legacy aliases remain for existing readers.
+            "new_rows": new_n,
+            "empty_cells": empty_n,
+            "requests": req_n,
+            "tickers_touched": len(touched_tickers),
+        }
+
     for idx, (tk, name) in enumerate(todo, 1):
         if args.quota_cap is not None and req_n >= args.quota_cap:
             print(f"[fin-bf] quota-cap {args.quota_cap} 도달 — 중단(다음 run 이어받음)", file=sys.stderr)
             break
-        cc = get_corp_code(tk)
+        try:
+            cc = get_corp_code(tk)
+        except Exception:  # noqa: BLE001 — never persist exception text or request URLs
+            cc = None
+        touched_tickers.add(tk)
         if not cc:
+            unresolved = [y for y in pending_by_tk.get(tk, []) if (tk, y) not in seen]
+            attempted_cells += len(unresolved)
+            for y in unresolved:
+                _record_error(missing, _cell(tk, y), "corp_code_unavailable")
+                error_n += 1
             done.add(tk); _save_done(done)
             continue
-        tk_new = 0
         for y in pending_by_tk.get(tk, []):
             if (tk, y) in seen:
                 continue
             if args.quota_cap is not None and req_n >= args.quota_cap:
                 break   # 🚨 셀 단위로 끊는다 — 종목 중간에 멈춰도 원장이 이어받는다
             req_n += 1
+            attempted_cells += 1
             try:
                 raw = _fetch_fnltt_all_cached(cc, str(y), "CFS")
-                data = json.loads(raw) if raw else {}
-                if not (data.get("list")):  # CFS 0건 → OFS fallback
-                    req_n += 1
-                    raw = _fetch_fnltt_all_cached(cc, str(y), "OFS")
-                    data = json.loads(raw) if raw else {}
-                source_rows = {}
-                plbs = _extract_pl_bs_from_dart(data, source_rows=source_rows) if data.get("list") else {}
-            except Exception as e:  # noqa: BLE001
-                print(f"[fin-bf] {tk} {y} 실패: {str(e)[:60]}", file=sys.stderr)
+            except Exception:  # noqa: BLE001 — bounded reason only
+                _record_error(missing, _cell(tk, y), "fetch_exception")
+                error_n += 1
                 continue
+
+            kind, data, error_reason = _response_kind(raw)
+            if kind == "error":
+                _record_error(missing, _cell(tk, y), error_reason)
+                error_n += 1
+                continue
+            if kind == "empty":  # Only official no-data status 013 permits OFS fallback.
+                if args.quota_cap is not None and req_n >= args.quota_cap:
+                    continue  # deferred; do not spend a no-data attempt until OFS is checked
+                req_n += 1
+                try:
+                    raw = _fetch_fnltt_all_cached(cc, str(y), "OFS")
+                except Exception:  # noqa: BLE001 — bounded reason only
+                    _record_error(missing, _cell(tk, y), "fetch_exception")
+                    error_n += 1
+                    continue
+                kind, data, error_reason = _response_kind(raw)
+                if kind == "error":
+                    _record_error(missing, _cell(tk, y), error_reason)
+                    error_n += 1
+                    continue
+                if kind == "empty":
+                    _record_empty(missing, _cell(tk, y))
+                    empty_n += 1
+                    continue
+
+            try:
+                source_rows = {}
+                plbs = _extract_pl_bs_from_dart(data, source_rows=source_rows)
+            except Exception:  # noqa: BLE001 — bounded reason only
+                _record_error(missing, _cell(tk, y), "extract_failed")
+                error_n += 1
+                continue
+
             def observed(field):
                 value = plbs.get(field)
                 if value != 0:
@@ -246,19 +378,27 @@ def main() -> int:
             rev, op, net = (observed(field) for field in ("revenue", "operating_profit", "net_income"))
             inv_re = plbs.get("investment_property")
             if all(value is None for value in (rev, op, net)):
-                # 🚨 빈 응답을 셀 원장에 적는다. 상장 전 연도는 영원히 비어 있어서
-                #   기록이 없으면 매 run 이 같은 칸을 다시 두드린다(쿼터 낭비).
-                _c = _cell(tk, y)
-                _prev = missing.get(_c) or {}
-                missing[_c] = {"n": int(_prev.get("n", 0)) + 1, "last": date.today().isoformat(),
-                               "status": str(data.get("status") or "empty")}
-                empty_n += 1
+                # status 000 with no target metrics is not official no-data;
+                # keep it retryable rather than exhausting the cell.
+                _record_error(missing, _cell(tk, y), "no_target_metrics")
+                error_n += 1
                 continue
             # An explicitly reported zero is a fact, not a missing account.
             fund = {"revenue": rev, "operating_profit": op,
                     "net_income": net, "investment_property": inv_re or None}
             existing = rows_by_key.get((tk, y))
             if existing is not None:
+                old_fund = existing.get("fundamentals") or {}
+                loses_numeric_value = any(
+                    isinstance(old_value, (int, float))
+                    and not isinstance(old_value, bool)
+                    and fund.get(field) is None
+                    for field, old_value in old_fund.items()
+                )
+                if loses_numeric_value:
+                    _record_error(missing, _cell(tk, y), "partial_replacement")
+                    error_n += 1
+                    continue
                 existing["fundamentals"] = fund   # null-net 행 in-place 갱신 (중복 append 방지)
             else:
                 new_row = {"ticker": tk, "name": name, "fiscal_year": y, "period": "annual", "fundamentals": fund}
@@ -266,19 +406,19 @@ def main() -> int:
                 rows_by_key[(tk, y)] = new_row
             seen.add((tk, y))
             missing.pop(_cell(tk, y), None)   # 채워졌으면 원장에서 뺀다
-            new_n += 1; tk_new += 1
+            new_n += 1
         done.add(tk)
         _save_done(done)
         if idx % 25 == 0 or idx == len(todo):
             _write_out(rows)                  # 주기 저장(crash-safe)
-            _save_missing(missing)
-            print(f"[fin-bf] {idx}/{len(todo)} — 신규행 {new_n} · 빈칸 {empty_n} · req {req_n}",
+            _save_missing(missing, {"last_run": _last_run()})
+            print(f"[fin-bf] {idx}/{len(todo)} — 신규행 {new_n} · 빈칸 {empty_n} · "
+                  f"오류 {error_n} · req {req_n}",
                   file=sys.stderr)
 
     _write_out(rows)
-    _save_missing(missing, {"last_run": {"new_rows": new_n, "empty_cells": empty_n,
-                                         "requests": req_n, "tickers_touched": len(todo)}})
-    print(f"[fin-bf] 완료 — 신규행 {new_n} · 빈칸 {empty_n} · req {req_n} · "
+    _save_missing(missing, {"last_run": _last_run()})
+    print(f"[fin-bf] 완료 — 신규행 {new_n} · 빈칸 {empty_n} · 오류 {error_n} · req {req_n} · "
           f"총행 {len(rows)} · 원장 {len(missing)}칸 -> {os.path.relpath(OUT_PATH, _ROOT)}",
           file=sys.stderr)
     return 0
