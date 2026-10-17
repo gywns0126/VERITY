@@ -113,6 +113,580 @@
         "attribution": "회사 설명",
         "summary": "회사는 반기 매출 확대와 영업이익 증가의 배경으로 제강·압연 부문의 수출 판매량 증가와 수익성 중심 운영을 들고, 지분법이익 감소 등이 계속영업이익 감소에 영향을 주었다고 설명한다."
       }
+    },
+  "104700": {
+      "ticker": "104700",
+      "name": "한국철강",
+      "corp_code": "00687711",
+      "reviewed_at": "2026-10-17",
+      "max_review_age_days": 180,
+      "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
+      "notes": [
+        "2026-10-17 DART 공시 탐색과 해당 접수번호의 문서 목록에서 확인한 최신 반기 자료. 이후 제출·정정 확인을 대신하지 않는다.",
+        "별도재무(OFS)이며 대한제강 연결재무(CFS)와 범위가 다르다. 단일 분기 현금흐름을 반기 누적으로 대체하지 않는다."
+      ],
+      "documents": {
+        "half_income": {
+          "accession": "20260814002934",
+          "filed": "2026-08-14",
+          "section": "손익계산서",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814002934&dcmNo=11535223&eleId=23&offset=239425&length=19199&dtd=dart4.xsd",
+          "sha256": "cb210fb7324331219153c353cc0fbff23c80f5b718f4f43452ad9e82d767e523",
+          "headers": [
+            "4-2. 손익계산서 손익계산서 제 19 기 반기 2026.01.01 부터 2026.06.30 까지 제 18 기 반기 2025.01.01 부터 2025.06.30 까지 (단위 : 원) 제 19 기 반기 제 18 기 반기 3개월 누적 3개월 누적 "
+          ]
+        },
+        "half_cash": {
+          "accession": "20260814002934",
+          "filed": "2026-08-14",
+          "section": "현금흐름표",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814002934&dcmNo=11535223&eleId=26&offset=291631&length=24515&dtd=dart4.xsd",
+          "sha256": "39c1ea7fb3f57e0475895f863372f7dc277f46f2f05f315c018e7c131f430a1a",
+          "headers": [
+            "4-5. 현금흐름표 현금흐름표 제 19 기 반기 2026.01.01 부터 2026.06.30 까지 제 18 기 반기 2025.01.01 부터 2025.06.30 까지 (단위 : 원) 제 19 기 반기 제 18 기 반기 "
+          ]
+        }
+      },
+      "periods": [
+        {
+          "year": 2026,
+          "start": "2026-04-01",
+          "end": "2026-06-30",
+          "period_kind": "quarter",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "accession": "20260814002934",
+          "filed": "2026-08-14",
+          "start_basis": "반기 종료일과 3개월 열에서 산출; 검토보고서로 3개월 기간 확인. 4월 1일 직접 표기는 미확인",
+          "metrics": {
+            "revenue": {
+              "value": 173809519338,
+              "raw": "173,809,519,338",
+              "account": "매출액",
+              "column": "2026 3개월",
+              "document": "half_income"
+            },
+            "op": {
+              "value": -6284385117,
+              "raw": "(6,284,385,117)",
+              "account": "영업이익(손실)",
+              "column": "2026 3개월",
+              "document": "half_income"
+            },
+            "net": {
+              "value": -1795105037,
+              "raw": "(1,795,105,037)",
+              "account": "당기순이익(손실)",
+              "column": "2026 3개월",
+              "document": "half_income"
+            },
+            "cost_of_sales": {
+              "value": 171813552877,
+              "raw": "171,813,552,877",
+              "account": "매출원가",
+              "column": "2026 3개월",
+              "document": "half_income"
+            },
+            "sga": {
+              "value": 8280351578,
+              "raw": "8,280,351,578",
+              "account": "판매비와관리비",
+              "column": "2026 3개월",
+              "document": "half_income"
+            }
+          },
+          "unreported_metrics": [
+            "ocf",
+            "capex"
+          ]
+        },
+        {
+          "year": 2026,
+          "start": "2026-01-01",
+          "end": "2026-06-30",
+          "period_kind": "ytd",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "accession": "20260814002934",
+          "filed": "2026-08-14",
+          "start_basis": "손익·현금흐름표의 1월 1일~6월 30일 직접 표기",
+          "metrics": {
+            "revenue": {
+              "value": 285504314287,
+              "raw": "285,504,314,287",
+              "account": "매출액",
+              "column": "2026 누적",
+              "document": "half_income"
+            },
+            "op": {
+              "value": -20565822950,
+              "raw": "(20,565,822,950)",
+              "account": "영업이익(손실)",
+              "column": "2026 누적",
+              "document": "half_income"
+            },
+            "net": {
+              "value": -13018900367,
+              "raw": "(13,018,900,367)",
+              "account": "당기순이익(손실)",
+              "column": "2026 누적",
+              "document": "half_income"
+            },
+            "ocf": {
+              "value": -12691130328,
+              "raw": "(12,691,130,328)",
+              "account": "영업활동으로 인한 현금흐름",
+              "column": "2026 누적",
+              "document": "half_cash"
+            },
+            "capex": {
+              "value": 6182605209,
+              "raw": "(6,182,605,209)",
+              "account": "유형자산의 취득",
+              "column": "2026 누적",
+              "document": "half_cash",
+              "normalization": "현금유출 괄호값을 양의 취득 지출로 보존"
+            },
+            "cost_of_sales": {
+              "value": 288681435747,
+              "raw": "288,681,435,747",
+              "account": "매출원가",
+              "column": "2026 누적",
+              "document": "half_income"
+            },
+            "sga": {
+              "value": 17388701490,
+              "raw": "17,388,701,490",
+              "account": "판매비와관리비",
+              "column": "2026 누적",
+              "document": "half_income"
+            }
+          },
+          "unreported_metrics": []
+        },
+        {
+          "year": 2025,
+          "start": "2025-04-01",
+          "end": "2025-06-30",
+          "period_kind": "quarter",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "accession": "20260814002934",
+          "filed": "2026-08-14",
+          "start_basis": "반기 종료일과 3개월 열에서 산출; 검토보고서로 3개월 기간 확인. 4월 1일 직접 표기는 미확인",
+          "metrics": {
+            "revenue": {
+              "value": 122300509014,
+              "raw": "122,300,509,014",
+              "account": "매출액",
+              "column": "2025 3개월",
+              "document": "half_income"
+            },
+            "op": {
+              "value": -2551067223,
+              "raw": "(2,551,067,223)",
+              "account": "영업이익(손실)",
+              "column": "2025 3개월",
+              "document": "half_income"
+            },
+            "net": {
+              "value": -2672524214,
+              "raw": "(2,672,524,214)",
+              "account": "당기순이익(손실)",
+              "column": "2025 3개월",
+              "document": "half_income"
+            },
+            "cost_of_sales": {
+              "value": 117212590864,
+              "raw": "117,212,590,864",
+              "account": "매출원가",
+              "column": "2025 3개월",
+              "document": "half_income"
+            },
+            "sga": {
+              "value": 7638985373,
+              "raw": "7,638,985,373",
+              "account": "판매비와관리비",
+              "column": "2025 3개월",
+              "document": "half_income"
+            }
+          },
+          "unreported_metrics": [
+            "ocf",
+            "capex"
+          ]
+        },
+        {
+          "year": 2025,
+          "start": "2025-01-01",
+          "end": "2025-06-30",
+          "period_kind": "ytd",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "accession": "20260814002934",
+          "filed": "2026-08-14",
+          "start_basis": "손익·현금흐름표의 1월 1일~6월 30일 직접 표기",
+          "metrics": {
+            "revenue": {
+              "value": 238487533761,
+              "raw": "238,487,533,761",
+              "account": "매출액",
+              "column": "2025 누적",
+              "document": "half_income"
+            },
+            "op": {
+              "value": -13154537875,
+              "raw": "(13,154,537,875)",
+              "account": "영업이익(손실)",
+              "column": "2025 누적",
+              "document": "half_income"
+            },
+            "net": {
+              "value": -6432420694,
+              "raw": "(6,432,420,694)",
+              "account": "당기순이익(손실)",
+              "column": "2025 누적",
+              "document": "half_income"
+            },
+            "ocf": {
+              "value": -1185451432,
+              "raw": "(1,185,451,432)",
+              "account": "영업활동으로 인한 현금흐름",
+              "column": "2025 누적",
+              "document": "half_cash"
+            },
+            "capex": {
+              "value": 7243848620,
+              "raw": "(7,243,848,620)",
+              "account": "유형자산의 취득",
+              "column": "2025 누적",
+              "document": "half_cash",
+              "normalization": "현금유출 괄호값을 양의 취득 지출로 보존"
+            },
+            "cost_of_sales": {
+              "value": 236297198365,
+              "raw": "236,297,198,365",
+              "account": "매출원가",
+              "column": "2025 누적",
+              "document": "half_income"
+            },
+            "sga": {
+              "value": 15344873271,
+              "raw": "15,344,873,271",
+              "account": "판매비와관리비",
+              "column": "2025 누적",
+              "document": "half_income"
+            }
+          },
+          "unreported_metrics": []
+        }
+      ]
+    },
+    "460860": {
+      "ticker": "460860",
+      "name": "동국제강",
+      "corp_code": "01765265",
+      "reviewed_at": "2026-10-17",
+      "max_review_age_days": 180,
+      "source_type": "DART 공개 HTML 직접 검수; API 원응답 아님",
+      "notes": [
+        "2026-10-17 DART 공시 탐색과 해당 접수번호의 문서 목록에서 확인한 최신 반기 자료. 이후 제출·정정 확인을 대신하지 않는다.",
+        "별도재무(OFS)이며 대한제강 연결재무(CFS)와 범위가 다르다. 단일 분기 현금흐름을 반기 누적으로 대체하지 않는다."
+      ],
+      "documents": {
+        "annual_income": {
+          "accession": "20260313000519", "filed": "2026-03-13", "section": "손익계산서", "unit": "원", "currency": "KRW", "fs_div": "OFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260313000519&dcmNo=11119273&eleId=23&offset=267703&length=16830&dtd=dart4.xsd",
+          "sha256": "1be0c71f0b1d58d993f542d0e9f27aa301765dcef94f272adab0386d8af14dcb",
+          "headers": ["제 3 기 2025.01.01 부터 2025.12.31 까지", "제 2 기 2024.01.01 부터 2024.12.31 까지", "제 1 기 2023.06.01 부터 2023.12.31 까지", "(단위 : 원)"]
+        },
+        "half_income": {
+          "accession": "20260814001702",
+          "filed": "2026-08-14",
+          "section": "손익계산서",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814001702&dcmNo=11530736&eleId=23&offset=257995&length=19718&dtd=dart4.xsd",
+          "sha256": "bd03bfda7286370fd5d34ab879ede11282a596a5c9e05c0946e3b8e359831933",
+          "headers": [
+            "4-2. 손익계산서 손익계산서 제 4 기 반기 2026.01.01 부터 2026.06.30 까지 제 3 기 반기 2025.01.01 부터 2025.06.30 까지 (단위 : 원) 제 4 기 반기 제 3 기 반기 3개월 누적 3개월 누적 "
+          ]
+        },
+        "half_cash": {
+          "accession": "20260814001702",
+          "filed": "2026-08-14",
+          "section": "현금흐름표",
+          "unit": "원",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814001702&dcmNo=11530736&eleId=26&offset=311338&length=23246&dtd=dart4.xsd",
+          "sha256": "487ad1e5a1fd85177b2cb6db82bb4e3e71d09a03b669b6299e2b7eb271feceb9",
+          "headers": [
+            "4-5. 현금흐름표 현금흐름표 제 4 기 반기 2026.01.01 부터 2026.06.30 까지 제 3 기 반기 2025.01.01 부터 2025.06.30 까지 (단위 : 원) 제 4 기 반기 제 3 기 반기 "
+          ]
+        }
+      },
+      "periods": [
+        {
+          "year": 2026,
+          "start": "2026-04-01",
+          "end": "2026-06-30",
+          "period_kind": "quarter",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "accession": "20260814001702",
+          "filed": "2026-08-14",
+          "start_basis": "첨부 반기재무제표에 4월 1일~6월 30일 직접 표기",
+          "metrics": {
+            "revenue": {
+              "value": 995514578458,
+              "raw": "995,514,578,458",
+              "account": "매출액",
+              "column": "2026 3개월",
+              "document": "half_income"
+            },
+            "op": {
+              "value": 45563446844,
+              "raw": "45,563,446,844",
+              "account": "영업이익",
+              "column": "2026 3개월",
+              "document": "half_income"
+            },
+            "net": {
+              "value": 11645015990,
+              "raw": "11,645,015,990",
+              "account": "반기순이익",
+              "column": "2026 3개월",
+              "document": "half_income"
+            },
+            "cost_of_sales": {
+              "value": 886533793022,
+              "raw": "886,533,793,022",
+              "account": "매출원가",
+              "column": "2026 3개월",
+              "document": "half_income"
+            },
+            "sga": {
+              "value": 63417338592,
+              "raw": "63,417,338,592",
+              "account": "판매비와 관리비",
+              "column": "2026 3개월",
+              "document": "half_income"
+            }
+          },
+          "unreported_metrics": [
+            "ocf",
+            "capex"
+          ]
+        },
+        {
+          "year": 2026,
+          "start": "2026-01-01",
+          "end": "2026-06-30",
+          "period_kind": "ytd",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "accession": "20260814001702",
+          "filed": "2026-08-14",
+          "start_basis": "손익·현금흐름표의 1월 1일~6월 30일 직접 표기",
+          "metrics": {
+            "revenue": {
+              "value": 1852671211401,
+              "raw": "1,852,671,211,401",
+              "account": "매출액",
+              "column": "2026 누적",
+              "document": "half_income"
+            },
+            "op": {
+              "value": 67004301087,
+              "raw": "67,004,301,087",
+              "account": "영업이익",
+              "column": "2026 누적",
+              "document": "half_income"
+            },
+            "net": {
+              "value": 17854192802,
+              "raw": "17,854,192,802",
+              "account": "반기순이익",
+              "column": "2026 누적",
+              "document": "half_income"
+            },
+            "ocf": {
+              "value": 137488041100,
+              "raw": "137,488,041,100",
+              "account": "영업활동으로 인한 현금흐름",
+              "column": "2026 누적",
+              "document": "half_cash"
+            },
+            "capex": {
+              "value": 26571201289,
+              "raw": "(26,571,201,289)",
+              "account": "유형자산의 취득",
+              "column": "2026 누적",
+              "document": "half_cash",
+              "normalization": "현금유출 괄호값을 양의 취득 지출로 보존"
+            },
+            "cost_of_sales": {
+              "value": 1667857145701,
+              "raw": "1,667,857,145,701",
+              "account": "매출원가",
+              "column": "2026 누적",
+              "document": "half_income"
+            },
+            "sga": {
+              "value": 117809764613,
+              "raw": "117,809,764,613",
+              "account": "판매비와 관리비",
+              "column": "2026 누적",
+              "document": "half_income"
+            }
+          },
+          "unreported_metrics": []
+        },
+        {
+          "year": 2025,
+          "start": "2025-04-01",
+          "end": "2025-06-30",
+          "period_kind": "quarter",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "accession": "20260814001702",
+          "filed": "2026-08-14",
+          "start_basis": "첨부 반기재무제표에 4월 1일~6월 30일 직접 표기",
+          "metrics": {
+            "revenue": {
+              "value": 893658443588,
+              "raw": "893,658,443,588",
+              "account": "매출액",
+              "column": "2025 3개월",
+              "document": "half_income"
+            },
+            "op": {
+              "value": 29915366057,
+              "raw": "29,915,366,057",
+              "account": "영업이익",
+              "column": "2025 3개월",
+              "document": "half_income"
+            },
+            "net": {
+              "value": 9183260824,
+              "raw": "9,183,260,824",
+              "account": "반기순이익",
+              "column": "2025 3개월",
+              "document": "half_income"
+            },
+            "cost_of_sales": {
+              "value": 806153892755,
+              "raw": "806,153,892,755",
+              "account": "매출원가",
+              "column": "2025 3개월",
+              "document": "half_income"
+            },
+            "sga": {
+              "value": 57589184776,
+              "raw": "57,589,184,776",
+              "account": "판매비와 관리비",
+              "column": "2025 3개월",
+              "document": "half_income"
+            }
+          },
+          "unreported_metrics": [
+            "ocf",
+            "capex"
+          ]
+        },
+        {
+          "year": 2025,
+          "start": "2025-01-01",
+          "end": "2025-06-30",
+          "period_kind": "ytd",
+          "currency": "KRW",
+          "fs_div": "OFS",
+          "accession": "20260814001702",
+          "filed": "2026-08-14",
+          "start_basis": "손익·현금흐름표의 1월 1일~6월 30일 직접 표기",
+          "metrics": {
+            "revenue": {
+              "value": 1619207826468,
+              "raw": "1,619,207,826,468",
+              "account": "매출액",
+              "column": "2025 누적",
+              "document": "half_income"
+            },
+            "op": {
+              "value": 34170312315,
+              "raw": "34,170,312,315",
+              "account": "영업이익",
+              "column": "2025 누적",
+              "document": "half_income"
+            },
+            "net": {
+              "value": 11634556749,
+              "raw": "11,634,556,749",
+              "account": "반기순이익",
+              "column": "2025 누적",
+              "document": "half_income"
+            },
+            "ocf": {
+              "value": 49497024510,
+              "raw": "49,497,024,510",
+              "account": "영업활동으로 인한 현금흐름",
+              "column": "2025 누적",
+              "document": "half_cash"
+            },
+            "capex": {
+              "value": 37366920090,
+              "raw": "(37,366,920,090)",
+              "account": "유형자산의 취득",
+              "column": "2025 누적",
+              "document": "half_cash",
+              "normalization": "현금유출 괄호값을 양의 취득 지출로 보존"
+            },
+            "cost_of_sales": {
+              "value": 1476702015535,
+              "raw": "1,476,702,015,535",
+              "account": "매출원가",
+              "column": "2025 누적",
+              "document": "half_income"
+            },
+            "sga": {
+              "value": 108335498618,
+              "raw": "108,335,498,618",
+              "account": "판매비와 관리비",
+              "column": "2025 누적",
+              "document": "half_income"
+            }
+          },
+          "unreported_metrics": []
+        },
+        {
+          "year": 2024, "start": "2024-01-01", "end": "2024-12-31", "period_kind": "annual", "currency": "KRW", "fs_div": "OFS", "accession": "20260313000519", "filed": "2026-03-13",
+          "metrics": {
+            "revenue": {"value": 3527525783006, "raw": "3,527,525,783,006", "account": "매출액", "column": "제 2 기", "document": "annual_income"},
+            "op": {"value": 102474077764, "raw": "102,474,077,764", "account": "영업이익", "column": "제 2 기", "document": "annual_income"},
+            "net": {"value": 34835234266, "raw": "34,835,234,266", "account": "당기순이익", "column": "제 2 기", "document": "annual_income"},
+            "cost_of_sales": {"value": 3188056704780, "raw": "3,188,056,704,780", "account": "매출원가", "column": "제 2 기", "document": "annual_income"},
+            "sga": {"value": 236995000462, "raw": "236,995,000,462", "account": "판매비와 관리비", "column": "제 2 기", "document": "annual_income"}
+          }
+        },
+        {
+          "year": 2025, "start": "2025-01-01", "end": "2025-12-31", "period_kind": "annual", "currency": "KRW", "fs_div": "OFS", "accession": "20260313000519", "filed": "2026-03-13",
+          "metrics": {
+            "revenue": {"value": 3203431341223, "raw": "3,203,431,341,223", "account": "매출액", "column": "제 3 기", "document": "annual_income"},
+            "op": {"value": 59380409698, "raw": "59,380,409,698", "account": "영업이익", "column": "제 3 기", "document": "annual_income"},
+            "net": {"value": 8231853074, "raw": "8,231,853,074", "account": "당기순이익", "column": "제 3 기", "document": "annual_income"},
+            "cost_of_sales": {"value": 2929983987929, "raw": "2,929,983,987,929", "account": "매출원가", "column": "제 3 기", "document": "annual_income"},
+            "sga": {"value": 214066943596, "raw": "214,066,943,596", "account": "판매비와 관리비", "column": "제 3 기", "document": "annual_income"}
+          }
+        }
+      ]
     }
   }
 }

@@ -17,7 +17,7 @@ else:
 
 
 REGISTRY_PATH = Path(__file__).parent / "_content" / "report_kr_primary_reviews.json"
-METRICS = ("revenue", "op", "net", "ocf", "capex")
+METRICS = ("revenue", "op", "net", "ocf", "capex", "cost_of_sales", "sga")
 _DART = "https://dart.fss.or.kr/"
 
 
@@ -95,7 +95,7 @@ def _period_ok(row, documents, today):
     start, end = _date(row.get("start")), _date(row.get("end"))
     if not filed or filed > today or not start or not end or start >= end:
         return False
-    if row.get("year") != end.year or row.get("currency") != "KRW" or row.get("fs_div") != "CFS":
+    if row.get("year") != end.year or row.get("currency") != "KRW" or row.get("fs_div") not in ("CFS", "OFS"):
         return False
     metrics = row.get("metrics") or {}
     if not metrics or any(key not in METRICS for key in metrics):

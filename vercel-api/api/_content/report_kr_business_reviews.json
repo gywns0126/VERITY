@@ -3,7 +3,7 @@
     "ticker": "084010",
     "name": "대한제강",
     "corp_code": "00113225",
-    "reviewed_at": "2026-10-16",
+    "reviewed_at": "2026-10-17",
     "max_review_age_days": 180,
     "period": {
       "start": "2026-01-01",
@@ -57,6 +57,46 @@
         "text": "2026년 반기 철스크랩 평균매입단가는 대한제강(주) 480천원/톤, 와이케이스틸(주) 478천원/톤이다. 이는 구매금액÷구매량이며 매출원가나 철근 판매단가와의 차이를 이익률로 해석할 수 없다.",
         "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814003201&dcmNo=11536243&eleId=9&offset=113305&length=188649&dtd=dart4.xsd",
         "period": "2026-01-01/2026-06-30"
+      },
+      {
+        "label": "영업이익 증감",
+        "text": "반기 연결 영업이익은 92.80억→167.81억원이다. 동일 손익표 자체계산으로 매출총이익 증가 +60.58억원, 판매비 감소 +39.58억원, 관리비 증가 −25.15억원이 영업이익 증가 +75.00억원과 일치한다(반올림 전 대조). 이는 회계 항목별 증감이며 수출 물량·판매가격·원재료 가격 각각의 인과적 기여액은 아니다.",
+        "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814003201&dcmNo=11536243&eleId=21&offset=361350&length=46931&dtd=dart4.xsd",
+        "period": "2026-01-01/2026-06-30",
+        "classification": "accounting_line_change_not_causal_attribution",
+        "amount_evidence": {
+          "currency": "KRW", "fs_div": "CFS", "prior_period": "2025-01-01/2025-06-30",
+          "gross_profit": {"prior": 42980100095, "current": 49037892499, "effect": 6057792404},
+          "selling_expense": {"prior": 11456510560, "current": 7498642687, "effect": 3957867873},
+          "administrative_expense": {"prior": 22243184699, "current": 24758617814, "effect": -2515433115},
+          "operating_income": {"prior": 9280404836, "current": 16780631998, "change": 7500227162}
+        }
+      },
+      {
+        "label": "영업 외 손익",
+        "text": "반기 지분법 순손익(이익−손실)은 67.03억→0.08억원으로 66.95억원 감소했다. 기타수익−기타비용은 79.14억원 악화, 금융수익−금융비용은 17.15억원 개선, 법인세비용은 10.16억원 증가했다. 영업이익 증가 75.00억원과 합산하면 계속영업이익 감소 64.08억원과 일치한다(동일 표 자체계산·반올림 전 대조). 지분법손익 감소만을 유일한 원인으로 단정하지 않는다.",
+        "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814003201&dcmNo=11536243&eleId=21&offset=361350&length=46931&dtd=dart4.xsd",
+        "period": "2026-01-01/2026-06-30",
+        "classification": "accounting_line_change_not_causal_attribution",
+        "amount_evidence": {
+          "currency": "KRW", "fs_div": "CFS", "prior_period": "2025-01-01/2025-06-30",
+          "equity_income": {"prior": 7883044280, "current": 615704394},
+          "equity_loss": {"prior": 1180050023, "current": 607364827},
+          "other_income": {"prior": 2071357775, "current": 2571080703},
+          "other_expense": {"prior": 5412340332, "current": 13825720501},
+          "finance_income": {"prior": 7575287157, "current": 12174163755},
+          "finance_cost": {"prior": 2189617920, "current": 5073050802},
+          "tax": {"prior": 1174056071, "current": 2189913684},
+          "continuing_income": {"prior": 16854029702, "current": 10445531036}
+        }
+      },
+      {
+        "label": "중단영업",
+        "text": "주석 22는 2026-06-30 Daehan Steel America, Inc. 청산 신청과 당반기 관련 손익의 중단영업 표시를 명시한다. 반기 중단사업손익은 +3.32억→−14.12억원으로 17.43억원 악화했다. 손익표·주석의 동일 금액을 대조했으며, 영업이익에 다시 합산하거나 2025년 연간 매출 차이 전체의 원인으로 단정하지 않는다.",
+        "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260814003201&dcmNo=11536243&eleId=46&offset=1456247&length=25521&dtd=dart4.xsd",
+        "period": "2026-01-01/2026-06-30",
+        "classification": "reported_discontinued_operation_not_operating_driver",
+        "amount_evidence": {"currency": "KRW", "fs_div": "CFS", "prior_period": "2025-01-01/2025-06-30", "prior": 331820661, "current": -1411579697, "change": -1743400358}
       }
     ],
     "peers": [

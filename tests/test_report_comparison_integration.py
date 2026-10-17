@@ -36,3 +36,50 @@ def test_arbitrary_issuers_use_same_pipeline_and_prompt_contract():
     prompt = analysis_prompt(report)
     assert 'peer_comparison' in prompt and 'attribution' in prompt
     assert '미설명 잔여분' in prompt
+
+
+def test_reviewed_peer_quarters_are_used_without_erasing_scope_difference():
+    stocks = [{'ticker': '084010', 'name': '대한제강'},
+              {'ticker': '104700', 'name': '한국철강', 'gics_ko': '철강'},
+              {'ticker': '460860', 'name': '동국제강', 'gics_ko': '철강'}]
+    docs = {'stock_report_public.json': {'stocks': stocks}}
+    now = datetime(2026, 10, 17, tzinfo=timezone.utc)
+    fetch = lambda n: docs.get(n, {})
+    daehan = build_report('084010', fetch, now)
+    assert daehan['peer_comparison']['qualified'] == 0
+    for row in daehan['peer_comparison']['rows']:
+        assert 'fs_div_mismatch' in row['reasons']
+        assert 'missing_financial_evidence' not in row['reasons']
+        assert 'no_sourced_income' not in row['reasons']
+        assert 'kr_review_applied' not in row['reasons']
+        assert row['enrichment'] == 'kr_review_applied'
+        assert any(p['start'] == '2026-04-01' and p['end'] == '2026-06-30' for p in row['available_periods'])
+    section = next(s for s in daehan['sections'] if s['id'] == 'R4H')
+    for row in section['rows']:
+        assert '2026-04-01' in row[3]['text'] and '별도' in row[3]['text']
+        assert 'rcpNo=2026081400' in row[3]['url']
+    korean = build_report('104700', fetch, now)
+    assert korean['reader']['current']['end'] == '2026-06-30'
+    assert korean['reader']['current']['fs_div'] == 'OFS'
+    assert korean['peer_comparison']['qualified'] == 1
+    peer = korean['peer_comparison']['rows'][0]
+    assert peer['ticker'] == '460860' and peer['metrics']['net']['value'] == 11645015990
+    assert not peer['ranking_allowed']
+
+
+def test_held_exact_period_keeps_source_but_future_or_stale_period_does_not():
+    target, peer = stock('123456'), stock('234567')
+    target['financial_evidence']['periods'][0]['accounting_standard'] = 'K-IFRS'
+    period = peer['financial_evidence']['periods'][0]
+    period['accounting_standard'] = 'US-GAAP'
+    docs = {'stock_report_public.json': {'stocks': [target, peer]}}
+    fetch = lambda n: docs.get(n, {})
+    now = datetime(2026, 10, 17, tzinfo=timezone.utc)
+    result = build_report('123456', fetch, now)
+    assert 'accounting_standard_mismatch' in result['peer_comparison']['rows'][0]['reasons']
+    last = lambda r: next(s for s in r['sections'] if s['id'] == 'R4H')['rows'][0][3]
+    assert last(result)['url'] == period['source_url']
+    period['filed'] = '2027-01-01'
+    assert last(build_report('123456', fetch, now)) == '기간·원문 미연결'
+    period['filed'] = '2026-08-14'
+    assert last(build_report('123456', fetch, datetime(2027, 10, 17, tzinfo=timezone.utc))) == '기간·원문 미연결'

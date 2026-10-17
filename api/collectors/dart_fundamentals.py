@@ -90,6 +90,23 @@ def _sga_split_amount(row: dict) -> int | None:
     return int(raw.replace(",", ""))
 
 
+def _net_income_priority(row: dict) -> int:
+    """Total profit/loss outranks exact-label fallback, independent of its value.
+
+    Owner/NCI attribution, EPS and reclassification lines are not the total.
+    A conflicting standard IFRS concept cannot be rescued by a familiar label.
+    """
+    aid = str(row.get("account_id") or "")
+    if aid in ("ifrs-full_ProfitLoss", "ifrs_ProfitLoss"):
+        return 2
+    if aid.startswith(("ifrs-full_", "ifrs_")):
+        return 0
+    label = re.sub(r"\s+", "", str(row.get("account_nm") or ""))
+    label = re.sub(r"\(주\d+(?:,\d+)*\)$", "", label)
+    return int(bool(re.fullmatch(
+        r"(?:연결)?(?:당기|분기|반기)(?:순이익(?:\(손실\))?|순손실|순손익)", label)))
+
+
 def _extract_pl_bs_from_dart(data: dict, *, source_rows=None, request_context: dict | None = None) -> dict:
     """DART fnlttSinglAcntAll.json 응답에서 PL/BS/CF 핵심 항목 추출.
 
@@ -144,6 +161,8 @@ def _extract_pl_bs_from_dart(data: dict, *, source_rows=None, request_context: d
 
     sga_total_seen = False
     sga_parts = {"판매비": [], "관리비": []}
+    net_income_priority = 0
+    net_total_rows = []
     for item in data.get("list", []):
         sj = item.get("sj_div", "")
         acct = item.get("account_nm", "")
@@ -179,6 +198,7 @@ def _extract_pl_bs_from_dart(data: dict, *, source_rows=None, request_context: d
             elif acct.strip() in ("건물", "건물및구축물"):
                 out["buildings"] = max(out["buildings"], amount)
         elif sj in ("IS", "CIS"):
+            net_priority = _net_income_priority(item)
             if aid in ("ifrs-full_Revenue", "ifrs_Revenue"):
                 # 총계 정본 = account_id (BS/IS/CF 동일 정책). account_nm 이 '매출'/'매출액'/'영업수익'/
                 #   '수익(매출액)'/'매출 및 지분법손익' 어떤 변형이든 id 불변. 구 substring '수익(매출액)' 은
@@ -197,21 +217,16 @@ def _extract_pl_bs_from_dart(data: dict, *, source_rows=None, request_context: d
                 #   '계속영업이익(손실)'(세후≈순이익)·'중단영업이익(손실)'·'주당…계속영업이익(손실)'(EPS)을 흡수해
                 #   op 를 자릿수/부호 파탄내던 구버그(LGES op 5,287원 vs 2.16조·GS 부호역전) 방어.
                 _assign("operating_profit", amount, item)
-            elif item.get("account_id") == "ifrs-full_ProfitLoss":
-                # 🚨 순이익 총계 정본 = account_id ifrs-full_ProfitLoss (NCI 포함 총계). 부호 보존
-                #   (손실=음수), max 제거. 이전 max(0,음수) 클램프가 적자기업 순이익을 0으로 왜곡 →
-                #   roa/roe null + LG화학류 wrong-sign. eq=자산-부채(NCI 포함) 분모와 정합.
-                #   (2026-07-17: 분기순이익/반기순이익 라벨도 이 정본에 흡수 — 분기 roa 복원 유지)
+            elif net_priority == 2 or (net_priority == 1 and net_income_priority == 0):
+                # Total includes NCI; reported zero is an observation, not an
+                # invitation to replace it with attribution/EPS/OCI amounts.
                 _assign("net_income", amount, item)
-            elif out["net_income"] == 0 and "지분" not in acct and "차감전" not in acct and (
-                    "당기순이익" in acct or "당기순손실" in acct or "당기순손익" in acct
-                    or "분기순이익" in acct or "분기순손실" in acct or "분기순손익" in acct
-                    or "반기순이익" in acct or "반기순손실" in acct or "반기순손익" in acct):
-                # account_id 부재(구 K-GAAP/비표준) fallback. '지분'(지배/비지배 소분해)·'차감전'(pretax) 배제.
-                _assign("net_income", amount, item)
+                net_income_priority = net_priority
+                if net_priority == 2:
+                    net_total_rows.append(item)
             elif "법인세차감전" in acct or "법인세비용차감전" in acct:
                 _assign("pretax_income", amount, item)
-            elif "판매비와관리비" in acct:
+            elif "판매비와관리비" in re.sub(r"\s+", "", acct):
                 _assign("sga", amount, item)
                 sga_total_seen = True
             elif re.fullmatch(r"\s*(판매비|관리비)\s*(?:\(\s*주\s*[\d,\s]+\))?\s*", acct):
@@ -236,6 +251,14 @@ def _extract_pl_bs_from_dart(data: dict, *, source_rows=None, request_context: d
                 _assign("investing_cashflow", amount, item)
             elif aid == "ifrs-full_CashFlowsFromUsedInFinancingActivities" or "재무활동현금흐름" in acct or acct == "재무활동으로 인한 현금흐름":
                 _assign("financing_cashflow", amount, item)
+    if len({_parse_int(row.get("thstrm_amount")) for row in net_total_rows}) > 1:
+        # A single requested statement must not silently choose the last of
+        # conflicting standardized totals. Unknown flows to existing evidence
+        # handling; diagnostics stay in the already optional source_rows map.
+        out["net_income"] = None
+        if source_rows is not None:
+            source_rows.pop("net_income", None)
+            source_rows.setdefault("_conflicts", {})["net_income"] = [dict(row) for row in net_total_rows]
     if not sga_total_seen and all(len(rows) == 1 for rows in sga_parts.values()):
         selling, administrative = sga_parts["판매비"][0], sga_parts["관리비"][0]
         identity = _sga_split_identity(selling, request_context)
