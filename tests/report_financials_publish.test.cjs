@@ -46,3 +46,20 @@ test('reviewed operating profit maps only to operating_profit and preserves net'
     h.rows[0].fundamentals.operating_profit=op.before;
     assert.throws(()=>repair(d,newer,h));
 });
+test('explicit reviewed missing op may be filled; unknown and zero values never count as missing',()=>{
+    const op={...c,metric:'op',before:null,after:298172334242,raw_text:'298,172,334,242',reported_unit:'원',unit_multiplier:1};
+    const newer={schema:'reviewed-kr-annual-financial-corrections-v2',rows:[op]};
+    const d=structuredClone(doc);d.stocks[0].fin_series[0].op=null;
+    const h=structuredClone(history);h.rows[0].fundamentals.operating_profit=op.after;
+    const result=repair(d,newer,h);
+    assert.equal(result.next.stocks[0].fin_series[0].op,op.after);
+    assert.equal(result.next.stocks[0].fin_series[0].net,c.before);
+    assert.deepEqual(repair(result.next,newer,h).changed,[]);
+    for (const value of [0,123,undefined]) {
+        const bad=structuredClone(d);bad.stocks[0].fin_series[0].op=value;
+        assert.throws(()=>repair(bad,newer,h));
+    }
+    assert.throws(()=>repair(d,{...newer,schema:manifest.schema},h));
+    assert.throws(()=>repair(d,{...newer,rows:[{...op,after:null}]},h));
+    assert.throws(()=>repair(d,{...newer,rows:[{...op,metric:'net'}]},h));
+});

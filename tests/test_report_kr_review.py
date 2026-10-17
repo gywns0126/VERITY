@@ -216,3 +216,21 @@ def test_discontinued_results_are_not_operating_profit_or_total_net():
     assert _by_period(wia,2024,'annual')['op'] == 218810000000
     assert current['metric_sources']['net']['name'] == '당기순이익'
     assert current['metric_sources']['op']['unit_multiplier'] == 1000000
+
+
+def test_ecopro_and_kakaogames_total_losses_do_not_use_positive_nci_parts():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    eco = review.reviewed_financials('086520', {'ticker':'086520','name':'에코프로','corp_code':'00536541'}, [], now)
+    current = _by_period(eco,2025,'annual')
+    assert current['net'] == -105539603168 and current['net'] != 44234880608
+    assert _by_period(eco,2023,'annual')['op'] == 298172334242
+    assert _by_period(eco,2024,'annual')['net'] == -295367033134
+    assert current['metric_sources']['net']['name'] == '당기순이익(손실)'
+    games = review.reviewed_financials('293490', {'ticker':'293490','name':'카카오게임즈','corp_code':'01137383'}, [], now)
+    current = _by_period(games,2025,'annual')
+    assert current['net'] == -143084637075 and current['net'] != 611118797
+    assert current['op'] == -39590701112 and current['revenue'] == 465018566528
+    assert {r['year'] for r in games} == {2024,2025}  # Original 2023 history is not silently restated.
+    assert 'sga' not in current  # Operating expenses are not reported SG&A.
+    assert current['metric_sources']['net']['unit_multiplier'] == 1
+    assert review.reviewed_entry('293490', {'ticker':'293490','name':'카카오게임즈','corp_code':'00258801'}, now) is None
