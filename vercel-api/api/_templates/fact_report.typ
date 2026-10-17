@@ -35,9 +35,10 @@
 }
 #let logo = D.at("logo_png", default: ())
 #grid(columns: (12mm, 1fr, auto), gutter: 3mm,
-  rect(width: 12mm, height: 12mm, radius: 3mm, inset: 0pt, stroke: none, fill: fill,
+  block(width: 12mm, height: 12mm, radius: 3mm, clip: true, breakable: false,
+    above: 0pt, below: 0pt, inset: 1.5pt, stroke: 1.5pt + hair, fill: fill,
     if logo.len() > 0 {
-      image(bytes(logo), format: "png", width: 12mm, height: 12mm, fit: "contain")
+      image(bytes(logo), format: "png", width: 100%, height: 100%, fit: "contain")
     } else { align(center + horizon, text(size: 17pt, weight: 800, fill: accent)[#D.name.first()]) }),
   [#text(size: 19pt, weight: 800)[#D.name]
    #linebreak()#if D.at("flag_svg", default: "") != "" [#box(image(bytes(D.flag_svg), format: "svg", width: 4mm))#h(1mm)]
