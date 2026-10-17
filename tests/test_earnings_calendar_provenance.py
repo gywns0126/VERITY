@@ -1,7 +1,11 @@
 """No network or production writes: provider estimates and stale pattern bounds."""
 import ast
 import datetime
+import os
 from pathlib import Path
+import subprocess
+import tempfile
+import textwrap
 import unittest
 from unittest.mock import patch
 
@@ -55,6 +59,81 @@ class EarningsCalendarProvenanceTests(unittest.TestCase):
         result = namespace['_kr_earnings_window'](fresh)
         self.assertTrue(result['is_estimated'])
         self.assertIn('미대조', result['basis'])
+
+
+class CalendarCheckpointPushTests(unittest.TestCase):
+    """Execute the actual two workflow shell steps with Git/network fully mocked."""
+    STEPS = ('Preserve only official calendar checkpoint',
+             'Apply the same calendar fields to public fallback')
+
+    def run_step(self, name, mode):
+        workflow = (Path(__file__).resolve().parents[1] /
+                    '.github/workflows/daily_analysis_full.yml').read_text()
+        job = workflow.split('\n  calendar_only:\n', 1)[1]
+        block = job.split('      - name: ' + name + '\n', 1)[1].split('\n      - ', 1)[0]
+        script = textwrap.dedent(block.split('        run: |\n', 1)[1])
+        # Functions shadow commands only inside this child shell; no real Git or Node.
+        stub = r'''
+push_count=0
+git() {
+  printf '%s\n' "$*" >> "$GIT_LOG"
+  if [ "$1" = "-C" ]; then shift 2; fi
+  case "$1" in
+    diff)
+      if [ "$2" = "--name-only" ]; then return 0; fi
+      return 1 ;;
+    pull)
+      if [ "$TEST_MODE" = "conflict" ]; then return 1; fi
+      return 0 ;;
+    push)
+      push_count=$((push_count + 1))
+      if [ "$TEST_MODE" = "always_fail" ]; then return 1; fi
+      if [ "$push_count" -eq 1 ]; then return 1; fi
+      return 0 ;;
+    *) return 0 ;;
+  esac
+}
+node() { return 0; }
+sleep() { return 0; }
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'data').mkdir()
+            (root / 'data/kr_earnings_calendar.json').write_text('{}')
+            result = subprocess.run(['bash', '-c', stub + '\n' + script], cwd=tmp,
+                                    env=dict(os.environ, GIT_LOG=str(root / 'git.log'), TEST_MODE=mode),
+                                    text=True, capture_output=True, timeout=10)
+            commands = (root / 'git.log').read_text().splitlines()
+        normalized = [line.removeprefix('-C _report_published ') for line in commands]
+        self.assertFalse(any('--force' in line or ' -X ' in line or
+                             'rebase --abort' in line for line in normalized))
+        return result, normalized
+
+    def test_first_push_race_rebases_then_succeeds(self):
+        for name in self.STEPS:
+            with self.subTest(step=name):
+                result, commands = self.run_step(name, 'first_race')
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                self.assertEqual(commands.count('pull --rebase --autostash origin main'), 2)
+                self.assertEqual(commands.count('push origin HEAD:main'), 2)
+
+    def test_five_failed_pushes_fail_closed(self):
+        for name in self.STEPS:
+            with self.subTest(step=name):
+                result, commands = self.run_step(name, 'always_fail')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(commands.count('pull --rebase --autostash origin main'), 5)
+                self.assertEqual(commands.count('push origin HEAD:main'), 5)
+                self.assertIn('failed after 5 attempts', result.stdout)
+
+    def test_rebase_conflict_stops_before_push(self):
+        for name in self.STEPS:
+            with self.subTest(step=name):
+                result, commands = self.run_step(name, 'conflict')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(commands.count('pull --rebase --autostash origin main'), 1)
+                self.assertEqual(commands.count('push origin HEAD:main'), 0)
+                self.assertIn('manual conflict review required', result.stdout)
 
 
 if __name__ == '__main__':
