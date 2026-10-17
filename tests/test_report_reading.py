@@ -108,3 +108,7 @@ def test_financial_checklist_does_not_treat_missing_capex_as_industrial_gap():
     assert '취득 지출' not in r['cards'][2]['detail']
     assert '금융업' in r['checklist'][2]['next']
     assert '영업이익률' not in r['checklist'][1]['state']
+    assert '이익률' not in r['checklist'][1]['next']
+    assert '영업이익 금액' in r['checklist'][1]['next']
+    assert '가격·물량' not in r['checklist'][3]['next']
+    assert '영업수익·영업비용' in r['checklist'][3]['next']

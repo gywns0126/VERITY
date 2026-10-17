@@ -43,6 +43,16 @@ def test_missing_capex_not_zero_and_financial_fcf_not_applicable():
     assert len(r['cash_rows']) == 3 and any('금융업' in s for s in r['cash_notes'])
 
 
+def test_financial_reader_preserves_amounts_without_industrial_margin_observation():
+    rows = [period(2024), period(2025)]
+    before = reader_financials(rows)
+    financial = reader_financials(rows, is_financial=True)
+    assert any('영업이익률' in text for text in before['observations'])
+    assert not any('영업이익률' in text for text in financial['observations'])
+    assert financial['rows'] == before['rows']
+    assert financial['current'] is rows[-1] and financial['prior'] is rows[0]
+
+
 def test_zero_negative_and_unknown_income_do_not_invent_ratios():
     a, b = period(2024), period(2025)
     a.update(revenue=0, op=-20, net=None)

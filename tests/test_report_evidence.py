@@ -353,3 +353,41 @@ def test_summary_rejects_wrong_displayed_filing_link_with_correct_metric_links()
     s['financial_evidence'] = {'periods': [row]}
     report = build_report('000650', lambda name: docs.get(name, {}), datetime(2026, 10, 17, tzinfo=timezone.utc))
     assert section(report, 'R2')['rows'][0] == ['손익계산서', '매출', '0']
+
+
+def test_kr_financial_sector_holds_industrial_bridge_but_keeps_reviewed_amounts():
+    import report_kr_review
+    entry = report_kr_review._registry()['003470']
+    stock = {'ticker': '003470', 'name': entry['name'], 'gics_ko': '금융',
+             'peer': {'sector': '금융', 'n': 0, 'rows': []},
+             'financials': {'period': '2025'}}
+    before = copy.deepcopy(stock)
+    docs = {'stock_report_public.json': {'stocks': {'003470': stock}}}
+    report = build_report('003470', lambda name: docs.get(name, {}),
+                          datetime(2026, 10, 17, tzinfo=timezone.utc))
+    reviewed = entry['periods'][-1]
+    assert section(report, 'R2')['rows'][:3] == [
+        ['손익계산서 · 원문 검수', '매출', '3.46조원'],
+        ['손익계산서 · 원문 검수', '영업이익', '993.79억원'],
+        ['손익계산서 · 원문 검수', '순이익', '956.32억원'],
+    ]
+    assert report['reader']['current']['revenue'] == reviewed['metrics']['revenue']['value']
+    assert report['reader']['current']['op'] == reviewed['metrics']['op']['value']
+    assert report['reader']['current']['source_url'].endswith('rcpNo=' + reviewed['accession'])
+    assert report['comparison']['changes'] and report['comparison']['bridge'] is None
+    assert not any(s['id'] == 'R5' for s in report['sections'])
+    assert not any('영업이익률' in s for s in report['reader']['observations'])
+    assert 'margin' not in report['reader']['visuals']['charts']
+    assert 'bridge' not in report['reader']['visuals']['charts']
+    assert '금융업' in report['attribution']['note']
+    assert report['summary'][2]['title'] == '이익과 현금의 차이'
+    assert any('금융업은 일반 기업식' in gap for gap in report['gaps'])
+    assert stock == before
+
+
+@pytest.mark.parametrize('is_financial', [False, True])
+def test_us_financial_classification_still_comes_from_sec_metadata(is_financial):
+    ticker, docs, _ = fixture()
+    docs['us_financials/CAT.json'] = {'ticker': ticker, 'meta': {'cik': '18230', 'is_financial': is_financial}}
+    report = build(docs, ticker)
+    assert any(s['id'] == 'R5' for s in report['sections']) is not is_financial

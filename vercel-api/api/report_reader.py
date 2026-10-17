@@ -81,7 +81,7 @@ def reader_financials(periods, is_financial=False):
             rows.append([label, format_money(before, current["currency"]), format_money(value, current["currency"]), change])
             metrics.append({"label": label, "current": rows[-1][2], "prior": rows[-1][1],
                             "change": change_display(before, value, profit=key != "revenue")})
-        if prior and all(_number(r.get(k)) is not None for r in (prior, current) for k in ("revenue", "op")):
+        if not is_financial and prior and all(_number(r.get(k)) is not None for r in (prior, current) for k in ("revenue", "op")):
             if prior["revenue"] > 0 and current["revenue"] > 0:
                 m0, m1 = prior["op"] / prior["revenue"] * 100, current["op"] / current["revenue"] * 100
                 observations.append(f"영업이익률 {m0:.1f}% → {m1:.1f}% ({m1-m0:+.1f}%p). 매출 중 영업이익으로 남은 비율입니다.")
