@@ -18,7 +18,10 @@ function repair(doc, manifest, history) {
         const key = correction.ticker + ':' + correction.year + (metric === 'net' ? '' : ':' + metric);
         assert(!seen.has(key), 'duplicate correction'); seen.add(key);
         assert(/^[0-9]{6}$/.test(correction.ticker));
-        assert(Number.isSafeInteger(correction.before) && Number.isSafeInteger(correction.after));
+        const reviewedMissingOp = manifest.schema === 'reviewed-kr-annual-financial-corrections-v2'
+            && metric === 'op' && correction.before === null;
+        assert(Number.isSafeInteger(correction.before) || reviewedMissingOp, 'unknown previous amount');
+        assert(Number.isSafeInteger(correction.after));
         assert.equal(correction.currency, 'KRW');
         assert(['CFS', 'OFS'].includes(correction.fs_div));
         assert.equal(correction.start, correction.year + '-01-01');
