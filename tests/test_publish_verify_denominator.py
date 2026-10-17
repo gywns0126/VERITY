@@ -71,7 +71,9 @@ def test_repeated_failures_do_not_erase_successful_baseline(tmp_path, monkeypatc
 def test_malformed_history_row_does_not_crash_or_erase_baseline(tmp_path, monkeypatch):
     hist = tmp_path / "history.jsonl"
     rows = [{"results": [{"file": "stock_report_public.json", "ok": True, "total": 2500}]},
-            {"results": [1]}, [], {"results": "bad"}]
+            {"results": [1]}, [], {"results": "bad"},
+            {"results": [{"file": "stock_report_public.json", "ok": True,
+                          "total": 2500, "coverage": [1]}]}]
     hist.write_text("\n".join(json.dumps(row) for row in rows) + "\n")
     monkeypatch.setattr(publish_verify, "HIST", str(hist))
     assert publish_verify._baseline_from_history("stock_report_public.json", 2440)["_total"] == 2500

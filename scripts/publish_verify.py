@@ -114,7 +114,10 @@ def _baseline_from_history(fname: str, current_total: int) -> dict:
             delta_pct = abs(n - current_total) * 100.0 / max(current_total, 1)
             if delta_pct > _RATCHET_N_TOL:
                 continue
-            for k, v in (r.get("coverage") or {}).items():
+            coverage = r.get("coverage")
+            if not isinstance(coverage, dict):
+                coverage = {}
+            for k, v in coverage.items():
                 if isinstance(v, (int, float)) and v > best.get(k, -1):
                     best[k] = v
             if n > best_n:
