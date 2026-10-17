@@ -17,6 +17,7 @@ import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from uuid import uuid4
 
 import requests
 
@@ -31,6 +32,9 @@ STORAGE_ERROR_CODES = frozenset({
     "EntityTooLarge", "InvalidMimeType", "InvalidRequest", "InvalidKey", "InvalidBucketName",
     "InvalidJWT", "AccessDenied", "NoSuchKey", "NoSuchBucket", "ResourceAlreadyExists",
     "KeyAlreadyExists", "AlreadyExists", "already_exists", "not_found", "unauthorized",
+})
+STORAGE_CACHE_STATES = frozenset({
+    "HIT", "MISS", "EXPIRED", "STALE", "BYPASS", "DYNAMIC", "REVALIDATED", "UPDATING", "NONE",
 })
 
 # (로컬 소스, bucket 내 경로, content-type).
@@ -165,6 +169,33 @@ def _storage_diagnostic(stage: str, response, byte_count: int):
     }, separators=(",", ":")), file=sys.stderr)
 
 
+def _fresh_private_get(url: str, key: str):
+    """One authenticated origin read; cacheNonce bypasses Storage's CDN cache.
+
+    Request no-cache headers alone do not select a new CDN cache entry. Use a
+    unique nonce even for immutable archives: create/duplicate preservation must
+    verify origin existence and exact bytes, not a cached copy after deletion.
+    """
+    separator = "&" if "?" in url else "?"
+    return requests.get(f"{url}{separator}cacheNonce={uuid4().hex}",
+        headers={"apikey": key, "Authorization": f"Bearer {key}",
+                 "Cache-Control": "no-cache, no-store, max-age=0"},
+        timeout=60, allow_redirects=False)
+
+
+def _readback_diagnostic(stage: str, response, expected: bytes):
+    """Only byte identities and an allowlisted cache state, never response text."""
+    headers = getattr(response, "headers", {})
+    cache_state = headers.get("CF-Cache-Status")
+    print("[operator_readback] " + json.dumps({
+        "stage": stage, "http_status": response.status_code,
+        "expected_bytes": len(expected), "actual_bytes": len(response.content),
+        "expected_sha256": hashlib.sha256(expected).hexdigest(),
+        "actual_sha256": hashlib.sha256(response.content).hexdigest(),
+        "cf_cache_status": cache_state if isinstance(cache_state, str) and cache_state in STORAGE_CACHE_STATES else "unknown",
+    }, separators=(",", ":")), file=sys.stderr)
+
+
 def _preserve_analysis_archive(supabase_url: str, key: str, body: bytes, archive: dict) -> bool:
     """Create without replacement; accept duplicates only after exact private readback."""
     url = f"{supabase_url}/storage/v1/object/{BUCKET}/{archive['object']}"
@@ -179,12 +210,11 @@ def _preserve_analysis_archive(supabase_url: str, key: str, body: bytes, archive
         # No error body proves preservation: only authenticated exact bytes do.
         if response.status_code not in (200, 201, 400, 409):
             return False
-        readback = requests.get(url, headers={"apikey": key, "Authorization": f"Bearer {key}"},
-                                timeout=60, allow_redirects=False)
+        readback = _fresh_private_get(url, key)
         preserved = (readback.status_code == 200 and readback.content == body
                      and hashlib.sha256(readback.content).hexdigest() == archive["sha256"])
         if not preserved:
-            _storage_diagnostic("archive_readback", readback, len(body))
+            _readback_diagnostic("archive_readback", readback, body)
         return preserved
     except requests.RequestException:
         _storage_diagnostic("archive_request", None, len(body))
@@ -340,9 +370,8 @@ def main() -> int:
             return 2
     if merge_paper:
         try:
-            current = requests.get(f"{supabase_url}/storage/v1/object/{BUCKET}/{PORTFOLIO_DEST}",
-                headers={"apikey": key, "Authorization": f"Bearer {key}", "Cache-Control": "no-cache"},
-                timeout=60, allow_redirects=False)
+            current = _fresh_private_get(
+                f"{supabase_url}/storage/v1/object/{BUCKET}/{PORTFOLIO_DEST}", key)
             if current.status_code != 200:
                 raise ValueError("private current analysis unavailable")
             prepared_portfolio = _merge_paper_summary(current.content, summary,
@@ -414,13 +443,9 @@ def main() -> int:
                 allow_redirects=False,
             )
             if r.status_code in (200, 201) and (dest in EXPLICIT_ONLY_DESTS or merge_paper):
-                readback = requests.get(
-                    f"{supabase_url}/storage/v1/object/{BUCKET}/{dest}",
-                    headers={"apikey": key, "Authorization": f"Bearer {key}", "Cache-Control": "no-store"},
-                    timeout=60, allow_redirects=False,
-                )
+                readback = _fresh_private_get(f"{supabase_url}/storage/v1/object/{BUCKET}/{dest}", key)
                 if readback.status_code != 200 or readback.content != body:
-                    _storage_diagnostic("object_readback", readback, len(body))
+                    _readback_diagnostic("object_readback", readback, body)
                     print("ERROR: private object readback mismatch; publication blocked", file=sys.stderr)
                     continue
         except requests.RequestException as e:
