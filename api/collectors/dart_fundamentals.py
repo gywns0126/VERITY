@@ -90,6 +90,28 @@ def _sga_split_amount(row: dict) -> int | None:
     return int(raw.replace(",", ""))
 
 
+def _total_account_label(row: dict) -> str:
+    """Normalize only decoration; callers must still match a complete total label.
+
+    Roman numbering is accepted only without an account ID. Never strip words
+    such as ownership, continuing/discontinued operations or per-share qualifiers.
+    """
+    label = re.sub(r"\s+", "", str(row.get("account_nm") or ""))
+    label = re.sub(r"\(주\d+(?:,\d+)*\)$", "", label)
+    if not str(row.get("account_id") or "").strip():
+        label = re.sub(r"^(?:[IVXLCDM]+|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫ]+)[.．]", "", label)
+    return label
+
+
+def _operating_income_priority(row: dict) -> int:
+    aid = str(row.get("account_id") or "")
+    if aid == "dart_OperatingIncomeLoss":
+        return 2
+    if aid.startswith(("ifrs-full_", "ifrs_")):
+        return 0
+    return int(_total_account_label(row) in ("영업이익", "영업이익(손실)"))
+
+
 def _net_income_priority(row: dict) -> int:
     """Total profit/loss outranks exact-label fallback, independent of its value.
 
@@ -101,8 +123,7 @@ def _net_income_priority(row: dict) -> int:
         return 2
     if aid.startswith(("ifrs-full_", "ifrs_")):
         return 0
-    label = re.sub(r"\s+", "", str(row.get("account_nm") or ""))
-    label = re.sub(r"\(주\d+(?:,\d+)*\)$", "", label)
+    label = _total_account_label(row)
     return int(bool(re.fullmatch(
         r"(?:연결)?(?:당기|분기|반기)(?:순이익(?:\(손실\))?|순손실|순손익)", label)))
 
@@ -161,8 +182,7 @@ def _extract_pl_bs_from_dart(data: dict, *, source_rows=None, request_context: d
 
     sga_total_seen = False
     sga_parts = {"판매비": [], "관리비": []}
-    net_income_priority = 0
-    net_total_rows = []
+    income_rows = {field: {1: [], 2: []} for field in ("operating_profit", "net_income")}
     for item in data.get("list", []):
         sj = item.get("sj_div", "")
         acct = item.get("account_nm", "")
@@ -199,34 +219,35 @@ def _extract_pl_bs_from_dart(data: dict, *, source_rows=None, request_context: d
                 out["buildings"] = max(out["buildings"], amount)
         elif sj in ("IS", "CIS"):
             net_priority = _net_income_priority(item)
+            op_priority = _operating_income_priority(item)
             if aid in ("ifrs-full_Revenue", "ifrs_Revenue"):
                 # 총계 정본 = account_id (BS/IS/CF 동일 정책). account_nm 이 '매출'/'매출액'/'영업수익'/
                 #   '수익(매출액)'/'매출 및 지분법손익' 어떤 변형이든 id 불변. 구 substring '수익(매출액)' 은
                 #   '기타수익(매출액)'(ifrs-full_OtherRevenue)을 잡아 revenue 오염(차바이오텍 240B vs 1.27조)·
                 #   top-line '매출' 누락(LG화학 revenue=0)이라 제거.
                 _assign("revenue", amount, item)
-            elif out["revenue"] == 0 and acct in ("매출액", "영업수익", "매출", "매출 및 지분법손익"):
+            elif out["revenue"] == 0 and (
+                    acct in ("매출액", "영업수익", "매출", "매출 및 지분법손익")
+                    or (not aid and _total_account_label(item) in
+                        ("매출액", "수익(매출액)", "영업수익", "매출", "매출및지분법손익"))):
                 # id 부재(구 비표준) fallback — 정확일치만.
                 _assign("revenue", amount, item)
             elif acct == "매출원가":
                 _assign("cogs", amount, item)
             elif acct == "매출총이익" or "매출총이익" in acct:
                 _assign("gross_profit", amount, item)
-            elif aid == "dart_OperatingIncomeLoss" or acct in ("영업이익", "영업이익(손실)"):
+            elif op_priority:
                 # 🚨 account_id 우선(dart_ 확장, BS/IS/CF 동일 정책) + 정확일치 유지. 부분일치 절대 금지 —
                 #   '계속영업이익(손실)'(세후≈순이익)·'중단영업이익(손실)'·'주당…계속영업이익(손실)'(EPS)을 흡수해
                 #   op 를 자릿수/부호 파탄내던 구버그(LGES op 5,287원 vs 2.16조·GS 부호역전) 방어.
-                _assign("operating_profit", amount, item)
-            elif net_priority == 2 or (net_priority == 1 and net_income_priority == 0):
+                income_rows["operating_profit"][op_priority].append(item)
+            elif net_priority:
                 # Total includes NCI; reported zero is an observation, not an
                 # invitation to replace it with attribution/EPS/OCI amounts.
-                _assign("net_income", amount, item)
-                net_income_priority = net_priority
-                if net_priority == 2:
-                    net_total_rows.append(item)
+                income_rows["net_income"][net_priority].append(item)
             elif "법인세차감전" in acct or "법인세비용차감전" in acct:
                 _assign("pretax_income", amount, item)
-            elif "판매비와관리비" in re.sub(r"\s+", "", acct):
+            elif _total_account_label(item) in ("판매비와관리비", "판매및일반관리비"):
                 _assign("sga", amount, item)
                 sga_total_seen = True
             elif re.fullmatch(r"\s*(판매비|관리비)\s*(?:\(\s*주\s*[\d,\s]+\))?\s*", acct):
@@ -251,14 +272,19 @@ def _extract_pl_bs_from_dart(data: dict, *, source_rows=None, request_context: d
                 _assign("investing_cashflow", amount, item)
             elif aid == "ifrs-full_CashFlowsFromUsedInFinancingActivities" or "재무활동현금흐름" in acct or acct == "재무활동으로 인한 현금흐름":
                 _assign("financing_cashflow", amount, item)
-    if len({_parse_int(row.get("thstrm_amount")) for row in net_total_rows}) > 1:
-        # A single requested statement must not silently choose the last of
-        # conflicting standardized totals. Unknown flows to existing evidence
-        # handling; diagnostics stay in the already optional source_rows map.
-        out["net_income"] = None
-        if source_rows is not None:
-            source_rows.pop("net_income", None)
-            source_rows.setdefault("_conflicts", {})["net_income"] = [dict(row) for row in net_total_rows]
+    for field, candidates in income_rows.items():
+        # Canonical totals outrank every fallback, including a conflicting pair
+        # of fallback labels. Only the highest available tier decides the value.
+        rows = candidates[2] or candidates[1]
+        if not rows:
+            continue  # Preserve the existing absent-account zero contract.
+        if len({_parse_int(row.get("thstrm_amount")) for row in rows}) > 1:
+            out[field] = None
+            if source_rows is not None:
+                source_rows.pop(field, None)
+                source_rows.setdefault("_conflicts", {})[field] = [dict(row) for row in rows]
+        else:
+            _assign(field, _parse_int(rows[0].get("thstrm_amount")), rows[0])
     if not sga_total_seen and all(len(rows) == 1 for rows in sga_parts.values()):
         selling, administrative = sga_parts["판매비"][0], sga_parts["관리비"][0]
         identity = _sga_split_identity(selling, request_context)
@@ -317,8 +343,9 @@ def _compute_ratios(pl_bs: dict) -> dict:
     if ta > 0 and rev > 0:
         out["asset_turnover"] = round(rev / ta, 4)
     if rev > 0:
-        opm = round(op / rev * 100, 2)
-        out["op_margin"] = opm if opm <= 100 else None   # op>rev 산술불가(revenue 오파싱) → 폐기
+        if op is not None:
+            opm = round(op / rev * 100, 2)
+            out["op_margin"] = opm if opm <= 100 else None   # op>rev 산술불가(revenue 오파싱) → 폐기
         if gp > 0:
             gm = round(gp / rev * 100, 2)
             out["gross_margin"] = gm if gm <= 100 else None   # gp>rev 산술불가 → 폐기
@@ -467,6 +494,7 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
     except Exception:
         corp_code = None
 
+    conflicted_fields = set()
     if corp_code:
         for fs_div in ("CFS", "OFS"):  # 연결 우선, fallback 개별
             try:
@@ -542,6 +570,7 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
                     base.update(period or {"period_basis": "unverified"})
                 else:
                     base["period_basis"] = "calendar_inferred"
+                conflicted_fields = set(source_rows.get("_conflicts", {}))
                 break
             except Exception:
                 continue
@@ -551,8 +580,13 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str, reprt_code: str = 
     needs_fallback = needs_fallback or any(base[k] is None for k in ("roe", "debt_ratio", "op_margin"))
     if needs_fallback:
         yf_data = _yf_fallback_for_ticker(ticker)
+        blocked_ratios = set()
+        if "operating_profit" in conflicted_fields:
+            blocked_ratios.add("op_margin")
+        if "net_income" in conflicted_fields:
+            blocked_ratios.update(("roe", "roa"))
         for k, v in yf_data.items():
-            if base.get(k) is None and v is not None:
+            if k not in blocked_ratios and base.get(k) is None and v is not None:
                 base[k] = v
         if base["source"] == "none" and any(yf_data[k] is not None for k in yf_data):
             base["source"] = "yfinance_fallback"
