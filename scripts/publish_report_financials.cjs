@@ -1,4 +1,4 @@
-// Correct reviewed annual net cells in the existing public report object only.
+// Correct explicitly reviewed annual financial cells in the existing public object only.
 const fs = require('node:fs'), cp = require('node:child_process');
 const assert = require('node:assert/strict');
 const NAME = 'stock_report_public.json';
@@ -6,12 +6,16 @@ const URL = 'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/' + NAME;
 const MANIFEST = 'data/metadata/report_fin_history_corrections_20261017.json';
 
 function repair(doc, manifest, history) {
-    assert.equal(manifest.schema, 'reviewed-kr-annual-net-corrections-v1');
+    assert(['reviewed-kr-annual-net-corrections-v1', 'reviewed-kr-annual-financial-corrections-v2'].includes(manifest.schema));
     assert(Array.isArray(manifest.rows) && manifest.rows.length > 0);
     assert(Array.isArray(doc.stocks) && Array.isArray(history.rows));
     const next = structuredClone(doc), changed = [], seen = new Set();
     for (const correction of manifest.rows) {
-        const key = correction.ticker + ':' + correction.year;
+        const metric = correction.metric ?? 'net';
+        assert(['net', 'op'].includes(metric), 'unreviewed metric');
+        assert(metric === 'net' || manifest.schema === 'reviewed-kr-annual-financial-corrections-v2', 'legacy net-only contract');
+        const historyMetric = {net: 'net_income', op: 'operating_profit'}[metric];
+        const key = correction.ticker + ':' + correction.year + (metric === 'net' ? '' : ':' + metric);
         assert(!seen.has(key), 'duplicate correction'); seen.add(key);
         assert(/^[0-9]{6}$/.test(correction.ticker));
         assert(Number.isSafeInteger(correction.before) && Number.isSafeInteger(correction.after));
@@ -31,15 +35,15 @@ function repair(doc, manifest, history) {
         const source = history.rows.filter(r => r.ticker === correction.ticker && r.fiscal_year === correction.year && r.period === 'annual');
         assert.equal(source.length, 1, 'history identity');
         assert.equal(source[0].name, correction.name);
-        assert.equal(source[0].fundamentals.net_income, correction.after, 'history must already be corrected');
+        assert.equal(source[0].fundamentals[historyMetric], correction.after, 'history must already be corrected');
         const stocks = next.stocks.filter(s => s.ticker === correction.ticker);
         assert.equal(stocks.length, 1, 'public identity');
         assert.equal(stocks[0].name_ko || stocks[0].name, correction.name);
         const periods = stocks[0].fin_series.filter(p => p.year === correction.year);
         assert.equal(periods.length, 1, 'public annual identity');
-        if (periods[0].net === correction.after) continue;
-        assert.equal(periods[0].net, correction.before, 'unreviewed public value; stop');
-        periods[0].net = correction.after;
+        if (periods[0][metric] === correction.after) continue;
+        assert.equal(periods[0][metric], correction.before, 'unreviewed public value; stop');
+        periods[0][metric] = correction.after;
         changed.push(key);
     }
     return {next, changed};

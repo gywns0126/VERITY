@@ -1,8 +1,29 @@
 {
-  "schema": "reviewed-kr-annual-net-corrections-v1",
+  "schema": "reviewed-kr-annual-financial-corrections-v2",
   "verified_on": "2026-10-17",
-  "scope": "Only listed annual total net-income cells; no inferred causal attribution",
+  "scope": "Only listed annual total net-income and explicitly named operating-profit cells; no inferred causal attribution",
   "rows": [
+    {
+      "ticker": "051910",
+      "name": "LG화학",
+      "year": 2025,
+      "metric": "op",
+      "start": "2025-01-01",
+      "end": "2025-12-31",
+      "currency": "KRW",
+      "fs_div": "CFS",
+      "before": 819360000000,
+      "after": 1180900000000,
+      "account_name": "영업이익(손실) (주22,23)",
+      "raw_text": "1,180,900",
+      "accession": "20260313001195",
+      "filed": "2026-03-13",
+      "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20260313001195&dcmNo=11121928&eleId=21&offset=550369&length=29038&dtd=dart4.xsd",
+      "source_sha256": "e11703080380cd468aadc6a63570e96199f276f282279a56b0a086a0d69a7b73",
+      "reason": "Current 2025 annual CFS operating profit directly matches the DART income statement and official issuer audit report page 12. Legacy account/execution cause is unproven. Prior-year restated comparisons are not partially overwritten.",
+      "reported_unit": "백만원",
+      "unit_multiplier": 1000000
+    },
     {
       "ticker": "460860",
       "name": "동국제강",
