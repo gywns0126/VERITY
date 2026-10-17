@@ -299,6 +299,22 @@ def test_reviewed_income_reaches_summary_without_claiming_cash_provenance():
     assert s == before
 
 
+def test_synthetic_primary_verified_sga_zero_stays_zero_in_replaced_income_table(monkeypatch):
+    import report_kr_review
+    stock, docs = _reviewed_income_fixture()
+    stock['financials']['groups'][0]['rows'].append({'k': '판매비와관리비', 'v': '0'})
+    entry = copy.deepcopy(report_kr_review._registry()['000650'])
+    annual = next(row for row in entry['periods'] if row['year'] == 2025)
+    annual['metrics']['sga'].update(value=0, raw='0')
+    monkeypatch.setattr(report_kr_review, '_registry', lambda: {'000650': entry})
+    report = build_report('000650', lambda name: docs.get(name, {}),
+                          datetime(2026, 10, 17, tzinfo=timezone.utc))
+    r2 = section(report, 'R2')
+    assert ['손익계산서 · 원문 검수', '판매비와관리비', '0원'] in r2['rows']
+    assert not any(row == ['손익계산서', '판매비와관리비', '확인 필요 (수신값 0)']
+                   for row in r2['rows'])
+
+
 @pytest.mark.parametrize('field,value', [('period', '2026'), ('period_kind', 'quarter'),
                                          ('currency', 'USD'), ('fs_div', 'CFS'),
                                          ('start', '2025-04-01'), ('end', '2025-09-30'),
@@ -385,9 +401,141 @@ def test_kr_financial_sector_holds_industrial_bridge_but_keeps_reviewed_amounts(
     assert stock == before
 
 
+def _reviewed_insurer_input():
+    # 000370 frozen public summary (2026-10-16) keeps industrial-looking zeros;
+    # the bundled 2025 CFS primary review has OP/net but no direct revenue total.
+    stock = {'ticker': '000370', 'name': '한화손해보험', 'gics_ko': '금융',
+             'financials': {'period': '2025', 'groups': [
+                 {'title': '손익계산서', 'rows': [
+                     {'k': '매출', 'v': '0'}, {'k': '매출원가', 'v': '0'},
+                     {'k': '매출총이익', 'v': '0'}, {'k': '판매비와관리비', 'v': '0'},
+                     {'k': '영업이익', 'v': '4296억'}, {'k': '순이익', 'v': '2923억'},
+                     {'k': '영업이익률', 'v': '7.7%'}]}]},
+             'facts': {'영업이익률': '7.7%', 'ROE': '10.8%'},
+             'peer': {'sector': '금융', 'n': 76, 'rows': [
+                 {'key': '영업이익률', 'value': '7.7%', 'median': '12.6%'},
+                 {'key': 'ROE', 'value': '10.8%', 'median': '7.5%'}]}}
+    return stock, {'stock_report_public.json': {'stocks': {'000370': stock}}}
+
+
+def test_reviewed_insurer_shows_only_same_column_op_net_and_holds_legacy_industrial_rows():
+    stock, docs = _reviewed_insurer_input()
+    before = copy.deepcopy(stock)
+    report = build_report('000370', lambda name: docs.get(name, {}),
+                          datetime(2026, 10, 17, tzinfo=timezone.utc))
+    current = report['reader']['current']
+    assert current['revenue'] is None and current['op'] == 429_592_532_000
+    assert current['net'] == 292_332_865_000 and report['reader']['accepted'] == 3
+    r2 = section(report, 'R2')
+    assert r2['rows'][:3] == [
+        ['손익계산서 · 원문 검수', '매출', '미수신 · 직접 총계행 미확인'],
+        ['손익계산서 · 원문 검수', '영업이익', '4,295.93억원'],
+        ['손익계산서 · 원문 검수', '순이익', '2,923.33억원']]
+    assert 'rcpNo=20260331000594' in r2['rows'][3][2]['url']
+    assert 'dcmNo=11200691' in r2['rows'][3][2]['url']
+    assert not any(row[1] in ('매출원가', '매출총이익', '판매비와관리비', '영업이익률')
+                   for row in r2['rows'])
+    assert '직접 매출 총계는 미수신' in r2['note']
+    assert not any(row[0] == '영업이익률' for row in section(report, 'R3')['rows'])
+    assert not any(row[0] == '영업이익률' for row in section(report, 'R4')['rows'])
+    assert '적용 대상이 아니어서 제외' in section(report, 'R3')['note']
+    assert stock == before
+
+
+def _insurer_with_synthetic_direct_sga(monkeypatch, value):
+    import report_kr_review
+    stock, docs = _reviewed_insurer_input()
+    entry = copy.deepcopy(report_kr_review._registry()['000370'])
+    annual = next(row for row in entry['periods'] if row['year'] == 2025)
+    annual['unreported_metrics'].remove('sga')
+    annual['metrics']['sga'] = {
+        'value': value, 'raw': f'{value // 1000:,}', 'account': '판매비와관리비',
+        'column': annual['metrics']['op']['column'],
+        'document': annual['metrics']['op']['document'],
+    }
+    monkeypatch.setattr(report_kr_review, '_registry', lambda: {'000370': entry})
+    return stock, docs, entry, annual
+
+
+@pytest.mark.parametrize('value,expected', [(None, None), (0, '0원'),
+                                             (12_345_000_000, '123.45억원')])
+def test_financial_core2_sga_requires_direct_registered_metric_not_legacy_zero(monkeypatch, value, expected):
+    if value is None:
+        stock, docs = _reviewed_insurer_input()
+    else:
+        stock, docs, _, _ = _insurer_with_synthetic_direct_sga(monkeypatch, value)
+    report = build_report('000370', lambda name: docs.get(name, {}),
+                          datetime(2026, 10, 17, tzinfo=timezone.utc))
+    r2 = section(report, 'R2')
+    sga_rows = [row for row in r2['rows'] if row[1] == '판매비와관리비']
+    assert sga_rows == ([['손익계산서 · 원문 검수', '판매비와관리비', expected]] if expected else [])
+    assert '직접 매출 총계는 미수신' in r2['note']
+    assert not any(row[1] in ('매출원가', '매출총이익', '영업이익률') for row in r2['rows'])
+
+
+@pytest.mark.parametrize('tamper', ['registered_column', 'registered_document', 'registered_unreported',
+                                     'candidate_column', 'candidate_account', 'candidate_raw', 'candidate_document'])
+def test_financial_core2_sga_does_not_borrow_a_mismatched_metric_source(monkeypatch, tamper):
+    import report_kr_review
+    stock, docs, entry, annual = _insurer_with_synthetic_direct_sga(monkeypatch, 12_345_000_000)
+    if tamper == 'registered_column':
+        annual['metrics']['sga']['column'] = '제 80 기'
+    elif tamper == 'registered_document':
+        other = copy.deepcopy(entry['documents']['annual_income'])
+        other['url'] = other['url'].replace('eleId=21', 'eleId=22')
+        other['sha256'] = 'a' * 64
+        entry['documents']['other_income'] = other
+        annual['metrics']['sga']['document'] = 'other_income'
+    elif tamper == 'registered_unreported':
+        annual['unreported_metrics'].append('sga')
+    else:
+        row = report_kr_review._materialize(annual, entry['documents'], entry['reviewed_at'])
+        key, value = {'candidate_column': ('column', '제 80 기'),
+                      'candidate_account': ('name', '매출원가'),
+                      'candidate_raw': ('raw_text', 'unverified'),
+                      'candidate_document': ('source_url', 'https://dart.fss.or.kr/report/viewer.do?rcpNo=20260331000594&dcmNo=other')}[tamper]
+        row['metric_sources']['sga'][key] = value
+        stock['financial_evidence'] = {'periods': [row]}
+    report = build_report('000370', lambda name: docs.get(name, {}),
+                          datetime(2026, 10, 17, tzinfo=timezone.utc))
+    r2 = section(report, 'R2')
+    assert [row[1] for row in r2['rows'][:3]] == ['매출', '영업이익', '순이익']
+    assert not any(row[1] == '판매비와관리비' for row in r2['rows'])
+
+
+@pytest.mark.parametrize('tamper', ['different_column', 'different_accession'])
+def test_partial_financial_review_does_not_borrow_a_mismatched_source(tamper):
+    import report_kr_review
+    stock, docs = _reviewed_insurer_input()
+    entry = report_kr_review._registry()['000370']
+    raw = next(row for row in entry['periods'] if row['year'] == 2025)
+    row = report_kr_review._materialize(raw, entry['documents'], entry['reviewed_at'])
+    if tamper == 'different_column':
+        row['metric_sources']['net']['column'] = '제 80 기'
+        stock['financial_evidence'] = {'periods': [row]}
+    else:
+        stock['financials']['accession'] = '20260401000001'
+    report = build_report('000370', lambda name: docs.get(name, {}),
+                          datetime(2026, 10, 17, tzinfo=timezone.utc))
+    r2 = section(report, 'R2')
+    assert not any(row[0] == '손익계산서 · 원문 검수' for row in r2['rows'])
+    assert not any(row[1] in ('매출원가', '매출총이익', '판매비와관리비', '영업이익률')
+                   for row in r2['rows'])
+
+
 @pytest.mark.parametrize('is_financial', [False, True])
 def test_us_financial_classification_still_comes_from_sec_metadata(is_financial):
-    ticker, docs, _ = fixture()
+    ticker, docs, stock = fixture()
+    stock['facts']['영업이익률'] = '12.3%'
+    stock['peer']['rows'].append({'key': '영업이익률', 'value': '12.3%', 'median': '8.1%'})
+    stock['financials']['groups'] = [
+        {'title': '손익계산서', 'rows': [
+            {'k': '매출원가', 'v': '0'}, {'k': '영업이익률', 'v': '12.3%'}]},
+        {'title': '재무상태표', 'rows': [{'k': '총자산', 'v': '$100'}]}]
     docs['us_financials/CAT.json'] = {'ticker': ticker, 'meta': {'cik': '18230', 'is_financial': is_financial}}
     report = build(docs, ticker)
     assert any(s['id'] == 'R5' for s in report['sections']) is not is_financial
+    for ident in ('R2', 'R3', 'R4'):
+        rows = section(report, ident)['rows']
+        assert any('영업이익률' in row for row in rows) is not is_financial
+    assert any(row[1] == '매출원가' for row in section(report, 'R2')['rows']) is not is_financial

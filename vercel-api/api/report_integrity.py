@@ -42,6 +42,13 @@ def financial_display(fin):
             row.update(received_value=row.get("v"), v="확인 필요 (수신값 0)",
                        status="inconsistent", reason="매출총이익·영업이익과의 차이 및 기타 영업항목 대조 필요")
             warnings.append("판매비와관리비 수신값 0은 매출총이익·영업이익과 함께 검산이 필요합니다. 차액을 판관비로 대체하지 않았습니다.")
+        elif sga == 0:
+            # Agreement of formatted totals is not proof of an original zero.
+            # Reviewed statement metrics replace this legacy group separately.
+            row = by_name["판매비와관리비"]
+            row.update(received_value=row.get("v"), v="확인 필요 (수신값 0)",
+                       status="unverified_zero", reason="직접 원문 계정·기간·범위가 연결되지 않은 수집 요약값")
+            warnings.append("판매비와관리비 수신값 0의 직접 원문을 확인하지 못했습니다. 합계 일치만으로 실제 판관비 0을 확정하지 않습니다.")
         groups.append({**group, "rows": rows})
     return {**fin, "groups": groups}, warnings
 
