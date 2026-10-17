@@ -200,3 +200,19 @@ def test_large_issuer_losses_and_rewritten_comparatives_use_reported_totals():
         assert _by_period(rows,2024,'annual')['net']==prior
         assert all(r['metric_sources']['net']['unit_multiplier']==multiplier for r in rows)
         assert all(r['metric_sources']['net']['name'] in ('당기순이익(손실)','당기순손실') for r in rows)
+
+
+def test_discontinued_results_are_not_operating_profit_or_total_net():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    holdings = review.reviewed_financials('005440', {'ticker':'005440','name':'현대지에프홀딩스'}, [], now)
+    assert _by_period(holdings,2025,'annual')['op'] == 274073694000
+    assert _by_period(holdings,2024,'annual')['op'] == 198099994000
+    assert _by_period(holdings,2023,'annual')['op'] == -11033826000
+    assert _by_period(holdings,2025,'annual')['net'] == 518661888000
+    wia = review.reviewed_financials('011210', {'ticker':'011210','name':'현대위아'}, [], now)
+    current = _by_period(wia,2025,'annual')
+    assert current['op'] == 204413000000 and current['op'] != -43559000000
+    assert current['net'] == 116932000000 and current['net'] != 160491000000
+    assert _by_period(wia,2024,'annual')['op'] == 218810000000
+    assert current['metric_sources']['net']['name'] == '당기순이익'
+    assert current['metric_sources']['op']['unit_multiplier'] == 1000000
