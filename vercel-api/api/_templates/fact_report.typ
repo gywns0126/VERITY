@@ -33,9 +33,15 @@
     #h(1mm)#text(size: 8pt, weight: 700, fill: color)[#change.label]
   ]
 }
-#grid(columns: (1fr, auto), gutter: 5mm,
+#let logo = D.at("logo_png", default: ())
+#grid(columns: (12mm, 1fr, auto), gutter: 3mm,
+  rect(width: 12mm, height: 12mm, radius: 3mm, inset: 0pt, stroke: none, fill: fill,
+    if logo.len() > 0 {
+      image(bytes(logo), format: "png", width: 12mm, height: 12mm, fit: "contain")
+    } else { align(center + horizon, text(size: 17pt, weight: 800, fill: accent)[#D.name.first()]) }),
   [#text(size: 19pt, weight: 800)[#D.name]
-   #h(2mm)#text(size: 10pt, fill: sub)[#D.ticker · #D.market]
+   #linebreak()#if D.at("flag_svg", default: "") != "" [#box(image(bytes(D.flag_svg), format: "svg", width: 4mm))#h(1mm)]
+   #text(size: 9pt, fill: sub)[#D.ticker · #D.market]
    #if D.business != "—" [#linebreak()#text(size: 8pt, fill: sub)[#D.business]]],
   align(right)[#text(size: 10pt, weight: 800, fill: accent)[ALPHANEST]
     #linebreak()#text(size: 8pt, fill: sub)[#D.report_label]

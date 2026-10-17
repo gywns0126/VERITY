@@ -105,17 +105,33 @@ def _render(data: Dict[str, Any]) -> bytes:
     import typst
     if __package__:
         from .report_visuals import chart_svg
+        from .report_identity import flag_svg, logo_png, reject_logo
     else:
         from report_visuals import chart_svg
+        from report_identity import flag_svg, logo_png, reject_logo
     # Vector markup is only a render asset, not research material in the prompt.
     charts = data.get("reader", {}).get("visuals", {}).get("charts", {})
     rendered = {**data, "chart_images": {key: chart_svg(chart) for key, chart in charts.items()}}
-    return typst.compile(
-        TEMPLATE,
-        font_paths=[FONT_DIR],
-        ignore_system_fonts=True,
-        sys_inputs={"data": json.dumps(rendered, ensure_ascii=False)},
-    )
+    # These bytes belong only to the PDF, never the model-free evidence export.
+    logo = logo_png(data["ticker"])
+    rendered["logo_png"] = list(logo)
+    rendered["flag_svg"] = flag_svg(data["market"])
+    def compile_pdf():
+        return typst.compile(
+            TEMPLATE,
+            font_paths=[FONT_DIR],
+            ignore_system_fonts=True,
+            sys_inputs={"data": json.dumps(rendered, ensure_ascii=False)},
+        )
+    try:
+        return compile_pdf()
+    except typst.TypstError:
+        if not rendered["logo_png"]:
+            raise
+        # Even a PNG-looking but corrupt CDN response must not break the report.
+        reject_logo(data["ticker"], logo)
+        rendered["logo_png"] = []
+        return compile_pdf()
 
 
 class handler(BaseHTTPRequestHandler):

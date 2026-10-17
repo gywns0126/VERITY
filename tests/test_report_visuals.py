@@ -116,11 +116,12 @@ def test_svg_text_is_escaped_and_export_keeps_numbers_not_markup():
     assert '<svg' not in json.dumps(v)
 
 
-def test_pdf_has_chart_labels_and_interpretation_with_clickable_sources():
+def test_pdf_has_chart_labels_and_interpretation_with_clickable_sources(monkeypatch):
     pytest.importorskip('typst')
     from pypdf import PdfReader
     import fact_report
     from report_evidence import build_report, analysis_prompt
+    monkeypatch.setattr('report_identity.logo_png', lambda ticker: b'')
     rows = [period(2024), period(2025, revenue=120, op=30, ocf=25, capex=5)]
     stock = {'ticker': 'CAT', 'name': '검증 기업', 'financial_evidence': {'periods': rows}}
     d = build_report('CAT', lambda name: {'stocks': {'CAT': stock}} if name == 'us_stock_report_public.json' else {})
