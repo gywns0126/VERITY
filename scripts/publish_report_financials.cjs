@@ -13,21 +13,23 @@ const REVIEWED_RENAMES = {
 };
 
 function repair(doc, manifest, history) {
-    assert(['reviewed-kr-annual-net-corrections-v1', 'reviewed-kr-annual-financial-corrections-v2'].includes(manifest.schema));
+    const v3 = manifest.schema === 'reviewed-kr-annual-financial-corrections-v3';
+    const financial = v3 || manifest.schema === 'reviewed-kr-annual-financial-corrections-v2';
+    assert(financial || manifest.schema === 'reviewed-kr-annual-net-corrections-v1');
     assert(Array.isArray(manifest.rows) && manifest.rows.length > 0);
     assert(Array.isArray(doc.stocks) && Array.isArray(history.rows));
     const next = structuredClone(doc), changed = [], seen = new Set();
     for (const correction of manifest.rows) {
         const metric = correction.metric ?? 'net';
-        assert(['net', 'op'].includes(metric), 'unreviewed metric');
-        assert(metric === 'net' || manifest.schema === 'reviewed-kr-annual-financial-corrections-v2', 'legacy net-only contract');
-        const historyMetric = {net: 'net_income', op: 'operating_profit'}[metric];
+        assert(['net', 'op'].includes(metric) || (v3 && metric === 'revenue'), 'unreviewed metric');
+        assert(metric === 'net' || financial, 'legacy net-only contract');
+        const historyMetric = {net: 'net_income', op: 'operating_profit', revenue:'revenue'}[metric];
         const key = correction.ticker + ':' + correction.year + (metric === 'net' ? '' : ':' + metric);
         assert(!seen.has(key), 'duplicate correction'); seen.add(key);
         assert(/^[0-9]{6}$/.test(correction.ticker));
-        const reviewedMissingOp = manifest.schema === 'reviewed-kr-annual-financial-corrections-v2'
-            && metric === 'op' && correction.before === null;
-        assert(Number.isSafeInteger(correction.before) || reviewedMissingOp, 'unknown previous amount');
+        const reviewedMissingMetric = ((financial && metric === 'op') || (v3 && metric === 'revenue'))
+            && correction.before === null;
+        assert(Number.isSafeInteger(correction.before) || reviewedMissingMetric, 'unknown previous amount');
         assert(Number.isSafeInteger(correction.after));
         assert.equal(correction.currency, 'KRW');
         assert(['CFS', 'OFS'].includes(correction.fs_div));
@@ -47,7 +49,7 @@ function repair(doc, manifest, history) {
         const historyName = correction.history_name ?? correction.name;
         if (correction.history_name !== undefined) {
             // Only a reviewed issuer-specific rename may bridge two exact names; no fuzzy aliases.
-            assert.equal(manifest.schema, 'reviewed-kr-annual-financial-corrections-v2');
+            assert(financial, 'legacy rename unsupported');
             const rename = correction.name_change;
             assert(rename && historyName && historyName !== correction.name, 'unreviewed historical name');
             const approved = REVIEWED_RENAMES[correction.ticker];
