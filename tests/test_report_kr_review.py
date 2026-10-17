@@ -234,3 +234,31 @@ def test_ecopro_and_kakaogames_total_losses_do_not_use_positive_nci_parts():
     assert 'sga' not in current  # Operating expenses are not reported SG&A.
     assert current['metric_sources']['net']['unit_multiplier'] == 1
     assert review.reviewed_entry('293490', {'ticker':'293490','name':'카카오게임즈','corp_code':'00258801'}, now) is None
+
+
+def test_next_priority_totals_and_operating_profit_keep_scope_and_versions():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    sajo = review.reviewed_financials('003960', {'ticker':'003960','name':'사조대림','corp_code':'00109718'}, [], now)
+    assert _by_period(sajo,2025,'annual')['net'] == -73563368883
+    assert _by_period(sajo,2025,'annual')['net'] != 5069145678
+    sk = review.reviewed_financials('302440', {'ticker':'302440','name':'SK바이오사이언스','corp_code':'01319899'}, [], now)
+    assert _by_period(sk,2025,'annual')['net'] == -56173210192
+    assert _by_period(sk,2024,'annual')['net'] == -50117070464
+    assert _by_period(sk,2023,'annual')['net'] == 22317719237
+    sns = review.reviewed_financials('101490', {'ticker':'101490','name':'에스앤에스텍','corp_code':'00411048'}, [], now)
+    assert _by_period(sns,2025,'annual')['op'] == 50389752346
+    assert _by_period(sns,2024,'annual')['op'] == 29478688017
+    assert _by_period(sns,2023,'annual')['op'] == 25039402690
+    assert _by_period(sns,2024,'annual')['net'] == 30313647619
+    assert 'sga' not in _by_period(sns,2025,'annual')
+    lnc = review.reviewed_financials('290650', {'ticker':'290650','name':'엘앤씨바이오','corp_code':'01181515'}, [], now)
+    previous = _by_period(lnc,2024,'annual')
+    assert _by_period(lnc,2025,'annual')['net'] == -138246706187
+    # The report compares the latest filing's complete restated column, while
+    # annual history is separately corrected to its original-as-filed total.
+    assert previous['net'] == 141496608088 and previous['net'] != 140965124092
+    assert previous['revenue'] == 72032432117 and previous['op'] == 3869170258
+    assert previous['accession'] == '20260324000006'
+    assert 'rcpNo=20260324000006' in previous['metric_sources']['net']['source_url']
+    notes = review.reviewed_entry('290650', {'ticker':'290650','name':'엘앤씨바이오'}, now)['notes']
+    assert '140,965,124,092' in notes[0] and '141,496,608,088' in notes[0]

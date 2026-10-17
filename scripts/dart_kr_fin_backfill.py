@@ -19,6 +19,7 @@ import argparse
 import collections
 import json
 import os
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -222,13 +223,24 @@ def main() -> int:
                     req_n += 1
                     raw = _fetch_fnltt_all_cached(cc, str(y), "OFS")
                     data = json.loads(raw) if raw else {}
-                plbs = _extract_pl_bs_from_dart(data) if data.get("list") else {}
+                source_rows = {}
+                plbs = _extract_pl_bs_from_dart(data, source_rows=source_rows) if data.get("list") else {}
             except Exception as e:  # noqa: BLE001
                 print(f"[fin-bf] {tk} {y} 실패: {str(e)[:60]}", file=sys.stderr)
                 continue
-            rev, op, net = plbs.get("revenue"), plbs.get("operating_profit"), plbs.get("net_income")
+            def observed(field):
+                value = plbs.get(field)
+                if value != 0:
+                    return value
+                # The extractor also initializes absent accounts to zero. Only
+                # a numeric zero in the selected raw account is an observation.
+                source = source_rows.get(field) or {}
+                raw = str(source.get("thstrm_amount", "")).replace(",", "").strip()
+                return 0 if re.fullmatch(r"[+-]?0+", raw) else None
+
+            rev, op, net = (observed(field) for field in ("revenue", "operating_profit", "net_income"))
             inv_re = plbs.get("investment_property")
-            if not (rev or op or net):
+            if all(value is None for value in (rev, op, net)):
                 # 🚨 빈 응답을 셀 원장에 적는다. 상장 전 연도는 영원히 비어 있어서
                 #   기록이 없으면 매 run 이 같은 칸을 다시 두드린다(쿼터 낭비).
                 _c = _cell(tk, y)
@@ -237,8 +249,9 @@ def main() -> int:
                                "status": str(data.get("status") or "empty")}
                 empty_n += 1
                 continue
-            fund = {"revenue": rev or None, "operating_profit": op or None,
-                    "net_income": net or None, "investment_property": inv_re or None}
+            # An explicitly reported zero is a fact, not a missing account.
+            fund = {"revenue": rev, "operating_profit": op,
+                    "net_income": net, "investment_property": inv_re or None}
             existing = rows_by_key.get((tk, y))
             if existing is not None:
                 existing["fundamentals"] = fund   # null-net 행 in-place 갱신 (중복 append 방지)
