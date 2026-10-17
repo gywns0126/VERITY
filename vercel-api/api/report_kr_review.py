@@ -9,6 +9,7 @@ from functools import lru_cache
 import json
 from pathlib import Path
 import re
+from urllib.parse import parse_qs, urlsplit
 
 if __package__:
     from .report_reader import valid_period
@@ -164,8 +165,9 @@ def _key(row):
 def reviewed_financials(ticker, stock, periods, now):
     """Merge eligible reviewed rows without overwriting a newer same-period row.
 
-    Same-filing rows receive only missing reviewed values. An older filing is
-    replaced as a complete period, never mixed with a newer filing's operands.
+    Same-filing rows receive only missing values, or corroborating HTML evidence
+    for an exactly equal number whose collected source has no raw/hash evidence.
+    An older filing is replaced as a complete period, never mixing versions.
     """
     merged = deepcopy(periods) if isinstance(periods, list) else []
     entry = reviewed_entry(ticker, stock, now)
@@ -197,6 +199,34 @@ def reviewed_financials(ticker, stock, periods, now):
             if augmented.get(metric) is None and reviewed.get(metric) is not None:
                 augmented[metric] = reviewed[metric]
                 sources[metric] = reviewed["metric_sources"][metric]
+            elif (type(augmented.get(metric)) in (int, float)
+                  and augmented[metric] == reviewed.get(metric)):
+                collected = sources.get(metric, {})
+                if (isinstance(collected, dict) and collected.get("source_url")
+                        and collected.get("source_type") in (None, "", "DART", "DART API")
+                        and collected.get("account_id") in (None, "")
+                        and set(collected).issubset({"name", "account_id", "source_url", "source_type",
+                            "start", "end", "currency", "fs_div", "ticker", "stock_code",
+                            "corp_code", "issuer_id", "accession", "rcept_no", "filed"})
+                        and "raw_text" not in collected
+                        and "sha256" not in collected
+                        and all(collected.get(k) in (None, "", reviewed[k])
+                                for k in ("start", "end", "currency", "fs_div"))
+                        and all(collected.get(k) in (None, "", value) for k, value in
+                                (("ticker", str(ticker)), ("stock_code", str(ticker)),
+                                 ("corp_code", entry["corp_code"]), ("issuer_id", entry["corp_code"])))
+                        and all(collected.get(k) in (None, "", reviewed["accession"])
+                                for k in ("accession", "rcept_no"))
+                        and collected.get("filed") in (None, "", reviewed["filed"])
+                        and str(collected["source_url"]).startswith(_DART)
+                        and urlsplit(collected["source_url"]).path == "/dsaf001/main.do"
+                        and set(parse_qs(urlsplit(collected["source_url"]).query,
+                                         keep_blank_values=True)) == {"rcpNo"}
+                        and parse_qs(urlsplit(collected["source_url"]).query,
+                                     keep_blank_values=True).get("rcpNo") == [reviewed["accession"]]):
+                    sources[metric] = deepcopy(reviewed["metric_sources"][metric])
+                    if collected:
+                        sources[metric]["collected_source"] = deepcopy(collected)
         if sources:
             augmented["metric_sources"] = sources
         if reviewed.get("start_basis"):

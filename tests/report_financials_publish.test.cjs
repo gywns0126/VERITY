@@ -50,6 +50,35 @@ test('a reviewed exact issuer rename preserves historical and public names separ
     const bad=structuredClone(h);bad.rows[0].name='비슷한회사';assert.throws(()=>repair(d,newer,bad));
     assert.throws(()=>repair(doc,manifest,h));
 });
+test('two-stage legal and listed short name evidence is exact and cannot be borrowed',()=>{
+    const row=require('../data/metadata/report_fin_history_corrections_20261017.json').rows.find(r=>r.ticker==='242040');
+    assert(row && row.history_name==='나무기술' && row.name==='나무AX');
+    const m={schema:'reviewed-kr-annual-financial-corrections-v3',rows:[row]};
+    const h={rows:[{ticker:row.ticker,name:row.history_name,fiscal_year:row.year,period:'annual',fundamentals:{net_income:row.after}}]};
+    const d={stocks:[{ticker:row.ticker,name:row.name,fin_series:[{year:row.year,net:row.before}]}]};
+    const result=repair(d,m,h);
+    assert.equal(result.next.stocks[0].fin_series[0].net,row.after);
+    assert.equal(result.next.stocks[0].name,'나무AX');
+    assert.equal(h.rows[0].name,'나무기술');
+    assert.deepEqual(repair(result.next,m,h).changed,[]);
+    for (const modify of [
+        r=>delete r.name_change_chain,r=>r.name_change_chain.reverse(),
+        r=>r.name_change_chain.pop(),r=>r.name_change_chain[0].new_name='나무AX',
+        r=>r.name_change_chain[1].corp_code='99999999',
+        r=>r.name_change_chain[1].accession='20260904900557',
+        r=>r.name_change_chain[1].source_sha256='a'.repeat(64),
+        r=>r.name_change_chain[0].source_url=r.name_change_chain[1].source_url,
+        r=>r.name_change_chain[1].listing_effective_date='2026-06-30',
+        r=>r.name_change_chain[0].source_path='/private/tmp/not-public',
+        r=>r.name_change=r.name_change_chain[0],
+    ]) {
+        const bad=structuredClone(m);modify(bad.rows[0]);assert.throws(()=>repair(d,bad,h));
+    }
+    const borrowed={...row,ticker:c.ticker,name:c.name,history_name:'나무기술'};
+    const otherH={rows:[{ticker:c.ticker,name:'나무기술',fiscal_year:row.year,period:'annual',fundamentals:{net_income:row.after}}]};
+    const otherD={stocks:[{ticker:c.ticker,name:c.name,fin_series:[{year:row.year,net:row.before}]}]};
+    assert.throws(()=>repair(otherD,{...m,rows:[borrowed]},otherH));
+});
 test('raw unit mismatch cannot publish a differently scaled amount',()=>{
     assert.throws(()=>repair(doc,{...manifest,rows:[{...c,reported_unit:'천원',unit_multiplier:1000}]},history));
     assert.throws(()=>repair(doc,{...manifest,rows:[{...c,reported_unit:'미확인'}]},history));

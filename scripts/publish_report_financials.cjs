@@ -11,6 +11,20 @@ const REVIEWED_RENAMES = {
     '282880': {corp_code:'01211232',old_name:'코윈테크',new_name:'코윈로보틱스',
         accession:'20260901900255',source_sha256:'662296dd661611d7b77eb1a3957d63406fc41f8d02cc45d513bc9200182fd6b8'},
 };
+// A separately reviewed legal-name -> listed-short-name chain for this issuer only.
+// Meeting date and listing date are distinct; no legal effective date is inferred.
+const NAMU_NAME_CHAIN = [
+    {ticker:'242040',corp_code:'01136348',old_name:'나무기술',new_name:'나무에이엑스',
+        accession:'20260630900344',filed:'2026-06-30',
+        source_url:'https://dart.fss.or.kr/report/viewer.do?rcpNo=20260630900344&dcmNo=11453971&eleId=0&offset=0&length=0&dtd=HTML',
+        source_sha256:'28d0a9cbf3779c1b106b161ebbb19f827b4e665caafa5ed1c0af7a8e9364e7a7',
+        kind:'legal_name',shareholders_meeting_date:'2026-06-30',listing_effective_date:null},
+    {ticker:'242040',corp_code:'01136348',old_name:'나무에이엑스',new_name:'나무AX',
+        accession:'20260904900556',filed:'2026-09-04',
+        source_url:'https://dart.fss.or.kr/report/viewer.do?rcpNo=20260904900556&dcmNo=11567827&eleId=0&offset=0&length=0&dtd=HTML',
+        source_sha256:'336db62a8a834f3489215a142f82fa5de04aca1d668d34f2e1ec2ec181b282a8',
+        kind:'market_short_name',shareholders_meeting_date:null,listing_effective_date:'2026-09-09'},
+];
 
 function repair(doc, manifest, history) {
     const v3 = manifest.schema === 'reviewed-kr-annual-financial-corrections-v3';
@@ -50,19 +64,27 @@ function repair(doc, manifest, history) {
         if (correction.history_name !== undefined) {
             // Only a reviewed issuer-specific rename may bridge two exact names; no fuzzy aliases.
             assert(financial, 'legacy rename unsupported');
-            const rename = correction.name_change;
-            assert(rename && historyName && historyName !== correction.name, 'unreviewed historical name');
-            const approved = REVIEWED_RENAMES[correction.ticker];
-            assert(approved, 'issuer rename has not been independently reviewed');
-            for (const field of Object.keys(approved)) assert.equal(rename[field], approved[field], 'rename source/issuer binding');
-            assert.equal(rename.old_name, historyName);
-            assert.equal(rename.new_name, correction.name);
-            assert.equal(rename.ticker, correction.ticker);
-            assert(/^[0-9]{8}$/.test(rename.corp_code), 'rename issuer identity');
-            assert(/^[0-9]{14}$/.test(rename.accession), 'rename accession');
-            assert(rename.source_url.startsWith('https://dart.fss.or.kr/report/viewer.do?'));
-            assert(rename.source_url.includes('rcpNo=' + rename.accession));
-            assert(/^[a-f0-9]{64}$/.test(rename.source_sha256), 'rename original source');
+            assert(historyName && historyName !== correction.name, 'unreviewed historical name');
+            if (correction.ticker === '242040') {
+                assert(correction.name_change === undefined, 'two-stage evidence required');
+                assert.deepEqual(correction.name_change_chain, NAMU_NAME_CHAIN, 'rename chain/source/issuer binding');
+                assert.equal(historyName, NAMU_NAME_CHAIN[0].old_name);
+                assert.equal(correction.name, NAMU_NAME_CHAIN[1].new_name);
+            } else {
+                const rename = correction.name_change;
+                assert(rename, 'unreviewed historical name');
+                const approved = REVIEWED_RENAMES[correction.ticker];
+                assert(approved, 'issuer rename has not been independently reviewed');
+                for (const field of Object.keys(approved)) assert.equal(rename[field], approved[field], 'rename source/issuer binding');
+                assert.equal(rename.old_name, historyName);
+                assert.equal(rename.new_name, correction.name);
+                assert.equal(rename.ticker, correction.ticker);
+                assert(/^[0-9]{8}$/.test(rename.corp_code), 'rename issuer identity');
+                assert(/^[0-9]{14}$/.test(rename.accession), 'rename accession');
+                assert(rename.source_url.startsWith('https://dart.fss.or.kr/report/viewer.do?'));
+                assert(rename.source_url.includes('rcpNo=' + rename.accession));
+                assert(/^[a-f0-9]{64}$/.test(rename.source_sha256), 'rename original source');
+            }
         }
         assert.equal(source[0].name, historyName);
         assert.equal(source[0].fundamentals[historyMetric], correction.after, 'history must already be corrected');
