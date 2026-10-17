@@ -24,6 +24,32 @@ test('uncorrected history and duplicate instructions are rejected',()=>{
     assert.throws(()=>repair(doc,manifest,bad));
     assert.throws(()=>repair(doc,{...manifest,rows:[c,c]},history));
 });
+test('a reviewed exact issuer rename preserves historical and public names separately',()=>{
+    const row=require('../data/metadata/report_fin_history_corrections_20261017.json').rows.find(r=>r.ticker==='282880');
+    assert(row && row.history_name==='코윈테크');
+    const rename=row.name_change;
+    const newer={schema:'reviewed-kr-annual-financial-corrections-v2',rows:[row]};
+    const h={rows:[{ticker:row.ticker,name:rename.old_name,fiscal_year:row.year,period:'annual',fundamentals:{net_income:row.after}}]};
+    const d={stocks:[{ticker:row.ticker,name:row.name,fin_series:[{year:row.year,net:row.before,revenue:123}]}]};
+    const result=repair(d,newer,h);
+    assert.equal(result.next.stocks[0].name,row.name);
+    assert.equal(h.rows[0].name,rename.old_name);
+    assert.equal(result.next.stocks[0].fin_series[0].net,row.after);
+    assert.deepEqual(repair(result.next,newer,h).changed,[]);
+    assert.throws(()=>repair(d,{...newer,schema:manifest.schema},h));
+    for (const change of [r=>delete r.name_change,r=>r.name_change.old_name='다른회사',
+        r=>r.name_change.new_name='다른회사',r=>r.name_change.ticker='000000',
+        r=>r.name_change.corp_code='00000001',r=>r.name_change.source_sha256='a'.repeat(64),
+        r=>r.name_change.accession='20260901900256',
+        r=>r.name_change.source_url='https://example.invalid/',r=>r.history_name=row.name]) {
+        const bad=structuredClone(newer);change(bad.rows[0]);assert.throws(()=>repair(d,bad,h));
+    }
+    const borrowed={...c,history_name:rename.old_name,name_change:{...rename,ticker:c.ticker,new_name:c.name}};
+    const other=structuredClone(history);other.rows[0].name=rename.old_name;
+    assert.throws(()=>repair(doc,{...newer,rows:[borrowed]},other));
+    const bad=structuredClone(h);bad.rows[0].name='비슷한회사';assert.throws(()=>repair(d,newer,bad));
+    assert.throws(()=>repair(doc,manifest,h));
+});
 test('raw unit mismatch cannot publish a differently scaled amount',()=>{
     assert.throws(()=>repair(doc,{...manifest,rows:[{...c,reported_unit:'천원',unit_multiplier:1000}]},history));
     assert.throws(()=>repair(doc,{...manifest,rows:[{...c,reported_unit:'미확인'}]},history));
