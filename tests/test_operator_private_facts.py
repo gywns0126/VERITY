@@ -1,6 +1,8 @@
 """Approved private facts stay private and preserve their source data/dates."""
 from types import SimpleNamespace
 from pathlib import Path
+import io
+import json
 
 import pytest
 import yaml
@@ -22,21 +24,22 @@ def private_source(monkeypatch, tmp_path):
 def test_fallback_uses_only_private_endpoint_preserving_document(private_source, monkeypatch, rel):
     document = {"generated_at": "2026-05-30", "rows": [{"ticker": "005930", "year": 2024}]}
     calls = []
-    def fetch(url, cache_key, headers):
-        calls.append((url, cache_key, headers))
-        return document
-    monkeypatch.setattr(tf, "_fetch_json", fetch)
+    def fetch(request, timeout):
+        calls.append(request)
+        return io.BytesIO(json.dumps(document).encode())
+    monkeypatch.setattr(tf.urllib.request, "build_opener", lambda *a: SimpleNamespace(open=fetch))
     origins = {}
     token = tf._LOCAL_ORIGINS.set(origins)
     try:
-        assert tf._load_local(rel) is document
+        assert tf._load_local(rel) == document
         assert origins[rel] == "private:" + tf.PRIVATE_LOCAL_FALLBACKS[rel]
     finally:
         tf._LOCAL_ORIGINS.reset(token)
-    url, cache_key, headers = calls[0]
+    request = calls[0]
+    url, headers = request.full_url, dict(request.header_items())
     assert "/storage/v1/object/verity-reports/_operator/" in url
     assert "/public/" not in url and "github" not in url
-    assert cache_key is None
+    assert headers["Cache-control"] == "no-cache"
     assert headers["Authorization"] == "Bearer SECRET"
     assert tf._meta_as_of(document) == ""  # write time is not the underlying reporting period
 
@@ -70,7 +73,7 @@ def test_private_disabled_blocks_even_local_file(private_source, monkeypatch):
 
 def test_private_request_memo_does_not_survive_collection(private_source, monkeypatch):
     calls = []
-    monkeypatch.setattr(tf, "_fetch_json", lambda *a, **k: calls.append(1) or {})
+    monkeypatch.setattr(tf, "_read_private_json", lambda *a, **k: calls.append(1) or {})
     def collect(query, include_private):
         tf._private_json("_operator/portfolio_full.json")
         tf._private_json("_operator/portfolio_full.json")

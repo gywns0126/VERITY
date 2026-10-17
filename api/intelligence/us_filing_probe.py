@@ -470,10 +470,10 @@ def _fresh_first(facts, tags, unit, anchor) -> Optional[Dict[str, Any]]:
 # "the registrant had 7,696,293,669 shares of Class A common stock and 5,485,486,276
 #  shares of Class B common stock outstanding" → 두 클래스를 합산한다.
 _COVER_SHARES_PAT = re.compile(
-    r"([\d,]{7,})\s+shares?\s+of\s+(?:the\s+registrant['’]s\s+)?"
+    r"([\d,]{7,})\s+sh\s*ares?\s+of\s+(?:the\s+registrant['’]s\s+)?"
     r"(?:its\s+)?(?P<cls>Class\s+[A-Z]\s+)?(?:common\s+stock|common\s+shares)", re.I)
 _COVER_ANCHOR_PAT = re.compile(
-    r"(?:had|were|there\s+were|outstanding)[^.]{0,600}?outstanding", re.I)
+    r"(?:had|were|there\s+were|outstanding)(?:[^.]|\.(?=\d)){0,600}?outstanding", re.I)
 
 
 def _cover_shares(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -1059,6 +1059,30 @@ def _segment_block(cik: str, rows: List[Dict[str, Any]]) -> Optional[Dict[str, A
 
 # ── 공개 진입점 ───────────────────────────────────────────────────────────
 
+def _facts_freshness(facts: Optional[Dict[str, Any]],
+                     rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Compare independent submissions periods, not an old XBRL's own anchor."""
+    financial_forms = {"10-Q", "10-K", "10-Q/A", "10-K/A"}
+    reports = [r for r in rows if r.get("form") in financial_forms
+               and re.fullmatch(r"\d{4}-\d{2}-\d{2}", r.get("reportDate") or "")]
+    latest = max(reports, key=lambda r: (r["reportDate"], r["filingDate"]), default=None)
+    ends = []
+    for tag in ("Assets", "NetIncomeLoss", "Revenues",
+                "RevenueFromContractWithCustomerExcludingAssessedTax"):
+        record = _latest(facts or {}, "us-gaap", tag, "USD")
+        if record:
+            ends.append(record["end"])
+    end = max(ends, default=None)
+    status = ("unavailable" if not end else "unverified" if not latest else
+              "stale" if end < latest["reportDate"] else "period_current")
+    return {"status": status, "companyfacts_period_end": end,
+            "latest_filing_period_end": latest["reportDate"] if latest else None,
+            "latest_filing_accession": latest["accessionNumber"] if latest else None,
+            "note": ("SEC companyfacts가 최신 보고기간보다 오래됨. 이전 재무 요약과 "
+                     "XBRL 시총 분모는 제외했으며 최신 원문 확인이 필요함."
+                     if status in ("stale", "unavailable") else
+                     "기간 비교 결과이며 개별 태그의 정확성 검증을 뜻하지 않음.")}
+
 def probe(ticker: str, *, no_cache: bool = False,
           diagnostics: Optional[List[Dict[str, str]]] = None,
           budget_seconds: float = _PROBE_BUDGET_SECONDS) -> Optional[Dict[str, Any]]:
@@ -1090,8 +1114,12 @@ def _probe(ticker: str) -> Optional[Dict[str, Any]]:
     if not rows:
         return None
     facts = _companyfacts(cik)
+    freshness = _facts_freshness(facts, rows)
+    # Fetch time does not make old XBRL current. Preserve document-derived shares.
+    if freshness["status"] in ("stale", "unavailable"):
+        facts = None
 
-    out: Dict[str, Any] = {"CIK": cik}
+    out: Dict[str, Any] = {"CIK": cik, "재무자료 신선도": freshness}
     name = subs.get("name")
     if name:
         out["법인명"] = name

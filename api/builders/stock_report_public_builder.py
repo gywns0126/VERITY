@@ -471,6 +471,31 @@ def _fmt_won(v: Any) -> Optional[str]:
         return None
 
 
+def _earnings_calendar_from_rec(rec: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Provider dates are unconfirmed; old observations never get a fresh stamp."""
+    earnings = rec.get("earnings") or {}
+    raw = earnings.get("next_earnings")
+    try:
+        if not isinstance(raw, str) or len(raw) != 10:
+            return []
+        if datetime.fromisoformat(raw).date() < _now_kst().date():
+            return []
+    except (TypeError, ValueError):
+        return []
+    source = earnings.get("source") or "unknown"
+    row = {"event": "실적발표 예상일 (미확정)", "kind": "실적", "date": raw,
+           "is_estimated": True, "source": source,
+           "basis": "Yahoo Finance 일정 · 회사 공시 미대조" if source in
+                    ("calendar", "earnings_dates") else "제공자 일정 · 회사 공시 미대조"}
+    observed = earnings.get("observed_at")
+    try:
+        if datetime.fromisoformat(observed).tzinfo is not None:
+            row["observed_at"] = observed
+    except (TypeError, ValueError):
+        pass
+    return [row]
+
+
 def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
     ticker = str(rec.get("ticker") or "")
     altman = (((rec.get("quant_factors") or {}).get("quality") or {}).get("altman") or {})
@@ -620,8 +645,7 @@ def build_rich(rec: Dict[str, Any], catalyst: Dict[str, List[Dict[str, Any]]]) -
         # consensus 미부착 (2026-07-10) — 쟁점4 이중IP(네이버 ToS+증권사 리서치). 표시=출처 링크아웃 대체.
         "consensus": None,
         "verity_lens": _verity_lens_from_rec(rec),
-        "calendar": ([{"event": "실적발표", "kind": "실적", "date": (rec.get("earnings") or {}).get("next_earnings")}]
-                     if (rec.get("earnings") or {}).get("next_earnings") else []),
+        "calendar": _earnings_calendar_from_rec(rec),
         "rich": True,
     }
     return out
@@ -1459,6 +1483,9 @@ def main() -> int:
         # 어닝 캘린더 — DART 제출 패턴 자체계산 (kr_earnings_pattern.json, 어닝 캘린더 스프린트 2026-07-04).
         # 잠정실적(자율, 대형주) 이력 ≥3 = 정밀 신호 우선 / 아니면 정기보고서 리듬. 파일 부재 = 기존 calendar 유지.
         earn_pats = (_load_json(os.path.join(_ROOT, "data", "kr_earnings_pattern.json"), {}) or {}).get("patterns") or {}
+        from api.collectors.kr_earnings_calendar import select_calendar as _official_calendar
+        from api.collectors.kr_earnings_calendar import merge_calendar as _merge_calendar
+        official_earnings = _load_json(os.path.join(_ROOT, "data", "kr_earnings_calendar.json"), {}) or {}
 
         def _kr_earnings_window(rows):
             from datetime import date as _date, timedelta as _td
@@ -1480,9 +1507,12 @@ def main() -> int:
                 if est >= today - _td(days=7):
                     break
                 est += _td(days=med)
+            if est < today - _td(days=7):
+                return None
             basis = "잠정실적 공시 패턴" if use is prov else "정기보고서 제출 패턴"
             return {"event": "다음 실적 공시 예상 창 (±7일)", "kind": "실적", "date": est.isoformat(),
-                    "basis": f"과거 {basis} · 자체계산 (확정 공시 시 갱신)"}
+                    "is_estimated": True, "source": "kr_earnings_pattern.json",
+                    "basis": f"과거 {basis} · 자체계산 · 확정 공시 미대조"}
 
         n_cal = 0
         # 재무요약 + PER/PBR 자체계산 보강 + 동종업계 비교 부착
@@ -1496,7 +1526,12 @@ def main() -> int:
             fs = fin_series.get(tk)
             if fs:
                 s["fin_series"] = fs  # 연도별 매출/영업이익/순익 시계열(DART 공시 실값, 추이 그래프용)
-            if not s.get("calendar"):  # rich 풀(운영풀) 기존 calendar 존중 — 빈 종목만 패턴 창
+            official = _official_calendar(official_earnings, tk, _now_kst().date())
+            if official is not None:
+                # Issuer notice supersedes estimates; ambiguity suppresses them.
+                s["calendar"] = _merge_calendar(s.get("calendar"), official)
+                n_cal += bool(official)
+            elif not s.get("calendar"):
                 w = _kr_earnings_window(earn_pats.get(tk))
                 if w:
                     s["calendar"] = [w]

@@ -3,8 +3,15 @@
 yfinance에서 종목별 실적발표 예정일을 수집
 """
 import yfinance as yf
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
+
+
+def _estimated_date(value, source: str) -> dict:
+    """Yahoo schedules are estimates unless an issuer source confirms them."""
+    return {"next_earnings": str(value)[:10], "source": source,
+            "is_estimated": True, "provider": "Yahoo Finance",
+            "observed_at": datetime.now(timezone.utc).isoformat()}
 
 
 def get_earnings_dates(ticker_yf: str) -> dict:
@@ -20,11 +27,11 @@ def get_earnings_dates(ticker_yf: str) -> dict:
                 ed = cal.get("Earnings Date", [])
                 if ed:
                     next_date = str(ed[0])[:10] if isinstance(ed, list) else str(ed)[:10]
-                    return {"next_earnings": next_date, "source": "calendar"}
+                    return _estimated_date(next_date, "calendar")
             elif isinstance(cal, pd.DataFrame) and not cal.empty:
                 if "Earnings Date" in cal.index:
                     val = cal.loc["Earnings Date"].iloc[0]
-                    return {"next_earnings": str(val)[:10], "source": "calendar"}
+                    return _estimated_date(val, "calendar")
 
         try:
             edates = t.get_earnings_dates(limit=4)
@@ -33,7 +40,7 @@ def get_earnings_dates(ticker_yf: str) -> dict:
                 future = edates[edates.index >= pd.Timestamp(now - timedelta(days=7))]
                 if not future.empty:
                     next_date = str(future.index[0])[:10]
-                    return {"next_earnings": next_date, "source": "earnings_dates"}
+                    return _estimated_date(next_date, "earnings_dates")
         except Exception:
             pass
 
