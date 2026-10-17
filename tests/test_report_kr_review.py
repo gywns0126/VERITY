@@ -77,6 +77,27 @@ def test_future_review_and_stale_review_fail_closed():
     assert review.reviewed_entry("084010", STOCK, datetime(2027, 4, 15, tzinfo=KST)) is None
 
 
+def test_next_primary_net_keeps_original_history_and_restated_columns_separate():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    expected = [('000480', '시알홀딩스', '00148984', -18803450000, 3, 1000),
+                ('001130', '대한제분', '00113243', -25137525435, 3, 1),
+                ('000680', 'LS네트웍스', '00104698', -19102992842, 2, 1),
+                ('241590', '화승엔터프라이즈', '01128613', -27121361108, 3, 1)]
+    for ticker, name, corp, net, count, multiplier in expected:
+        rows = review.reviewed_financials(ticker, {'ticker':ticker,'name':name,'corp_code':corp}, [], now)
+        assert len(rows) == count
+        annual = _by_period(rows, 2025, 'annual')
+        assert annual['net'] == net and annual['sga'] > 0
+        assert annual['revenue'] - annual['cost_of_sales'] - annual['sga'] == annual['op']
+        assert annual['metric_sources']['net']['unit_multiplier'] == multiplier
+        if ticker == '000480':
+            assert _by_period(rows, 2024, 'annual')['net'] == -1278597000
+        if ticker == '000680':
+            prior = _by_period(rows, 2024, 'annual')
+            assert (prior['net'], prior['op']) == (-17593580482,30187565175)
+            assert not any(r['year'] == 2023 for r in rows)
+
+
 def test_next_primary_totals_exclude_discontinued_and_attribution_rows():
     now = datetime(2026, 10, 17, tzinfo=KST)
     expected = [('214270', 'FSN', '01061497', 30518488142, -15863077578),
