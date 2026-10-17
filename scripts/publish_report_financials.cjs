@@ -5,6 +5,12 @@ const NAME = 'stock_report_public.json';
 const URL = 'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/' + NAME;
 const MANIFEST = 'data/metadata/report_fin_history_corrections_20261017.json';
 const HISTORY = 'data/dart_kr_fin_history.json';
+// A single directly reviewed rename, not a general alias resolver. Additional issuers
+// require a new primary-source review before this publication identity gate expands.
+const REVIEWED_RENAMES = {
+    '282880': {corp_code:'01211232',old_name:'코윈테크',new_name:'코윈로보틱스',
+        accession:'20260901900255',source_sha256:'662296dd661611d7b77eb1a3957d63406fc41f8d02cc45d513bc9200182fd6b8'},
+};
 
 function repair(doc, manifest, history) {
     assert(['reviewed-kr-annual-net-corrections-v1', 'reviewed-kr-annual-financial-corrections-v2'].includes(manifest.schema));
@@ -38,7 +44,25 @@ function repair(doc, manifest, history) {
         assert(/^-?\d+$/.test(raw) && Number(raw) * multiplier === correction.after, 'source amount/unit mismatch');
         const source = history.rows.filter(r => r.ticker === correction.ticker && r.fiscal_year === correction.year && r.period === 'annual');
         assert.equal(source.length, 1, 'history identity');
-        assert.equal(source[0].name, correction.name);
+        const historyName = correction.history_name ?? correction.name;
+        if (correction.history_name !== undefined) {
+            // Only a reviewed issuer-specific rename may bridge two exact names; no fuzzy aliases.
+            assert.equal(manifest.schema, 'reviewed-kr-annual-financial-corrections-v2');
+            const rename = correction.name_change;
+            assert(rename && historyName && historyName !== correction.name, 'unreviewed historical name');
+            const approved = REVIEWED_RENAMES[correction.ticker];
+            assert(approved, 'issuer rename has not been independently reviewed');
+            for (const field of Object.keys(approved)) assert.equal(rename[field], approved[field], 'rename source/issuer binding');
+            assert.equal(rename.old_name, historyName);
+            assert.equal(rename.new_name, correction.name);
+            assert.equal(rename.ticker, correction.ticker);
+            assert(/^[0-9]{8}$/.test(rename.corp_code), 'rename issuer identity');
+            assert(/^[0-9]{14}$/.test(rename.accession), 'rename accession');
+            assert(rename.source_url.startsWith('https://dart.fss.or.kr/report/viewer.do?'));
+            assert(rename.source_url.includes('rcpNo=' + rename.accession));
+            assert(/^[a-f0-9]{64}$/.test(rename.source_sha256), 'rename original source');
+        }
+        assert.equal(source[0].name, historyName);
         assert.equal(source[0].fundamentals[historyMetric], correction.after, 'history must already be corrected');
         const stocks = next.stocks.filter(s => s.ticker === correction.ticker);
         assert.equal(stocks.length, 1, 'public identity');

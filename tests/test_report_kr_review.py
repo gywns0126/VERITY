@@ -311,3 +311,26 @@ def test_next_priority_totals_and_operating_profit_keep_scope_and_versions():
     assert 'rcpNo=20260324000006' in previous['metric_sources']['net']['source_url']
     notes = review.reviewed_entry('290650', {'ticker':'290650','name':'엘앤씨바이오'}, now)['notes']
     assert '140,965,124,092' in notes[0] and '141,496,608,088' in notes[0]
+
+
+def test_owner_discontinued_and_renamed_issuer_sources_keep_exact_annual_scope():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    cases = (
+        ('200130','콜마비앤에이치','01032404',-22639015475,26645965589),
+        ('282880','코윈로보틱스','01211232',-17618390526,-25447396955),
+        ('092200','디아이씨','00112165',-4771081140,18550433161),
+        ('045660','에이텍','00256502',393882122,8698700770),
+    )
+    for ticker,name,corp,net,op in cases:
+        rows=review.reviewed_financials(ticker,{'ticker':ticker,'name':name,'corp_code':corp},[],now)
+        assert len(rows)==3
+        current=_by_period(rows,2025,'annual')
+        assert (current['net'],current['op'])==(net,op)
+        assert current['revenue']-current['cost_of_sales']-current['sga']==op
+        assert current['metric_sources']['net']['unit_multiplier']==1
+        assert review.reviewed_entry(ticker,{'ticker':ticker,'name':name,'corp_code':'99999999'},now) is None
+    atec=review.reviewed_financials('045660',{'ticker':'045660','name':'에이텍'},[],now)
+    prior=_by_period(atec,2024,'annual')
+    assert (prior['revenue'],prior['op'])==(45526630657,2075095975)
+    assert prior['op']!=1462480218  # Historical original is not this recast column.
+    assert _by_period(atec,2023,'annual')['op']==-712489950
