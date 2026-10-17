@@ -1,6 +1,7 @@
 """Private diagnostic baseline never becomes an analysis/scoring input."""
 from copy import deepcopy
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -61,10 +62,13 @@ def test_actual_private_reader_authorized_get_and_context_restored(monkeypatch):
         def __enter__(self): return self
         def __exit__(self, *args): return False
         def read(self): return json.dumps(private).encode()
-    def urlopen(request, timeout):
+    def open_request(request, timeout):
         calls.append((request.full_url, request.get_method(), dict(request.header_items())))
         return Response()
-    monkeypatch.setattr(ticker_facts.urllib.request, "urlopen", urlopen)
+    def build_opener(*handlers):
+        assert any(isinstance(h, ticker_facts._PrivateNoRedirect) for h in handlers)
+        return SimpleNamespace(open=open_request)
+    monkeypatch.setattr(ticker_facts.urllib.request, "build_opener", build_opener)
     private_token = ticker_facts._INCLUDE_PRIVATE.set(True)
     original_memo = {"_operator/portfolio_full.json": {"stale": True}}
     memo_token = ticker_facts._PRIVATE_DOCS.set(original_memo)
@@ -74,6 +78,8 @@ def test_actual_private_reader_authorized_get_and_context_restored(monkeypatch):
         assert len(calls) == 1
         assert calls[0][:2] == ("https://private-fixture.example/storage/v1/object/verity-reports/_operator/portfolio_full.json", "GET")
         assert calls[0][2]["Apikey"] == "service-role-fixture"
+        assert calls[0][2]["Authorization"] == "Bearer service-role-fixture"
+        assert calls[0][2]["Cache-control"] == "no-cache"
         assert ticker_facts._INCLUDE_PRIVATE.get() is True
         assert ticker_facts._PRIVATE_DOCS.get() is original_memo
     finally:
@@ -84,6 +90,7 @@ def test_actual_private_reader_authorized_get_and_context_restored(monkeypatch):
 def test_explicit_private_disabled_context_is_respected_without_transport(monkeypatch):
     from api.intelligence import ticker_facts
     monkeypatch.setattr(ticker_facts.urllib.request, "urlopen", lambda *a, **k: pytest.fail("private context disabled"))
+    monkeypatch.setattr(ticker_facts.urllib.request, "build_opener", lambda *a, **k: pytest.fail("private context disabled"))
     token = ticker_facts._INCLUDE_PRIVATE.set(False)
     try:
         assert load_previous_analysis_baseline({})["baseline_source"] == "legacy_local"
