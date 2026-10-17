@@ -369,6 +369,13 @@ def build_report(ticker, fetch, now=None):
             if (not registered or any(fin.get(k) not in (None, '', candidate[k])
                                       for k in ('start', 'end', 'period_kind', 'currency', 'fs_div'))):
                 continue
+            filing_url = 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=' + registered['accession']
+            if (candidate.get('source_url') != filing_url
+                    or any(fin.get(k) not in (None, '', registered[v]) for k, v in
+                           (('accession', 'accession'), ('rcept_no', 'accession'),
+                            ('filed', 'filed'), ('filed_at', 'filed'), ('filing_date', 'filed')))
+                    or fin.get('source_url') not in (None, '', filing_url)):
+                continue
             confirmed = []
             for key, fact in registered['metrics'].items():
                 if key not in ('revenue', 'op', 'net', 'cost_of_sales', 'sga'):
@@ -460,7 +467,7 @@ def build_report(ticker, fetch, now=None):
               [[r['company'] + ' (' + r['ticker'] + ')', r['reason'], r['limitation'], source_cell(r)] for r in kr_business.get('peers', [])],
               '검수 ' + kr_business['reviewed_at'] + ' · 사업 유사성 비교이며 가치평가 배수 순위가 아닙니다. ' + kr_business.get('peer_note', ''), widths=[1, 1.4, 2, 0.5])
     table("R4G" if kr_business else "R4", "기존 업종 지표 · 기간 정규화 전 참고값", ["지표", "종목", "업종 중앙값"],
-          [[text(r.get("key")), text(facts.get(r.get("key"))) if str(facts.get(r.get("key"), "")).startswith("추정 ") else text(r.get("value")), text(r.get("median"))] for r in prows],
+          [[text(r.get("key")), text(facts.get(r.get("key"))) if str(facts.get(r.get("key"), "")).startswith(("추정 ", "비교 보류 ·")) else text(r.get("value")), text(r.get("median"))] for r in prows],
           f"{peer.get('sector') or '업종 미상'} · 비교 집단 {peer.get('n', '미상')}개 · 중앙값은 순서상 가운데 값. 종목별 결산기간·산식 일치 미확인." + (' 위에서 선정한 직접 비교기업의 중앙값이 아닙니다.' if kr_business else ''))
     valuation = next((r for r in prows if r.get("key") == "PER"), None)
     if valuation and not kr_business:

@@ -268,7 +268,9 @@ def test_sec_fetch_does_not_hold_global_cache_lock_during_io(monkeypatch):
 
 
 def _reviewed_income_fixture():
-    s = {'ticker': '000650', 'name': '천일고속', 'facts': {'영업이익률': '0%'}, 'financials': {'period': '2025', 'groups': [
+    s = {'ticker': '000650', 'name': '천일고속', 'facts': {'영업이익률': '0%'},
+         'peer': {'sector': '운송', 'n': 2, 'rows': [{'key': '영업이익률', 'value': '0%', 'median': '7.2%'}]},
+         'financials': {'period': '2025', 'groups': [
         {'title': '손익계산서', 'rows': [{'k': k, 'v': '0'} for k in ('매출', '영업이익', '순이익', '영업이익률')]},
         {'title': '현금흐름표', 'rows': [{'k': '영업활동', 'v': '3억'}]},
     ]}}
@@ -292,12 +294,18 @@ def test_reviewed_income_reaches_summary_without_claiming_cash_provenance():
     assert not report['reader']['cash_status']['source_linked']
     margin = next(r for r in section(report, 'R3')['rows'] if r[0] == '영업이익률')
     assert margin[1] == '비교 보류 · 수집값 0%' and '재계산한 비율이 아닙니다' in margin[2]
+    peer = next(s for s in report['sections'] if s['title'].startswith('기존 업종 지표'))
+    assert peer['rows'][0] == ['영업이익률', '비교 보류 · 수집값 0%', '7.2%']
     assert s == before
 
 
 @pytest.mark.parametrize('field,value', [('period', '2026'), ('period_kind', 'quarter'),
                                          ('currency', 'USD'), ('fs_div', 'CFS'),
-                                         ('start', '2025-04-01'), ('end', '2025-09-30')])
+                                         ('start', '2025-04-01'), ('end', '2025-09-30'),
+                                         ('accession', '20260401000001'), ('rcept_no', '20260401000001'),
+                                         ('filed', '2026-04-01'), ('filed_at', '2026-04-01'),
+                                         ('filing_date', '2026-04-01'),
+                                         ('source_url', 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260401000001')])
 def test_summary_does_not_borrow_reviewed_income_for_a_different_basis(field, value):
     s, docs = _reviewed_income_fixture()
     s['financials'][field] = value
@@ -330,6 +338,18 @@ def test_summary_rejects_a_wrong_document_url_even_with_the_reviewed_hash():
     raw = next(r for r in entry['periods'] if r['year'] == 2025)
     row = report_kr_review._materialize(raw, entry['documents'], entry['reviewed_at'])
     row['metric_sources']['revenue']['source_url'] += '&wrong-document=1'
+    s['financial_evidence'] = {'periods': [row]}
+    report = build_report('000650', lambda name: docs.get(name, {}), datetime(2026, 10, 17, tzinfo=timezone.utc))
+    assert section(report, 'R2')['rows'][0] == ['손익계산서', '매출', '0']
+
+
+def test_summary_rejects_wrong_displayed_filing_link_with_correct_metric_links():
+    import report_kr_review
+    s, docs = _reviewed_income_fixture()
+    entry = report_kr_review._registry()['000650']
+    raw = next(r for r in entry['periods'] if r['year'] == 2025)
+    row = report_kr_review._materialize(raw, entry['documents'], entry['reviewed_at'])
+    row['source_url'] = 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260401000001'
     s['financial_evidence'] = {'periods': [row]}
     report = build_report('000650', lambda name: docs.get(name, {}), datetime(2026, 10, 17, tzinfo=timezone.utc))
     assert section(report, 'R2')['rows'][0] == ['손익계산서', '매출', '0']
