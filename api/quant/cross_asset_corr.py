@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
+from api.utils.macro_runtime import request_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +44,9 @@ def _fetch_returns(ticker: str, days: int = WINDOW_DAYS + 5) -> Optional[List[fl
     try:
         # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
         from api.collectors.yfinance_safe import yf_ticker
+        request_timeout(10)
         t = yf_ticker(ticker)
-        hist = t.history(period=f"{days + 10}d")
+        hist = t.history(period=f"{days + 10}d", timeout=request_timeout(10))
         if hist.empty or len(hist) < days:
             return None
         close = hist["Close"].dropna()
@@ -53,7 +55,7 @@ def _fetch_returns(ticker: str, days: int = WINDOW_DAYS + 5) -> Optional[List[fl
         rets = close.pct_change().dropna().tail(days).tolist()
         return [float(r) for r in rets] if rets else None
     except Exception as e:  # noqa: BLE001
-        logger.warning("cross_asset_corr fetch %s failed: %s", ticker, e)
+        logger.warning("cross_asset_corr fetch %s failed: %s", ticker, type(e).__name__)
         return None
 
 

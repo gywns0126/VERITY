@@ -31,6 +31,7 @@ import time
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict
+from api.utils.macro_runtime import collection_budget
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +53,16 @@ def _safe_call(fn: Callable[[], Any], name: str, timeout_s: int) -> tuple[Any, s
     from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout
 
     executor = ThreadPoolExecutor(max_workers=1)
-    future = executor.submit(fn)
+    def bounded():
+        # Leave cleanup time before the existing outer timeout. Running sockets
+        # still have their own read timeout; this is not force-cancellation.
+        with collection_budget(max(0, timeout_s - 2)):
+            return fn()
+
+    future = executor.submit(bounded)
     outcome: str | None = None
     result: Any = None
+    started = time.monotonic()
     try:
         result = future.result(timeout=timeout_s)
         if result is None:
@@ -62,12 +70,13 @@ def _safe_call(fn: Callable[[], Any], name: str, timeout_s: int) -> tuple[Any, s
     except FutTimeout:
         outcome = f"timeout_{timeout_s}s"
     except Exception as e:
-        outcome = f"exception:{type(e).__name__}:{str(e)[:120]}"
+        outcome = f"exception:{type(e).__name__}"
     finally:
         executor.shutdown(wait=False, cancel_futures=True)
         ok = result is not None and outcome is None
         sys.stderr.write(
-            f"[macro_collect] collector={name} ok={ok} outcome={outcome or 'success'}\n"
+            f"[macro_collect] collector={name} ok={ok} outcome={outcome or 'success'} "
+            f"elapsed_ms={round((time.monotonic() - started) * 1000)}\n"
         )
     return (result, outcome)
 
@@ -84,6 +93,13 @@ def _load_existing() -> Dict[str, Any]:
         return {}
 
 
+def _is_observation(value: Any) -> bool:
+    return isinstance(value, dict) and any(
+        key in value for key in ("source", "source_as_of", "as_of", "value", "pct",
+                                 "index", "billions_usd", "trillions_usd", "yoy_pct")
+    )
+
+
 def _mark_reused(value: Any) -> Any:
     """Copy fallback data without advancing any observation/fetch/success clock."""
     if isinstance(value, list):
@@ -91,9 +107,45 @@ def _mark_reused(value: Any) -> Any:
     if not isinstance(value, dict):
         return value
     result = {key: _mark_reused(item) for key, item in value.items()}
-    if any(key in value for key in ("source", "as_of", "source_as_of", "value")):
+    if _is_observation(value):
         result.update(stale=True, reused=True)
     return result
+
+
+def _preserve_partial_macro(current: dict, previous: dict, prefix: str = "") -> list[str]:
+    """Restore failed/missing source rows, including native FRED/ECOS fields.
+
+    Only these two source containers are descended into; successful empty lists
+    and unrelated narrative/diagnostic structures keep their existing behavior.
+    """
+    reused = []
+    for key in dict.fromkeys([*current, *previous]):
+        path = f"{prefix}.{key}" if prefix else key
+        row, old = current.get(key), previous.get(key)
+        if not prefix and key in ("fred", "ecos"):
+            if isinstance(old, dict):
+                if not isinstance(row, dict):
+                    row = current[key] = {}
+                reused.extend(_preserve_partial_macro(row, old, path))
+                if any(_is_observation(value) for value in row.values()):
+                    row["available"] = True
+            continue
+        if _is_observation(old) and (row is None or isinstance(row, dict) and row.get("status") == "fail"):
+            if old.get("status") != "fail":
+                current[key] = _mark_reused(old)
+                reused.append(path)
+    return sorted(reused)
+
+
+def _has_stale_macro_row(macro: dict) -> bool:
+    rows = list(macro.values())
+    for key in ("fred", "ecos"):
+        if isinstance(macro.get(key), dict):
+            if macro[key].get("available") is False:
+                return True
+            rows.extend(macro[key].values())
+    return any(_is_observation(row) and (row.get("stale") or row.get("status") == "fail")
+               for row in rows)
 
 
 def build() -> Dict[str, Any]:
@@ -150,15 +202,8 @@ def build() -> Dict[str, Any]:
     reused_fields = []
     if macro and not macro_err and isinstance(final["macro"], dict):
         previous_macro = prev.get("macro") or {}
-        for key, row in final["macro"].items():
-            if isinstance(row, dict) and row.get("stale"):
-                collector_meta["macro"]["stale"] = True
-            if isinstance(row, dict) and row.get("status") == "fail":
-                previous_row = previous_macro.get(key)
-                if isinstance(previous_row, dict) and previous_row.get("status") != "fail":
-                    final["macro"][key] = _mark_reused(previous_row)
-                    reused_fields.append(key)
-                collector_meta["macro"]["stale"] = True
+        reused_fields = _preserve_partial_macro(final["macro"], previous_macro)
+        collector_meta["macro"]["stale"] = bool(reused_fields) or _has_stale_macro_row(final["macro"])
         if collector_meta["macro"]["stale"]:
             old_meta = (prev.get("collector_meta") or {}).get("macro") or {}
             collector_meta["macro"]["last_successful_at"] = old_meta.get("last_successful_at")

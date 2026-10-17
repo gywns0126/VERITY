@@ -14,6 +14,7 @@ import re
 from typing import Optional
 
 import requests
+from api.utils.macro_runtime import request_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def fetch_cape() -> Optional[dict]:
         r = requests.get(
             MULTPL_URL,
             headers={"User-Agent": "Mozilla/5.0 VERITY/1.0 health-check"},
-            timeout=8,
+            timeout=request_timeout(8),
         )
         if r.status_code != 200:
             logger.warning("CAPE multpl HTTP %s", r.status_code)

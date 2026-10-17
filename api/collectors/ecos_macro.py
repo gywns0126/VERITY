@@ -5,12 +5,15 @@
 https://ecos.bok.or.kr/api/
 """
 from datetime import timedelta
+import sys
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 import requests
 
 from api.config import ECOS_API_KEY, now_kst
+from api.utils.macro_provenance import copy_meta, now_iso, observation_meta
+from api.utils.macro_runtime import request_timeout
 
 ECOS_BASE = "https://ecos.bok.or.kr/api/StatisticSearch"
 _TIMEOUT = 25
@@ -47,14 +50,15 @@ def _ecos_get(
         f"/{stat_code}/{cycle}/{period_start}/{period_end}/{item_code}"
     )
     try:
-        r = requests.get(url, timeout=_TIMEOUT)
+        r = requests.get(url, timeout=request_timeout(_TIMEOUT))
         if r.status_code != 200:
             return []
         data = r.json()
         if isinstance(data, dict) and data.get("RESULT"):
             return []
         return _normalize_rows(data)
-    except Exception:
+    except Exception as error:
+        sys.stderr.write(f"[ecos_fetch] error={type(error).__name__}\n")
         return []
 
 
@@ -95,6 +99,7 @@ def _kr_cpi_inflation_axis(key: str) -> Optional[Dict[str, Any]]:
     """
     ps, pe = _month_range_months_back(KR_CPI_MIN_MONTHS + 6)
     rows = _ecos_get(key, KR_CPI_STAT, "M", ps, pe, KR_CPI_ITEM, 1, 100)
+    fetched_at = now_iso() if rows else None
     if len(rows) < KR_CPI_MIN_MONTHS:
         return None
 
@@ -133,6 +138,7 @@ def _kr_cpi_inflation_axis(key: str) -> Optional[Dict[str, Any]]:
         "stat_code": KR_CPI_STAT,
         "item_code": KR_CPI_ITEM,
         "source": "ecos",
+        **observation_meta("ecos", yoy_months[-1], fetched_at=fetched_at),
         "form": "rolling_z_sign_only",
         "note": ("한국 headline CPI YoY 의 12M 롤링 z 부호. 절대 임계 없음 — "
                  "PREREG_INFLATION_AXIS_2026_08_20 F-c. 창은 사전 고정(변경=사전등록)"),
@@ -155,6 +161,7 @@ def get_ecos_macro_block() -> Dict[str, Any]:
     if not pr_rows:
         pr_rows = _ecos_get(key, "722Y001", "M", ps, pe, "0101000", 1, 10)
     if pr_rows:
+        fetched_at = now_iso()
         last = pr_rows[-1]
         try:
             out["korea_policy_rate"] = {
@@ -163,6 +170,7 @@ def get_ecos_macro_block() -> Dict[str, Any]:
                 "unit": last.get("UNIT_NAME"),
                 "stat_code": "722Y001",
                 "source": "ecos",
+                **observation_meta("ecos", last.get("TIME"), fetched_at=fetched_at),
             }
         except (TypeError, ValueError):
             pass
@@ -180,6 +188,7 @@ def get_ecos_macro_block() -> Dict[str, Any]:
     if not y_rows:
         y_rows = _ecos_get(key, "817Y002", "D", ds, de, "010210000", 1, 10)
     if y_rows:
+        fetched_at = now_iso()
         last = y_rows[-1]
         try:
             val = round(float(last.get("DATA_VALUE", 0)), 4)
@@ -198,6 +207,7 @@ def get_ecos_macro_block() -> Dict[str, Any]:
                 "series_id": "ECOS/817Y002/010210000",
                 "source_note": "한국은행 ECOS 시장금리(일별) 국고채(10년)",
                 "source": "ecos",
+                **observation_meta("ecos", date_iso or None, fetched_at=fetched_at),
             }
         except (TypeError, ValueError):
             pass
@@ -219,6 +229,7 @@ def merge_ecos_into_fred(fred: Dict[str, Any], ecos: Dict[str, Any]) -> None:
             "yoy_pp": g.get("yoy_pp"),
             "series_id": g.get("series_id"),
             "source_note": g.get("source_note"),
+            **copy_meta(g),
         }
 
     if ecos.get("korea_policy_rate"):
