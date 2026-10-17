@@ -516,7 +516,7 @@ def build_report(ticker, fetch, now=None):
           [[text(r.get("key")), text(facts.get(r.get("key"))) if str(facts.get(r.get("key"), "")).startswith(("추정 ", "비교 보류 ·")) else text(r.get("value")), text(r.get("median"))] for r in prows],
           f"{peer.get('sector') or '업종 미상'} · 비교 집단 {peer.get('n', '미상')}개 · 중앙값은 순서상 가운데 값. 종목별 결산기간·산식 일치 미확인." + (' 금융업의 일반 기업식 영업이익률·중앙값은 제외했습니다.' if financial_sector else '') + (' 위에서 선정한 직접 비교기업의 중앙값이 아닙니다.' if kr_business else ''))
     valuation = next((r for r in prows if r.get("key") == "PER"), None)
-    if valuation and not kr_business:
+    if valuation and not kr_business and not str(facts.get('PER', '')).startswith('비교 보류 ·'):
         issue("수익성과 가격을 함께 볼 근거는 충분한가?",
               f"표시 PER {text(valuation.get('value'))}, 업종 중앙값 {text(valuation.get('median'))}. PER은 이익 대비 가격 배수입니다. 두 값의 기간·계산 기준 일치 여부는 미확인입니다.",
               "이익의 지속성·부채·성장 차이를 확인한 뒤 비교하세요. PER만으로 싸다거나 비싸다고 결론내릴 수 없습니다.", "R3 · R4")

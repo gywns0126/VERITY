@@ -92,6 +92,17 @@ def cash_receipt(fin, reader):
 
 def valuation_display(facts, notes, calculations):
     values, descriptions, warnings = dict(facts), dict(calculations), []
+    per_calc = str(calculations.get("PER") or "")
+    if ("PER" in facts and _number(facts["PER"]) is not None
+            and notes.get("PER") == "자체계산"
+            and re.match(r"^시가총액\s+\S+\s*÷\s*순이익\s+\S+\s*\(", per_calc)
+            and not re.search(r"EPS|주당순이익|지배기업.*귀속|지배주주.*귀속", per_calc, re.I)):
+        # A received total-income-style quotient is not yet a verified
+        # ordinary-share EPS/owner-earnings PER; preserve the received number.
+        values["PER"] = "비교 보류 · 수집값 " + str(facts["PER"])
+        descriptions["PER"] = (per_calc + " · 수신 순이익의 귀속 기준 및 보통주 EPS 정합 미검수. "
+                               "표준 PER로 비교 보류")
+        warnings.append("PER 수집 산식의 순이익 귀속 기준과 보통주 EPS 정합이 검수되지 않아 비교를 보류했습니다. 수신 숫자는 보존했습니다.")
     for key in ("PBR", "BPS"):
         calc = str(calculations.get(key) or "")
         if key not in facts or not re.search(r"총자산.*부채비율|assets_debt_ratio", calc):
