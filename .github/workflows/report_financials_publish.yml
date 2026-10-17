@@ -1,0 +1,49 @@
+name: Publish reviewed report financial corrections (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verity-report-financial-corrections
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify exact-cell correction contract
+        run: node --test tests/report_financials_publish.test.cjs
+      - name: Install existing Blob SDK version
+        run: npm install --no-save --no-audit --no-fund @vercel/blob@2.4.1
+      - name: Correct and read back existing public Blob
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: node scripts/publish_report_financials.cjs
+      - uses: actions/checkout@v4
+        with:
+          repository: gywns0126/VERITY-data
+          token: ${{ secrets.VERITY_DATA_PAT }}
+          path: _report_published
+          sparse-checkout: stock_report_public.json
+          sparse-checkout-cone-mode: false
+      - name: Correct the same cells in the public fallback
+        run: |
+          node scripts/publish_report_financials.cjs --github-file
+          git -C _report_published add stock_report_public.json
+          if git -C _report_published diff --cached --quiet; then exit 0; fi
+          git -C _report_published config user.name "AI Stock Bot"
+          git -C _report_published config user.email "gywns0126@gmail.com"
+          git -C _report_published commit -m "data(reports): apply reviewed annual net corrections"
+          git -C _report_published push origin HEAD:main
