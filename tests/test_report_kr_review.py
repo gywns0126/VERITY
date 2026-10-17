@@ -388,3 +388,101 @@ def test_equity_reported_net_and_restated_columns_are_not_ownership_sums():
     for year,net in ((2023,16370375160),(2024,12422763198)):
         period = _by_period(power,year,'annual')
         assert period['net'] == net and period['accession'] == '20260602000010'
+
+
+def test_next_ten_primary_income_totals_keep_exact_scope_and_identity():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    cases = (
+        ('086960','MDS테크','00445841',6190210178,5813313438),
+        ('108860','셀바스AI','00666064',-4343459641,1482121007),
+        ('021050','서원','00131197',-34369841,53323111520),
+        ('051980','중앙첨단소재','00347716',-5504612917,-4562905485),
+        ('065510','휴비츠','00398668',-4940420274,5553331465),
+        ('032820','우리기술','00231044',-4104661336,-5486712823),
+        ('299170','더블유에스아이','01318261',-3494309836,3915666692),
+        ('242040','나무AX','01136348',-1878681541,2251203375),
+        ('085310','엔케이','00172228',-3694204031,-647803589),
+        ('306620','지아이에스','01325429',-3648033893,1631644343),
+    )
+    for ticker,name,corp,net,op in cases:
+        stock={'ticker':ticker,'name':name,'corp_code':corp}
+        rows=review.reviewed_financials(ticker,stock,[],now)
+        assert len(rows)==(2 if ticker=='021050' else 3)
+        current=_by_period(rows,2025,'annual')
+        assert (current['net'],current['op'])==(net,op)
+        assert all(r['fs_div']=='CFS' for r in rows)
+        assert review.reviewed_entry(ticker,{**stock,'corp_code':'99999999'},now) is None
+        for row in rows:
+            for key,source in row['metric_sources'].items():
+                assert row[key]==review._amount(source['raw_text'])*source['unit_multiplier']
+                assert row['accession'] in source['source_url']
+
+
+def test_operating_expense_is_not_sga_and_original_periods_are_not_blended():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    ai=review.reviewed_financials('108860',{'ticker':'108860','name':'셀바스AI'},[],now)
+    for row in ai:
+        assert 'sga' not in row and 'cost_of_sales' not in row
+        assert set(row['metric_sources'])=={'revenue','op','net'}
+    hu=_by_period(review.reviewed_financials('065510',{'ticker':'065510','name':'휴비츠'},[],now),2025,'annual')
+    assert hu['sga']==48183071752
+    assert hu['metric_sources']['sga']['name']=='판매 및 일반관리비'
+    central=review.reviewed_financials('051980',{'ticker':'051980','name':'중앙첨단소재'},[],now)
+    prior=_by_period(central,2023,'annual')
+    assert prior['op']==56864463 and prior['op']!=46944494
+    assert prior['accession']=='20260323001194'
+    seowon=review.reviewed_financials('021050',{'ticker':'021050','name':'서원'},[],now)
+    assert not any(r['year']==2023 for r in seowon)
+    assert review.reviewed_entry('242040',{'ticker':'242040','name':'나무기술'},now) is None
+
+
+def test_equal_same_filing_number_gains_primary_evidence_without_losing_collected_source():
+    now = datetime(2026,10,17,tzinfo=KST)
+    stock={'ticker':'086960','name':'MDS테크'}
+    primary=_by_period(review.reviewed_financials('086960',stock,[],now),2025,'annual')
+    collected={k:primary[k] for k in ('year','start','end','period_kind','currency','fs_div','accession','filed','net')}
+    original_source={'name':'당기순이익(손실)','account_id':None,'source_url':primary['source_url'],
+                     'start':primary['start'],'end':primary['end'],'currency':'KRW'}
+    collected['metric_sources']={'net':original_source}
+    before=deepcopy(collected)
+    result=_by_period(review.reviewed_financials('086960',stock,[collected],now),2025,'annual')
+    assert result['net']==before['net']
+    source=result['metric_sources']['net']
+    assert source['raw_text']=='6,190,210,178'
+    assert source['sha256']=='2a63fc29a66a07e05c6e52591300cd0c40e4e2c61de74ade61b0d885e9f0ed26'
+    assert source['collected_source']==original_source
+    assert 'API 원응답 아님' in source['source_type']
+    assert collected==before
+    repeated=_by_period(review.reviewed_financials('086960',stock,[result],now),2025,'annual')
+    assert repeated==result  # No nested provenance growth on repeated rendering.
+
+
+def test_same_filing_evidence_never_overwrites_conflicting_or_already_detailed_sources():
+    now = datetime(2026,10,17,tzinfo=KST)
+    stock={'ticker':'086960','name':'MDS테크'}
+    primary=_by_period(review.reviewed_financials('086960',stock,[],now),2025,'annual')
+    variants=[{'source_url':'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001051'},
+              {'source_url':'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=202603180010500'},
+              {'source_url':'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001050&rcpNo=20260318001051'},
+              {'source_url':'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001050&rcpNo='},
+              {},
+              {'source_url':primary['source_url'],'source_type':'unverified'},
+              {'source_url':primary['source_url'],'accession':'20260318001051'},
+              {'source_url':primary['source_url'],'rcept_no':'20260318001051'},
+              {'source_url':primary['source_url'],'filed':'2026-03-19'},
+              {'source_url':'https://dart.fss.or.kr/report/viewer.do?rcpNo=20260318001050&dcmNo=99999999'},
+              {'source_url':primary['source_url']+'&dcmNo=99999999'},
+              {'source_url':primary['source_url'],'document_version':'different'},
+              {'source_url':primary['source_url'],'account_id':'ifrs-full_ProfitLossAttributableToOwnersOfParent'},
+              {'currency':'USD'},{'fs_div':'OFS'},{'end':'2024-12-31'},
+              {'ticker':'000000'},{'stock_code':'000000'},{'corp_code':'99999999'},
+              {'issuer_id':'99999999'},
+              {'raw_text':'already retained'},{'sha256':'a'*64}]
+    for variant in variants:
+        source={'source_url':primary['source_url'],**variant} if variant else {}
+        row={**primary,'metric_sources':{'net':source}}
+        result=_by_period(review.reviewed_financials('086960',stock,[row],now),2025,'annual')
+        assert result['metric_sources']['net']==source
+    wrong={**primary,'net':777,'metric_sources':{}}
+    result=_by_period(review.reviewed_financials('086960',stock,[wrong],now),2025,'annual')
+    assert result['net']==777 and 'net' not in result['metric_sources']
