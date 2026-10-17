@@ -20,7 +20,23 @@ def test_zero_sga_with_conflicting_display_totals_is_flagged_not_replaced():
     assert warnings and fin == before
     fin['groups'][0]['rows'][1]['v'] = '702억'
     result, warnings = financial_display(fin)
-    assert result['groups'][0]['rows'][-1]['v'] == '0' and not warnings
+    row = result['groups'][0]['rows'][-1]
+    assert row['status'] == 'unverified_zero' and row['received_value'] == '0'
+    assert '확인 필요' in row['v'] and warnings
+
+
+def test_legacy_zero_sga_without_status_or_other_totals_is_not_verified():
+    for zero in ('0', '0원', '0억', 0, 0.0):
+        fin = {'groups': [{'title': '손익계산서', 'rows': [{'k': '판매비와관리비', 'v': zero}]}]}
+        before = copy.deepcopy(fin)
+        result, warnings = financial_display(fin)
+        row = result['groups'][0]['rows'][0]
+        assert row['status'] == 'unverified_zero' and row['received_value'] == zero
+        assert '확인 필요' in row['v'] and warnings and fin == before
+    for value in ('2억', '—', None):
+        fin = {'groups': [{'title': '손익계산서', 'rows': [{'k': '판매비와관리비', 'v': value}]}]}
+        result, warnings = financial_display(fin)
+        assert result == fin and not warnings
 
 
 def test_cash_summary_is_received_without_becoming_an_arithmetic_input():

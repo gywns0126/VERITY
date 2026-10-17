@@ -360,7 +360,8 @@ def build_report(ticker, fetch, now=None):
     if any(r.get("op") is not None and r.get("op") == r.get("net") for r in annual):
         gaps.append("영업이익과 순이익이 동일한 연도가 있습니다. 원문 대조 전 값 복제 오류인지 우연한 일치인지 확정할 수 없습니다.")
     period = text(fin.get("period"))
-    reviewed_income, reviewed_income_keys = None, []
+    reviewed_income, reviewed_income_keys, reviewed_financial_income = None, [], None
+    reviewed_financial_sga = False
     # Use one complete, currently eligible reviewed income column. Never promote
     # the remaining formatted balance/cash rows to that column's provenance.
     if primary_review:
@@ -394,6 +395,24 @@ def build_report(ticker, fetch, now=None):
                 reviewed_income = candidate
                 reviewed_income_keys = confirmed
                 break
+            if (financial_sector and reviewed_financial_income is None
+                    and 'revenue' in registered.get('unreported_metrics', [])
+                    and candidate.get('revenue') is None and {'op', 'net'}.issubset(confirmed)
+                    and registered['metrics']['op']['document'] == registered['metrics']['net']['document']
+                    and registered['metrics']['op']['column'] == registered['metrics']['net']['column']
+                    and all(candidate['metric_sources'][key].get('column') == registered['metrics'][key]['column']
+                            for key in ('op', 'net'))):
+                # A financial issuer's reviewed OP/net can share one filing column
+                # without implying that a general revenue or industrial costs exist.
+                reviewed_financial_income = candidate
+                sga_fact = registered['metrics'].get('sga')
+                reviewed_financial_sga = bool(
+                    'sga' in confirmed and sga_fact
+                    and 'sga' not in registered.get('unreported_metrics', [])
+                    and sga_fact['document'] == registered['metrics']['op']['document']
+                    and sga_fact['column'] == registered['metrics']['op']['column']
+                    and candidate['metric_sources']['sga'].get('name') == sga_fact['account']
+                    and candidate['metric_sources']['sga'].get('column') == sga_fact['column'])
     rows = []
     if reviewed_income:
         for key, label in [('revenue', '매출'), ('op', '영업이익'), ('net', '순이익'),
@@ -401,11 +420,28 @@ def build_report(ticker, fetch, now=None):
             if key in reviewed_income_keys:
                 rows.append(['손익계산서 · 원문 검수', label, money(reviewed_income[key], kr, reviewed_income['currency'])])
         rows.append(['손익계산서 · 원문 검수', '원문', source_cell(reviewed_income)])
-    rows.extend([g.get('title', '') + (' · 수집 요약' if reviewed_income else ''), text(r.get('k')), text(r.get('v'))]
-                for g in fin.get('groups', []) if not (reviewed_income and g.get('title') == '손익계산서')
-                for r in g.get('rows', []) if not re.search(r'FCF|잉여.*현금|free.?cash', str(r.get('k')), re.I))
+    elif reviewed_financial_income:
+        row = reviewed_financial_income
+        rows.extend([['손익계산서 · 원문 검수', '매출', '미수신 · 직접 총계행 미확인'],
+                     ['손익계산서 · 원문 검수', '영업이익', money(row['op'], kr, row['currency'])],
+                     ['손익계산서 · 원문 검수', '순이익', money(row['net'], kr, row['currency'])]])
+        if reviewed_financial_sga:
+            rows.append(['손익계산서 · 원문 검수', '판매비와관리비', money(row['sga'], kr, row['currency'])])
+        rows.append(['손익계산서 · 원문 검수', '원문', source_cell(row['metric_sources']['op'])])
+    industrial_rows = {'매출원가', '매출총이익', '판매비와관리비', '매출총이익률', '영업이익률'}
+    rows.extend([g.get('title', '') + (' · 수집 요약' if reviewed_income or reviewed_financial_income else ''),
+                 text(r.get('k')), text(r.get('v'))]
+                for g in fin.get('groups', [])
+                if not ((reviewed_income or reviewed_financial_income) and g.get('title') == '손익계산서')
+                for r in g.get('rows', [])
+                if not re.search(r'FCF|잉여.*현금|free.?cash', str(r.get('k')), re.I)
+                and not (financial_sector and g.get('title') == '손익계산서' and r.get('k') in industrial_rows))
     income_note = (f"손익: {period_label(reviewed_income)} · {reviewed_income['currency']} · {reviewed_income['fs_div']} · 원문 검수. "
-                   "기존 손익 요약·비율은 이 표에서 제외했으며 다른 수집 요약의 원문 연결을 뜻하지 않습니다. ") if reviewed_income else ''
+                   "기존 손익 요약·비율은 이 표에서 제외했으며 다른 수집 요약의 원문 연결을 뜻하지 않습니다. ") if reviewed_income else (
+                   f"손익: {period_label(reviewed_financial_income)} · {reviewed_financial_income['currency']} · {reviewed_financial_income['fs_div']} · "
+                   "같은 원문 열에서 검수된 영업이익·순이익"
+                   + ("·판매비와관리비" if reviewed_financial_sga else "")
+                   + "만 표시. 직접 매출 총계는 미수신이며 기존 제조업식 손익 요약은 제외했습니다. ") if reviewed_financial_income else ''
     table("R2", "최근 결산 재무", ["구분", "항목", "값"], rows, income_note + f"기준기간 {period} · 단위는 각 항목에 표시")
     reviewed_sga = [(r, (r.get('derived_metrics') or {}).get('sga')) for r in proven_annual]
     table('R2S', '판매비와 관리비 · 원문 구성행 합산', ['연도', '판매비', '관리비', '자체합산', '원문'],
@@ -415,14 +451,19 @@ def build_report(ticker, fetch, now=None):
     facts, notes = s.get("facts") or {}, s.get("facts_note") or {}
     facts, calculations, valuation_warnings = valuation_display(facts, notes, s.get("facts_calc") or {})
     gaps.extend(valuation_warnings)
+    if financial_sector:
+        facts.pop('영업이익률', None)
     if reviewed_income and '영업이익률' in facts and not (notes.get('영업이익률') or calculations.get('영업이익률')):
         facts['영업이익률'] = '비교 보류 · 수집값 ' + text(facts['영업이익률'])
         calculations['영업이익률'] = '수집 비율의 기간·산식 미연결. R2 원문 손익으로 검수하거나 재계산한 비율이 아닙니다.'
     table("R3", "주요 지표와 계산 기준", ["지표", "값", "기준·정의"],
           [[k, text(v), " · ".join(dict.fromkeys(str(x) for x in (notes.get(k), calculations.get(k)) if x)) or "기간·계산 기준 미수신"] for k, v in facts.items() if not re.search(r"FCF|잉여.*현금|free.?cash", k, re.I)],
-          "가격이 반영된 지표는 실시간 값이 아닙니다. 기간·계산 기준 미수신인 항목은 추가 확인이 필요합니다.", widths=[0.8, 0.9, 2.3])
+          "가격이 반영된 지표는 실시간 값이 아닙니다. 기간·계산 기준 미수신인 항목은 추가 확인이 필요합니다."
+          + (" 금융업의 일반 기업식 영업이익률은 적용 대상이 아니어서 제외했습니다." if financial_sector else ""), widths=[0.8, 0.9, 2.3])
     peer = s.get("peer") or {}
     prows = peer.get("rows") or []
+    if financial_sector:
+        prows = [row for row in prows if row.get('key') != '영업이익률']
     peer_comparison = build_peer_comparison(ticker, {**s, 'is_financial': True} if financial_sector else s, reader, docs['R'], now,
         kr_business.get('peers', []) if kr_business else None, fetch)
     pb = peer_comparison['basis']
@@ -437,7 +478,8 @@ def build_report(ticker, fetch, now=None):
            for name, r in peer_rows],
           text(pb.get('start')) + ' ~ ' + text(pb.get('end')) + ' · ' + text(pb.get('currency')) + ' · ' + text(pb.get('fs_div'))
           + f" · 후보 {peer_comparison['total']}개 중 기간 정렬 {peer_comparison['qualified']}개. "
-          + '영업이익률=영업이익/양수 매출×100 자체계산. 회계기준·계정 정의의 동등성을 보장하지 않으며 순위·중앙값은 만들지 않습니다.',
+          + ('금융업의 일반 기업식 영업이익률은 제외합니다. ' if financial_sector else '영업이익률=영업이익/양수 매출×100 자체계산. ')
+          + '회계기준·계정 정의의 동등성을 보장하지 않으며 순위·중앙값은 만들지 않습니다.',
           widths=[1.3, 0.8, 0.8, 0.8, 0.7, 0.6])
     reason_labels = {'missing_financial_evidence': '재무 원문 기준 미연결',
         'missing_exact_target_period': '기준 기업과 정확히 같은 기간·범위 없음',
@@ -472,7 +514,7 @@ def build_report(ticker, fetch, now=None):
               '검수 ' + kr_business['reviewed_at'] + ' · 사업 유사성 비교이며 가치평가 배수 순위가 아닙니다. ' + kr_business.get('peer_note', ''), widths=[1, 1.4, 2, 0.5])
     table("R4G" if kr_business else "R4", "기존 업종 지표 · 기간 정규화 전 참고값", ["지표", "종목", "업종 중앙값"],
           [[text(r.get("key")), text(facts.get(r.get("key"))) if str(facts.get(r.get("key"), "")).startswith(("추정 ", "비교 보류 ·")) else text(r.get("value")), text(r.get("median"))] for r in prows],
-          f"{peer.get('sector') or '업종 미상'} · 비교 집단 {peer.get('n', '미상')}개 · 중앙값은 순서상 가운데 값. 종목별 결산기간·산식 일치 미확인." + (' 위에서 선정한 직접 비교기업의 중앙값이 아닙니다.' if kr_business else ''))
+          f"{peer.get('sector') or '업종 미상'} · 비교 집단 {peer.get('n', '미상')}개 · 중앙값은 순서상 가운데 값. 종목별 결산기간·산식 일치 미확인." + (' 금융업의 일반 기업식 영업이익률·중앙값은 제외했습니다.' if financial_sector else '') + (' 위에서 선정한 직접 비교기업의 중앙값이 아닙니다.' if kr_business else ''))
     valuation = next((r for r in prows if r.get("key") == "PER"), None)
     if valuation and not kr_business:
         issue("수익성과 가격을 함께 볼 근거는 충분한가?",
