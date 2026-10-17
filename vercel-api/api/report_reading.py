@@ -64,8 +64,11 @@ def reading_guide(reader, company, events, issues, is_financial=False):
             baseline = format_money(value, current['currency'])
             if not is_financial and key == 'op' and _number(current.get('revenue')) and current['revenue'] > 0:
                 baseline += f" · 영업이익률 {value / current['revenue'] * 100:.1f}%"
+            next_step = ('매출 증감 방향 확인.' if key == 'revenue' else
+                         '영업이익 금액의 증감 방향 확인.' if is_financial else
+                         '영업이익과 이익률의 방향을 함께 확인.')
             checklist.append({'item': label, 'state': period_label(current) + '\n' + baseline,
-                              'next': '다음 공시도 같은 기간 길이의 전년 동기와 비교. ' + ('매출 증감 방향 확인.' if key == 'revenue' else '영업이익과 이익률의 방향을 함께 확인.'),
+                              'next': '다음 공시도 같은 기간 길이의 전년 동기와 비교. ' + next_step,
                               'source': {'text': '현재 근거', 'url': current['source_url']}})
     checklist.append({'item': '현금흐름',
         'state': (period_label(cash) + '\n영업현금 ' + format_money(cash['ocf'], cash['currency'])) if cash else reader.get('cash_status', {}).get('status', '기간·원문을 갖춘 현금흐름 미확보'),
@@ -73,7 +76,8 @@ def reading_guide(reader, company, events, issues, is_financial=False):
         'source': {'text': '현재 근거', 'url': cash['source_url']} if cash else '미확보'})
     checklist.append({'item': '변화의 원인',
         'state': (company.get('basis_label', '현재 실적과 기간이 맞는') + f" 회사 설명 {len(company['excerpts'])}개 문단. " + ('단일 분기의 원인으로 전용하지 않음. ' if company.get('period_matches_current') is False else '') + ' / '.join(r['label'] + (' 연결' if r['refs'] else ' 미확보') for r in company['topics'])),
-        'next': '가격·물량·구성·비용 설명과 항목별 기여 금액을 원문에서 확인. 반복 가능한 변화와 일회성 항목 구분.',
+        'next': ('영업수익·영업비용 구성과 항목별 기여 금액을 원문에서 확인. 반복 가능한 변화와 일회성 항목 구분.' if is_financial
+                 else '가격·물량·구성·비용 설명과 항목별 기여 금액을 원문에서 확인. 반복 가능한 변화와 일회성 항목 구분.'),
         'source': company['source'] or '미확보'})
     if events:
         event = events[0]

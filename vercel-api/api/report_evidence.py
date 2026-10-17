@@ -23,7 +23,7 @@ if __package__:
     from .report_integrity import financial_display, cash_receipt, valuation_display, quarter_missing_fields
     from .report_kr_review import reviewed_entry, reviewed_financials
     from .report_attribution import monetary_attribution
-    from .report_peers import build_peer_comparison
+    from .report_peers import build_peer_comparison, _financial_sector
 else:
     from report_context import annual_context, business_profile, compare_annual, first_page, format_money
     from report_reader import reader_financials, period_label
@@ -35,7 +35,7 @@ else:
     from report_integrity import financial_display, cash_receipt, valuation_display, quarter_missing_fields
     from report_kr_review import reviewed_entry, reviewed_financials
     from report_attribution import monetary_attribution
-    from report_peers import build_peer_comparison
+    from report_peers import build_peer_comparison, _financial_sector
 
 VERSION = "evidence-report-v8"
 KST = timezone(timedelta(hours=9))
@@ -196,7 +196,7 @@ def build_report(ticker, fetch, now=None):
     if primary_review:
         periods = reviewed_financials(ticker, s, periods, now)
     business_record = s.get("business_evidence") or records.get("B") or {}
-    financial_sector = False
+    financial_sector = _financial_sector(s)["is_financial"] if kr else False
     document, filing, cik = None, {}, ""
     if not kr:
         c = {"id": "S", "label": "SEC 보고 기간·통화", "file": "SEC Company Facts", "status": "해당 종목 자료 미수신",
@@ -319,6 +319,10 @@ def build_report(ticker, fetch, now=None):
     annual = sorted(proven_annual or [r for r in s.get("fin_series", []) if str(r.get("year", "")).isdigit()], key=lambda r: int(r["year"]))
     basis = [annual_context(r, fin, kr) for r in annual]
     comparison = compare_annual(annual, fin, kr)
+    financial_bridge_held = financial_sector and comparison["bridge"] is not None
+    if financial_bridge_held:
+        comparison["bridge"] = None
+        gaps.append("금융업은 일반 기업식 매출·영업이익률 분해(R5)를 적용하지 않습니다. 연간 금액과 원문은 유지합니다.")
     table("R0", "연간 수치의 비교 기준", ["기간", "통화 · 연결/별도", "원문 위치"],
           [[r["period"], r["currency"] + " · " + r["scope"] + " · " + r["currency_basis"], source_cell(r)] for r in basis],
           "최근 2개 연도의 기준. 연도만 같아도 기간 길이·보고 통화·연결/별도가 다르면 직접 비교할 수 없습니다. 원문 링크는 수치 대조 완료를 뜻하지 않습니다.", limit=2, recent=True, widths=[1.5, 1.6, 0.9])
