@@ -5,11 +5,15 @@ const NAME = 'stock_report_public.json';
 const URL = 'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/' + NAME;
 const MANIFEST = 'data/metadata/report_fin_history_corrections_20261017.json';
 const HISTORY = 'data/dart_kr_fin_history.json';
-// A single directly reviewed rename, not a general alias resolver. Additional issuers
+// Directly reviewed issuer-specific renames, not a general alias resolver. Additional issuers
 // require a new primary-source review before this publication identity gate expands.
 const REVIEWED_RENAMES = {
     '282880': {corp_code:'01211232',old_name:'코윈테크',new_name:'코윈로보틱스',
         accession:'20260901900255',source_sha256:'662296dd661611d7b77eb1a3957d63406fc41f8d02cc45d513bc9200182fd6b8'},
+    '070300': {corp_code:'00683007',old_name:'엑스큐어',new_name:'퀀텀레일',
+        accession:'20260722900410',filed:'2026-07-22',
+        source_url:'https://dart.fss.or.kr/report/viewer.do?rcpNo=20260722900410&dcmNo=11489311&eleId=0&offset=0&length=0&dtd=HTML',
+        source_sha256:'767f9313904798540f702f1dd46136cd90e2aa845404d1e3db7a98d2a3a2dca9'},
 };
 // A separately reviewed legal-name -> listed-short-name chain for this issuer only.
 // Meeting date and listing date are distinct; no legal effective date is inferred.

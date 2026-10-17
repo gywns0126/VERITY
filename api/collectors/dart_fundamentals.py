@@ -105,7 +105,7 @@ def _total_account_label(row: dict) -> str:
 
 def _operating_income_priority(row: dict) -> int:
     aid = str(row.get("account_id") or "")
-    if aid == "dart_OperatingIncomeLoss":
+    if aid in ("dart_OperatingIncomeLoss", "ifrs-full_ProfitLossFromOperatingActivities"):
         return 2
     if aid.startswith(("ifrs-full_", "ifrs_")):
         return 0
