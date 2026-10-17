@@ -76,7 +76,7 @@ PUBLIC_LOCAL_FALLBACKS = frozenset({
     "data/kr_listed.json", "data/kr_lynch_class.json", "data/kr_major_shareholders.json",
     "data/kr_sector_map.json", "data/krx_mktcap.json", "data/mapping.json",
     "data/us_fin_annual_compact.json", "data/us_form144.json", "data/us_options.json",
-    "data/us_sector_cache.json", "data/us_short_pressure.json",
+    "data/us_sector_cache.json", "data/us_short_pressure.json", "data/us_etf_universe.json",
 })
 
 # ── 핵심 발행물: 전용 포맷터가 있는 것 ───────────────────────────────────────
@@ -378,11 +378,13 @@ def _is_known_us_symbol(u: str) -> bool:
 
 
 def _us_display_name(u: str) -> str:
-    """US 심볼 → 표시명. 한글명 우선, 없으면 ETF 정식명, 없으면 빈 문자열.
+    """US 심볼 → 표시명. 로컬 한글명/정식명 우선, 없으면 공개 ETF 표시명.
 
-    2026-08-09: JEPQ 조회 헤더가 'JEPQ (JEPQ)' 로 나오던 갭. us_stock_names_ko 는 개별주
-    수집본이라 ETF 가 없는데 us_etf_universe.names 에 5,486 종 정식명이 이미 있었다.
+    Vercel 번들에는 data/ 로컬 사전이 없을 수 있다. 기존 조인과 같은 공개 자료·캐시를
+    사용하며, vendor shortName을 정식명으로 보정하거나 부분 심볼로 추측하지 않는다.
     """
+    if not isinstance(u, str) or not re.fullmatch(r"[A-Z]{1,5}(?:[.-][A-Z])?", u):
+        return ""
     for rel, path in (("data/us_stock_names_ko.json", "names"),
                       ("data/us_name_ko.json", ""),
                       ("data/us_etf_universe.json", "names")):
@@ -391,9 +393,23 @@ def _us_display_name(u: str) -> str:
             continue
         src = d.get(path) if path else d
         v = src.get(u) if isinstance(src, dict) else None
-        if isinstance(v, str) and v:
-            return v
-    return ""
+        if isinstance(v, str) and v.strip() and v.strip() != u:
+            return v.strip()
+
+    # SCAN_FILES가 이미 사용하는 30분 캐시 키를 공유한다. 사전 파일 복원에 의존하지 않음.
+    doc = _fetch_json(f"{BLOB}/us_etf.json", "us_etf.json")
+    rows = doc.get("etfs") if isinstance(doc, dict) else None
+    if not isinstance(rows, list):
+        return ""
+    names = set()
+    for row in rows:
+        if not isinstance(row, dict) or row.get("ticker") != u:
+            continue
+        name = row.get("name")
+        if isinstance(name, str) and name.strip() and name.strip() != u:
+            names.add(name.strip())
+    # 동일 심볼의 서로 다른 이름은 임의로 첫 항목을 채택하지 않는다.
+    return next(iter(names)) if len(names) == 1 else ""
 
 
 # ── 제네릭 추출 ──────────────────────────────────────────────────────────────
@@ -411,7 +427,7 @@ def _extract_for_ticker(doc: Any, tk: str) -> Optional[Any]:
     for key in ("stocks", "map", "items", "events", "warnings", "feed", "flows",
                 "prices", "etfs", "top", "rows", "recommendations",
                 # 2026-08-03 실측 추가 — 오퍼레이터 전 자산 조인(PM "민감 자료도 전부")
-                "summaries", "synth", "patterns", "by_ticker", "structure", "full",
+                "summaries", "synth", "patterns", "by_ticker", "structure", "structures", "full",
                 "holdings", "positions", "syntheses", "data", "fundamentals",
                 "company_reports"):  # analyst_reports.json (2026-08-03 배선 감사)
         v = doc.get(key)
@@ -423,6 +439,29 @@ def _extract_for_ticker(doc: Any, tk: str) -> Optional[Any]:
                 return hits
     if tk in doc:  # 최상위가 티커 맵
         return doc[tk]
+    # perspective_maps: only these issuer leader paths are subject records.
+    # Do not recurse through arbitrary mentions or ETF constituent holdings.
+    perspectives = []
+    for axis, container in (("desire", "tiers"), ("cycle", "buckets"),
+                            ("buyback", "buckets")):
+        section = doc.get(axis)
+        buckets = section.get(container) if isinstance(section, dict) else None
+        if not isinstance(buckets, list):
+            continue
+        for bucket in buckets:
+            leaders = bucket.get("leaders") if isinstance(bucket, dict) else None
+            if not isinstance(leaders, list):
+                continue
+            for row in leaders:
+                if isinstance(row, dict) and str(row.get("ticker") or "") == tk:
+                    perspectives.append({
+                        "perspective": axis,
+                        "bucket": {k: bucket[k] for k in ("key", "label", "desc")
+                                   if k in bucket},
+                        "record": row,
+                    })
+    if perspectives:
+        return perspectives
     return None
 
 
@@ -694,19 +733,94 @@ def _daily_bars(tk: str) -> Optional[Dict[str, Any]]:
     return out
 
 
+class _PrivateSourceError(Exception):
+    """Only allowlisted codes/status escape; never response bodies or credentials."""
+    CODES = frozenset({
+        "DatabaseTimeout", "database_timeout", "InvalidJWT", "AccessDenied", "InvalidRequest",
+        "NoSuchBucket", "NoSuchKey", "InternalError", "DatabaseError", "SlowDown",
+        "ResourceLocked", "not_found", "unauthorized", "credentials_missing",
+        "invalid_configuration", "invalid_json", "invalid_document", "transport_error",
+        "redirect_denied", "unknown_error",
+    })
+
+    def __init__(self, code: str, status: Optional[int] = None):
+        self.code = code if code in self.CODES else "unknown_error"
+        self.status = status
+        super().__init__(f"http={status} code={self.code}")
+
+
+class _PrivateNoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None  # Never forward a service key to a redirect target.
+
+
+def _read_private_json(path: str, timeout: float) -> Any:
+    url = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
+    if not url or not key:
+        raise _PrivateSourceError("credentials_missing")
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except ValueError:
+        raise _PrivateSourceError("invalid_configuration") from None
+    if (parsed.scheme != "https" or not parsed.netloc or parsed.username
+            or parsed.password or parsed.query or parsed.fragment or parsed.path):
+        raise _PrivateSourceError("invalid_configuration")
+    bucket = os.environ.get("OPERATOR_BUCKET", "verity-reports")
+    full = f"{url}/storage/v1/object/{urllib.parse.quote(bucket, safe='')}/{urllib.parse.quote(path)}"
+    request = urllib.request.Request(full, headers={
+        "apikey": key, "Authorization": f"Bearer {key}", "Cache-Control": "no-cache",
+    })
+    try:
+        with urllib.request.build_opener(_PrivateNoRedirect()).open(request, timeout=timeout) as response:
+            raw = response.read()
+    except urllib.error.HTTPError as exc:
+        status = exc.code
+        code = "redirect_denied" if 300 <= status < 400 else "unknown_error"
+        try:
+            body = json.loads(exc.read(4096))
+            if isinstance(body, dict):
+                code = next((body[k] for k in ("code", "error")
+                             if isinstance(body.get(k), str) and body[k] in _PrivateSourceError.CODES), code)
+        except (ValueError, OSError):
+            pass
+        finally:
+            exc.close()
+        raise _PrivateSourceError(code, status) from None
+    except (urllib.error.URLError, OSError):
+        raise _PrivateSourceError("transport_error") from None
+    except ValueError:
+        raise _PrivateSourceError("invalid_configuration") from None
+    try:
+        doc = json.loads(raw)
+    except (ValueError, UnicodeError):
+        raise _PrivateSourceError("invalid_json", 200) from None
+    if not isinstance(doc, (dict, list)):
+        raise _PrivateSourceError("invalid_document", 200)
+    # No cache/local/public fallback: a successful fetch does not refresh the document's as-of.
+    return doc
+
+
 def _private_json(path: str) -> Optional[Any]:
     if not _INCLUDE_PRIVATE.get():
         return None
     memo = _PRIVATE_DOCS.get()
     if memo is not None and path in memo:
         return memo[path]
-    url = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
-    if not url or not key:
-        return None
-    bucket = os.environ.get("OPERATOR_BUCKET", "verity-reports")
-    full = f"{url}/storage/v1/object/{bucket}/{urllib.parse.quote(path)}"
-    doc = _fetch_json(full, None, {"apikey": key, "Authorization": f"Bearer {key}"})
+    # Fixed diagnostic origin; never echo malformed configuration or credentials.
+    diagnostic = "https://private.invalid/" + path
+    deadline = _REQUEST_DEADLINE.get()
+    remaining = deadline - time.monotonic() if deadline is not None else _TIMEOUT
+    doc = None
+    if remaining <= 0:
+        _trace_fetch(diagnostic, "unavailable", "budget_exhausted")
+    else:
+        try:
+            doc = _read_private_json(path, min(_TIMEOUT, remaining))
+        except _PrivateSourceError as exc:
+            _trace_fetch(diagnostic, "unavailable", str(exc))
+        else:
+            _trace_fetch(diagnostic, "received")
     if memo is not None:
         memo[path] = doc
     return doc
@@ -824,7 +938,8 @@ def _collect(query: str, include_private: bool = True) -> Dict[str, Any]:
         reason = "" if status == "hit" else "조회 실패 또는 파일 미배치" if doc is None else "응답 내 종목 레코드 없음"
         if doc is None:
             for event in reversed(_FETCH_TRACE.get() or []):
-                if event["source"].endswith("/" + source) and event["status"] == "unavailable":
+                lookup = PRIVATE_LOCAL_FALLBACKS.get(source, source.removeprefix("private:"))
+                if event["source"].endswith("/" + lookup) and event["status"] == "unavailable":
                     reason = event["reason"]
                     break
         _mark(source, label, status, reason, _record_as_of(got, doc))

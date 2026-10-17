@@ -51,6 +51,11 @@ on:
         required: false
         default: false
         type: boolean
+      calendar_only:
+        description: '공식 실적일만 수집·검증·발행 (KIS/LLM/전체 분석 제외)'
+        required: false
+        default: false
+        type: boolean
       expected_scan_id:
         description: 'Optional completed scan identity for explicit runtime validation (gh:run:attempt)'
         required: false
@@ -91,7 +96,7 @@ jobs:
   #   fail-open 원칙: 조회 실패·자기 run 미발견·판단 불가 = **무조건 실행**. 슬롯을 비우는 것이
   #     이 fallback 이 막으려던 사고이므로, 의심스러우면 도는 쪽이 맞다.
   guard:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
+    if: inputs.calendar_only != true && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -116,7 +121,7 @@ jobs:
 
   analyze:
     needs: guard
-    if: needs.guard.outputs.run == '1' && inputs.nps_history_only != true
+    if: needs.guard.outputs.run == '1' && inputs.nps_history_only != true && inputs.calendar_only != true
     concurrency:
       group: verity-data-write
       cancel-in-progress: false
@@ -513,6 +518,14 @@ jobs:
         env:
           KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
         run: python -m api.builders.krx_mktcap_snapshot
+
+      - name: Collect official KR earnings presentation dates
+        if: success() && steps.writer_gate.outputs.run == '1'
+        continue-on-error: true
+        timeout-minutes: 12
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: python -m api.collectors.kr_earnings_calendar
 
       - name: 공개 종목 리포트 빌드 (public-safe, allowlist)
         if: success() && steps.writer_gate.outputs.run == '1'
@@ -924,6 +937,7 @@ jobs:
           git add data/
           # RULE 4: 공시 원문·마지막 정상 수집시각 체크포인트를 매 실행 보존한다.
           if [ -f data/nps_history_cache.json ]; then git add data/nps_history_cache.json; fi
+          if [ -f data/kr_earnings_calendar.json ]; then git add -f data/kr_earnings_calendar.json; fi
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
           MODE="${{ steps.detect_mode.outputs.mode }}"
           if [[ "$MODE" == periodic_* ]]; then
@@ -1042,7 +1056,7 @@ jobs:
   # 기존 스케줄·직렬 그룹 유지. N=1 검증을 위해 전체 분석/토큰 경로를 실행하지 않는다.
 
   nps_history_only:
-    if: github.event_name == 'workflow_dispatch' && inputs.nps_history_only == true
+    if: github.event_name == 'workflow_dispatch' && inputs.nps_history_only == true && inputs.calendar_only != true
     concurrency:
       group: verity-data-write
       cancel-in-progress: false
@@ -1094,3 +1108,81 @@ jobs:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
           NODE_PATH: ${{ runner.temp }}/nps-blob-runtime/node_modules
         run: node scripts/nps_history_publish.cjs
+
+  calendar_only:
+    if: github.event_name == 'workflow_dispatch' && inputs.calendar_only == true && github.ref == 'refs/heads/main'
+    concurrency:
+      group: verity-data-write
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 100
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install existing collector dependencies
+        run: pip install -r requirements.txt
+      - name: Verify calendar source and consumer contract
+        run: python -m unittest tests.test_kr_earnings_calendar tests.test_earnings_calendar_provenance -q
+      - name: Collect bounded official notices
+        id: calendar_collect
+        continue-on-error: true
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: python -m api.collectors.kr_earnings_calendar
+      - name: Preserve only official calendar checkpoint
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ ! -f data/kr_earnings_calendar.json ]; then exit 0; fi
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add -f data/kr_earnings_calendar.json
+          if ! git diff --staged --quiet; then
+            git commit -m "data: refresh official earnings calendar checkpoint"
+            git pull --rebase --autostash origin main
+            git push origin HEAD:main
+          fi
+      - name: Preserve collection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-earnings-calendar-${{ github.run_id }}
+          path: data/kr_earnings_calendar.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Require complete collection before publication
+        if: steps.calendar_collect.outcome != 'success'
+        run: exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install existing Blob SDK version
+        run: npm install --no-save --no-audit --no-fund @vercel/blob@2.4.1
+      - name: Publish and read back only earnings calendar fields
+        # The publisher reuses select_calendar/merge_calendar and preserves non-calendar facts.
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: |
+          node --test tests/earnings_calendar_publish.test.cjs
+          node scripts/publish_earnings_calendar.cjs --blob
+      - uses: actions/checkout@v4
+        with:
+          repository: gywns0126/VERITY-data
+          token: ${{ secrets.VERITY_DATA_PAT }}
+          path: _report_published
+          sparse-checkout: stock_report_public.json
+          sparse-checkout-cone-mode: false
+      - name: Apply the same calendar fields to public fallback
+        run: |
+          node scripts/publish_earnings_calendar.cjs --github-file
+          git -C _report_published add stock_report_public.json
+          if git -C _report_published diff --cached --quiet; then exit 0; fi
+          git -C _report_published config user.name "AI Stock Bot"
+          git -C _report_published config user.email "gywns0126@gmail.com"
+          git -C _report_published commit -m "data(reports): refresh official earnings calendar"
+          git -C _report_published push origin HEAD:main

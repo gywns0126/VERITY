@@ -241,6 +241,50 @@ def test_cover_shares_sums_multiple_classes(monkeypatch):
     assert got["classes"] == {"Class A": 7_696_293_669, "Class B": 5_485_486_276}
 
 
+def test_cover_shares_handles_inline_split_word(monkeypatch):
+    monkeypatch.setattr(P, "_doc_text", lambda *a, **k: (
+        "There were 451,686,252 sh ares of common stock with a par value "
+        "of $0.01 per share outstanding as of July 22, 2026."))
+    result = P._cover_shares("0001932393", [_row("2026-07-29", "10-Q")])
+    assert result["total"] == 451_686_252
+
+def test_facts_freshness_uses_submissions_not_its_own_anchor():
+    facts = _facts({
+        ("us-gaap", "Assets", "USD"): [{"end": "2026-03-31", "val": 37_125_000_000}],
+        ("dei", "EntityCommonStockSharesOutstanding", "shares"): [
+            {"end": "2026-04-22", "val": 454_891_786}],
+    })
+    latest = {**_row("2026-07-29", "10-Q"), "reportDate": "2026-06-30"}
+    status = P._facts_freshness(facts, [latest])
+    assert status["status"] == "stale"
+    assert status["companyfacts_period_end"] == "2026-03-31"
+    # A later amendment to an older period does not replace the latest period.
+    amendment = {**_row("2026-08-01", "10-K/A"), "reportDate": "2025-12-31"}
+    assert P._facts_freshness(facts, [amendment, latest]) == status
+    facts["facts"]["us-gaap"]["Assets"]["units"]["USD"].append(
+        {"end": "2026-06-30", "val": 38_000_000_000})
+    assert P._facts_freshness(facts, [latest])["status"] == "period_current"
+    assert P._facts_freshness(facts, [])["status"] == "unverified"
+    assert P._facts_freshness(None, [latest])["status"] == "unavailable"
+
+def test_probe_excludes_stale_financials_but_keeps_current_cover(monkeypatch):
+    monkeypatch.setattr(P, "_cik", lambda ticker: "0001932393")
+    monkeypatch.setattr(P, "_submissions", lambda cik: {"filings": {"recent": {
+        "form": ["10-Q"], "filingDate": ["2026-07-29"],
+        "reportDate": ["2026-06-30"], "accessionNumber": ["0001932393-26-000046"],
+        "primaryDocument": ["gehc-20260630.htm"]}}})
+    monkeypatch.setattr(P, "_companyfacts", lambda cik: _facts({
+        ("us-gaap", "Assets", "USD"): [{"end": "2026-03-31", "val": 37_125_000_000}],
+        ("dei", "EntityCommonStockSharesOutstanding", "shares"): [
+            {"end": "2026-04-22", "val": 454_891_786}]}))
+    monkeypatch.setattr(P, "_doc_text", lambda *a, **k: (
+        "There were 451,686,252 sh ares of common stock outstanding as of July 22, 2026."))
+    result = P.probe("GEHC")
+    assert result["재무자료 신선도"]["status"] == "stale"
+    assert result["_capital"]["_basic"] == 451_686_252
+    assert "재무 요약 (XBRL)" not in result["경보"]
+    assert "454,891,786" not in str(result)
+
 def test_market_cap_ladder_needs_a_real_price():
     """가격이 없으면 시총을 만들지 않는다 — 지어낸 가격 금지 규율."""
     assert P.market_cap_ladder({"_basic": 100, "_diluted_max": 200}, 0) is None

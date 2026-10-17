@@ -76,10 +76,12 @@ def test_us_etf_가_조인_대상이다():
     assert "us_etf.json" in tf.SCAN_FILES
 
 
-def test_etf_이름이_해석된다():
-    """'JEPQ (JEPQ)' 로 나오던 갭. us_etf_universe.names 에 정식명이 이미 있었다."""
+def test_etf_이름이_해석된다(monkeypatch):
+    """배포 번들에 로컬 사전이 없어도 공개 ETF 표시명을 읽는다."""
+    monkeypatch.setattr(tf, "_load_local", lambda _: None)
+    monkeypatch.setattr(tf, "_fetch_json", lambda *a, **k: {"etfs": [JEPQ_REC]})
     name = tf._us_display_name("JEPQ")
-    assert name and name != "JEPQ", "ETF 정식명 해석 실패"
+    assert name == JEPQ_REC["name"].strip(), "ETF 표시명 해석 실패"
 
 
 def test_us_가격축이_실호출로_존재한다():
