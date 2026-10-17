@@ -1,9 +1,9 @@
 {
-  "collected_at": "2026-10-17T17:38:25.647350+00:00",
+  "collected_at": "2026-10-17T19:29:28.308081+00:00",
   "schema_version": 1,
   "severity": "YELLOW",
   "severity_reasons": [
-    "data delivery AMBER: 신선도 감시 대상 누락·미측정"
+    "data delivery AMBER: 감시 근거 annual_backfill: invalid_timestamp"
   ],
   "n_verification_days": 59,
   "n_milestones": {
@@ -41,17 +41,17 @@
   "alert_volume_24h": {
     "sent": 4,
     "dedupe_skip": 1,
-    "quiet_skip": 8,
+    "quiet_skip": 3,
     "fp_repeat_max": 2
   },
   "auto_action_blocked": [],
   "_inputs_snapshot": {
     "kis_lock_commits_24h": 1,
-    "fred_age_h": 0.55,
+    "fred_age_h": 0.48,
     "fred_24h_failure_rate": 0.0,
     "core_sources_ok": true,
     "delivery_status": "amber",
-    "delivery_generated_at": "2026-10-18T02:35:18.286678+09:00",
+    "delivery_generated_at": "2026-10-18T04:01:04.140390+09:00",
     "publish_verify_ok": true,
     "publish_verify_failed": 0,
     "runtime_mode": "full_us",
