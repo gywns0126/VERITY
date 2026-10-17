@@ -254,8 +254,132 @@ class TestExtractPLBS:
         assert df._extract_pl_bs_from_dart({"list": [row]}, source_rows=sources)["net_income"] == -100
         assert sources["net_income"] == row
 
+    @pytest.mark.parametrize("amount", ["0", "-500", "500"])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_canonical_op_outranks_custom_exact_fallback(self, amount, reverse):
+        canonical = {"sj_div": "CIS", "account_nm": "Ⅴ.영업이익",
+                     "account_id": "dart_OperatingIncomeLoss", "thstrm_amount": amount}
+        fallback = {"sj_div": "IS", "account_nm": "영업이익",
+                    "account_id": "issuer_CustomOperatingIncome", "thstrm_amount": "999"}
+        rows = [canonical, fallback]
+        if reverse:
+            rows.reverse()
+        sources = {}
+        out = df._extract_pl_bs_from_dart({"list": rows}, source_rows=sources)
+        assert out["operating_profit"] == int(amount)
+        assert sources["operating_profit"] == canonical
+        assert "_conflicts" not in sources
+
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_conflicting_canonical_op_cannot_be_rescued_by_fallback(self, reverse):
+        totals = [{"sj_div": sj, "account_nm": "영업이익",
+                   "account_id": "dart_OperatingIncomeLoss", "thstrm_amount": amount}
+                  for sj, amount in [("IS", "0"), ("CIS", "200")]]
+        fallback = {"sj_div": "IS", "account_nm": "영업이익", "thstrm_amount": "100"}
+        rows = totals + [fallback]
+        if reverse:
+            rows.reverse()
+        sources = {}
+        out = df._extract_pl_bs_from_dart({"list": rows}, source_rows=sources)
+        assert out["operating_profit"] is None
+        assert "operating_profit" not in sources
+        assert sources["_conflicts"]["operating_profit"] == [r for r in rows if r in totals]
+        assert df._extract_pl_bs_from_dart({"list": rows})["operating_profit"] is None
+
+    @pytest.mark.parametrize("field,labels,aid", [
+        ("net_income", ("당기순이익", "당기순이익(손실)"), "ifrs-full_ProfitLoss"),
+        ("operating_profit", ("영업이익", "영업이익(손실)"), "dart_OperatingIncomeLoss"),
+    ])
+    @pytest.mark.parametrize("canonical", [False, True])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_conflicting_exact_fallbacks_only_matter_without_canonical(
+            self, field, labels, aid, canonical, reverse):
+        rows = [{"sj_div": "IS", "account_nm": name, "thstrm_amount": amount}
+                for name, amount in zip(labels, ("100", "200"))]
+        total = {"sj_div": "CIS", "account_nm": labels[0],
+                 "account_id": aid, "thstrm_amount": "0"}
+        if canonical:
+            rows.append(total)
+        if reverse:
+            rows.reverse()
+        sources = {}
+        out = df._extract_pl_bs_from_dart({"list": rows}, source_rows=sources)
+        if canonical:
+            assert out[field] == 0 and sources[field] == total
+            assert "_conflicts" not in sources
+        else:
+            assert out[field] is None and field not in sources
+            assert sources["_conflicts"][field] == rows
+
+    @pytest.mark.parametrize("field,aid,label", [
+        ("operating_profit", "dart_OperatingIncomeLoss", "영업이익"),
+        ("net_income", "", "당기순이익"),
+    ])
+    def test_equal_duplicate_income_candidates_keep_zero_and_source(self, field, aid, label):
+        row = {"sj_div": "IS", "account_nm": label, "account_id": aid, "thstrm_amount": "0"}
+        sources = {}
+        out = df._extract_pl_bs_from_dart({"list": [row, dict(row)]}, source_rows=sources)
+        assert out[field] == 0 and sources[field] == row
+        assert "_conflicts" not in sources
+
+    @pytest.mark.parametrize("field,label", [
+        ("revenue", "Ⅰ.매출액"), ("revenue", "I. 영업수익 (주 3,4)"),
+        ("operating_profit", "Ⅴ.영업이익"), ("operating_profit", "V.영업이익(손실)"),
+        ("net_income", "IX.당기순이익(손실)"), ("net_income", "Ⅸ．반기순손익"),
+    ])
+    def test_idless_roman_exact_totals_preserve_original_rows(self, field, label):
+        row = {"sj_div": "CIS", "account_nm": label, "thstrm_amount": "-100"}
+        sources = {}
+        assert df._extract_pl_bs_from_dart({"list": [row]}, source_rows=sources)[field] == -100
+        assert sources[field] == row and row["account_nm"] == label
+
+    @pytest.mark.parametrize("field,label,aid", [
+        ("revenue", "기타Ⅰ.매출액", ""), ("revenue", "Ⅰ.매출액", "issuer_Custom"),
+        ("operating_profit", "Ⅴ.중단영업이익(손실)", ""),
+        ("operating_profit", "Ⅴ.계속영업이익(손실)", ""),
+        ("operating_profit", "Ⅴ.주당영업이익", ""),
+        ("operating_profit", "영업이익", "ifrs-full_ProfitLossFromDiscontinuedOperations"),
+        ("net_income", "IX.지배기업소유주귀속당기순이익", ""),
+        ("net_income", "IX.비지배지분당기순이익", ""),
+        ("net_income", "IX.계속영업당기순이익", ""),
+        ("net_income", "IX.중단영업당기순이익", ""),
+        ("net_income", "IX.기본주당순이익", ""),
+        ("net_income", "IX.당기순이익재분류항목", ""),
+    ])
+    def test_total_normalization_never_removes_semantic_qualifiers(self, field, label, aid):
+        row = {"sj_div": "CIS", "account_nm": label, "account_id": aid, "thstrm_amount": "999"}
+        sources = {}
+        assert df._extract_pl_bs_from_dart({"list": [row]}, source_rows=sources)[field] == 0
+        assert field not in sources
+
+    @pytest.mark.parametrize("reverse", [False, True])
+    @pytest.mark.parametrize("amount", ["0", "48,183,071,752"])
+    def test_verified_combined_sga_alias_precedes_split_without_merging_bad_debt(self, reverse, amount):
+        # Verified HTML label/value, synthetic API fixture; not historical execution evidence.
+        total = self._sga_row("판매 및 일반관리비 (주 3,4)", amount)
+        rows = [total, self._sga_row("판매비", "1"), self._sga_row("관리비", "2"),
+                self._sga_row("대손상각비", "2,072,674,155")]
+        if reverse:
+            rows.reverse()
+        sources = {}
+        out = df._extract_pl_bs_from_dart({"list": rows}, source_rows=sources, request_context=self._request)
+        assert out["sga"] == int(amount.replace(",", ""))
+        assert sources["sga"] == {**total, "request_context": self._request}
+
+    @pytest.mark.parametrize("name", ["기타판매비와관리비", "판매비와관리비중감가상각비",
+                                      "판매및일반관리비율", "중단영업판매및일반관리비"])
+    def test_combined_sga_aliases_are_exact_not_substrings(self, name):
+        sources = {}
+        out = df._extract_pl_bs_from_dart({"list": [self._sga_row(name, "999")]}, source_rows=sources)
+        assert out["sga"] == 0 and "sga" not in sources
+
 
 class TestComputeRatios:
+    def test_conflicting_operating_profit_keeps_margin_unknown(self):
+        ratios = df._compute_ratios({"revenue": 1000, "operating_profit": None, "gross_profit": 300})
+        assert ratios["op_margin"] is None
+        assert ratios["gross_margin"] == 30
+
     def test_basic_ratios(self):
         pl_bs = {
             "total_assets": 1_000_000, "total_liabilities": 400_000, "equity": 600_000,
@@ -335,6 +459,53 @@ class TestYfFallback:
 # ─────────────────────────────────────────────────────────────────────
 
 class TestFetchOneFundamentals:
+    @patch("api.collectors.dart_fundamentals._yf_fallback_for_ticker")
+    @patch("api.collectors.dart_fundamentals._get_fnltt_all_data")
+    @patch("api.collectors.dart_corp_code.get_corp_code")
+    def test_conflicting_op_stays_unknown_without_discarding_dart_record(self, mock_corp, mock_dart, mock_yf):
+        mock_corp.return_value = "00123456"
+        mock_dart.return_value = {"status": "000", "list": [
+            {"sj_div": "BS", "account_nm": "자산총계", "thstrm_amount": "1000"},
+            {"sj_div": "IS", "account_nm": "매출액", "thstrm_amount": "500"},
+            *[{"sj_div": sj, "account_nm": "영업이익", "account_id": "dart_OperatingIncomeLoss",
+               "thstrm_amount": amount} for sj, amount in [("IS", "100"), ("CIS", "200")]],
+        ]}
+        mock_yf.return_value = {"per": 12.5, "pbr": 1.2, "roe": 15.0,
+                                "debt_ratio": 30.0, "op_margin": 20.0}
+        out = df._fetch_one_dart_fundamentals("084010", "2025")
+        assert out["source"] == "DART+yfinance" and out["revenue"] == 500
+        assert out["operating_profit"] is None and out["op_margin"] is None
+        assert (out["per"], out["pbr"]) == (12.5, 1.2)
+        assert out["_source_evidence"]["operating_profit"]["inputs"] == [None]
+
+    @patch("api.collectors.dart_fundamentals._yf_fallback_for_ticker")
+    @patch("api.collectors.dart_fundamentals._get_fnltt_all_data")
+    @patch("api.collectors.dart_corp_code.get_corp_code")
+    def test_canonical_net_and_op_conflicts_block_yf_ratios(
+            self, mock_corp, mock_dart, mock_yf):
+        mock_corp.return_value = "00123456"
+        row = TestExtractPLBS._sga_row
+        mock_dart.return_value = {"status": "000", "list": [
+            row("자산총계", "1,000,000,000,000", sj_div="BS"),
+            row("매출액", "500,000,000,000"),
+            row("영업이익", "100", account_id="dart_OperatingIncomeLoss"),
+            row("영업이익", "200", sj_div="CIS", account_id="dart_OperatingIncomeLoss"),
+            row("당기순이익", "300", account_id="ifrs-full_ProfitLoss"),
+            row("당기순이익", "400", sj_div="CIS", account_id="ifrs_ProfitLoss"),
+            row("법인세차감전순이익", "500"),
+            row("영업활동현금흐름", "600", sj_div="CF"),
+        ]}
+        mock_yf.return_value = {"per": 12.5, "pbr": 1.2, "roe": 15.0,
+                                "debt_ratio": 30.0, "op_margin": 20.0}
+
+        out = df._fetch_one_dart_fundamentals("084010", "2025")
+        assert out["source"] == "DART+yfinance"
+        assert (out["operating_profit"], out["net_income"]) == (None, None)
+        assert (out["op_margin"], out["roe"], out["roa"]) == (None, None, None)
+        assert (out["per"], out["pbr"]) == (12.5, 1.2)
+        assert out["_source_evidence"]["roe"]["value"] is None
+        assert out["_source_evidence"]["op_margin"]["value"] is None
+
     @patch("api.collectors.dart_fundamentals._yf_fallback_for_ticker")
     @patch("api.collectors.dart_fundamentals._get_fnltt_all_data")
     @patch("api.collectors.dart_corp_code.get_corp_code")
