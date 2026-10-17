@@ -77,6 +77,34 @@ def test_future_review_and_stale_review_fail_closed():
     assert review.reviewed_entry("084010", STOCK, datetime(2027, 4, 15, tzinfo=KST)) is None
 
 
+def test_next_primary_totals_exclude_discontinued_and_attribution_rows():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    expected = [('214270', 'FSN', '01061497', 30518488142, -15863077578),
+                ('033640', '네패스', '00227333', 23761125843, 20158821632),
+                ('009580', '무림P&P', '00119007', -24460014863, -33085743414),
+                ('035080', '그래디언트', '00244561', -29581406856, -24705775927)]
+    for ticker, name, corp, op, net in expected:
+        stock = {'ticker': ticker, 'name': name, 'corp_code': corp}
+        rows = review.reviewed_financials(ticker, stock, [], now)
+        assert len(rows) == 3
+        annual = _by_period(rows, 2025, 'annual')
+        assert (annual['op'], annual['net']) == (op, net)
+        for key in ('revenue', 'op', 'net'):
+            assert annual['metric_sources'][key]['unit_multiplier'] == 1
+            assert annual['metric_sources'][key]['fs_div'] == 'CFS'
+            assert annual['accession'] in annual['metric_sources'][key]['source_url']
+        if ticker == '214270':
+            assert _by_period(rows, 2023, 'annual')['net'] == -24785408918
+            assert _by_period(rows, 2024, 'annual')['revenue'] == 185400336138
+            assert annual.get('sga') is None
+        if ticker == '033640':
+            assert _by_period(rows, 2023, 'annual')['op'] == 10069328909
+        if ticker == '009580':
+            assert _by_period(rows, 2023, 'annual')['net'] == -21635976438
+        if ticker == '035080':
+            assert _by_period(rows, 2024, 'annual')['net'] == -25955494157
+
+
 def test_future_filing_is_not_returned_even_if_review_date_is_current(monkeypatch):
     fixture = deepcopy(review._registry())
     entry = fixture["084010"]
