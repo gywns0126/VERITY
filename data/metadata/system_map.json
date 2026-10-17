@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-10-17T10:38:43.319330+09:00",
+  "generated_at": "2026-10-17T15:14:41.782541+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 395754,
-    "python_modules": 1286,
+    "code_lines_tsx_py": 396331,
+    "python_modules": 1288,
     "tsx_components": 150,
-    "json_data_files": 2442,
-    "json_total_tracked": 2469,
-    "workflows": 81,
+    "json_data_files": 2443,
+    "json_total_tracked": 2470,
+    "workflows": 82,
     "scheduled_workflows": 62,
     "cron_triggers": 72,
-    "git_tracked_files": 8647
+    "git_tracked_files": 8656
   },
   "subsystems": {
     "ingest": {
@@ -204,7 +204,7 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 81,
+      "count": 82,
       "scheduled": 62,
       "workflows": [
         {
@@ -540,6 +540,11 @@
           "scheduled": true
         },
         {
+          "name": "report_financials_publish",
+          "crons": [],
+          "scheduled": false
+        },
+        {
           "name": "reports_v2_cron",
           "crons": [],
           "scheduled": false
@@ -767,25 +772,25 @@
     },
     "data": {
       "label": "데이터",
-      "count": 2442
+      "count": 2443
     },
     "validation": {
       "label": "검증",
       "n_trading_days": 103,
-      "n_calendar_days": 152,
+      "n_calendar_days": 153,
       "next_milestone": {
         "next_n": 252,
         "days_remaining": 149,
         "label": "IC 의미 게이트 (Fama-MacBeth 1973, 1년 거래일)"
       },
-      "as_of": "2026-10-16T13:46:23+09:00"
+      "as_of": "2026-10-17T13:44:53+09:00"
     }
   },
   "python_by_dir": {
     "api": 491,
-    "tests": 484,
+    "tests": 485,
     "scripts": 177,
-    "vercel-api": 120,
+    "vercel-api": 121,
     "server": 8,
     ".github": 6
   },
@@ -812,7 +817,7 @@
       "warn": 0,
       "alert": 0
     },
-    "infra_as_of": "2026-10-16T11:01:44+09:00",
+    "infra_as_of": "2026-10-17T10:56:31+09:00",
     "file_age_hours": {
       "data/price_pulse.json": 0.0,
       "data/portfolio.json": 0.0,
