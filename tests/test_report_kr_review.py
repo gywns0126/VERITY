@@ -334,3 +334,57 @@ def test_owner_discontinued_and_renamed_issuer_sources_keep_exact_annual_scope()
     assert (prior['revenue'],prior['op'])==(45526630657,2075095975)
     assert prior['op']!=1462480218  # Historical original is not this recast column.
     assert _by_period(atec,2023,'annual')['op']==-712489950
+
+
+def test_primary_cohort_totals_preserve_units_scope_and_document_identity():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    cases = (
+        ('217330','싸이토젠','01046391',-12339826935),
+        ('307180','아이엘','01326279',-10831408385),
+        ('267320','나인테크','01208849',-17422714499),
+        ('047310','파워로직스','00269612',-12318778055),
+        ('011280','태림포장','00153524',-9187452000),
+        ('304360','에스바이오메딕스','01258020',-7059342697),
+        ('095190','신화프리텍','00526951',-6941945613),
+        ('172670','에이엘티','00493325',-8866390769),
+        ('101360','에코앤드림','00619640',-8596919787),
+        ('083310','엘오티베큠','00484682',-7781162151),
+    )
+    for ticker,name,corp,net in cases:
+        stock = {'ticker':ticker,'name':name,'corp_code':corp}
+        rows = review.reviewed_financials(ticker,stock,[],now)
+        assert len(rows) == (2 if ticker == '095190' else 3)
+        current = _by_period(rows,2025,'annual')
+        assert current['net'] == net
+        assert all(r['fs_div'] == ('OFS' if ticker == '095190' else 'CFS') for r in rows)
+        assert review.reviewed_entry(ticker,{**stock,'corp_code':'99999999'},now) is None
+        for row in rows:
+            for key,source in row['metric_sources'].items():
+                assert row[key] == review._amount(source['raw_text']) * source['unit_multiplier']
+                assert row['accession'] in source['source_url']
+        residual = current['revenue'] - current['cost_of_sales'] - current['sga'] - current['op']
+        assert residual == (2072674155 if ticker == '267320' else 0)
+        if ticker == '011280':
+            assert current['metric_sources']['net']['reported_unit'] == '천원'
+            assert current['metric_sources']['net']['unit_multiplier'] == 1000
+        if ticker == '095190':
+            assert not any(r['year'] == 2023 for r in rows)
+            assert current['net'] != 2226144074  # Continuing-only net is not total.
+
+
+def test_equity_reported_net_and_restated_columns_are_not_ownership_sums():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    rows = review.reviewed_financials('304360',{'ticker':'304360','name':'에스바이오메딕스'},[],now)
+    current = _by_period(rows,2025,'annual')
+    assert current['net'] == -7059342697 and current['net'] != -8122245545
+    source = current['metric_sources']['net']
+    assert source['column'] == '2025년 자본 합계'
+    assert source['sha256'] == '3206dce2f13dfcdff7a23fc0e85d843587cad4455f5e7714fa5df335fee078ec'
+    assert 'eleId=22' in source['source_url']
+    assert 'eleId=21' in current['metric_sources']['op']['source_url']
+    prior = _by_period(rows,2023,'annual')
+    assert prior['net'] == -9257682623 and prior['net'] != -6460345203
+    power = review.reviewed_financials('047310',{'ticker':'047310','name':'파워로직스'},[],now)
+    for year,net in ((2023,16370375160),(2024,12422763198)):
+        period = _by_period(power,year,'annual')
+        assert period['net'] == net and period['accession'] == '20260602000010'
