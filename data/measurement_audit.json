@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-17T09:32:49+09:00",
+ "as_of": "2026-10-17T13:35:08+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -80,6 +80,21 @@
      ]
     },
     {
+     "key": "dart_financials",
+     "coverage": "30/66",
+     "via": [
+      "dart_report_date",
+      "dart_source"
+     ],
+     "modules": [
+      "fact.py",
+      "moat.py",
+      "quality.py",
+      "red_flags.py",
+      "value_guards.py"
+     ]
+    },
+    {
      "key": "operating_income",
      "coverage": "55/66",
      "via": [
@@ -98,6 +113,16 @@
      ],
      "modules": [
       "quality.py"
+     ]
+    },
+    {
+     "key": "quant_factors",
+     "coverage": "66/66",
+     "via": [
+      "multi_factor.quant_factors"
+     ],
+     "modules": [
+      "fact.py"
      ]
     },
     {
