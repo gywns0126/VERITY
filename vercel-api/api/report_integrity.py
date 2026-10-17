@@ -31,8 +31,9 @@ def financial_display(fin):
         for row in rows:
             if row.get("status") in ("conflict", "inconsistent", "unverified_zero"):
                 warnings.append(f"{row.get('k')}: {row.get('reason') or '수신값의 원천 확인 필요'}")
-                if row.get("status") == "unverified_zero":
-                    row.update(received_value=row.get("v"), v="확인 필요 (수신값 0)")
+                if row.get("status") == "unverified_zero" and displayed_amount(row.get("v")) == 0:
+                    row.update(received_value=row.get("received_value", row.get("v")),
+                               v="확인 필요 (수신값 0)")
         gross, op, sga = (displayed_amount(by_name.get(k, {}).get("v"))
                           for k in ("매출총이익", "영업이익", "판매비와관리비"))
         if sga == 0 and gross is not None and op is not None and abs(gross - op) > 2e8:

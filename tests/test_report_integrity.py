@@ -39,6 +39,26 @@ def test_legacy_zero_sga_without_status_or_other_totals_is_not_verified():
         assert result == fin and not warnings
 
 
+def test_qualified_sga_zero_preserves_received_value_and_is_idempotent():
+    for status in ('unverified_zero', 'conflict'):
+        fin = {'groups': [{'title': '손익계산서', 'rows': [
+            {'k': '판매비와관리비', 'v': '미확인 (수신값 0)',
+             'received_value': '0', 'status': status, 'reason': '원천 확인 필요'}]}]}
+        before = copy.deepcopy(fin)
+        once, warnings = financial_display(fin)
+        twice, repeated_warnings = financial_display(once)
+        row = once['groups'][0]['rows'][0]
+        assert row['received_value'] == '0' and row['v'] == '미확인 (수신값 0)'
+        assert once == twice and warnings == repeated_warnings and fin == before
+
+    raw = {'groups': [{'title': '손익계산서', 'rows': [
+        {'k': '판매비와관리비', 'v': '0', 'received_value': '0', 'status': 'unverified_zero'}]}]}
+    qualified, _ = financial_display(raw)
+    assert qualified['groups'][0]['rows'][0]['received_value'] == '0'
+    assert qualified['groups'][0]['rows'][0]['v'] == '확인 필요 (수신값 0)'
+    assert financial_display(qualified)[0] == qualified
+
+
 def test_cash_summary_is_received_without_becoming_an_arithmetic_input():
     fin = {'period': '2025', 'groups': [{'title': '현금흐름표', 'rows': [{'k': '영업활동', 'v': '396억'}]}]}
     state = cash_receipt(fin, {'cash': None})

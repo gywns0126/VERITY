@@ -5,6 +5,18 @@ const NAME = 'stock_report_public.json';
 const URL = 'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/' + NAME;
 const MANIFEST = 'data/metadata/report_fin_history_corrections_20261017.json';
 const HISTORY = 'data/dart_kr_fin_history.json';
+// Original first fiscal period only. It must never become a year-only public annual row.
+const INCEPTION_489790 = {
+    ticker:'489790',name:'한화비전',corp_code:'01867758',year:2024,
+    start:'2024-09-01',end:'2024-12-31',period_kind:'inception_partial',
+    currency:'KRW',fs_div:'CFS',accession:'20250317000812',filed:'2025-03-17',
+    source_column:'제 1 기',
+    source_url:'https://dart.fss.or.kr/report/viewer.do?rcpNo=20250317000812&dcmNo=10415585&eleId=21&offset=273070&length=19363&dtd=dart4.xsd',
+    source_sha256:'3adf9e10ce84dc053c73264f9721f14d4a306da7ca828cb3f6eaf83846d01bf3',
+    revenue:493322362934,op:-120362075,net:3210792631,stale_net:31701255717,
+    accounts:{revenue:'I.매출 (주25,26,32)',net:'XV.당기순이익'},
+    raw:{revenue:'493,322,362,934',net:'3,210,792,631'},
+};
 // Directly reviewed issuer-specific renames, not a general alias resolver. Additional issuers
 // require a new primary-source review before this publication identity gate expands.
 const REVIEWED_RENAMES = {
@@ -45,6 +57,12 @@ function repair(doc, manifest, history) {
     assert(financial || manifest.schema === 'reviewed-kr-annual-net-corrections-v1');
     assert(Array.isArray(manifest.rows) && manifest.rows.length > 0);
     assert(Array.isArray(doc.stocks) && Array.isArray(history.rows));
+    assert(!doc._meta?.review_quarantine?.includes(INCEPTION_489790.ticker), 'quarantined first close cannot publish');
+    const partialRows = manifest.rows.filter(r => r.ticker === INCEPTION_489790.ticker && r.year === INCEPTION_489790.year);
+    if (partialRows.length) {
+        assert(v3, 'inception partial requires v3');
+        assert.deepEqual(partialRows.map(r => r.metric).sort(), ['net','revenue'], 'complete original column corrections required');
+    }
     const next = structuredClone(doc), changed = [], seen = new Set();
     for (const correction of manifest.rows) {
         const metric = correction.metric ?? 'net';
@@ -60,7 +78,22 @@ function repair(doc, manifest, history) {
         assert(Number.isSafeInteger(correction.after));
         assert.equal(correction.currency, 'KRW');
         assert(['CFS', 'OFS'].includes(correction.fs_div));
-        assert.equal(correction.start, correction.year + '-01-01');
+        const inception = correction.ticker === INCEPTION_489790.ticker && correction.year === INCEPTION_489790.year;
+        if (inception) {
+            for (const field of ['ticker','name','corp_code','year','start','end','period_kind','currency','fs_div',
+                'accession','filed','source_column','source_url','source_sha256']) {
+                assert.equal(correction[field], INCEPTION_489790[field], 'inception source/issuer/column binding');
+            }
+            assert.equal(correction.publication_target, 'history_only');
+            assert.equal(correction.before, metric === 'revenue' ? null : INCEPTION_489790.stale_net,
+                'known old partial cell');
+            assert.equal(correction.after, INCEPTION_489790[metric], 'original partial amount');
+            assert.equal(correction.account_name, INCEPTION_489790.accounts[metric], 'original account identity');
+            assert.equal(correction.raw_text, INCEPTION_489790.raw[metric], 'original column raw amount');
+        } else {
+            assert.equal(correction.publication_target, undefined, 'unreviewed publication target');
+            assert.equal(correction.start, correction.year + '-01-01');
+        }
         assert.equal(correction.end, correction.year + '-12-31');
         assert(correction.source_url.startsWith('https://dart.fss.or.kr/report/viewer.do?'));
         assert(correction.source_url.includes('rcpNo=' + correction.accession));
@@ -101,10 +134,31 @@ function repair(doc, manifest, history) {
         }
         assert.equal(source[0].name, historyName);
         assert.equal(source[0].fundamentals[historyMetric], correction.after, 'history must already be corrected');
+        if (inception) {
+            for (const field of ['corp_code','start','end','period_kind','currency','fs_div','accession','filed',
+                'source_column','source_url','source_sha256']) {
+                assert.equal(source[0][field], INCEPTION_489790[field], 'corrected history provenance');
+            }
+            assert.equal(source[0].fundamentals.operating_profit, INCEPTION_489790.op, 'one original OP column');
+            assert.equal(source[0].fundamentals.revenue, INCEPTION_489790.revenue, 'one original revenue column');
+            assert.equal(source[0].fundamentals.net_income, INCEPTION_489790.net, 'one original total net column');
+        }
         const stocks = next.stocks.filter(s => s.ticker === correction.ticker);
         assert.equal(stocks.length, 1, 'public identity');
         assert.equal(stocks[0].name_ko || stocks[0].name, correction.name);
         const periods = stocks[0].fin_series.filter(p => p.year === correction.year);
+        if (inception) {
+            assert(periods.length <= 1, 'duplicate public partial year');
+            if (periods.length) {
+                const old = periods[0];
+                assert.deepEqual(Object.keys(old).sort(), ['net','op','revenue','year'], 'unknown partial public fields');
+                assert.deepEqual(old, {year:2024,revenue:null,op:INCEPTION_489790.op,net:INCEPTION_489790.stale_net},
+                    'unknown partial public amount');
+                stocks[0].fin_series.splice(stocks[0].fin_series.indexOf(old), 1);
+                changed.push('489790:2024:remove_partial');
+            }
+            continue;
+        }
         assert.equal(periods.length, 1, 'public annual identity');
         if (periods[0][metric] === correction.after) continue;
         assert.equal(periods[0][metric], correction.before, 'unreviewed public value; stop');
@@ -132,33 +186,19 @@ function repairStagedFile(file, loadSources = latestReviewedSources) {
     return {ref, reviewed: manifest.rows.length, changed: result.changed};
 }
 
-async function main() {
-    if (process.argv[2] === '--staged-public') {
-        const result = repairStagedFile('_public_dist/' + NAME);
-        console.log(JSON.stringify({target: '_public_dist/' + NAME, ...result}));
-        return;
-    }
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST));
-    const history = JSON.parse(fs.readFileSync(HISTORY));
-    if (process.argv[2] === '--github-file') {
-        const path = '_report_published/' + NAME;
-        const result = repair(JSON.parse(fs.readFileSync(path)), manifest, history);
-        if (result.changed.length) fs.writeFileSync(path, JSON.stringify(result.next));
-        console.log(JSON.stringify({target: 'VERITY-data/' + NAME, changed: result.changed}));
-        return;
-    }
-    assert(process.env.BLOB_READ_WRITE_TOKEN, 'existing Blob secret required');
-    const {head, put} = require('@vercel/blob');
+async function publishBlob({head, put, fetcher = globalThis.fetch, loadSources = latestReviewedSources}) {
     const metadata = await head(URL);
-    const response = await fetch(URL + '?verify=' + Date.now(), {signal: AbortSignal.timeout(30000)});
+    const response = await fetcher(URL + '?verify=' + Date.now(), {signal: AbortSignal.timeout(30000)});
     assert(response.ok, 'public read failed');
     const etag = metadata.etag;
     assert(etag && response.headers.get('etag')?.replace(/^W\//, '') === etag.replace(/^W\//, ''), 'storage/CDN mismatch');
     const previous = Buffer.from(await response.arrayBuffer());
-    const {next, changed} = repair(JSON.parse(previous), manifest, history);
-    cp.execFileSync('git', ['fetch', 'origin', 'main', '--quiet']);
-    const latestHistory = JSON.parse(cp.execFileSync('git', ['show', 'origin/main:data/dart_kr_fin_history.json'], {maxBuffer: 15000000}));
-    repair(next, manifest, latestHistory); // Stop if main no longer has the reviewed correction.
+    const reviewed = loadSources();
+    const {next, changed} = repair(JSON.parse(previous), reviewed.manifest, reviewed.history);
+    const latest = loadSources();
+    assert.equal(latest.ref, reviewed.ref, 'main changed before Blob write');
+    assert.deepEqual(repair(next, latest.manifest, latest.history).changed, [],
+        'latest reviewed correction not reflected before Blob write');
     const body = changed.length ? Buffer.from(JSON.stringify(next)) : previous;
     if (changed.length) {
         const result = await put(NAME, body, {access: 'public', addRandomSuffix: false,
@@ -167,15 +207,33 @@ async function main() {
     }
     for (let i = 0; i < 12; i++) {
         if (i) await new Promise(resolve => setTimeout(resolve, 10000));
-        const check = await fetch(URL + '?verify=' + Date.now(), {signal: AbortSignal.timeout(30000)});
+        const check = await fetcher(URL + '?verify=' + Date.now(), {signal: AbortSignal.timeout(30000)});
         if (check.ok && body.equals(Buffer.from(await check.arrayBuffer()))) {
-            console.log(JSON.stringify({file: NAME, changed, readback: 'matched', reviewed: manifest.rows.length}));
-            return;
+            return {file: NAME, changed, readback: 'matched', reviewed: reviewed.manifest.rows.length};
         }
     }
     throw Error('public readback differs; no repeated write');
 }
-module.exports = {repair, repairStagedFile, latestReviewedSources};
+
+async function main() {
+    if (process.argv[2] === '--staged-public') {
+        const result = repairStagedFile('_public_dist/' + NAME);
+        console.log(JSON.stringify({target: '_public_dist/' + NAME, ...result}));
+        return;
+    }
+    if (process.argv[2] === '--github-file') {
+        const manifest = JSON.parse(fs.readFileSync(MANIFEST));
+        const history = JSON.parse(fs.readFileSync(HISTORY));
+        const path = '_report_published/' + NAME;
+        const result = repair(JSON.parse(fs.readFileSync(path)), manifest, history);
+        if (result.changed.length) fs.writeFileSync(path, JSON.stringify(result.next));
+        console.log(JSON.stringify({target: 'VERITY-data/' + NAME, changed: result.changed}));
+        return;
+    }
+    assert(process.env.BLOB_READ_WRITE_TOKEN, 'existing Blob secret required');
+    console.log(JSON.stringify(await publishBlob(require('@vercel/blob'))));
+}
+module.exports = {repair, repairStagedFile, latestReviewedSources, publishBlob};
 if (require.main === module) main().catch(e => {
     console.error('report correction publish failed: ' + e.constructor.name);
     process.exitCode = 1;

@@ -192,3 +192,21 @@ def test_blank_selected_account_is_not_promoted_to_reported_zero(bf, monkeypatch
     assert bf.main() == 0
     output = json.loads(Path(bf.OUT_PATH).read_text())
     assert not any(row["fiscal_year"] == YEARS[0] for row in output["rows"])
+
+
+def test_first_four_months_cannot_be_recollected_without_reviewed_history(bf, monkeypatch):
+    universe = Path(bf.DEFAULT_UNIVERSE)
+    universe.write_text(json.dumps({"stocks": [{"ticker": "489790", "name": "한화비전"}]}), encoding="utf-8")
+    _write(bf, rows=[])
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--start-year", "2024", "--quota-cap", "0"])
+    monkeypatch.setattr(bf, "get_corp_code", lambda _: (_ for _ in ()).throw(AssertionError("no API lookup")))
+    with pytest.raises(ValueError, match="489790 first close"):
+        bf.main()
+    old = {"ticker":"489790", "name":"한화비전", "fiscal_year":2024, "period":"annual",
+           "fundamentals":{"revenue":None,"operating_profit":-120362075,"net_income":31701255717}}
+    _write(bf, rows=[old])
+    assert bf.main() == 0  # The known row is held, never treated as a 12-month value.
+    universe.write_text(json.dumps({"stocks": [{"ticker": "111111", "name": "unrelated"}]}), encoding="utf-8")
+    _write(bf, rows=[{**old, "fundamentals": {**old["fundamentals"], "net_income": 0}}])
+    monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--ticker", "111111", "--start-year", "2024", "--quota-cap", "0"])
+    assert bf.main() == 0  # An unrelated caller does not validate this issuer's held history.

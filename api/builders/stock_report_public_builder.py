@@ -166,8 +166,7 @@ def _financials(fund: Dict[str, Any]) -> Dict[str, Any] | None:
                 row["status"] = "conflict" if discrepancy else "unverified_zero"
                 row["reason"] = ("매출총이익과 영업이익이 달라 판매비와관리비 0의 원천 확인 필요"
                                  if discrepancy else "이 발행 입력에서 원천 확인되지 않은 0: 실제 0인지 미확인")
-                if discrepancy:
-                    row["v"] = "미확인"
+                row.update(received_value=fv, v="미확인 (수신값 0)")
             rows.append(row)
         return {"title": title, "rows": rows} if rows else None
 
@@ -902,6 +901,12 @@ def _valuation_map(fundamentals: Dict[str, Any], krx_map: Dict[str, Any],
     """
     out: Dict[str, Dict[str, Any]] = {}
     for tk, f in fundamentals.items():
+        # This issuer's 2024 annual-form input is the reviewed four-month first close.
+        # Do not give it annual valuation precedence over a valid 2025 or TTM source.
+        if (tk == "489790" and str(f.get("report_date") or "") in ("2024", "2024-12-31", "20241231")
+                and str(f.get("reprt_code") or "11011") == "11011"
+                and f.get("period_kind") in (None, "annual", "inception_partial")):
+            continue
         km = krx_map.get(tk)
         if not km:
             continue
@@ -1258,7 +1263,40 @@ def _load_panel_facts() -> Dict[str, Dict[str, Any]]:
     return out
 
 
-def _load_fin_series() -> Dict[str, List[Dict[str, Any]]]:
+def _checked_489790_first_close(history_rows: List[Dict[str, Any]]) -> bool:
+    """Recognize only the known stale row or the exact reviewed original column."""
+    inception = [r for r in history_rows if isinstance(r, dict)
+                 and r.get("ticker") == "489790" and r.get("fiscal_year") == 2024]
+    if len(inception) > 1:
+        raise ValueError("489790 first-period history identity")
+    if not inception:
+        return False
+    evidence = {
+        "corp_code": "01867758", "period_kind": "inception_partial",
+        "start": "2024-09-01", "end": "2024-12-31", "currency": "KRW", "fs_div": "CFS",
+        "accession": "20250317000812", "filed": "2025-03-17", "source_column": "제 1 기",
+        "source_url": "https://dart.fss.or.kr/report/viewer.do?rcpNo=20250317000812&dcmNo=10415585&eleId=21&offset=273070&length=19363&dtd=dart4.xsd",
+        "source_sha256": "3adf9e10ce84dc053c73264f9721f14d4a306da7ca828cb3f6eaf83846d01bf3",
+    }
+    source = inception[0]
+    if source.get("name") != "한화비전" or source.get("period") != "annual":
+        raise ValueError("489790 first-period issuer/report form")
+    f = source.get("fundamentals") or {}
+    stale = (f.get("revenue"), f.get("operating_profit"), f.get("net_income")) == (
+        None, -120362075, 31701255717)
+    reviewed = (f.get("revenue"), f.get("operating_profit"), f.get("net_income")) == (
+        493322362934, -120362075, 3210792631)
+    if reviewed:
+        if any(source.get(key) != value for key, value in evidence.items()):
+            raise ValueError("489790 corrected first-period provenance")
+    elif stale and not any(source.get(key) is not None for key in evidence):
+        print("[stock_report_public] 489790 2024 four-month close held pending reviewed history", file=sys.stderr)
+    else:
+        raise ValueError("489790 first-period value/provenance unknown")
+    return True
+
+
+def _load_fin_series(quarantined: Optional[set[str]] = None) -> Dict[str, List[Dict[str, Any]]]:
     """DART KR backfill → ticker별 연도 재무 시계열 (매출/영업이익/순익).
 
     소스 = data/dart_kr_backfill_result.json (DART 원본 연간 실값, fiscal_year 2015~).
@@ -1268,13 +1306,28 @@ def _load_fin_series() -> Dict[str, List[Dict[str, Any]]]:
     doc = _load_json(DART_KR_BACKFILL_PATH, {})
     rows = list((doc.get("rows") if isinstance(doc, dict) else None) or [])
     hist = _load_json(DART_KR_FIN_HISTORY_PATH, {})  # 광범위 백필 merge (universe 확대)
-    rows += (hist.get("rows") if isinstance(hist, dict) else None) or []
+    history_rows = (hist.get("rows") if isinstance(hist, dict) else None) or []
+    # The report form says annual but the source span is only 2024-09-01..12-31.
+    try:
+        inception = _checked_489790_first_close(history_rows)
+        if not inception and any(isinstance(r, dict) and r.get("ticker") == "489790"
+                                 and r.get("fiscal_year") in (2024, 2025) for r in rows + history_rows):
+            raise ValueError("489790 first-period history missing")
+    except ValueError as exc:
+        if quarantined is None:
+            raise
+        quarantined.add("489790")
+        inception = False
+        print(f"[stock_report_public] quarantine 489790: {exc}", file=sys.stderr)
+    rows += history_rows
     by_ticker: Dict[str, List[Dict[str, Any]]] = {}
     for r in rows:
         if not isinstance(r, dict) or r.get("period") != "annual":
             continue
         tk = str(r.get("ticker") or "")
         fy = r.get("fiscal_year")
+        if tk == "489790" and (fy == 2024 or (quarantined is not None and tk in quarantined)):
+            continue  # Both backfill and history; no partial year in year-only consumers.
         f = r.get("fundamentals") or {}
         if not tk or fy is None:
             continue
@@ -1296,7 +1349,15 @@ def _load_fin_series() -> Dict[str, List[Dict[str, Any]]]:
         for p in pts:
             seen[p["year"]] = p
         ordered = [seen[y] for y in sorted(seen.keys())][-12:]
-        if len(ordered) >= 2:
+        if tk == "489790" and inception and len(ordered) == 1 and ordered[0]["year"] == 2025:
+            full = [r for r in history_rows if isinstance(r, dict) and r.get("ticker") == tk
+                    and r.get("fiscal_year") == 2025 and r.get("period") == "annual"]
+            if len(full) != 1 or any((full[0].get("fundamentals") or {}).get(src) != ordered[0][key]
+                                     for src, key in (("revenue", "revenue"), ("operating_profit", "op"),
+                                                      ("net_income", "net"))):
+                raise ValueError("489790 retained full-year source identity")
+            out[tk] = ordered
+        elif len(ordered) >= 2:
             out[tk] = ordered
     return out
 
@@ -1343,7 +1404,8 @@ def main() -> int:
             recs = []
         fund_doc = _load_json(FUND_PATH, {})
         fundamentals = (fund_doc.get("fundamentals") if isinstance(fund_doc, dict) else {}) or {}
-        fin_series = _load_fin_series()
+        quarantined: set[str] = set()
+        fin_series = _load_fin_series(quarantined)
         panel_facts = _load_panel_facts()
         print(f"  [패널 소스] 발행 품질 통과 {len(panel_facts)}종")
         _dart_holders = (_load_json(KR_OWNERSHIP_PATH, {}) or {}).get("holders") or {}
@@ -1418,7 +1480,7 @@ def main() -> int:
               f"CB/BW {len(_overhang_map)} · 공급망 {len(_chain_map)}")
 
         universe = (set(fundamentals.keys()) | set(rich_by_ticker.keys())
-                    | set(fin_series.keys()) | set(panel_facts.keys()))
+                    | set(fin_series.keys()) | set(panel_facts.keys())) - quarantined
         stocks: List[Dict[str, Any]] = []
         for tk in universe:
             if tk in rich_by_ticker:
@@ -1460,9 +1522,13 @@ def main() -> int:
         krx_doc = _load_json(KRXMKTCAP_PATH, {})
         krx_map = (krx_doc.get("map") if isinstance(krx_doc, dict) else {}) or {}
         valuation = _valuation_map(fundamentals, krx_map, fin_series, panel_facts) if krx_map else {}
+        for tk in quarantined:
+            valuation.pop(tk, None)
         sector_doc = _load_json(SECTOR_MAP_PATH, {})
         sector_map = (sector_doc.get("map") if isinstance(sector_doc, dict) else {}) or {}
-        sector_medians = _sector_medians(fundamentals, sector_map, valuation) if sector_map else {}
+        median_fundamentals = ({tk: row for tk, row in fundamentals.items() if tk not in quarantined}
+                               if quarantined else fundamentals)
+        sector_medians = _sector_medians(median_fundamentals, sector_map, valuation) if sector_map else {}
         # KR↔US 교차피어 (Tier B B-5) — GICS 공통축 헬퍼 (로컬 import, 파일 관례 정합)
         from api.builders.cross_sector_peer import (
             GICS_KO as _GICS_KO,
@@ -1806,6 +1872,8 @@ def main() -> int:
             },
             "stocks": stocks,
         }
+        if quarantined:
+            out["_meta"]["review_quarantine"] = sorted(quarantined)
         if not stocks and os.path.isfile(OUTPUT_PATH):
             print("[stock_report_public] 0 stocks — 기존 snapshot 보존", file=sys.stderr)
             ok = True

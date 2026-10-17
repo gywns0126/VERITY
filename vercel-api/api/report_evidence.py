@@ -192,6 +192,9 @@ def build_report(ticker, fetch, now=None):
     coverage.append(news_coverage)
     sections, issues, gaps = [], [], []
     periods = (s.get("financial_evidence") or {}).get("periods") or []
+    if kr and ticker == '489790':
+        periods = [p for p in periods if not (isinstance(p, dict) and str(p.get('year')) == '2024'
+                                                   and p.get('period_kind') == 'annual')]
     primary_review = reviewed_entry(ticker, s, now) if kr else None
     if primary_review:
         periods = reviewed_financials(ticker, s, periods, now)
@@ -316,7 +319,10 @@ def build_report(ticker, fetch, now=None):
               company['basis_label'] + ' · 회사별 제품표와 연결재무를 구분합니다. 판매단가와 원재료 매입단가의 차이는 영업마진이 아닙니다.', widths=[0.8, 3, 0.6])
     # Preserve reporting currency and expose the limits of each annual comparison.
     proven_annual = [r for r in reader["periods"] if r["period_kind"] == "annual"]
-    annual = sorted(proven_annual or [r for r in s.get("fin_series", []) if str(r.get("year", "")).isdigit()], key=lambda r: int(r["year"]))
+    # The 489790 2024 first close spans only 2024-09-01..12-31. Older public
+    # objects may still carry it as a year-only row until the staged CAS repair.
+    public_annual = [r for r in s.get("fin_series", []) if not (kr and ticker == '489790' and str(r.get('year')) == '2024')]
+    annual = sorted(proven_annual or [r for r in public_annual if str(r.get("year", "")).isdigit()], key=lambda r: int(r["year"]))
     basis = [annual_context(r, fin, kr) for r in annual]
     comparison = compare_annual(annual, fin, kr)
     financial_bridge_held = financial_sector and comparison["bridge"] is not None
@@ -329,6 +335,17 @@ def build_report(ticker, fetch, now=None):
     table("R1", "연간 실적 흐름" if proven_annual else "원문 기준 보강 전 연간 수집값", ["결산연도", "매출", "영업이익", "순이익"],
           [[str(r["year"]), *[money(r.get(k), kr, c["currency"]) for k in ("revenue", "op", "net")]] for r, c in zip(annual, basis)],
           "각 행의 보고 통화 유지 · M/B/T=백만/십억/조 단위. " + ("보고 기간·연결/별도·공시 원문 연결." if proven_annual else "기간·연결/별도·원문 근거가 불충분하여 본문 비교에서 제외."), limit=10, recent=True)
+    if kr and ticker == '489790':
+        partial = (primary_review or {}).get('partial_periods') or []
+        table('R1P', '2024 신설 첫 결산 · 4개월', ['실제 기간', '매출', '영업이익', '총순이익', '원문'],
+              [[r['start'] + ' ~ ' + r['end'],
+                *[r['metric_sources'][k]['raw_text'] for k in ('revenue', 'op', 'net')],
+                source_cell(r['metric_sources']['revenue'])]
+               for r in partial],
+              '단위: 원 · 2024년 원래 사업보고서 제 1 기 연결 손익계산서의 같은 열입니다. 12개월 연간·전년 대비·동종기업 비교의 입력이 아닙니다.',
+              widths=[1.7, 1, 1, 1, 0.7])
+        gaps.append('489790의 2024-09-01~12-31 첫 결산은 4개월입니다. 2025년과 12개월 연간 증감률을 계산하지 않습니다.'
+                    + ('' if partial else ' 이 리포트의 2024년 원문 열 직접 검수 표시가 아직 연결되지 않았습니다.'))
     if primary_review:
         table('RF', '직접 검수한 재무 표의 범위', ['기간', '구분', '확인 사항'],
               [[period_label(r), r['fs_div'] + ' · ' + r['currency'],
@@ -337,7 +354,7 @@ def build_report(ticker, fetch, now=None):
               ' · '.join(primary_review.get('notes', [])), widths=[1.4, 0.6, 2])
     # Keep received years visible even when only some years have attribution.
     proven_years = {int(r["year"]) for r in proven_annual}
-    unlinked_annual = sorted([r for r in s.get("fin_series", [])
+    unlinked_annual = sorted([r for r in public_annual
                              if str(r.get("year", "")).isdigit() and int(r["year"]) not in proven_years],
                             key=lambda r: int(r["year"])) if proven_annual else []
     table("R1U", "연간 수집값 · 분석 연결 대기", ["결산연도", "매출", "영업이익", "순이익", "표시 통화 기준"],
