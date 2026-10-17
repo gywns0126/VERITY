@@ -54,6 +54,20 @@ class TestExtractPLBS:
             assert out["sga"] == 70_000_000_000
             assert sources["sga"] == {**total, "request_context": self._request}
 
+    @pytest.mark.parametrize("name", ["판매비와 관리비", "판매비 와 관리비", "판매비와\u00a0관리비",
+                                      " 판매비와 관리비 (주 23,24) "])
+    def test_sga_total_whitespace_variant_keeps_original_source(self, name):
+        # Annual 460860 primary table label/value; API identity is a synthetic
+        # unit fixture, not a claim that the historical raw response was saved.
+        total = self._sga_row(name, "214,066,943,596")
+        parts = [self._sga_row("판매비", "1"), self._sga_row("관리비", "2")]
+        sources = {}
+        result = df._extract_pl_bs_from_dart({"list": parts + [total]},
+            source_rows=sources, request_context=self._request)
+        assert result["sga"] == 214_066_943_596
+        assert sources["sga"] == {**total, "request_context": self._request}
+        assert total["account_nm"] == name
+
     def test_split_sga_requires_both_unique_rows_and_same_identity(self):
         selling = self._sga_row("판매비", "22,821,576,676")
         administrative = self._sga_row("관리비", "50,293,694,325")
@@ -173,6 +187,72 @@ class TestExtractPLBS:
         out = df._extract_pl_bs_from_dart(data)
         assert out["total_assets"] == 0
         assert out["equity"] == 0
+
+    @pytest.mark.parametrize("aid", ["ifrs-full_ProfitLoss", "ifrs_ProfitLoss"])
+    @pytest.mark.parametrize("amount", ["0", "-500", "500"])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_total_net_priority_preserves_zero_sign_and_source(self, aid, amount, reverse):
+        total = {"sj_div": "CIS", "account_nm": "분기순손익", "account_id": aid,
+                 "thstrm_amount": amount}
+        owner = {"sj_div": "IS", "account_nm": "지배기업 소유주에게 귀속되는 당기순이익",
+                 "account_id": "ifrs-full_ProfitLossAttributableToOwnersOfParent", "thstrm_amount": "999"}
+        other = {"sj_div": "CIS", "account_nm": "당기순이익으로 재분류되지 않는 항목",
+                 "thstrm_amount": "777"}
+        fallback = {"sj_div": "IS", "account_nm": "당기순이익", "thstrm_amount": "123"}
+        rows = [fallback, owner, other, total]
+        if reverse:
+            rows.reverse()
+        sources = {}
+        result = df._extract_pl_bs_from_dart({"list": rows}, source_rows=sources)
+        assert result["net_income"] == int(amount)
+        assert sources["net_income"] == total
+
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_conflicting_standardized_net_totals_are_unknown_and_flagged(self, reverse):
+        rows = [{"sj_div": sj, "account_nm": "당기순이익", "account_id": aid,
+                 "thstrm_amount": value} for sj, aid, value in (
+                     ("IS", "ifrs-full_ProfitLoss", "100"),
+                     ("CIS", "ifrs_ProfitLoss", "200"))]
+        if reverse:
+            rows.reverse()
+        sources = {}
+        result = df._extract_pl_bs_from_dart({"list": rows}, source_rows=sources)
+        assert result["net_income"] is None
+        assert "net_income" not in sources
+        assert sources["_conflicts"]["net_income"] == rows
+        assert df._extract_pl_bs_from_dart({"list": rows})["net_income"] is None
+
+    def test_duplicate_equal_standardized_totals_do_not_create_conflict(self):
+        row = {"sj_div": "IS", "account_nm": "당기순이익", "account_id": "ifrs-full_ProfitLoss",
+               "thstrm_amount": "-100"}
+        sources = {}
+        assert df._extract_pl_bs_from_dart({"list": [row, dict(row)]}, source_rows=sources)["net_income"] == -100
+        assert "_conflicts" not in sources
+
+    @pytest.mark.parametrize("name,aid", [
+        ("당기순이익으로 재분류되는 항목", ""),
+        ("당기순이익으로 재분류되지 않는 항목", ""),
+        ("비지배주주에게 귀속되는 당기순이익", ""),
+        ("기본주당기순이익", ""),
+        ("당기순이익", "ifrs-full_BasicEarningsLossPerShare"),
+        ("당기순이익", "ifrs-full_ProfitLossAttributableToOwnersOfParent"),
+        ("당기순이익", "ifrs-full_ProfitLossFromContinuingOperations"),
+    ])
+    def test_related_income_concepts_are_not_total_net_fallback(self, name, aid):
+        sources = {}
+        result = df._extract_pl_bs_from_dart({"list": [{
+            "sj_div": "IS", "account_nm": name, "account_id": aid,
+            "thstrm_amount": "199032927011"}]}, source_rows=sources)
+        assert result["net_income"] == 0  # Existing missing-value contract.
+        assert "net_income" not in sources
+
+    @pytest.mark.parametrize("name", ["당기순이익", "당기순이익(손실)", "당기순손실",
+                                      "분기순이익", "반기순손익", "연결 당기순이익 (주 3,4)"])
+    def test_exact_net_label_fallback_and_source_still_work(self, name):
+        row = {"sj_div": "IS", "account_nm": name, "thstrm_amount": "-100"}
+        sources = {}
+        assert df._extract_pl_bs_from_dart({"list": [row]}, source_rows=sources)["net_income"] == -100
+        assert sources["net_income"] == row
 
 
 class TestComputeRatios:

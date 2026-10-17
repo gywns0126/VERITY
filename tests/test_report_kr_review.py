@@ -110,3 +110,46 @@ def test_older_filing_replaced_and_same_filing_only_fills_missing_metrics():
     assert "revenue" not in filled["metric_sources"]
     assert filled["metric_sources"]["ocf"]["raw_text"] == "(6,818,141,298)"
     assert old["revenue"] == 1 and same["ocf"] is None
+
+
+def test_separate_statements_require_matching_document_scope(monkeypatch):
+    fixture = deepcopy(review._registry())
+    entry = fixture['084010']
+    for doc in entry['documents'].values():
+        if doc.get('fs_div') == 'CFS':
+            doc['fs_div'] = 'OFS'
+    for row in entry['periods']:
+        row['fs_div'] = 'OFS'
+    monkeypatch.setattr(review, '_registry', lambda: fixture)
+    separate = review.reviewed_financials('084010', STOCK, [], NOW)
+    assert len(separate) == 7 and all(r['fs_div'] == 'OFS' for r in separate)
+    entry['documents']['half_income']['fs_div'] = 'CFS'
+    eligible = review.reviewed_entry('084010', STOCK, NOW)
+    assert len(eligible['periods']) == 3
+    assert all(r['period_kind'] == 'annual' for r in eligible['periods'])
+    for row in entry['periods']:
+        row['fs_div'] = 'UNKNOWN'
+    assert review.reviewed_entry('084010', STOCK, NOW) is None
+
+
+def test_latest_peer_reviews_preserve_quarter_ytd_scope_and_source():
+    now = datetime(2026, 10, 17, tzinfo=KST)
+    expected = [('104700', '한국철강', '00687711', 173809519338, -6284385117, -12691130328),
+                ('460860', '동국제강', '01765265', 995514578458, 45563446844, 137488041100)]
+    for ticker, name, corp, revenue, op, cash in expected:
+        rows = review.reviewed_financials(ticker, {'ticker': ticker, 'name': name, 'corp_code': corp}, [], now)
+        assert len(rows) == (6 if ticker == '460860' else 4)
+        q2, h1 = _by_period(rows, 2026, 'quarter'), _by_period(rows, 2026, 'ytd')
+        assert q2['start'] == '2026-04-01' and h1['start'] == '2026-01-01'
+        assert q2['revenue'] == revenue and q2['op'] == op
+        assert q2['revenue'] - q2['cost_of_sales'] - q2['sga'] == q2['op']
+        assert h1['ocf'] == cash and h1['capex'] > 0
+        assert q2['ocf'] is q2['capex'] is None
+        assert q2['metric_sources']['sga']['fs_div'] == 'OFS'
+        assert all(r['fs_div'] == 'OFS' for r in rows)
+        assert all('rcpNo=' + r['accession'] in m['source_url'] for r in rows for m in r['metric_sources'].values())
+        if ticker == '460860':
+            annual = _by_period(rows, 2025, 'annual')
+            assert annual['net'] == 8231853074 and annual['sga'] == 214066943596
+            assert annual['revenue'] - annual['cost_of_sales'] - annual['sga'] == annual['op']
+            assert not any(r['year'] == 2023 for r in rows)  # First seven-month year is not a full annual.

@@ -10,7 +10,7 @@ from report_kr_review import reviewed_financials
 from report_reader import reader_financials
 from report_evidence import build_report
 
-NOW = datetime(2026, 10, 16, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 17, tzinfo=timezone.utc)
 STOCK = {'ticker': '084010', 'name': '대한제강', 'corp_code': '00113225',
          'financials': {'period': '2025'}, 'peer': {'sector': '철강', 'n': 164,
          'rows': [{'key': 'PER', 'value': '8', 'median': '12'}]}}
@@ -73,3 +73,29 @@ def test_legacy_cash_summary_does_not_mark_new_verified_cash_unusable():
     rows = next(r['rows'] for r in report['sections'] if r['id'] == 'DQ1')
     assert rows[0][0] == '결산 요약 영업현금흐름' and '보류' in rows[0][2]
     assert rows[1][0] == '본문 영업현금흐름' and '비교 가능' in rows[1][2]
+
+
+def test_reviewed_amount_changes_reconcile_but_are_not_causal_drivers():
+    entry = reviewed_kr_business('084010', STOCK, reader(), NOW)
+    observations = {r['label']: r for r in entry['observations']}
+    op = observations['영업이익 증감']['amount_evidence']
+    effects = []
+    for key, sign in [('gross_profit', 1), ('selling_expense', -1), ('administrative_expense', -1)]:
+        row = op[key]
+        assert row['effect'] == sign * (row['current'] - row['prior'])
+        effects.append(row['effect'])
+    assert sum(effects) == op['operating_income']['change'] == 7500227162
+    assert op['operating_income']['current'] - op['operating_income']['prior'] == sum(effects)
+    below = observations['영업 외 손익']['amount_evidence']
+    delta = lambda key: below[key]['current'] - below[key]['prior']
+    contribution = sum(delta(k) for k in ('equity_income', 'other_income', 'finance_income'))
+    contribution -= sum(delta(k) for k in ('equity_loss', 'other_expense', 'finance_cost', 'tax'))
+    assert sum(effects) + contribution == delta('continuing_income') == -6408498666
+    discontinued = observations['중단영업']['amount_evidence']
+    assert discontinued['current'] - discontinued['prior'] == discontinued['change'] == -1743400358
+    assert all(r['period'] == '2026-01-01/2026-06-30' for r in observations.values())
+    report = build_report('084010', lambda name: {'stocks': {'084010': STOCK}} if name == 'stock_report_public.json' else {}, NOW)
+    assert report['attribution']['groups'] == []  # H1 account deltas are not Q2 causal estimates.
+    section = next(s for s in report['sections'] if s['id'] == 'B3')
+    assert len(section['rows']) == 6
+    assert any('17.43' in r[1] and '중단영업' in r[0] for r in section['rows'])

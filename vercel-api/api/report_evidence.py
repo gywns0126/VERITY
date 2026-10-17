@@ -328,7 +328,7 @@ def build_report(ticker, fetch, now=None):
     if primary_review:
         table('RF', '직접 검수한 재무 표의 범위', ['기간', '구분', '확인 사항'],
               [[period_label(r), r['fs_div'] + ' · ' + r['currency'],
-                (r.get('start_basis') or '원문 표의 기간') + ' · ' + ', '.join({'revenue': '매출', 'op': '영업이익', 'net': '순이익', 'ocf': '영업현금', 'capex': '유형자산 취득'}.get(k, k) for k in r.get('metric_sources', {}))]
+                (r.get('start_basis') or '원문 표의 기간') + ' · ' + ', '.join({'revenue': '매출', 'op': '영업이익', 'net': '순이익', 'ocf': '영업현금', 'capex': '유형자산 취득', 'cost_of_sales': '매출원가', 'sga': '판매비와관리비'}.get(k, k) for k in r.get('metric_sources', {}))]
                for r in reader['periods'] if any(m.get('reviewed_at') == primary_review['reviewed_at'] for m in (r.get('metric_sources') or {}).values())],
               ' · '.join(primary_review.get('notes', [])), widths=[1.4, 0.6, 2])
     # Keep received years visible even when only some years have attribution.
@@ -396,14 +396,24 @@ def build_report(ticker, fetch, now=None):
         'candidate_not_in_public_feed': '공개 자료에서 종목 미수신',
         'us_enrichment_cap_reached': '요청당 미국 원문 조회 한도',
         'us_enrichment_failed': '추가 원문 조회 실패', 'target_basis_held': '기준 기업의 비교 조건 미충족'}
-    table('R4H', '비교 후보 · 선정 이유와 비교 한계', ['기업', '선정 이유', '현재 상태'],
+    def peer_period_source(row):
+        available = [p for p in row.get('available_periods') or [] if not p.get('errors')]
+        same_kind = [p for p in available if p.get('period_kind') == pb.get('period_kind')]
+        period = max(same_kind or available, key=lambda p: (p.get('end') or '', p.get('filed') or ''), default={})
+        if row['status'] == 'qualified':
+            period = {**row['period'], 'source_url': row.get('source_url')}
+        scope = {'CFS': '연결', 'OFS': '별도'}.get(period.get('fs_div'), '범위 미확인')
+        return {'text': period_label(period) + ' · ' + scope, 'url': period['source_url']} if period.get('source_url') else '기간·원문 미연결'
+
+    table('R4H', '비교 후보 · 선정 이유와 비교 한계', ['기업', '선정 이유', '현재 상태', '확보 기간·원문'],
           [[text(r.get('name') or r['ticker']) + ' (' + r['ticker'] + ')',
             text(r['selection']['reason']),
             ('기간 정렬 · ' + ('회계기준 일치' if r['accounting_standard_comparability'] == 'matched' else '회계기준 미확인'))
-            if r['status'] == 'qualified' else '비교 보류 · ' + ' / '.join(dict.fromkeys(reason_labels.get(x, '원문·식별·기간 조건 추가 확인') for x in r['reasons']))]
+            if r['status'] == 'qualified' else '비교 보류 · ' + ' / '.join(dict.fromkeys(reason_labels.get(x, '원문·식별·기간 조건 추가 확인') for x in r['reasons'])),
+            peer_period_source(r)]
            for r in peer_comparison['rows']],
           ' '.join(peer_comparison['notes']) + ' ' + ' '.join(dict.fromkeys(r['selection'].get('limitation') or '' for r in peer_comparison['rows'])),
-          widths=[1, 1.5, 2])
+          widths=[0.8, 1.4, 1.6, 1.2])
     if kr_business:
         table('R4', '사업이 겹치는 비교기업 · 선정 근거', ['기업', '비교하는 이유', '차이·주의점', '원문'],
               [[r['company'] + ' (' + r['ticker'] + ')', r['reason'], r['limitation'], source_cell(r)] for r in kr_business.get('peers', [])],

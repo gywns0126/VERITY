@@ -378,7 +378,7 @@ def normalized_peers(target_ticker, target_stock, target_reader, stocks, now, re
         accounting = "basis_unknown" if not target_standard or not standard else (
             "matched" if target_standard == standard else "mismatch")
         metrics = _metrics(selected, financial_comparison)
-        if not any(metrics[k]["value"] is not None for k in ("revenue", "op", "net")):
+        if exact and not any(metrics[k]["value"] is not None for k in ("revenue", "op", "net")):
             reasons.append("no_sourced_income")
         numeric_alignment = "held" if reasons else "qualified"
         if accounting == "mismatch":
@@ -390,7 +390,8 @@ def normalized_peers(target_ticker, target_stock, target_reader, stocks, now, re
             "status": "held" if reasons else "qualified", "reasons": reasons,
             "numeric_period_alignment": numeric_alignment,
             "selection": selection, "period": {k: selected.get(k) for k in FIELDS},
-            "available_periods": [{k: p.get(k) for k in FIELDS} for p in periods] if not exact else [],
+            "available_periods": [{**{k: p.get(k) for k in (*FIELDS, "source_url", "filed")},
+                                   "errors": _period_errors(p, today)} for p in periods] if not exact or reasons else [],
             "scope_basis": selected.get("scope_basis"),
             "financial_sector": _financial_sector(peer),
             "source_url": selected.get("source_url"), "filed": selected.get("filed"),
@@ -513,7 +514,8 @@ def build_peer_comparison(ticker, target, reader, doc, now, reviewed_peers=None,
     for row, original in zip(result["rows"], chosen):
         row["selection"] = original["selection"]
         row["enrichment"] = statuses.get(row["ticker"], "not_attempted")
-        if row["status"] == "held" and row["enrichment"] not in ("existing_exact_period", "kr_review_no_change"):
+        if row["status"] == "held" and row["enrichment"] not in (
+                "existing_exact_period", "kr_review_no_change", "kr_review_applied", "us_enriched"):
             row["reasons"].append(row["enrichment"])
     result["qualified"] = sum(r["status"] == "qualified" for r in result["rows"])
     result["held"] = result["total"] - result["qualified"]
