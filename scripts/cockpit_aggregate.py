@@ -31,6 +31,7 @@ from api.observability.verification_trail import compute_trail
 DATA_DIR = _REPO_ROOT / "data"
 METADATA_DIR = DATA_DIR / "metadata"
 COCKPIT_PATH = METADATA_DIR / "cockpit_state.json"
+DATA_HEALTH_MAX_AGE = timedelta(hours=3)
 
 # ─── helpers ─────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ def _read_jsonl_tail(path: Path, n: int = 200) -> List[Dict[str, Any]]:
 
 
 def _parse_ts(s: Optional[str]) -> Optional[datetime]:
-    if not s:
+    if not isinstance(s, str) or not s:
         return None
     try:
         # ts_kst / ts_utc / collected_at 등 다양 포맷
@@ -121,18 +122,66 @@ def _reduce_data_health() -> Dict[str, Any]:
     }
 
     delivery = _read_json(METADATA_DIR / "data_health.json")
-    if isinstance(delivery, dict):
-        verify = delivery.get("publish_verify") or {}
-        out.update({
-            "delivery_status": str(delivery.get("status") or "").lower() or None,
-            "delivery_reasons": delivery.get("reasons") or [],
-            "delivery_generated_at": (
-                delivery.get("generated_at")
-                or verify.get("generated_at")
-            ),
-            "publish_verify_ok": verify.get("ok"),
-            "publish_verify_failed": verify.get("failed"),
-        })
+    status = None
+    reasons: List[str] = []
+    verify: Dict[str, Any] = {}
+    malformed = False
+    generated_at = None
+
+    if not isinstance(delivery, dict):
+        malformed = True
+        reasons.append("data_health aggregate missing or unreadable")
+    else:
+        raw_status = delivery.get("status")
+        status = str(raw_status or "").lower() or None
+        raw_reasons = delivery.get("reasons")
+        if status not in {"green", "amber", "red"} or not isinstance(raw_reasons, list):
+            malformed = True
+            reasons.append("data_health aggregate schema invalid")
+        else:
+            reasons = [str(reason) for reason in raw_reasons]
+
+        raw_verify = delivery.get("publish_verify")
+        if raw_verify is None:
+            verify = {}
+        elif isinstance(raw_verify, dict):
+            verify = raw_verify
+        else:
+            malformed = True
+            reasons.append("data_health publish_verify schema invalid")
+
+        meta = delivery.get("_meta")
+        # Legacy top-level clocks apply only when _meta itself is absent.
+        if "_meta" in delivery:
+            generated_at = meta.get("generated_at") if isinstance(meta, dict) else None
+        else:
+            generated_at = delivery.get("generated_at")
+
+        parsed_generated_at = _parse_ts(generated_at)
+        if parsed_generated_at is None:
+            malformed = True
+            reasons.append("data_health aggregate generated_at missing or invalid")
+        else:
+            age = _now_utc() - parsed_generated_at
+            if age > DATA_HEALTH_MAX_AGE:
+                reasons.append(f"data_health aggregate stale ({age.total_seconds() / 3600:.1f}h > 3h)")
+                malformed = True
+            elif age < -timedelta(minutes=5):
+                reasons.append("data_health aggregate generated_at is in the future (>5m)")
+                malformed = True
+
+    # Incomplete health evidence is at least YELLOW, but never downgrades an
+    # explicit RED report or a publish verification failure.
+    if malformed and status != "red":
+        status = "amber"
+
+    out.update({
+        "delivery_status": status,
+        "delivery_reasons": reasons,
+        "delivery_generated_at": generated_at,
+        "publish_verify_ok": verify.get("ok"),
+        "publish_verify_failed": verify.get("failed"),
+    })
     return out
 
 
@@ -447,7 +496,6 @@ def build_cockpit_state() -> Dict[str, Any]:
         except (json.JSONDecodeError, OSError):
             pass
     severity, severity_reasons = evaluate_severity(flat_inputs)
-
     # N milestones — verification_trail helper 사용 (Phase 1 P1-d)
     portfolio = _read_json(DATA_DIR / "portfolio.json") or {}
     trail = compute_trail(portfolio)
@@ -490,6 +538,7 @@ def build_cockpit_state() -> Dict[str, Any]:
             "fred_24h_failure_rate": inputs.get("fred_24h_failure_rate"),
             "core_sources_ok": (inputs.get("data_health") or {}).get("core_sources_ok"),
             "delivery_status": (inputs.get("data_health") or {}).get("delivery_status"),
+            "delivery_generated_at": (inputs.get("data_health") or {}).get("delivery_generated_at"),
             "publish_verify_ok": (inputs.get("data_health") or {}).get("publish_verify_ok"),
             "publish_verify_failed": (inputs.get("data_health") or {}).get("publish_verify_failed"),
             "runtime_mode": inputs.get("runtime_mode"),

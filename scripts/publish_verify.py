@@ -2,8 +2,8 @@
 
 발행 성공 ≠ 배달 정합: 업로드 손상·CDN 스테일 갭 차단. 로컬 빌드가 아니라 '배달된 것'을 본다.
 절차(guarded 파일별):
-  (1) 캐시버스트 fetch(?v=ts) = origin 진실(방금 발행본) 채움율 검사 — 배달 손상 감지.
-  (2) plain fetch = 사용자 edge 가 받는 것의 age 헤더(CDN 스테일 지표) 수집 — max-age 초과 서빙 감시.
+  (1) 캐시버스트 fetch(?v=ts)의 실제 내용·분모·채움율 검사.
+  (2) plain fetch의 JSON 내용 일치 검사. age 헤더는 캐시 나이이며 자료 기준일이 아니다.
 출력: data/metadata/publish_verify.json(최신) + publish_verify.jsonl(추이) — admin 데이터-헬스 피드가 소비.
 규율: 측정만(RULE 7). 핵심 붕괴 감지 시 exit 1 → 워크플로 red.
 """
@@ -84,24 +84,40 @@ def _baseline_from_history(fname: str, current_total: int) -> dict:
     best_n = 0
     try:
         with open(HIST, "r", encoding="utf-8") as f:
-            lines = f.readlines()[-_BASELINE_WINDOW:]
+            lines = f.readlines()
     except FileNotFoundError:
         return {}
-    for line in lines:
+    accepted = 0
+    for line in reversed(lines):
+        if accepted >= _BASELINE_WINDOW:
+            break
         try:
             rec = json.loads(line)
         except json.JSONDecodeError:
             continue
-        for r in rec.get("results") or []:
+        if not isinstance(rec, dict) or not isinstance(rec.get("results"), list):
+            continue
+        for r in rec["results"]:
+            if not isinstance(r, dict):
+                continue
             if r.get("file") != fname:
                 continue
             n = r.get("total")
             if not isinstance(n, int) or n <= 0:
                 continue
+            if r.get("ok") is False:
+                continue
+            accepted += 1
+            # A larger previous universe is evidence of loss, not a new cohort.
+            if n > current_total:
+                best_n = max(best_n, n)
             delta_pct = abs(n - current_total) * 100.0 / max(current_total, 1)
             if delta_pct > _RATCHET_N_TOL:
                 continue
-            for k, v in (r.get("coverage") or {}).items():
+            coverage = r.get("coverage")
+            if not isinstance(coverage, dict):
+                coverage = {}
+            for k, v in coverage.items():
                 if isinstance(v, (int, float)) and v > best.get(k, -1):
                     best[k] = v
             if n > best_n:
@@ -119,22 +135,32 @@ def verify_one(fname: str, cfg: dict) -> dict:
     except Exception as e:  # noqa: BLE001
         res["error"] = f"fetch/parse 실패: {e}"
         return res
-    arr = doc.get("stocks")
+    arr = doc.get("stocks") if isinstance(doc, dict) else None
     if not isinstance(arr, list):
         res["error"] = "stocks 배열 부재"
+        return res
+    if any(not isinstance(s, dict) for s in arr):
+        res["error"] = "stocks 항목 형식 오류"
+        return res
+    if any(s.get("facts") is not None and not isinstance(s["facts"], dict) for s in arr):
+        res["error"] = "stocks facts 형식 오류"
         return res
     if cfg["kr_only"]:
         arr = [s for s in arr if str((s or {}).get("ticker", "")).isdigit() and len(str((s or {}).get("ticker", ""))) == 6]
     total = len(arr)
     res["total"] = total
-    try:  # plain fetch age = 사용자 edge 스테일 지표
-        _, age = _fetch(f"{BLOB_HOST}/{fname}")
+    try:
+        plain, age = _fetch(f"{BLOB_HOST}/{fname}")
         res["cdn_age_s"] = int(age) if age is not None else None
-    except Exception:  # noqa: BLE001
-        res["cdn_age_s"] = None
+        res["plain_matches"] = json.loads(plain) == doc
+        if not res["plain_matches"]:
+            res["error"] = "일반 공개 주소와 검증 조회본 내용 불일치"
+            return res
+    except Exception as e:  # noqa: BLE001
+        res["error"] = f"일반 공개 주소 조회/parse 실패: {e}"
+        return res
     if total < cfg["min_n"]:
-        res["ok"] = True
-        res["note"] = "N부족 판단보류"
+        res["error"] = f"배달 종목수 부족 {total} < {cfg['min_n']}"
         return res
     pcts, ok = {}, True
     for sub in cfg["subfields"]:

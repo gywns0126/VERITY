@@ -106,6 +106,26 @@ def test_yellow_when_brain_anomaly_3():
     assert severity == "YELLOW"
 
 
+def test_yellow_when_public_delivery_is_amber():
+    severity, reasons = evaluate({"data_health": {
+        "delivery_status": "amber",
+        "delivery_reasons": ["집계 입력 누락"],
+    }})
+    assert severity == "YELLOW"
+    assert reasons == ["data delivery AMBER: 집계 입력 누락"]
+
+
+def test_red_overrides_delivery_amber():
+    severity, reasons = evaluate({"data_health": {
+        "delivery_status": "red",
+        "delivery_reasons": ["전달 검증 실패"],
+        "publish_verify_ok": False,
+        "publish_verify_failed": 1,
+    }, "fred_age_h": 8.0})
+    assert severity == "RED"
+    assert reasons == ["data delivery RED: 전달 검증 실패"]
+
+
 def test_red_overrides_yellow():
     """RED + YELLOW 동시 → RED 우선."""
     inputs = {
