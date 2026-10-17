@@ -8,6 +8,10 @@ const HISTORY = 'data/dart_kr_fin_history.json';
 // Directly reviewed issuer-specific renames, not a general alias resolver. Additional issuers
 // require a new primary-source review before this publication identity gate expands.
 const REVIEWED_RENAMES = {
+    '030520': {corp_code:'00204262',old_name:'한글과컴퓨터',new_name:'한컴',
+        accession:'20260702900166',filed:'2026-07-02',
+        source_url:'https://dart.fss.or.kr/report/viewer.do?rcpNo=20260702900166&dcmNo=11459671&eleId=0&offset=0&length=0&dtd=HTML',
+        source_sha256:'0fae6196efd3e838fc1dd2162706c789aae56aece8c96361691c9f6d68cf497c'},
     '282880': {corp_code:'01211232',old_name:'코윈테크',new_name:'코윈로보틱스',
         accession:'20260901900255',source_sha256:'662296dd661611d7b77eb1a3957d63406fc41f8d02cc45d513bc9200182fd6b8'},
     '070300': {corp_code:'00683007',old_name:'엑스큐어',new_name:'퀀텀레일',
