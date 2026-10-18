@@ -61,9 +61,11 @@ def test_single_clock_manual_entry_and_serialized_guard(name):
     assert triggers['repository_dispatch']['types'] == [name]
     assert 'workflow_dispatch' in triggers
     assert doc['permissions']['actions'] == 'read'
-    assert doc['concurrency']['cancel-in-progress'] is False
+    assert 'concurrency' not in doc  # Duplicate gate must run before any queue lock.
     assert doc['jobs']['cadence']['if'] == "github.event_name == 'repository_dispatch'"
     job = next(v for k, v in doc['jobs'].items() if k != 'cadence')
+    assert job['concurrency']['cancel-in-progress'] is False
+    assert job['concurrency']['group'] in ('verity-cockpit-aggregate', 'cron-health-monitor', 'verity-fin-backfill')
     assert job['needs'] == 'cadence'
     assert "needs.cadence.result == 'skipped'" in job['if']
     assert "needs.cadence.outputs.run == 'true'" in job['if']

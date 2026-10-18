@@ -34,10 +34,6 @@ permissions:
   contents: write   # 2026-05-17 Phase 3 — cron_health.jsonl persist main commit (옛 read)
   actions: read    # gh run list 위해
 
-concurrency:
-  group: cron-health-monitor
-  cancel-in-progress: false
-
 jobs:
   cadence:
     if: github.event_name == 'repository_dispatch'
@@ -63,6 +59,9 @@ jobs:
     needs: cadence
     if: always() && !cancelled() && (needs.cadence.result == 'skipped' || needs.cadence.outputs.run == 'true')
     runs-on: ubuntu-latest
+    concurrency:
+      group: cron-health-monitor
+      cancel-in-progress: false
     # requirements 설치 + 실물 검증 + monitor가 최근 실측 5분을 넘겨 commit 전 취소됨.
     timeout-minutes: 10
 
