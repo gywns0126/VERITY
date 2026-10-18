@@ -42,6 +42,11 @@ def _filled(v) -> bool:
 
 def _fetch(url: str, timeout: int = 45):
     req = urllib.request.Request(url, headers={"User-Agent": "verity-publish-verify"})
+    # Runner IPs share GitHub's anonymous limit. Authenticate only this fixed
+    # metadata endpoint; never send the token to Blob or forward it on redirects.
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if url == _DATA_REPO_API and token:
+        req.add_unredirected_header("Authorization", f"Bearer {token}")
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read(), r.headers.get("age")
 
