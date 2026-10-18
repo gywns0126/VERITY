@@ -1,7 +1,10 @@
 import json
+import io
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+import yaml
 
 from scripts import publish_verify
 
@@ -103,3 +106,30 @@ def test_identical_json_with_old_cdn_age_is_valid(tmp_path, monkeypatch):
 def test_invalid_stock_shape_fails_without_crashing(monkeypatch, doc):
     monkeypatch.setattr(publish_verify, "_fetch", lambda url: (json.dumps(doc).encode(), None))
     assert publish_verify.verify_one("stock_report_public.json", publish_verify.GUARD["stock_report_public.json"])["ok"] is False
+
+
+@pytest.mark.parametrize("url,authorized", [
+    (publish_verify._DATA_REPO_API, True),
+    (publish_verify.BLOB_HOST + "/stock_report_public.json", False),
+    ("https://api.github.com.evil.invalid/repos/gywns0126/VERITY-data", False),
+    ("http://api.github.com/repos/gywns0126/VERITY-data", False),
+])
+def test_token_is_only_sent_to_fixed_github_endpoint_without_redirect_forwarding(monkeypatch, url, authorized):
+    monkeypatch.setenv("GH_TOKEN", "test-not-a-secret")
+    requests = []
+    response = io.BytesIO(b"{}")
+    response.headers = {}
+    monkeypatch.setattr(publish_verify.urllib.request, "urlopen",
+                        lambda request, timeout: requests.append(request) or response)
+    assert publish_verify._fetch(url) == (b"{}", None)
+    request = requests[0]
+    assert request.get_header("Authorization") == ("Bearer test-not-a-secret" if authorized else None)
+    assert "Authorization" not in request.headers  # urllib redirect copies only these headers.
+
+
+def test_monitor_passes_existing_scoped_token_to_recency_check():
+    root = Path(__file__).resolve().parents[1]
+    workflow = yaml.safe_load((root / ".github/workflows/cron_health_monitor.yml").read_text())
+    step = next(s for s in workflow["jobs"]["monitor"]["steps"]
+                if "scripts/publish_verify.py" in s.get("run", ""))
+    assert step["env"]["GH_TOKEN"] == "${{ secrets.GITHUB_TOKEN }}"

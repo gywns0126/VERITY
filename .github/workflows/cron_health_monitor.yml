@@ -94,6 +94,8 @@ jobs:
         # 2026-07-12 신설 — 업로드된 실제 Blob 재fetch 해 핵심 배수(PER/PBR) 채움율 단언 + CDN age 수집.
         # 발행 성공≠배달 정합 갭 감시. 결과 = data/metadata/publish_verify.json(+jsonl). 외부호출 = Blob GET only.
         # graceful — 일시 네트워크 실패 무해(다음 시각 재측정). || echo = monitor/commit step 항상 실행.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/publish_verify.py || echo "publish_verify 실패(무해, 다음 시각 재측정)"
 
       - name: 데이터-헬스 집계 (관리자 감시 SoT)
