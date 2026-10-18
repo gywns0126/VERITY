@@ -149,6 +149,72 @@ def test_real_parser_local_xml_without_network(monkeypatch, xml, outcome):
     assert {f["outcome"] for f in evidence} == {outcome}
 
 
+@pytest.mark.parametrize("mime,broken,status,accepted", [
+    ("text/xml", False, 200, True),
+    ("application/rss+xml; charset=us-ascii", False, 200, True),
+    ("text/html", False, 200, False),
+    ("text/xml", True, 200, False),
+    ("text/xml", False, 503, False),
+])
+def test_real_encoding_recovery_does_not_hide_other_failures(
+        monkeypatch, mime, broken, status, accepted):
+    xml = ('<?xml version="1.0" encoding="utf-8"?><rss version="2.0">'
+           '<channel><title>금융 정책</title><item><title>은행 발표</title>'
+           '<link>https://example.test/announcement</link>'
+           '<pubDate>Fri, 16 Oct 2026 15:00:00 GMT</pubDate></item></channel></rss>')
+    if broken:
+        xml = xml.replace("</channel>", "</wrong>")
+    parsed = _PARSE_LOCAL_XML(xml.encode(), response_headers={"content-type": mime})
+    assert parsed.bozo
+    if not broken:
+        assert isinstance(parsed.bozo_exception, RSSScout.feedparser.CharacterEncodingOverride)
+    parsed.status = status
+    monkeypatch.setattr(RSSScout.feedparser, "parse", lambda *a, **k: parsed)
+    evidence = []
+    rows, count = RSSScout._parse_feeds(evidence)
+    assert count == (3 if accepted else 0)
+    if accepted:
+        assert all(row["title"] == "은행 발표" for row in rows)
+        assert all(row["published_at"] == "2026-10-17T00:00:00+09:00" for row in rows)
+        assert all(feed["warning_type"] == "CharacterEncodingOverride" for feed in evidence)
+    else:
+        assert rows == []
+
+
+@pytest.mark.parametrize("exception,encoding", [
+    (RSSScout.feedparser.CharacterEncodingUnknown("unknown"), ""),
+    (RSSScout.feedparser.NonXMLContentType("not XML"), "utf-8"),
+    (RSSScout.feedparser.CharacterEncodingOverride("other codec"), "windows-1252"),
+])
+def test_only_verified_utf8_xml_encoding_warning_is_accepted(monkeypatch, exception, encoding):
+    parsed = _feed([_entry(1)], bozo=True)
+    parsed.bozo_exception = exception
+    parsed.headers = {"content-type": "text/xml"}
+    parsed.encoding = encoding
+    monkeypatch.setattr(RSSScout.feedparser, "parse", lambda *a, **k: parsed)
+    rows, count = RSSScout._parse_feeds([])
+    assert rows == [] and count == 0
+
+
+def test_recovered_encoding_warning_survives_saved_receipt(monkeypatch, tmp_path):
+    from scripts.freshness_producer_evidence import collection_receipt
+    flash = tmp_path / "news_flash.json"
+    original = b'[{"published_at":"2020-01-01","link":"old"}]'
+    flash.write_bytes(original)
+    parsed = _PARSE_LOCAL_XML(
+        '<rss version="2.0"><channel><title>금융 정책</title></channel></rss>'.encode(),
+        response_headers={"content-type": "text/xml"})
+    parsed.status = 200
+    monkeypatch.setattr(RSSScout.feedparser, "parse", lambda *a, **k: parsed)
+    assert RSSScout.run_rss_scout() == 0
+    receipt = json.loads((tmp_path / "metadata/rss_source_receipt.json").read_text())
+    assert all(feed["warning_type"] == "CharacterEncodingOverride" for feed in receipt["feeds"])
+    proof = collection_receipt("news_flash", flash)
+    assert proof["status"] == "bound_query_complete"
+    assert proof["source_freshness_verified"] is False
+    assert flash.read_bytes() == original
+
+
 def test_transport_error_receipt_has_no_exception_message(monkeypatch, tmp_path):
     def fail(*a, **k):
         raise OSError("sensitive-query-value")
