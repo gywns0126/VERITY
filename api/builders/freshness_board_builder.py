@@ -29,6 +29,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 sys.path.insert(0, _ROOT)
 
 from api.config import DATA_DIR, now_kst  # noqa: E402
+from scripts.freshness_producer_evidence import producer_evidence  # noqa: E402
 from api.observability.content_freshness import (  # noqa: E402
     content_status as _content_status,
     extract_content_ts as _extract_content_ts,
@@ -134,6 +135,7 @@ def build_board() -> dict:
     manifest = _load_any(MANIFEST) or {}
     rows = []
     skipped = []
+    pipeline = {}
     for s in manifest.get("streams", []):
         sid = s.get("id", "")
         if s.get("owner") == "local" or sid in EXCLUDE_IDS:
@@ -160,11 +162,28 @@ def build_board() -> dict:
             t = latest_ts_for_glob(f, s.get("ts_field"))
         else:
             path = os.path.join(DATA_DIR, f)
-            obj = _load_any(path) if os.path.exists(path) else None
+            exists = os.path.exists(path)
+            obj = _load_any(path) if exists else None
             ts = _extract_ts(obj, s.get("ts_field")) if obj is not None else None
+            if obj is not None and not ts:
+                proof = producer_evidence(sid)
+                if proof:
+                    # Keep workflow names, run identifiers, and internal scope labels
+                    # in the shadow observation, not the public board whitelist.
+                    pipeline[sid] = {key: proof[key] for key in (
+                        "status", "completed_at", "clock_kind", "asset_binding",
+                        "source_freshness_verified", "all_records_revalidated",
+                    ) if key in proof}
             t = _parse_ts_kst(ts) if ts else None
         if t is None:
-            skipped.append(sid)  # 내부 진단 = shadow jsonl 몫, 공개 board 미발행
+            if "*" in f:
+                reason = "no_ts"
+            else:
+                reason = ("missing" if not exists else "unreadable" if obj is None
+                          else "no_ts" if not ts else "bad_ts")
+            # Internal diagnostics must name omitted streams even while schedule is closed.
+            # Never substitute file/commit time or event dates for collection evidence.
+            skipped.append({"id": sid, "reason": reason})
             continue
 
         age_min = (now - t).total_seconds() / 60
@@ -234,6 +253,8 @@ def build_board() -> dict:
         "summary": summary,
         "streams": rows,
         "_skipped_count": len(skipped),
+        "_skipped": skipped,
+        "_producer_evidence": pipeline,
     }
 
 

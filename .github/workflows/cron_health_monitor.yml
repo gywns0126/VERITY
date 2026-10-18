@@ -79,12 +79,16 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run freshness shadow monitor (관측-only, 알람 없음)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # 2026-06-26 신설 — SLA 매니페스트 데이터주도 모니터 SHADOW 롤아웃.
         # 텔레그램·severity 무관여, data/metadata/freshness_observations.jsonl 에만 관측 append.
         # 실 CI run 무오발 검증 후 알람 flip (별도 단계). monitor 앞 배치 = P0 exit 무관 항상 실행.
         run: python scripts/freshness_shadow_monitor.py || echo "shadow monitor 실패(무해)"
 
       - name: Build public freshness board
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # 2026-07-07 신설 — 신선도 SLA 공개 board (나박 대응 잔여 큐).
         # shadow monitor 와 동일 헬퍼로 판정 → data/freshness_board.json 화이트리스트 발행.
         # crypto_collect 30분 사이클 publish-data 가 main HEAD 에서 Blob 반영.
