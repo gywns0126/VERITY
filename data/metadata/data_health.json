@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-10-19T07:12:54.530742+09:00",
+  "generated_at": "2026-10-19T08:12:38.442354+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
@@ -13,7 +13,7 @@
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-10-19T07:12:54.455552+09:00",
+   "generated_at": "2026-10-19T08:12:38.380208+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -21,19 +21,19 @@
   "coverage": {
    "generated_at": "2026-10-17T13:29:12.055407+09:00",
    "max_age_h": 96,
-   "age_h": 41.728,
+   "age_h": 42.724,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-10-19T07:12:45.400968+09:00",
+   "generated_at": "2026-10-19T08:12:29.924685+09:00",
    "max_age_h": 3,
-   "age_h": 0.003,
+   "age_h": 0.002,
    "status": "fresh"
   },
   "annual_backfill": {
    "generated_at": "2026-10-18T20:32:25.639966+00:00",
    "max_age_h": 48,
-   "age_h": 1.675,
+   "age_h": 2.67,
    "status": "fresh"
   }
  },
@@ -42,11 +42,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-10-19T07:12:54.455552+09:00",
+  "generated_at": "2026-10-19T08:12:38.380208+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 39615,
+  "max_cdn_age_s": 58584,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -56,7 +56,7 @@
      "PBR": 96.0
     },
     "total": 2550,
-    "cdn_age_s": 10808,
+    "cdn_age_s": 17998,
     "error": null
    },
    {
@@ -67,7 +67,7 @@
      "PBR": 73.6
     },
     "total": 5271,
-    "cdn_age_s": 39615,
+    "cdn_age_s": 58584,
     "error": null
    },
    {
@@ -78,7 +78,7 @@
      "PBR": 75.2
     },
     "total": 3972,
-    "cdn_age_s": 10805,
+    "cdn_age_s": 53989,
     "error": null
    },
    {
@@ -107,7 +107,7 @@
   "last_run_at": "2026-10-17T13:29:12.179624+09:00"
  },
  "freshness": {
-  "generated_at": "2026-10-19T07:12:45.400968+09:00",
+  "generated_at": "2026-10-19T08:12:29.924685+09:00",
   "summary": {
    "fresh": 59,
    "stale": 1,
@@ -154,8 +154,7 @@
     "new_rows": 0
    },
    "dividends_kr": {
-    "status": "pipeline_completed",
-    "completed_at": "2026-10-17T23:32:17Z",
+    "status": "pending",
     "clock_kind": "producer_step_completion",
     "asset_binding": "unverified",
     "source_freshness_verified": false,
@@ -170,7 +169,7 @@
    {
     "id": "logo_map",
     "last_ts": "2026-07-10T21:28:23.192812+09:00",
-    "age_eff_min": 144584.4,
+    "age_eff_min": 144644.1,
     "max_age_min": 129600
    }
   ]
