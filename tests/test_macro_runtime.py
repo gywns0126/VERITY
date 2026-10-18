@@ -109,6 +109,39 @@ assert (error == "timeout_0.2s") if TIMEOUT else (result == {"ok": True} and err
     assert time.monotonic() - started < 3
 
 
+def test_build_initializes_provider_modules_only_inside_children():
+    script = """
+import builtins, os, sys, types
+import api.collectors
+from api.builders import macro_collect_builder as builder
+parent = os.getpid()
+providers = {
+    'api.collectors.macro_data': ('get_macro_indicators', lambda: {'worker': os.getpid()}),
+    'api.collectors.yieldcurve': ('get_full_yield_curve_data', lambda **kw: {'worker': os.getpid()}),
+    'api.collectors.global_events': ('collect_global_events', lambda: [{'worker': os.getpid()}]),
+}
+for name, (function, callback) in providers.items():
+    module = types.ModuleType(name)
+    setattr(module, function, callback)
+    sys.modules[name] = module
+original = builtins.__import__
+def guarded(name, *args, **kwargs):
+    if name in providers:
+        assert os.getpid() != parent, 'provider initialized in supervisor'
+    return original(name, *args, **kwargs)
+builtins.__import__ = guarded
+builder._load_existing = lambda: {}
+result = builder.build()
+assert result['macro']['worker'] != parent
+assert result['bonds']['worker'] != parent
+assert result['global_events'][0]['worker'] != parent
+assert result['diagnostics']['errors'] == []
+"""
+    completed = subprocess.run([sys.executable, "-c", script], cwd=Path(__file__).resolve().parents[1],
+                               capture_output=True, text=True, timeout=5)
+    assert completed.returncode == 0, completed.stderr
+
+
 def test_cross_asset_each_asset_honors_remaining_budget(monkeypatch):
     from types import SimpleNamespace
     from api.quant import cross_asset_corr as corr
