@@ -12,13 +12,16 @@ RSSScout — 로이터/CNBC/야후 파이낸스 RSS 속보 스캔
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import sys
+import tempfile
 from calendar import timegm
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
+from urllib.request import BaseHandler
 
 import feedparser
 from dotenv import load_dotenv
@@ -50,6 +53,7 @@ HIGH_INTENSITY = frozenset(
 
 NEWS_FLASH_MAX = 200
 NEWS_FLASH_PATH = os.path.join(DATA_DIR, "news_flash.json")
+RECEIPT_PATH = os.path.join(DATA_DIR, "metadata", "rss_source_receipt.json")
 USER_AGENT = (
     "VERITY-RSSScout/1.0 (+https://github.com; lightweight headline scanner)"
 )
@@ -228,7 +232,18 @@ def _entry_published_iso(entry: Any) -> str:
     return now_kst().isoformat()
 
 
-def _parse_feeds() -> Tuple[List[Dict[str, str]], int]:
+class _ResponseStatus(BaseHandler):
+    """Retain terminal HTTP status before feedparser replaces it with redirect status."""
+    status: Optional[int] = None
+
+    def http_response(self, request, response):
+        self.status = response.getcode()
+        return response
+
+    https_response = http_response
+
+
+def _parse_feeds(evidence: Optional[List[Dict[str, Any]]] = None) -> Tuple[List[Dict[str, str]], int]:
     """(헤드라인 행, 조회 성공 피드 수) 를 돌려준다.
 
     🚨 두 번째 값이 가드의 근거다. feedparser 는 네트워크 실패에도 예외 대신
@@ -240,20 +255,39 @@ def _parse_feeds() -> Tuple[List[Dict[str, str]], int]:
     out: List[Dict[str, str]] = []
     ok_feeds = 0
     for source, url in FEEDS:
+        result = {"source": source, "url": url, "started_at": now_kst().isoformat(),
+                  "outcome": "transport_error", "entries": 0, "usable_entries": 0,
+                  "entries_without_source_date": 0}
+        if evidence is not None:
+            evidence.append(result)
+        response_status = _ResponseStatus()
         try:
-            parsed = feedparser.parse(url, agent=USER_AGENT)
+            parsed = feedparser.parse(url, agent=USER_AGENT, handlers=[response_status])
         except Exception as e:
-            # 2026-05-12 audit fix (HIGH #6): silent skip → logged=True stderr.
-            # feedback_data_collection_verification_mandatory 정합.
+            result["error_type"] = type(e).__name__
+            result["finished_at"] = now_kst().isoformat()
             sys.stderr.write(
-                f"[RSSScout] outcome=fail feed_source={source} err={type(e).__name__}: {str(e)[:120]} logged=True\n"
+                f"[RSSScout] outcome=transport_error feed_source={source} err={type(e).__name__} logged=True\n"
             )
             continue
         entries = getattr(parsed, "entries", []) or []
-        if not entries:
-            # 예외 없이 빈 응답 = feedparser 가 삼킨 실패. 성공으로 세지 않는다.
+        status = response_status.status or getattr(parsed, "status", None)
+        result.update(http_status=status, entries=len(entries),
+                      finished_at=now_kst().isoformat())
+        # A recognized RSS/Atom document is required even for a legitimate empty feed.
+        # feedparser can return entries from malformed XML or HTTP error bodies.
+        if not isinstance(status, int) or not 200 <= status < 300:
+            result["outcome"] = "http_error"
+        elif getattr(parsed, "bozo", False) or not getattr(parsed, "version", ""):
+            result["outcome"] = "parse_error"
+            error = getattr(parsed, "bozo_exception", None)
+            if error is not None:
+                result["error_type"] = type(error).__name__
+        else:
+            result["outcome"] = "success" if entries else "success_empty"
+        if result["outcome"] not in {"success", "success_empty"}:
             sys.stderr.write(
-                f"[RSSScout] outcome=empty feed_source={source} entries=0 logged=True\n"
+                f"[RSSScout] outcome={result['outcome']} feed_source={source} logged=True\n"
             )
             continue
         ok_feeds += 1
@@ -262,6 +296,10 @@ def _parse_feeds() -> Tuple[List[Dict[str, str]], int]:
             link = (entry.get("link") or "").strip()
             if not title or not link:
                 continue
+            result["usable_entries"] += 1
+            if not (getattr(entry, "published_parsed", None) or
+                    getattr(entry, "updated_parsed", None)):
+                result["entries_without_source_date"] += 1
             out.append(
                 {
                     "source": source,
@@ -273,8 +311,90 @@ def _parse_feeds() -> Tuple[List[Dict[str, str]], int]:
     return out, ok_feeds
 
 
+def _asset_evidence(disposition: str) -> Dict[str, Any]:
+    """Hash actual persisted bytes, never a reserialized approximation or mtime."""
+    try:
+        with open(NEWS_FLASH_PATH, "rb") as stream:
+            payload = stream.read()
+        rows = json.loads(payload)
+        if not isinstance(rows, list):
+            raise ValueError("not a list")
+    except (OSError, ValueError):
+        return {"path": "data/news_flash.json", "disposition": disposition,
+                "status": "missing_or_invalid", "sha256": None}
+    return {"path": "data/news_flash.json", "disposition": disposition,
+            "status": "bound", "sha256": hashlib.sha256(payload).hexdigest(),
+            "rows": len(rows)}
+
+
+def _save_receipt(started_at: str, feeds: List[Dict[str, Any]],
+                  new_rows: int, disposition: str) -> None:
+    successes = sum(f["outcome"] in {"success", "success_empty"} for f in feeds)
+    receipt = {
+        "schema_version": 1, "producer": "RSSScout",
+        "clock_kind": "source_query_attempt", "started_at": started_at,
+        "finished_at": now_kst().isoformat(),
+        "run_id": os.environ.get("GITHUB_RUN_ID"),
+        "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+        "input_commit": os.environ.get("GITHUB_SHA"),
+        "scope": {"kind": "configured_rss_feed_query", "expected_feeds": len(FEEDS),
+                  "successful_feeds": successes,
+                  "asset_scope": "filtered incremental headlines; retained rows not revalidated"},
+        "outcome": ("complete" if successes == len(FEEDS) else
+                    "partial_failure" if successes else "all_feed_failure"),
+        "new_rows": new_rows, "feeds": feeds,
+        "new_rows_scope": "selected before retention limit; not a full-file refresh",
+        "asset": _asset_evidence(disposition),
+        "source_freshness_verified": False,
+        "article_timestamp_policy": "unchanged; query clock is not article publication time",
+    }
+    directory = os.path.dirname(RECEIPT_PATH)
+    os.makedirs(directory, exist_ok=True)
+    name = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory,
+                                         delete=False) as stream:
+            name = stream.name
+            json.dump(receipt, stream, ensure_ascii=False, indent=2)
+        os.replace(name, RECEIPT_PATH)
+    finally:
+        if name and os.path.exists(name):
+            os.unlink(name)
+
+
+def verify_receipt(expected_receipt_sha: Optional[str] = None, *,
+                   committed: bool = False) -> str:
+    """Exact byte binding for the pair committed by this run; no freshness promotion."""
+    with open(RECEIPT_PATH, "rb") as stream:
+        payload = stream.read()
+    digest = hashlib.sha256(payload).hexdigest()
+    receipt = json.loads(payload)
+    if expected_receipt_sha and digest != expected_receipt_sha:
+        raise ValueError("receipt changed during delivery")
+    if os.environ.get("GITHUB_RUN_ID") and (
+        receipt.get("run_id") != os.environ["GITHUB_RUN_ID"] or
+        receipt.get("run_attempt") != os.environ.get("GITHUB_RUN_ATTEMPT")
+    ):
+        raise ValueError("receipt belongs to another attempt")
+    asset = _asset_evidence(receipt["asset"]["disposition"])
+    if asset["status"] != "bound" or asset["sha256"] != receipt["asset"]["sha256"]:
+        raise ValueError("receipt/output hash mismatch or missing output")
+    if committed:
+        # Fixed paths at HEAD avoid putting a self-referential output commit in receipt.
+        # Consumers fetch both paths at the logged output commit, then exact-match SHA.
+        import subprocess
+        for path, expected in [("data/metadata/rss_source_receipt.json", digest),
+                               ("data/news_flash.json", asset["sha256"])]:
+            saved = subprocess.run(["git", "show", "HEAD:" + path], check=True,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+            if hashlib.sha256(saved).hexdigest() != expected:
+                raise ValueError("committed receipt/output mismatch")
+    return digest
+
+
 def run_rss_scout() -> int:
     """신규 반영 건수를 돌려준다. 피드 전량 실패는 -1 (호출부가 실패 종료)."""
+    started_at = now_kst().isoformat()
     mapping = _load_json(MAPPING_PATH, {})
     if not isinstance(mapping, dict):
         mapping = {}
@@ -306,13 +426,15 @@ def run_rss_scout() -> int:
     new_rows: List[Dict[str, str]] = []
     breaking_alerts: List[Tuple[str, str]] = []
 
-    headlines, ok_feeds = _parse_feeds()
+    feeds: List[Dict[str, Any]] = []
+    headlines, ok_feeds = _parse_feeds(feeds)
     if ok_feeds == 0:
         # 전량 실패. news_flash.json 을 건드리지 않고 실패로 종료한다 —
         # 여기서 정상 종료하면 mtime 만 신선해져 신선도 보드가 통과시킨다.
         sys.stderr.write(
             f"[RSSScout] outcome=total_fail feeds={len(FEEDS)} ok=0 — 산출 미갱신·실패 종료\n"
         )
+        _save_receipt(started_at, feeds, 0, "preserved_after_failure")
         return -1
 
     for h in headlines:
@@ -337,6 +459,7 @@ def run_rss_scout() -> int:
                 breaking_alerts.append((hname, title))
 
     if not new_rows:
+        _save_receipt(started_at, feeds, 0, "unchanged_no_new_rows")
         return 0
 
     merged = new_rows + [x for x in existing if isinstance(x, dict)]
@@ -353,6 +476,7 @@ def run_rss_scout() -> int:
     raw.pop("news_flash", None)
 
     _save_raw_data(raw)
+    _save_receipt(started_at, feeds, len(new_rows), "atomically_replaced")
 
     for stock_label, news_title in breaking_alerts:
         msg = (
@@ -365,6 +489,11 @@ def run_rss_scout() -> int:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--verify-receipt":
+        args = sys.argv[2:]
+        expected = next((arg for arg in args if arg != "--committed"), None)
+        print(verify_receipt(expected, committed="--committed" in args))
+        sys.exit(0)
     n = run_rss_scout()
     if n < 0:
         sys.stderr.write("[RSSScout] 피드 전량 실패 — exit 1\n")

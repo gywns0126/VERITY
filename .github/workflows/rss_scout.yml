@@ -43,17 +43,22 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run RSSScout
+        id: collect
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_ALLOWED_CHAT_IDS: ${{ secrets.TELEGRAM_ALLOWED_CHAT_IDS }}
         run: python api/collectors/RSSScout.py
 
-      - name: Commit & push raw_data (news_flash)
+      - name: Commit & push news_flash and source receipt
+        # Failed source attempts remain failed, but their receipt can still be delivered.
+        if: ${{ !cancelled() && (steps.collect.outcome == 'success' || steps.collect.outcome == 'failure') }}
         run: |
+          RECEIPT_SHA=$(python api/collectors/RSSScout.py --verify-receipt)
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/news_flash.json
+          git add data/metadata/rss_source_receipt.json
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
           git diff --staged --quiet || git commit -m "📡 RSS 속보 갱신 ${HOUR_KST}"
           BRANCH="${{ github.ref_name }}"
@@ -63,9 +68,14 @@ jobs:
           for i in 1 2 3 4 5 6 7 8; do
             git rebase --abort 2>/dev/null || true
             git merge --abort 2>/dev/null || true
-            if git pull --rebase --autostash -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
-              PUSHED=true
-              break
+            if git pull --rebase --autostash -X theirs origin "$BRANCH"; then
+              # Reject conflict resolution that replaces either half of this run's pair.
+              python api/collectors/RSSScout.py --verify-receipt "$RECEIPT_SHA" --committed
+              if git push origin "$BRANCH"; then
+                echo "RSS receipt binding commit=$(git rev-parse HEAD) receipt_sha256=$RECEIPT_SHA"
+                PUSHED=true
+                break
+              fi
             fi
             WAIT=$(( i * 7 + RANDOM % 15 ))
             echo "Push attempt $i failed, retrying in ${WAIT}s (jittered)..."

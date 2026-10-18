@@ -26,7 +26,7 @@ from datetime import datetime, time, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from api.config import DATA_DIR, now_kst  # noqa: E402
-from scripts.freshness_producer_evidence import producer_evidence  # noqa: E402
+from scripts.freshness_producer_evidence import collection_receipt, producer_evidence  # noqa: E402
 
 KST = timezone(timedelta(hours=9))
 MANIFEST = os.path.join(DATA_DIR, "freshness_sla.json")
@@ -186,7 +186,9 @@ def build_observations() -> dict:
             obj = _load_any(path)
             ts = _extract_ts(obj, s.get("ts_field"))
             if obj is not None and not ts:
-                proof = producer_evidence(s["id"])
+                proof = collection_receipt(s["id"], path) or producer_evidence(s["id"])
+                if proof and proof.get("status") == "bound_query_complete":
+                    ts = proof["completed_at"]
             if not ts:
                 row = {"id": s["id"], "status": "no_ts"}
                 if proof:
@@ -211,6 +213,9 @@ def build_observations() -> dict:
             "age_min": round(age_m, 1), "age_eff_min": round(age_eff, 1), "max_age_min": maxm,
             "would_alarm": would_alarm, "criticality": s.get("criticality"),
         }
+        if proof:
+            row["producer_evidence"] = proof
+            row["clock_kind"] = proof["clock_kind"]
         rows.append(row)
     alarms = [r["id"] for r in rows if r.get("would_alarm")]
     return {
