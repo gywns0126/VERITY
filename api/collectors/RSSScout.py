@@ -1,5 +1,8 @@
 """
-RSSScout — 로이터/CNBC/야후 파이낸스 RSS 속보 스캔
+RSSScout — CNBC 뉴스 + SEC/Fed 공식 발표 RSS 헤드라인 스캔
+
+- SEC/Fed는 정부 공식 발표이며, 3피드 성공은 독립 경제보도 3곳의 확인이 아니다.
+- query clock은 조회 시각이며 기사 최신성·기존 행 재검증을 뜻하지 않는다.
 
 - 제목만 사용(본문 미요청). mapping.json 티커 + raw_data 종목명 매칭,
   또는 BREAKING·EXCLUSIVE·URGENT·HALT 키워드 시 수집.
@@ -42,9 +45,11 @@ RAW_DATA_PATH = os.path.join(DATA_DIR, "raw_data.json")
 ALIASES_PATH = os.path.join(DATA_DIR, "rss_en_aliases.json")
 
 FEEDS: List[Tuple[str, str]] = [
-    ("Reuters", "http://feeds.reuters.com/reuters/businessNews"),
+    # SEC 자체 발표: 목록 https://www.sec.gov/about/rss-feeds · 조건 https://www.sec.gov/about/privacy-information#website-dissemination
+    ("SEC 공식 발표", "https://www.sec.gov/news/pressreleases.rss"),
     ("CNBC", "https://www.cnbc.com/id/100003114/device/rss/rss.html"),
-    ("Yahoo Finance", "https://finance.yahoo.com/news/rssindex"),
+    # Fed 자체 발표: 목록 https://www.federalreserve.gov/feeds/feeds.htm · 조건 https://www.federalreserve.gov/disclaimer.htm
+    ("Fed 공식 발표", "https://www.federalreserve.gov/feeds/press_all.xml"),
 ]
 
 HIGH_INTENSITY = frozenset(

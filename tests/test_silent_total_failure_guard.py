@@ -179,6 +179,27 @@ def test_valid_empty_feed_preserves_file_and_publication_dates(monkeypatch, tmp_
     assert receipt["source_freshness_verified"] is False
 
 
+def test_feed_replacement_does_not_reset_200_legacy_headlines(monkeypatch, tmp_path):
+    flash = tmp_path / "news_flash.json"
+    rows = [{"source": "Reuters" if index % 2 else "Yahoo Finance",
+             "title": f"Historical headline {index}",
+             "link": f"https://example.test/legacy/{index}",
+             "published_at": "2020-01-01T12:00:00+09:00"}
+            for index in range(200)]
+    payload = json.dumps(rows, indent=2).encode()
+    flash.write_bytes(payload)
+    before = flash.stat().st_mtime_ns
+    monkeypatch.setattr(RSSScout.feedparser, "parse", lambda *a, **k: _feed([]))
+
+    assert RSSScout.run_rss_scout() == 0
+    assert flash.read_bytes() == payload
+    assert flash.stat().st_mtime_ns == before
+    receipt = json.loads((tmp_path / "metadata/rss_source_receipt.json").read_text())
+    assert receipt["asset"]["rows"] == 200
+    assert receipt["asset"]["sha256"] == hashlib.sha256(payload).hexdigest()
+    assert receipt["source_freshness_verified"] is False
+
+
 def test_partial_feed_success_binds_written_list_and_keeps_article_time(monkeypatch, tmp_path):
     published = (2024, 1, 2, 3, 4, 5, 1, 2, 0)
     entry = RSSScout.feedparser.FeedParserDict(
