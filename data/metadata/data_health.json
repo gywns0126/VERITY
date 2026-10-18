@@ -1,19 +1,17 @@
 {
  "_meta": {
-  "generated_at": "2026-10-18T16:45:34.515402+09:00",
+  "generated_at": "2026-10-18T17:12:48.607520+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "red",
+ "status": "amber",
  "reasons": [
-  "배달 개별 검증 실패·미확인",
-  "배달 검증 실패 1건",
   "연간 재무 원천 기간 공란 1칸",
   "신선도 감시 대상 누락·미측정",
   "비P0 stale 1건"
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-10-18T16:45:34.423598+09:00",
+   "generated_at": "2026-10-18T17:12:48.510666+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -21,19 +19,19 @@
   "coverage": {
    "generated_at": "2026-10-17T13:29:12.055407+09:00",
    "max_age_h": 96,
-   "age_h": 27.273,
+   "age_h": 27.727,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-10-18T16:45:28.502510+09:00",
+   "generated_at": "2026-10-18T17:12:38.107326+09:00",
    "max_age_h": 3,
-   "age_h": 0.002,
+   "age_h": 0.003,
    "status": "fresh"
   },
   "annual_backfill": {
    "generated_at": "2026-10-18T07:40:57.193988+00:00",
    "max_age_h": 48,
-   "age_h": 0.077,
+   "age_h": 0.531,
    "status": "fresh"
   }
  },
@@ -42,11 +40,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-10-18T16:45:34.423598+09:00",
-  "ok": false,
-  "failed": 1,
+  "generated_at": "2026-10-18T17:12:48.510666+09:00",
+  "ok": true,
+  "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 78203,
+  "max_cdn_age_s": 52534,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -56,7 +54,7 @@
      "PBR": 96.0
     },
     "total": 2550,
-    "cdn_age_s": 45872,
+    "cdn_age_s": 52534,
     "error": null
    },
    {
@@ -67,7 +65,7 @@
      "PBR": 73.6
     },
     "total": 5271,
-    "cdn_age_s": 78203,
+    "cdn_age_s": 4591,
     "error": null
    },
    {
@@ -78,16 +76,16 @@
      "PBR": 75.2
     },
     "total": 3972,
-    "cdn_age_s": 53776,
+    "cdn_age_s": 0,
     "error": null
    },
    {
     "file": "_verity_data_push_recency",
-    "ok": false,
+    "ok": true,
     "pct": null,
     "total": null,
     "cdn_age_s": null,
-    "error": "조회 실패: HTTP Error 403: rate limit exceeded"
+    "error": null
    }
   ]
  },
@@ -107,7 +105,7 @@
   "last_run_at": "2026-10-17T13:29:12.179624+09:00"
  },
  "freshness": {
-  "generated_at": "2026-10-18T16:45:28.502510+09:00",
+  "generated_at": "2026-10-18T17:12:38.107326+09:00",
   "summary": {
    "fresh": 30,
    "stale": 1,
