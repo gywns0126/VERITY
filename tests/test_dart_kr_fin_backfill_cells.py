@@ -422,3 +422,121 @@ def test_first_four_months_cannot_be_recollected_without_reviewed_history(bf, mo
     _write(bf, rows=[{**old, "fundamentals": {**old["fundamentals"], "net_income": 0}}])
     monkeypatch.setattr(sys, "argv", ["dart_kr_fin_backfill.py", "--ticker", "111111", "--start-year", "2024", "--quota-cap", "0"])
     assert bf.main() == 0  # An unrelated caller does not validate this issuer's held history.
+
+
+def _principal_rows(ticker="005930", corp="00126380", year=2023, scope="CFS",
+                    column="thstrm", values=(100, -20, 10)):
+    return [{"corp_code": corp, "stock_code": ticker, "reprt_code": "11011",
+             "bsns_year": str(year if column == "thstrm" else year + 1),
+             "rcept_no": "20260324000091", "fs_div": scope, "sj_div": "IS",
+             "account_nm": name, "currency": "KRW",
+             f"{column}_dt": f"{year}.01.01 ~ {year}.12.31",
+             f"{column}_amount": "-" if value is None else str(value)}
+            for name, value in zip(("매출액", "영업이익", "당기순이익(손실)"), values)]
+
+
+def test_selected_tickers_share_one_run_quota_and_reject_invalid_selection(bf, tmp_path):
+    universe = tmp_path / "selection.json"
+    universe.write_text(json.dumps({"stocks": [{"ticker": t} for t in ("136490", "082660", "192080", "005930")]}))
+    assert [t for t, _ in bf._universe(str(universe), None, "136490,082660,192080")] == ["136490", "082660", "192080"]
+    with pytest.raises(ValueError, match="ticker"):
+        bf._universe(str(universe), None, "136490;ignored")
+
+
+@pytest.mark.parametrize("ticker,corp,year,scope,column,values", [
+    ("136490", "00855093", 2024, "CFS", "thstrm", (1681370807177, 124085515096, 6642150612)),
+    ("082660", "00442455", 2024, "CFS", "frmtrm", (9745770767, -8285302600, -19463045883)),
+    ("192080", "01010110", 2015, "OFS", "thstrm", (122441546376, 31899043444, 34161459082)),
+])
+def test_confirmed_source_blocks_and_explicit_comparative_period(bf, ticker, corp, year, scope, column, values):
+    rows = _principal_rows(ticker, corp, year, scope, column, values)
+    if scope == "OFS":
+        rows += _principal_rows(ticker, corp, year, "CFS", values=(None,) * 3)
+    block, source, reason = bf._principal_annual_block({"status": "000", "list": rows}, corp, ticker, year)
+    assert reason is None
+    assert tuple(block.values()) == values
+    assert (source["fs_div"], source["amount_column"], source["period_end"]) == (scope, column + "_amount", f"{year}-12-31")
+    assert len(source["response_sha256"]) == 64
+
+
+@pytest.mark.parametrize("field,value", [
+    ("corp_code", "99999999"), ("stock_code", "999999"), ("reprt_code", "11012"),
+    ("currency", "USD"), ("fs_div", "unknown"), ("rcept_no", "bad"),
+    ("thstrm_dt", "2023.04.01 ~ 2023.12.31"), ("thstrm_dt", "2024.01.01 ~ 2024.12.31"),
+])
+def test_principal_wrong_identity_currency_or_duration_cannot_fill(bf, field, value):
+    rows = [{**row, field: value} for row in _principal_rows()]
+    block, _, reason = bf._principal_annual_block({"status": "000", "list": rows}, "00126380", "005930", 2023)
+    assert block is None
+    assert reason == "principal_period_unverified"
+
+
+def test_current_blank_is_never_filled_from_previous_column(bf):
+    rows = _principal_rows(year=2025, values=(None,) * 3)
+    for row in rows:
+        row.update(frmtrm_dt="2024.01.01 ~ 2024.12.31", frmtrm_amount="9999999")
+    block, source, reason = bf._principal_annual_block({"status": "000", "list": rows}, "00126380", "005930", 2025)
+    assert block is None
+    assert reason == "source_period_blank"
+    assert source["amount_column"] == "thstrm_amount"
+
+
+@pytest.mark.parametrize("change", ["conflict", "partial", "different_filing", "invalid_amount"])
+def test_principal_does_not_mix_or_hide_ambiguous_blocks(bf, change):
+    rows = _principal_rows()
+    if change == "conflict":
+        rows.append({**rows[0], "thstrm_amount": "101"})
+    elif change == "partial":
+        rows[0]["thstrm_amount"] = "-"
+        rows += _principal_rows(scope="OFS")
+    elif change == "different_filing":
+        rows[-1]["rcept_no"] = "20250324000028"
+    else:
+        rows[0]["thstrm_amount"] = "N/A"
+    assert bf._principal_annual_block({"status": "000", "list": rows}, "00126380", "005930", 2023)[0] is None
+
+
+@pytest.mark.parametrize("values", [(0, -20, 0), (None,) * 3])
+def test_recovery_persists_whole_block_or_visible_source_gap(bf, monkeypatch, values):
+    _write(bf, rows=[_row(y) for y in ALL_BUT_FIRST], cells={
+        "005930|2023": {"n": 2, "status": "error", "error_count": 1}})
+    monkeypatch.setattr(bf, "get_corp_code", lambda _: "00126380")
+    calls = []
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_: calls.append("all") or '{"status":"000","list":[]}')
+    monkeypatch.setattr(bf, "_get_principal_accounts", lambda *_: calls.append("principal") or {
+        "status": "000", "list": _principal_rows(values=values)})
+    monkeypatch.setattr(sys, "argv", ["backfill", "--start-year", "2023", "--quota-cap", "2"])
+    assert bf.main() == 0
+    doc = json.loads(Path(bf.MISSING_PATH).read_text())
+    run = doc["_meta"]["last_run"]
+    assert calls == ["all", "principal"]
+    assert run["requests"] == 2 and run["error"] == 0
+    assert run["requested"] == run["success"] + run["empty"] + run["error"] + run["source_gap"] + run["deferred"]
+    rows = json.loads(Path(bf.OUT_PATH).read_text())["rows"]
+    if values[0] is None:
+        assert run["source_gap"] == 1
+        cell = doc["cells"]["005930|2023"]
+        assert cell["status"] == "source_blank" and cell["no_data_attempts"] == 0
+        assert not bf._is_exhausted_no_data(cell)
+        assert not any(r["fiscal_year"] == 2023 for r in rows)
+    else:
+        row = next(r for r in rows if r["fiscal_year"] == 2023)
+        assert tuple(row["fundamentals"][f] for f in bf._PL_FIELDS) == values
+        assert row["source"]["endpoint"] == "fnlttSinglAcnt.json"
+        assert row["fs_div"] == "CFS"
+        assert not doc["cells"]
+
+
+def test_ofs_fallback_cannot_replace_existing_unknown_scope(bf, monkeypatch):
+    old = _row(2023)
+    old["fundamentals"]["net_income"] = None
+    _write(bf, rows=[old, *[_row(y) for y in ALL_BUT_FIRST]])
+    monkeypatch.setattr(bf, "get_corp_code", lambda _: "00126380")
+    monkeypatch.setattr(bf, "_fetch_fnltt_all_cached", lambda *_: '{"status":"000","list":[]}')
+    monkeypatch.setattr(bf, "_get_principal_accounts", lambda *_: {
+        "status": "000", "list": _principal_rows(scope="OFS")})
+    monkeypatch.setattr(sys, "argv", ["backfill", "--start-year", "2023", "--quota-cap", "2"])
+    assert bf.main() == 0
+    assert json.loads(Path(bf.OUT_PATH).read_text())["rows"][0] == old
+    cell = json.loads(Path(bf.MISSING_PATH).read_text())["cells"]["005930|2023"]
+    assert cell["last_error"] == "scope_change_unverified"

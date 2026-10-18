@@ -12,24 +12,28 @@ name: DART KR 연간재무 백필 (재무추이 부활)
 # 저빈도 자가완주 cron (2026-07-04, 커버리지 스프린트 — fin_series 4%→95%):
 #    KST 05:30 일 1회 drip, scheduled run cap 3000. 쿼터 산수 = 카탈리스트(평일 8K/주말 12K) +
 #    분기 drip 1.5K + 연간 3K + 일상 ops ≈ 평일 14~16K < 20K. 완주 후 run = done-set skip 무비용 no-op.
-#    🚨 schedule 은 default branch 에서만 발화 — 머지 전엔 workflow_dispatch 로 N=1 검증(RULE 8).
+#    Vercel repository_dispatch runs on the default branch; manual validation remains available.
 #
 # 7축 audit: env=DART_API_KEY · push=vercel-api 무관(RULE2) · concurrency=verity-data-write(직렬화) ·
 #    cron=KST 05:30(카탈리스트 UTC 14/18·00/08/16 과 비충돌) · KIS=0(RULE1) · pip=requirements · N=2=manual+scheduled.
 
 on:
-  schedule:
-    # KST 05:30 (UTC 20:30) 일 1회 — pulse·카탈리스트·분기 drip(KST 20:00) 시간대 회피
-    - cron: '30 20 * * *'
+  repository_dispatch:
+    types: [dart_kr_fin_backfill]
   workflow_dispatch:
     inputs:
       quota_cap:
         description: '이번 run DART 요청 상한 (쿼터 분할)'
         required: false
         default: '6000'
+      tickers:
+        description: '선택 종목 코드(쉼표 구분, 비우면 기존 전체 대상)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   # 전용 그룹 (2026-07-04) — verity-data-write 공유 시 pending 축출로 scheduled run 취소 반복
@@ -38,7 +42,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  cadence:
+    if: github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.slot.outputs.run }}
+    steps:
+      - uses: actions/github-script@v7
+        id: slot
+        with:
+          script: |
+            const slot = context.payload.client_payload?.schedule_slot;
+            if (!slot || !Number.isFinite(Date.parse(slot))) throw new Error('Invalid schedule_slot');
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              ...context.repo, workflow_id: 'dart_kr_fin_backfill.yml',
+              branch: context.payload.repository.default_branch,
+              created: `>=${slot}`, per_page: 100
+            });
+            // Any earlier attempt today may have spent DART quota, even a failed run.
+            const duplicate = runs.some(run => run.id < context.runId);
+            core.setOutput('run', String(!duplicate));
+            core.info(duplicate ? 'Daily drip already attempted; skip duplicate' : 'First run today');
   fin-backfill:
+    needs: cadence
+    if: always() && !cancelled() && (needs.cadence.result == 'skipped' || needs.cadence.outputs.run == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 70
     steps:
@@ -62,11 +89,16 @@ jobs:
         continue-on-error: true
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          QUOTA_CAP: ${{ github.event.inputs.quota_cap || '3000' }}
+          SELECTED_TICKERS: ${{ github.event.inputs.tickers }}
         run: |
-          set +e
-          # scheduled run = inputs 없음 → fallback 3000 (쿼터 안전). dispatch = UI 기본 6000.
-          python scripts/dart_kr_fin_backfill.py --start-year 2015 --quota-cap ${{ github.event.inputs.quota_cap || '3000' }}
-          echo "RC=$?"
+          [[ "$QUOTA_CAP" =~ ^[0-9]+$ ]] || { echo "Invalid quota_cap"; exit 1; }
+          args=(--start-year 2015 --quota-cap "$QUOTA_CAP")
+          if [ -n "$SELECTED_TICKERS" ]; then
+            [[ "$SELECTED_TICKERS" =~ ^[0-9]{6}(,[0-9]{6})*$ ]] || { echo "Invalid tickers"; exit 1; }
+            args+=(--ticker "$SELECTED_TICKERS")
+          fi
+          python scripts/dart_kr_fin_backfill.py "${args[@]}"
 
       - name: Commit + push (변경 시만)
         if: always()   # 잘려도 부분 진척(done.json+history) 보존

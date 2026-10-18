@@ -3,7 +3,7 @@ Vercel Cron → GitHub Actions repository_dispatch (시각별 multi-event)
 
 배경: GH Actions schedule trigger 가 high-load 시 silent skip. Vercel Cron (Pro 매분 안정) 으로 우회.
 
-호출: GET /api/cron/dispatch_pulse (매분, Vercel cron `* * * * *`)
+호출: GET /api/cron/dispatch_pulse (5분 간격 + 매시 :07, vercel.json 기준)
 시각별 발화 events:
   - price_pulse        — 매 5분 (2026-05-13 매분 → 5분 완화, commit 부피 1/5)
   - daily_realtime     — 매 30분 (5/12 hotfix, ~9m run, brain 분석)
@@ -11,6 +11,9 @@ Vercel Cron → GitHub Actions repository_dispatch (시각별 multi-event)
   - daily_analysis_quick — 매시 :07 (시간당 1회 quick 분석)
   - reports_v2         — UTC 13:07 매일 (1일 1회 reports)
   - hourly_pulse       — 한국장 4슬롯 + 미장 3슬롯 (DST 자동, 2026-05-12 · 17:00 장후 제거 2026-07-17)
+  - cockpit_aggregate  — 매 5분
+  - cron_health_monitor — 매시 :10
+  - dart_kr_fin_backfill — UTC 20:30 (KST 05:30), 자동 cap 3000
 
 필요 env:
   - GH_DISPATCH_PAT: GitHub PAT (Contents: Read and write)
@@ -178,6 +181,18 @@ def _resolve_events(now_utc: datetime) -> list[str]:
     # 매크로 fact-check: project_market_info_density_map (★★★★★ 윈도우 정합).
     if _is_hourly_pulse_slot(now_utc):
         events.append("hourly_pulse")
+
+    # Preserve the existing consumers' order; reuse the deployed clock.
+    # Slot start is consumed by the workflow's serialized duplicate guard.
+    slot = now_utc.replace(minute=minute - minute % 5, second=0, microsecond=0)
+    events.append(("cockpit_aggregate", {"schedule_slot": slot.isoformat()}))
+    if 10 <= minute < 15:
+        events.append(("cron_health_monitor", {"schedule_slot":
+                       now_utc.replace(minute=10, second=0, microsecond=0).isoformat()}))
+    if hour == 20 and 30 <= minute < 35:
+        # KST midnight: an earlier manual run today also consumes this day's drip.
+        day_start = now_utc.replace(hour=15, minute=0, second=0, microsecond=0)
+        events.append(("dart_kr_fin_backfill", {"schedule_slot": day_start.isoformat()}))
 
     return events
 

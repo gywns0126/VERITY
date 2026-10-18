@@ -161,14 +161,15 @@ def _annual_backfill_section() -> Optional[Dict[str, Any]]:
         return None
     fields = ("requested", "attempted", "success", "empty", "error", "deferred", "touched", "requests")
     counts = {key: run.get(key) for key in fields}
+    counts["source_gap"] = run.get("source_gap", 0)  # Older typed ledgers predate this outcome.
     valid = all(type(value) is int and value >= 0 for value in counts.values())
     if valid:
-        completed = counts["success"] + counts["empty"] + counts["error"]
+        completed = counts["success"] + counts["empty"] + counts["error"] + counts["source_gap"]
         valid = (counts["requested"] == completed + counts["deferred"]
                  and completed <= counts["attempted"] <= counts["requested"]
                  and counts["touched"] <= counts["attempted"]
                  and (not counts["attempted"] or counts["touched"] > 0)
-                 and counts["success"] + 2 * counts["empty"] <= counts["requests"]
+                 and counts["success"] + 2 * (counts["empty"] + counts["source_gap"]) <= counts["requests"]
                  and counts["requests"] <= 2 * counts["attempted"])
     cells = list(doc["cells"].values())
     return {
@@ -176,7 +177,8 @@ def _annual_backfill_section() -> Optional[Dict[str, Any]]:
         "generated_at": run.get("attempted_at"), "clock_kind": "collection_attempt",
         "attempted_at": run.get("attempted_at"), "counts_valid": valid, **counts,
         "unresolved_error_cells": sum(isinstance(cell, dict) and cell.get("status") == "error" for cell in cells),
-        "unclassified_cells": sum(not isinstance(cell, dict) or cell.get("status") not in ("error", "013") for cell in cells),
+        "source_blank_cells": sum(isinstance(cell, dict) and cell.get("status") == "source_blank" for cell in cells),
+        "unclassified_cells": sum(not isinstance(cell, dict) or cell.get("status") not in ("error", "013", "source_blank") for cell in cells),
     }
 
 
@@ -218,6 +220,8 @@ def build() -> Dict[str, Any]:
             ambers.append(f"연간 재무 미해결 수집 오류 {annual_backfill['unresolved_error_cells']}칸")
         if annual_backfill["unclassified_cells"]:
             ambers.append(f"연간 재무 미분류 수집 기록 {annual_backfill['unclassified_cells']}칸")
+        if annual_backfill.get("source_blank_cells"):
+            ambers.append(f"연간 재무 원천 기간 공란 {annual_backfill['source_blank_cells']}칸")
     if verify and (not isinstance(verify.get("ok"), bool)
                    or verify.get("checked") != len(_EXPECTED_VERIFY_FILES)
                    or len(verify.get("files", [])) != len(_EXPECTED_VERIFY_FILES)
