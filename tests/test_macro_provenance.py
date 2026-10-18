@@ -119,3 +119,29 @@ def test_failed_yield_input_preserves_spread_but_mixed_dates_do_not(monkeypatch)
     builder._preserve_partial_macro(current, previous)
     assert current["yield_spread"] == mixed
     assert current["yield_spread"]["value"] == 0.8
+
+
+def test_failed_daily_ecos_does_not_silently_switch_to_annual_fred():
+    old = {"value": 4.18, "date": "2026-10-16", "series_id": "ECOS/817Y002/010210000",
+           **provenance.observation_meta("ecos", "2026-10-16", fetched_at=OLD)}
+    annual = {"value": 3.2, "date": "2025-01-01", "series_id": "IRLTLT01KRA156N",
+              **provenance.observation_meta("fred", "2025-01-01", fetched_at=NOW)}
+    current = {"fred": {"korea_gov_10y": annual}}
+    reused = builder._preserve_partial_macro(current, {"fred": {"korea_gov_10y": old}})
+    assert reused == ["fred.korea_gov_10y"]
+    assert current["fred"]["korea_gov_10y"] == {**old, "stale": True, "reused": True}
+
+
+def test_partial_bonds_keep_actual_fresh_points_but_not_advance_aggregate_success(monkeypatch):
+    previous = {"bonds": {"old": True}, "collector_meta": {
+        "bonds": {"fetched_at": OLD, "last_successful_at": OLD}}}
+    points = {"stale": True, "available": True, "yield_curves": {
+        "us": {"curve": [{"tenor": "10Y", "yield": 4.2, "last_successful_at": NOW}]}}}
+    results = {"macro": ({"value": 3}, None), "bonds": (points, None), "global_events": ([], None)}
+    monkeypatch.setattr(builder, "_load_existing", lambda: previous)
+    monkeypatch.setattr(builder, "_safe_call", lambda fn, name, timeout_s: results[name])
+    result = builder.build()
+    assert result["bonds"] == points
+    assert result["collector_meta"]["bonds"]["stale"] is True
+    assert result["collector_meta"]["bonds"]["last_successful_at"] == OLD
+    assert result["diagnostics"]["bonds_ok"] is False

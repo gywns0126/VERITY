@@ -211,7 +211,7 @@ def test_ecos_policy_unknown_date_has_receipt_only(monkeypatch, source_date):
     assert row["last_successful_at"] == BASE.isoformat()
 
 
-def test_ecos_retries_unchanged_and_empty_has_no_clock(monkeypatch):
+def test_ecos_empty_has_no_row_count_retry_or_success_clock(monkeypatch):
     calls = []
 
     def empty(*args):
@@ -221,8 +221,7 @@ def test_ecos_retries_unchanged_and_empty_has_no_clock(monkeypatch):
     monkeypatch.setattr(E, "_ecos_get", empty)
     monkeypatch.setattr(E, "now_iso", lambda: pytest.fail("No successful fetch"))
     assert E.get_ecos_macro_block() == {"available": False}
-    assert calls == [("722Y001", 24), ("722Y001", 10), (E.KR_CPI_STAT, 100),
-                     ("817Y002", 320), ("817Y002", 10)]
+    assert calls == [("722Y001", 24), (E.KR_CPI_STAT, 100), ("817Y002", 320)]
 
 
 def test_ecos_successful_retry_uses_its_own_receipt(monkeypatch):
@@ -230,22 +229,28 @@ def test_ecos_successful_retry_uses_its_own_receipt(monkeypatch):
     calls = []
     expected = {}
 
-    def fetch(key, stat, *args):
-        calls.append((stat, args[-1]))
+    counts = {}
+    def get(url, **kwargs):
+        stat = url.split("/")[-5]
+        calls.append((stat, url))
         clock["value"] = (BASE + timedelta(seconds=len(calls))).isoformat()
-        if args[-1] != 10:
-            return []
+        counts[stat] = counts.get(stat, 0) + 1
+        if stat == E.KR_CPI_STAT:
+            return SimpleNamespace(status_code=200, json=lambda: {"StatisticSearch": {"row": []}})
+        if counts[stat] == 1:
+            return SimpleNamespace(status_code=503)
         expected[stat] = clock["value"]
-        return [{"TIME": "202609" if stat == "722Y001" else "20261016",
-                 "DATA_VALUE": "3.0"}]
+        return SimpleNamespace(status_code=200, json=lambda: {"StatisticSearch": {"row": [
+            {"TIME": "202609" if stat == "722Y001" else "20261016", "DATA_VALUE": "3.0"}]}})
 
-    monkeypatch.setattr(E, "_ecos_get", fetch)
+    monkeypatch.setattr(E.requests, "get", get)
     monkeypatch.setattr(E, "now_iso", lambda: clock["value"])
     block = E.get_ecos_macro_block()
     assert len(calls) == 5 and "korea_cpi_axis" not in block
     assert block["korea_policy_rate"]["last_successful_at"] == expected["722Y001"]
     assert block["korea_gov_10y"]["last_successful_at"] == expected["817Y002"]
     assert expected["722Y001"] != expected["817Y002"]
+    assert calls[0][1] == calls[1][1] and calls[3][1] == calls[4][1]
 
 
 def test_macro_integration_all_25_clock_paths(providers, monkeypatch):
@@ -371,7 +376,7 @@ def test_ecos_remaining_budget_blocks_fallback_and_later_sources(monkeypatch, ca
     monkeypatch.setattr(E.requests, "get", get)
     with runtime.collection_budget(2):
         assert E.get_ecos_macro_block() == {"available": False}
-    assert timeouts == [2]
+    assert len(timeouts) == 1 and sum(timeouts[0]) == pytest.approx(2)
     stderr = capsys.readouterr().err
     assert "private-key-url" not in stderr
     assert "Timeout" in stderr and "CollectionDeadline" in stderr

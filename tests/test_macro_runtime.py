@@ -1,5 +1,9 @@
 """Offline cooperative deadline and diagnostic boundaries; no provider calls."""
-from threading import Event
+from pathlib import Path
+import subprocess
+import sys
+import time
+import os
 
 import pytest
 
@@ -49,25 +53,60 @@ def test_outer_call_propagates_budget_into_worker_and_redacts_exception(capsys):
     assert "DO_NOT_LOG" not in capsys.readouterr().err
 
 
-def test_timeout_discards_late_result_but_does_not_claim_force_cancellation():
-    started, release, finished = Event(), Event(), Event()
-
+def test_timeout_stops_late_side_effects_and_does_not_return_late_result(tmp_path):
+    late = tmp_path / "late-result"
     def slow():
-        started.set()
-        try:
-            release.wait(timeout=2)
-            return {"late": True}
-        finally:
-            finished.set()
+        time.sleep(0.3)
+        late.write_text("must not reach this")
+        return {"late": True}
+    started = time.monotonic()
+    value, error = builder._safe_call(slow, "fixture", 0.1)
+    assert value is None and error == "timeout_0.1s"
+    assert time.monotonic() - started < 1
+    time.sleep(0.4)
+    assert not late.exists()
 
-    try:
-        value, error = builder._safe_call(slow, "fixture", 0.02)
-        assert started.is_set()
-        assert value is None and error == "timeout_0.02s"
-        assert not finished.is_set()  # Running work is not misreported as killed.
-    finally:
-        release.set()
-        assert finished.wait(timeout=2)
+
+@pytest.mark.parametrize("timeout", [True, False])
+def test_process_group_cleanup_precedes_child_reaping(monkeypatch, timeout):
+    calls = []
+    killpg, waitpid = os.killpg, os.waitpid
+    def cleanup(pid, sig):
+        calls.append(("group", pid))
+        return killpg(pid, sig)
+    def reap(pid, options):
+        calls.append(("reap", pid))
+        return waitpid(pid, options)
+    monkeypatch.setattr(os, "killpg", cleanup)
+    monkeypatch.setattr(os, "waitpid", reap)
+    result, error = builder._safe_call(
+        (lambda: time.sleep(1)) if timeout else (lambda: {"ok": True}), "fixture", 0.1
+    )
+    assert calls[0][0] == "group" and calls[1] == ("reap", calls[0][1])
+    assert len(calls) == 2
+    assert error == "timeout_0.1s" if timeout else result == {"ok": True}
+
+
+@pytest.mark.parametrize("timeout", [True, False])
+def test_collector_threads_cannot_delay_interpreter_exit(timeout):
+    script = """
+from concurrent.futures import ThreadPoolExecutor
+import time
+from api.builders.macro_collect_builder import _safe_call
+def collect():
+    pool = ThreadPoolExecutor(max_workers=1)
+    pool.submit(time.sleep, 30)
+    if TIMEOUT:
+        time.sleep(30)
+    return {"ok": True}
+result, error = _safe_call(collect, "fixture", 0.2)
+assert (error == "timeout_0.2s") if TIMEOUT else (result == {"ok": True} and error is None)
+""".replace("TIMEOUT", str(timeout))
+    started = time.monotonic()
+    completed = subprocess.run([sys.executable, "-c", script], cwd=Path(__file__).resolve().parents[1],
+                               capture_output=True, text=True, timeout=4)
+    assert completed.returncode == 0, completed.stderr
+    assert time.monotonic() - started < 3
 
 
 def test_cross_asset_each_asset_honors_remaining_budget(monkeypatch):

@@ -4,11 +4,15 @@
   - 회사채 신용등급별 스프레드 (AA- / BBB-, 3년물, 국고채 3년 대비)
   - 한국은행 ECOS 보조 (국고채 3Y 기준)
 """
+import math
+import os
 import sys
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from api.config import ECOS_API_KEY, now_kst
+from api.utils.macro_provenance import now_iso, observation_meta
+from api.utils.macro_runtime import CollectionDeadline, collection_budget, request_timeout, timed_source
 
 _KR_GOV_BOND_TENORS = {
     "1Y": "국고채권(01년)",
@@ -28,41 +32,22 @@ _KR_GOV_BOND_TENORS = {
 
 
 def _pykrx_bond_yields() -> Dict[str, Any]:
-    """pykrx에서 국고채 수익률 곡선 수집 시도."""
-    try:
-        from pykrx import bond
-    except ImportError:
-        return {}
+    """Gate before import/network; pykrx's transport has no request timeout API.
 
-    today = now_kst().date()
-    start = today - timedelta(days=14)
-    from_s = start.strftime("%Y%m%d")
-    to_s = today.strftime("%Y%m%d")
-
-    curve: List[Dict[str, Any]] = []
-    for tenor, name in _KR_GOV_BOND_TENORS.items():
-        try:
-            df = bond.get_otc_treasury_yields(from_s, to_s, name)
-            if df is None or df.empty:
-                continue
-            col = "수익률" if "수익률" in df.columns else (df.columns[0] if len(df.columns) > 0 else None)
-            if col is None:
-                continue
-            vals = df[col].dropna()
-            if vals.empty:
-                continue
-            last_yield = float(vals.iloc[-1])
-            curve.append({"tenor": tenor, "yield": round(last_yield, 3)})
-        except Exception:
-            continue
-
-    return {"curve": curve} if curve else {}
+    Even with credentials, do not let this optional fallback consume the US budget.
+    ECOS supplies the same seven tenors through an explicitly bounded transport.
+    """
+    reason = "unbounded_transport"
+    if not all(os.environ.get(key, "").strip() for key in ("KRX_ID", "KRX_PW")):
+        reason = "no_credentials"
+    sys.stderr.write(f"[bond_source] source=krx outcome=skipped_{reason}\n")
+    return {}
 
 
-def _ecos_fetch_point(
+def _ecos_fetch_observation(
     stat_code: str, item_code: str, days: int = 30
-) -> Optional[Tuple[float, str]]:
-    """ECOS 단일 시계열의 최신 관측 = (값, 관측일 YYYYMMDD).
+) -> Optional[Dict[str, Any]]:
+    """ECOS 단일 시계열의 최신 유효 관측과 원천 수신 시각.
 
     🚨 관측일을 같이 돌려주는 이유 = ECOS 일별 금리는 수집 시점보다 뒤처진다(2026-08-08 실측:
       회사채 최신 관측 20260723 = 수집일 대비 16일 전). 수집일을 as_of 로 쓰면 실제보다 신선한
@@ -97,7 +82,12 @@ def _ecos_fetch_point(
             f"https://ecos.bok.or.kr/api/StatisticSearch/{key_seg}/json/kr/1/{limit}"
             f"/{stat_code}/D/{start.strftime('%Y%m%d')}/{today.strftime('%Y%m%d')}/{item_code}"
         )
-        r = requests.get(url, timeout=20)
+        # Connect + read allowances fit inside the shared remaining budget.
+        # The outer process supervisor is still the hard wall-clock boundary.
+        remaining = request_timeout(6)
+        r = timed_source("bonds:ecos", lambda: requests.get(
+            url, timeout=(remaining / 3, remaining * 2 / 3), allow_redirects=False,
+        ))
         if r.status_code != 200:
             return None
         data = r.json()
@@ -115,11 +105,32 @@ def _ecos_fetch_point(
                 f"절단 의심, 최신값 신뢰 불가로 결손 처리\n"
             )
             return None
-        # ECOS 는 오름차순 → 마지막이 최신. 방어적으로 TIME 최대값을 고른다.
-        last = max(rows, key=lambda r: str(r.get("TIME") or ""))
-        return round(float(last.get("DATA_VALUE", 0)), 4), str(last.get("TIME") or "")
+        fetched_at = now_iso()
+        # Invalid/future rows cannot become observations or advance as_of.
+        valid = []
+        for row in rows:
+            try:
+                day = datetime.strptime(str(row.get("TIME") or ""), "%Y%m%d").date()
+                value = float(row["DATA_VALUE"])
+                if start <= day <= today and math.isfinite(value):
+                    valid.append((day, value))
+            except (KeyError, TypeError, ValueError):
+                continue
+        if not valid:
+            return None
+        day, value = max(valid, key=lambda point: point[0])
+        return {"value": round(value, 4), "as_of": day.strftime("%Y%m%d"),
+                **observation_meta("ecos", day.isoformat(), fetched_at=fetched_at)}
     except Exception:
         return None
+
+
+def _ecos_fetch_point(
+    stat_code: str, item_code: str, days: int = 30
+) -> Optional[Tuple[float, str]]:
+    """Keep the legacy value/date tuple contract."""
+    point = _ecos_fetch_observation(stat_code, item_code, days)
+    return (point["value"], point["as_of"]) if point else None
 
 
 def _ecos_fetch_series(stat_code: str, item_code: str, days: int = 30) -> Optional[float]:
@@ -131,6 +142,7 @@ def _ecos_fetch_series(stat_code: str, item_code: str, days: int = 30) -> Option
 def _ecos_yield_curve() -> Dict[str, Any]:
     """ECOS에서 국고채 수익률 곡선 + 회사채 스프레드 수집."""
     if not ECOS_API_KEY:
+        sys.stderr.write("[bond_source] source=ecos outcome=skipped_no_credentials\n")
         return {}
 
     # ECOS stat 817Y002 국고채 item 코드 (2026-06-03 정정 — 메타 API StatisticItemList 확인).
@@ -151,10 +163,15 @@ def _ecos_yield_curve() -> Dict[str, Any]:
     for tenor, (stat, item) in tenor_map.items():
         # 🚨 커브에도 관측일을 남긴다. 옛 코드는 값만 담아 **커브가 언제 것인지 알 수 없었다**
         #   — 위 행수 절단이 10영업일 낡은 값을 채웠는데도 신선도 보드가 못 잡은 이유다.
-        point = _ecos_fetch_point(stat, item, days=30)
+        try:
+            request_timeout(1)
+        except CollectionDeadline:
+            break
+        point = _ecos_fetch_observation(stat, item, days=30)
         if point is not None:
-            val, obs_date = point
-            entry: Dict[str, Any] = {"tenor": tenor, "yield": val}
+            obs_date = point["as_of"]
+            entry: Dict[str, Any] = {k: v for k, v in point.items() if k != "value"}
+            entry.update(tenor=tenor, **{"yield": point["value"]})
             if obs_date:
                 entry["as_of"] = obs_date
                 curve_as_of = max(curve_as_of, obs_date)
@@ -175,10 +192,15 @@ def _ecos_yield_curve() -> Dict[str, Any]:
     grades: Dict[str, Dict[str, Any]] = {}
     grade_as_of = ""
     for grade, (stat, item) in corp_grade_map.items():
-        point = _ecos_fetch_point(stat, item, days=30)
+        try:
+            request_timeout(1)
+        except CollectionDeadline:
+            break
+        point = _ecos_fetch_observation(stat, item, days=30)
         if point is not None:
-            val, obs_date = point
-            entry: Dict[str, Any] = {"yield": val}
+            val, obs_date = point["value"], point["as_of"]
+            entry: Dict[str, Any] = {k: v for k, v in point.items() if k != "value"}
+            entry["yield"] = val
             if gov_3y is not None:
                 entry["spread_vs_3y"] = round(val - gov_3y, 3)
             if obs_date:
@@ -224,17 +246,17 @@ def get_bond_market_summary() -> Dict[str, Any]:
     반환: {curve: [...], curve_shape, kr_corp_spreads: {grades: ...}, updated_at}
     """
     ts = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
-    date_str = now_kst().strftime("%Y%m%d")
 
     result: Dict[str, Any] = {
         "available": False,
         "updated_at": ts,
     }
 
-    pykrx_data = _pykrx_bond_yields()
-    ecos_data = _ecos_yield_curve()
+    with collection_budget(25):
+        ecos_data = _ecos_yield_curve()
+        pykrx_data = _pykrx_bond_yields()
 
-    # ECOS(BOK 공식, credential 불요) 우선 + pykrx 보충 — 만기 union (2026-06-03 정정).
+    # ECOS(BOK 공식, 기존 API key 사용) 우선 + bounded fallback만 허용.
     # 옛 'pykrx OR ecos' = pykrx 부분 성공(KRX 로그인 실패에도 일부 반환) 시 ECOS 통째 무시 →
     # KR 커브 결손(5Y/10Y/2Y 누락). 두 소스 병합으로 결손 방지, ECOS 값 우선.
     _by_tenor: Dict[str, Any] = {}
@@ -262,12 +284,22 @@ def get_bond_market_summary() -> Dict[str, Any]:
 
     grades = ecos_data.get("grades")
     if grades:
-        # date = ECOS 실제 관측일(있으면). 수집일 fallback 은 관측일 부재 시에만.
+        # Receipt and observation date stay distinct; no collection-date fallback.
         result["kr_corp_spreads"] = {
-            "date": ecos_data.get("grades_as_of") or date_str,
-            "collected_at": ts,
+            "date": ecos_data.get("grades_as_of"),
+            "collected_at": max((g["fetched_at"] for g in grades.values()
+                                 if g.get("fetched_at")), default=None),
             "grades": grades,
         }
+        result["available"] = True
+
+    result["missing_tenors"] = [t for t in _KR_GOV_BOND_TENORS
+                                if t not in {c["tenor"] for c in curve}]
+    result["missing_grades"] = [g for g in ("AA-", "BBB-") if g not in (grades or {})]
+    result["partial"] = bool(result["missing_tenors"] or result["missing_grades"])
+    result["stale"] = result["partial"]
+    sys.stderr.write(f"[bond_source] source=kr outcome={'partial' if result['partial'] else 'complete'} "
+                     f"tenors={len(curve)}/7 grades={len(grades or {})}/2\n")
 
     return result
 

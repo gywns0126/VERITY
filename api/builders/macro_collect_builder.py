@@ -26,7 +26,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import select
+import signal
 import sys
+import tempfile
 import time
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -46,37 +49,82 @@ def _now_kst() -> datetime:
 
 
 def _safe_call(fn: Callable[[], Any], name: str, timeout_s: int) -> tuple[Any, str | None]:
-    """ThreadPoolExecutor + timeout. fail 시 (None, reason) 반환.
+    """Isolate one collector on the POSIX cron runner, including its threads.
 
-    silent skip 방지 — stderr 에 outcome 명시.
+    Executor.shutdown(wait=False) still joins live workers at interpreter exit.
+    A disposable child exits directly after writing its JSON result; a timeout
+    terminates its process group before we continue to the next collector.
     """
-    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout
-
-    executor = ThreadPoolExecutor(max_workers=1)
-    def bounded():
-        # Leave cleanup time before the existing outer timeout. Running sockets
-        # still have their own read timeout; this is not force-cancellation.
-        with collection_budget(max(0, timeout_s - 2)):
-            return fn()
-
-    future = executor.submit(bounded)
     outcome: str | None = None
     result: Any = None
     started = time.monotonic()
     try:
-        result = future.result(timeout=timeout_s)
+        with tempfile.TemporaryDirectory(prefix="macro-collector-") as temp:
+            path = os.path.join(temp, "result.json")
+            sys.stdout.flush()
+            sys.stderr.flush()
+            ready_read, ready_write = os.pipe()
+            try:
+                pid = os.fork()
+            except BaseException:
+                os.close(ready_read)
+                os.close(ready_write)
+                raise
+            if pid == 0:
+                try:
+                    os.close(ready_read)
+                    os.setsid()
+                    try:
+                        with collection_budget(max(0, timeout_s - 2)):
+                            payload = {"result": fn(), "error": None}
+                    except Exception as error:
+                        payload = {"result": None, "error": f"exception:{type(error).__name__}"}
+                    with open(path, "w", encoding="utf-8") as output:
+                        json.dump(payload, output, ensure_ascii=False)
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                    os.write(ready_write, b"1")
+                finally:
+                    # Do not wait on stalled library/executor threads at exit.
+                    os._exit(0)
+            os.close(ready_write)
+            try:
+                deadline = started + timeout_s
+                readable, _, _ = select.select(
+                    [ready_read], [], [], max(0, deadline - time.monotonic())
+                )
+                if not readable:
+                    outcome = f"timeout_{timeout_s}s"
+                elif os.path.isfile(path):
+                    with open(path, encoding="utf-8") as output:
+                        payload = json.load(output)
+                    result, outcome = payload["result"], payload["error"]
+                else:
+                    outcome = "worker_exited_without_result"
+            finally:
+                # Keep the child PID reserved until group cleanup is complete;
+                # reaping first could allow its numeric process-group ID reuse.
+                os.close(ready_read)
+                try:
+                    os.killpg(pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    # macOS reports EPERM for an already-exited group leader;
+                    # the owned PID is still signalled and reaped below.
+                    pass
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                os.waitpid(pid, 0)
         if result is None:
-            outcome = "returned_none"
-    except FutTimeout:
-        outcome = f"timeout_{timeout_s}s"
+            outcome = outcome or "returned_none"
     except Exception as e:
         outcome = f"exception:{type(e).__name__}"
     finally:
-        executor.shutdown(wait=False, cancel_futures=True)
         ok = result is not None and outcome is None
         sys.stderr.write(
             f"[macro_collect] collector={name} ok={ok} outcome={outcome or 'success'} "
-            f"elapsed_ms={round((time.monotonic() - started) * 1000)}\n"
+            f"elapsed_ms={round((time.monotonic() - started) * 1000)} isolation=process\n"
         )
     return (result, outcome)
 
@@ -130,7 +178,10 @@ def _preserve_partial_macro(current: dict, previous: dict, prefix: str = "") -> 
                 if any(_is_observation(value) for value in row.values()):
                     row["available"] = True
             continue
-        if _is_observation(old) and (row is None or isinstance(row, dict) and row.get("status") == "fail"):
+        source_downgrade = (
+            path == "fred.korea_gov_10y" and isinstance(old, dict) and isinstance(row, dict)
+            and old.get("source") == "ecos" and row.get("source") == "fred")
+        if _is_observation(old) and (source_downgrade or row is None or isinstance(row, dict) and row.get("status") == "fail"):
             if old.get("status") != "fail":
                 current[key] = _mark_reused(old)
                 reused.append(path)
@@ -155,6 +206,7 @@ def build() -> Dict[str, Any]:
     from api.collectors.global_events import collect_global_events
 
     now = _now_kst()
+    prev = _load_existing()
     errors: list[str] = []
     started = time.time()
 
@@ -162,7 +214,8 @@ def build() -> Dict[str, Any]:
     if macro_err:
         errors.append(f"macro: {macro_err}")
 
-    bonds, bonds_err = _safe_call(get_full_yield_curve_data, "bonds", timeout_s=60)
+    bonds, bonds_err = _safe_call(
+        lambda: get_full_yield_curve_data(prev_bonds=prev.get("bonds")), "bonds", timeout_s=60)
     if bonds_err:
         errors.append(f"bonds: {bonds_err}")
 
@@ -174,7 +227,6 @@ def build() -> Dict[str, Any]:
 
     # Collection attempts are not successful refreshes. Legacy collected_at remains
     # the build clock; collector_meta and each quote carry their own provenance.
-    prev = _load_existing()
     stamp = _now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
     final = {}
     collector_meta = {}
@@ -196,6 +248,9 @@ def build() -> Dict[str, Any]:
             "stale": not ok,
             "reused": reused,
         }
+        if name == "bonds" and ok and isinstance(result, dict) and result.get("stale"):
+            collector_meta[name]["stale"] = True
+            collector_meta[name]["last_successful_at"] = old_meta.get("last_successful_at")
 
     # A collector can return a partial dict with failed quotes. Preserve only the
     # failed quote's previous payload; do not relabel it as newly collected.
@@ -211,7 +266,7 @@ def build() -> Dict[str, Any]:
 
     diagnostics = {
         "macro_ok": not collector_meta["macro"]["stale"],
-        "bonds_ok": bool(bonds) and not bonds_err,
+        "bonds_ok": bool(bonds) and not bonds_err and not collector_meta["bonds"]["stale"],
         "events_ok": events is not None and not events_err,
         "errors": errors,
         "used_prev_snapshot": used_prev,
@@ -240,6 +295,7 @@ def _atomic_write(path: str, data: Dict[str, Any]) -> None:
 
 
 def main() -> int:
+    started = time.monotonic()
     snapshot = build()
     _atomic_write(OUTPUT_PATH, snapshot)
     diag = snapshot.get("diagnostics", {})
@@ -254,6 +310,8 @@ def main() -> int:
         write_data_pipeline_health()
     except Exception as _e:
         sys.stderr.write(f"[macro_collect] data_pipeline_health 갱신 실패(무시): {_e}\n")
+
+    sys.stderr.write(f"[macro_collect] run_complete elapsed_ms={round((time.monotonic()-started)*1000)}\n")
 
     # 모든 collector 가 fail 시 exit code 1 (cron 알람)
     if not (diag.get("macro_ok") or diag.get("bonds_ok") or diag.get("events_ok")):
