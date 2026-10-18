@@ -279,17 +279,32 @@ def _parse_feeds(evidence: Optional[List[Dict[str, Any]]] = None) -> Tuple[List[
         status = response_status.status or getattr(parsed, "status", None)
         result.update(http_status=status, entries=len(entries),
                       finished_at=now_kst().isoformat())
+        error = getattr(parsed, "bozo_exception", None)
+        content_type = (getattr(parsed, "headers", None) or {}).get("content-type", "")
+        mime = content_type.split(";", 1)[0].strip().lower() if isinstance(content_type, str) else ""
+        xml_mime = mime in {"text/xml", "application/xml"} or bool(
+            re.fullmatch(r"(?:application|text)/[a-z0-9!#$&^_.+-]+\+xml", mime)
+        )
+        # Encoding recovery can mask NonXMLContentType; require XML MIME separately.
+        # Strict SAX failures replace this warning, so all other bozo errors stay fatal.
+        encoding_warning = (
+            type(error) is feedparser.CharacterEncodingOverride
+            and getattr(parsed, "encoding", None) == "utf-8"
+            and xml_mime
+            and getattr(feedparser.api, "_XML_AVAILABLE", False)
+        )
         # A recognized RSS/Atom document is required even for a legitimate empty feed.
         # feedparser can return entries from malformed XML or HTTP error bodies.
         if not isinstance(status, int) or not 200 <= status < 300:
             result["outcome"] = "http_error"
-        elif getattr(parsed, "bozo", False) or not getattr(parsed, "version", ""):
+        elif (getattr(parsed, "bozo", False) and not encoding_warning) or not getattr(parsed, "version", ""):
             result["outcome"] = "parse_error"
-            error = getattr(parsed, "bozo_exception", None)
             if error is not None:
                 result["error_type"] = type(error).__name__
         else:
             result["outcome"] = "success" if entries else "success_empty"
+            if encoding_warning:
+                result["warning_type"] = "CharacterEncodingOverride"
         if result["outcome"] not in {"success", "success_empty"}:
             sys.stderr.write(
                 f"[RSSScout] outcome={result['outcome']} feed_source={source} logged=True\n"
