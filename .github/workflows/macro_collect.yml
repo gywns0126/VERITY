@@ -30,7 +30,8 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Setup + source collection + bounded persistence + recovery upload margin.
+    timeout-minutes: 12
 
     steps:
       - name: Checkout
@@ -40,6 +41,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -58,9 +61,10 @@ jobs:
         run: |
           python -m api.builders.macro_collect_builder
 
-      - name: Commit data/macro_snapshot.json
+      - name: Prepare macro output commit
+        id: prepare
         # main 영속화 (project_gh_pages_disabled 룰 — 빌더 산출물 main commit 의무).
-        # 빈 변경 시 no-op exit. push 5 회 retry.
+        # Explicit paths only; transport happens after immutable recovery upload.
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
@@ -73,16 +77,33 @@ jobs:
           # macro_collect 매 30분 cron = 가장 빈번 갱신자. SystemHealthBar pipelineUrl source.
           # CLAUDE.md RULE 4 — 6번째 같은 패턴 (2026-05-17 audit, 5/10 신설 후 7일 stale).
           git add data/metadata/data_pipeline_health.json 2>/dev/null || true
-          git diff --staged --quiet && echo "no changes" && exit 0
+          if git diff --staged --quiet; then
+            echo "no changes"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "📊 macro_snapshot ${TIME_KST}"
-          BRANCH="${{ github.ref_name }}"
-          for i in 1 2 3 4 5; do
-            git rebase --abort 2>/dev/null || true
-            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
-              exit 0
-            fi
-            echo "Push attempt $i failed, retrying in $((i * 10))s..."
-            sleep $((i * 10))
-          done
-          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
+          mkdir -p _macro_recovery
+          git archive HEAD -- data/macro_snapshot.json data/metadata/fred_health.jsonl data/metadata/data_pipeline_health.json | tar -x -C _macro_recovery
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Retain collected macro outputs before transport
+        if: steps.prepare.outputs.changed == 'true'
+        timeout-minutes: 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: macro-persistence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            _macro_recovery/data/macro_snapshot.json
+            _macro_recovery/data/metadata/fred_health.jsonl
+            _macro_recovery/data/metadata/data_pipeline_health.json
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Persist macro outputs with bounded retries
+        if: steps.prepare.outputs.changed == 'true'
+        timeout-minutes: 4
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: python scripts/ci/persist_macro_snapshot.py "$TARGET_BRANCH"
