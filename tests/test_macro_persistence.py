@@ -337,7 +337,9 @@ def test_retry_backoff_is_capped_by_total_budget(repos, monkeypatch):
     with pytest.raises(module.GitFailure, match="retries exhausted"):
         module.persist(repos.producer, "main", attempts=3, budget_s=2, retry_delay=5)
     assert clock[0] <= 102.0
-    assert sum(sleeps) == 0.5
+    # Linux subprocess polling can split sleep into 0.001 + 0.499 seconds;
+    # binary floating-point summation is not exact. Keep the hard clock cap above.
+    assert sum(sleeps) == pytest.approx(0.5, abs=1e-9)
     assert fetches == [102.0] * 3
     assert repos.producer_state() == before
 

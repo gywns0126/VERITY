@@ -75,9 +75,12 @@ jobs:
         run: python scripts/system_map.py
 
       - name: Commit operator data (cockpit_state + system_map)
+        id: persist
         # [[feedback_cron_commit_author_github_match]] gywns0126@gmail.com (GitHub 검증)
         # [[feedback_data_collection_verification_mandatory]] specific path commit
         # [[feedback_brain_evolution_admin_sync]] 🎯 prefix = cron blacklist (brain learn skip)
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
@@ -88,25 +91,23 @@ jobs:
           fi
           NOW_KST=$(TZ=Asia/Seoul date +"%Y-%m-%dT%H:%M")
           git commit -m "🎯 cockpit ${NOW_KST}"
-          BRANCH="${{ github.ref_name }}"
-          PUSHED=false
-          for i in 1 2 3; do
-            git rebase --abort 2>/dev/null || true
-            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
-              PUSHED=true
-              break
-            fi
-            echo "push attempt $i failed, retrying in $((i * 5))s..."
-            sleep $((i * 5))
-          done
-          if [ "$PUSHED" != "true" ]; then
-            echo "::warning::push 3회 실패 — 다음 5분 cron 재시도"
-          fi
+          python scripts/ci/persist_cockpit_snapshot.py "$TARGET_BRANCH"
+
+      - name: Preserve unpersisted cockpit outputs
+        if: failure() && steps.persist.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cockpit-unpersisted-${{ github.run_id }}
+          path: |
+            data/metadata/cockpit_state.json
+            data/metadata/system_map.json
+          retention-days: 3
+          if-no-files-found: error
 
       - name: Publish hot data to VERITY-data
         # 2026-05-27 박은 fix — 다른 cron 박은 publish 의존 X.
         # OperatorCockpitBar / Card 박은 부분 raw URL fetch 박은 부분 박힘 의무.
-        if: always()
+        if: success()
         uses: ./.github/actions/publish-data
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
