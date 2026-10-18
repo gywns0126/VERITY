@@ -29,7 +29,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 sys.path.insert(0, _ROOT)
 
 from api.config import DATA_DIR, now_kst  # noqa: E402
-from scripts.freshness_producer_evidence import producer_evidence  # noqa: E402
+from scripts.freshness_producer_evidence import collection_receipt, producer_evidence  # noqa: E402
 from api.observability.content_freshness import (  # noqa: E402
     content_status as _content_status,
     extract_content_ts as _extract_content_ts,
@@ -166,14 +166,19 @@ def build_board() -> dict:
             obj = _load_any(path) if exists else None
             ts = _extract_ts(obj, s.get("ts_field")) if obj is not None else None
             if obj is not None and not ts:
-                proof = producer_evidence(sid)
+                proof = collection_receipt(sid, path) or producer_evidence(sid)
                 if proof:
                     # Keep workflow names, run identifiers, and internal scope labels
                     # in the shadow observation, not the public board whitelist.
                     pipeline[sid] = {key: proof[key] for key in (
                         "status", "completed_at", "clock_kind", "asset_binding",
                         "source_freshness_verified", "all_records_revalidated",
+                        "outcome", "expected_feeds", "successful_feeds", "new_rows",
                     ) if key in proof}
+                    if proof.get("status") == "bound_query_complete":
+                        ts = proof["completed_at"]
+                        row["clock_kind"] = proof["clock_kind"]
+                        row["all_records_revalidated"] = False
             t = _parse_ts_kst(ts) if ts else None
         if t is None:
             if "*" in f:
