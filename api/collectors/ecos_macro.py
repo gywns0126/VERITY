@@ -5,7 +5,9 @@
 https://ecos.bok.or.kr/api/
 """
 from datetime import timedelta
+import math
 import sys
+import time
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
@@ -13,26 +15,32 @@ import requests
 
 from api.config import ECOS_API_KEY, now_kst
 from api.utils.macro_provenance import copy_meta, now_iso, observation_meta
-from api.utils.macro_runtime import request_timeout
+from api.utils.macro_runtime import CollectionDeadline, collection_budget, request_timeout
 
 ECOS_BASE = "https://ecos.bok.or.kr/api/StatisticSearch"
-_TIMEOUT = 25
+_COLLECTION_BUDGET = 18
+_SOURCE_BUDGET = 6
+_CONNECT_TIMEOUT = 2
+_READ_TIMEOUT = 3
+_TRANSIENT_HTTP = {408, 429, 500, 502, 503, 504}
+_SOURCE_LABELS = {"722Y001": "policy_rate", "901Y009": "cpi", "817Y002": "gov_10y"}
 
 
 def _normalize_rows(payload: dict) -> List[dict]:
-    if not payload or "RESULT" in payload:
+    if not isinstance(payload, dict) or not payload or "RESULT" in payload:
         return []
     ss = payload.get("StatisticSearch") or {}
-    raw = ss.get("row")
+    raw = ss.get("row") if isinstance(ss, dict) else None
     if raw is None:
         return []
     if isinstance(raw, list):
-        return raw
+        return [row for row in raw if isinstance(row, dict)]
     if isinstance(raw, dict):
         return [raw]
     return []
 
 
+@collection_budget(_SOURCE_BUDGET)
 def _ecos_get(
     api_key: str,
     stat_code: str,
@@ -49,17 +57,60 @@ def _ecos_get(
         f"{ECOS_BASE}/{key_seg}/json/kr/{int(start_idx)}/{int(end_idx)}"
         f"/{stat_code}/{cycle}/{period_start}/{period_end}/{item_code}"
     )
+    label = _SOURCE_LABELS.get(stat_code, "other")
+    for attempt in range(1, 3):
+        started = time.monotonic()
+        status = "error"
+        response = None
+        try:
+            remaining = request_timeout(_CONNECT_TIMEOUT + _READ_TIMEOUT)
+            # Divide the remaining allowance between connection and read phases.
+            # These are socket caps; the parent process owns hard cancellation.
+            timeout = (min(_CONNECT_TIMEOUT, remaining * 0.4),
+                       min(_READ_TIMEOUT, remaining * 0.6))
+            response = requests.get(url, timeout=timeout, allow_redirects=False)
+            status = f"http_{response.status_code}"
+            if response.status_code == 200:
+                rows = _normalize_rows(response.json())
+                request_timeout(1)  # Discard responses completed after the deadline.
+                status = "ok" if rows else "empty_or_result"
+                return rows
+            if response.status_code not in _TRANSIENT_HTTP:
+                return []
+        except CollectionDeadline:
+            status = "CollectionDeadline"
+            return []
+        except requests.exceptions.SSLError:
+            status = "SSLError"
+            return []
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as error:
+            status = type(error).__name__
+        except Exception as error:
+            status = type(error).__name__
+            return []
+        finally:
+            if response is not None:
+                close = getattr(response, "close", None)
+                if close:
+                    try:
+                        close()
+                    except Exception:
+                        status += "_close_error"
+            elapsed_ms = round((time.monotonic() - started) * 1000)
+            sys.stderr.write(
+                f"[ecos_fetch] source=ecos:{label} attempt={attempt} "
+                f"status={status} elapsed_ms={elapsed_ms}\n"
+            )
+    return []
+
+
+def _finite_value(row: dict) -> Optional[float]:
+    """A missing/nonfinite observation is not a measured zero."""
     try:
-        r = requests.get(url, timeout=request_timeout(_TIMEOUT))
-        if r.status_code != 200:
-            return []
-        data = r.json()
-        if isinstance(data, dict) and data.get("RESULT"):
-            return []
-        return _normalize_rows(data)
-    except Exception as error:
-        sys.stderr.write(f"[ecos_fetch] error={type(error).__name__}\n")
-        return []
+        value = float(row.get("DATA_VALUE"))
+        return value if math.isfinite(value) else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _month_range_months_back(months: int) -> tuple:
@@ -108,7 +159,9 @@ def _kr_cpi_inflation_axis(key: str) -> Optional[Dict[str, Any]]:
         t, v = str(r.get("TIME", "")), r.get("DATA_VALUE")
         if len(t) == 6 and v not in (None, "", "."):
             try:
-                idx[t] = float(v)
+                value = _finite_value(r)
+                if value is not None:
+                    idx[t] = value
             except (TypeError, ValueError):
                 continue
     months = sorted(idx)
@@ -145,6 +198,7 @@ def _kr_cpi_inflation_axis(key: str) -> Optional[Dict[str, Any]]:
     }
 
 
+@collection_budget(_COLLECTION_BUDGET)
 def get_ecos_macro_block() -> Dict[str, Any]:
     """
     ECOS 한국 기준금리(월)·국고채 10년(일).
@@ -158,14 +212,15 @@ def get_ecos_macro_block() -> Dict[str, Any]:
 
     ps, pe = _month_range_months_back(24)
     pr_rows = _ecos_get(key, "722Y001", "M", ps, pe, "0101000", 1, 24)
-    if not pr_rows:
-        pr_rows = _ecos_get(key, "722Y001", "M", ps, pe, "0101000", 1, 10)
     if pr_rows:
         fetched_at = now_iso()
         last = pr_rows[-1]
         try:
+            value = _finite_value(last)
+            if value is None:
+                raise ValueError("missing policy rate")
             out["korea_policy_rate"] = {
-                "value": round(float(last.get("DATA_VALUE", 0)), 3),
+                "value": round(value, 3),
                 "date": str(last.get("TIME", "")),
                 "unit": last.get("UNIT_NAME"),
                 "stat_code": "722Y001",
@@ -185,17 +240,20 @@ def get_ecos_macro_block() -> Dict[str, Any]:
 
     ds, de = _day_range_days_back(400)
     y_rows = _ecos_get(key, "817Y002", "D", ds, de, "010210000", 1, 320)
-    if not y_rows:
-        y_rows = _ecos_get(key, "817Y002", "D", ds, de, "010210000", 1, 10)
     if y_rows:
         fetched_at = now_iso()
         last = y_rows[-1]
         try:
-            val = round(float(last.get("DATA_VALUE", 0)), 4)
+            value = _finite_value(last)
+            if value is None:
+                raise ValueError("missing government yield")
+            val = round(value, 4)
             yoy_pp: Optional[float] = None
             if len(y_rows) >= 200:
                 ref = y_rows[max(0, len(y_rows) - 260)]
-                yoy_pp = round(val - float(ref.get("DATA_VALUE", 0)), 3)
+                ref_value = _finite_value(ref)
+                if ref_value is not None:
+                    yoy_pp = round(val - ref_value, 3)
             d_raw = str(last.get("TIME", ""))
             date_iso = d_raw
             if len(d_raw) == 8 and d_raw.isdigit():

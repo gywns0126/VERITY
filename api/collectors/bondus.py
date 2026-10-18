@@ -5,13 +5,16 @@
   - IG / HY 신용 스프레드 (ICE BofA OAS)
 기존 fred_macro.py의 _fetch_series 패턴을 재사용.
 """
+import math
+import sys
 import time
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
 from api.config import FRED_API_KEY
+from api.utils.macro_provenance import now_iso, observation_meta
+from api.utils.macro_runtime import CollectionDeadline, collection_budget, request_timeout, timed_source
 
 FRED_OBS_URL = "https://api.stlouisfed.org/fred/series/observations"
 
@@ -44,17 +47,20 @@ _CREDIT_SERIES = {
 
 
 def _fetch_latest(series_id: str, limit: int = 10, retries: int = 3) -> Optional[float]:
-    """FRED 시리즈 최신 관측값 1개. transient 실패(timeout/5xx/429) 시 backoff 재시도.
+    """Preserve the float contract; dated receipts are used by the collector."""
+    with collection_budget(25):
+        point = _fetch_latest_point(series_id, limit, retries)
+    return point["value"] if point else None
 
-    2026-06-03 fix: retry 부재로 11개 시리즈 루프 중 일부가 간헐 실패 → US 커브 부분 결손
-    (run 마다 다른 만기 누락 = '불안정'; 2Y/10Y 누락 시 spread 계산 불가 → 채권 viz 공백 +
-    MarketHorizon 침체확률 '?' 연쇄). limit 5→10 = '.' 공백일 헤더룸 확보.
-    """
+
+def _fetch_latest_point(series_id: str, limit: int = 10, retries: int = 3) -> Optional[Dict[str, Any]]:
+    """Retry only within the shared US/parent budget, keeping partial results."""
     if not FRED_API_KEY:
         return None
     for attempt in range(retries):
         try:
-            r = requests.get(
+            remaining = request_timeout(6)
+            r = timed_source("bonds:fred", lambda: requests.get(
                 FRED_OBS_URL,
                 params={
                     "series_id": series_id,
@@ -63,26 +69,39 @@ def _fetch_latest(series_id: str, limit: int = 10, retries: int = 3) -> Optional
                     "sort_order": "desc",
                     "limit": limit,
                 },
-                timeout=20,
-            )
+                timeout=(remaining / 3, remaining * 2 / 3),
+                allow_redirects=False,
+            ))
             if r.status_code != 200:
-                if r.status_code in (429, 500, 502, 503, 504) and attempt < retries - 1:
-                    time.sleep(0.6 * (attempt + 1))
-                    continue
-                return None
-            for obs in r.json().get("observations", []):
-                raw = obs.get("value")
-                if raw in (".", "", None):
-                    continue
-                try:
-                    return float(raw)
-                except (TypeError, ValueError):
-                    continue
-            return None  # 200 정상이나 유효값 없음 — 재시도 무의미
+                if r.status_code not in (429, 500, 502, 503, 504):
+                    return None
+            else:
+                fetched_at = now_iso()
+                points = []
+                for obs in r.json().get("observations", []):
+                    try:
+                        value = float(obs.get("value"))
+                    except (TypeError, ValueError):
+                        continue
+                    if not math.isfinite(value):
+                        continue
+                    metadata = observation_meta("fred", obs.get("date"), fetched_at=fetched_at)
+                    if metadata["source_date_status"] == "invalid":
+                        continue  # Includes future dates.
+                    point = {"value": value, **metadata}
+                    if metadata["source_as_of"]:
+                        point["as_of"] = metadata["source_as_of"]
+                    points.append(point)
+                return max(points, key=lambda p: p.get("as_of", "")) if points else None
+        except CollectionDeadline:
+            return None
         except Exception:
-            if attempt < retries - 1:
-                time.sleep(0.6 * (attempt + 1))
-                continue
+            pass  # Never emit exception bodies, which can contain the API key.
+        if attempt < retries - 1:
+            try:
+                time.sleep(request_timeout(0.6 * (attempt + 1)))
+            except CollectionDeadline:
+                return None
     return None
 
 
@@ -91,6 +110,7 @@ def _fetch_series_points(series_id: str, limit: int = 260) -> List[Tuple[str, fl
     if not FRED_API_KEY:
         return []
     try:
+        remaining = request_timeout(6)
         r = requests.get(
             FRED_OBS_URL,
             params={
@@ -100,7 +120,8 @@ def _fetch_series_points(series_id: str, limit: int = 260) -> List[Tuple[str, fl
                 "sort_order": "desc",
                 "limit": limit,
             },
-            timeout=20,
+            timeout=(remaining / 3, remaining * 2 / 3),
+            allow_redirects=False,
         )
         if r.status_code != 200:
             return []
@@ -110,7 +131,10 @@ def _fetch_series_points(series_id: str, limit: int = 260) -> List[Tuple[str, fl
             if raw in (".", "", None):
                 continue
             try:
-                out.append((str(obs.get("date", "")), float(raw)))
+                value = float(raw)
+                metadata = observation_meta("fred", obs.get("date"))
+                if math.isfinite(value) and metadata["source_date_status"] == "ok":
+                    out.append((metadata["source_as_of"], value))
             except (TypeError, ValueError):
                 continue
         return out
@@ -165,27 +189,42 @@ def _assess_credit_risk(oas: float, category: str) -> str:
 
 
 def get_us_bond_summary() -> Dict[str, Any]:
+    with collection_budget(25):
+        return _collect_us_bonds()
+
+
+def _collect_us_bonds() -> Dict[str, Any]:
     """
     미국 채권 시장 요약.
     반환: {curve: [...], curve_shape, spread_2y_10y, spread_3m_10y,
            credit_spreads: {us_ig_oas, us_hy_oas, ...}, updated_at}
     """
-    result: Dict[str, Any] = {"available": False}
+    result: Dict[str, Any] = {"available": False, "partial": True, "stale": True}
 
     if not FRED_API_KEY:
         result["error"] = "no_fred_api_key"
+        sys.stderr.write("[bond_source] source=us outcome=skipped_no_credentials\n")
         return result
 
     curve: List[Dict[str, Any]] = []
     for tenor, series_id in _TREASURY_SERIES:
-        val = _fetch_latest(series_id)
-        if val is not None:
-            curve.append({"tenor": tenor, "yield": round(val, 3)})
+        try:
+            request_timeout(1)
+        except CollectionDeadline:
+            break
+        point = _fetch_latest_point(series_id)
+        if point is not None:
+            entry = {k: v for k, v in point.items() if k != "value"}
+            entry.update(tenor=tenor, **{"yield": round(point["value"], 3)})
+            curve.append(entry)
 
     if curve:
         result["curve"] = curve
         result["curve_shape"] = _classify_us_curve_shape(curve)
         result["available"] = True
+        as_ofs = [p["as_of"] for p in curve if p.get("as_of")]
+        if as_ofs:
+            result["curve_as_of"] = max(as_ofs)
 
         yields_map = {c["tenor"]: c["yield"] for c in curve}
         y2 = yields_map.get("2Y")
@@ -197,9 +236,18 @@ def get_us_bond_summary() -> Dict[str, Any]:
         if y3m is not None and y10 is not None:
             result["spread_3m_10y"] = round(y10 - y3m, 3)
 
-    ig_val = _fetch_latest(_CREDIT_SERIES["us_ig_oas"])
-    bbb_val = _fetch_latest(_CREDIT_SERIES["us_bbb_oas"])
-    hy_val = _fetch_latest(_CREDIT_SERIES["us_hy_oas"])
+    credit_points = {}
+    for key, series_id in _CREDIT_SERIES.items():
+        try:
+            request_timeout(1)
+        except CollectionDeadline:
+            break
+        point = _fetch_latest_point(series_id)
+        if point is not None:
+            credit_points[key] = point
+    ig_val = credit_points.get("us_ig_oas", {}).get("value")
+    bbb_val = credit_points.get("us_bbb_oas", {}).get("value")
+    hy_val = credit_points.get("us_hy_oas", {}).get("value")
 
     credit: Dict[str, Any] = {}
     if ig_val is not None:
@@ -214,6 +262,19 @@ def get_us_bond_summary() -> Dict[str, Any]:
     if credit:
         result["credit_spreads"] = credit
         result["available"] = True
+        result["credit_spreads_meta"] = {
+            key: {k: v for k, v in point.items() if k != "value"}
+            for key, point in credit_points.items()
+        }
+
+    result["missing_tenors"] = [t for t, _ in _TREASURY_SERIES
+                                if t not in {c["tenor"] for c in curve}]
+    result["missing_credit"] = [k for k in _CREDIT_SERIES if k not in credit_points]
+    result["partial"] = bool(result["missing_tenors"] or result["missing_credit"])
+    result["stale"] = result["partial"] or any(
+        point.get("stale") for point in curve + list(credit_points.values()))
+    sys.stderr.write(f"[bond_source] source=us outcome={'partial' if result['partial'] else 'complete'} "
+                     f"tenors={len(curve)}/11 credit={len(credit_points)}/3\n")
 
     return result
 
