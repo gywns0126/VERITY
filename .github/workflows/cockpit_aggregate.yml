@@ -7,9 +7,8 @@ name: Cockpit Aggregate (5분 cron)
 # data/metadata/ = vercel-api/ 외부 → ignoreCommand auto-skip (RULE 2 정합).
 
 on:
-  schedule:
-    # 매 5분
-    - cron: '*/5 * * * *'
+  repository_dispatch:
+    types: [cockpit_aggregate]
   workflow_dispatch:
 
 env:
@@ -17,16 +16,37 @@ env:
 
 permissions:
   contents: write
-
-concurrency:
-  # 형제 cron 과 다른 group — 5분 cron 직렬화 (cron_health_monitor 와 별)
-  # cockpit 은 read-only 라 race 위험 낮음, but commit/push race 회피
-  group: verity-cockpit-aggregate
-  cancel-in-progress: false
+  actions: read
 
 jobs:
-  aggregate:
+  cadence:
+    if: github.event_name == 'repository_dispatch'
     runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.slot.outputs.run }}
+    steps:
+      - uses: actions/github-script@v7
+        id: slot
+        with:
+          script: |
+            const slot = context.payload.client_payload?.schedule_slot;
+            if (!slot || !Number.isFinite(Date.parse(slot))) throw new Error('Invalid schedule_slot');
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              ...context.repo, workflow_id: 'cockpit_aggregate.yml',
+              branch: context.payload.repository.default_branch,
+              created: `>=${slot}`, per_page: 100
+            });
+            const duplicate = runs.some(run => run.id < context.runId);
+            core.setOutput('run', String(!duplicate));
+            core.info(duplicate ? 'Slot already attempted; skip duplicate' : 'First run in slot');
+  aggregate:
+    needs: cadence
+    if: always() && !cancelled() && (needs.cadence.result == 'skipped' || needs.cadence.outputs.run == 'true')
+    runs-on: ubuntu-latest
+    # Reject duplicate slots before entering the single pending-job queue.
+    concurrency:
+      group: verity-cockpit-aggregate
+      cancel-in-progress: false
     timeout-minutes: 5
 
     steps:

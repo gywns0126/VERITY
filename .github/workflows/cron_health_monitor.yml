@@ -12,11 +12,8 @@
 name: Cron Health Monitor
 
 on:
-  schedule:
-    # 2026-05-16 시간당 강화 — KIS 토큰 발급 폭주 detect (5/16 5분 폭주 사고 학습).
-    # 매시 정각 (UTC 매시 0분). PASS silent / WARNING / FAIL 만 telegram → spam 없음.
-    # KIS lock 24h commit ≥ 2 = WARNING, ≥ 3 = FAIL (1일 1토큰 ABSOLUTE 위반).
-    - cron: '0 * * * *'
+  repository_dispatch:
+    types: [cron_health_monitor]
   workflow_dispatch:
     inputs:
       hours:
@@ -37,13 +34,34 @@ permissions:
   contents: write   # 2026-05-17 Phase 3 — cron_health.jsonl persist main commit (옛 read)
   actions: read    # gh run list 위해
 
-concurrency:
-  group: cron-health-monitor
-  cancel-in-progress: false
-
 jobs:
-  monitor:
+  cadence:
+    if: github.event_name == 'repository_dispatch'
     runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.slot.outputs.run }}
+    steps:
+      - uses: actions/github-script@v7
+        id: slot
+        with:
+          script: |
+            const slot = context.payload.client_payload?.schedule_slot;
+            if (!slot || !Number.isFinite(Date.parse(slot))) throw new Error('Invalid schedule_slot');
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              ...context.repo, workflow_id: 'cron_health_monitor.yml',
+              branch: context.payload.repository.default_branch,
+              created: `>=${slot}`, per_page: 100
+            });
+            const duplicate = runs.some(run => run.id < context.runId);
+            core.setOutput('run', String(!duplicate));
+            core.info(duplicate ? 'Slot already attempted; skip duplicate' : 'First run in slot');
+  monitor:
+    needs: cadence
+    if: always() && !cancelled() && (needs.cadence.result == 'skipped' || needs.cadence.outputs.run == 'true')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: cron-health-monitor
+      cancel-in-progress: false
     # requirements 설치 + 실물 검증 + monitor가 최근 실측 5분을 넘겨 commit 전 취소됨.
     timeout-minutes: 10
 

@@ -193,3 +193,22 @@ def test_zero_quota_pending_work_cannot_look_successful(tmp_path, monkeypatch, h
                    "deferred": 2, "touched": 0, "requests": 0})
     healthy_sections["annual_backfill"] = _annual_reader()
     assert "연간 재무 수집 대상이 있으나 실행된 셀 없음" in data_health_builder.build()["reasons"]
+
+
+def test_confirmed_source_blank_remains_amber_not_official_013(tmp_path, monkeypatch, healthy_sections):
+    _annual_ledger(tmp_path, monkeypatch, {"success": 0, "empty": 1, "source_gap": 1, "requests": 4},
+                   {"082660|2025": {"status": "source_blank", "reason": "source_period_blank"}})
+    healthy_sections["annual_backfill"] = _annual_reader()
+    doc = data_health_builder.build()
+    assert doc["status"] == "amber"
+    assert doc["annual_backfill"]["counts_valid"] is True
+    assert doc["annual_backfill"]["unclassified_cells"] == 0
+    assert doc["annual_backfill"]["unresolved_error_cells"] == 0
+    assert "연간 재무 원천 기간 공란 1칸" in doc["reasons"]
+
+
+@pytest.mark.parametrize("value", [-1, True, "1", 2])
+def test_invalid_source_gap_counter_cannot_be_green(tmp_path, monkeypatch, healthy_sections, value):
+    _annual_ledger(tmp_path, monkeypatch, {"source_gap": value})
+    healthy_sections["annual_backfill"] = _annual_reader()
+    assert data_health_builder.build()["status"] == "amber"
