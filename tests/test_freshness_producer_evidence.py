@@ -308,6 +308,14 @@ def test_receipt_source_set_matches_the_actual_producer():
     assert evidence.RSS_SOURCES == {name for name, _ in FEEDS}
 
 
+def test_retired_feed_receipt_cannot_certify_replacement_sources(tmp_path):
+    path, receipt, doc = bound_receipt(tmp_path)
+    for feed, name in zip(doc["feeds"], ["Reuters", "CNBC", "Yahoo Finance"]):
+        feed["source"] = name
+    receipt.write_text(json.dumps(doc))
+    assert evidence.collection_receipt("news_flash", path)["status"] == "invalid_receipt"
+
+
 @pytest.mark.parametrize("lead_seconds", [0, 1, 60, 300])
 def test_even_near_future_query_clocks_are_not_promoted(tmp_path, monkeypatch, lead_seconds):
     path, receipt, doc = bound_receipt(tmp_path)

@@ -19,7 +19,7 @@ PRODUCERS = {
 }
 _PROCESS_BUDGET_SECONDS = 20.0
 _PROCESS_DEADLINE = None
-RSS_SOURCES = frozenset({"Reuters", "CNBC", "Yahoo Finance"})
+RSS_SOURCES = frozenset({"SEC 공식 발표", "CNBC", "Fed 공식 발표"})
 
 
 def collection_receipt(sid, artifact_path):
