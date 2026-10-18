@@ -147,8 +147,14 @@ def _freshness_section() -> Optional[Dict[str, Any]]:
         "summary": board.get("summary"),
         "stream_count": len(streams),
         "skipped_count": board.get("_skipped_count", 0),
+        "unmeasured_streams": board.get("_skipped", []),
+        "producer_evidence": board.get("_producer_evidence", {}),
         "stale_p0": [{"id": s.get("id"), "label": s.get("label"), "age_min": s.get("age_eff_min")} for s in stale_p0],
         "stale_other": [s.get("id") for s in stale if s.get("criticality") != "P0"],
+        "stale_other_details": [
+            {key: s.get(key) for key in ("id", "last_ts", "age_eff_min", "max_age_min")}
+            for s in stale if s.get("criticality") != "P0"
+        ],
     }
 
 

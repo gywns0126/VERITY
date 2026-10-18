@@ -26,6 +26,7 @@ from datetime import datetime, time, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from api.config import DATA_DIR, now_kst  # noqa: E402
+from scripts.freshness_producer_evidence import producer_evidence  # noqa: E402
 
 KST = timezone(timedelta(hours=9))
 MANIFEST = os.path.join(DATA_DIR, "freshness_sla.json")
@@ -171,9 +172,7 @@ def build_observations() -> dict:
         if s.get("owner") == "local" and not os.path.exists(os.path.join(DATA_DIR, f)):
             rows.append({"id": s["id"], "status": "skip_local_absent"})
             continue
-        if not _schedule_active(sched, now):
-            rows.append({"id": s["id"], "status": "skip_schedule", "schedule": sched})
-            continue
+        proof = None
         if is_glob:
             t = latest_ts_for_glob(f, s.get("ts_field"))
             if t is None:
@@ -186,8 +185,13 @@ def build_observations() -> dict:
                 continue
             obj = _load_any(path)
             ts = _extract_ts(obj, s.get("ts_field"))
+            if obj is not None and not ts:
+                proof = producer_evidence(s["id"])
             if not ts:
-                rows.append({"id": s["id"], "status": "no_ts"})
+                row = {"id": s["id"], "status": "no_ts"}
+                if proof:
+                    row["producer_evidence"] = proof
+                rows.append(row)
                 continue
             t = _parse_ts_kst(ts)
             if t is None:
@@ -199,12 +203,15 @@ def build_observations() -> dict:
         if sched in ("weekday", "market_hours"):
             age_eff = age_m - _weekend_minutes_between(t, now)
         maxm = s.get("max_age_minutes")
-        would_alarm = bool(maxm and age_eff > maxm)
-        rows.append({
-            "id": s["id"], "status": "checked", "schedule": sched,
+        active = _schedule_active(sched, now)
+        would_alarm = bool(active and maxm and age_eff > maxm)
+        row = {
+            "id": s["id"], "status": "checked" if active else "skip_schedule", "schedule": sched,
+            "last_ts": t.isoformat(), "measured": True,
             "age_min": round(age_m, 1), "age_eff_min": round(age_eff, 1), "max_age_min": maxm,
             "would_alarm": would_alarm, "criticality": s.get("criticality"),
-        })
+        }
+        rows.append(row)
     alarms = [r["id"] for r in rows if r.get("would_alarm")]
     return {
         "observed_at": now.isoformat(),
