@@ -1,9 +1,9 @@
 {
-  "collected_at": "2026-10-18T07:46:23.728047+00:00",
+  "collected_at": "2026-10-18T07:51:27.530722+00:00",
   "schema_version": 1,
-  "severity": "YELLOW",
+  "severity": "RED",
   "severity_reasons": [
-    "data delivery AMBER: 연간 재무 수집 실패 4/164칸"
+    "data delivery RED: 배달 개별 검증 실패·미확인"
   ],
   "n_verification_days": 59,
   "n_milestones": {
@@ -47,13 +47,13 @@
   "auto_action_blocked": [],
   "_inputs_snapshot": {
     "kis_lock_commits_24h": 1,
-    "fred_age_h": 0.07,
+    "fred_age_h": 0.22,
     "fred_24h_failure_rate": 0.0,
     "core_sources_ok": true,
-    "delivery_status": "amber",
-    "delivery_generated_at": "2026-10-18T11:36:56.231745+09:00",
-    "publish_verify_ok": true,
-    "publish_verify_failed": 0,
+    "delivery_status": "red",
+    "delivery_generated_at": "2026-10-18T16:45:34.515402+09:00",
+    "publish_verify_ok": false,
+    "publish_verify_failed": 1,
     "runtime_mode": "full_us",
     "ramp_up_stage": 5000,
     "brain_anomaly_24h": 0,
