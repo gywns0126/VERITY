@@ -201,25 +201,35 @@ def _has_stale_macro_row(macro: dict) -> bool:
 
 def build() -> Dict[str, Any]:
     """3 collector 호출 → snapshot dict 반환. caller 가 OUTPUT_PATH atomic write."""
-    from api.collectors.macro_data import get_macro_indicators
-    from api.collectors.yieldcurve import get_full_yield_curve_data
-    from api.collectors.global_events import collect_global_events
-
     now = _now_kst()
     prev = _load_existing()
     errors: list[str] = []
     started = time.time()
 
-    macro, macro_err = _safe_call(get_macro_indicators, "macro", timeout_s=60)
+    # Provider imports can start native/library threads. Initialize them only
+    # inside their disposable child, not in the parent before its next fork.
+    def collect_macro():
+        from api.collectors.macro_data import get_macro_indicators
+        return get_macro_indicators()
+
+    def collect_bonds():
+        from api.collectors.yieldcurve import get_full_yield_curve_data
+        return get_full_yield_curve_data(prev_bonds=prev.get("bonds"))
+
+    def collect_events():
+        from api.collectors.global_events import collect_global_events
+        return collect_global_events()
+
+    macro, macro_err = _safe_call(collect_macro, "macro", timeout_s=60)
     if macro_err:
         errors.append(f"macro: {macro_err}")
 
     bonds, bonds_err = _safe_call(
-        lambda: get_full_yield_curve_data(prev_bonds=prev.get("bonds")), "bonds", timeout_s=60)
+        collect_bonds, "bonds", timeout_s=60)
     if bonds_err:
         errors.append(f"bonds: {bonds_err}")
 
-    events, events_err = _safe_call(collect_global_events, "global_events", timeout_s=45)
+    events, events_err = _safe_call(collect_events, "global_events", timeout_s=45)
     if events_err:
         errors.append(f"global_events: {events_err}")
 
