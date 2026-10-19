@@ -1970,7 +1970,7 @@ html>body{padding:0}</style>
       function closeSearch(focus=true){searchPanel.hidden=true;searchToggle.setAttribute('aria-expanded','false');if(focus)searchToggle.focus({preventScroll:true});}
       function openSearch(){closePreview();if(cancelGesture)cancelGesture();searchPanel.hidden=false;searchToggle.setAttribute('aria-expanded','true');positionSearch();renderSearch();searchInput.focus();}
       function membership(n){return !n.explore?'보유 · 가상':demoRegistration[n.id]?.kind==='holding'?'보유 등록 예시':demoRegistration[n.id]?.kind==='watch'?'관심 등록 예시':'탐색 중';}
-      function focusBoardNode(n){invalidateMemberSelectionReturn();state.filter='all';state.topic='all';state.view='all';root.querySelector('#an-view').value='all';select(n.id);const p=point(n);if(p.x<60||p.y<40||p.x>space.clientWidth-60||p.y>space.clientHeight-40){state.panX+=space.clientWidth/2-p.x;state.panY+=space.clientHeight/2-p.y;}renderMap();}
+      function focusBoardNode(n){invalidateMemberSelectionReturn();state.filter='all';state.topic='all';state.view='all';root.querySelector('#an-view').value='all';select(n.id,false,true);const p=point(n);if(p.x<60||p.y<40||p.x>space.clientWidth-60||p.y>space.clientHeight-40){state.panX+=space.clientWidth/2-p.x;state.panY+=space.clientHeight/2-p.y;}renderMap();}
       function addBoardNode(n,at){
         invalidateMemberSelectionReturn();closeSearch(false);closePreview();const b=boardDraft[state.scenario],already=inScenario(n);
         if(already){focusBoardNode(n);sayBoard(n.name+'는 이미 작업판에 있어요.');return;}
@@ -2412,7 +2412,7 @@ html>body{padding:0}</style>
         const deselect=toggle&&id&&state.selected===id&&!showGuide&&!state.activeNote&&!state.noteList;
         const leaving=!id||deselect;
         const previous=changeView&&leaving&&selectionReturn?.usedFit&&selectionReturn.context===selectionContext()?selectionReturn:null;
-        if(leaving)invalidateMemberSelectionReturn(false);
+        if(leaving&&(changeView||!state.focusId))invalidateMemberSelectionReturn(false);
         else if(!state.selected&&!state.focusId&&!selectionReturn)selectionReturn={context:selectionContext(),camera:{zoom:state.zoom,panX:state.panX,panY:state.panY},usedFit:false};
         if(deselect){id='';selectedItems.clear();}
         if(edges.some(e=>e.id===id))observeTour('edge');closePreview();if(!selectedItems.has(id))selectedItems.clear();
@@ -3199,7 +3199,7 @@ memberPort.onmessage=event=>{
     const n=nodeById[event.data.id],button=n&&[...nodesEl.children].find(el=>el.dataset.node===n.id);
     // shown() respects user hiding/filters; DOM hidden can mean another stock's focus.
     // Never unhide stocks, reset filters or toggle an already-selected stock off.
-    if(n?.kind==='stock'&&shown(n)&&button&&!(state.selected===n.id&&!showGuide&&!state.activeNote&&!state.noteList))select(n.id,true);
+    if(n?.kind==='stock'&&shown(n)&&button&&!(state.selected===n.id&&state.focusId===n.id&&!showGuide&&!state.activeNote&&!state.noteList))select(n.id,false,true);
     return;
   }
   if(event.data?.type!=='status')return;
