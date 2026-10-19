@@ -39,17 +39,20 @@ def _now():
 
 
 def _pack(feed_path: str, market: str, cutoff: str, out: dict) -> int:
-    if not os.path.exists(feed_path):
-        return 0
     with open(feed_path, "r", encoding="utf-8") as f:
         d = json.load(f)
+    if not isinstance(d, dict) or not isinstance(d.get("items"), list):
+        raise ValueError(f"{market} disclosure feed: invalid or missing items")
     n = 0
-    for it in d.get("items") or []:
+    for it in d["items"]:
+        if (not isinstance(it, dict) or not isinstance(it.get("ticker"), str)
+                or not it["ticker"].strip() or not isinstance(it.get("disclosures"), list)):
+            raise ValueError(f"{market} disclosure feed: invalid ticker or disclosures")
         tk = it.get("ticker")
-        if not tk:
-            continue
         evs = []
-        for x in it.get("disclosures") or []:
+        for x in it["disclosures"]:
+            if not isinstance(x, dict):
+                raise ValueError(f"{market} disclosure feed: invalid disclosure row")
             dt = x.get("date") or ""
             if dt < cutoff:
                 continue
@@ -83,8 +86,8 @@ def main() -> int:
                 #   티커가 겹치면 dict 에서 덮여쓰이는데 카운터는 두 번 센다(실측 800 vs 799).
                 "counts": {"kr": n_kr, "us": n_us, "total": len(tickers)},
                 # 🚨 자기신고 — 소비자가 "없음" 과 "안 담음" 을 구분할 수 있어야 한다
-                "coverage_note": "공시가 창 안에 있는 종목만 실린다. 색인에 없는 티커 = "
-                                 "그 창에 공시 없음(미수집 아님).",
+                "coverage_note": "조회한 원천 범위에서 최근 공시가 있는 종목만 실린다. "
+                                 "색인 미등재는 공시 부재를 뜻하지 않으며 수집 범위·누락의 영향을 받을 수 있다.",
                 "news": "미포함 — news_flash 티커 연결 0/200, 종목별 헤드라인은 분석 풀 한정",
                 "disclaimer": "공시 사실·일정만 · 점수·추천·매매의견 아님",
             },
