@@ -3,13 +3,14 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const directory=path.join(__dirname,'../review/member-map');
 const source=fs.readFileSync(path.join(directory,'prototype-network-runtime.js'),'utf8');
+const engineSource=fs.readFileSync(path.join(directory,'prototype-network-engine.js'),'utf8');
 const geometry=fs.readFileSync(path.join(directory,'prototype-network-layout.js'),'utf8');
 const relationship=fs.readFileSync(path.join(directory,'prototype-relationship-layout.js'),'utf8');
 const clone=value=>JSON.parse(JSON.stringify(value));
 function functionSource(text,name){
  const start=text.indexOf('function '+name+'(');assert.ok(start>=0,'actual function '+name);
  const begin=text.indexOf('{',start);let depth=0;
- for(let i=begin;i<text.length;i++){if(text[i]==='{')depth++;else if(text[i]==='}'&&--depth===0)return text.slice(start,i+1);}
+ for(let i=begin;i<text.length;i++){if(text[i]==='{')depth++;else if(text[i]==='}'&&--depth===0)return text.slice(text.slice(Math.max(0,start-6),start)==='async '?start-6:start,i+1);}
  assert.fail('unterminated '+name);
 }
 function freeze(value){if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;}
@@ -47,9 +48,14 @@ function fixture(){
  const visualContext=freeze({stockIds:['stock'],scope:'native-current'}),visualCalls=[];
  const reference=freeze({kind:'reference',topic:'neutral',color:'#6b7684',width:1,dash:'2 4',
   statusLabel:'참고 자료',summaryLabel:'영향 미평가',lineLabel:'자료 귀속'});
+ const engineCalls=[],engineState={camera:null,stage:null,destroys:0,resizes:0,highlights:[]};
+ const engine={setCamera(camera){engineState.camera={...camera};},getCamera:()=>({...engineState.camera}),setStage(stage,zoom){engineState.stage=stage;engineState.stageZoom=zoom;},
+  resize(){engineState.resizes++;},highlight(id){engineState.highlights.push(id);},destroy(){engineState.destroys++;}};
+ const graph=element();
  const context={Map,Set,Math,Number,Float64Array,TypeError,URL,document:{createElement:element,createElementNS:(_,tag)=>element(tag)},
   root,memberNetworkHost:host,memberNetworkSpace:space,memberNetworkNodes:nodes,memberNetworkSvg:svg,memberNetworkInspector:inspector,
-  memberNetworkButton:button,memberNetworkResize:observer,memberNetworkSession:null,memberReset:false,
+  memberNetworkButton:button,memberNetworkResize:observer,memberNetworkSession:null,memberNetworkOpening:false,memberNetworkGraph:graph,memberReset:false,
+  memberLoadNetworkEngine:async()=>{},memberCreateNetworkEngine(...args){engineCalls.push(args);return engine;},
   space:element(),nativeGesture:false,cancelGesture:null,closePreview(){},closeSearch(){},
   memberScope:()=>scope,edges,inScenario:e=>e.scenario==='current',eventHoldings:n=>n.kind==='stock'?[n.id]:['stock'],
   memberDisplayDecisions:readOnlyMap([['source',{evidence:'reported'}],['candidate',{evidence:'pending'}]]),
@@ -68,7 +74,7 @@ function fixture(){
  const nativeValues=()=>clone({scope,edges,native,initial:[...context.initialPositions],offsets:[...context.focusOffsets],bases:[...context.memberLayoutBases]});
  const before=nativeValues();
  return{context,scope,edges,stock,record,candidate,native,root,host,space,nodes,svg,inspector,live,button,controls,alreadyInert,observer,hostParts,
-  visualContext,visualCalls,reference,layoutCalls:()=>layoutCalls,assertNative:()=>assert.deepEqual(nativeValues(),before)};
+  visualContext,visualCalls,reference,engine,engineCalls,engineState,graph,layoutCalls:()=>layoutCalls,assertNative:()=>assert.deepEqual(nativeValues(),before)};
 }
 test('stage thresholds are dots / names / cards at the exact boundaries',()=>{
  const {context:c}=fixture();
@@ -84,22 +90,84 @@ test('snapshot copies current scope and evidence, filters links by both current 
  assert.equal(f.record.evidence[0].title,'Filing');assert.equal(f.edges[0].from,'stock');
  assert.equal(c.memberNetworkKind(s.items[2]),'candidate');assert.equal(s.items[2].recordKind,'relationship');assert.equal(s.items[2].layer,'candidates');f.assertNative();
 });
-test('actual open builds every current node once with source/candidate semantics and independent session objects',()=>{
- const f=fixture(),c=f.context;c.openMemberNetwork();const s=c.memberNetworkSession;
+test('actual open builds every current node once with source/candidate semantics and independent session objects',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
  assert.equal(f.layoutCalls(),1);assert.equal(s.elements.size,3);assert.equal(s.positions.size,3);assert.equal(s.paths.length,2);
  assert.equal(s.elements.get('source').dataset.kind,'source');assert.equal(s.elements.get('candidate').dataset.kind,'candidate');
  assert.ok(s.paths.every(([,el])=>el.dataset.semantic==='reference'),'reuse native visual semantics rather than promoting source/candidate edges');
  assert.equal(s.visuals.size,2);assert.equal(f.visualCalls.length,2);
  assert.ok(f.visualCalls.every(call=>call.context===f.visualContext));
  assert.equal(f.controls.inert,true);assert.equal(f.alreadyInert.inert,true);assert.equal(f.host.hidden,false);
- c.openMemberNetwork();assert.equal(f.layoutCalls(),1,'opening an already open session must not recalculate layout');f.assertNative();
+ await c.openMemberNetwork();assert.equal(f.layoutCalls(),1,'opening an already open session must not recalculate layout');
+ assert.equal(f.engineCalls.length,1);assert.equal(f.engineCalls[0][0],f.graph);assert.equal(f.engineCalls[0][3],s.positions);assert.equal(f.engineCalls[0][4],s.visuals);f.assertNative();
 });
-test('geometry failure reports a user message before changing native inert state or creating a session',()=>{
+test('missing embedded library fails via actual loader before native inert mutation and releases opening guard with a user message',async()=>{
+ const f=fixture(),c=f.context,dataset={...f.root.dataset};
+ for(const el of f.root.children){const original=el.inert;Object.defineProperty(el,'inert',{get:()=>original,set:()=>assert.fail('loader failure must not touch inert state')});}
+ c.window={};vm.runInNewContext(functionSource(engineSource,'memberLoadNetworkEngine'),c);
+ await assert.doesNotReject(()=>c.openMemberNetwork());
+ assert.equal(f.live.textContent,'관계망 도구를 불러오지 못했어요. 원래 작업판은 그대로예요.');
+ assert.equal(c.memberNetworkSession,null);assert.equal(c.memberNetworkOpening,false);assert.equal(f.button.disabled,false);
+ assert.equal(f.host.hidden,true);assert.deepEqual(f.root.dataset,dataset);assert.equal(f.layoutCalls(),0);assert.equal(f.engineCalls.length,0);
+ assert.equal(f.observer.observed.length,0);assert.equal(f.button.focusCalls.length,0);f.assertNative();
+});
+test('pending loader rejection after reset/root removal/missing live is harmless and never mutates native state',async()=>{
+ for(const boundary of ['reset','removed','null-live','all']){
+  const f=fixture(),c=f.context,children=f.root.children.slice(),dataset={...f.root.dataset};let reject;
+  f.live.textContent='existing notice';
+  for(const el of children){const original=el.inert;Object.defineProperty(el,'inert',{get:()=>original,set:()=>assert.fail('late loader failure must not touch inert state: '+boundary)});}
+  c.memberLoadNetworkEngine=()=>new Promise((_,fail)=>{reject=fail;});
+  const pending=c.openMemberNetwork();assert.equal(c.memberNetworkOpening,true);assert.equal(f.button.disabled,true);
+  if(boundary==='reset'||boundary==='all')c.memberReset=true;
+  if(boundary==='removed'||boundary==='all')f.root.isConnected=false;
+  if(boundary==='null-live'||boundary==='all')f.root.querySelector=()=>null;
+  reject(new Error('late loader rejection fixture'));await assert.doesNotReject(()=>pending,boundary);
+  assert.equal(f.live.textContent,'existing notice');assert.equal(c.memberNetworkSession,null);assert.equal(c.memberNetworkOpening,false);assert.equal(f.button.disabled,false);
+  assert.deepEqual(f.root.children,children);assert.deepEqual(f.root.dataset,dataset);assert.equal(f.host.hidden,true);
+  assert.equal(f.layoutCalls(),0);assert.equal(f.engineCalls.length,0);assert.equal(f.visualCalls.length,0);
+  assert.equal(f.nodes.children.length,0);assert.equal(f.graph.children.length,0);assert.equal(f.svg.children.length,0);
+  assert.equal(f.observer.observed.length,0);assert.equal(f.button.focusCalls.length,0);f.assertNative();
+ }
+});
+test('engine init failure restores original native inert/session state, clears temporary nodes and reports a user message',async()=>{
+ const f=fixture(),c=f.context,children=f.root.children.slice(),inert=children.map(el=>el.inert),dataset={...f.root.dataset};
+ c.memberCreateNetworkEngine=()=>{throw new Error('renderer unavailable fixture');};
+ await assert.doesNotReject(()=>c.openMemberNetwork());
+ assert.equal(f.live.textContent,'관계망을 표시하지 못했어요. 원래 작업판은 그대로예요.');
+ assert.equal(c.memberNetworkSession,null);assert.equal(c.memberNetworkOpening,false);assert.equal(f.button.disabled,false);assert.equal(f.host.hidden,true);
+ assert.deepEqual(f.root.children,children);assert.deepEqual(children.map(el=>el.inert),inert);assert.deepEqual(f.root.dataset,dataset);
+ assert.equal(f.nodes.children.length,0);assert.equal(f.svg.children.length,0);assert.equal(f.button.attributes['aria-expanded'],'false');
+ assert.equal(f.observer.observed.length,0);f.assertNative();
+});
+test('concurrent entry loads once and snapshots current scope only after loader resolves',async()=>{
+ const f=fixture(),c=f.context;let resolve,loads=0;
+ c.memberLoadNetworkEngine=()=>{loads++;return new Promise(done=>{resolve=done;});};
+ const first=c.openMemberNetwork();assert.equal(c.memberNetworkOpening,true);assert.equal(f.controls.inert,false);assert.equal(f.button.disabled,true);
+ await c.openMemberNetwork();assert.equal(loads,1);assert.equal(f.layoutCalls(),0);
+ c.memberScope=()=>({stocks:[f.stock],records:[f.record]});resolve();await first;
+ assert.equal(c.memberNetworkSession.elements.size,2);assert.equal(c.memberNetworkSession.elements.has('candidate'),false);
+ assert.equal(f.engineCalls.length,1);assert.equal(f.layoutCalls(),1);assert.equal(f.button.disabled,false);c.closeMemberNetwork();f.assertNative();
+});
+test('vendor viewport/select/highlight callbacks update exploration only and late viewport cannot resurrect a session',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,hooks=f.engineCalls[0][5],before=clone([...s.positions]);
+ hooks.viewport({zoom:.4,panX:21,panY:-11});assert.deepEqual({...s.camera},{zoom:.4,panX:21,panY:-11});assert.equal(f.engineState.stage,'names');
+ hooks.select('source');assert.equal(s.selected,'source');hooks.highlight('stock');assert.equal(f.engineState.highlights.at(-1),'stock');
+ assert.deepEqual(clone([...s.positions]),before);assert.equal(f.layoutCalls(),1);c.closeMemberNetwork();
+ hooks.viewport({zoom:2,panX:99,panY:99});assert.equal(c.memberNetworkSession,null);assert.equal(f.host.hidden,true);f.assertNative();
+ await c.openMemberNetwork();const next=c.memberNetworkSession,selected=next.selected,highlights=f.engineState.highlights.length;
+ hooks.select('source');hooks.highlight('source');hooks.viewport({zoom:2,panX:99,panY:99});
+ assert.equal(c.memberNetworkSession,next);assert.equal(next.selected,selected);assert.equal(f.engineState.highlights.length,highlights);
+ c.closeMemberNetwork();f.assertNative();
+});
+test('runtime delegates gestures to vendor rather than adding custom pointer/wheel handlers',()=>{
+ assert.doesNotMatch(source,/memberNetworkSpace\.addEventListener\(['"](?:wheel|pointerdown)['"]/);
+});
+test('geometry failure reports a user message before changing native inert state or creating a session',async()=>{
  const f=fixture(),c=f.context,children=f.root.children.slice(),dataset={...f.root.dataset};
  const inertBefore=children.map(el=>el.inert);
  for(const el of children){const original=el.inert;Object.defineProperty(el,'inert',{get:()=>original,set:()=>assert.fail('geometry failure must not touch native inert state')});}
  c.memberNetworkLayout=()=>{throw new Error('geometry failure fixture');};
- assert.doesNotThrow(()=>c.openMemberNetwork());
+ await assert.doesNotReject(()=>c.openMemberNetwork());
  assert.equal(f.live.textContent,'관계망을 만들지 못했어요. 원래 작업판은 그대로예요.');
  assert.equal(c.memberNetworkSession,null);assert.equal(f.host.hidden,true);
  assert.deepEqual(f.root.children,children);assert.deepEqual(f.root.dataset,dataset);
@@ -108,14 +176,16 @@ test('geometry failure reports a user message before changing native inert state
  assert.equal(f.nodes.children.length,0);assert.equal(f.svg.children.length,0);
  assert.equal(f.observer.observed.length,0);assert.equal(f.visualCalls.length,0);f.assertNative();
 });
-test('draw/zoom/pan/resize/fit preserve every world position, raw value and path/node identity without calling layout again',()=>{
- const f=fixture(),c=f.context;c.openMemberNetwork();const s=c.memberNetworkSession,positions=clone([...s.positions]),elements=[...s.elements.values()],paths=s.paths.map(([,el])=>el);
+test('draw/zoom/pan/resize/fit preserve every world position, raw value and path/node identity without calling layout again',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,positions=clone([...s.positions]),elements=[...s.elements.values()],paths=s.paths.map(([,el])=>el);
  for(const p of s.positions.values())freeze(p);
  for(const key of ['set','delete','clear'])Object.defineProperty(s.positions,key,{value:()=>assert.fail('session world position mutation')});
  const center=id=>{const el=s.elements.get(id);return{x:parseFloat(el.style.left),y:parseFloat(el.style.top)};};
  for(const zoom of [.1,.28,.7,.8,1.6]){
   c.zoomMemberNetwork(zoom);c.drawMemberNetwork();
   assert.equal(f.space.dataset.stage,c.memberNetworkStage(zoom));
+  assert.equal(f.engineState.stage,c.memberNetworkStage(zoom));assert.deepEqual(f.engineState.camera,{...s.camera});
+  assert.equal(f.engineState.stageZoom,zoom,'runtime passes current camera zoom for constant rendered sizes');
   for(const [id,p]of s.positions){const el=s.elements.get(id),a=center(id),r=f.space.getBoundingClientRect();
    assert.ok(Math.abs(a.x-(r.width/2+(p.x-500)*zoom+s.camera.panX))<1e-9);
    assert.ok(Math.abs(a.y-(r.height/2+(p.y-340)*zoom+s.camera.panY))<1e-9);
@@ -128,46 +198,47 @@ test('draw/zoom/pan/resize/fit preserve every world position, raw value and path
  assert.deepEqual(clone([...s.positions]),positions);assert.deepEqual([...s.elements.values()],elements);assert.deepEqual(s.paths.map(([,el])=>el),paths);
  assert.equal(f.layoutCalls(),1);f.assertNative();
 });
-test('zoom preserves the cursor world point, clamps camera bounds, and fit remains finite without changing geometry',()=>{
- const f=fixture(),c=f.context;c.openMemberNetwork();const s=c.memberNetworkSession,r=f.space.getBoundingClientRect(),at={x:131,y:227};
+test('zoom preserves the cursor world point, clamps camera bounds, and fit remains finite without changing geometry',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,r=f.space.getBoundingClientRect(),at={x:131,y:227};
  const world=()=>({x:500+(at.x-r.width/2-s.camera.panX)/s.camera.zoom,y:340+(at.y-r.height/2-s.camera.panY)/s.camera.zoom});
  const before=world();c.zoomMemberNetwork(.6,at);const after=world();
  assert.ok(Math.abs(before.x-after.x)<1e-9&&Math.abs(before.y-after.y)<1e-9);
  c.zoomMemberNetwork(100);assert.equal(s.camera.zoom,4);c.zoomMemberNetwork(.00001);assert.equal(s.camera.zoom,.02);
  c.fitMemberNetwork();assert.ok(Object.values(s.camera).every(Number.isFinite));assert.equal(f.layoutCalls(),1);f.assertNative();
 });
-test('close cancels pan, restores only connected native inert states and keeps native camera/notes/coordinates/history unchanged',()=>{
- const f=fixture(),c=f.context;c.openMemberNetwork();const s=c.memberNetworkSession;
- let cancelled=0;s.cancelPan=()=>{cancelled++;s.cancelPan=null;};
+test('close destroys vendor engine, restores only connected native inert states and keeps native camera/notes/coordinates/history unchanged',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();
+ f.graph.append(element('canvas'));assert.equal(f.graph.children.length,1);
  c.memberNetworkSelect('source');c.zoomMemberNetwork(.5);c.closeMemberNetwork();
- assert.equal(cancelled,1);assert.equal(c.memberNetworkSession,null);assert.equal(f.host.hidden,true);assert.equal(f.root.dataset.networkOpen,undefined);
+ assert.equal(f.engineState.destroys,1);assert.equal(c.memberNetworkSession,null);assert.equal(f.host.hidden,true);assert.equal(f.root.dataset.networkOpen,undefined);
  assert.equal(f.controls.inert,false);assert.equal(f.alreadyInert.inert,true);assert.equal(f.root.dataset.other,'kept');
  assert.equal(f.nodes.children.length,0);assert.equal(f.svg.children.length,0);assert.equal(f.observer.disconnects,1);
+ assert.equal(f.graph.children.length,0);
  assert.equal(f.button.attributes['aria-expanded'],'false');assert.equal(f.button.focusCalls.length,1);
- c.closeMemberNetwork();assert.equal(f.observer.disconnects,1,'second close is inert');f.assertNative();
+ c.closeMemberNetwork();assert.equal(f.observer.disconnects,1,'second close is inert');assert.equal(f.engineState.destroys,1);f.assertNative();
 });
-test('close never refocuses/reinserts removed controls or mutates a node moved outside the native root',()=>{
- const f=fixture(),c=f.context;c.openMemberNetwork();
+test('close never refocuses/reinserts removed controls or mutates a node moved outside the native root',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();
  f.controls.isConnected=false;f.button.isConnected=false;f.root.children=f.root.children.filter(el=>el!==f.controls&&el!==f.alreadyInert);
  // A still-connected element moved elsewhere must not be mutated by restoration.
  f.alreadyInert.inert=false;const remaining=f.root.children.slice();
  c.closeMemberNetwork();assert.equal(f.controls.inert,true);assert.equal(f.alreadyInert.inert,false);
  assert.equal(f.button.focusCalls.length,0);assert.deepEqual(f.root.children,remaining);assert.ok(!f.root.children.includes(f.controls));f.assertNative();
 });
-test('empty scope and closed draw/zoom/fit calls are harmless and never fabricate nodes',()=>{
+test('empty scope and closed draw/zoom/fit calls are harmless and never fabricate nodes',async()=>{
  const f=fixture(),c=f.context;c.memberScope=()=>({stocks:[],records:[]});
  c.drawMemberNetwork();c.zoomMemberNetwork(.2);c.fitMemberNetwork();assert.equal(f.layoutCalls(),0);
- c.openMemberNetwork();assert.equal(c.memberNetworkSession.elements.size,0);assert.equal(c.memberNetworkSession.positions.size,0);
+ await c.openMemberNetwork();assert.equal(c.memberNetworkSession.elements.size,0);assert.equal(c.memberNetworkSession.positions.size,0);
  c.fitMemberNetwork();c.closeMemberNetwork();f.assertNative();
 });
-for(const [index,kind]of ['direct','indirect','history','review','reference'].entries())test(`native ${kind} visual is copied unchanged into path styling and inspector, not recomputed`,()=>{
+for(const [index,kind]of ['direct','indirect','history','review','reference'].entries())test(`native ${kind} visual is copied unchanged into path styling and inspector, not recomputed`,async()=>{
  const f=fixture(),c=f.context;
  const visual=freeze({kind,topic:'native-topic-'+kind,color:['#123456','#234567','#345678','#456789','#56789a'][index],
   width:1.25+index*.5,dash:kind==='direct'?'':'3 '+(index+2),statusLabel:'native-status-'+kind,
   summaryLabel:'native-summary-'+kind,lineLabel:'native-line-'+kind,extraNativeField:'preserve-'+kind});
  const before=clone(visual),calls=[];
  c.memberEdgeVisual=(edge,record,context)=>{calls.push({edge,record,context});return visual;};
- c.openMemberNetwork();const s=c.memberNetworkSession;
+ await c.openMemberNetwork();const s=c.memberNetworkSession;
  assert.equal(calls.length,2);
  for(const [edge,el]of s.paths){
   const saved=s.visuals.get(edge.id);assert.notEqual(saved,visual,'snapshot must not retain helper return object identity');
@@ -191,5 +262,7 @@ for(const [index,kind]of ['direct','indirect','history','review','reference'].en
 test('embedded network modules match their canonical source verbatim',()=>{
  const canvas=fs.readFileSync(process.env.MEMBER_MAP_CANVAS||path.join(__dirname,'../vercel-api/public/member-map-canvas.html'),'utf8');
  assert.ok(canvas.includes(geometry.trimEnd()),'geometry not yet emitted or mismatched');
+ const engine=fs.readFileSync(path.join(directory,'prototype-network-engine.js'),'utf8');
+ assert.ok(canvas.includes(engine.trimEnd()),'engine not yet emitted or mismatched');
  assert.ok(canvas.includes(source.trimEnd()),'runtime not yet emitted or mismatched');
 });
