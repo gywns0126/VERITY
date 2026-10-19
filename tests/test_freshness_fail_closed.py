@@ -1,6 +1,9 @@
 """Missing evidence and partial refreshes must not become a healthy stream."""
 import json
+import os
 import re
+import subprocess
+from types import SimpleNamespace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -236,3 +239,107 @@ def test_invalid_expected_members_cannot_fall_back_to_a_fresh_glob(tmp_path, mon
     assert result["summary"]["fresh"] == 0
     assert result["summary"]["p0"]["unmeasured"] == 1
     assert result["_skipped"][0]["reason"] == "invalid_expected_files"
+
+
+def setup_pipeline_clock(tmp_path, monkeypatch, kind, text):
+    monkeypatch.setattr(pipeline, "_REPO_ROOT", tmp_path)
+    monkeypatch.setattr(pipeline, "_now_kst", lambda: NOW)
+    source = {"key": "input", "label": "input", "path": "input.jsonl" if kind.startswith("jsonl") else "input.json",
+              "type": kind, "max_fresh_hours": 26}
+    path = tmp_path / source["path"]
+    path.write_text(text, encoding="utf-8")
+    os.utime(path, (NOW.timestamp(), NOW.timestamp()))
+    return source
+
+
+@pytest.mark.parametrize("key", ["ts", "ts_kst", "logged_at", "created_at", "run_id"])
+@pytest.mark.parametrize("age,status", [(6, "fresh"), (27, "stale"), (53, "missing")])
+def test_pipeline_jsonl_clock_not_checkout_mtime(tmp_path, monkeypatch, key, age, status):
+    stamp = (NOW - timedelta(hours=age)).isoformat()
+    source = setup_pipeline_clock(tmp_path, monkeypatch, "jsonl_runtime", json.dumps({key: stamp}) + "\n")
+    row = pipeline._diagnose_one(source)
+    assert row["ts_source"] == "content"
+    assert row["last_update_kst"] == stamp
+    assert row["age_hours"] == age
+    assert row["status"] == status
+    assert row["last_entry"][key] == stamp
+
+
+@pytest.mark.parametrize("kind,key", [("json_content", "generated_at"), ("json_collected_at", "collected_at")])
+def test_pipeline_json_clock_not_checkout_mtime(tmp_path, monkeypatch, kind, key):
+    source = setup_pipeline_clock(tmp_path, monkeypatch, kind,
+                                  json.dumps({key: (NOW - timedelta(hours=53)).isoformat()}))
+    row = pipeline._diagnose_one(source)
+    assert row["age_hours"] == 53
+    assert row["status"] == "missing"
+    assert row["ts_source"] == "content"
+
+
+@pytest.mark.parametrize("kind", ["json_content", "json_collected_at", "jsonl_runtime"])
+@pytest.mark.parametrize("text,reason", [("", "empty_content"), ("{", "invalid_json"),
+    ("[]", "invalid_object"), ("{}", "missing_timestamp"),
+    ('{"collected_at":"bad"}', "invalid_timestamp"),
+    ('{"collected_at":true}', "invalid_timestamp")])
+def test_pipeline_unmeasured_content_never_falls_back_to_mtime(tmp_path, monkeypatch, kind, text, reason):
+    source = setup_pipeline_clock(tmp_path, monkeypatch, kind, text)
+    row = pipeline._diagnose_one(source)
+    assert row["status"] == "missing"
+    assert row["ts_source"] == "none"
+    assert row["age_hours"] is None
+    assert row["timestamp_issue"] == reason
+
+
+@pytest.mark.parametrize("stamp,expected,age", [
+    ("2026-10-19T02:00:00Z", "2026-10-19T11:00:00+09:00", 1),
+    ("2026-10-19T11:00:00", "2026-10-19T11:00:00+09:00", 1),
+    ("2026-10-19", "2026-10-19T00:00:00+09:00", 12),
+])
+def test_pipeline_collected_clock_timezone_and_date_normalization(tmp_path, monkeypatch, stamp, expected, age):
+    source = setup_pipeline_clock(tmp_path, monkeypatch, "json_collected_at", json.dumps({"collected_at": stamp}))
+    row = pipeline._diagnose_one(source)
+    assert row["status"] == "fresh"
+    assert row["last_update_kst"] == expected
+    assert row["age_hours"] == age
+
+
+@pytest.mark.parametrize("kind", ["json_content", "json_collected_at", "jsonl_runtime"])
+def test_pipeline_future_content_is_not_fresh_even_when_age_rounds_to_zero(tmp_path, monkeypatch, kind):
+    source = setup_pipeline_clock(tmp_path, monkeypatch, kind,
+        json.dumps({"collected_at": (NOW + timedelta(microseconds=1)).isoformat()}))
+    row = pipeline._diagnose_one(source)
+    assert row["status"] == "missing"
+    assert row["timestamp_issue"] == "future_timestamp"
+    assert row["ts_source"] == "none"  # Not an age-based freeze notification.
+
+
+def test_pipeline_reads_full_last_jsonl_record_and_does_not_skip_broken_tail(tmp_path, monkeypatch):
+    entry = {"ts": NOW.isoformat(), "large_field": "x" * 20000}
+    source = setup_pipeline_clock(tmp_path, monkeypatch, "jsonl_quarter",
+                                  json.dumps(entry) + "\n\n")
+    row = pipeline._diagnose_one(source)
+    assert row["status"] == "fresh"
+    assert row["line_count"] == 2
+    assert row["last_entry"] == {"ts": NOW.isoformat()}
+    with (tmp_path / source["path"]).open("a") as stream:
+        stream.write('{"ts":')
+    row = pipeline._diagnose_one(source)
+    assert row["status"] == "missing"
+    assert row["timestamp_issue"] == "invalid_json"
+
+
+def test_pipeline_invalid_declared_clock_does_not_use_other_clock(tmp_path, monkeypatch):
+    source = setup_pipeline_clock(tmp_path, monkeypatch, "json_content",
+        json.dumps({"generated_at": "bad", "collected_at": NOW.isoformat()}))
+    assert pipeline._diagnose_one(source)["timestamp_issue"] == "invalid_timestamp"
+
+
+def test_pipeline_runtime_committed_clock_uses_same_run_id_contract(monkeypatch):
+    stamp = (NOW - timedelta(hours=105)).isoformat()
+    monkeypatch.setattr(pipeline, "_now_kst", lambda: NOW)
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs:
+                        SimpleNamespace(returncode=0, stdout=json.dumps({"run_id": stamp}) + "\n"))
+    assert pipeline._committed_content_ts("data/metadata/runtime_load_log.jsonl", is_jsonl=True).isoformat() == stamp
+    result = pipeline._persistence_frozen([{"path": "data/metadata/runtime_load_log.jsonl",
+        "key": "runtime_load", "type": "jsonl_runtime", "max_fresh_hours": 26, "status": "fresh"}])
+    assert result[0]["committed_age_hours"] == 105
+    assert result[0]["limit_hours"] == 104  # Existing 4x persistence threshold is unchanged.
