@@ -17,7 +17,12 @@ const memberNetworkStyle=document.createElement('style');memberNetworkStyle.text
 #an-map-design .an-network-main{min-height:0;flex:1;display:grid;grid-template-columns:minmax(0,1fr) 240px}
 #an-map-design .an-network-space{position:relative;min-width:0;min-height:0;overflow:hidden;touch-action:none;cursor:grab}
 #an-map-design .an-network-space:focus-visible{outline:none}
-#an-map-design .an-network-space svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#an-map-design .an-network-space>svg{display:none}
+#an-map-design .an-network-graph{position:absolute;inset:0}
+#an-map-design .an-network-nodes{position:absolute;inset:0;pointer-events:none}
+#an-map-design .an-network-space:not([data-stage=cards]) .an-network-node{pointer-events:none;background:transparent;box-shadow:none}
+#an-map-design .an-network-space[data-stage=cards] .an-network-node{pointer-events:auto}
+#an-map-design .an-network-node .an-network-dot{display:none}
 #an-map-design .an-network-edge{fill:none;stroke:var(--an-line);stroke-width:1;stroke-dasharray:2 4;opacity:.55}
 #an-map-design .an-network-node{position:absolute;box-sizing:border-box;width:18px;height:18px;min-height:0;padding:0;transform:translate(-50%,-50%);background:transparent;box-shadow:none;user-select:none;touch-action:none}
 #an-map-design .an-network-dot{display:block;position:absolute;width:6px;height:6px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;background:var(--an-line)}
@@ -46,10 +51,10 @@ const memberNetworkStyle=document.createElement('style');memberNetworkStyle.text
 `;root.append(memberNetworkStyle);
 const memberNetworkButton=document.createElement('button');memberNetworkButton.type='button';memberNetworkButton.className='an-tool';memberNetworkButton.textContent='전체 관계망';memberNetworkButton.setAttribute('aria-expanded','false');root.querySelector('.an-zoom').append(memberNetworkButton);
 const memberNetworkHost=document.createElement('section');memberNetworkHost.className='an-network-view';memberNetworkHost.hidden=true;memberNetworkHost.setAttribute('aria-label','전체 관계망 탐색');
-memberNetworkHost.innerHTML='<header class="an-network-head"><h2>전체 관계망</h2><button type="button" data-network-action="out" aria-label="관계망 축소">−</button><output aria-label="관계망 배율"></output><button type="button" data-network-action="in" aria-label="관계망 확대">+</button><button type="button" data-network-action="fit">한눈에</button><button type="button" data-network-action="close">원래 보기</button></header><div class="an-network-main"><div class="an-network-space" tabindex="0" role="group" aria-label="고정 관계망 · 드래그로 이동, 휠로 확대축소"><svg aria-hidden="true"></svg><div class="an-network-nodes"></div></div><aside class="an-network-inspector" aria-label="관계망 선택 자료"></aside></div><footer class="an-network-foot"></footer>';
+memberNetworkHost.innerHTML='<header class="an-network-head"><h2>전체 관계망</h2><button type="button" data-network-action="out" aria-label="관계망 축소">−</button><output aria-label="관계망 배율"></output><button type="button" data-network-action="in" aria-label="관계망 확대">+</button><button type="button" data-network-action="fit">한눈에</button><button type="button" data-network-action="close">원래 보기</button></header><div class="an-network-main"><div class="an-network-space" tabindex="0" role="group" aria-label="고정 관계망 · 드래그로 이동, 휠로 확대축소"><div class="an-network-graph" aria-hidden="true"></div><svg aria-hidden="true"></svg><div class="an-network-nodes"></div></div><aside class="an-network-inspector" aria-label="관계망 선택 자료"></aside></div><footer class="an-network-foot"></footer>';
 root.append(memberNetworkHost);
-const memberNetworkSpace=memberNetworkHost.querySelector('.an-network-space'),memberNetworkSvg=memberNetworkHost.querySelector('svg'),memberNetworkNodes=memberNetworkHost.querySelector('.an-network-nodes'),memberNetworkInspector=memberNetworkHost.querySelector('.an-network-inspector');
-let memberNetworkSession=null;
+const memberNetworkSpace=memberNetworkHost.querySelector('.an-network-space'),memberNetworkGraph=memberNetworkHost.querySelector('.an-network-graph'),memberNetworkSvg=memberNetworkHost.querySelector('svg'),memberNetworkNodes=memberNetworkHost.querySelector('.an-network-nodes'),memberNetworkInspector=memberNetworkHost.querySelector('.an-network-inspector');
+let memberNetworkSession=null,memberNetworkOpening=false;
 function memberNetworkKind(n){return n.kind==='stock'?'stock':memberRelationshipIsMapRecord(n)?'relationship':n.layer==='candidates'?'candidate':'source';}
 function memberNetworkKindText(n){return {stock:'종목',relationship:'사건·관계',candidate:'미검수 후보',source:'근거 자료'}[memberNetworkKind(n)];}
 function memberNetworkSelect(id){
@@ -77,13 +82,14 @@ function memberNetworkHighlight(id){
   for(const e of s.links)if(e.from===id||e.to===id){linked.add(e.from);linked.add(e.to);}
   for(const [key,el] of s.elements){el.dataset.faded=String(!!id&&!linked.has(key));el.setAttribute('aria-pressed',String(key===s.selected));}
   for(const [e,el] of s.paths)el.dataset.faded=String(!!id&&e.from!==id&&e.to!==id);
+  s.engine?.highlight(id);
 }
 function drawMemberNetwork(){
   const s=memberNetworkSession;if(!s)return;
   const {width,height}=memberNetworkSpace.getBoundingClientRect(),z=s.camera.zoom,project=p=>({x:width/2+(p.x-500)*z+s.camera.panX,y:height/2+(p.y-340)*z+s.camera.panY});
   const stage=memberNetworkStage(z);memberNetworkSpace.dataset.stage=stage;memberNetworkSpace.style.setProperty('--an-network-label-width',Math.max(40,145*z)+'px');
+  s.engine?.setCamera(s.camera);s.engine?.setStage(stage,z);
   for(const [id,el] of s.elements){const p=project(s.positions.get(id));el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.transform='translate(-50%,-50%)'+(stage==='cards'?' scale('+z+')':'');}
-  for(const [e,el] of s.paths){const a=project(s.positions.get(e.from)),b=project(s.positions.get(e.to));el.setAttribute('d','M '+a.x+' '+a.y+' L '+b.x+' '+b.y);}
   memberNetworkHost.querySelector('output').textContent=Math.round(z*100)+'%';
 }
 function zoomMemberNetwork(next,at){
@@ -97,16 +103,22 @@ function fitMemberNetwork(){
   s.camera={zoom:z,panX:(500-(left+right)/2)*z,panY:(340-(top+bottom)/2)*z};drawMemberNetwork();
 }
 function closeMemberNetwork(){
-  const s=memberNetworkSession;if(!s)return;if(s.cancelPan)s.cancelPan();memberNetworkSession=null;memberNetworkHost.hidden=true;delete root.dataset.networkOpen;
+  const s=memberNetworkSession;if(!s)return;s.engine?.destroy();memberNetworkSession=null;memberNetworkHost.hidden=true;delete root.dataset.networkOpen;
   for(const [el,inert] of s.inert)if(el.isConnected&&root.contains(el))el.inert=inert;
-  memberNetworkNodes.replaceChildren();memberNetworkSvg.replaceChildren();memberNetworkResize.disconnect();memberNetworkButton.setAttribute('aria-expanded','false');
+  memberNetworkNodes.replaceChildren();memberNetworkSvg.replaceChildren();memberNetworkGraph.replaceChildren();memberNetworkResize.disconnect();memberNetworkButton.setAttribute('aria-expanded','false');
   if(!memberReset&&memberNetworkButton.isConnected)memberNetworkButton.focus({preventScroll:true});
 }
-function openMemberNetwork(){
-  if(memberNetworkSession||memberReset||space.classList.contains('panning')||nativeGesture)return;if(cancelGesture)cancelGesture();closePreview();closeSearch(false);
+async function openMemberNetwork(){
+  if(memberNetworkSession||memberNetworkOpening||memberReset||space.classList.contains('panning')||nativeGesture)return;
+  memberNetworkOpening=true;memberNetworkButton.disabled=true;
+  try{await memberLoadNetworkEngine();}
+  catch{const live=root.querySelector('#an-live');if(!memberReset&&root.isConnected&&live)live.textContent='관계망 도구를 불러오지 못했어요. 원래 작업판은 그대로예요.';return;}
+  finally{memberNetworkOpening=false;memberNetworkButton.disabled=false;}
+  if(memberNetworkSession||memberReset||!root.isConnected||space.classList.contains('panning')||nativeGesture)return;
+  if(cancelGesture)cancelGesture();closePreview();closeSearch(false);
   const {items,links}=memberNetworkSnapshot(memberScope(),edges);let positions;
   try{positions=memberNetworkLayout(items.map(n=>({id:n.id,kind:n.kind,stockIds:eventHoldings(n),width:160,height:76})),links);}
-  catch{root.querySelector('#an-live').textContent='관계망을 만들지 못했어요. 원래 작업판은 그대로예요.';return;}
+  catch{const live=root.querySelector('#an-live');if(!memberReset&&root.isConnected&&live)live.textContent='관계망을 만들지 못했어요. 원래 작업판은 그대로예요.';return;}
   const s={byId:new Map(items.map(n=>[n.id,n])),links,positions,elements:new Map(),paths:[],visuals:new Map(),selected:'',camera:{zoom:1,panX:0,panY:0},inert:[]};memberNetworkSession=s;
   for(const el of root.children)if(el!==memberNetworkHost&&el.tagName!=='STYLE'&&el.tagName!=='SCRIPT'){s.inert.push([el,el.inert]);el.inert=true;}
   root.dataset.networkOpen='true';memberNetworkHost.hidden=false;memberNetworkButton.setAttribute('aria-expanded','true');
@@ -124,6 +136,10 @@ function openMemberNetwork(){
     const copy=document.createElement('span'),name=document.createElement('strong'),meta=document.createElement('small');name.className='an-network-label';name.textContent=n.name;meta.className='an-network-meta';meta.textContent=memberNetworkKindText(n)+' · '+(n.asOf||'기준일 미확인');copy.append(name,meta);b.append(dot,face,copy);
     b.onclick=()=>memberNetworkSelect(n.id);b.onpointerenter=()=>memberNetworkHighlight(n.id);b.onpointerleave=()=>memberNetworkHighlight(s.selected);b.onfocus=()=>memberNetworkHighlight(n.id);b.onblur=()=>memberNetworkHighlight(s.selected);memberNetworkNodes.append(b);s.elements.set(n.id,b);
   }
+  try{s.engine=memberCreateNetworkEngine(memberNetworkGraph,items,links,positions,s.visuals,{
+    viewport(camera){if(memberNetworkSession!==s)return;s.camera=camera;drawMemberNetwork();},
+    select(id){if(memberNetworkSession===s)memberNetworkSelect(id);},highlight(id){if(memberNetworkSession===s)memberNetworkHighlight(id||s.selected);}
+  });}catch{closeMemberNetwork();const live=root.querySelector('#an-live');if(!memberReset&&root.isConnected&&live)live.textContent='관계망을 표시하지 못했어요. 원래 작업판은 그대로예요.';return;}
   memberNetworkResize.observe(memberNetworkSpace);memberNetworkSelect('');fitMemberNetwork();memberNetworkHost.querySelector('[data-network-action=close]').focus({preventScroll:true});
 }
 memberNetworkButton.onclick=openMemberNetwork;
@@ -145,14 +161,6 @@ memberNetworkHost.addEventListener('keydown',e=>{
   const delta={ArrowLeft:[40,0],ArrowRight:[-40,0],ArrowUp:[0,40],ArrowDown:[0,-40]}[e.key];
   if(delta){e.preventDefault();memberNetworkSession.camera.panX+=delta[0];memberNetworkSession.camera.panY+=delta[1];drawMemberNetwork();}
 },true);
-memberNetworkSpace.addEventListener('wheel',e=>{if(!memberNetworkSession)return;e.preventDefault();const r=memberNetworkSpace.getBoundingClientRect();zoomMemberNetwork(memberNetworkSession.camera.zoom*Math.exp(-e.deltaY*.002),{x:e.clientX-r.left,y:e.clientY-r.top});},{passive:false});
-memberNetworkSpace.addEventListener('pointerdown',e=>{
-  const s=memberNetworkSession;if(!s||e.button!==0||e.target.closest('button'))return;e.preventDefault();memberNetworkSpace.focus({preventScroll:true});const before={x:e.clientX,y:e.clientY,...s.camera};memberNetworkSpace.setPointerCapture(e.pointerId);
-  const move=v=>{if(v.pointerId!==e.pointerId)return;s.camera.panX=before.panX+v.clientX-before.x;s.camera.panY=before.panY+v.clientY-before.y;drawMemberNetwork();};
-  const end=v=>{if(v&&v.pointerId!==e.pointerId)return;memberNetworkSpace.removeEventListener('pointermove',move);memberNetworkSpace.removeEventListener('pointerup',end);memberNetworkSpace.removeEventListener('pointercancel',end);memberNetworkSpace.removeEventListener('lostpointercapture',end);if(memberNetworkSpace.hasPointerCapture(e.pointerId))memberNetworkSpace.releasePointerCapture(e.pointerId);s.cancelPan=null;};
-  s.cancelPan=()=>end();memberNetworkSpace.addEventListener('pointermove',move);memberNetworkSpace.addEventListener('pointerup',end);memberNetworkSpace.addEventListener('pointercancel',end);memberNetworkSpace.addEventListener('lostpointercapture',end);
-});
-const memberNetworkResize=new ResizeObserver(()=>{if(memberNetworkSession)drawMemberNetwork();});
+const memberNetworkResize=new ResizeObserver(()=>{if(memberNetworkSession){memberNetworkSession.engine?.resize();drawMemberNetwork();}});
 const memberNetworkRemoval=new MutationObserver(()=>{if(!memberNetworkHost.isConnected){closeMemberNetwork();memberNetworkResize.disconnect();memberNetworkRemoval.disconnect();}});memberNetworkRemoval.observe(root,{childList:true});
 window.addEventListener('pagehide',()=>{closeMemberNetwork();memberNetworkRemoval.disconnect();});
-window.addEventListener('blur',()=>memberNetworkSession?.cancelPan?.());
