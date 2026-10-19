@@ -2582,7 +2582,22 @@ html>body{padding:0}</style>
       space.addEventListener('click',function(e){if(suppressClick||spaceHeld){e.preventDefault();e.stopPropagation();}},true);
       let narrowFocusLayout=space.clientWidth<560;
       let pendingMapResize=false;
-      function applyMapResize(){if(nodeMoveActive){pendingMapResize=true;return;}pendingMapResize=false;closePreview();if(cancelGesture)cancelGesture();const narrow=space.clientWidth<560;if(state.focusId&&narrow!==narrowFocusLayout)focusStock(state.focusId,true);narrowFocusLayout=narrow;renderMap();}
+      let memberPanelResizeOrigin=null;
+      function applyMapResize(){
+        if(nodeMoveActive){pendingMapResize=true;return;}
+        pendingMapResize=false;closePreview();
+        if(memberPanelResizeOrigin){
+          const origin=memberPanelResizeOrigin;memberPanelResizeOrigin=null;
+          // Preserve the visible world origin while the bottom library changes height.
+          // This is a camera compensation, not a node/note edit or an implicit fit.
+          state.panX=origin.panX+(origin.width-space.clientWidth)/2;
+          state.panY=origin.panY+(origin.height-space.clientHeight)/2;
+          narrowFocusLayout=space.clientWidth<560;renderMap();return;
+        }
+        if(cancelGesture)cancelGesture();
+        const narrow=space.clientWidth<560;if(state.focusId&&narrow!==narrowFocusLayout)focusStock(state.focusId,true);
+        narrowFocusLayout=narrow;renderMap();
+      }
       new ResizeObserver(applyMapResize).observe(space);
 // Product criteria v1. Source: research-plan-20261003/plan.md sections 4, 5E/F.
 // Source-explicit qualitative dependency rubric (2026-10-09), not a numeric score.
@@ -5037,7 +5052,7 @@ function applyMemberRelationshipLayout(scope){
   }
 }
 const memberRelationshipStyle=document.createElement('style');memberRelationshipStyle.textContent=`
-#an-map-design .an-body{grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(180px,1fr) 200px;grid-template-areas:'map detail' 'library detail'}
+#an-map-design .an-body{grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(180px,1fr) var(--an-library-height,200px);grid-template-areas:'map detail' 'library detail'}
 #an-map-design .an-map{grid-area:map;min-width:0;min-height:0}
 #an-map-design .an-detail{grid-area:detail}
 #an-map-design .an-inbox{grid-area:library;display:grid!important;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));align-content:start;align-items:start;gap:12px;padding:16px 20px;background:light-dark(#f8f9fb,#1d242c);scrollbar-gutter:stable}
@@ -5056,9 +5071,89 @@ const memberRelationshipStyle=document.createElement('style');memberRelationship
 #an-map-design #an-nodes .an-node.event[data-overview-title=true] :is(.an-record-category,.an-record-date,.an-record-criteria,.an-relation-summary){display:none!important}
 #an-map-design #an-nodes .an-node.event[data-overview-title=true] strong{display:block!important;white-space:nowrap!important;line-height:18px!important;-webkit-line-clamp:unset}
 @media(max-width:1100px){#an-map-design .an-body{grid-template-columns:minmax(0,1fr) 280px}}
-@media(max-width:700px){#an-map-design .an-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(160px,1fr) 164px;grid-template-areas:'map' 'library'}#an-map-design .an-inbox{grid-template-columns:minmax(0,1fr);padding:12px;gap:10px}#an-map-design .an-detail{grid-area:auto}}
+@media(max-width:700px){#an-map-design .an-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(160px,1fr) var(--an-library-height,164px);grid-template-areas:'map' 'library'}#an-map-design .an-inbox{grid-template-columns:minmax(0,1fr);padding:12px;gap:10px}#an-map-design .an-detail{grid-area:auto;bottom:calc(var(--an-library-height,164px) + 8px);max-height:calc(100% - var(--an-library-height,164px) - 16px)}}
+#an-map-design .an-library-panel{grid-area:library;min-height:0;min-width:0;overflow:hidden;display:flex;flex-direction:column;background:light-dark(#f8f9fb,#1d242c)}
+#an-map-design .an-library-panel .an-inbox{flex:1;min-height:0;padding-top:8px}
+#an-map-design .an-library-bar{display:flex;flex:none;align-items:center;gap:4px;padding:4px 8px;min-height:36px}
+#an-map-design .an-library-bar h3{flex:1;min-width:0;margin:0;font-size:13px;font-weight:800}
+#an-map-design .an-library-bar button,#an-map-design .an-library-grip{display:flex;align-items:center;justify-content:center;min-height:28px;padding:4px 8px;border-radius:8px;font:700 12px/20px Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;color:light-dark(#191f28,#e3e7ec);background:transparent;white-space:nowrap;transition:background-color 160ms;cursor:pointer}
+#an-map-design .an-library-bar h3 button{width:100%;justify-content:flex-start;gap:8px;font-weight:800;text-align:left}
+#an-map-design .an-library-toggle span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#an-map-design .an-library-toggle::before{content:'';flex:none;width:6px;height:6px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
+#an-map-design .an-library-toggle[aria-expanded=false]::before{transform:rotate(-45deg)}
+#an-map-design .an-library-grip{flex:none;min-width:32px;padding:4px;cursor:row-resize;touch-action:none;user-select:none}
+#an-map-design .an-library-grip::before{content:'';width:18px;height:6px;border-radius:1px;background:linear-gradient(to bottom,light-dark(#6b7684,#9aa4b1) 0 2px,transparent 2px 4px,light-dark(#6b7684,#9aa4b1) 4px 6px)}
+#an-map-design .an-library-bar button:disabled{opacity:.4;cursor:default}
+#an-map-design[data-library-collapsed=true] .an-library-panel .an-inbox{display:none!important}
+@media(hover:hover){#an-map-design .an-library-bar button:hover:not(:disabled),#an-map-design .an-library-grip:hover{background:light-dark(#f1f3f5,#252c35);filter:none}}
+#an-map-design .an-library-bar button:focus-visible,#an-map-design .an-library-grip:focus-visible{background:light-dark(#e9edf2,#303945);filter:none}
+@media(pointer:coarse){#an-map-design .an-library-bar button,#an-map-design .an-library-grip{min-height:44px;min-width:44px}}
+@media(prefers-reduced-motion:reduce){#an-map-design .an-library-bar button,#an-map-design .an-library-grip{transition:none}}
 `;root.append(memberRelationshipStyle);
 inbox.setAttribute('aria-label','종목별 근거 자료');inbox.querySelector('h3').textContent='근거 자료 · 사건과 구분해 보기';
+function memberLibraryHeight(value,min,max){return Math.max(min,Math.min(max,Number.isFinite(value)?value:min));}
+function installMemberLibraryResize(){
+  const body=root.querySelector('.an-body'),panel=document.createElement('section'),bar=document.createElement('div');
+  const heading=inbox.querySelector('h3'),title=heading.textContent,toggle=document.createElement('button');
+  panel.className='an-library-panel';panel.setAttribute('aria-label',title);bar.className='an-library-bar';
+  inbox.id='an-source-library';body.insertBefore(panel,inbox);panel.append(bar,inbox);
+  toggle.type='button';toggle.className='an-library-toggle';toggle.title='근거 자료 접기·펼치기';toggle.setAttribute('aria-controls',inbox.id);
+  const label=document.createElement('span');label.textContent=title;toggle.append(label);heading.replaceChildren(toggle);bar.append(heading);
+  const grip=document.createElement('div');grip.className='an-library-grip';grip.tabIndex=0;
+  grip.setAttribute('role','separator');grip.setAttribute('aria-orientation','horizontal');grip.setAttribute('aria-controls',inbox.id);
+  grip.setAttribute('aria-label','근거 자료 높이 조절');grip.title='위아래로 드래그 · 방향키로 높이 조절 · Home 접기 · End 최대로';bar.append(grip);
+  const button=(name,text)=>{const b=document.createElement('button');b.type='button';b.textContent=text;b.setAttribute('aria-label',name);b.title=name;bar.append(b);return b;};
+  const less=button('근거 자료 높이 줄이기','−'),more=button('근거 자료 높이 늘리기','+'),reset=button('근거 자료 기본 높이','기본');
+  const defaultHeight=()=>matchMedia('(max-width:700px)').matches?164:200;
+  let preferred=null,lastExpanded=defaultHeight();
+  const bounds=()=>{
+    const min=Math.ceil(bar.getBoundingClientRect().height),map=root.querySelector('.an-map');
+    const chrome=Math.max(0,map.clientHeight-space.clientHeight);
+    return {min,max:Math.max(min,Math.floor(body.clientHeight-chrome-160))};
+  };
+  function setHeight(value,remember=true){
+    const {min,max}=bounds(),height=memberLibraryHeight(value,min,max),collapsed=height<=min;
+    if(remember){preferred=height;if(!collapsed)lastExpanded=height;}
+    if(Math.abs(panel.getBoundingClientRect().height-height)>.5&&!memberPanelResizeOrigin)
+      memberPanelResizeOrigin={width:space.clientWidth,height:space.clientHeight,panX:state.panX,panY:state.panY};
+    root.style.setProperty('--an-library-height',height+'px');root.dataset.libraryCollapsed=String(collapsed);
+    inbox.inert=collapsed;toggle.setAttribute('aria-expanded',String(!collapsed));
+    grip.setAttribute('aria-valuemin',String(min));grip.setAttribute('aria-valuemax',String(max));grip.setAttribute('aria-valuenow',String(Math.round(height)));
+    grip.setAttribute('aria-valuetext',collapsed?'자료함 접힘':Math.round(height)+'픽셀');
+    less.disabled=collapsed;more.disabled=height>=max;
+  }
+  const currentHeight=()=>panel.getBoundingClientRect().height;
+  toggle.onclick=()=>{if(cancelGesture)return;setHeight(root.dataset.libraryCollapsed==='true'?lastExpanded:bounds().min);};
+  less.onclick=()=>{if(!cancelGesture)setHeight(currentHeight()-64);};
+  more.onclick=()=>{if(!cancelGesture)setHeight(currentHeight()+64);};
+  reset.onclick=()=>{if(cancelGesture)return;preferred=null;lastExpanded=defaultHeight();setHeight(lastExpanded,false);};
+  grip.onkeydown=e=>{
+    const {min,max}=bounds(),height=currentHeight();
+    const next=e.key==='ArrowUp'?height+(e.shiftKey?64:24):e.key==='ArrowDown'?height-(e.shiftKey?64:24):e.key==='Home'?min:e.key==='End'?max:null;
+    if(next===null||cancelGesture)return;e.preventDefault();e.stopPropagation();setHeight(next);
+  };
+  grip.onpointerdown=e=>{
+    if(e.button!==0||cancelGesture||nodeMoveActive)return;
+    e.preventDefault();e.stopPropagation();closePreview();grip.focus({preventScroll:true});
+    const start={y:e.clientY,height:currentHeight(),preferred,lastExpanded};let ended=false;
+    grip.setPointerCapture(e.pointerId);
+    function move(v){if(v.pointerId===e.pointerId)setHeight(start.height+start.y-v.clientY);}
+    function finish(v,cancelled=false){
+      if(ended||v&&v.pointerId!==e.pointerId)return;ended=true;
+      grip.removeEventListener('pointermove',move);grip.removeEventListener('pointerup',finish);
+      grip.removeEventListener('pointercancel',cancel);grip.removeEventListener('lostpointercapture',cancel);
+      if(grip.hasPointerCapture(e.pointerId))grip.releasePointerCapture(e.pointerId);
+      if(cancelGesture===abort)cancelGesture=null;
+      if(cancelled){preferred=start.preferred;lastExpanded=start.lastExpanded;setHeight(start.height,false);}
+    }
+    function cancel(v){finish(v,true);}const abort=()=>cancel();cancelGesture=abort;
+    grip.addEventListener('pointermove',move);grip.addEventListener('pointerup',finish);
+    grip.addEventListener('pointercancel',cancel);grip.addEventListener('lostpointercapture',cancel);
+  };
+  new ResizeObserver(()=>{if(!cancelGesture)setHeight(preferred??defaultHeight(),false);}).observe(body);
+  setHeight(defaultHeight(),false);
+}
+installMemberLibraryResize();
 const memberRelationshipDrawGroups=drawMemberGroups;
 drawMemberGroups=function(){
   memberRelationshipDrawGroups();memberGroupLines.replaceChildren();memberSectionLayer.replaceChildren();
