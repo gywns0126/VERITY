@@ -93,7 +93,8 @@ function memberOverviewSyncEdgePaths(){
   }
 }
 function drawMemberOverviewTitles(){
-  if(state.zoom>=.65)return;
+  const relationshipCentered=typeof memberRelationshipOverviewNodes==='function';
+  if(!relationshipCentered&&state.zoom>=.65)return;
   const entries=[...holdings.filter(shown).map(n=>({id:n.id,n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')})),
     ...(typeof memberRelationshipOverviewNodes==='function'?memberRelationshipOverviewNodes():[]),
     ...[...memberGroups.values()].filter(g=>g.records.length&&!g.button.hidden).map(g=>({id:g.id,n:g,el:g.button}))]
@@ -107,18 +108,22 @@ function drawMemberOverviewTitles(){
   const items=entries.map(({n,el})=>{
     el.dataset.summaryIcon='false';
     const p=point(n),w=el.offsetWidth,h=el.offsetHeight;
-    el.dataset.overviewWidth=String(w);el.dataset.overviewHeight=String(h);
     memberOverviewElements.set(el,{left:el.style.left,top:el.style.top,transform:el.style.transform});el.dataset.overviewTitle='true';
+    // Fit uses unscaled canonical dimensions, after the compact CSS is active.
+    // Legacy titles retain their original full-card fit measurement.
+    el.dataset.overviewWidth=String(relationshipCentered?el.offsetWidth:w);el.dataset.overviewHeight=String(relationshipCentered?el.offsetHeight:h);
     const group=n.kind!=='stock'&&n.kind!=='event',height=el.offsetHeight;
     return {x:p.x,y:group?p.y-height/2-h*state.zoom/2-6:p.y,w:el.offsetWidth,h:height,group,anchor:p,manual:!group&&memberOverviewManual(n)};
   });
-  // Relationship mode keeps the real button centered on its world anchor.
-  // Dense titles may overlap at extreme zoom-out; zoom in instead of retiling
-  // while panning, leaving the viewport, or ending an explicit node move.
-  if(typeof memberRelationshipOverviewNodes==='function'){
+  // One compact shape at every relationship zoom: scale the whole real button
+  // around its world anchor, never switch shape or retile at the legacy cutoff.
+  if(relationshipCentered){
     entries.forEach(({el},i)=>{
-      const p=items[i].anchor;el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.transform='translate(-50%,-50%)';
+      const p=items[i].anchor;el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.transform='translate(-50%,-50%) scale('+state.zoom+')';
     });
+    // Native rendering placed attached notes before compact card dimensions.
+    // Re-anchor only their presentation after the final title geometry is set.
+    renderNotes();
     memberOverviewSyncEdgePaths();return;
   }
   // Manual positions own their anchors, including during a pointer gesture.

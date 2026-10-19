@@ -31,7 +31,7 @@ function harness(width = 1280, height = 720, zoom = .2) {
         createElementNS: () => element(),
     }
     groupLines.before = node => { leader.group = node }
-    const baseCalls = { groups: 0, render: 0, edges: 0, visuals: 0 }
+    const baseCalls = { groups: 0, render: 0, edges: 0, visuals: 0, notes: 0 }
     const stockButtons = new Map(), eventButtons = []
     const nodesEl = {
         querySelector(selector) { return stockButtons.get(selector.match(/data-node="([^"]+)"/)?.[1]) },
@@ -54,7 +54,9 @@ function harness(width = 1280, height = 720, zoom = .2) {
                 const p = box.point(group)
                 Object.assign(group.button.style, { left: p.x + 'px', top: p.y + 'px', transform: 'translate(-50%,-50%) scale(' + box.state.zoom + ')' })
             }
+            box.renderNotes()
         },
+        renderNotes() { baseCalls.notes++ },
         renderMap() { baseCalls.render++;box.drawMemberGroups() },
         syncMemberEdgeLabels() { baseCalls.edges++ },
         applyMemberEdgeVisuals() { baseCalls.visuals++ },
@@ -295,7 +297,8 @@ test('relationship compact/full centers follow zoom affine projection without a 
             const n = box.nodeById[id]
             assert.ok(Math.abs((center.x - 195 - 19) / zoom - (n.x - .5) * 1000) < 1e-9)
             assert.ok(Math.abs((center.y - 360 + 23) / zoom - (n.y - .5) * 680) < 1e-9)
-            assert.equal(stockButtons.get(id).dataset.overviewTitle === 'true', zoom < .65)
+            assert.equal(stockButtons.get(id).dataset.overviewTitle, 'true')
+            assert.equal(stockButtons.get(id).style.transform, `translate(-50%,-50%) scale(${zoom})`)
         }
     }
 })
@@ -332,4 +335,76 @@ test('relationship explicit drag adopts no extra title offset and has no release
     assert.ok(Math.abs(dragged.x - start.x - 18) < 1e-10)
     assert.ok(Math.abs(dragged.y - start.y + 9) < 1e-10)
     f.render();assert.deepEqual(f.centers()[n.id], dragged, 'release redraw stays at the dragged point')
+})
+
+test('relationship compact canonical fit dimensions, notes and saved pins stay constant across all zooms', () => {
+    const f = relationshipHarness(), { box, stockButtons } = f
+    for (const el of stockButtons.values()) Object.defineProperties(el, {
+        offsetWidth: { get() { return this.dataset.summaryIcon === 'true' ? 44 : this.dataset.overviewTitle === 'true' ? 104 : 160 } },
+        offsetHeight: { get() { return this.dataset.summaryIcon === 'true' ? 44 : this.dataset.overviewTitle === 'true' ? 36 : 60 } },
+    })
+    box.state.marks = { 'event-a': { important: true } }
+    const saved = JSON.stringify({ nodes: box.nodeById, notes: box.state.notes, marks: box.state.marks })
+    for (const zoom of [.08, .2, .64, .649999, .65, .650001, 1.2, .2]) {
+        box.state.zoom = zoom;f.render();f.assertAnchors()
+        for (const [id, el] of stockButtons) {
+            assert.equal(el.dataset.overviewTitle, 'true')
+            assert.equal(el.dataset.overviewWidth, String(el.offsetWidth), `canonical fit width ${id}`)
+            assert.equal(el.dataset.overviewHeight, String(el.offsetHeight), `canonical fit height ${id}`)
+            assert.equal(el.dataset.overviewWidth, '104')
+            assert.equal(el.dataset.overviewHeight, '36')
+            assert.equal(el.style.transform, `translate(-50%,-50%) scale(${zoom})`)
+            const center = f.centers()[id], n = box.nodeById[id]
+            // Attached-note anchors use the same point; camera changes must
+            // not add a label offset or a threshold-dependent display origin.
+            assert.deepEqual(center, box.point(n))
+        }
+        assert.equal(JSON.stringify({ nodes: box.nodeById, notes: box.state.notes, marks: box.state.marks }), saved)
+    }
+})
+
+test('relationship drag and pan remain continuous above and below the former compact threshold', () => {
+    for (const zoom of [.08, .2, .64, .649999, .65, .650001, 1.2]) {
+        const f = relationshipHarness(), { box } = f
+        box.state.zoom = zoom;f.render()
+        const n = box.nodeById['event-a'], raw = clone(n), before = f.centers()[n.id]
+        box.memberOverviewRebaseMovement(n.id)
+        assert.deepEqual(n, raw, 'centered presentation adds no drag-start coordinate change')
+        n.x += 18 / (1000 * zoom);n.y -= 9 / (680 * zoom)
+        f.render();const dragged = f.centers()[n.id]
+        assert.ok(Math.abs(dragged.x - before.x - 18) < 1e-10)
+        assert.ok(Math.abs(dragged.y - before.y + 9) < 1e-10)
+        f.render();assert.deepEqual(f.centers()[n.id], dragged)
+        box.state.panX += 37;box.state.panY -= 21;f.render();f.assertAnchors()
+        assert.ok(Math.abs(f.centers()[n.id].x - dragged.x - 37) < 1e-10)
+        assert.ok(Math.abs(f.centers()[n.id].y - dragged.y + 21) < 1e-10)
+    }
+})
+
+test('relationship attached note is refreshed from actual noteAnchor after final compact dimensions and transform', () => {
+    const f = relationshipHarness(), { box, stockButtons } = f
+    const canvas = fs.readFileSync(process.env.MEMBER_MAP_CANVAS || path.resolve(__dirname, '../vercel-api/public/member-map-canvas.html'), 'utf8')
+    const start = canvas.indexOf('function noteAnchor('), end = canvas.indexOf('function noteTargetName(', start)
+    assert.ok(start >= 0 && end > start)
+    box.nodeScale = () => box.state.zoom
+    vm.runInNewContext(canvas.slice(start, end), box)
+    const el = stockButtons.get('event-a'), note = box.state.notes.attached
+    Object.defineProperties(el, {
+        offsetWidth: { get() { return this.dataset.overviewTitle === 'true' ? 104 : 160 } },
+        offsetHeight: { get() { return this.dataset.overviewTitle === 'true' ? 36 : 60 } },
+    })
+    const calls = []
+    box.renderNotes = () => calls.push({ anchor: clone(box.noteAnchor(note)), compact: el.dataset.overviewTitle,
+        transform: el.style.transform })
+    const saved = JSON.stringify({ nodes: box.nodeById, notes: box.state.notes })
+    for (const zoom of [.2, .649999, .65, .650001, 1.2]) {
+        calls.length = 0;box.state.zoom = zoom;f.render()
+        assert.equal(calls.length, 2, 'early native note placement plus one non-recursive post-title refresh')
+        const early = calls[0], final = calls.at(-1), p = box.point(box.nodeById[note.target])
+        assert.notDeepEqual(early.anchor, final.anchor, 'fixture reproduces dimensions changing after native note placement')
+        assert.deepEqual(final.anchor, { x: p.x + 104 * zoom / 2 - 2, y: p.y - 36 * zoom / 2 })
+        assert.equal(final.compact, 'true')
+        assert.equal(final.transform, `translate(-50%,-50%) scale(${zoom})`)
+        assert.equal(JSON.stringify({ nodes: box.nodeById, notes: box.state.notes }), saved)
+    }
 })
