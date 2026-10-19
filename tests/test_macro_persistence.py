@@ -130,6 +130,44 @@ def test_exact_committed_outputs_and_dirty_producer_are_preserved(repos):
     assert repos.git(repos.producer, "rev-parse", "HEAD").strip() == source
 
 
+def test_shallow_merge_fetch_keeps_only_head_and_preserves_prepared_blobs(repos):
+    # Prepared HEAD plus its baseline mirror the shallow CI checkout + local commit.
+    shallow = repos.root / "shallow-producer"
+    repos.git(repos.root, "clone", "--depth=2", "-b", "main", repos.producer.as_uri(), str(shallow))
+    repos.configure(shallow)
+    repos.git(shallow, "remote", "set-url", "origin", repos.remote.as_uri())
+    repos.producer = shallow
+    source = repos.git(shallow, "rev-parse", "HEAD").strip()
+    base = repos.git(shallow, "rev-parse", "HEAD^").strip()
+
+    # The remote acquires a merge whose side parent is outside CI's shallow boundary.
+    repos.git(repos.writer, "checkout", "-b", "side")
+    for i in range(6):
+        repos.write(repos.writer, "side.txt", f"side {i}\n".encode())
+        repos.commit(repos.writer, f"side change {i}")
+    repos.git(repos.writer, "checkout", "main")
+    repos.write(repos.writer, module.HEALTH, b'{"health":"concurrent"}\n')
+    repos.write(repos.writer, module.LEDGER, BASE_ROW + REMOTE_ROW)
+    repos.push_writer()
+    repos.git(repos.writer, "merge", "--no-ff", "side", "-m", "concurrent merge")
+    repos.git(repos.writer, "push", "origin", "main")
+    # Previous fetch traversed the missing ancestry even from a shallow clone.
+    repos.git(shallow, "fetch", "--no-tags", "origin", "refs/heads/main")
+    assert int(repos.git(shallow, "rev-list", "--count", "FETCH_HEAD")) > 6
+    remote_before = repos.remote_head().strip()
+    repos.write(shallow, "unrelated.txt", b"private dirty code\n")
+    result = repos.persist()
+    assert repos.git(shallow, "rev-list", "--count", "FETCH_HEAD").strip() == b"1"
+    assert repos.git(shallow, "rev-parse", "HEAD").strip() == source
+    assert repos.git(shallow, "show", base.decode() + ":" + module.LEDGER) == BASE_ROW
+    assert repos.remote_blob(module.SNAPSHOT) == SNAPSHOT
+    assert repos.remote_blob(module.LEDGER) == BASE_ROW + REMOTE_ROW + LOCAL_ROW
+    assert repos.remote_blob(module.HEALTH) == b'{"health":"concurrent"}\n'
+    assert repos.remote_blob("side.txt") == b"side 5\n"
+    assert repos.remote_blob("unrelated.txt") == b"remote writer\n"
+    assert repos.git(repos.remote, "rev-parse", result + "^").strip() == remote_before
+
+
 @pytest.mark.parametrize("health", [b'{"scan":"remote"}\n', b'{\n"macro":0,\n"scan":7\n}\n'])
 def test_concurrent_health_is_preserved_as_exact_whole_blob(repos, health):
     repos.push_writer(module.HEALTH, health)

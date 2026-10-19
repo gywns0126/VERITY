@@ -122,28 +122,47 @@ jobs:
           fi
           python scripts/cron_health_monitor.py $ARGS
 
+      - name: Preserve prepared health outputs
+        # Preserve before Git transport so a later timeout/cancellation cannot lose this run.
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-prepared-${{ github.run_id }}
+          path: |
+            data/metadata/cron_health.jsonl
+            data/metadata/freshness_observations.jsonl
+            data/freshness_board.json
+            data/metadata/publish_verify.json
+            data/metadata/publish_verify.jsonl
+            data/metadata/data_health.json
+          retention-days: 3
+          if-no-files-found: error
+
       - name: Commit cron_health.jsonl
+        id: persist
         # 2026-05-17 Phase 3 audit fix — cron_health_monitor 결과 persist.
         # 옛 구현 = 텔레그램 push 만 + stdout 출력 휘발 → 운영자 과거 trend 추적 불가.
-        # 매시 1 commit 박힘 (24/일) — macro_collect 48/일, price_pulse 매분 대비 noise 0.
         # 2026-05-30 fix — monitor step 의도된 exit 1 (P0 시그널) 후 commit step skipped 결함.
         # if: success() || failure() = cancelled 제외 항상 실행 → P0 시그널 후에도 jsonl persist.
         # 5/26~5/30 5일 연속 commit skip (88 run) repo cron_health.jsonl 3일 stale 학습.
         if: success() || failure()
+        timeout-minutes: 3
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/metadata/cron_health.jsonl data/metadata/freshness_observations.jsonl data/freshness_board.json data/metadata/publish_verify.json data/metadata/publish_verify.jsonl data/metadata/data_health.json 2>/dev/null || true
+          for path in \
+            data/metadata/cron_health.jsonl \
+            data/metadata/freshness_observations.jsonl \
+            data/freshness_board.json \
+            data/metadata/publish_verify.json \
+            data/metadata/publish_verify.jsonl \
+            data/metadata/data_health.json; do
+            test -f "$path" || { echo "::error::Missing health output: $path"; exit 1; }
+            git add -- "$path"
+          done
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔔 cron_health ${TIME_KST}"
-          BRANCH="${{ github.ref_name }}"
-          for i in 1 2 3 4 5; do
-            git rebase --abort 2>/dev/null || true
-            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
-              exit 0
-            fi
-            echo "Push attempt $i failed, retrying in $((i * 10))s..."
-            sleep $((i * 10))
-          done
-          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
+          python scripts/ci/persist_health_snapshot.py "$TARGET_BRANCH"
