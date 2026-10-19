@@ -175,3 +175,13 @@ def test_workflow_stops_publication_and_retains_outputs_on_persistence_failure()
     result = subprocess.run([sys.executable, str(ROOT / "scripts/ci/persist_cockpit_snapshot.py"),
                              "--help"], capture_output=True, text=True)
     assert result.returncode == 0
+
+
+def test_missing_cockpit_output_remains_a_hard_failure(repos):
+    remote, _, producer = repos
+    git(producer, "rm", "--", module.PATHS[0])
+    git(producer, "commit", "-m", "missing required output")
+    head = git(remote, "rev-parse", "main")
+    with pytest.raises(module.GitFailure, match="read_output failed"):
+        module.persist(producer, "main", retry_delay=0)
+    assert git(remote, "rev-parse", "main") == head

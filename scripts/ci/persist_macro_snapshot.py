@@ -88,7 +88,10 @@ def persist(repo, branch, attempts=3, budget_s=180, retry_delay=5):
         index_env = {"GIT_INDEX_FILE": str(Path(temp) / "index")}
         for attempt in range(1, attempts + 1):
             try:
-                run("fetch", "--no-tags", "origin", f"refs/heads/{branch}", phase="fetch")
+                # Match cockpit persistence: only the remote tree/head is needed,
+                # not missing side-parent ancestry across concurrent merges.
+                run("fetch", "--depth=1", "--no-tags", "--no-recurse-submodules",
+                    "origin", f"refs/heads/{branch}", phase="fetch")
                 remote = run("rev-parse", "FETCH_HEAD").stdout.decode().strip()
                 incoming = {path: blob(remote, path) for path in PATHS}
                 if incoming[SNAPSHOT] not in (before[SNAPSHOT], prepared[SNAPSHOT]):

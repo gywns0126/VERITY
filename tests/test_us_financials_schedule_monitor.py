@@ -306,9 +306,13 @@ def test_workflow_always_checks_and_persists_us_health():
     assert step["if"] == "success() || failure()"
     assert step["run"] == "python scripts/us_financials_schedule_monitor.py --notify"
     assert step["env"]["GH_TOKEN"] == "${{ secrets.GITHUB_TOKEN }}"
-    persist = steps[index + 1]
+    artifact = next(s for s in steps if s.get("uses") == "actions/upload-artifact@v4")
+    persist = next(s for s in steps if s.get("id") == "persist")
+    assert index < steps.index(artifact) < steps.index(persist)
+    assert "data/metadata/us_financials_schedule_health.json" in artifact["with"]["path"]
     assert persist["if"] == "success() || failure()"
     assert "git add -- data/metadata/us_financials_schedule_health.json" in persist["run"]
     assert "github.ref == 'refs/heads/main'" in workflow["jobs"]["monitor"]["if"]
-    assert 'BRANCH="${{ github.ref_name }}"' in persist["run"]
-    assert persist["run"].strip().endswith("exit 1")
+    assert persist["env"]["TARGET_BRANCH"] == "${{ github.ref_name }}"
+    assert persist["run"].strip().endswith('python scripts/ci/persist_health_snapshot.py "$TARGET_BRANCH"')
+    assert "continue-on-error" not in persist
