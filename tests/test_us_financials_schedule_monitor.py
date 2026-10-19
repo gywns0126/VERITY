@@ -309,3 +309,6 @@ def test_workflow_always_checks_and_persists_us_health():
     persist = steps[index + 1]
     assert persist["if"] == "success() || failure()"
     assert "git add -- data/metadata/us_financials_schedule_health.json" in persist["run"]
+    assert "github.ref == 'refs/heads/main'" in workflow["jobs"]["monitor"]["if"]
+    assert 'BRANCH="${{ github.ref_name }}"' in persist["run"]
+    assert persist["run"].strip().endswith("exit 1")

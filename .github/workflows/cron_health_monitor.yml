@@ -57,7 +57,7 @@ jobs:
             core.info(duplicate ? 'Slot already attempted; skip duplicate' : 'First run in slot');
   monitor:
     needs: cadence
-    if: always() && !cancelled() && (needs.cadence.result == 'skipped' || needs.cadence.outputs.run == 'true')
+    if: always() && !cancelled() && github.ref == 'refs/heads/main' && (needs.cadence.result == 'skipped' || needs.cadence.outputs.run == 'true')
     runs-on: ubuntu-latest
     concurrency:
       group: cron-health-monitor
@@ -161,4 +161,5 @@ jobs:
             echo "Push attempt $i failed, retrying in $((i * 10))s..."
             sleep $((i * 10))
           done
-          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
+          echo "::error::push 5회 실패 — health receipt not persisted"
+          exit 1
