@@ -4750,6 +4750,15 @@ function drawMemberOverviewTitles(){
     const group=n.kind!=='stock'&&n.kind!=='event',height=el.offsetHeight;
     return {x:p.x,y:group?p.y-height/2-h*state.zoom/2-6:p.y,w:el.offsetWidth,h:height,group,anchor:p,manual:!group&&memberOverviewManual(n)};
   });
+  // Relationship mode keeps the real button centered on its world anchor.
+  // Dense titles may overlap at extreme zoom-out; zoom in instead of retiling
+  // while panning, leaving the viewport, or ending an explicit node move.
+  if(typeof memberRelationshipOverviewNodes==='function'){
+    entries.forEach(({el},i)=>{
+      const p=items[i].anchor;el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.transform='translate(-50%,-50%)';
+    });
+    memberOverviewSyncEdgePaths();return;
+  }
   // Manual positions own their anchors, including during a pointer gesture.
   // Automatic titles avoid them rather than snapping a dragged title to a grid.
   const fixed=items.map(item=>item.manual?{x:item.x,y:item.y,left:item.x-item.w/2,right:item.x+item.w/2,top:item.y-item.h/2,bottom:item.y+item.h/2}:null);

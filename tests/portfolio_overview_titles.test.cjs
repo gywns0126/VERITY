@@ -46,7 +46,7 @@ function harness(width = 1280, height = 720, zoom = .2) {
             y: height / 2 + (n.y - .5) * 680 * box.state.zoom + box.state.panY } },
         drawMemberGroups() {
             baseCalls.groups++
-            for (const n of box.holdings) {
+            for (const n of [...box.holdings, ...(box.testRecords || [])]) {
                 const button = stockButtons.get(n.id), p = box.point(n)
                 Object.assign(button.style, { left: p.x + 'px', top: p.y + 'px', transform: 'translate(-50%,-50%) scale(' + box.state.zoom + ')' })
             }
@@ -226,4 +226,110 @@ test('real stock/group buttons stay interactive, above source cards, and keep ca
     assert.ok(buttons.every(button => button.style.transform.includes('scale(0.65)')))
     assert.equal(leader.children.length, 0)
     assert.deepEqual(box.root.dataset, datasetBefore)
+})
+
+function relationshipHarness() {
+    const fixture = harness(390, 720, .2)
+    const { box, stockButtons } = fixture
+    const records = [], excluded = new Set()
+    box.testRecords = records
+    box.state.notes = { attached: { id: 'attached', target: 'event-a', text: 'preserved note' },
+        free: { id: 'free', x: .8, y: .9, text: 'preserved free note' } }
+    box.nodeById = {};box.WORLD_WIDTH = 1000;box.WORLD_HEIGHT = 680
+    box.shown = n => !excluded.has(n.id)
+    box.memberRelationshipOverviewNodes = () => records.filter(box.shown)
+        .map(n => ({ id: n.id, n, el: stockButtons.get(n.id) }))
+    const add = (id, kind, x, y) => {
+        const n = { id, kind, x, y }, button = element(104, 36)
+        stockButtons.set(id, button);box.nodeById[id] = n
+        ;(kind === 'stock' ? box.holdings : records).push(n)
+        return n
+    }
+    add('stock-a', 'stock', .48, .5);add('stock-b', 'stock', .52, .5)
+    add('event-a', 'event', .5, .51);add('event-b', 'event', .51, .52)
+    const note = element();note.rect = { left: 100, right: 490, top: 50, bottom: 770 }
+    box.noteEls.set('free', note)
+    // In this mode neither a full-canvas note nor dense titles authorize slots.
+    box.memberOverviewTitleSlots = () => assert.fail('relationship mode must never call the screen-space allocator')
+    const render = () => {
+        for (const n of records) {
+            const button = stockButtons.get(n.id), p = box.point(n)
+            button.hidden = !box.shown(n)
+            Object.assign(button.style, { left: p.x + 'px', top: p.y + 'px', transform: 'translate(-50%,-50%) scale(' + box.state.zoom + ')' })
+        }
+        box.renderMap()
+    }
+    const centers = () => Object.fromEntries([...box.holdings, ...records].filter(box.shown).map(n => {
+        const el = stockButtons.get(n.id)
+        return [n.id, { x: parseFloat(el.style.left), y: parseFloat(el.style.top) }]
+    }))
+    const assertAnchors = () => {
+        for (const [id, center] of Object.entries(centers())) assert.deepEqual(center, box.point(box.nodeById[id]), `point-only ${id}`)
+        assert.equal(fixture.leader.children.length, 0, 'no collision-offset leaders in relationship mode')
+    }
+    return { ...fixture, records, excluded, add, render, centers, assertAnchors }
+}
+
+test('relationship titles translate by the exact pan delta, including repeated redraw and pointerup', () => {
+    const f = relationshipHarness(), { box } = f
+    const saved = JSON.stringify({ nodes: box.nodeById, notes: box.state.notes })
+    f.render();const before = f.centers()
+    box.state.panX += 137;box.state.panY -= 83
+    f.render();f.assertAnchors()
+    for (const [id, center] of Object.entries(f.centers())) {
+        assert.ok(Math.abs(center.x - before[id].x - 137) < 1e-10)
+        assert.ok(Math.abs(center.y - before[id].y + 83) < 1e-10)
+    }
+    const panned = f.centers()
+    f.render();f.render() // Released pointer / follow-up redraw cannot retile.
+    assert.deepEqual(f.centers(), panned)
+    assert.equal(JSON.stringify({ nodes: box.nodeById, notes: box.state.notes }), saved)
+})
+
+test('relationship compact/full centers follow zoom affine projection without a .65 transition jump', () => {
+    const f = relationshipHarness(), { box, stockButtons } = f
+    box.state.panX = 19;box.state.panY = -23
+    for (const zoom of [.08, .2, .64, .649999, .65, .650001, 1.2, .2]) {
+        box.state.zoom = zoom;f.render();f.assertAnchors()
+        for (const [id, center] of Object.entries(f.centers())) {
+            const n = box.nodeById[id]
+            assert.ok(Math.abs((center.x - 195 - 19) / zoom - (n.x - .5) * 1000) < 1e-9)
+            assert.ok(Math.abs((center.y - 360 + 23) / zoom - (n.y - .5) * 680) < 1e-9)
+            assert.equal(stockButtons.get(id).dataset.overviewTitle === 'true', zoom < .65)
+        }
+    }
+})
+
+test('relationship viewport entry/exit, new records, filter/fold and note changes never retile surviving anchors', () => {
+    const f = relationshipHarness(), { box, records, stockButtons, excluded } = f
+    f.render();const initial = f.centers(), raw = JSON.stringify(box.nodeById)
+    box.state.panX = -1000;f.render();f.assertAnchors()
+    assert.ok(Object.values(f.centers()).every(p => p.x < 0), 'offscreen titles remain world-projected, not viewport-clamped')
+    box.state.panX = 0;f.render();assert.deepEqual(f.centers(), initial)
+    f.add('event-0-new', 'event', .5, .51);f.render()
+    for (const [id, p] of Object.entries(initial)) assert.deepEqual(f.centers()[id], p)
+    excluded.add(records[0].id);box.state.filter = 'filtered';f.render();f.assertAnchors()
+    for (const [id, p] of Object.entries(initial)) if (!excluded.has(id)) assert.deepEqual(f.centers()[id], p)
+    excluded.clear();box.state.filter = 'all'
+    const [folded] = records.splice(1, 1);f.render();f.assertAnchors()
+    for (const [id, p] of Object.entries(initial)) if (id !== folded.id) assert.deepEqual(f.centers()[id], p)
+    records.splice(1, 0, folded);f.render()
+    box.noteEls.get('free').hidden = true;f.render();f.assertAnchors()
+    for (const [id, p] of Object.entries(initial)) assert.deepEqual(f.centers()[id], p)
+    for (const n of Object.values(JSON.parse(raw))) assert.deepEqual(box.nodeById[n.id], n)
+    assert.ok([...stockButtons.values()].filter(el => !el.hidden).every(el => el.dataset.overviewTitle === 'true'))
+})
+
+test('relationship explicit drag adopts no extra title offset and has no release-time slot jump', () => {
+    const f = relationshipHarness(), { box } = f
+    f.render()
+    const n = box.nodeById['event-a'], before = clone(n), start = f.centers()[n.id]
+    box.memberOverviewRebaseMovement(n.id)
+    assert.deepEqual(n, before, 'point-centered title adds zero canonical delta at drag threshold')
+    n.x += 18 / (1000 * box.state.zoom);n.y -= 9 / (680 * box.state.zoom)
+    f.render();f.assertAnchors()
+    const dragged = f.centers()[n.id]
+    assert.ok(Math.abs(dragged.x - start.x - 18) < 1e-10)
+    assert.ok(Math.abs(dragged.y - start.y + 9) < 1e-10)
+    f.render();assert.deepEqual(f.centers()[n.id], dragged, 'release redraw stays at the dragged point')
 })
