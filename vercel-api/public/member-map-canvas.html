@@ -1807,6 +1807,27 @@ html>body{padding:0}</style>
     @media(max-width:700px) { #an-map-design[data-focused=true] .an-detail:not([data-notes=true]) { height:32%; } }
     @media(pointer:coarse) { #an-map-design .an-tool-menu summary,#an-map-design .an-control-panel select { min-height:44px; } }
 
+    /* Compact chrome: popovers never consume the fixed map viewport. */
+    #an-map-design .an-head{min-height:44px;padding:6px 12px;gap:8px}
+    #an-map-design .an-tools{gap:4px;padding:4px 8px}
+    #an-map-design .an-controls-row{display:contents}
+    #an-map-design #an-stock-search{flex:0 0 auto;font-weight:700}
+    #an-map-design .an-tools .an-zoom{flex-wrap:nowrap}
+    #an-map-design .an-tools .an-save-note{margin:0;font-weight:600}
+    #an-map-design .an-compact-tools{position:relative;margin-left:auto}
+    #an-map-design .an-compact-tools>summary{display:flex;align-items:center;gap:6px;list-style:none;cursor:pointer;font-weight:700}
+    #an-map-design .an-compact-tools>summary::-webkit-details-marker{display:none}
+    #an-map-design .an-compact-tools>summary::after{content:'';width:5px;height:5px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
+    #an-map-design .an-compact-tools[open]>summary::after{transform:rotate(225deg)}
+    #an-map-design #an-filter-panel,#an-map-design .an-compact-panel{position:absolute;z-index:30;top:100%;padding:12px;max-height:min(320px,55dvh);overflow:auto;border-radius:12px;background:var(--an-panel);box-shadow:0 4px 16px var(--an-shadow)}
+    #an-map-design #an-filter-panel{left:8px;right:8px;justify-content:flex-start;flex-wrap:wrap;gap:8px 12px}
+    #an-map-design .an-compact-panel{right:0;display:grid;gap:6px;min-width:168px}
+    #an-map-design .an-compact-panel>.an-tool{text-align:left;white-space:nowrap;min-height:32px;font-weight:700}
+    @media(hover:hover){#an-map-design .an-compact-tools>summary:hover,#an-map-design .an-compact-panel>.an-tool:hover:not(:disabled){background:light-dark(#f1f3f5,#252c35);filter:none}}
+    #an-map-design .an-compact-tools>summary:focus-visible,#an-map-design .an-compact-panel>.an-tool:focus-visible{background:light-dark(#e9edf2,#303945);filter:none}
+    @media(max-width:700px){#an-map-design .an-head{padding:6px 10px}#an-map-design .an-tools{padding:4px 8px}#an-map-design #an-filter-panel{flex-basis:auto;padding:12px}#an-map-design .an-tools .an-zoom{flex-wrap:wrap}#an-map-design #an-stock-search{flex-basis:116px}#an-map-design .an-tools .an-save-note{font-size:11px}}
+    @media(pointer:coarse){#an-map-design .an-compact-tools>summary,#an-map-design .an-compact-panel>.an-tool{min-height:44px;min-width:44px}}
+
   </style>
   <header class="an-head"><div class="an-brand"><svg width="22" height="22" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle;margin-right:4px" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M140.963 525.5C140.963 739 314.963 876.5 499.963 876.5C684.963 876.5 860.463 739 860.463 525.5" stroke="#3A4268" stroke-width="150" stroke-linecap="round"/><path d="M714.618 431.5C714.618 601 627.618 720 499.618 720C375.906 720 282.118 587 286.618 431.5C286.618 265.815 397.618 122 500.618 122C603.618 122 714.618 262 714.618 431.5Z" fill="#6B51EA"/></svg> ALPHANEST</div><h1 class="an-title">내 종목 작업판</h1><span class="an-demo">가상 회사·사건으로 만든 디자인 시안</span><button type="button" class="an-tool cursor-interaction" id="an-guide" aria-haspopup="dialog">사용 가이드</button></header>
   <dialog class="an-intro" id="an-intro" aria-labelledby="an-intro-title" aria-describedby="an-intro-summary">
@@ -3877,8 +3898,8 @@ nodesEl.addEventListener('pointerout',e=>inspectMemberRecord(e.relatedTarget));
 nodesEl.addEventListener('focusin',e=>inspectMemberRecord(e.target));
 nodesEl.addEventListener('focusout',e=>inspectMemberRecord(e.relatedTarget));
 const memberGroupNames={filing:'공시',news:'뉴스',business:'사업 자료',candidates:'관계 후보',relationships:'확인된 관계',events:'공통 사건',government:'정부 발표',prices:'가격 자료',other:'기타 자료',fx:'환율',commodity:'원자재',calendar:'발표 일정'};
-// Only optional filters fold. Existing search, camera, history and save controls
-// keep their handlers and remain visible; disclosure never writes a member draft.
+// Optional controls overlay the map without resizing it or writing a member draft.
+// Keep search, camera, history, notes and save directly available.
 function installMemberFilterDisclosure(){
   const panel=root.querySelector('.an-filters'),row=root.querySelector('.an-controls-row');
   if(!panel||!row)return;
@@ -3886,21 +3907,36 @@ function installMemberFilterDisclosure(){
   const toggle=document.createElement('button');toggle.type='button';toggle.className='an-tool';toggle.id='an-filter-toggle';
   toggle.setAttribute('aria-controls',panel.id);row.insertBefore(toggle,panel);
   const changed=root.querySelector('#an-changed-toggle');if(changed)row.insertBefore(changed,panel);
-  const narrow=matchMedia('(max-width:700px)');let open=false;
+  const more=document.createElement('details');more.className='an-compact-tools';
+  const summary=document.createElement('summary');summary.className='an-tool';summary.textContent='도구';
+  const tools=document.createElement('div');tools.className='an-compact-panel';tools.setAttribute('role','group');tools.setAttribute('aria-label','추가 지도 도구');
+  for(const control of [root.querySelector('#an-stock-remove'),root.querySelector('#an-reset-layout'),motionButton])if(control)tools.append(control);
+  more.append(summary,tools);adjustTools.append(more);
+  let open=false;
   function sync(){
-    toggle.hidden=!narrow.matches;panel.hidden=narrow.matches&&!open;
+    panel.hidden=!open;
     toggle.setAttribute('aria-expanded',String(!panel.hidden));
     toggle.setAttribute('aria-label',panel.hidden?'필터 펼치기':'필터 접기');
     const active=[...panel.querySelectorAll('select')].filter(el=>el.value!=='all'&&el.value!=='changed').length;
     toggle.textContent='필터'+(active?' · '+active:'');
   }
-  toggle.onclick=()=>{closePreview();open=!open;sync();};
+  toggle.onclick=()=>{closePreview();open=!open;more.open=false;sync();};
+  more.addEventListener('toggle',()=>{if(more.open){open=false;sync();}});
   panel.addEventListener('change',sync);panel.addEventListener('click',sync);
   if(changed)changed.addEventListener('click',sync);
-  panel.addEventListener('keydown',e=>{
-    if(e.key==='Escape'&&narrow.matches&&open&&!e.defaultPrevented){open=false;sync();toggle.focus({preventScroll:true});e.preventDefault();e.stopPropagation();}
+  primaryTools.addEventListener('keydown',e=>{
+    if(e.key!=='Escape'||e.defaultPrevented)return;
+    const target=open?toggle:more.open?summary:null;if(!target)return;
+    open=false;more.open=false;sync();target.focus({preventScroll:true});e.preventDefault();e.stopPropagation();
   });
-  narrow.addEventListener('change',sync);sync();
+  root.addEventListener('pointerdown',e=>{
+    if(!panel.contains(e.target)&&!toggle.contains(e.target)){open=false;sync();}
+    if(!more.contains(e.target))more.open=false;
+  });
+  primaryTools.addEventListener('focusout',e=>{
+    if(!primaryTools.contains(e.relatedTarget)){open=false;more.open=false;sync();}
+  });
+  sync();
 }
 installMemberFilterDisclosure();
 // Summary chips keep the accepted surfaces/icons, not full articles at a fixed size.
