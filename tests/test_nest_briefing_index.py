@@ -5,7 +5,7 @@ PM 요청: 회원이 둥지에 보유한 종목의 최근 공시 + 국민연금 
 
 🚨 지키는 계약 3개
  1. 색인은 압축돼야 한다 — 원본 피드(US 4.1MB + KR 862KB)를 브라우저가 못 받는다
- 2. 자기신고 — "색인에 없음 = 창 안에 공시 없음(미수집 아님)" 을 _meta 가 말해야 한다
+ 2. 자기신고 — 색인 미등재와 공시 부재를 구분하고 수집 범위의 한계를 설명한다
  3. 🚨 국민연금 배지는 **없을 때 아무것도 안 그린다** — 원천이 5% 대량보유 공시라
     부재는 "미보유" 가 아니라 "5% 미만" 이다. "미보유" 라고 쓰면 거짓이 된다
 """
@@ -26,6 +26,43 @@ TSX = ROOT / "framer-components" / "public-probe" / "PublicHoldingsTab.tsx"
 def test_builder_caps_window_and_per_ticker():
     s = SRC.read_text(encoding="utf-8")
     assert "WINDOW_DAYS" in s and "MAX_PER_TICKER" in s, "크기 방어 상한이 사라졌다"
+
+
+@pytest.mark.parametrize("market", ["KR", "US"])
+@pytest.mark.parametrize("broken", [None, {}, {"items": None}, {"items": {}},
+    {"items": [None]}, {"items": [{"ticker": "A"}]},
+    {"items": [{"ticker": "A", "disclosures": [None]}]}])
+def test_missing_or_invalid_feed_preserves_previous_index(monkeypatch, tmp_path, market, broken):
+    from api.builders import nest_briefing_index_builder as b
+    paths = {m: tmp_path / f"{m}.json" for m in ("KR", "US")}
+    for m, path in paths.items():
+        if m != market:
+            path.write_text(json.dumps({"items": []}))
+        elif broken is not None:
+            path.write_text(json.dumps(broken))
+    out = tmp_path / "index.json"
+    out.write_text("previous-good")
+    monkeypatch.setattr(b, "KR_FEED", str(paths["KR"]))
+    monkeypatch.setattr(b, "US_FEED", str(paths["US"]))
+    monkeypatch.setattr(b, "OUT_PATH", str(out))
+    assert b.main() == 1
+    assert out.read_text() == "previous-good"
+
+
+def test_valid_empty_sources_are_zero_without_claiming_no_disclosures(monkeypatch, tmp_path):
+    from api.builders import nest_briefing_index_builder as b
+    feed = tmp_path / "empty.json"
+    feed.write_text(json.dumps({"items": []}))
+    out = tmp_path / "index.json"
+    monkeypatch.setattr(b, "KR_FEED", str(feed))
+    monkeypatch.setattr(b, "US_FEED", str(feed))
+    monkeypatch.setattr(b, "OUT_PATH", str(out))
+    assert b.main() == 0
+    result = json.loads(out.read_text())
+    assert result["tickers"] == {}
+    assert result["_meta"]["counts"]["total"] == 0
+    assert "미수집 아님" not in result["_meta"]["coverage_note"]
+    assert "수집 범위" in result["_meta"]["coverage_note"]
 
 
 def test_index_shape_and_selfreport():

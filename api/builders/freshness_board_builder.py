@@ -162,8 +162,9 @@ def build_board() -> dict:
         f = s.get("file", "")
         obj = None   # glob 분기에서도 아래 내용 신선도 블록이 참조 — 미초기화 시 NameError
         group = None
-        if "*" in f:
-            group = glob_freshness(f, s.get("ts_field"), DATA_DIR)
+        if "*" in f or "expected_files" in s:
+            declared = {"expected_files": s["expected_files"]} if "expected_files" in s else {}
+            group = glob_freshness(f, s.get("ts_field"), DATA_DIR, **declared)
             t = group["oldest"]
         else:
             path = os.path.join(DATA_DIR, f)
@@ -186,14 +187,17 @@ def build_board() -> dict:
                         row["all_records_revalidated"] = False
             t = _parse_ts_kst(ts) if ts else None
         if t is None:
-            if "*" in f:
-                reason = "no_ts"
+            if group is not None:
+                reason = group.get("error") or "no_ts"
             else:
                 reason = ("missing" if not exists else "unreadable" if obj is None
                           else "no_ts" if not ts else "bad_ts")
             # Internal diagnostics must name omitted streams even while schedule is closed.
             # Never substitute file/commit time or event dates for collection evidence.
-            skipped.append({"id": sid, "reason": reason})
+            omitted = {"id": sid, "reason": reason}
+            if group is not None:
+                omitted["group_counts"] = {k: group[k] for k in ("members", "measured", "unmeasured")}
+            skipped.append(omitted)
             if s.get("criticality") in unmeasured:
                 unmeasured[s["criticality"]] += 1
                 if _schedule_active(sched, now):

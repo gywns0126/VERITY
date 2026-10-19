@@ -1,10 +1,13 @@
 """Missing evidence and partial refreshes must not become a healthy stream."""
 import json
+import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
 from api.builders import freshness_board_builder as board
+from api.observability import data_pipeline_health as pipeline
 from scripts import freshness_shadow_monitor as monitor
 
 NOW = datetime(2026, 10, 19, 12, tzinfo=timezone(timedelta(hours=9)))
@@ -98,3 +101,138 @@ def test_bad_macro_metadata_is_a_named_quality_failure(key):
 def test_stale_alarm_still_reports_real_age_and_limit():
     assert monitor.format_freshness_alarm({"id": "crypto", "age_eff_min": 114,
             "max_age_min": 90}) == "crypto 1.9h>1.5h(90분)"
+
+
+def setup_pipeline_macro(tmp_path, monkeypatch, payload):
+    monkeypatch.setattr(pipeline, "_REPO_ROOT", tmp_path)
+    monkeypatch.setattr(pipeline, "_now_kst", lambda: NOW)
+    monkeypatch.setattr(pipeline, "_committed_content_ts", lambda *args, **kwargs: None)
+    monkeypatch.setattr(pipeline, "_alert_egregious_freezes", lambda health: None)
+    source = next(s for s in pipeline.SOURCES if s["key"] == "macro_snapshot")
+    monkeypatch.setattr(pipeline, "SOURCES", [source])
+    if payload is not None:
+        path = tmp_path / source["path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload))
+    return source
+
+
+def test_pipeline_writer_does_not_count_partial_macro_as_fresh(tmp_path, monkeypatch):
+    setup_pipeline_macro(tmp_path, monkeypatch, {
+        "collected_at": NOW.isoformat(),
+        "collector_meta": {"macro": {"stale": True, "reused": True},
+                           "bonds": {"stale": True, "reused": False}},
+        "diagnostics": {"macro_ok": False, "bonds_ok": False, "events_ok": True},
+    })
+    output = tmp_path / "health.json"
+    result = pipeline.write_data_pipeline_health(output_path=output)
+    assert json.loads(output.read_text()) == result
+    assert result["overall_status"] == "warn"
+    assert result["summary"] == {"fresh": 0, "stale": 1, "missing": 0, "total": 1}
+    row = result["items"][0]
+    assert row["status"] == "stale"
+    assert row["clock_status"] == "fresh"
+    assert row["source_status"] == "partial"
+    assert row["source_issues"] == ["macro", "bonds"]
+    assert result["schema_version"] == "v0"
+
+
+@pytest.mark.parametrize("age,status", [(0, "fresh"), (6, "fresh"), (7, "stale"), (13, "missing")])
+def test_pipeline_source_check_preserves_existing_clock_thresholds(tmp_path, monkeypatch, age, status):
+    source = setup_pipeline_macro(tmp_path, monkeypatch, {
+        "collected_at": (NOW - timedelta(hours=age)).isoformat(),
+        "collector_meta": {"macro": {"stale": False, "reused": True}},
+        "diagnostics": {"macro_ok": True, "bonds_ok": True, "events_ok": True},
+    })
+    row = pipeline._diagnose_one(source)
+    assert row["clock_status"] == row["status"] == status
+    assert "source_issues" not in row  # Reuse alone is not a declared source failure.
+
+
+def test_pipeline_partial_source_cannot_downgrade_missing_clock(tmp_path, monkeypatch):
+    source = setup_pipeline_macro(tmp_path, monkeypatch, {
+        "collected_at": (NOW - timedelta(hours=13)).isoformat(),
+        "diagnostics": {"macro_ok": False},
+    })
+    row = pipeline._diagnose_one(source)
+    assert row["clock_status"] == row["status"] == "missing"
+    assert row["source_issues"] == ["macro"]
+    assert pipeline.collect_data_pipeline_health()["overall_status"] == "error"
+
+
+def test_pipeline_missing_file_remains_missing(tmp_path, monkeypatch):
+    source = setup_pipeline_macro(tmp_path, monkeypatch, None)
+    row = pipeline._diagnose_one(source)
+    assert row["status"] == row["clock_status"] == "missing"
+    assert row["exists"] is False
+    assert pipeline.collect_data_pipeline_health()["overall_status"] == "error"
+
+
+@pytest.mark.parametrize("key", ["collector_meta", "diagnostics"])
+def test_pipeline_reuses_invalid_source_metadata_contract(tmp_path, monkeypatch, key):
+    source = setup_pipeline_macro(tmp_path, monkeypatch, {"collected_at": NOW.isoformat(), key: ["bad"]})
+    row = pipeline._diagnose_one(source)
+    assert row["status"] == "stale"
+    assert row["source_issues"] == ["invalid_source_metadata"]
+
+
+def crypto_stream_spec():
+    root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((root / "data/freshness_sla.json").read_text())
+    return next(s for s in manifest["streams"] if s["id"] == "crypto")
+
+
+def test_crypto_expected_members_match_producer_and_publication_lists():
+    root = Path(__file__).resolve().parents[1]
+    spec = crypto_stream_spec()
+    workflow = (root / ".github/workflows/crypto_collect.yml").read_text()
+    producer_line = next(line for line in workflow.splitlines()
+                         if line.strip().startswith("git add data/crypto_macro.json"))
+    producer_files = {Path(path).name for path in producer_line.split()
+                      if path.endswith(".json")}
+    publisher = (root / ".github/actions/publish-data/action.yml").read_text()
+    public_files = set(re.findall(r"\bcrypto_[a-z_]+\.json\b", publisher))
+    assert len(spec["expected_files"]) == 11
+    assert set(spec["expected_files"]) == producer_files == public_files
+    assert (spec["max_age_minutes"], spec["schedule"], spec["criticality"]) == (90, "always", "P0")
+
+
+@pytest.mark.parametrize("missing_count", [0, 1, 11])
+def test_crypto_archives_excluded_but_expected_missing_members_counted(tmp_path, monkeypatch, missing_count):
+    spec = crypto_stream_spec()
+    setup_stream(tmp_path, monkeypatch, **spec)
+    present = spec["expected_files"][:11 - missing_count]
+    for name in present:
+        (tmp_path / name).write_text(json.dumps({"collected_at": NOW.isoformat()}))
+    for name in ("crypto_exogenous_history.json", "crypto_regime_history.json"):
+        (tmp_path / name).write_text(json.dumps({"collected_at": (NOW - timedelta(days=63)).isoformat()}))
+    row = monitor.build_observations()["rows"][0]
+    counts = {"members": 11, "measured": 11 - missing_count, "unmeasured": missing_count}
+    assert row["group_counts"] == counts
+    assert row["would_alarm"] is bool(missing_count)
+    result = board.build_board()
+    if missing_count == 11:
+        assert row["measured"] is False
+        assert result["summary"]["p0"]["unmeasured"] == 1
+        assert result["_skipped"][0]["group_counts"] == counts
+    else:
+        assert row["age_eff_min"] == 0
+        public = result["streams"][0]
+        assert public["group_counts"] == counts
+        assert public["status"] == ("stale" if missing_count else "fresh")
+        if missing_count:
+            assert row["quality_reason"] == public["stale_reason"] == "partial_group"
+
+
+@pytest.mark.parametrize("expected", [None, [], {}, "crypto_macro.json", [None], [""],
+                                      ["crypto_*.json"], ["../outside.json"]])
+def test_invalid_expected_members_cannot_fall_back_to_a_fresh_glob(tmp_path, monkeypatch, expected):
+    setup_stream(tmp_path, monkeypatch, file="crypto_*.json", expected_files=expected)
+    (tmp_path / "crypto_macro.json").write_text(json.dumps({"collected_at": NOW.isoformat()}))
+    row = monitor.build_observations()["rows"][0]
+    assert row["would_alarm"] is True
+    assert row["status"] == "invalid_expected_files"
+    result = board.build_board()
+    assert result["summary"]["fresh"] == 0
+    assert result["summary"]["p0"]["unmeasured"] == 1
+    assert result["_skipped"][0]["reason"] == "invalid_expected_files"

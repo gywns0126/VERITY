@@ -27,6 +27,11 @@ from typing import Any, Dict, Optional
 KST = timezone(timedelta(hours=9))
 
 _REPO_ROOT = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+if not __package__:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.freshness_shadow_monitor import source_quality_issues
+
 OUTPUT_PATH = _REPO_ROOT / "data" / "metadata" / "data_pipeline_health.json"
 
 
@@ -334,7 +339,9 @@ def _diagnose_one(src: dict) -> dict:
             d = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
         except (OSError, json.JSONDecodeError):
             d = {}
-        diag = d.get("diagnostics") or {}
+        diag = d.get("diagnostics") if isinstance(d, dict) else None
+        if not isinstance(diag, dict):
+            diag = {}
         if diag:
             keep_keys = (
                 "ok", "candidates_count", "kr_count", "us_count",
@@ -342,6 +349,16 @@ def _diagnose_one(src: dict) -> dict:
                 "source_counts",
             )
             out["diagnostics"] = {k: diag.get(k) for k in keep_keys if k in diag}
+        if src["key"] == "macro_snapshot":
+            # A recent rebuild is not proof that its upstream sources refreshed.
+            # Share the same explicit-failure contract as the public freshness board.
+            out["clock_status"] = out["status"]
+            issues = source_quality_issues("macro_snapshot", d)
+            if issues:
+                out["source_status"] = "partial"
+                out["source_issues"] = issues
+                if out["status"] == "fresh":
+                    out["status"] = "stale"
 
     return out
 
