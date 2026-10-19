@@ -1,16 +1,35 @@
 {
-  "checked_at": "2026-10-19T20:14:04.764398Z",
+  "checked_at": "2026-10-19T21:14:15.758633Z",
   "slot": "2026-10-19T10:30:00Z",
-  "status": "unknown",
-  "severity": "UNKNOWN",
+  "status": "delivered",
+  "severity": "PASS",
   "acceptance_scope": "workflow_delivery_only",
-  "inspected_runs": [],
-  "attempt_count": null,
-  "delivery_run_id": null,
-  "reason": "inspection_unavailable",
-  "error_type": "RuntimeError",
+  "inspected_runs": [
+    {
+      "id": 39291314097,
+      "event": "schedule",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "7dd363c71aa85c2b9cf4d3d980736f62c71307ac",
+      "created_at": "2026-10-19T17:06:38Z",
+      "duplicate_noop": true
+    },
+    {
+      "id": 39256465242,
+      "event": "repository_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "678284e30a8b52c7ddbeb38cd07061c8348fe5d8",
+      "created_at": "2026-10-19T13:00:06Z"
+    }
+  ],
+  "attempt_count": 1,
+  "delivery_run_id": 39256465242,
+  "expected_slot_count": 1,
+  "inspected_run_count": 2,
+  "reason": "required_workflow_steps_delivered",
   "alert_state": {
     "2026-10-19T10:30:00Z|unknown": "2026-10-19T20:14:04.764398Z"
   },
-  "alert_outcome": "sent"
+  "alert_outcome": "not_incident"
 }
