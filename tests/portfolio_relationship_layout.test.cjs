@@ -34,7 +34,7 @@ function assignmentSource(source, name) {
 
 function helpers(names = ['memberRelationshipSlotsFor', 'memberRelationshipIsMapRecord'], context = {}) {
     const source = fs.readFileSync(runtimePath, 'utf8')
-    const box = { Map, Set, Math, ...context }
+    const box = { Map, Set, Math, memberRelationshipLegacyOrigins: new Map(), ...context }
     vm.runInNewContext(names.map(name => functionSource(source, name)).join('\n') +
         `\nthis.api={${names.join(',')}}`, box)
     return box.api
@@ -245,7 +245,7 @@ test('a note-pinned source stays visible without becoming raw manual movement', 
         },
         memberRelationshipSlotsFor: records => new Map(records.map(r => [r.id, { x: 500, y: 500, width: r.width, height: r.height }])),
     }
-    const names = ['memberRelationshipIsMapRecord', 'memberRelationshipMovedIds', 'memberRelationshipPinnedIds', 'applyMemberRelationshipLayout']
+    const names = ['memberRelationshipIsMapRecord', 'memberRelationshipMovedIds', 'memberRelationshipPinnedIds', 'memberRelationshipCaptureLegacyOrigins', 'applyMemberRelationshipLayout']
     const { memberRelationshipMovedIds, memberRelationshipPinnedIds, applyMemberRelationshipLayout } = helpers(names, context)
     assert.equal(memberRelationshipMovedIds(scope).has(source.id), false)
     assert.equal(memberRelationshipPinnedIds(scope).has(source.id), true)
@@ -256,6 +256,136 @@ test('a note-pinned source stays visible without becoming raw manual movement', 
     assert.ok(context.memberDisplayOffsets.has(source.id), 'note-pinned source still receives a display-only slot')
 })
 
+function legacyReconnectFixture() {
+    const canvas = fs.readFileSync(canvasPath, 'utf8')
+    const stock = { id: 'stock', kind: 'stock', x: .64, y: .22 }
+    const event = { id: 'event', kind: 'event', recordKind: 'event', layer: 'events', x: .55, y: .52 }
+    const source = { id: 'source', kind: 'event', recordKind: 'document', layer: 'filing', x: .42, y: .56 }
+    const automatic = { id: 'automatic', kind: 'event', recordKind: 'document', layer: 'filing', x: .5, y: .5 }
+    const nodes = [stock, event, source, automatic], records = [event, source, automatic]
+    const group = { key: 'filing', records, button: { hidden: false, offsetWidth: 160, offsetHeight: 50 },
+        more: { hidden: true, offsetWidth: 120, offsetHeight: 32 }, recordShifts: new Map(), sectionBlocks: [],
+        x: .5, y: .5, positioned: true, slotSizes: new Map() }
+    const notes = { attached: { id: 'attached', target: source.id, text: 'retained note' },
+        automatic: { id: 'automatic-note', target: automatic.id, text: 'not a manual pin' },
+        free: { id: 'free', target: null, text: 'free note', x: .9, y: .9 } }
+    const context = {
+        Map, Set, Math, nodes, holdings: [stock], nodeById: Object.fromEntries(nodes.map(n => [n.id, n])),
+        state: { notes, selected: null, marks: {}, focusId: '', filter: '', topic: '', view: '', zoom: 1, panX: 0, panY: 0 },
+        edges: [], memberLayoutBases: new Map(nodes.map(n => [n.id, { x: .5, y: .5 }])), initialPositions: new Map(),
+        memberDisplayDecisions: new Map(records.map(n => [n.id, { mode: 'group', evidence: 'reported' }])),
+        memberGroups: new Map([['filing', group]]), memberVisible: new Set(nodes.map(n => n.id)), memberEligible: records,
+        memberDisplayOffsets: new Map(), focusOffsets: new Map([[stock.id, { x: -.1, y: -.2 }]]),
+        memberRelationshipSlots: new Map(), memberRelationshipContext: '', memberBaseLayoutKey: 'false',
+        memberRelationshipBases: new Map(), memberRelationshipLegacyOrigins: new Map(), MEMBER_DEFAULT_BUDGET: 4,
+        WORLD_WIDTH: 1000, WORLD_HEIGHT: 680, memberCardSize: () => ({ width: 180, height: 100 }),
+        eventHoldings: () => [stock.id], compareMemberDisplay: () => 0, memberGroupKey: () => 'filing',
+        noteVisible: () => false, noteEls: new Map(), space: { clientWidth: 1000, clientHeight: 680 },
+    }
+    context.memberScope = () => ({ records, stocks: [stock], stockIds: new Set([stock.id]) })
+    context.viewPosition = n => {
+        const offset = context.focusOffsets.get(n.id) || { x: 0, y: 0 }
+        return { x: n.x + offset.x, y: n.y + offset.y }
+    }
+    // Execute the emitted OLD grouping allocator, before its relationship hook.
+    // This is a fresh reconnect projection, not an unavailable prior-session slot.
+    vm.runInNewContext(functionSource(canvas, 'arrangeMemberSections'), context)
+    context.arrangeMemberSections()
+    const legacyWorld = new Map(nodes.map(n => [n.id, clone(context.viewPosition(n))]))
+    const names = ['memberRelationshipSlotsFor', 'memberRelationshipBasesFor', 'memberRelationshipIsMapRecord',
+        'memberRelationshipAlias', 'memberRelationshipMovedIds', 'memberRelationshipPinnedIds',
+        'memberRelationshipCaptureLegacyOrigins', 'memberRelationshipRebaseMovement', 'applyMemberRelationshipLayout']
+    const api = helpers(names, context)
+    return { context, api, nodes, records, stock, event, source, automatic, legacyWorld }
+}
+
+test('old fresh reconnect world positions survive relationship layout for manual event/source/stock without saved edits', () => {
+    const fixture = legacyReconnectFixture()
+    const { context, api, nodes, stock, event, source, automatic, legacyWorld } = fixture
+    const saved = JSON.stringify({ positions: nodes.map(({ id, x, y }) => ({ id, x, y })), notes: context.state.notes })
+    api.applyMemberRelationshipLayout(context.memberScope())
+    for (const n of [stock, event, source]) assert.deepEqual(clone(context.viewPosition(n)), legacyWorld.get(n.id), `same old fresh world origin for ${n.id}`)
+    assert.notDeepEqual(clone(context.viewPosition(automatic)), legacyWorld.get(automatic.id), 'unmoved note-pinned source can use the new automatic layout')
+    assert.equal(JSON.stringify({ positions: nodes.map(({ id, x, y }) => ({ id, x, y })), notes: context.state.notes }), saved)
+    const reconnected = legacyReconnectFixture()
+    reconnected.api.applyMemberRelationshipLayout(reconnected.context.memberScope())
+    for (const n of [stock, event, source]) assert.deepEqual(clone(reconnected.context.viewPosition(reconnected.context.nodeById[n.id])), legacyWorld.get(n.id), `same-input reload for ${n.id}`)
+})
+
+test('hidden legacy group handles remain measurable for the fresh reconnect origin', () => {
+    const source = fs.readFileSync(runtimePath, 'utf8')
+    const rule = source.match(/#an-map-design #an-member-groups,#an-map-design #an-member-sections\{([^}]+)\}/)
+    assert.ok(rule)
+    assert.match(rule[1], /visibility:hidden/)
+    assert.match(rule[1], /pointer-events:none/)
+    assert.doesNotMatch(rule[1], /display:none/, 'display:none would force old header measurements into fallback geometry')
+})
+
+test('first legacy origin stays fixed through folding/filter/resize/new data, model-origin rebase and repeated apply', () => {
+    const { context, api, nodes, records, stock, event, source, legacyWorld } = legacyReconnectFixture()
+    api.applyMemberRelationshipLayout(context.memberScope())
+    const notesBefore = JSON.stringify(context.state.notes), coordinatesBefore = JSON.stringify(nodes)
+    const verify = () => {
+        for (const n of [stock, event, source]) {
+            const actual = context.viewPosition(n), expected = legacyWorld.get(n.id)
+            assert.ok(Math.abs(actual.x - expected.x) < 1e-12 && Math.abs(actual.y - expected.y) < 1e-12, `stable ${n.id}`)
+        }
+        assert.equal(JSON.stringify(context.state.notes), notesBefore)
+    }
+    for (const variant of ['folded', 'filtered', 'narrow', 'all']) {
+        context.state.filter = variant
+        context.space.clientWidth = variant === 'narrow' ? 390 : 1000
+        context.memberBaseLayoutKey = String(variant === 'narrow')
+        // Emulate regrouping replacing its presentation offsets. The saved
+        // manual origins must not be recaptured from these later projections.
+        for (const n of nodes) context.focusOffsets.set(n.id, { x: .8, y: .7 })
+        const scoped = variant === 'filtered' ? { ...context.memberScope(), records: [event] } : context.memberScope()
+        api.applyMemberRelationshipLayout(scoped)
+        api.applyMemberRelationshipLayout(context.memberScope())
+        verify()
+    }
+    assert.equal(JSON.stringify(nodes), coordinatesBefore, 'fold/filter/resize cannot edit raw positions')
+    const added = { id: 'added', kind: 'event', recordKind: 'document', layer: 'filing', x: .5, y: .5 }
+    nodes.push(added); records.push(added); context.nodeById[added.id] = added
+    context.memberLayoutBases.set(added.id, { x: .5, y: .5 })
+    api.applyMemberRelationshipLayout(context.memberScope()); verify()
+    // Existing host rebases canonical origins and their raw saved coordinates
+    // together when the model grows. The display origin remains absolute.
+    for (const n of [stock, event, source]) {
+        const base = context.memberLayoutBases.get(n.id)
+        n.x += .03; n.y -= .02
+        context.memberLayoutBases.set(n.id, { x: base.x + .03, y: base.y - .02 })
+    }
+    const rebasedBefore = JSON.stringify(nodes)
+    api.applyMemberRelationshipLayout(context.memberScope())
+    api.applyMemberRelationshipLayout(context.memberScope()); verify()
+    assert.equal(JSON.stringify(nodes), rebasedBefore, 'layout cannot rebase the host coordinates again')
+})
+
+test('legacy movement rebase is idempotent and invokes optional overview helper last, including stocks', () => {
+    const { context, api, event, stock } = legacyReconnectFixture()
+    api.applyMemberRelationshipLayout(context.memberScope())
+    const before = clone(context.viewPosition(event))
+    const origin = context.memberRelationshipLegacyOrigins.get(event.id)
+    context.focusOffsets.set(event.id, { x: origin.x - .5 + .04, y: origin.y - .5 - .02 })
+    const screenBefore = clone(context.viewPosition(event))
+    const calls = []
+    // Extract the helper with the same shared maps, and observe ordering after
+    // canonical/offset rebase; absence of this optional helper remains supported.
+    const { memberRelationshipRebaseMovement } = helpers(['memberRelationshipRebaseMovement'], {
+        ...context, memberOverviewRebaseMovement: id => calls.push({ id, view: clone(context.viewPosition(context.nodeById[id])) }),
+    })
+    memberRelationshipRebaseMovement(event.id)
+    assert.deepEqual(clone(context.viewPosition(event)), screenBefore)
+    const once = clone(event)
+    memberRelationshipRebaseMovement(event.id)
+    assert.deepEqual(event, once, 'relationship delta applied only once')
+    memberRelationshipRebaseMovement(stock.id)
+    assert.deepEqual(calls.map(c => c.id), [event.id, event.id, stock.id])
+    assert.deepEqual(calls[0].view, screenBefore, 'overview callback sees completed relationship rebase')
+    assert.notDeepEqual(screenBefore, before)
+})
+
 test('keyboard movement snapshots original coordinates before rebase for Undo', () => {
     const source = fs.readFileSync(runtimePath, 'utf8')
     const node = { id: 'event-a', kind: 'event', x: .31, y: .42 }
@@ -264,7 +394,7 @@ test('keyboard movement snapshots original coordinates before rebase for Undo', 
     const context = {
         nodeById: { [node.id]: node }, memberRelationshipBases: new Map([[node.id, { x: 640, y: 408 }]]),
         memberLayoutBases: new Map([[node.id, { x: node.x, y: node.y }]]), initialPositions: new Map(),
-        focusOffsets: new Map([[node.id, { x: .37, y: .18 }]]), memberDisplayOffsets: new Map(),
+        focusOffsets: new Map([[node.id, { x: .37, y: .18 }]]), memberDisplayOffsets: new Map(), memberRelationshipLegacyOrigins: new Map(),
         WORLD_WIDTH: 1000, WORLD_HEIGHT: 680, state: { zoom: 1 }, cancelGesture: false, memberWritable: true,
         layoutSnapshot: () => clone(node), movableItems: () => [{ id: node.id, item: node }], selectedItems: new Set(),
         recordMove: before => { undoBefore = before }, renderMap: () => {},

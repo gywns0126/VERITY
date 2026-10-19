@@ -71,14 +71,28 @@ function memberRelationshipBasesFor(records,stocks){
   return bases;
 }
 let memberRelationshipBases=new Map();
+// First fresh grouping origin, not a reconstruction of an unsaved prior session.
+// Store the absolute origin so a later model-origin rebase keeps the same view.
+const memberRelationshipLegacyOrigins=new Map();
+function memberRelationshipCaptureLegacyOrigins(scope){
+  for(const n of [...scope.stocks,...scope.records]){
+    if(memberRelationshipLegacyOrigins.has(n.id))continue;
+    const offset=focusOffsets.get(n.id);if(!offset)continue;
+    const base=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;
+    memberRelationshipLegacyOrigins.set(n.id,{x:base.x+offset.x,y:base.y+offset.y});
+  }
+}
 function memberRelationshipRebaseMovement(id){
-  const n=nodeById[id],p=memberRelationshipBases.get(id);if(!n||!p||n.kind==='stock')return;
-  const base=memberLayoutBases.get(id)||initialPositions.get(id)||n,offset=focusOffsets.get(id)||{x:0,y:0};
-  const next={x:p.x/WORLD_WIDTH-base.x,y:p.y/WORLD_HEIGHT-base.y};
-  // Only an explicit move converts a collision-avoidance offset into saved
-  // movement. The screen position does not change, including after reload.
-  n.x+=offset.x-next.x;n.y+=offset.y-next.y;
-  memberDisplayOffsets.set(id,next);focusOffsets.set(id,next);
+  const n=nodeById[id],p=memberRelationshipBases.get(id),legacy=memberRelationshipLegacyOrigins.get(id);if(!n)return;
+  if(n.kind!=='stock'&&(legacy||p)){
+    const base=memberLayoutBases.get(id)||initialPositions.get(id)||n,offset=focusOffsets.get(id)||{x:0,y:0};
+    const next=legacy?{x:legacy.x-base.x,y:legacy.y-base.y}:{x:p.x/WORLD_WIDTH-base.x,y:p.y/WORLD_HEIGHT-base.y};
+    // Only an explicit move converts a collision-avoidance offset into saved
+    // movement. Fresh grouping origins, not lost prior-session slots, own reload.
+    n.x+=offset.x-next.x;n.y+=offset.y-next.y;
+    memberDisplayOffsets.set(id,next);focusOffsets.set(id,next);
+  }
+  if(typeof memberOverviewRebaseMovement==='function')memberOverviewRebaseMovement(id);
 }
 moveWithKeys=function(e,id){
   const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
@@ -115,9 +129,15 @@ function memberRelationshipAlias(n,records){
     &&(other.evidence||[]).some(e=>urls.has(e.url)))||null;
 }
 function applyMemberRelationshipLayout(scope){
+  memberRelationshipCaptureLegacyOrigins(scope);
   const context=[memberBaseLayoutKey,state.focusId,state.filter,state.topic,state.view].join('|');
   if(memberRelationshipContext!==context){memberRelationshipSlots.clear();memberRelationshipContext=context;}
   const pinned=memberRelationshipPinnedIds(scope),moved=memberRelationshipMovedIds(scope),selectedEdge=edges.find(e=>e.id===state.selected);
+  // Restore manual stock anchors before using them as automatic-card obstacles.
+  for(const n of [...scope.stocks,...scope.records].filter(n=>moved.has(n.id))){
+    const legacy=memberRelationshipLegacyOrigins.get(n.id),base=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;
+    if(legacy){const offset={x:legacy.x-base.x,y:legacy.y-base.y};memberDisplayOffsets.set(n.id,offset);focusOffsets.set(n.id,offset);}
+  }
   const selected=new Set([state.selected,...(selectedEdge?[selectedEdge.from,selectedEdge.to]:[])]);
   const candidates=scope.records.filter(n=>memberRelationshipIsMapRecord(n)&&memberDisplayDecisions.get(n.id)?.evidence==='reported'
     &&memberDisplayDecisions.get(n.id)?.mode!=='detail');
@@ -135,11 +155,7 @@ function applyMemberRelationshipLayout(scope){
   // Filters decide visibility, never the basis interpreting saved movement.
   const baseStocks=holdings.map(n=>{const p=world(n),base=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;return {...p,x:p.x-(n.x-base.x)*WORLD_WIDTH,y:p.y-(n.y-base.y)*WORLD_HEIGHT};});
   memberRelationshipBases=memberRelationshipBasesFor(nodes.filter(n=>n.kind==='event').map(n=>({...world(n),stockIds:eventHoldings(n),isRelationship:memberRelationshipIsMapRecord(n)})),baseStocks);
-  for(const n of scope.records.filter(n=>visible.has(n.id)&&moved.has(n.id))){
-    const p=memberRelationshipBases.get(n.id),base=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;
-    const offset={x:p.x/WORLD_WIDTH-base.x,y:p.y/WORLD_HEIGHT-base.y};
-    memberDisplayOffsets.set(n.id,offset);focusOffsets.set(n.id,offset);obstacles.push(rect(world(n)));
-  }
+  for(const n of scope.records.filter(n=>visible.has(n.id)&&moved.has(n.id)))obstacles.push(rect(world(n)));
   for(const note of Object.values(state.notes)){
     if(!noteVisible(note))continue;
     const p=noteAnchor(note),z=Math.max(.08,state.zoom),el=noteEls.get(note.id);
@@ -169,7 +185,7 @@ const memberRelationshipStyle=document.createElement('style');memberRelationship
 #an-map-design .an-inbox>[data-member-list]>[data-select] small{display:block;font-size:11px;font-weight:600;line-height:1.5;margin-top:4px}
 #an-map-design .an-inbox>[data-member-list]>[data-select] .an-record-date{display:none}
 #an-map-design .an-inbox .an-aside-note{grid-column:1/-1;margin:0;font-size:11px;font-weight:600}
-#an-map-design #an-member-groups,#an-map-design #an-member-sections{display:none}
+#an-map-design #an-member-groups,#an-map-design #an-member-sections{visibility:hidden;pointer-events:none}
 #an-map-design .an-inbox .an-node{position:static;transform:none}
 #an-map-design .an-note-marker[data-free=true]{transform:translate(-50%,-50%) scale(var(--an-relationship-zoom,1))}
 #an-map-design #an-nodes .an-node[data-overview-title=true] .an-category-icon{width:18px;height:18px;flex-basis:18px}

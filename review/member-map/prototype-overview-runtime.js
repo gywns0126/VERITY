@@ -59,6 +59,20 @@ function memberOverviewTitleSlots(items,obstacles,width,height){
   }
   return result;
 }
+function memberOverviewManual(n){
+  const base=(typeof memberLayoutBases!=='undefined'&&memberLayoutBases.get(n.id))
+    ||(typeof initialPositions!=='undefined'&&initialPositions.get(n.id));
+  return !!base&&(Math.abs(n.x-base.x)>1e-9||Math.abs(n.y-base.y)>1e-9);
+}
+function memberOverviewRebaseMovement(id){
+  const n=nodeById[id],el=n&&nodesEl.querySelector('[data-node="'+id+'"]');
+  if(!n||!el||el.dataset.overviewTitle!=='true'||!memberOverviewElements.has(el))return;
+  const x=parseFloat(el.style.left),y=parseFloat(el.style.top),p=point(n),zoom=state.zoom;
+  if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(zoom)||zoom<=0)return;
+  // A readable title may have been separated from its world anchor. Only an
+  // explicit move adopts that visual offset; a click/hydration never does.
+  n.x+=(x-p.x)/(WORLD_WIDTH*zoom);n.y+=(y-p.y)/(WORLD_HEIGHT*zoom);
+}
 function drawMemberOverviewTitles(){
   if(state.zoom>=.65)return;
   const entries=[...holdings.filter(shown).map(n=>({id:n.id,n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')})),
@@ -77,9 +91,14 @@ function drawMemberOverviewTitles(){
     el.dataset.overviewWidth=String(w);el.dataset.overviewHeight=String(h);
     memberOverviewElements.set(el,{left:el.style.left,top:el.style.top,transform:el.style.transform});el.dataset.overviewTitle='true';
     const group=n.kind!=='stock'&&n.kind!=='event',height=el.offsetHeight;
-    return {x:p.x,y:group?p.y-height/2-h*state.zoom/2-6:p.y,w:el.offsetWidth,h:height,group,anchor:p};
+    return {x:p.x,y:group?p.y-height/2-h*state.zoom/2-6:p.y,w:el.offsetWidth,h:height,group,anchor:p,manual:!group&&memberOverviewManual(n)};
   });
-  const slots=memberOverviewTitleSlots(items,obstacles,space.clientWidth,space.clientHeight);
+  // Manual positions own their anchors, including during a pointer gesture.
+  // Automatic titles avoid them rather than snapping a dragged title to a grid.
+  const fixed=items.map(item=>item.manual?{x:item.x,y:item.y,left:item.x-item.w/2,right:item.x+item.w/2,top:item.y-item.h/2,bottom:item.y+item.h/2}:null);
+  const automatic=items.flatMap((item,i)=>item.manual?[]:[{item,i}]);
+  const placed=memberOverviewTitleSlots(automatic.map(row=>row.item),[...obstacles,...fixed.filter(Boolean)],space.clientWidth,space.clientHeight);
+  const slots=fixed;automatic.forEach((row,i)=>{slots[row.i]=placed[i];});
   entries.forEach(({el},i)=>{
     const slot=slots[i],p=items[i];
     if(!slot){delete el.dataset.overviewTitle;return;}
