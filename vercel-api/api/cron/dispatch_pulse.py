@@ -22,9 +22,12 @@ Vercel Cron → GitHub Actions repository_dispatch (시각별 multi-event)
 from __future__ import annotations
 
 import json
+import importlib.util
 import os
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 
 import urllib.request
 import urllib.error
@@ -33,6 +36,16 @@ import urllib.parse
 GH_REPO = os.environ.get("GH_DISPATCH_REPO", "gywns0126/VERITY")
 GH_PAT = os.environ.get("GH_DISPATCH_PAT", "")
 CRON_SECRET = os.environ.get("CRON_SECRET", "")
+
+
+@lru_cache(maxsize=1)
+def _us_financials_cadence():
+    # Explicitly bundled in vercel.json; also callable by Actions and offline tests.
+    path = Path(__file__).resolve().parents[2] / "us_financials_schedule.py"
+    spec = importlib.util.spec_from_file_location("us_financials_cadence", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 # Quick과 같은 GitHub concurrency group(`verity-data-write`)의 실제 workflow 파일.
 # tests/test_dispatch_mode_payload.py가 워크플로 전체를 열거해 이 집합의 drift를 차단한다.
@@ -85,6 +98,16 @@ def _dispatch(event_type: str, payload: dict | None = None) -> tuple[int, str]:
         return e.code, f"http {e.code}: {e.read().decode('utf-8', errors='replace')[:200]}"
     except Exception as e:
         return 500, f"error: {e}"
+
+
+def _us_financials_slot(now: datetime) -> datetime | None:
+    """Pure scheduling; helper import failures must not stop other consumers."""
+    now = now.astimezone(timezone.utc)
+    if now.weekday() > 4 or now.minute % 15 >= 5:
+        return None
+    slot = now.replace(hour=10, minute=30, second=0, microsecond=0)
+    end = now.replace(hour=14, minute=50, second=0, microsecond=0)
+    return slot if slot <= now < end else None
 
 
 def _resolve_events(now_utc: datetime) -> list[str]:
@@ -193,6 +216,13 @@ def _resolve_events(now_utc: datetime) -> list[str]:
         # KST midnight: an earlier manual run today also consumes this day's drip.
         day_start = now_utc.replace(hour=15, minute=0, second=0, microsecond=0)
         events.append(("dart_kr_fin_backfill", {"schedule_slot": day_start.isoformat()}))
+
+    # One weekday financial slot, using the already-deployed Vercel clock.
+    # Catch-up attempts are bounded and carry the ORIGINAL due time, not now.
+    financial_slot = _us_financials_slot(now_utc)
+    if financial_slot is not None:
+        events.append(("us_financials_incremental", {
+            "schedule_slot": financial_slot.isoformat()}))
 
     return events
 
@@ -373,6 +403,20 @@ class handler(BaseHTTPRequestHandler):
         results = []
         for raw_evt in events:
             evt, _payload = _split_event(raw_evt)
+            if evt == "us_financials_incremental":
+                try:
+                    receipt = _us_financials_cadence().inspect_slot(
+                        GH_REPO, GH_PAT, datetime.fromisoformat(_payload["schedule_slot"]), now_utc)
+                except Exception as exc:
+                    results.append({"event": evt, "payload": _payload, "status": 502,
+                                    "detail": f"cadence-unknown: {type(exc).__name__}"})
+                    continue
+                if receipt["status"] not in ("missing", "failed"):
+                    results.append({"event": evt, "payload": _payload,
+                                    "status": 503 if receipt["status"] == "attempt_limit" else 200,
+                                    "detail": f"cadence-skip: {receipt['status']}",
+                                    "cadence": receipt})
+                    continue
             if evt == "daily_analysis_quick" and _data_write_group_busy(now_utc):
                 results.append({"event": evt, "payload": _payload, "status": 200,
                                 "detail": "busy-skip: verity-data-write 점유 중, 다음 시간 재확인"})

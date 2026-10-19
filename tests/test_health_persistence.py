@@ -30,7 +30,7 @@ def commit(repo, message, paths):
 
 
 @pytest.fixture
-def repos(tmp_path, monkeypatch):
+def repos(tmp_path, monkeypatch, request):
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
     for key in ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"):
@@ -41,18 +41,20 @@ def repos(tmp_path, monkeypatch):
     git(tmp_path, "init", "--bare", str(remote))
     git(tmp_path, "clone", str(remote), str(writer))
     git(writer, "checkout", "-b", "main")
-    for path in health.PATHS:
+    baseline_paths = health.PATHS[:-1] if getattr(request, "param", "") in ("new", "missing") else health.PATHS
+    for path in baseline_paths:
         write(writer, path, b'{"generation":"base"}\n')
     write(writer, "code.txt", b"base code\n")
-    commit(writer, "baseline", [*health.PATHS, "code.txt"])
+    commit(writer, "baseline", [*baseline_paths, "code.txt"])
     git(writer, "push", "origin", "main")
     git(tmp_path, "clone", "--depth=1", "-b", "main", remote.as_uri(), str(producer))
-    for path in health.PATHS:
+    prepared_paths = health.PATHS[:-1] if getattr(request, "param", "") == "missing" else health.PATHS
+    for path in prepared_paths:
         value = b'{"generation":"prepared"}\n'
         if path.endswith(".jsonl"):
             value = b'{"generation":"base"}\n' + value
         write(producer, path, value)
-    commit(producer, "prepared health", health.PATHS)
+    commit(producer, "prepared health", prepared_paths)
     return remote, writer, producer
 
 
@@ -142,7 +144,56 @@ def test_health_rejects_prepared_code_change(repos):
     assert git(remote, "rev-parse", "main") == head
 
 
-def test_workflow_keeps_monitor_policy_and_preserves_six_outputs_before_transport():
+@pytest.mark.parametrize("repos", ["new"], indirect=True)
+def test_new_us_receipt_can_be_created_without_base_blob(repos):
+    remote, _, producer = repos
+    health.persist(producer, "main", retry_delay=0)
+    assert git(remote, "show", f"main:{health.PATHS[-1]}") == (producer / health.PATHS[-1]).read_bytes()
+
+
+@pytest.mark.parametrize("repos", ["new"], indirect=True)
+def test_different_concurrent_first_us_receipt_is_not_overwritten(repos):
+    remote, writer, producer = repos
+    path = health.PATHS[-1]
+    write(writer, path, b'{"remote":true}\n')
+    commit(writer, "first remote US receipt", [path])
+    git(writer, "push", "origin", "main")
+    head = git(remote, "rev-parse", "main")
+    with pytest.raises(RuntimeError, match="generation changed"):
+        health.persist(producer, "main", retry_delay=0)
+    assert git(remote, "rev-parse", "main") == head
+
+
+@pytest.mark.parametrize("repos", ["missing"], indirect=True)
+@pytest.mark.parametrize("remote_created", [False, True])
+def test_failed_first_us_producer_preserves_six_outputs_and_remote_receipt(repos, remote_created, capsys):
+    remote, writer, producer = repos
+    path = health.PATHS[-1]
+    if remote_created:
+        write(writer, path, b'{"remote":true}\n')
+        commit(writer, "first remote receipt", [path])
+        git(writer, "push", "origin", "main")
+    health.persist(producer, "main", retry_delay=0)
+    assert f"optional_output_not_prepared={path}" in capsys.readouterr().out
+    for item in health.PATHS[:-1]:
+        assert git(remote, "show", f"main:{item}") == (producer / item).read_bytes()
+    if remote_created:
+        assert git(remote, "show", f"main:{path}") == b'{"remote":true}\n'
+    else:
+        assert git(remote, "ls-tree", "main", "--", path) == b""
+
+
+def test_existing_us_receipt_cannot_be_deleted(repos):
+    remote, _, producer = repos
+    git(producer, "rm", "--", health.PATHS[-1])
+    git(producer, "commit", "-m", "deleted receipt")
+    head = git(remote, "rev-parse", "main")
+    with pytest.raises(RuntimeError, match="deletion is not allowed"):
+        health.persist(producer, "main", retry_delay=0)
+    assert git(remote, "rev-parse", "main") == head
+
+
+def test_workflow_keeps_monitor_policy_and_preserves_seven_outputs_before_transport():
     doc = yaml.safe_load((ROOT / ".github/workflows/cron_health_monitor.yml").read_text())
     job = doc["jobs"]["monitor"]
     assert job["concurrency"] == {"group": "cron-health-monitor", "cancel-in-progress": False}
@@ -162,7 +213,7 @@ def test_workflow_keeps_monitor_policy_and_preserves_six_outputs_before_transpor
     assert steps.index(monitor) < steps.index(retain) < steps.index(persist)
     assert retain["with"]["name"] == "health-prepared-${{ github.run_id }}"
     assert set(retain["with"]["path"].splitlines()) == set(health.PATHS)
-    assert len(health.PATHS) == 6
+    assert len(health.PATHS) == 7
     for path in health.PATHS:
         assert path in persist["run"]
     subprocess.run(["bash", "-n"], input=persist["run"], text=True, check=True)

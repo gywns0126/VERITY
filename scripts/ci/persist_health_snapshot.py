@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Persist six prepared health outputs; reject concurrent JSON/JSONL changes.
+"""Persist seven prepared health outputs; reject concurrent JSON/JSONL changes.
 
 No ledger merging or history rebase: retain the producer files for the recovery
 artifact when any remote output differs from both the base and prepared bytes.
@@ -19,11 +19,13 @@ PATHS = (
     "data/metadata/publish_verify.json",
     "data/metadata/publish_verify.jsonl",
     "data/metadata/data_health.json",
+    "data/metadata/us_financials_schedule_health.json",
 )
 
 
 def persist(repo, branch, **kwargs):
-    return persist_snapshot(repo, branch, paths=PATHS, label="health", **kwargs)
+    return persist_snapshot(repo, branch, paths=PATHS, label="health",
+                            optional_paths=(PATHS[-1],), **kwargs)
 
 
 def main():

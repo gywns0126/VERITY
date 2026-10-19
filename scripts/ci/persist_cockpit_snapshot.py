@@ -20,15 +20,22 @@ except ImportError:  # Direct workflow invocation.
 PATHS = ("data/metadata/cockpit_state.json", "data/metadata/system_map.json")
 
 
-def persist(repo, branch, attempts=3, budget_s=120, retry_delay=2, *, paths=None, label="cockpit"):
+def persist(repo, branch, attempts=3, budget_s=120, retry_delay=2, *, paths=None,
+            label="cockpit", optional_paths=()):
     # Health uses the same whole-blob conflict policy with its own explicit list.
     paths = tuple(PATHS if paths is None else paths)
+    if set(optional_paths) - set(paths):
+        raise ValueError("New output paths must belong to the explicit output list")
     deadline = time.monotonic() + budget_s
 
     def run(*args, **kwargs):
         return git(repo, *args, deadline=deadline, phase=kwargs.pop("phase", args[0]), **kwargs)
 
-    def blob(ref, path):
+    def blob(ref, path, allow_missing=False):
+        if allow_missing and path in optional_paths:
+            # Only a successful exact tree lookup can establish initial absence.
+            if not run("ls-tree", "-z", ref, "--", path).stdout:
+                return None
         return run("show", f"{ref}:{path}", phase="read_output").stdout
 
     run("check-ref-format", f"refs/heads/{branch}")
@@ -37,8 +44,16 @@ def persist(repo, branch, attempts=3, budget_s=120, retry_delay=2, *, paths=None
     changed = run("diff-tree", "--no-commit-id", "--name-only", "-r", source).stdout.decode().splitlines()
     if not changed or set(changed) - set(paths):
         raise RuntimeError(f"Prepared commit must contain only explicit {label} outputs")
-    prepared = {path: blob(source, path) for path in paths}
-    before = {path: blob(base, path) for path in paths}
+    prepared = {path: blob(source, path, allow_missing=True) for path in paths}
+    if any(prepared[path] is None for path in changed):
+        raise RuntimeError("Prepared output deletion is not allowed")
+    for path in paths:
+        if prepared[path] is None:
+            print(f"[{label}_persist] optional_output_not_prepared={path}", flush=True)
+    # An optional producer may fail before first creation; never delete or replace
+    # a concurrent remote receipt for an output that this run did not prepare.
+    paths = tuple(path for path in paths if prepared[path] is not None)
+    before = {path: blob(base, path, allow_missing=True) for path in paths}
     message = run("log", "-1", "--format=%B", source).stdout
     last_error = None
     with tempfile.TemporaryDirectory(prefix=f"{label}-persist-") as temp:
@@ -49,7 +64,7 @@ def persist(repo, branch, attempts=3, budget_s=120, retry_delay=2, *, paths=None
                 run("fetch", "--depth=1", "--no-tags", "--no-recurse-submodules",
                     "origin", f"refs/heads/{branch}", phase=f"{label}_fetch")
                 remote = run("rev-parse", "FETCH_HEAD").stdout.decode().strip()
-                incoming = {path: blob(remote, path) for path in paths}
+                incoming = {path: blob(remote, path, allow_missing=True) for path in paths}
                 if any(incoming[path] not in (before[path], prepared[path]) for path in paths):
                     raise RuntimeError(f"Remote {label} generation changed; preserve remote and recover artifact")
                 run("read-tree", remote, env=index_env)
