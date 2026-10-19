@@ -2076,7 +2076,7 @@ html>body{padding:0}</style>
         groups.forEach(g=>{const cy=g.top+g.height/2-row/2;place(g.event.id,-60,cy);g.peers.forEach((key,i)=>place(key,135+(i%3)*112,g.top+20+Math.floor(i/3)*48-row/2));});
       }
       function visibleEdgeForStock(eventId,id){return edges.some(e=>visibleEdge(e)&&((e.from===eventId&&e.to===id)||(e.to===eventId&&e.from===id)));}
-      function returnToMap(){clearFocus();select('');renderMap();save();}
+      function returnToMap(){clearFocus();select('',false,true);renderMap();save();}
 
       function viewPosition(n){const offset=focusOffsets.get(n.id);return offset?{x:n.x+offset.x,y:n.y+offset.y}:n;}
       function point(n){const v=viewPosition(n);return {x:space.clientWidth/2+(v.x-.5)*WORLD_WIDTH*state.zoom+state.panX,y:space.clientHeight/2+(v.y-.5)*WORLD_HEIGHT*state.zoom+state.panY+(groupedOverview()&&n.kind==='event'?8:0)};}
@@ -2404,17 +2404,20 @@ html>body{padding:0}</style>
         fitNodes(selectionOnly);
         if(selectionOnly&&selectionReturn&&selectionReturn.context===selectionContext()&&(state.selected||state.focusId||selectedItems.size))selectionReturn.usedFit=true;
       }
-      function select(id,toggle=false){
+      function select(id,toggle=false,allowViewChange=false){
+        // Selection changes explanation/highlighting, never the relationship viewport.
+        // Explicit surrounding/return controls retain their view-change behavior.
+        const changeView=allowViewChange||root.dataset.relationshipCentered!=='true';
         if(id&&!nodeById[id]&&!edges.some(e=>e.id===id)){invalidateMemberSelectionReturn();id='';}
         const deselect=toggle&&id&&state.selected===id&&!showGuide&&!state.activeNote&&!state.noteList;
         const leaving=!id||deselect;
-        const previous=leaving&&selectionReturn?.usedFit&&selectionReturn.context===selectionContext()?selectionReturn:null;
+        const previous=changeView&&leaving&&selectionReturn?.usedFit&&selectionReturn.context===selectionContext()?selectionReturn:null;
         if(leaving)invalidateMemberSelectionReturn(false);
         else if(!state.selected&&!state.focusId&&!selectionReturn)selectionReturn={context:selectionContext(),camera:{zoom:state.zoom,panX:state.panX,panY:state.panY},usedFit:false};
         if(deselect){id='';selectedItems.clear();}
         if(edges.some(e=>e.id===id))observeTour('edge');closePreview();if(!selectedItems.has(id))selectedItems.clear();
         const stock=nodeById[id]?.kind==='stock';
-        if(!id)clearFocus();else if(stock)focusStock(id);else if(state.focusId&&!relevant().has(id)&&!edges.some(e=>e.id===id&&relevant().has(e.from)&&relevant().has(e.to)))clearFocus();
+        if(changeView){if(!id)clearFocus();else if(stock)focusStock(id);else if(state.focusId&&!relevant().has(id)&&!edges.some(e=>e.id===id&&relevant().has(e.from)&&relevant().has(e.to)))clearFocus();}
         showGuide=false;state.activeNote='';state.noteList=false;state.selected=id;
         if(previous)Object.assign(state,previous.camera);
         renderMap();renderDetail();detail.scrollTop=0;
@@ -4318,10 +4321,10 @@ focusNeighborhood=function(id){const scope=memberScope();return new Set([...scop
 focusStock=function(id,rebuild=false){if(state.focusId===id&&!rebuild)return;if(!state.focusId){memberOverviewOpen=new Map(memberOpenGroups);for(const key of memberOpenGroups.keys())if(key!=='events'&&key!=='relationships')memberOpenGroups.delete(key);}if(!focusCamera)focusCamera={zoom:state.zoom,panX:state.panX,panY:state.panY};state.focusId=id;memberLayoutKey='';};
 const originalClearFocus=clearFocus;
 clearFocus=function(){originalClearFocus();if(memberOverviewOpen){memberOpenGroups.clear();for(const [key,value] of memberOverviewOpen)memberOpenGroups.set(key,value);memberOverviewOpen=null;}memberFocusGroupId='';memberLayoutKey='';};
-select=function(id,toggle=false){
+select=function(id,toggle=false,allowViewChange=false){
   const n=nodeById[id];if(!id||(toggle&&state.selected===id)||n?.kind==='stock'&&state.focusId!==id)memberReveal='';
   else if(n?.kind==='event'||edges.some(e=>e.id===id))memberReveal=id;
-  prepareMemberGroups();ungroupedSelect(id,toggle);
+  prepareMemberGroups();ungroupedSelect(id,toggle,allowViewChange);
 };
 function syncMemberMapFoot(){
   if(root.dataset.readableFit==='true'&&Number(root.dataset.readableFitZoom)!==state.zoom)root.dataset.readableFit='false';
@@ -5238,7 +5241,7 @@ const memberNetworkStyle=document.createElement('style');memberNetworkStyle.text
 #an-map-design .an-network-inspector button{display:block;width:100%;text-align:left;min-height:36px;padding:8px 10px;margin-top:8px;background:light-dark(#f8f9fb,#1d242c)}
 #an-map-design .an-network-foot{padding:8px 16px;background:var(--an-panel);color:var(--an-sub);font-size:11px}
 @media(hover:hover){#an-map-design .an-network-view button:hover{background:light-dark(#f1f3f5,#252c35)}}
-@media(max-width:700px){#an-map-design .an-network-main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(160px,1fr) auto}#an-map-design .an-network-inspector{max-height:150px;padding:12px 16px}#an-map-design .an-network-head{padding:10px 12px;gap:6px}}
+@media(max-width:700px){#an-map-design .an-network-main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) min(150px,35%)}#an-map-design .an-network-inspector{max-height:150px;padding:12px 16px}#an-map-design .an-network-head{padding:10px 12px;gap:6px}}
 @media(pointer:coarse){#an-map-design .an-network-head button,#an-map-design .an-network-inspector button{min-height:44px}}
 `;root.append(memberNetworkStyle);
 const memberNetworkButton=document.createElement('button');memberNetworkButton.type='button';memberNetworkButton.className='an-tool';memberNetworkButton.textContent='전체 관계망';memberNetworkButton.setAttribute('aria-expanded','false');root.querySelector('.an-zoom').append(memberNetworkButton);

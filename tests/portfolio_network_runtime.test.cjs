@@ -161,6 +161,30 @@ test('vendor viewport/select/highlight callbacks update exploration only and lat
  assert.equal(c.memberNetworkSession,next);assert.equal(next.selected,selected);assert.equal(f.engineState.highlights.length,highlights);
  c.closeMemberNetwork();f.assertNative();
 });
+test('HTML click and vendor select-other/reselect preserve network camera, world/card centers and native drafts',async()=>{
+ for(const zoom of [.4,1.2])for(const path of ['html-click','vendor-hook']){
+  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+  s.camera={zoom,panX:83,panY:-47};c.drawMemberNetwork();
+  const camera=clone(s.camera),positions=clone([...s.positions]),items=clone([...s.byId]),elements=[...s.elements.values()],paths=s.paths.map(([,el])=>el);
+  const centers=()=>[...s.elements].map(([id,el])=>[id,el.style.left,el.style.top,el.style.transform,el.hidden]);
+  const before=centers(),engineCamera={...f.engineState.camera},stage=f.engineState.stage,visualCalls=f.visualCalls.length;
+  assert.equal(stage,zoom<.8?'names':'cards');
+  c.fitMemberNetwork=()=>assert.fail('selection must not fit/recenter the network');
+  c.memberNetworkLayout=()=>assert.fail('selection must not rerun network layout');
+  for(const position of s.positions.values())freeze(position);
+  for(const method of ['set','delete','clear'])Object.defineProperty(s.positions,method,{value:()=>assert.fail('selection must not change world positions')});
+  const select=f.engineCalls[0][5].select;
+  for(const [id,expected]of [['stock','stock'],['source','source'],['stock','stock'],['stock','']]){
+   if(path==='html-click')s.elements.get(id).onclick();else select(id);
+   assert.equal(s.selected,expected);assert.equal(f.inspector.children[0].textContent,expected?s.byId.get(expected).name:'연결을 선택해 보세요');
+   assert.deepEqual(clone(s.camera),camera);assert.deepEqual(clone([...s.positions]),positions);assert.deepEqual(centers(),before);
+   assert.deepEqual([...s.elements.values()],elements);assert.deepEqual(s.paths.map(([,el])=>el),paths);assert.deepEqual(clone([...s.byId]),items);
+   assert.deepEqual(f.engineState.camera,engineCamera);assert.equal(f.engineState.stage,stage);assert.equal(f.layoutCalls(),1);
+   assert.equal(f.engineCalls.length,1);assert.equal(f.visualCalls.length,visualCalls);f.assertNative();
+  }
+  c.closeMemberNetwork();f.assertNative();
+ }
+});
 test('runtime delegates gestures to vendor rather than adding custom pointer/wheel handlers',()=>{
  assert.doesNotMatch(source,/memberNetworkSpace\.addEventListener\(['"](?:wheel|pointerdown)['"]/);
 });

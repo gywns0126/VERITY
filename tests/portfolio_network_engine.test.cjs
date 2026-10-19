@@ -107,6 +107,23 @@ test('arbitrary source IDs roundtrip through events and highlight without select
   assert.equal(f.hooks.select.at(-1),id);assert.equal(f.hooks.highlight.at(-1),id);assert.equal(f.state.lookups.at(-1),nodes[index].data.id);});
  f.emit('mouseout');assert.equal(f.hooks.highlight.at(-1),'');api.highlight('');f.unchanged();api.destroy();
 });
+test('vendor tap select-other/reselect never moves camera, supplied positions or rendered centers in names/cards',()=>{
+ for(const [stage,zoom]of [['names',.4],['cards',1.2]]){
+  const f=fixture(),api=f.create();api.setCamera({zoom,panX:83,panY:-47});api.setStage(stage,zoom);
+  const nodes=f.state.config.elements.filter(el=>el.position),camera=copy(api.getCamera()),positions=copy(nodes.map(el=>el.position));
+  const centers=()=>nodes.map(el=>({x:el.position.x*f.state.zoom+f.state.pan.x,y:el.position.y*f.state.zoom+f.state.pan.y}));
+  const before=centers(),viewportCalls=f.state.viewportCalls,notices=f.hooks.viewport.length;
+  f.cy.fit=()=>assert.fail('tap must not fit/recenter');
+  for(const node of nodes)freeze(node.position);
+  const order=[0,1,0,0];
+  for(const index of order){
+   f.emit('tap',{id:()=>nodes[index].data.id});assert.equal(f.hooks.select.at(-1),f.ids[index]);
+   assert.deepEqual(copy(api.getCamera()),camera);assert.deepEqual(copy(nodes.map(el=>el.position)),positions);assert.deepEqual(centers(),before);
+   assert.equal(f.state.viewportCalls,viewportCalls);assert.equal(f.hooks.viewport.length,notices);f.unchanged();
+  }
+  assert.deepEqual(f.hooks.select,order.map(index=>f.ids[index]));api.destroy();
+ }
+});
 test('destroy is once-only and stale callbacks/camera operations are inert',()=>{
  const f=fixture(),api=f.create();api.destroy();api.destroy();assert.equal(f.state.destroyCalls,1);
  const before=copy(f.hooks);f.emit('viewport');f.emit('tap',{id:()=> 'n0'});f.emit('mouseover',{id:()=> 'n0'});f.emit('mouseout');
