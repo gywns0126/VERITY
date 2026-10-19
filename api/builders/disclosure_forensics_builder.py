@@ -20,8 +20,13 @@ import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if not __package__:
+    sys.path.insert(0, _ROOT)
+
+from api.collectors.dart_catalyst import _detect_correction
+
+KST = timezone(timedelta(hours=9))
 INPUT_PATH = os.path.join(_ROOT, "data", "dart_catalyst_alerts.jsonl")
 BACKFILL_PATH = os.path.join(_ROOT, "data", "dart_catalyst_backfill.jsonl")  # 2015~ 과거 이력(있으면 심화)
 OUTPUT_PATH = os.path.join(_ROOT, "data", "disclosure_forensics.json")
@@ -87,7 +92,9 @@ def main() -> int:
             nm = a.get("report_nm") or ""
             if not tk or not rc or rc in seen:
                 continue
-            is_corr = bool(a.get("is_correction"))
+            # Historical backfill predates the collector's title-based guard.
+            # Re-evaluate official correction markers without mutating raw rows.
+            is_corr = bool(a.get("is_correction")) or _detect_correction(a)
             cls = _classify(nm)
             if not cls and not is_corr:
                 continue  # forensics 관련 이벤트만 (일반 공시 제외)

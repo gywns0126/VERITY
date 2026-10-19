@@ -40,7 +40,8 @@ from scripts.freshness_shadow_monitor import (  # noqa: E402
     _parse_ts_kst,
     _schedule_active,
     _weekend_minutes_between,
-    latest_ts_for_glob,
+    glob_freshness,
+    source_quality_issues,
 )
 
 MANIFEST = os.path.join(DATA_DIR, "freshness_sla.json")
@@ -136,6 +137,7 @@ def build_board() -> dict:
     rows = []
     skipped = []
     pipeline = {}
+    unmeasured = {crit: 0 for crit in ("P0", "P1", "P2")}
     for s in manifest.get("streams", []):
         sid = s.get("id", "")
         if s.get("owner") == "local" or sid in EXCLUDE_IDS:
@@ -158,14 +160,16 @@ def build_board() -> dict:
 
         f = s.get("file", "")
         obj = None   # glob 분기에서도 아래 내용 신선도 블록이 참조 — 미초기화 시 NameError
+        group = None
         if "*" in f:
-            t = latest_ts_for_glob(f, s.get("ts_field"))
+            group = glob_freshness(f, s.get("ts_field"), DATA_DIR)
+            t = group["oldest"]
         else:
             path = os.path.join(DATA_DIR, f)
             exists = os.path.exists(path)
             obj = _load_any(path) if exists else None
             ts = _extract_ts(obj, s.get("ts_field")) if obj is not None else None
-            if obj is not None and not ts:
+            if obj is not None and not ts and not s.get("ts_field"):
                 proof = collection_receipt(sid, path) or producer_evidence(sid)
                 if proof:
                     # Keep workflow names, run identifiers, and internal scope labels
@@ -189,6 +193,8 @@ def build_board() -> dict:
             # Internal diagnostics must name omitted streams even while schedule is closed.
             # Never substitute file/commit time or event dates for collection evidence.
             skipped.append({"id": sid, "reason": reason})
+            if s.get("criticality") in unmeasured:
+                unmeasured[s["criticality"]] += 1
             continue
 
         age_min = (now - t).total_seconds() / 60
@@ -226,6 +232,20 @@ def build_board() -> dict:
             if c_status == "stale" and row["status"] == "fresh":
                 row["status"] = "stale"
                 row["stale_reason"] = "content"
+        if group:
+            row["group_counts"] = {k: group[k] for k in ("members", "measured", "unmeasured")}
+            if group["unmeasured"]:
+                row["source_status"] = "unverified"
+                row["stale_reason"] = "partial_group"
+                if row["status"] == "fresh":
+                    row["status"] = "stale"
+        issues = source_quality_issues(sid, obj)
+        if issues:
+            row["source_status"] = "partial"
+            row["source_issues"] = issues
+            row["stale_reason"] = "source_quality"
+            if row["status"] == "fresh":
+                row["status"] = "stale"
         rows.append(row)
 
     rows.sort(key=lambda r: (_CRIT_ORDER.get(r.get("criticality"), 9), r["id"]))
@@ -234,6 +254,7 @@ def build_board() -> dict:
         "stale": sum(1 for r in rows if r["status"] == "stale"),
         "closed": sum(1 for r in rows if r["status"] == "closed"),          # 휴장(장 마감 정상)
         "discontinued": sum(1 for r in rows if r["status"] == "discontinued"),  # 수집 중단
+        "unmeasured": len(skipped),
     }
     for crit in ("P0", "P1", "P2"):
         crit_rows = [r for r in rows if r.get("criticality") == crit]
@@ -242,10 +263,11 @@ def build_board() -> dict:
         n_disc = sum(1 for r in crit_rows if r["status"] == "discontinued")
         # active = 지금 생산돼야 하는 스트림(휴장·중단 제외) → 신선도 비율 분모(주말 오해 방지)
         summary[crit.lower()] = {
-            "total": len(crit_rows),
+            "total": len(crit_rows) + unmeasured[crit],
             "fresh": n_fresh,
             "closed": n_closed,
-            "active": len(crit_rows) - n_closed - n_disc,
+            "active": len(crit_rows) - n_closed - n_disc + unmeasured[crit],
+            "unmeasured": unmeasured[crit],
         }
     return {
         "_meta": {

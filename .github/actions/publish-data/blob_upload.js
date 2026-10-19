@@ -15,7 +15,10 @@
  * 호출: node blob_upload.js <_public_dist>
  */
 
-const { put, del } = require("@vercel/blob");
+// Preflight runs before either public write and before the SDK install. It is
+// strictly local: no token, manifest fetch, Blob SDK, or public mutation.
+const VERIFY_CORE_ONLY = process.argv[2] === "--verify-core";
+const { put, del } = VERIFY_CORE_ONLY ? {} : require("@vercel/blob");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -143,19 +146,20 @@ function maxAgeFor(blobPath) {
 // ── 핵심 데이터 발행 가드 (fail-closed, 단일 병목) ─────────────────────────
 // 핵심 배수(PER/PBR)가 붕괴한 리포트는 업로드 SKIP → Blob 의 직전 GOOD 본 유지.
 // 어느 워크플로가 발행하든 여기서 차단 (2026-07-12 — 미장 PER/PBR 전량 공백 사고 계열).
-// baseline 무관 절대 하한. 유니버스 작으면(<minN) 판단 보류 = 가짜 차단 방지.
+// baseline 무관 절대 하한. 핵심 전체 리포트의 유니버스 부족도 발행 차단.
 const CORE_GUARD = {
     "stock_report_public.json":         { subfields: ["PER", "PBR"], floorPct: 5, minN: 100, krOnly: true },
     "us_stock_report_public.json":      { subfields: ["PER", "PBR"], floorPct: 5, minN: 100 },
     "us_stock_report_us_smallcap.json": { subfields: ["PER", "PBR"], floorPct: 5, minN: 50 },
 };
 
-function _filled(v) {
-    if (v === null || v === undefined) return false;
-    if (Array.isArray(v)) return v.length > 0;
-    if (typeof v === "object") return Object.keys(v).length > 0;
-    if (typeof v === "string") { const t = v.trim(); return t !== "" && t !== "—" && t !== "-"; }
-    return true;
+function finiteMultiple(v) {
+    // Public report ratios are numeric strings. Zero and negative values are
+    // valid reported facts, not missing data; booleans/objects are not ratios.
+    if (typeof v === "number") return Number.isFinite(v);
+    if (typeof v !== "string" || !v.trim()) return false;
+    return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(v.trim())
+        && Number.isFinite(Number(v));
 }
 
 // 리포트 파일 발행 안전성 검사 → { ok:true } | { ok:false, reason }
@@ -165,17 +169,42 @@ function guardCore(fp, blobPath) {
     let doc;
     try { doc = JSON.parse(fs.readFileSync(fp, "utf-8")); }
     catch (e) { return { ok: false, reason: `JSON 파싱 실패 (${e.message})` }; }
-    let arr = Array.isArray(doc.stocks) ? doc.stocks : null;
+    let arr = doc && Array.isArray(doc.stocks) ? doc.stocks : null;
     if (!arr) return { ok: false, reason: "stocks 배열 부재" };
+    if (arr.some((s) => !s || typeof s !== "object" || Array.isArray(s))) {
+        return { ok: false, reason: "stocks 항목 형식 오류" };
+    }
+    if (arr.some((s) => s.facts != null && (typeof s.facts !== "object" || Array.isArray(s.facts)))) {
+        return { ok: false, reason: "stocks facts 형식 오류" };
+    }
     if (g.krOnly) arr = arr.filter((s) => /^\d{6}$/.test(String((s || {}).ticker || "")));
     const total = arr.length;
-    if (total < g.minN) return { ok: true };  // 유니버스 부족 = 판단 보류(가짜 차단 방지)
+    // Match the existing delivery verifier's minimum universe contract. A full
+    // core report collapsing to zero is not an optional empty event feed.
+    if (total < g.minN) return { ok: false, reason: `종목수 부족 ${total} < ${g.minN}` };
     for (const sub of g.subfields) {
-        const filled = arr.reduce((n, s) => n + (_filled(((s || {}).facts || {})[sub]) ? 1 : 0), 0);
+        const filled = arr.reduce((n, s) => n + (finiteMultiple((s.facts || {})[sub]) ? 1 : 0), 0);
         const pct = (filled * 100) / total;
         if (pct < g.floorPct) return { ok: false, reason: `facts.${sub} 채움율 ${pct.toFixed(1)}% < ${g.floorPct}% (N=${total}) — 붕괴` };
     }
     return { ok: true };
+}
+
+function verifyCoreDirectory(dir) {
+    if (!dir) {
+        console.error("usage: node blob_upload.js --verify-core <_public_dist>");
+        return 1;
+    }
+    let failures = 0;
+    for (const name of Object.keys(CORE_GUARD)) {
+        const result = guardCore(path.join(dir, name), name);
+        if (!result.ok) {
+            failures++;
+            console.error(`::error::public preflight ${name}: ${result.reason}`);
+        }
+    }
+    console.log(`public preflight: ${Object.keys(CORE_GUARD).length - failures}/${Object.keys(CORE_GUARD).length} core reports passed`);
+    return failures ? 1 : 0;
 }
 
 async function uploadFile(filePath, blobPath) {
@@ -382,7 +411,9 @@ async function main() {
     }
 }
 
-main().catch((e) => {
+if (VERIFY_CORE_ONLY) {
+    process.exitCode = verifyCoreDirectory(process.argv[3]);
+} else main().catch((e) => {
     console.error("::warning::blob_upload fatal —", e.message);
     // fatal 도 exit 0 — cron 정합 우선
 });

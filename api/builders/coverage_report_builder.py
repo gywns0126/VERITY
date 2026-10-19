@@ -12,7 +12,9 @@
 from __future__ import annotations
 
 import json
+import math
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
@@ -57,13 +59,32 @@ def _load(name: str) -> Optional[Dict[str, Any]]:
 def _filled(v: Any) -> bool:
     if v is None:
         return False
-    if isinstance(v, (list, dict)):
-        return len(v) > 0
+    if isinstance(v, str):
+        return bool(v.strip())
+    if isinstance(v, dict):
+        return any(_filled(value) for value in v.values())
+    if isinstance(v, list):
+        return any(_filled(value) for value in v)
+    # Zero and False may be real observations; emptiness is not truthiness.
     return True
 
 
 def _pct(n: int, total: int) -> Optional[float]:
     return round(n * 100.0 / total, 1) if total > 0 else None
+
+
+def _finite_multiple(value: Any) -> bool:
+    """PER/PBR presence requires a finite number, matching publication gates."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return False
+    if isinstance(value, str):
+        value = value.strip()
+        if not re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:e[+-]?[0-9]+)?", value, re.I):
+            return False
+    try:
+        return math.isfinite(float(value))
+    except (ValueError, OverflowError):
+        return False
 
 
 def build() -> Dict[str, Any]:
@@ -82,7 +103,7 @@ def build() -> Dict[str, Any]:
         if kr_total == 0:
             fields[f"facts.{sub}"] = None
             continue
-        filled = sum(1 for s in kr if _filled((s.get("facts") or {}).get(sub)))
+        filled = sum(1 for s in kr if _finite_multiple((s.get("facts") or {}).get(sub)))
         fields[f"facts.{sub}"] = {"filled": filled, "pct": _pct(filled, kr_total)}
 
     def _companion(name: str, key: str = "stocks") -> Optional[Dict[str, Any]]:
@@ -118,7 +139,7 @@ def build() -> Dict[str, Any]:
         if us_total == 0:
             us_fields[f"facts.{sub}"] = None
             continue
-        filled = sum(1 for s in us if _filled((s.get("facts") or {}).get(sub)))
+        filled = sum(1 for s in us if _finite_multiple((s.get("facts") or {}).get(sub)))
         us_fields[f"facts.{sub}"] = {"filled": filled, "pct": _pct(filled, us_total)}
 
     def _us_companion(name: str, key: str = "stocks") -> Optional[Dict[str, Any]]:
@@ -151,7 +172,7 @@ def build() -> Dict[str, Any]:
         if sc_total == 0:
             sc_fields[f"facts.{sub}"] = None
             continue
-        filled = sum(1 for s in sc if _filled((s.get("facts") or {}).get(sub)))
+        filled = sum(1 for s in sc if _finite_multiple((s.get("facts") or {}).get(sub)))
         sc_fields[f"facts.{sub}"] = {"filled": filled, "pct": _pct(filled, sc_total)}
 
     return {
@@ -243,6 +264,25 @@ def main() -> None:
 
     warns = fails = 0
     reasons = []
+
+    # Missing sources have null percentages, not 0%. They must not disappear
+    # from the gate merely because _flat_pcts omits unmeasurable values.
+    # A partial first run may omit unrelated markets, but an existing GOOD
+    # market/critical companion cannot silently become unmeasurable.
+    totals = ("kr_total", "us_total", "us_smallcap_total")
+    if not any(report.get(key, 0) for key in totals):
+        reasons.append("all report universes unavailable or empty")
+    if prev:
+        for key in totals:
+            if (prev.get(key) or 0) > 0 and not report.get(key):
+                reasons.append(f"{key} previously populated report unavailable or empty")
+        before_n = _flat_counts(prev)
+        for key in _flat_pcts(prev):
+            if key.startswith(CORE_PREFIXES) and before_n.get(key, 0) > 0 and key not in now:
+                reasons.append(f"{key} previously populated core metric is unmeasurable")
+    fails = len(reasons)
+    for reason in reasons:
+        print(f"[coverage] FAIL {reason} — publish 차단")
 
     # 1) 회귀 게이트 — 마지막 GOOD baseline(REPORT_PATH) 대비 핵심 필드 급락(>30%p)
     if prev:
