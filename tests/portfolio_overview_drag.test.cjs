@@ -25,3 +25,16 @@ test('manual title anchors do not depend on compact label grid columns',()=>{
  assert.equal(context.memberOverviewManual({id:'a',x:.52,y:.51}),true);
  assert.match(source,/automatic=items\.flatMap\(\(item,i\)=>item\.manual\?\[\]/);
 });
+test('compact relationship paths and hit areas follow displayed cards without replacing animation elements',()=>{
+ const nodes={a:{id:'a',x:.5,y:.5},b:{id:'b',x:.6,y:.6}};
+ const els={a:{dataset:{overviewTitle:'true'},style:{left:'140px',top:'160px'}},b:{dataset:{overviewTitle:'true'},style:{left:'380px',top:'220px'}}};
+ const path={setAttribute(k,v){this[k]=v}},hit={setAttribute(k,v){this[k]=v}},flow={style:{},identity:1},rim={style:{},identity:2};
+ const pair={group:{style:{}},path,hit,flow,rim};
+ const context={nodeById:nodes,nodesEl:{querySelector:s=>els[s.match(/"([^"]+)"/)[1]]},edges:[{id:'e',from:'a',to:'b'}],edgeEls:new Map([['e',pair]]),point:()=>({x:1,y:2}),parseFloat,Number};
+ vm.runInNewContext(extract('memberOverviewSyncEdgePaths'),context);context.memberOverviewSyncEdgePaths();
+ assert.equal(path.d,'M 140 160 Q 276 190 380 220');assert.equal(hit.d,path.d);
+ assert.equal(flow.style.offsetPath,'path("'+path.d+'")');assert.equal(rim.style.offsetPath,flow.style.offsetPath);
+ assert.equal(pair.flow,flow);assert.equal(pair.rim,rim);assert.equal(nodes.a.x,.5);
+ els.a.style.left='148px';context.memberOverviewSyncEdgePaths();assert.match(path.d,/^M 148 160 /);
+ assert.equal(pair.flow,flow);
+});

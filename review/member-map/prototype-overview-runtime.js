@@ -73,6 +73,25 @@ function memberOverviewRebaseMovement(id){
   // explicit move adopts that visual offset; a click/hydration never does.
   n.x+=(x-p.x)/(WORLD_WIDTH*zoom);n.y+=(y-p.y)/(WORLD_HEIGHT*zoom);
 }
+function memberOverviewSyncEdgePaths(){
+  const anchor=id=>{
+    const n=nodeById[id],el=nodesEl.querySelector('[data-node="'+id+'"]');
+    if(!n||!el||el.hidden)return null;
+    if(el.dataset.overviewTitle==='true'){
+      const x=parseFloat(el.style.left),y=parseFloat(el.style.top);
+      if(Number.isFinite(x)&&Number.isFinite(y))return {x,y};
+    }
+    return point(n);
+  };
+  for(const edge of edges){
+    const pair=edgeEls.get(edge.id);if(!pair||pair.group.style.display==='none')continue;
+    const a=anchor(edge.from),b=anchor(edge.to);if(!a||!b)continue;
+    const d='M '+a.x+' '+a.y+' Q '+((a.x+b.x)/2+16)+' '+((a.y+b.y)/2)+' '+b.x+' '+b.y;
+    // Reuse paths and animation elements: only their screen-space geometry changes.
+    pair.path.setAttribute('d',d);pair.hit.setAttribute('d',d);
+    for(const flow of [pair.rim,pair.flow])flow.style.offsetPath='path("'+d+'")';
+  }
+}
 function drawMemberOverviewTitles(){
   if(state.zoom>=.65)return;
   const entries=[...holdings.filter(shown).map(n=>({id:n.id,n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')})),
@@ -108,6 +127,7 @@ function drawMemberOverviewTitles(){
       path.setAttribute('d','M '+p.anchor.x+' '+p.anchor.y+' L '+slot.x+' '+slot.y);path.setAttribute('title','축소 제목 위치 안내 · 관계선 아님');memberOverviewLeaders.append(path);
     }
   });
+  memberOverviewSyncEdgePaths();
 }
 const memberOverviewBaseDrawGroups=drawMemberGroups;
 drawMemberGroups=function(){

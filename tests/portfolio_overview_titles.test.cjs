@@ -41,7 +41,7 @@ function harness(width = 1280, height = 720, zoom = .2) {
         document, memberGroupLines: groupLines, state: { zoom, panX: 0, panY: 0 },
         space: { clientWidth: width, clientHeight: height,
             getBoundingClientRect: () => ({ left: 100, top: 50, right: 100 + width, bottom: 50 + height }) },
-        holdings: [], shown: () => true, nodesEl, memberGroups: new Map(), noteEls: new Map(),
+        holdings: [], edges: [], edgeEls: new Map(), shown: () => true, nodesEl, memberGroups: new Map(), noteEls: new Map(),
         point(n) { return { x: width / 2 + (n.x - .5) * 1000 * box.state.zoom + box.state.panX,
             y: height / 2 + (n.y - .5) * 680 * box.state.zoom + box.state.panY } },
         drawMemberGroups() {
