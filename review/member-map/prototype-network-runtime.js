@@ -47,7 +47,7 @@ const memberNetworkStyle=document.createElement('style');memberNetworkStyle.text
 #an-map-design .an-network-inspector button{display:block;width:100%;text-align:left;min-height:36px;padding:8px 10px;margin-top:8px;background:light-dark(#f8f9fb,#1d242c)}
 #an-map-design .an-network-foot{padding:8px 16px;background:var(--an-panel);color:var(--an-sub);font-size:11px}
 @media(hover:hover){#an-map-design .an-network-view button:hover{background:light-dark(#f1f3f5,#252c35)}}
-@media(max-width:700px){#an-map-design .an-network-main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(160px,1fr) auto}#an-map-design .an-network-inspector{max-height:150px;padding:12px 16px}#an-map-design .an-network-head{padding:10px 12px;gap:6px}}
+@media(max-width:700px){#an-map-design .an-network-main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) min(150px,35%)}#an-map-design .an-network-inspector{max-height:150px;padding:12px 16px}#an-map-design .an-network-head{padding:10px 12px;gap:6px}}
 @media(pointer:coarse){#an-map-design .an-network-head button,#an-map-design .an-network-inspector button{min-height:44px}}
 `;root.append(memberNetworkStyle);
 const memberNetworkButton=document.createElement('button');memberNetworkButton.type='button';memberNetworkButton.className='an-tool';memberNetworkButton.textContent='전체 관계망';memberNetworkButton.setAttribute('aria-expanded','false');root.querySelector('.an-zoom').append(memberNetworkButton);
