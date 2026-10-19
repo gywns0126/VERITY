@@ -6,14 +6,16 @@ name: US Financials Incremental (10-K/Q 이벤트 기반 재무 신선도)
 #
 # 7축 audit:
 #  1 env: SEC UA / EDGAR 키 불요. publish-data: VERITY_DATA_PAT + VERCEL_BLOB_TOKEN.
-#  2 push trigger: vercel-api/ 미변경 — Vercel deploy 무관 (RULE 2)
+#  2 push trigger: delivery helper deploys with vercel-api; ignoreCommand unchanged (RULE 2)
 #  3 concurrency: verity-us-incremental (전용). 평일 UTC 10:30 = KST 19:30
-#  4 cron: 평일 1회. EDGAR 일자(ET) 기준 전일 인덱스 완성 후 처리
+#  4 cron: existing Vercel clock + native fallback, serialized successful-slot guard
 #  5 KIS: 0 (RULE 1 무관)
 #  6 pip: requirements.txt
 #  7 N=2: push 후 dispatch(N=1) + main 머지 후 첫 scheduled(N=2) 검증 의무 (RULE 8)
 
 on:
+  repository_dispatch:
+    types: [us_financials_incremental]
   schedule:
     - cron: '30 10 * * 1-5'   # KST 19:30 평일
   workflow_dispatch:
@@ -25,6 +27,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   # 전용 그룹 (2026-07-04) — verity-data-write 공유 시 pending 축출로 scheduled run 취소 반복
@@ -41,17 +44,28 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 5
+          # A queued automatic event must see current guards and persisted inputs.
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || 'refs/heads/main' }}
+
+      - name: US financial daily slot guard
+        id: slot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 vercel-api/us_financials_schedule.py guard
 
       - name: Setup Python
+        if: steps.slot.outputs.run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
 
       - name: Install dependencies
+        if: steps.slot.outputs.run == 'true'
         run: pip install -r requirements.txt
 
       - name: 10-K/Q 이벤트 감지 + 해당 종목 재수집
+        if: steps.slot.outputs.run == 'true'
         id: incr
         env:
           CAP: ${{ github.event.inputs.cap || '60' }}
@@ -70,6 +84,7 @@ jobs:
             data/metadata/us_fin_incremental_state.json
 
       - name: 리포트 재빌드 (재수집 반영)
+        if: steps.slot.outputs.run == 'true'
         id: report
         # 재수집 per-ticker 는 이 run 로컬에만 존재(gitignore) — 같은 run 안에서 즉시 소비.
         # fin_series/financials = us_fin_annual_compact.json(커밋 폴백) 로 CI 캐시 부재에도 보존
@@ -77,10 +92,12 @@ jobs:
         run: python -m api.builders.us_stock_report_public_builder
 
       - name: 분기 재빌드
+        if: steps.slot.outputs.run == 'true'
         id: quarterly
         run: python -m api.builders.us_quarterly_public_builder
 
       - name: 커버리지 발행 검사 (WARN 허용, 핵심 결함 차단)
+        if: steps.slot.outputs.run == 'true'
         id: quality
         run: python -m api.builders.coverage_report_builder
 

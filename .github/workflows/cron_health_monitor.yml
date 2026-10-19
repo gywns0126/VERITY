@@ -57,7 +57,7 @@ jobs:
             core.info(duplicate ? 'Slot already attempted; skip duplicate' : 'First run in slot');
   monitor:
     needs: cadence
-    if: always() && !cancelled() && (needs.cadence.result == 'skipped' || needs.cadence.outputs.run == 'true')
+    if: always() && !cancelled() && github.ref == 'refs/heads/main' && (needs.cadence.result == 'skipped' || needs.cadence.outputs.run == 'true')
     runs-on: ubuntu-latest
     concurrency:
       group: cron-health-monitor
@@ -68,6 +68,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Resolve main after acquiring the job lock, not the queued event SHA.
+          ref: main
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -122,6 +125,15 @@ jobs:
           fi
           python scripts/cron_health_monitor.py $ARGS
 
+      - name: Check US financial automatic delivery
+        if: success() || failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_QUIET_HOURS_ENABLED: "0"
+        run: python scripts/us_financials_schedule_monitor.py --notify
+
       - name: Commit cron_health.jsonl
         # 2026-05-17 Phase 3 audit fix — cron_health_monitor 결과 persist.
         # 옛 구현 = 텔레그램 push 만 + stdout 출력 휘발 → 운영자 과거 trend 추적 불가.
@@ -134,6 +146,9 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/metadata/cron_health.jsonl data/metadata/freshness_observations.jsonl data/freshness_board.json data/metadata/publish_verify.json data/metadata/publish_verify.jsonl data/metadata/data_health.json 2>/dev/null || true
+          if [ -f data/metadata/us_financials_schedule_health.json ]; then
+            git add -- data/metadata/us_financials_schedule_health.json
+          fi
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔔 cron_health ${TIME_KST}"
@@ -146,4 +161,5 @@ jobs:
             echo "Push attempt $i failed, retrying in $((i * 10))s..."
             sleep $((i * 10))
           done
-          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
+          echo "::error::push 5회 실패 — health receipt not persisted"
+          exit 1
