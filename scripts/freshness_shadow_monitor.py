@@ -162,6 +162,8 @@ def source_quality_issues(stream_id, obj):
         return []
     meta = obj.get("collector_meta") or {}
     diag = obj.get("diagnostics") or {}
+    if not isinstance(meta, dict) or not isinstance(diag, dict):
+        return ["invalid_source_metadata"]
     return [name for name, flag in (("macro", "macro_ok"), ("bonds", "bonds_ok"),
                                    ("global_events", "events_ok"))
             if (isinstance(meta.get(name), dict) and meta[name].get("stale") is True)

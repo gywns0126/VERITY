@@ -138,6 +138,7 @@ def build_board() -> dict:
     skipped = []
     pipeline = {}
     unmeasured = {crit: 0 for crit in ("P0", "P1", "P2")}
+    active_unmeasured = dict(unmeasured)
     for s in manifest.get("streams", []):
         sid = s.get("id", "")
         if s.get("owner") == "local" or sid in EXCLUDE_IDS:
@@ -195,6 +196,8 @@ def build_board() -> dict:
             skipped.append({"id": sid, "reason": reason})
             if s.get("criticality") in unmeasured:
                 unmeasured[s["criticality"]] += 1
+                if _schedule_active(sched, now):
+                    active_unmeasured[s["criticality"]] += 1
             continue
 
         age_min = (now - t).total_seconds() / 60
@@ -266,7 +269,7 @@ def build_board() -> dict:
             "total": len(crit_rows) + unmeasured[crit],
             "fresh": n_fresh,
             "closed": n_closed,
-            "active": len(crit_rows) - n_closed - n_disc + unmeasured[crit],
+            "active": len(crit_rows) - n_closed - n_disc + active_unmeasured[crit],
             "unmeasured": unmeasured[crit],
         }
     return {

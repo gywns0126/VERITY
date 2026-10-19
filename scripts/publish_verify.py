@@ -47,7 +47,7 @@ def _finite_multiple(v) -> bool:
     if isinstance(v, bool) or not isinstance(v, (int, float, str)):
         return False
     if isinstance(v, str) and not re.fullmatch(
-            r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?", v.strip(), re.I):
+            r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:e[+-]?[0-9]+)?", v.strip(), re.I):
         return False
     try:
         return math.isfinite(float(v))

@@ -83,7 +83,16 @@ def test_partial_macro_source_cannot_be_fresh_just_because_rebuilt(tmp_path, mon
 def test_closed_schedule_does_not_page_on_missing_file(tmp_path, monkeypatch):
     setup_stream(tmp_path, monkeypatch, schedule="market_hours")
     monkeypatch.setattr(monitor, "now_kst", lambda: NOW.replace(hour=22))
+    monkeypatch.setattr(board, "now_kst", lambda: NOW.replace(hour=22))
     assert monitor.build_observations()["rows"][0]["would_alarm"] is False
+    counts = board.build_board()["summary"]["p0"]
+    assert counts["total"] == counts["unmeasured"] == 1
+    assert counts["active"] == 0
+
+
+@pytest.mark.parametrize("key", ["collector_meta", "diagnostics"])
+def test_bad_macro_metadata_is_a_named_quality_failure(key):
+    assert monitor.source_quality_issues("macro_snapshot", {key: ["bad"]}) == ["invalid_source_metadata"]
 
 
 def test_stale_alarm_still_reports_real_age_and_limit():

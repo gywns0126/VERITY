@@ -101,6 +101,7 @@ def test_minimum_universe_matches_delivery_verifier():
 
 @pytest.mark.parametrize("value,expected", [(0, True), (-1.5, True), ("1e2", True),
     (" -2.0 ", True), ("NaN", False), ("Infinity", False), (True, False),
-    ({}, False), ([], False), ("not a number", False), ("1,000", False)])
+    ({}, False), ([], False), ("not a number", False), ("1,000", False),
+    ("１２", False), ("١٢", False)])
 def test_delivery_numeric_contract(value, expected):
     assert _finite_multiple(value) is expected
