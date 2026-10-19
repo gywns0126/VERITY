@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-10-19T23:21:31.805251+09:00",
+  "generated_at": "2026-10-19T23:26:39.063097+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 407411,
-    "python_modules": 1323,
+    "code_lines_tsx_py": 407634,
+    "python_modules": 1325,
     "tsx_components": 150,
     "json_data_files": 2464,
     "json_total_tracked": 2491,
     "workflows": 82,
     "scheduled_workflows": 59,
     "cron_triggers": 69,
-    "git_tracked_files": 8716
+    "git_tracked_files": 8718
   },
   "subsystems": {
     "ingest": {
       "label": "수집",
-      "count": 90,
+      "count": 91,
       "modules": [
         ".github/actions/publish-data/merge_pulse.py",
         "api/analyzers/dart_audit_signals.py",
@@ -87,6 +87,7 @@
         "api/utils/macro_snapshot.py",
         "scripts/audit/macro_field_audit.py",
         "scripts/ci/persist_macro_snapshot.py",
+        "scripts/ci/persist_price_pulse.py",
         "scripts/collect/dart_cb_bw_detail.py",
         "scripts/dart_business_overview_extract.py",
         "scripts/dart_catalyst_backfill.py",
@@ -784,9 +785,9 @@
     }
   },
   "python_by_dir": {
-    "tests": 510,
+    "tests": 511,
     "api": 495,
-    "scripts": 182,
+    "scripts": 183,
     "vercel-api": 122,
     "server": 8,
     ".github": 6
