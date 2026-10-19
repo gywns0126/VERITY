@@ -3348,7 +3348,7 @@ renderDetail=function(){
       const button=appendMemberText(row,'button',n.name,'an-connection');button.type='button';
       const visible=shown(n),hidden=boardDraft[state.scenario].hidden.includes(n.id);
       button.disabled=!visible;button.setAttribute('aria-label',n.name+' 지도에서 보기');
-      button.onclick=()=>{memberStockList=false;if(state.selected===n.id&&!showGuide&&!state.activeNote&&!state.noteList)renderDetail();else select(n.id,true);};
+      button.onclick=()=>{memberStockList=false;if(state.selected===n.id&&state.focusId===n.id&&!showGuide&&!state.activeNote&&!state.noteList)renderDetail();else select(n.id,false,true);};
       appendMemberText(row,'p',[n.ticker,n.market,membership(n),hidden?'작업판에서 숨김':!visible?'현재 필터에서 숨김':'표시 중'].filter(Boolean).join(' · '),'an-save-note');
       const count=new Set(edges.filter(e=>e.from===n.id||e.to===n.id).map(e=>e.from===n.id?e.to:e.from)).size;
       appendMemberText(row,'small','연결된 항목 '+count+'개','an-save-note');detail.append(row);

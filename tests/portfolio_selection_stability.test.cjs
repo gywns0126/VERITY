@@ -72,3 +72,12 @@ test('parent focus-stock can focus an already-selected stock outside the old sco
  assert.deepEqual([f.state.filter,f.state.topic,f.state.view],['filing','customers','changed']);
  const count=f.calls.render;f.context.dispatchFocusStock({data:{type:'focus-stock',id:'b'}});assert.equal(f.calls.render,count,'duplicate focus is inert');
 });
+test('explicit stock-list navigation switches the old scope even when its target is already selected',()=>{
+ const f=fixture();Object.assign(f.state,{focusId:'a',selected:'b',filter:'filing',topic:'customers',view:'changed'});
+ f.context.button={};f.context.n=f.nodeById.b;f.context.memberStockList=true;
+ vm.runInNewContext(extract('button.onclick=()=>{memberStockList=false;')+';',f.context);
+ f.context.button.onclick();assert.equal(f.context.memberStockList,false);
+ assert.equal(f.state.selected,'b');assert.equal(f.state.focusId,'b');assert.deepEqual(clone(f.context.memberScope().stocks.map(n=>n.id)),['b']);
+ assert.deepEqual([f.state.filter,f.state.topic,f.state.view],['filing','customers','changed']);
+ const count=f.calls.focus.length;f.context.button.onclick();assert.equal(f.state.selected,'b');assert.equal(f.calls.focus.length,count,'repeat list selection does not toggle or refocus');
+});
