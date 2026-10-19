@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from api.builders import freshness_board_builder as board
+from api.observability import data_pipeline_health as pipeline
 from scripts import freshness_shadow_monitor as monitor
 
 NOW = datetime(2026, 10, 19, 12, tzinfo=timezone(timedelta(hours=9)))
@@ -98,3 +99,76 @@ def test_bad_macro_metadata_is_a_named_quality_failure(key):
 def test_stale_alarm_still_reports_real_age_and_limit():
     assert monitor.format_freshness_alarm({"id": "crypto", "age_eff_min": 114,
             "max_age_min": 90}) == "crypto 1.9h>1.5h(90분)"
+
+
+def setup_pipeline_macro(tmp_path, monkeypatch, payload):
+    monkeypatch.setattr(pipeline, "_REPO_ROOT", tmp_path)
+    monkeypatch.setattr(pipeline, "_now_kst", lambda: NOW)
+    monkeypatch.setattr(pipeline, "_committed_content_ts", lambda *args, **kwargs: None)
+    monkeypatch.setattr(pipeline, "_alert_egregious_freezes", lambda health: None)
+    source = next(s for s in pipeline.SOURCES if s["key"] == "macro_snapshot")
+    monkeypatch.setattr(pipeline, "SOURCES", [source])
+    if payload is not None:
+        path = tmp_path / source["path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload))
+    return source
+
+
+def test_pipeline_writer_does_not_count_partial_macro_as_fresh(tmp_path, monkeypatch):
+    setup_pipeline_macro(tmp_path, monkeypatch, {
+        "collected_at": NOW.isoformat(),
+        "collector_meta": {"macro": {"stale": True, "reused": True},
+                           "bonds": {"stale": True, "reused": False}},
+        "diagnostics": {"macro_ok": False, "bonds_ok": False, "events_ok": True},
+    })
+    output = tmp_path / "health.json"
+    result = pipeline.write_data_pipeline_health(output_path=output)
+    assert json.loads(output.read_text()) == result
+    assert result["overall_status"] == "warn"
+    assert result["summary"] == {"fresh": 0, "stale": 1, "missing": 0, "total": 1}
+    row = result["items"][0]
+    assert row["status"] == "stale"
+    assert row["clock_status"] == "fresh"
+    assert row["source_status"] == "partial"
+    assert row["source_issues"] == ["macro", "bonds"]
+    assert result["schema_version"] == "v0"
+
+
+@pytest.mark.parametrize("age,status", [(0, "fresh"), (6, "fresh"), (7, "stale"), (13, "missing")])
+def test_pipeline_source_check_preserves_existing_clock_thresholds(tmp_path, monkeypatch, age, status):
+    source = setup_pipeline_macro(tmp_path, monkeypatch, {
+        "collected_at": (NOW - timedelta(hours=age)).isoformat(),
+        "collector_meta": {"macro": {"stale": False, "reused": True}},
+        "diagnostics": {"macro_ok": True, "bonds_ok": True, "events_ok": True},
+    })
+    row = pipeline._diagnose_one(source)
+    assert row["clock_status"] == row["status"] == status
+    assert "source_issues" not in row  # Reuse alone is not a declared source failure.
+
+
+def test_pipeline_partial_source_cannot_downgrade_missing_clock(tmp_path, monkeypatch):
+    source = setup_pipeline_macro(tmp_path, monkeypatch, {
+        "collected_at": (NOW - timedelta(hours=13)).isoformat(),
+        "diagnostics": {"macro_ok": False},
+    })
+    row = pipeline._diagnose_one(source)
+    assert row["clock_status"] == row["status"] == "missing"
+    assert row["source_issues"] == ["macro"]
+    assert pipeline.collect_data_pipeline_health()["overall_status"] == "error"
+
+
+def test_pipeline_missing_file_remains_missing(tmp_path, monkeypatch):
+    source = setup_pipeline_macro(tmp_path, monkeypatch, None)
+    row = pipeline._diagnose_one(source)
+    assert row["status"] == row["clock_status"] == "missing"
+    assert row["exists"] is False
+    assert pipeline.collect_data_pipeline_health()["overall_status"] == "error"
+
+
+@pytest.mark.parametrize("key", ["collector_meta", "diagnostics"])
+def test_pipeline_reuses_invalid_source_metadata_contract(tmp_path, monkeypatch, key):
+    source = setup_pipeline_macro(tmp_path, monkeypatch, {"collected_at": NOW.isoformat(), key: ["bad"]})
+    row = pipeline._diagnose_one(source)
+    assert row["status"] == "stale"
+    assert row["source_issues"] == ["invalid_source_metadata"]
