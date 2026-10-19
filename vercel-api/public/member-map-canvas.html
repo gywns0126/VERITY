@@ -1814,7 +1814,7 @@ html>body{padding:0}</style>
     <h2 id="an-intro-title" tabindex="-1" autofocus>내 종목의 연결을 한눈에</h2>
     <p id="an-intro-summary">종목과 뉴스·공시·정책이 어떻게 이어지는지, 지도로 살펴보는 시안이에요.</p>
     <ol class="an-intro-steps">
-      <li><div><strong>사건 묶음에서 종목 주변으로</strong><p>전체에서는 사건별 묶음을 보고, 종목을 누르면 주변 연결을 크게 읽어요. ‘전체 지도’를 누르면 원래 배치로 돌아와요. 연결선을 누르면 이유와 근거를 볼 수 있어요.</p></div></li>
+      <li><div><strong>사건 묶음에서 종목 주변으로</strong><p>종목이나 연결선을 선택하면 배치는 그대로 두고 이유와 근거를 보여줘요. 선택한 종목의 ‘주변 한눈에’를 누르면 주변 연결을 크게 읽고, ‘전체 지도’를 누르면 원래 배치로 돌아와요.</p></div></li>
       <li><div><strong>지도를 움직이고 확대해 보세요</strong><p>휠·두 손가락으로 이동, ⌘/Ctrl+휠·핀치로 확대·축소해요. 길을 잃으면 ‘한눈에’를 누르세요.</p></div></li>
       <li><div><strong>궁금한 종목을 검색해 추가하세요</strong><p>‘종목 검색·추가’로 탐색하고 메모를 남겨보세요. 지도에서 숨겨도 보유 기록은 지워지지 않아요. 상단 ‘테스트’에서 가상 30종목도 시험할 수 있어요.</p></div></li>
     </ol>
@@ -2219,7 +2219,7 @@ html>body{padding:0}</style>
         root.querySelector('#an-counts').textContent='보유 표시 '+visibleStocks+'/'+totalStocks+' · 탐색 표시 '+searchCatalog.filter(shown).length+'/'+searchCatalog.filter(inScenario).length+' · 사건 '+visibleEvents+' · 가상';
         root.querySelector('.an-aside-note').textContent='보유 '+totalStocks+'종목 · 가상 사건 '+nodes.filter(n=>inScenario(n)&&n.kind==='event').length+'건';
         nodes.filter(n=>n.kind==='event').forEach(n=>{const badge=nodesEl.querySelector('[data-node="'+n.id+'"] .an-note-badge');if(badge)badge.textContent=changeStatus[n.id]+' · 보유 '+eventHoldings(n).length+'종목 연결';});
-        root.querySelector('.an-foot > span:last-of-type').textContent=groupedOverview()?'사건 묶음 보기 · 종목을 누르면 주변을 크게 · 같은 종목이 여러 사건에 연결될 수 있어요':'드래그 선택 · Shift 추가 · ⌘/Ctrl+A 전체 · Space+드래그 이동';
+        root.querySelector('.an-foot > span:last-of-type').textContent=groupedOverview()?'사건 묶음 보기 · 선택해도 배치 고정 · 주변 한눈에는 버튼으로 · 같은 종목이 여러 사건에 연결될 수 있어요':'드래그 선택 · Shift 추가 · ⌘/Ctrl+A 전체 · Space+드래그 이동';
         renderClusters();renderNotes();placeEdgeLabels();renderSelection();
       }
       function renderClusters(){
