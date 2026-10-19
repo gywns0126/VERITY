@@ -100,6 +100,16 @@ def _dispatch(event_type: str, payload: dict | None = None) -> tuple[int, str]:
         return 500, f"error: {e}"
 
 
+def _us_financials_slot(now: datetime) -> datetime | None:
+    """Pure scheduling; helper import failures must not stop other consumers."""
+    now = now.astimezone(timezone.utc)
+    if now.weekday() > 4 or now.minute % 15 >= 5:
+        return None
+    slot = now.replace(hour=10, minute=30, second=0, microsecond=0)
+    end = now.replace(hour=14, minute=50, second=0, microsecond=0)
+    return slot if slot <= now < end else None
+
+
 def _resolve_events(now_utc: datetime) -> list[str]:
     """현재 UTC 시각 기반 발화 event_type 목록 결정.
 
@@ -209,7 +219,7 @@ def _resolve_events(now_utc: datetime) -> list[str]:
 
     # One weekday financial slot, using the already-deployed Vercel clock.
     # Catch-up attempts are bounded and carry the ORIGINAL due time, not now.
-    financial_slot = _us_financials_cadence().dispatch_slot(now_utc)
+    financial_slot = _us_financials_slot(now_utc)
     if financial_slot is not None:
         events.append(("us_financials_incremental", {
             "schedule_slot": financial_slot.isoformat()}))

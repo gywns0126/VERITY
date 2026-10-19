@@ -48,13 +48,14 @@ def fake_reads(m, monkeypatch, runs, steps=None, total=None):
 
 def test_original_daily_slot_and_finite_recovery_window():
     m = module()
+    schedule = dispatcher()
     start = datetime(2026, 10, 18, tzinfo=timezone.utc)
     found = []
     for i in range(7 * 1440):
         now = start + timedelta(minutes=i)
         if now.minute % 5 and now.minute != 7:
             continue
-        slot = m.dispatch_slot(now)
+        slot = schedule._us_financials_slot(now)
         if slot:
             assert slot.weekday() < 5
             assert (slot.hour, slot.minute) == (10, 30)
@@ -62,8 +63,8 @@ def test_original_daily_slot_and_finite_recovery_window():
             found.append(slot)
     assert len(found) == 5 * 18
     assert len(set(found)) == 5
-    assert m.dispatch_slot(datetime(2026, 10, 19, 10, 29, tzinfo=timezone.utc)) is None
-    assert m.dispatch_slot(datetime(2026, 10, 19, 14, 50, tzinfo=timezone.utc)) is None
+    assert schedule._us_financials_slot(datetime(2026, 10, 19, 10, 29, tzinfo=timezone.utc)) is None
+    assert schedule._us_financials_slot(datetime(2026, 10, 19, 14, 50, tzinfo=timezone.utc)) is None
     assert m.latest_slot(datetime(2026, 10, 19, 10, 29, tzinfo=timezone.utc)).isoformat() == "2026-10-16T10:30:00+00:00"
 
 
@@ -209,6 +210,18 @@ def test_existing_cron_config_and_time_budget_are_preserved():
         bound += 20 if "us_financials_incremental" in events else 0
         worst = max(worst, bound)
     assert worst < config["functions"]["api/cron/dispatch_pulse.py"]["maxDuration"]
+
+
+def test_helper_import_failure_does_not_break_existing_clock(monkeypatch):
+    m = dispatcher()
+    def unavailable():
+        raise ImportError("fixture missing bundle")
+    monkeypatch.setattr(m, "_us_financials_cadence", unavailable)
+    # Event resolution stays pure even when the optional financial helper fails.
+    events = [m._split_event(e)[0] for e in m._resolve_events(NOW)]
+    assert "macro_collect" in events
+    assert "cockpit_aggregate" in events
+    assert "us_financials_incremental" in events
 
 
 def test_workflow_guard_precedes_network_collection_and_guards_publish():

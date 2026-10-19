@@ -38,16 +38,6 @@ def latest_slot(now: datetime) -> datetime:
     return slot
 
 
-def dispatch_slot(now: datetime) -> datetime | None:
-    """Reuse quarter-hour ticks, with a finite same-day recovery window."""
-    now = now.astimezone(timezone.utc)
-    if now.weekday() > 4 or now.minute % 15 >= 5:
-        return None
-    slot = now.replace(hour=10, minute=30, second=0, microsecond=0)
-    end = now.replace(hour=14, minute=50, second=0, microsecond=0)
-    return slot if slot <= now < end else None
-
-
 def _read(repo: str, token: str, resource: str) -> dict:
     if not token:
         raise RuntimeError("GitHub read credential unavailable")
