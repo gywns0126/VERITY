@@ -44,16 +44,6 @@ def _quarter_filename(dt: datetime) -> str:
     return f"{dt.year}-Q{q}"
 
 
-def _file_mtime_kst(path: Path) -> Optional[datetime]:
-    if not path.exists():
-        return None
-    try:
-        ts = path.stat().st_mtime
-        return datetime.fromtimestamp(ts, tz=KST)
-    except OSError:
-        return None
-
-
 def _age_hours(t: Optional[datetime]) -> Optional[float]:
     if t is None:
         return None
@@ -62,7 +52,7 @@ def _age_hours(t: Optional[datetime]) -> Optional[float]:
 
 
 def _status_from_age(age_hours: Optional[float], max_fresh_hours: float) -> str:
-    if age_hours is None:
+    if age_hours is None or age_hours < 0:
         return "missing"
     if age_hours > max_fresh_hours * 2:
         return "missing"  # 2x 초과 = 사실상 dead
@@ -71,83 +61,59 @@ def _status_from_age(age_hours: Optional[float], max_fresh_hours: float) -> str:
     return "fresh"
 
 
-def _count_jsonl_lines(path: Path) -> int:
-    if not path.exists():
-        return 0
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return sum(1 for _ in f)
-    except OSError:
-        return 0
-
-
-def _last_jsonl_entry(path: Path) -> Optional[dict]:
-    """jsonl 마지막 라인 parse — diagnostics / triggers 추출용."""
-    if not path.exists():
-        return None
-    try:
-        with open(path, "rb") as f:
-            f.seek(0, 2)
-            size = f.tell()
-            if size == 0:
-                return None
-            chunk_size = min(8192, size)
-            f.seek(-chunk_size, 2)
-            lines = f.read().decode("utf-8", errors="ignore").splitlines()
-            for line in reversed(lines):
-                line = line.strip()
-                if line:
-                    return json.loads(line)
-    except (OSError, json.JSONDecodeError, ValueError):
-        return None
-    return None
-
-
-def _load_collected_at(path: Path) -> Optional[datetime]:
-    """JSON 파일의 collected_at 필드 → datetime."""
-    if not path.exists():
-        return None
-    try:
-        d = json.loads(path.read_text(encoding="utf-8"))
-        if isinstance(d, dict):
-            ts = d.get("collected_at")
-            if ts:
-                return datetime.fromisoformat(ts)
-    except (OSError, json.JSONDecodeError, ValueError):
-        return None
-    return None
-
-
 # 내용 타임스탬프 후보 키 (top-level + _meta). 파일마다 generated_at/collected_at/as_of/updated_at 혼재.
 _CONTENT_TS_KEYS = ("generated_at", "collected_at", "as_of", "updated_at")
+_JSONL_TS_KEYS = ("ts", "ts_kst", "logged_at", "created_at", "run_id") + _CONTENT_TS_KEYS
 
 
-def _load_content_ts(path: Path) -> Optional[datetime]:
-    """JSON **내용** 타임스탬프(generated_at/_meta.generated_at/collected_at/as_of/updated_at) → datetime(KST).
-    🚨 mtime 아님 — CI 가 broad `git add data/` 로 mtime 을 매 run 갱신하면 content 가 동결돼도 mtime 은 fresh.
-    insider_trades 6.7일 silent freeze(2026-06-27 P0)가 정확히 이 함정. 내용 시각으로만 freeze 포착."""
-    if not path.exists():
-        return None
+def _read_clock_content(path: Path, *, is_jsonl: bool) -> tuple:
+    """Read JSON or the complete final JSONL record; checkout mtime is not evidence."""
+    line_count = 0
     try:
-        d = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, ValueError):
-        return None
-    if not isinstance(d, dict):
-        return None
-    meta = d.get("_meta") if isinstance(d.get("_meta"), dict) else {}
-    for scope in (d, meta):
-        for k in _CONTENT_TS_KEYS:
+        if is_jsonl:
+            text = ""
+            # The quarterly file can be large; retain only one full record, not
+            # the entire file or a truncated 8 KiB tail. Count lines in this pass.
+            with path.open(encoding="utf-8") as stream:
+                for line in stream:
+                    line_count += 1
+                    if line.strip():
+                        text = line
+        else:
+            text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return None, line_count, "missing_file"
+    except (OSError, UnicodeError):
+        return None, line_count, "unreadable_content"
+    if not text.strip():
+        return None, line_count, "empty_content"
+    try:
+        obj = json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        return None, line_count, "invalid_json"
+    if not isinstance(obj, dict):
+        return None, line_count, "invalid_object"
+    return obj, line_count, None
+
+
+def _content_timestamp(obj: dict, keys: tuple) -> tuple:
+    """Use the first declared clock, normalized to KST; invalid clocks do not fall back."""
+    meta = obj.get("_meta") if isinstance(obj.get("_meta"), dict) else {}
+    for scope in (obj, meta):
+        for k in keys:
             v = scope.get(k)
-            if not v:
+            if v is None or v == "":
                 continue
             try:
-                dt = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+                if not isinstance(v, str):
+                    return None, "invalid_timestamp"
+                dt = datetime.fromisoformat(v.strip().replace("Z", "+00:00"))
                 if dt.tzinfo is None:
                     dt = dt.replace(tzinfo=KST)
-                return dt.astimezone(KST)
-            except (ValueError, TypeError):
-                continue
-    return None
+                return dt.astimezone(KST), None
+            except (ValueError, TypeError, OverflowError):
+                return None, "invalid_timestamp"
+    return None, "missing_timestamp"
 
 
 _PERSIST_FREEZE_FACTOR = 4.0  # max_fresh 의 4배 초과 = 명백 동결(주말/월요일 gap false-fire 0)
@@ -159,7 +125,7 @@ def _committed_content_ts(rel_path: str, *, is_jsonl: bool) -> Optional[datetime
     🚨 git-add-miss / commit 실패로 영속 안 된 freeze 를 잡는 유일 신호 —
     in-CI 모니터는 hook 직후 fresh 작업본(mtime·content 둘 다)을 봐서 persistence freeze 를 못 잡는다.
     모니터는 commit 前 실행 → HEAD = 직전 커밋(동결 상태) → 커밋 content-ts 가 진짜 영속 신선도.
-    git 미가용/파일 미추적 → None (mtime/content fallback, 무해). shallow checkout 라도 HEAD 는 존재."""
+    git 미가용/파일 미추적 → None (영속 시각 미확인). shallow checkout 라도 HEAD 는 존재."""
     try:
         import subprocess
         r = subprocess.run(
@@ -181,7 +147,7 @@ def _committed_content_ts(rel_path: str, *, is_jsonl: bool) -> Optional[datetime
             if not last_line:
                 return None
             obj = json.loads(last_line)
-            keys = ("ts", "ts_kst", "logged_at", "created_at") + _CONTENT_TS_KEYS
+            keys = _JSONL_TS_KEYS
         else:
             obj = json.loads(content)
             keys = _CONTENT_TS_KEYS
@@ -189,26 +155,14 @@ def _committed_content_ts(rel_path: str, *, is_jsonl: bool) -> Optional[datetime
         return None
     if not isinstance(obj, dict):
         return None
-    meta = obj.get("_meta") if isinstance(obj.get("_meta"), dict) else {}
-    for scope in (obj, meta):
-        for k in keys:
-            v = scope.get(k)
-            if not v:
-                continue
-            try:
-                dt = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=KST)
-                return dt.astimezone(KST)
-            except (ValueError, TypeError):
-                continue
-    return None
+    ts, _ = _content_timestamp(obj, keys)
+    return ts
 
 
 def _persistence_frozen(items: list) -> list:
     """커밋된 내용(HEAD) 기준 명백 동결 — git-add-miss / commit 실패 포착(working-copy fresh 여도).
 
-    max_fresh × 4 초과만 → 주말·월요일 gap false-fire 0. mtime-기반 jsonl 항목(현 status 사각)도 커버.
+    max_fresh × 4 초과만 → 주말·월요일 gap false-fire 0. 작업본과 별개로 JSONL 영속 내용도 확인.
     2026-07-01 학습: quarterly_history 50일 freeze(universe_scan.yml git add 누락 + CI mtime false-GREEN 은폐)."""
     frozen = []
     for it in items:
@@ -307,38 +261,38 @@ def _diagnose_one(src: dict) -> dict:
         "exists": path.exists(),
     }
 
-    # 내용 타임스탬프 우선, 없으면 mtime fallback (json_content = mtime 절대 신뢰 X, freeze 포착용)
+    # Every source uses its content clock. A checkout/touch cannot refresh data.
+    is_jsonl = src["type"].startswith("jsonl")
+    d, line_count, issue = _read_clock_content(path, is_jsonl=is_jsonl)
     ts: Optional[datetime] = None
-    if src["type"] == "json_content":
-        ts = _load_content_ts(path)
-    elif src["type"] == "json_collected_at":
-        ts = _load_collected_at(path)
-    out["ts_source"] = "content" if ts is not None else ("mtime" if path.exists() else "none")
-    if ts is None:
-        ts = _file_mtime_kst(path)
-
+    if issue is None:
+        keys = (_JSONL_TS_KEYS if is_jsonl else
+                ("collected_at",) if src["type"] == "json_collected_at" else _CONTENT_TS_KEYS)
+        ts, issue = _content_timestamp(d, keys)
+        if ts is not None and ts > now:
+            issue = "future_timestamp"
+    out["ts_source"] = "content" if ts is not None and issue is None else "none"
     age = _age_hours(ts)
     out["last_update_kst"] = ts.isoformat() if ts else None
     out["age_hours"] = age
-    out["status"] = _status_from_age(age, src["max_fresh_hours"])
+    out["status"] = "missing" if issue else _status_from_age(age, src["max_fresh_hours"])
+    if issue:
+        out["timestamp_issue"] = issue
 
     # 추가 메타 — 라인 수 / 마지막 entry 핵심 필드
-    if src["type"].startswith("jsonl"):
-        out["line_count"] = _count_jsonl_lines(path)
-        last = _last_jsonl_entry(path)
+    if is_jsonl:
+        out["line_count"] = line_count
+        last = d
         if last:
             # 큰 필드는 제외 (UI 부담 통제) — 핵심만
             keep_keys = (
-                "ts", "step", "mode", "input_n", "passed_n", "cut_score",
+                "ts", "ts_kst", "logged_at", "created_at", "run_id",
+                "step", "mode", "input_n", "passed_n", "cut_score",
                 "ramp_up_stage", "execution_time_seconds", "fail_triggers",
                 "yfinance_failure_rate",
             )
             out["last_entry"] = {k: last.get(k) for k in keep_keys if k in last}
     elif src["type"] == "json_collected_at":
-        try:
-            d = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-        except (OSError, json.JSONDecodeError):
-            d = {}
         diag = d.get("diagnostics") if isinstance(d, dict) else None
         if not isinstance(diag, dict):
             diag = {}
