@@ -46,11 +46,11 @@ def install_core(monkeypatch, endpoint, facts):
     return ask
 
 
-@pytest.mark.parametrize("status,ticker,count", [
-    ("ready", "JEPQ", 1), ("partial", "JEPQ", 2),
-    ("empty", "JEPQ", 0), ("unresolved", None, 0),
+@pytest.mark.parametrize("status,ticker,count,expected", [
+    ("ready", "JEPQ", 1, "partial"), ("partial", "JEPQ", 2, "partial"),
+    ("empty", "JEPQ", 0, "empty"), ("unresolved", None, 0, "unresolved"),
 ])
-def test_status_coverage_diagnostics_survive_http(endpoint, monkeypatch, status, ticker, count):
+def test_status_coverage_diagnostics_survive_http(endpoint, monkeypatch, status, ticker, count, expected):
     coverage = {"total": 4, "applicable": 3, "checked": 3, "hit": 1,
                 "no_record": 1, "unavailable": 1, "skipped": 1, "sources": [
                     {"source": "fixture", "label": "fixture", "status": "unavailable", "reason": "dns_error", "as_of": None},
@@ -63,7 +63,7 @@ def test_status_coverage_diagnostics_survive_http(endpoint, monkeypatch, status,
     ask = install_core(monkeypatch, endpoint, facts)
     code, body = request(endpoint, "/api/operator_ask?ticker=JEPQ&llm=1")
     assert code == 200
-    assert body["status"] == status
+    assert body["status"] == expected
     assert body["sections"] == facts["sections"]
     assert body["coverage"] == coverage
     assert body["fetch_diagnostics"] == diagnostics
@@ -72,6 +72,36 @@ def test_status_coverage_diagnostics_survive_http(endpoint, monkeypatch, status,
     assert body["contract"]["llm_calls"] == 0
     assert "answer" not in body and "synthesis" not in body
     ask.assert_called_once_with("JEPQ", "", facts_only=True)
+
+
+@pytest.mark.parametrize("unavailable,diagnostics", [
+    (1, []),
+    (0, [{"source": "fixture", "status": "unavailable", "reason": "timeout"}]),
+])
+def test_ready_cannot_hide_explicit_source_failure(endpoint, monkeypatch, unavailable, diagnostics):
+    facts = {"ticker": "JEPQ", "sections": [{"label": "retained", "data": {"value": 12}}],
+             "coverage": {"unavailable": unavailable}, "missing": [],
+             "_meta": {"status": "ready", "fetch_diagnostics": diagnostics}}
+    install_core(monkeypatch, endpoint, facts)
+    code, body = request(endpoint, "/api/operator_ask?ticker=JEPQ")
+    assert code == 200 and body["status"] == "partial"
+    assert body["coverage"] == facts["coverage"]
+    assert body["fetch_diagnostics"] == diagnostics
+    assert body["sections"] == facts["sections"]
+
+
+def test_consistent_ready_keeps_no_record_exclusions_and_optional_gaps(endpoint, monkeypatch):
+    facts = {"ticker": "JEPQ", "sections": [{"label": "fixture", "as_of": "2026-09-27"}],
+             "coverage": {"unavailable": 0, "no_record": 2, "skipped": 1},
+             "missing": ["optional issuer-document check remains"],
+             "_meta": {"status": "ready", "fetch_diagnostics": [
+                 {"source": "fixture", "status": "received"},
+                 {"source": "fixture/cache", "status": "cache_hit"}]}}
+    install_core(monkeypatch, endpoint, facts)
+    code, body = request(endpoint, "/api/operator_ask?ticker=JEPQ")
+    assert code == 200 and body["status"] == "ready"
+    assert body["coverage"] == facts["coverage"]
+    assert body["missing"] == facts["missing"]
 
 
 def test_legacy_payload_is_not_declared_ready(endpoint, monkeypatch):

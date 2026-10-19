@@ -40,12 +40,12 @@ function makePatch(doc, today, exec = cp.execFileSync) {
     const program = [
         'import sys,json',
         'from datetime import date',
-        'from api.collectors.kr_earnings_calendar import select_calendar',
+        'from api.utils.earnings_calendar_selection import select_calendar',
         'doc=json.load(sys.stdin)',
         'tickers=sorted(set(r["ticker"] for r in doc["records"] if isinstance(r,dict) and r.get("ticker")))',
         'print(json.dumps([{ "ticker":t,"calendar":select_calendar(doc,t,date.fromisoformat(sys.argv[1]))} for t in tickers],ensure_ascii=False))',
     ].join('\n');
-    const selected = JSON.parse(exec('python3', ['-c', program, today], {
+    const selected = JSON.parse(exec('python3', ['-S', '-c', program, today], {
         input: JSON.stringify(doc), encoding: 'utf8', maxBuffer: 15000000,
     }));
     assert(Array.isArray(selected));
@@ -86,9 +86,9 @@ function repair(doc, patch) {
         pending.push({stock, row});
     }
     if (pending.length) {
-        const program = 'import sys,json\nfrom api.collectors.kr_earnings_calendar import merge_calendar\n' +
+        const program = 'import sys,json\nfrom api.utils.earnings_calendar_selection import merge_calendar\n' +
             'print(json.dumps([merge_calendar(r["existing"],r["official"]) for r in json.load(sys.stdin)],ensure_ascii=False))';
-        const merged = JSON.parse(cp.execFileSync('python3', ['-c', program], {
+        const merged = JSON.parse(cp.execFileSync('python3', ['-S', '-c', program], {
             input: JSON.stringify(pending.map(({stock,row}) => ({existing:stock.calendar || [],official:row.calendar}))),
             encoding:'utf8',maxBuffer:15000000,
         }));
@@ -138,11 +138,48 @@ function repairGithubFile(file, patch) {
     return {target: 'VERITY-data/' + NAME, changed: result.changed, readback: 'matched'};
 }
 
+function latestCalendarSource(exec = cp.execFileSync) {
+    // A shared publisher may run from an older checkout. Bind the checkpoint to
+    // one current main commit instead of the caller's stale working-copy data.
+    const options = {encoding: 'utf8', maxBuffer: 15000000, timeout: 30000};
+    exec('git', ['fetch', 'origin', 'main', '--depth=1', '--quiet'], options);
+    const ref = exec('git', ['rev-parse', 'origin/main'], options).trim();
+    assert(/^[a-f0-9]{40}$/.test(ref), 'invalid main ref');
+    const doc = JSON.parse(exec('git', ['show', `${ref}:${SOURCE}`], options));
+    assert(Array.isArray(doc?.records), 'official calendar source missing');
+    for (const row of doc.records) {
+        assert(row && typeof row === 'object' && !Array.isArray(row), 'invalid source record');
+        assert(/^\d{6}$/.test(row.ticker) && /^\d{14}$/.test(row.receipt), 'invalid source identity');
+        assert(['confirmed', 'cancelled', 'review_required', 'not_earnings'].includes(row.status),
+            'invalid source status');
+    }
+    return {doc, ref};
+}
+
+function kstToday() {
+    return new Intl.DateTimeFormat('en-CA', {timeZone: 'Asia/Seoul',
+        year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());
+}
+
+function repairStagedFile(file, today = kstToday(), loadSource = latestCalendarSource) {
+    // Mandatory at the full-snapshot publish boundary: absence must not turn
+    // into a successful no-op that can erase a previously reviewed report.
+    const before = fs.readFileSync(file);
+    const {doc, ref} = loadSource();
+    const patch = makePatch(doc, today);
+    const result = repairGithubFile(file, patch);
+    if (!result.changed.length) assert(before.equals(fs.readFileSync(file)), 'no-op changed bytes');
+    return {...result, target: file, ref, checked_at: patch.checkedAt, reviewed: patch.rows.length};
+}
+
 async function main() {
+    if (process.argv[2] === '--staged-public') {
+        console.log(JSON.stringify(repairStagedFile('_public_dist/' + NAME)));
+        return;
+    }
     assert(['--github-file', '--blob'].includes(process.argv[2]), 'choose --github-file or --blob explicitly');
     cp.execFileSync('git', ['ls-files', '--error-unmatch', SOURCE], {stdio: 'pipe'});
-    const today = new Intl.DateTimeFormat('en-CA', {timeZone: 'Asia/Seoul',
-        year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());
+    const today = kstToday();
     const patch = makePatch(JSON.parse(fs.readFileSync(SOURCE)), today);
     if (process.argv[2] === '--github-file') {
         console.log(JSON.stringify(repairGithubFile('_report_published/' + NAME, patch)));
@@ -154,7 +191,8 @@ async function main() {
         fetch: url => fetch(url, {signal: AbortSignal.timeout(30000)}),
         sleep: ms => new Promise(resolve => setTimeout(resolve, ms))})));
 }
-module.exports = {makePatch, repair, publish, repairGithubFile, validateCalendar};
+module.exports = {makePatch, repair, publish, repairGithubFile, validateCalendar,
+    latestCalendarSource, repairStagedFile};
 if (require.main === module) main().catch(e => {
     console.error('calendar publish failed: ' + e.constructor.name);
     process.exitCode = 1;
