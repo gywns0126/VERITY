@@ -11,6 +11,13 @@ test('an overview move adopts the displayed title offset only when explicitly ca
  context.memberOverviewRebaseMovement('event');
  assert.equal(n.x,.7);assert.ok(Math.abs(n.y-(.5+40/136))<1e-12);
 });
+test('relationship titles never turn a stale screen measurement into saved drag movement',()=>{
+ const n={id:'stock',x:.6,y:.7},el={dataset:{overviewTitle:'true'},style:{left:'140px',top:'160px'}};
+ const context={nodeById:{stock:n},nodesEl:{querySelector:()=>el},memberOverviewElements:new Map([[el,{}]]),state:{zoom:.2},WORLD_WIDTH:1000,WORLD_HEIGHT:680,
+  point:()=>({x:140,y:176.5}),memberRelationshipOverviewNodes:()=>[],parseFloat,Number};
+ vm.runInNewContext(extract('memberOverviewRebaseMovement'),context);context.memberOverviewRebaseMovement('stock');
+ assert.deepEqual(n,{id:'stock',x:.6,y:.7});
+});
 test('unrendered/full-size titles and invalid zoom cannot rewrite coordinates',()=>{
  for(const [overview,zoom]of[['false',.2],['true',0],['true',NaN]]){
   const n={id:'a',x:.6,y:.7},el={dataset:{overviewTitle:overview},style:{left:'140px',top:'160px'}};

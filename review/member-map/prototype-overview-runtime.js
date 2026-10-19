@@ -65,6 +65,8 @@ function memberOverviewManual(n){
   return !!base&&(Math.abs(n.x-base.x)>1e-9||Math.abs(n.y-base.y)>1e-9);
 }
 function memberOverviewRebaseMovement(id){
+  // Relationship titles have no displaced screen-space slot to adopt.
+  if(typeof memberRelationshipOverviewNodes==='function')return;
   const n=nodeById[id],el=n&&nodesEl.querySelector('[data-node="'+id+'"]');
   if(!n||!el||el.dataset.overviewTitle!=='true'||!memberOverviewElements.has(el))return;
   const x=parseFloat(el.style.left),y=parseFloat(el.style.top),p=point(n),zoom=state.zoom;
