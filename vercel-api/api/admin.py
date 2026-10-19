@@ -1522,12 +1522,12 @@ def _terminal_analysis_evidence(rec: dict) -> dict:
     snapshot = rec.get("evidence_snapshot")
     if isinstance(snapshot, dict):
         slim = pick(snapshot, ("schema", "ticker", "currency", "captured_at", "analysis_as_of", "input_hash", "hash_scope"))
-        slim["price"] = pick(snapshot.get("price"), ("value", "as_of", "source", "adjustment", "status", "reasons"))
+        slim["price"] = pick(snapshot.get("price"), ("value", "as_of", "source", "adjustment", "status", "reasons", "bar_as_of", "bar_date", "time_kind"))
         slim["run"] = pick(snapshot.get("run"), run_keys)
         out["evidence_snapshot"] = slim
     entry = rec.get("rec_price_evidence")
     if isinstance(entry, dict):
-        slim = pick(entry, ("schema", "ticker", "currency", "value", "status", "captured_at", "quote_as_of", "source", "adjustment", "reason", "quote_reasons"))
+        slim = pick(entry, ("schema", "ticker", "currency", "value", "status", "captured_at", "quote_as_of", "source", "adjustment", "reason", "quote_reasons", "bar_as_of", "bar_date", "time_kind"))
         slim["run"] = pick(entry.get("run"), run_keys)
         out["rec_price_evidence"] = slim
     change = rec.get("analysis_change")

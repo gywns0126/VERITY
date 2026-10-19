@@ -67,7 +67,8 @@ def fake_yahoo(monkeypatch):
     class FakeStock:
         info = {}  # No quote cap or shares: exercise the actual cached fallback.
 
-        def history(self, period):
+        def history(self, period, interval="1d", auto_adjust=True):
+            assert interval == "1d" and auto_adjust is True
             return pd.DataFrame(
                 {"Close": [20.0, 21.0], "High": [22.0, 23.0],
                  "Low": [19.0, 20.0], "Volume": [100, 200]},
@@ -113,6 +114,10 @@ def test_stock_data_emits_ticker_dates_including_failed_carry_forward(snapshot, 
         assert result["market_cap"] == cap
         assert result["market_cap_source"] == "us_market_caps.json"
         assert result["market_cap_as_of"] == date
+        assert result["price_source"] == "yfinance.history"
+        assert result["price_adjustment"] == "auto_adjust"
+        assert result["price_bar_date"] == "2026-10-06"
+        assert result["price_bar_as_of"] is None  # Naive fixture index is not a quote clock.
 
 
 @pytest.mark.parametrize("metadata", UNKNOWN_METADATA)

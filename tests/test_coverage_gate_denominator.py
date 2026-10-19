@@ -18,6 +18,8 @@ import json
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api.builders import coverage_report_builder as cb  # noqa: E402
@@ -126,3 +128,228 @@ def test_existing_public_report_is_available_as_regeneration_floor(tmp_path):
     got = ub._load_existing_public_annual_packs(str(path))
     assert got["AAPL"]["fs"] == [{"year": 2024}, {"year": 2025}]
     assert got["AAPL"]["fin"] == {"period": "2025"}
+
+
+@pytest.mark.parametrize("value", [None, "", "  ", {}, [], {"PER": None}, [None, ""],
+                                  {"values": {"revenue": None}, "rows": []}])
+def test_filled_rejects_empty_payloads(value):
+    assert not cb._filled(value)
+
+
+@pytest.mark.parametrize("value", [0, False, "0", {"value": 0}, [None, {"value": 0}],
+                                  {"status": "not_applicable"}])
+def test_filled_preserves_zero_and_explicit_status(value):
+    assert cb._filled(value)
+
+
+def _run_gate(monkeypatch, tmp_path, current, previous=None):
+    baseline = tmp_path / "coverage_report.json"
+    if previous is not None:
+        baseline.write_text(json.dumps(previous), encoding="utf-8")
+    monkeypatch.setattr(cb, "_META", str(tmp_path))
+    monkeypatch.setattr(cb, "REPORT_PATH", str(baseline))
+    monkeypatch.setattr(cb, "HISTORY_PATH", str(tmp_path / "coverage_history.jsonl"))
+    monkeypatch.setattr(cb, "build", lambda: current)
+    return baseline
+
+
+def test_all_sources_missing_blocks_without_overwriting_good_baseline(monkeypatch, tmp_path):
+    previous = _report(1000, 800, 900)
+    with monkeypatch.context() as mp:
+        mp.setattr(cb, "_load", lambda name: None)
+        current = cb.build()
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    before = path.read_bytes()
+    with pytest.raises(SystemExit, match="1"):
+        cb.main()
+    assert path.read_bytes() == before
+    assert json.loads((tmp_path / "coverage_history.jsonl").read_text())["blocked"] is True
+
+
+def test_empty_first_run_is_not_a_good_baseline(monkeypatch, tmp_path):
+    current = {"kr_total": 0, "us_total": 0, "us_smallcap_total": 0}
+    path = _run_gate(monkeypatch, tmp_path, current)
+    with pytest.raises(SystemExit):
+        cb.main()
+    assert not path.exists()
+
+
+def test_missing_critical_companion_blocks_even_with_healthy_report(monkeypatch, tmp_path):
+    previous = _report(1000, 800, 900)
+    current = _report(1000, 800, 900)
+    current["us_companions"]["us_quarterly"] = None
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    with pytest.raises(SystemExit):
+        cb.main()
+    assert json.loads(path.read_text()) == previous
+
+
+def test_missing_one_market_blocks_while_other_market_remains(monkeypatch, tmp_path):
+    previous = _report(1000, 800, 900)
+    previous["kr_total"] = 1000
+    current = _report(1000, 800, 900)
+    _run_gate(monkeypatch, tmp_path, current, previous)
+    with pytest.raises(SystemExit):
+        cb.main()
+
+
+def test_partial_initial_run_and_unobserved_optional_sources_are_allowed(monkeypatch, tmp_path):
+    current = _report(1000, 800, 900)
+    path = _run_gate(monkeypatch, tmp_path, current)
+    cb.main()
+    assert json.loads(path.read_text()) == current
+
+
+def test_denominator_expansion_still_passes_full_gate(monkeypatch, tmp_path):
+    previous = _report(1505, 1299, 1498)
+    current = _report(5148, 2265, 1530)
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    cb.main()
+    assert json.loads(path.read_text()) == current
+
+
+@pytest.mark.parametrize("value", [None, True, False, {}, [], "", " ", "NaN", "Infinity",
+                                  float("nan"), float("inf"), "not a number", "1,000", "10배", "１２"])
+def test_multiple_coverage_rejects_non_numeric_or_nonfinite(value):
+    assert not cb._finite_multiple(value)
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, "0", "-1.2", "+.2", "1.", "1e3", "-2E-2", " 12 "])
+def test_multiple_coverage_preserves_valid_numbers(value):
+    assert cb._finite_multiple(value)
+
+
+def test_all_report_scopes_count_numeric_multiple_values_only(monkeypatch):
+    rows = [{"ticker": str(100000 + i), "facts": {"PER": value, "PBR": value}}
+            for i, value in enumerate([0, "-2.5", None, True, "NaN", "--", {}])]
+    reports = {name: {"stocks": rows} for name in (
+        "stock_report_public.json", "us_stock_report_public.json", "us_stock_report_us_smallcap.json")}
+    monkeypatch.setattr(cb, "_load", reports.get)
+    result = cb.build()
+    for field in ("fields", "us_fields", "us_smallcap_fields"):
+        assert result[field]["facts.PER"]["filled"] == 2
+        assert result[field]["facts.PBR"]["filled"] == 2
+
+
+@pytest.mark.parametrize("shape,value", [
+    (dict, {"000001": {}, "000002": {}, "999999": {}}),
+    (list, [{"ticker": "000001"}, {"ticker": "000002"}, {"ticker": "999999"}]),
+])
+def test_companion_coverage_uses_report_intersection(shape, value):
+    rows = [{"ticker": "000001"}, {"ticker": "000001"}, {"ticker": "000002"}]
+    result = cb._companion_coverage({"stocks": value}, "stocks", rows, "pct_of_kr", shape)
+    assert result["count"] == 3  # raw source count remains inspectable
+    assert result["report_ticker_count"] == 2
+    assert result["matched_count"] == 2
+    assert result["unmatched_count"] == 1
+    assert result["pct_of_kr"] == 100.0
+
+
+def test_duplicate_companion_rows_do_not_inflate_coverage():
+    value = [{"ticker": ticker} for ticker in ("A", "A", "Z")]
+    result = cb._companion_coverage({"stocks": value}, "stocks", [{"ticker": "A"}], "pct_of_us", list)
+    assert result["count"] == 3
+    assert result["matched_count"] == 1
+    assert result["unmatched_count"] == 1
+    assert result["duplicate_count"] == 1
+    assert result["unidentified_count"] == 0
+    assert result["pct_of_us"] == 100.0
+
+
+@pytest.mark.parametrize("value,shape,reason", [
+    ([{"name": "not a ticker"}], list, "unidentified_ticker"),
+    ([{"ticker": None}], list, "unidentified_ticker"),
+    ([{"ticker": 123}], list, "unidentified_ticker"),
+    (["A"], list, "unidentified_ticker"),
+    ({"": {}}, dict, "unidentified_ticker"),
+    ({"A": {}}, list, "unexpected_companion_schema"),
+    ([], dict, "unexpected_companion_schema"),
+    (None, dict, "unexpected_companion_schema"),
+])
+def test_unidentifiable_companion_is_not_zero_or_complete(value, shape, reason):
+    result = cb._companion_coverage({"stocks": value}, "stocks", [{"ticker": "A"}], "pct_of_us", shape)
+    assert result["pct_of_us"] is None
+    assert result["unmeasurable_reason"] == reason
+
+
+@pytest.mark.parametrize("shape", [dict, list])
+def test_valid_empty_companion_measures_zero(shape):
+    result = cb._companion_coverage({"stocks": shape()}, "stocks", [{"ticker": "A"}], "pct_of_us", shape)
+    assert result["count"] == result["matched_count"] == 0
+    assert result["pct_of_us"] == 0.0
+    assert result["unmeasurable_reason"] is None
+
+
+def test_all_seven_companions_use_their_confirmed_schema(monkeypatch):
+    docs = {"stock_report_public.json": {"stocks": [{"ticker": "000001"}]},
+            "us_stock_report_public.json": {"stocks": [{"ticker": "A"}]}}
+    for name, key, shape, ticker in [
+        ("dart_quarterly_public.json", "stocks", dict, "000001"),
+        ("disclosure_forensics.json", "stocks", list, "000001"),
+        ("insider_trades.json", "stocks", list, "000001"),
+        ("securities_lending.json", "stocks", list, "000001"),
+        ("stock_flow_5d.json", "flows", dict, "000001"),
+        ("us_quarterly_public.json", "stocks", dict, "A"),
+        ("us_insider_trades.json", "stocks", list, "A"),
+    ]:
+        docs[name] = {key: {ticker: {}, "EXTRA": {}} if shape is dict
+                      else [{"ticker": ticker}, {"ticker": "EXTRA"}]}
+    monkeypatch.setattr(cb, "_load", docs.get)
+    result = cb.build()
+    for group, pct_key in (("companions", "pct_of_kr"), ("us_companions", "pct_of_us")):
+        for metric in result[group].values():
+            assert metric["count"] == 2
+            assert metric["matched_count"] == 1
+            assert metric["unmatched_count"] == 1
+            assert metric[pct_key] == 100.0
+
+
+def _intersection_report(total, raw_count, matched_count):
+    result = _report(total, total, raw_count)
+    result["us_companions"]["us_quarterly"].update(
+        coverage_basis=cb.COMPANION_BASIS, matched_count=matched_count,
+        pct_of_us=round(matched_count / total * 100, 1))
+    return result
+
+
+def test_legacy_raw_baseline_migration_does_not_fake_a_collapse(monkeypatch, tmp_path):
+    previous = _report(1000, 1000, 1000)
+    current = _intersection_report(1000, 1000, 600)
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    cb.main()
+    assert json.loads(path.read_text()) == current
+    history = json.loads((tmp_path / "coverage_history.jsonl").read_text())
+    assert history["basis_migrations"] == ["us.companion.us_quarterly"]
+    assert history["us.companion.us_quarterly"] == 60.0
+    assert cb._flat_counts(current)["us.companion.us_quarterly"] == 600
+
+
+@pytest.mark.parametrize("previous,current", [
+    (_report(1000, 1000, 1000), _intersection_report(1000, 100, 100)),
+    (_report(1000, 1000, 1000), _intersection_report(1000, 1000, 0)),
+    (_intersection_report(1000, 1000, 600), _intersection_report(1000, 1000, 100)),
+])
+def test_intersection_gate_keeps_raw_loss_floor_and_matched_loss_guards(monkeypatch, tmp_path, previous, current):
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    with pytest.raises(SystemExit):
+        cb.main()
+    assert json.loads(path.read_text()) == previous
+
+
+def test_intersection_denominator_growth_preserves_existing_exemption(monkeypatch, tmp_path):
+    previous = _intersection_report(1000, 1000, 800)
+    current = _intersection_report(3000, 1000, 800)
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    cb.main()
+    assert json.loads(path.read_text()) == current
+
+
+def test_new_basis_unmeasurable_core_does_not_replace_legacy_good(monkeypatch, tmp_path):
+    previous = _report(1000, 1000, 1000)
+    current = _intersection_report(1000, 1000, 600)
+    current["us_companions"]["us_quarterly"].update(
+        pct_of_us=None, unmeasurable_reason="unidentified_ticker")
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    with pytest.raises(SystemExit):
+        cb.main()
+    assert json.loads(path.read_text()) == previous

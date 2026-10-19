@@ -117,7 +117,9 @@ def test_board_marks_stale_reason_and_survives_glob_streams(monkeypatch):
     monkeypatch.setattr(os.path, "exists", lambda p: True)
     # 파일 시각은 '방금' — 기존 축만으로는 fresh 가 나오는 상황을 재현한다
     monkeypatch.setattr(B, "_extract_ts", lambda o, f=None: now.isoformat())
-    monkeypatch.setattr(B, "latest_ts_for_glob", lambda f, tf=None: now)
+    monkeypatch.setattr(B, "glob_freshness", lambda *args:
+                        {"oldest": now, "newest": now, "members": 1,
+                         "measured": 1, "unmeasured": 0})
 
     board = B.build_board()
     by_id = {r["id"]: r for r in board["streams"]}

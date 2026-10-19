@@ -106,6 +106,7 @@ def _check_metadata(value, evidence, stock, expected_issuer=None, expected_unit=
         unknown.append("definition_or_output_unit_missing")
     definition_unit = "percent" if evidence.get("definition") in (
         "long_term_plus_short_borrowings_over_equity",
+        "noncurrent_plus_current_debt_over_equity",
         "total_liabilities_over_assets_minus_liabilities",
         "annual_net_income_over_closing_equity", "annual_operating_profit_over_revenue"
     ) else None

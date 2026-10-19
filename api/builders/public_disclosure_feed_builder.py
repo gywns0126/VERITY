@@ -34,6 +34,7 @@ from typing import Any, Dict, List
 # 공시 분류 재사용 (재구현 금지) + '왜 중요한가' 결정론 템플릿. 둘 다 런타임 LLM 0.
 from api.builders.disclosure_forensics_builder import _classify
 from api.builders.disclosure_why_templates import why_for_kr
+from api.collectors.dart_catalyst import _detect_correction
 
 KST = timezone(timedelta(hours=9))
 
@@ -176,7 +177,7 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
         for r in rows[:MAX_PER_TICKER]:
             rcept_no = str(r.get("rcept_no") or "").strip()
             # '왜 중요한가' — 카테고리 분류(재사용) → 결정론 dict lookup. LLM 0. 미매핑 = 빈 문자열.
-            _is_corr = bool(r.get("is_correction"))
+            _is_corr = bool(r.get("is_correction")) or _detect_correction(r)
             _cls = _classify(r.get("report_nm") or "")
             _cat = "정정공시" if _is_corr else (_cls["category"] if _cls else None)
             disclosures.append(

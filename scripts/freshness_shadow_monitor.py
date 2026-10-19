@@ -48,8 +48,8 @@ def _extract_ts(obj, ts_field: str | None):
             else:
                 cur = None
                 break
-        if isinstance(cur, str):
-            return cur
+        # A declared observation clock must not silently become a build clock.
+        return cur if isinstance(cur, str) and cur.strip() else None
     if isinstance(obj, dict):
         for k in TS_FALLBACK:
             if isinstance(obj.get(k), str):
@@ -140,19 +140,46 @@ def _schedule_active(schedule: str, now: datetime) -> bool:
     return True  # always / weekly / monthly
 
 
-def latest_ts_for_glob(pattern: str, ts_field: str | None):
-    """glob 스트림(crypto_* / us_financials/*) — 매칭 파일 전체에서 최신 ts 1개.
-
-    2026-07-30: 알람 경로(build_observations)가 glob 을 skip 하던 사각 해소용으로 승격.
-    board 빌더가 자체 복제하던 동일 로직도 이 함수를 import 하게 통일 (단일 산식 유지).
-    """
-    best = None
-    for path in glob.glob(os.path.join(DATA_DIR, pattern)):
+def glob_freshness(pattern: str, ts_field: str | None, data_dir=None):
+    """Measure every matched member; one recent file cannot refresh its siblings."""
+    paths = sorted(p for p in glob.glob(os.path.join(data_dir or DATA_DIR, pattern))
+                   if os.path.isfile(p))
+    stamps = []
+    for path in paths:
         ts = _extract_ts(_load_any(path), ts_field)
         t = _parse_ts_kst(ts) if ts else None
-        if t and (best is None or t > best):
-            best = t
-    return best
+        if t is not None:
+            stamps.append(t)
+    return {"oldest": min(stamps) if stamps else None,
+            "newest": max(stamps) if stamps else None,
+            "members": len(paths), "measured": len(stamps),
+            "unmeasured": len(paths) - len(stamps)}
+
+
+def source_quality_issues(stream_id, obj):
+    """Honor explicit producer failures, without guessing per-source freshness SLAs."""
+    if stream_id != "macro_snapshot" or not isinstance(obj, dict):
+        return []
+    meta = obj.get("collector_meta") or {}
+    diag = obj.get("diagnostics") or {}
+    if not isinstance(meta, dict) or not isinstance(diag, dict):
+        return ["invalid_source_metadata"]
+    return [name for name, flag in (("macro", "macro_ok"), ("bonds", "bonds_ok"),
+                                   ("global_events", "events_ok"))
+            if (isinstance(meta.get(name), dict) and meta[name].get("stale") is True)
+            or diag.get(flag) is False]
+
+
+def format_freshness_alarm(row):
+    """Do not describe missing/partial evidence as a fabricated zero-hour delay."""
+    reason = row.get("quality_reason")
+    if reason:
+        return f"{row['id']} {reason}"
+    age = row.get("age_eff_min")
+    limit = row.get("max_age_min")
+    if age is None or limit is None:
+        return f"{row['id']} {row.get('status', 'unmeasured')}"
+    return f"{row['id']} {age / 60:.1f}h>{limit / 60:.1f}h({limit:.0f}분)"
 
 
 def build_observations() -> dict:
@@ -173,31 +200,39 @@ def build_observations() -> dict:
             rows.append({"id": s["id"], "status": "skip_local_absent"})
             continue
         proof = None
+        obj = None
+        group = None
+        active = _schedule_active(sched, now)
+        def unavailable(status, **extra):
+            return {"id": s["id"], "status": status, "measured": False,
+                    "quality_reason": status, "criticality": s.get("criticality"),
+                    "schedule": sched, "would_alarm": active, **extra}
         if is_glob:
-            t = latest_ts_for_glob(f, s.get("ts_field"))
+            group = glob_freshness(f, s.get("ts_field"))
+            t = group["oldest"]
             if t is None:
-                rows.append({"id": s["id"], "status": "no_ts"})
+                rows.append(unavailable("no_ts" if group["members"] else "missing"))
                 continue
         else:
             path = os.path.join(DATA_DIR, f)
             if not os.path.exists(path):
-                rows.append({"id": s["id"], "status": "missing"})
+                rows.append(unavailable("missing"))
                 continue
             obj = _load_any(path)
             ts = _extract_ts(obj, s.get("ts_field"))
-            if obj is not None and not ts:
+            if obj is not None and not ts and not s.get("ts_field"):
                 proof = collection_receipt(s["id"], path) or producer_evidence(s["id"])
                 if proof and proof.get("status") == "bound_query_complete":
                     ts = proof["completed_at"]
             if not ts:
-                row = {"id": s["id"], "status": "no_ts"}
+                row = unavailable("unreadable" if obj is None else "no_ts")
                 if proof:
                     row["producer_evidence"] = proof
                 rows.append(row)
                 continue
             t = _parse_ts_kst(ts)
             if t is None:
-                rows.append({"id": s["id"], "status": "bad_ts", "ts": ts})
+                rows.append(unavailable("bad_ts", ts=ts))
                 continue
         age_m = (now - t).total_seconds() / 60
         # weekday/market_hours = 주말 무생산 스트림 → 토·일 경과분 제외한 유효 age 로 판정
@@ -205,7 +240,6 @@ def build_observations() -> dict:
         if sched in ("weekday", "market_hours"):
             age_eff = age_m - _weekend_minutes_between(t, now)
         maxm = s.get("max_age_minutes")
-        active = _schedule_active(sched, now)
         would_alarm = bool(active and maxm and age_eff > maxm)
         row = {
             "id": s["id"], "status": "checked" if active else "skip_schedule", "schedule": sched,
@@ -216,6 +250,15 @@ def build_observations() -> dict:
         if proof:
             row["producer_evidence"] = proof
             row["clock_kind"] = proof["clock_kind"]
+        if group:
+            row["group_counts"] = {k: group[k] for k in ("members", "measured", "unmeasured")}
+            if group["unmeasured"]:
+                row["quality_reason"] = "partial_group"
+                row["would_alarm"] = active
+        issues = source_quality_issues(s["id"], obj)
+        if issues:
+            row["quality_reason"] = "source_quality: " + ",".join(issues)
+            row["would_alarm"] = active
         rows.append(row)
     alarms = [r["id"] for r in rows if r.get("would_alarm")]
     return {

@@ -338,6 +338,13 @@ runs:
         # publish; a failed overlay stops both public targets before either write.
         node "${{ github.workspace }}/scripts/publish_earnings_calendar.cjs" --staged-public
 
+    - name: Validate core public reports before either public write
+      shell: bash
+      run: |
+        # Same guard as Blob, but before force_orphan can publish a broken report
+        # or remove a missing one. Local-only; no SDK install or token required.
+        node "${{ github.action_path }}/blob_upload.js" --verify-core "${{ github.workspace }}/_public_dist"
+
     - name: Deploy to VERITY-data main branch (옵션 B, P0)
       id: publish_primary
       continue-on-error: true

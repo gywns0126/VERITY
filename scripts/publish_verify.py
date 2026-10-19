@@ -10,7 +10,9 @@
 from __future__ import annotations
 
 import json
+import math
 import os
+import re
 import time
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -38,6 +40,19 @@ def _filled(v) -> bool:
     if isinstance(v, str):
         return v.strip() not in ("", "—", "-")
     return True
+
+
+def _finite_multiple(v) -> bool:
+    """Match the public uploader's finite numeric ratio contract, including zero."""
+    if isinstance(v, bool) or not isinstance(v, (int, float, str)):
+        return False
+    if isinstance(v, str) and not re.fullmatch(
+            r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:e[+-]?[0-9]+)?", v.strip(), re.I):
+        return False
+    try:
+        return math.isfinite(float(v))
+    except (ValueError, OverflowError):
+        return False
 
 
 def _fetch(url: str, timeout: int = 45):
@@ -169,7 +184,7 @@ def verify_one(fname: str, cfg: dict) -> dict:
         return res
     pcts, ok = {}, True
     for sub in cfg["subfields"]:
-        filled = sum(1 for s in arr if _filled(((s or {}).get("facts") or {}).get(sub)))
+        filled = sum(1 for s in arr if _finite_multiple(((s or {}).get("facts") or {}).get(sub)))
         pct = round(filled * 100.0 / total, 1)
         pcts[sub] = pct
         if pct < cfg["floor"]:

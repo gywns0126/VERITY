@@ -993,7 +993,7 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     try:
         if _REPO_ROOT not in sys.path:  # `python scripts/...` 실행 시 sys.path[0]=scripts/ — repo root 필요
             sys.path.insert(0, _REPO_ROOT)
-        from scripts.freshness_shadow_monitor import build_observations
+        from scripts.freshness_shadow_monitor import build_observations, format_freshness_alarm
         _fresh_obs = build_observations()
         _stale_rows = [r for r in _fresh_obs.get("rows", []) if r.get("would_alarm")]
         _stale_ids_for_sweep = [r["id"] for r in _stale_rows]
@@ -1011,18 +1011,14 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
                 #   판정을 의심하게 된다. 판정은 정확했고 **표시만 거짓**이었다.
                 #   임계는 분 단위 원본을 그대로 쓰고, 시간 환산은 소수 1자리로 맞춘다.
                 "freshness P0 stale: " + ", ".join(
-                    f"{r['id']} {r.get('age_eff_min', 0) / 60:.1f}h"
-                    f">{(r.get('max_age_min') or 0) / 60:.1f}h"
-                    f"({r.get('max_age_min') or 0:.0f}분)"
-                    for r in _stale_p0
+                    format_freshness_alarm(r) for r in _stale_p0
                 )
             )
         if _stale_rest:
             severity = "WARNING" if severity == "PASS" else severity
             findings.append(
                 "freshness stale(P1+): " + ", ".join(
-                    f"{r['id']} {r.get('age_eff_min', 0) / 60:.1f}h"
-                    for r in _stale_rest
+                    format_freshness_alarm(r) for r in _stale_rest
                 )
             )
     except Exception as e:  # 판정 실패 = 모니터 결함 가시화 (silent pass 금지)

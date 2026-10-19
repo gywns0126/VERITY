@@ -452,7 +452,7 @@ def get_fred_macro_block() -> Dict[str, Any]:
                 **cape_data,
                 **observation_meta(
                     cape_data.get("source", "multpl.com (Shiller PE)"),
-                    None, fetched_at=now_iso(),
+                    cape_data.get("source_as_of"), fetched_at=now_iso(),
                 ),
             }
     except Exception as error:  # noqa: BLE001

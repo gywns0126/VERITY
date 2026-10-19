@@ -122,7 +122,9 @@ def test_weekend_missing_artifact_not_hidden_by_successful_producer(tmp_path, mo
     setup_snapshot(tmp_path, monkeypatch, exists=False)
     calls = replies(monkeypatch)
     assert board.build_board()["_skipped"] == [{"id": "news_flash", "reason": "missing"}]
-    assert shadow.build_observations()["rows"] == [{"id": "news_flash", "status": "missing"}]
+    row = shadow.build_observations()["rows"][0]
+    assert row["id"] == "news_flash" and row["status"] == "missing"
+    assert row["measured"] is False and row["would_alarm"] is False
     assert calls == []
 
 

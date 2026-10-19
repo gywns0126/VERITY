@@ -2535,6 +2535,13 @@ def main():
             if tk in price_map:
                 p = price_map[tk]
                 stock["price"] = p
+                # build_price_map returns scalars without source clocks. Do not
+                # attribute this replacement quote to the previous daily bar/tick.
+                for price_meta_key in (
+                    "price_as_of", "price_timestamp", "price_source", "price_adjustment",
+                    "price_bar_as_of", "price_bar_date", "price_time_kind", "price_bar_value",
+                ):
+                    stock.pop(price_meta_key, None)
                 # 🚨 2026-08-20 — current_price 동반 갱신. 12줄 위 holdings 분기(2435)는
                 #   갱신하는데 추천만 price 에서 멈춰 있었다. 섹션 헤더가 "보유·추천 종목
                 #   시세 갱신"(2426) 이고 publish 쪽 action.yml 주석도 "recommendations

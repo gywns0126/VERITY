@@ -27,6 +27,7 @@
 from __future__ import annotations
 
 import importlib.util
+import ast
 import json
 from pathlib import Path
 
@@ -194,6 +195,37 @@ def test_main_py_realtime_block_updates_recommendation_current_price():
     assert 'stock["current_price"] = p' in src, (
         "realtime 블록에서 추천 current_price 갱신이 사라졌다 (main.py:2444 인접)"
     )
+
+
+@pytest.mark.parametrize("ticker,currency", [("005930", "KRW"), ("GOOGL", "USD")])
+@pytest.mark.parametrize("replacement_price", [100.0, 120.0])
+def test_actual_realtime_loop_clears_unattributed_quote_metadata(ticker, currency, replacement_price):
+    """Execute the real update loop without importing or running the pipeline."""
+    tree = ast.parse((ROOT / "api" / "main.py").read_text(encoding="utf-8"))
+    loops = [node for node in ast.walk(tree) if isinstance(node, ast.For)
+             and isinstance(node.target, ast.Name) and node.target.id == "stock"
+             and isinstance(node.iter, ast.Name) and node.iter.id == "prev_recs"]
+    assert len(loops) == 1
+    metadata = {
+        "price_as_of": "2026-10-16T16:00:00-04:00",
+        "price_timestamp": "2026-10-16T16:00:00-04:00",
+        "price_source": "old-provider", "price_adjustment": "auto_adjusted",
+        "price_bar_as_of": "2026-10-16T00:00:00-04:00", "price_bar_date": "2026-10-16",
+        "price_time_kind": "daily_bar_start", "price_bar_value": 100.0,
+    }
+    updated = {"ticker": ticker, "currency": currency, "price": 100.0,
+               "current_price": 100.0, "rec_price": 80.0, **metadata}
+    untouched = {"ticker": "000660", "price": 100.0, **metadata}
+    legacy = {"ticker": ticker, "currency": currency, "price": 100.0}
+    scope = {"prev_recs": [updated, untouched, legacy], "price_map": {ticker: replacement_price},
+             "get_investor_flow": lambda *args: {}, "compute_us_flow": lambda *args: {}}
+    module = ast.fix_missing_locations(ast.Module(body=loops, type_ignores=[]))
+    exec(compile(module, "api/main.py realtime loop", "exec"), scope)
+    assert updated["price"] == updated["current_price"] == replacement_price
+    assert updated["rec_price"] == 80.0
+    assert all(key not in updated for key in metadata)
+    assert all(untouched[key] == value for key, value in metadata.items())
+    assert legacy["current_price"] == replacement_price
 
 
 def test_merge_pulse_source_updates_recommendation_current_price():

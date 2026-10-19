@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import date
+from html import unescape
 from typing import Optional
 
 import requests
@@ -18,9 +20,35 @@ from api.utils.macro_runtime import request_timeout
 
 logger = logging.getLogger(__name__)
 
-MULTPL_URL = "https://www.multpl.com/shiller-pe"
+# The chart's current timestamp omits the year; the linked table states it.
+MULTPL_URL = "https://www.multpl.com/shiller-pe/table/by-month"
 _META_RE = re.compile(r"Current Shiller PE Ratio is ([\d.]+)", re.IGNORECASE)
 _CHANGE_RE = re.compile(r"a change of ([+-]?[\d.]+) from previous", re.IGNORECASE)
+_TABLE_RE = re.compile(r'<table\b[^>]*\bid=[\"\']datatable[\"\'][^>]*>(.*?)</table>', re.I | re.S)
+_ROW_RE = re.compile(r"<tr\b[^>]*>(.*?)</tr>", re.I | re.S)
+_CELL_RE = re.compile(r"<td\b[^>]*>(.*?)</td>", re.I | re.S)
+_MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
+
+
+def _source_date(html: str, current_value: float) -> Optional[str]:
+    """Accept only an explicit date on the first table row matching this quote."""
+    table = _TABLE_RE.search(html)
+    rows = _ROW_RE.findall(table.group(1)) if table else []
+    row = next((row for row in rows if re.search(r"<td\b", row, re.I)), "")
+    cells = _CELL_RE.findall(row)
+    if len(cells) != 2:
+        return None
+    cells = [unescape(re.sub(r"<[^>]+>", "", cell)).strip() for cell in cells]
+    match = re.fullmatch(r"([A-Z][a-z]{2})\s+(\d{1,2}),\s+(\d{4})", cells[0])
+    if not match:
+        return None
+    try:
+        if float(cells[1].replace(",", "")) != current_value:
+            return None
+        month, day, year = match.groups()
+        return date(int(year), _MONTHS.index(month) + 1, int(day)).isoformat()
+    except ValueError:
+        return None
 
 
 def fetch_cape() -> Optional[dict]:
@@ -53,6 +81,8 @@ def fetch_cape() -> Optional[dict]:
             "as_of": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
             "source": "multpl.com (Shiller PE)",
             "series_id": "MULTPL_SHILLER_PE",
+            "source_as_of": _source_date(html, value),
+            "source_url": MULTPL_URL,
         }
     except (requests.RequestException, ValueError) as e:
         logger.warning("CAPE multpl 실패: %s", e)

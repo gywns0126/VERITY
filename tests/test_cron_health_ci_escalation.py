@@ -226,3 +226,44 @@ def test_in_progress_main_run_skipped():
     ]
     latest = m._latest_completed_main_run(runs)
     assert latest is not None and latest["conclusion"] == "failure"
+
+
+def test_freshness_findings_preserve_non_age_failures(monkeypatch, tmp_path):
+    """Quality/missing rows must reach the alert and sweep without invented age."""
+    from datetime import datetime
+    from types import SimpleNamespace
+    from scripts import freshness_shadow_monitor as freshness
+
+    now = datetime(2026, 10, 19, 20, tzinfo=m.KST)
+    monkeypatch.setattr(m, "_REPO_ROOT", str(tmp_path))
+    monkeypatch.setattr(m, "_now_kst", lambda: now)
+    monkeypatch.setattr(m, "_gh_run_list", lambda *args, **kwargs: [])
+    monkeypatch.setattr(m, "_load_runtime_log", lambda: [])
+    monkeypatch.setattr(m, "_load_json", lambda path: None)
+    monkeypatch.setattr(m, "_sweep_workflow_latest_failures", lambda: [])
+    monkeypatch.setattr(m, "_workflow_stream_map", lambda: {})
+    monkeypatch.setattr(m, "_count_expected_daily_full_in_window", lambda *a, **k: 0)
+    monkeypatch.setattr(m, "_count_expected_price_pulse_in_window", lambda *a, **k: 0)
+    monkeypatch.setattr(m, "_is_price_pulse_slot_active", lambda *a, **k: False)
+    monkeypatch.setattr(m.subprocess, "run", lambda *a, **k: SimpleNamespace(stdout="one-lock"))
+    states = ["missing", "no_ts", "bad_ts", "partial_group", "source_quality"]
+    rows = [{"id": state, "status": state, "would_alarm": True,
+             "criticality": "P0" if index == 0 else "P1"}
+            for index, state in enumerate(states)]
+    monkeypatch.setattr(freshness, "build_observations", lambda: {"checked": 5, "rows": rows})
+    sweep_ids = []
+
+    def sweep(failures, severity, stale_ids, mapping):
+        sweep_ids.extend(stale_ids)
+        return severity, []
+
+    monkeypatch.setattr(m, "_sweep_severity_and_findings", sweep)
+    report = m.analyze()
+    text = "\n".join(report["findings"])
+    assert report["severity"] == "FAIL"
+    assert sweep_ids == states
+    assert report["freshness_summary"]["stale_ids"] == states
+    assert "0.0h>0.0h" not in text
+    for row in rows:
+        assert freshness.format_freshness_alarm(row) in text
+    assert m._has_critical_signal(report)
