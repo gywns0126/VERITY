@@ -1,7 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
-const {makePatch, repair, publish, repairGithubFile} = require('../scripts/publish_earnings_calendar.cjs');
+const {makePatch, repair, publish, repairGithubFile, latestCalendarSource,
+    repairStagedFile} = require('../scripts/publish_earnings_calendar.cjs');
 const checkedAt = '2026-10-18T00:00:00+09:00';
 const event = {date:'2026-10-30',event:'실적발표 (회사 공시)',kind:'실적',is_estimated:false,
     source:'DART issuer IR notice',url:'https://dart.fss.or.kr/report/viewer.do?rcpNo=20261014800271',
@@ -103,5 +104,108 @@ test('GitHub fallback file receives identical selective mutation', () => {
     try {fs.writeFileSync(file,JSON.stringify(report()));
         assert.equal(repairGithubFile(file,patch()).readback,'matched');
         assert.deepEqual(JSON.parse(fs.readFileSync(file)),repair(report(),patch()).next);
+    } finally {fs.rmSync(file);fs.rmdirSync(dir);}
+});
+
+test('normal publisher reads a tracked checkpoint from one exact current-main ref', () => {
+    const ref='b'.repeat(40), calls=[];
+    const exec=(command,args) => {
+        calls.push([command,args]);
+        if (args[0]==='fetch') return '';
+        if (args[0]==='rev-parse') return ref+'\n';
+        assert.deepEqual(args,['show',ref+':data/kr_earnings_calendar.json']);
+        return JSON.stringify(source());
+    };
+    assert.deepEqual(latestCalendarSource(exec),{doc:source(),ref});
+    assert.deepEqual(calls.map(c=>c[1][0]),['fetch','rev-parse','show']);
+    assert.throws(()=>latestCalendarSource((command,args)=>args[0]==='fetch'?'':'not-a-ref'),
+        /invalid main ref/);
+});
+
+test('selection and merging work without site packages or HTML collector imports', () => {
+    const program=[
+        'import json,sys',
+        'from datetime import date',
+        'from api.utils.earnings_calendar_selection import select_calendar,merge_calendar',
+        'doc=json.load(sys.stdin)',
+        'selected=select_calendar(doc,"000270",date(2026,10,18))',
+        'assert selected[0]["date"]=="2026-10-30"',
+        'assert merge_calendar([{"kind":"배당"},{"kind":"실적"}],selected)==[{"kind":"배당"}]+selected',
+        'assert "bs4" not in sys.modules and "requests" not in sys.modules',
+        'assert "api.collectors.kr_earnings_calendar" not in sys.modules',
+        'print("stdlib-only selection and merge passed")',
+    ].join('\n');
+    const result=require('node:child_process').execFileSync('python3',['-S','-c',program],
+        {input:JSON.stringify(source()),encoding:'utf8'});
+    assert.equal(result.trim(),'stdlib-only selection and merge passed');
+});
+
+test('every normal staging re-applies official dates while preserving newer financial cells', () => {
+    const dir=fs.mkdtempSync(path.join(os.tmpdir(),'calendar-normal-stage-'));
+    const file=path.join(dir,'stock_report_public.json');
+    const load=()=>({doc:source(),ref:'b'.repeat(40)});
+    try {
+        for (const amount of [12345,56789]) {
+            const oldReport=report();oldReport.stocks[0].financials.latest=amount;
+            fs.writeFileSync(file,JSON.stringify(oldReport,null,2)+'\n');
+            const result=repairStagedFile(file,'2026-10-18',load);
+            assert.deepEqual(result.changed,['000270']);
+            assert.equal(result.ref,'b'.repeat(40));
+            const current=JSON.parse(fs.readFileSync(file));
+            assert.deepEqual(current.stocks[0].calendar,[oldReport.stocks[0].calendar[1],event]);
+            const withoutOverlay=structuredClone(current);
+            withoutOverlay.stocks[0].calendar=oldReport.stocks[0].calendar;
+            delete withoutOverlay._meta.calendar_checked_at;
+            assert.deepEqual(withoutOverlay,oldReport);
+            const bytes=fs.readFileSync(file);
+            assert.deepEqual(repairStagedFile(file,'2026-10-18',load).changed,[]);
+            assert(bytes.equals(fs.readFileSync(file)));
+        }
+    } finally {fs.rmSync(file);fs.rmdirSync(dir);}
+});
+
+test('normal staging fails closed before write on missing or invalid checkpoint', () => {
+    const dir=fs.mkdtempSync(path.join(os.tmpdir(),'calendar-stage-fail-'));
+    const file=path.join(dir,'stock_report_public.json');
+    try {
+        assert.throws(()=>repairStagedFile(file,'2026-10-18',()=>assert.fail('source not needed')),
+            /ENOENT/);
+        fs.writeFileSync(file,JSON.stringify(report(),null,2)+'\n');
+        const before=fs.readFileSync(file);
+        for (const load of [()=>{throw Error('checkpoint fetch failed');},
+            ()=>({doc:{records:[]},ref:'b'.repeat(40)}),
+            ()=>({doc:{_meta:{checked_at:checkedAt}},ref:'b'.repeat(40)})]) {
+            assert.throws(()=>repairStagedFile(file,'2026-10-18',load));
+            assert(before.equals(fs.readFileSync(file)));
+        }
+        assert.throws(()=>latestCalendarSource((command,args)=>{
+            if(args[0]==='fetch') return '';
+            return args[0]==='rev-parse'?'b'.repeat(40):'{invalid';
+        }),SyntaxError);
+        assert.throws(()=>latestCalendarSource((command,args)=>{
+            if(args[0]==='fetch') return '';
+            return args[0]==='rev-parse'?'b'.repeat(40):JSON.stringify({...source(),records:[{}]});
+        }),/invalid source identity/);
+    } finally {fs.rmSync(file);fs.rmdirSync(dir);}
+});
+
+test('normal staging preserves cancellation, ambiguity and stale-authority suppression', () => {
+    const dir=fs.mkdtempSync(path.join(os.tmpdir(),'calendar-stage-suppression-'));
+    const file=path.join(dir,'stock_report_public.json');
+    try {
+        for (const [status,today] of [['cancelled','2026-10-18'],
+            ['review_required','2026-10-18'],['confirmed','2026-10-23']]) {
+            const doc=source();doc.records[0].status=status;
+            fs.writeFileSync(file,JSON.stringify(report()));
+            repairStagedFile(file,today,()=>({doc,ref:'b'.repeat(40)}));
+            const current=JSON.parse(fs.readFileSync(file));
+            assert.deepEqual(current.stocks[0].calendar,[report().stocks[0].calendar[1]]);
+            assert.equal(current.stocks[0].financials.latest,12345);
+        }
+        const newer=report();newer.stocks[0].calendar=[{...event,receipt:'20261015800271'}];
+        fs.writeFileSync(file,JSON.stringify(newer));const before=fs.readFileSync(file);
+        assert.throws(()=>repairStagedFile(file,'2026-10-18',()=>({doc:source(),ref:'b'.repeat(40)})),
+            /newer official receipt/);
+        assert(before.equals(fs.readFileSync(file)));
     } finally {fs.rmSync(file);fs.rmdirSync(dir);}
 });

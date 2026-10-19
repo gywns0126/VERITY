@@ -161,6 +161,17 @@ class handler(BaseHTTPRequestHandler):
         elif status not in ("unresolved", "empty", "partial", "ready"):
             # 구형 코어의 응답도 읽되 진단 없는 결과를 ready로 승격하지 않는다.
             status = "partial"
+        elif status == "ready":
+            # ready is packet availability, not verified freshness. Explicit source
+            # failures must still reach the consumer even if core metadata disagrees.
+            coverage = facts.get("coverage") or {}
+            unavailable = coverage.get("unavailable") if isinstance(coverage, dict) else None
+            diagnostics = meta.get("fetch_diagnostics") or []
+            if ((isinstance(unavailable, (int, float)) and unavailable > 0)
+                    or (isinstance(diagnostics, list) and any(
+                        isinstance(item, dict) and item.get("status") == "unavailable"
+                        for item in diagnostics))):
+                status = "partial"
         body: Dict[str, Any] = {
             "status": status,
             "ticker": facts.get("ticker"),

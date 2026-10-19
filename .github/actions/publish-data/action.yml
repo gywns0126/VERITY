@@ -333,6 +333,10 @@ runs:
         }
         node --version
         node "${{ github.workspace }}/scripts/publish_report_financials.cjs" --staged-public
+        # calendar_only may have corrected the serving object while an older report
+        # remains in main. Apply the latest authoritative calendar on every full
+        # publish; a failed overlay stops both public targets before either write.
+        node "${{ github.workspace }}/scripts/publish_earnings_calendar.cjs" --staged-public
 
     - name: Deploy to VERITY-data main branch (옵션 B, P0)
       id: publish_primary
