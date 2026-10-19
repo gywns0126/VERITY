@@ -82,6 +82,15 @@ test('stage thresholds are dots / names / cards at the exact boundaries',()=>{
  const {context:c}=fixture();
  for(const [zoom,expected]of[[.02,'dots'],[.279999,'dots'],[.28,'names'],[.799999,'names'],[.8,'cards'],[4,'cards']])assert.equal(c.memberNetworkStage(zoom),expected);
 });
+test('keyboard traversal includes only projected visible nodes and re-admits them after explicit camera movement',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+ s.positions=new Map([['stock',{x:500,y:340}],['source',{x:1000,y:340}],['candidate',{x:500,y:-50}]]);
+ s.camera={zoom:1,panX:0,panY:0};c.drawMemberNetwork();
+ assert.equal(s.elements.get('stock').tabIndex,0);assert.equal(s.elements.get('source').tabIndex,-1);assert.equal(s.elements.get('candidate').tabIndex,-1);
+ s.camera.panX=-100;c.drawMemberNetwork();assert.equal(s.elements.get('source').tabIndex,0);
+ s.camera.panY=100;c.drawMemberNetwork();assert.equal(s.elements.get('candidate').tabIndex,0);
+ assert.equal(f.layoutCalls(),1,'keyboard eligibility never recalculates positions');f.assertNative();
+});
 test('snapshot copies current scope and evidence, filters links by both current IDs and inScenario, and never promotes candidates',()=>{
  const f=fixture(),c=f.context,s=c.memberNetworkSnapshot(f.scope,f.edges);
  assert.deepEqual(Array.from(s.items,n=>n.id),['stock','source','candidate']);

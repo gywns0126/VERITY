@@ -5211,7 +5211,7 @@ const memberNetworkStyle=document.createElement('style');memberNetworkStyle.text
 #an-map-design .an-network-head button{min-height:36px;padding:6px 10px;background:light-dark(#f8f9fb,#1d242c)}
 #an-map-design .an-network-view button:focus-visible{outline:none;background:light-dark(#e9edf2,#303945)}
 #an-map-design .an-network-main{min-height:0;flex:1;display:grid;grid-template-columns:minmax(0,1fr) 240px}
-#an-map-design .an-network-space{position:relative;min-width:0;min-height:0;overflow:hidden;touch-action:none;cursor:grab}
+#an-map-design .an-network-space{position:relative;min-width:0;min-height:0;overflow:clip;touch-action:none;cursor:grab}
 #an-map-design .an-network-space:focus-visible{outline:none}
 #an-map-design .an-network-space>svg{display:none}
 #an-map-design .an-network-space>.an-network-grid{display:block;position:absolute;inset:0;width:100%;height:100%;pointer-events:none;fill:none;stroke:light-dark(var(--an-grid),var(--an-divider));stroke-width:1;shape-rendering:crispEdges}
@@ -5305,7 +5305,7 @@ function drawMemberNetwork(){
   const stage=memberNetworkStage(z);memberNetworkSpace.dataset.stage=stage;memberNetworkSpace.style.setProperty('--an-network-label-width',Math.max(40,145*z)+'px');
   s.engine?.setCamera(s.camera);s.engine?.setStage(stage,z);
   renderMemberNetworkGrid();
-  for(const [id,el] of s.elements){const p=project(s.positions.get(id));el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.transform='translate(-50%,-50%)'+(stage==='cards'?' scale('+z+')':'');}
+  for(const [id,el] of s.elements){const p=project(s.positions.get(id));el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.transform='translate(-50%,-50%)'+(stage==='cards'?' scale('+z+')':'');el.tabIndex=p.x>=0&&p.x<=width&&p.y>=0&&p.y<=height?0:-1;}
   memberNetworkHost.querySelector('output').textContent=Math.round(z*100)+'%';
 }
 function zoomMemberNetwork(next,at){
@@ -5369,7 +5369,7 @@ memberNetworkHost.addEventListener('keydown',e=>{
   if(!memberNetworkSession)return;e.stopPropagation();
   if(e.key==='Escape'){e.preventDefault();closeMemberNetwork();return;}
   if(e.key==='Tab'){
-    const focusable=[...memberNetworkHost.querySelectorAll('button:not([disabled]),[tabindex="0"]')],first=focusable[0],last=focusable.at(-1);
+    const focusable=[...memberNetworkHost.querySelectorAll('button:not([disabled]):not([tabindex="-1"]),[tabindex="0"]')],first=focusable[0],last=focusable.at(-1);
     if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}return;
   }
   if(e.code==='Space'){e.preventDefault();return;}
