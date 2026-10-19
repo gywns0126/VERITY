@@ -2138,8 +2138,8 @@ html>body{padding:0}</style>
         if(!selectedItems.has(id))selectedItems.clear();renderSelection();
         const before=layoutSnapshot(),entries=movableItems().filter(entry=>selectedItems.has(id)?selectedItems.has(entry.id):entry.id===id).map(entry=>({...entry,x:entry.item.x,y:entry.item.y})),start={x:e.clientX,y:e.clientY,zoom:state.zoom};let moved=false,ended=false;
         el.setPointerCapture(e.pointerId);
-        function move(v){if(v.pointerId!==e.pointerId)return;const dx=v.clientX-start.x,dy=v.clientY-start.y;if(Math.abs(dx)+Math.abs(dy)>4)moved=true;if(!moved)return;for(const entry of entries){entry.item.x=entry.x+dx/(WORLD_WIDTH*start.zoom);entry.item.y=entry.y+dy/(WORLD_HEIGHT*start.zoom);}renderMap();}
-        function end(v,cancelled=false){if(ended||v&&v.pointerId!==e.pointerId)return;ended=true;el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',end);el.removeEventListener('pointercancel',cancel);el.removeEventListener('lostpointercapture',cancel);if(el.hasPointerCapture(e.pointerId))el.releasePointerCapture(e.pointerId);cancelGesture=null;nodePointerActive=false;nodeMoveActive=false;if(cancelled){for(const entry of entries){entry.item.x=entry.x;entry.item.y=entry.y;}renderMap();}else if(moved){recordMove(before,'항목 이동을');}if(moved||cancelled){suppressClick=true;setTimeout(()=>{suppressClick=false;},0);}closePreview();if(pendingMapResize)applyMapResize();}
+        function move(v){if(v.pointerId!==e.pointerId)return;const dx=v.clientX-start.x,dy=v.clientY-start.y;if(!moved&&Math.abs(dx)+Math.abs(dy)>4){if(typeof memberRelationshipRebaseMovement==='function')for(const entry of entries){entry.relationshipOriginal={x:entry.x,y:entry.y};memberRelationshipRebaseMovement(entry.id);entry.x=entry.item.x;entry.y=entry.item.y;}moved=true;}if(!moved)return;for(const entry of entries){entry.item.x=entry.x+dx/(WORLD_WIDTH*start.zoom);entry.item.y=entry.y+dy/(WORLD_HEIGHT*start.zoom);}renderMap();}
+        function end(v,cancelled=false){if(ended||v&&v.pointerId!==e.pointerId)return;ended=true;el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',end);el.removeEventListener('pointercancel',cancel);el.removeEventListener('lostpointercapture',cancel);if(el.hasPointerCapture(e.pointerId))el.releasePointerCapture(e.pointerId);cancelGesture=null;nodePointerActive=false;nodeMoveActive=false;if(cancelled){for(const entry of entries){entry.item.x=entry.relationshipOriginal?.x??entry.x;entry.item.y=entry.relationshipOriginal?.y??entry.y;}renderMap();}else if(moved){recordMove(before,'항목 이동을');}if(moved||cancelled){suppressClick=true;setTimeout(()=>{suppressClick=false;},0);}closePreview();if(pendingMapResize)applyMapResize();}
         function cancel(v){end(v,true);}cancelGesture=()=>cancel();el.addEventListener('pointermove',move);el.addEventListener('pointerup',end);el.addEventListener('pointercancel',cancel);el.addEventListener('lostpointercapture',cancel);
       }
       function renderGrid(){
@@ -4070,6 +4070,7 @@ function prepareMemberGroups(){
     group.more.hidden=displayed===0||displayed>=records.length;group.more.textContent=displayed+'/'+records.length+'건 · 더 보기';
   }
   // Preserve all source IDs and marks; grouping affects only presentation.
+  if(typeof prepareMemberRelationshipPins==='function')prepareMemberRelationshipPins(scope);
   // Folding, filtering and selection never recompute the base grid. Newly shown
   // records take a free slot without moving headers or previously placed cards.
   const narrow=space.clientWidth<560;
@@ -4136,6 +4137,7 @@ function prepareMemberGroups(){
   syncMemberScopedLayout(context,scope);
   for(const [id,offset] of memberDisplayOffsets)if(nodeById[id])focusOffsets.set(id,offset);
   placeRevealedMemberRecords();
+  if(typeof applyMemberRelationshipLayout==='function')applyMemberRelationshipLayout(scope);
 }
 function placeRevealedMemberRecords(){
   const zoom=Math.max(.08,state.zoom),scale=memberSummaryScale(zoom),occupied=[];
@@ -4661,7 +4663,7 @@ function memberOverviewTitleSlots(items,obstacles,width,height){
   const visible=items.filter(item=>item.x>=0&&item.y>=0&&item.x<=width&&item.y<=height);
   const maxWidth=Math.max(0,...visible.map(item=>item.w)),maxHeight=Math.max(0,...visible.map(item=>item.h));
   const columns=Math.max(1,Math.floor((width-margin*2+gap)/(maxWidth+gap)));
-  const crowded=visible.length*(maxHeight+gap)>height-margin*2;
+  const crowded=visible.length*(maxHeight+gap)>height-margin*2||visible.length>columns*2;
   const centers=Array.from({length:columns},(_,i)=>margin+(width-margin*2)/columns*(i+.5));
   const intersects=(a,b)=>a.left<b.right+gap&&a.right>b.left-gap&&a.top<b.bottom+gap&&a.bottom>b.top-gap;
   for(const item of items){
@@ -4673,7 +4675,7 @@ function memberOverviewTitleSlots(items,obstacles,width,height){
     const rows=Math.ceil(height/(h+gap));
     for(let row=0;row<=rows&&!slot;row++)for(const sign of row?(item.group?[-1]:[-1,1]):[0]){
       const py=cy+row*(h+gap)*sign;
-      const xs=crowded&&columns>1?[cx,...centers.filter(c=>c!==cx)]:[cx,cx-(w+gap),cx+w+gap];
+      const xs=crowded&&columns>1?[cx,...centers.filter(c=>c!==cx)]:[cx,cx-(w+gap),cx+w+gap,...centers.filter(c=>c!==cx)];
       for(const px of xs){
         const r={left:px-w/2,right:px+w/2,top:py-h/2,bottom:py+h/2};
         if(r.left<margin||r.right>width-margin||r.top<margin||r.bottom>height-margin||occupied.some(o=>intersects(r,o)))continue;
@@ -4681,13 +4683,57 @@ function memberOverviewTitleSlots(items,obstacles,width,height){
       }
       if(slot)break;
     }
+    // Nearby search can miss a free row when different anchors use different
+    // vertical phases. Try the shared screen grid before giving up a title.
+    for(let py=margin+h/2;!slot&&py<=height-margin-h/2;py+=gap){
+      if(item.group&&py>cy)break;
+      for(const px of centers){
+        const r={left:px-w/2,right:px+w/2,top:py-h/2,bottom:py+h/2};
+        if(r.left<margin||r.right>width-margin||occupied.some(o=>intersects(r,o)))continue;
+        slot={x:px,y:py,...r};occupied.push(r);break;
+      }
+    }
     result.push(slot);
   }
   return result;
 }
+function memberOverviewManual(n){
+  const base=(typeof memberLayoutBases!=='undefined'&&memberLayoutBases.get(n.id))
+    ||(typeof initialPositions!=='undefined'&&initialPositions.get(n.id));
+  return !!base&&(Math.abs(n.x-base.x)>1e-9||Math.abs(n.y-base.y)>1e-9);
+}
+function memberOverviewRebaseMovement(id){
+  const n=nodeById[id],el=n&&nodesEl.querySelector('[data-node="'+id+'"]');
+  if(!n||!el||el.dataset.overviewTitle!=='true'||!memberOverviewElements.has(el))return;
+  const x=parseFloat(el.style.left),y=parseFloat(el.style.top),p=point(n),zoom=state.zoom;
+  if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(zoom)||zoom<=0)return;
+  // A readable title may have been separated from its world anchor. Only an
+  // explicit move adopts that visual offset; a click/hydration never does.
+  n.x+=(x-p.x)/(WORLD_WIDTH*zoom);n.y+=(y-p.y)/(WORLD_HEIGHT*zoom);
+}
+function memberOverviewSyncEdgePaths(){
+  const anchor=id=>{
+    const n=nodeById[id],el=nodesEl.querySelector('[data-node="'+id+'"]');
+    if(!n||!el||el.hidden)return null;
+    if(el.dataset.overviewTitle==='true'){
+      const x=parseFloat(el.style.left),y=parseFloat(el.style.top);
+      if(Number.isFinite(x)&&Number.isFinite(y))return {x,y};
+    }
+    return point(n);
+  };
+  for(const edge of edges){
+    const pair=edgeEls.get(edge.id);if(!pair||pair.group.style.display==='none')continue;
+    const a=anchor(edge.from),b=anchor(edge.to);if(!a||!b)continue;
+    const d='M '+a.x+' '+a.y+' Q '+((a.x+b.x)/2+16)+' '+((a.y+b.y)/2)+' '+b.x+' '+b.y;
+    // Reuse paths and animation elements: only their screen-space geometry changes.
+    pair.path.setAttribute('d',d);pair.hit.setAttribute('d',d);
+    for(const flow of [pair.rim,pair.flow])flow.style.offsetPath='path("'+d+'")';
+  }
+}
 function drawMemberOverviewTitles(){
   if(state.zoom>=.65)return;
   const entries=[...holdings.filter(shown).map(n=>({id:n.id,n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')})),
+    ...(typeof memberRelationshipOverviewNodes==='function'?memberRelationshipOverviewNodes():[]),
     ...[...memberGroups.values()].filter(g=>g.records.length&&!g.button.hidden).map(g=>({id:g.id,n:g,el:g.button}))]
     .filter(({el})=>el&&!el.hidden);
   // Group titles occupy the band above their anchors. Sources expand below it;
@@ -4701,10 +4747,15 @@ function drawMemberOverviewTitles(){
     const p=point(n),w=el.offsetWidth,h=el.offsetHeight;
     el.dataset.overviewWidth=String(w);el.dataset.overviewHeight=String(h);
     memberOverviewElements.set(el,{left:el.style.left,top:el.style.top,transform:el.style.transform});el.dataset.overviewTitle='true';
-    const group=n.kind!=='stock',height=el.offsetHeight;
-    return {x:p.x,y:group?p.y-height/2-h*state.zoom/2-6:p.y,w:el.offsetWidth,h:height,group,anchor:p};
+    const group=n.kind!=='stock'&&n.kind!=='event',height=el.offsetHeight;
+    return {x:p.x,y:group?p.y-height/2-h*state.zoom/2-6:p.y,w:el.offsetWidth,h:height,group,anchor:p,manual:!group&&memberOverviewManual(n)};
   });
-  const slots=memberOverviewTitleSlots(items,obstacles,space.clientWidth,space.clientHeight);
+  // Manual positions own their anchors, including during a pointer gesture.
+  // Automatic titles avoid them rather than snapping a dragged title to a grid.
+  const fixed=items.map(item=>item.manual?{x:item.x,y:item.y,left:item.x-item.w/2,right:item.x+item.w/2,top:item.y-item.h/2,bottom:item.y+item.h/2}:null);
+  const automatic=items.flatMap((item,i)=>item.manual?[]:[{item,i}]);
+  const placed=memberOverviewTitleSlots(automatic.map(row=>row.item),[...obstacles,...fixed.filter(Boolean)],space.clientWidth,space.clientHeight);
+  const slots=fixed;automatic.forEach((row,i)=>{slots[row.i]=placed[i];});
   entries.forEach(({el},i)=>{
     const slot=slots[i],p=items[i];
     if(!slot){delete el.dataset.overviewTitle;return;}
@@ -4714,6 +4765,7 @@ function drawMemberOverviewTitles(){
       path.setAttribute('d','M '+p.anchor.x+' '+p.anchor.y+' L '+slot.x+' '+slot.y);path.setAttribute('title','축소 제목 위치 안내 · 관계선 아님');memberOverviewLeaders.append(path);
     }
   });
+  memberOverviewSyncEdgePaths();
 }
 const memberOverviewBaseDrawGroups=drawMemberGroups;
 drawMemberGroups=function(){
@@ -4723,6 +4775,216 @@ drawMemberGroups=function(){
 };
 const memberOverviewBaseRenderMap=renderMap;
 renderMap=function(){resetMemberOverviewTitles();memberOverviewBaseRenderMap();};
+// Relationship-centered presentation. Neither canonical coordinates nor private
+// notes/marks are rewritten: automatic sources use the existing evidence list.
+function memberRelationshipIsMapRecord(n){
+  return !!n&&n.layer!=='candidates'&&(n.recordKind==='event'||n.recordKind==='relationship'&&n.layer==='relationships');
+}
+function memberRelationshipOverviewNodes(){
+  return nodes.filter(n=>n.kind==='event'&&shown(n)).map(n=>({id:n.id,n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')}));
+}
+function memberRelationshipSlotsFor(records,stocks,obstacles=[],prior=new Map()){
+  const gap=24,placed=new Map(),occupied=obstacles.map(b=>({...b}));
+  const rect=p=>({left:p.x-p.width/2,right:p.x+p.width/2,top:p.y-p.height/2,bottom:p.y+p.height/2});
+  const hits=(a,b)=>a.left<b.right+gap&&a.right>b.left-gap&&a.top<b.bottom+gap&&a.bottom>b.top-gap;
+  for(const s of stocks)occupied.push(rect(s));
+  const existing=records.filter(r=>prior.has(r.id)),fresh=records.filter(r=>!prior.has(r.id));
+  // Prior insertion order, not changed reading order, owns established slots.
+  existing.sort((a,b)=>[...prior.keys()].indexOf(a.id)-[...prior.keys()].indexOf(b.id));
+  const displaced=[];
+  // Reserve every still-safe prior slot before relocating a newly obstructed
+  // card. Otherwise one moved memo can cascade through unaffected records.
+  for(const r of existing){
+    const p={...prior.get(r.id),width:r.width,height:r.height},b=rect(p);
+    if(occupied.some(o=>hits(b,o)))displaced.push(r);
+    else{placed.set(r.id,p);occupied.push(b);}
+  }
+  for(const r of [...displaced,...fresh]){
+    const peers=stocks.filter(s=>(r.stockIds||[]).includes(s.id)),linked=peers.length?peers:stocks;
+    const x=linked.length?linked.reduce((a,s)=>a+s.x,0)/linked.length:500;
+    const bottom=linked.length?Math.max(...linked.map(s=>s.y+s.height/2)):340;
+    const old=prior.get(r.id),p={x:old?.x??x,y:old?.y??bottom+70+r.height/2,width:r.width,height:r.height};
+    // Keep X aligned with this relationship's participants; avoid only downward.
+    // Appending or folding sources never participates in this calculation.
+    for(let i=0;i<=occupied.length;i++){
+      const b=rect(p),collisions=occupied.filter(o=>hits(b,o));
+      if(!collisions.length)break;
+      p.y=Math.max(...collisions.map(o=>o.bottom))+gap+r.height/2;
+    }
+    placed.set(r.id,p);occupied.push(rect(p));
+  }
+  return placed;
+}
+const memberRelationshipSlots=new Map();
+let memberRelationshipContext='';
+const relationshipSnapshot=layoutSnapshot,relationshipRecordMove=recordMove,relationshipTravelHistory=travelHistory;
+layoutSnapshot=function(){
+  const snapshot=relationshipSnapshot();
+  snapshot.relationshipSlots=new Map(nodes.filter(n=>n.kind==='event'&&memberVisible.has(n.id)).map(n=>{const p=viewPosition(n),s=memberCardSize(n);return [n.id,{x:p.x*WORLD_WIDTH,y:p.y*WORLD_HEIGHT,...s}];}));
+  return snapshot;
+};
+recordMove=function(before,label,options={}){
+  const prior=moveHistory.past.at(-1);relationshipRecordMove(before,label,options);
+  const entry=moveHistory.past.at(-1);if(!entry)return;
+  if(entry!==prior)entry.relationshipBefore=before.relationshipSlots;
+  if(entry!==prior||options.repeat)entry.relationshipAfter=layoutSnapshot().relationshipSlots;
+};
+travelHistory=function(redo){
+  if(cancelGesture)return;
+  const entry=(redo?moveHistory.future:moveHistory.past).at(-1),slots=redo?entry?.relationshipAfter:entry?.relationshipBefore;
+  if(slots){memberRelationshipSlots.clear();for(const [id,p] of slots)memberRelationshipSlots.set(id,p);}
+  relationshipTravelHistory(redo);
+};
+function memberRelationshipBasesFor(records,stocks){
+  const ordered=records.slice().sort((a,b)=>a.id.localeCompare(b.id));
+  const relationships=ordered.filter(r=>r.isRelationship),sources=ordered.filter(r=>!r.isRelationship);
+  const bases=memberRelationshipSlotsFor(relationships,stocks);
+  const bottom=Math.max(340,...stocks.map(s=>s.y+s.height/2),...[...bases.values()].map(p=>p.y+p.height/2));
+  const center=stocks.length?stocks.reduce((sum,s)=>sum+s.x,0)/stocks.length:500;
+  // Source material lives in the library, not in 100 reserved canvas rows.
+  // Explicit pins start at this shared home; the visible-slot pass separates
+  // them, and an explicit drag records that presentation delta before moving.
+  sources.forEach(r=>bases.set(r.id,{x:center,y:bottom+70+r.height/2,width:r.width,height:r.height}));
+  return bases;
+}
+let memberRelationshipBases=new Map();
+// First fresh grouping origin, not a reconstruction of an unsaved prior session.
+// Store the absolute origin so a later model-origin rebase keeps the same view.
+const memberRelationshipLegacyOrigins=new Map();
+function memberRelationshipCaptureLegacyOrigins(scope){
+  for(const n of [...scope.stocks,...scope.records]){
+    if(memberRelationshipLegacyOrigins.has(n.id))continue;
+    const offset=focusOffsets.get(n.id);if(!offset)continue;
+    const base=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;
+    memberRelationshipLegacyOrigins.set(n.id,{x:base.x+offset.x,y:base.y+offset.y});
+  }
+}
+function memberRelationshipRebaseMovement(id){
+  const n=nodeById[id],p=memberRelationshipBases.get(id),legacy=memberRelationshipLegacyOrigins.get(id);if(!n)return;
+  if(n.kind!=='stock'&&(legacy||p)){
+    const base=memberLayoutBases.get(id)||initialPositions.get(id)||n,offset=focusOffsets.get(id)||{x:0,y:0};
+    const next=legacy?{x:legacy.x-base.x,y:legacy.y-base.y}:{x:p.x/WORLD_WIDTH-base.x,y:p.y/WORLD_HEIGHT-base.y};
+    // Only an explicit move converts a collision-avoidance offset into saved
+    // movement. Fresh grouping origins, not lost prior-session slots, own reload.
+    n.x+=offset.x-next.x;n.y+=offset.y-next.y;
+    memberDisplayOffsets.set(id,next);focusOffsets.set(id,next);
+  }
+  if(typeof memberOverviewRebaseMovement==='function')memberOverviewRebaseMovement(id);
+}
+moveWithKeys=function(e,id){
+  const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+  if(!delta||cancelGesture||!memberWritable)return;
+  e.preventDefault();e.stopPropagation();
+  const before=layoutSnapshot(),step=e.shiftKey?20:8,entries=movableItems().filter(entry=>selectedItems.has(id)?selectedItems.has(entry.id):entry.id===id);
+  for(const entry of entries){memberRelationshipRebaseMovement(entry.id);entry.item.x+=delta[0]*step/(WORLD_WIDTH*state.zoom);entry.item.y+=delta[1]*step/(WORLD_HEIGHT*state.zoom);}
+  recordMove(before,'항목 이동을',{key:e.key+':'+entries.map(entry=>entry.id).sort().join(','),repeat:e.repeat});renderMap();
+};
+function memberRelationshipMovedIds(scope){
+  const ids=new Set();
+  for(const n of [...scope.stocks,...scope.records]){
+    const base=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;
+    if(Math.abs(n.x-base.x)>1e-9||Math.abs(n.y-base.y)>1e-9)ids.add(n.id);
+  }
+  return ids;
+}
+function memberRelationshipPinnedIds(scope){
+  const ids=memberRelationshipMovedIds(scope);
+  for(const note of Object.values(state.notes)){
+    if(nodeById[note.target])ids.add(note.target);
+    const edge=edges.find(e=>e.id===note.target);if(edge){ids.add(edge.from);ids.add(edge.to);}
+  }
+  return ids;
+}
+function prepareMemberRelationshipPins(scope){
+  for(const id of memberRelationshipPinnedIds(scope))if(scope.stockIds.has(id)||scope.records.some(n=>n.id===id))memberVisible.add(id);
+}
+function memberRelationshipAlias(n,records){
+  if(n.recordKind!=='relationship')return null;
+  const peers=eventHoldings(n).slice().sort().join('|'),urls=new Set((n.evidence||[]).map(e=>e.url).filter(Boolean));
+  if(!urls.size)return null;
+  return records.find(other=>other.recordKind==='event'&&other.asOf===n.asOf&&eventHoldings(other).slice().sort().join('|')===peers
+    &&(other.evidence||[]).some(e=>urls.has(e.url)))||null;
+}
+function applyMemberRelationshipLayout(scope){
+  memberRelationshipCaptureLegacyOrigins(scope);
+  const context=[memberBaseLayoutKey,state.focusId,state.filter,state.topic,state.view].join('|');
+  if(memberRelationshipContext!==context){memberRelationshipSlots.clear();memberRelationshipContext=context;}
+  const pinned=memberRelationshipPinnedIds(scope),moved=memberRelationshipMovedIds(scope),selectedEdge=edges.find(e=>e.id===state.selected);
+  // Restore manual stock anchors before using them as automatic-card obstacles.
+  for(const n of [...scope.stocks,...scope.records].filter(n=>moved.has(n.id))){
+    const legacy=memberRelationshipLegacyOrigins.get(n.id),base=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;
+    if(legacy){const offset={x:legacy.x-base.x,y:legacy.y-base.y};memberDisplayOffsets.set(n.id,offset);focusOffsets.set(n.id,offset);}
+  }
+  const selected=new Set([state.selected,...(selectedEdge?[selectedEdge.from,selectedEdge.to]:[])]);
+  const candidates=scope.records.filter(n=>memberRelationshipIsMapRecord(n)&&memberDisplayDecisions.get(n.id)?.evidence==='reported'
+    &&memberDisplayDecisions.get(n.id)?.mode!=='detail');
+  const ranked=candidates.filter(n=>!memberRelationshipAlias(n,candidates)||pinned.has(n.id)||selected.has(n.id))
+    .sort((a,b)=>compareMemberDisplay(memberDisplayDecisions.get(a.id),memberDisplayDecisions.get(b.id)));
+  // A browsing budget is not an economic grade. Explicit selections, notes and
+  // manually placed records remain accessible even outside the initial budget.
+  const visible=new Set([...scope.stocks.map(n=>n.id),...ranked.slice(0,MEMBER_DEFAULT_BUDGET).map(n=>n.id)]);
+  for(const n of scope.records)if(pinned.has(n.id)||selected.has(n.id)&&memberRelationshipIsMapRecord(n)||state.marks[n.id]?.important)visible.add(n.id);
+  memberVisible=visible;
+  for(const g of memberGroups.values()){g.button.hidden=true;g.more.hidden=true;}
+  const world=n=>{const p=viewPosition(n),s=memberCardSize(n);return {id:n.id,x:p.x*WORLD_WIDTH,y:p.y*WORLD_HEIGHT,...s};};
+  const rect=p=>({left:p.x-p.width/2,right:p.x+p.width/2,top:p.y-p.height/2,bottom:p.y+p.height/2});
+  const stocks=scope.stocks.map(world),obstacles=[];
+  // Filters decide visibility, never the basis interpreting saved movement.
+  const baseStocks=holdings.map(n=>{const p=world(n),base=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;return {...p,x:p.x-(n.x-base.x)*WORLD_WIDTH,y:p.y-(n.y-base.y)*WORLD_HEIGHT};});
+  memberRelationshipBases=memberRelationshipBasesFor(nodes.filter(n=>n.kind==='event').map(n=>({...world(n),stockIds:eventHoldings(n),isRelationship:memberRelationshipIsMapRecord(n)})),baseStocks);
+  for(const n of scope.records.filter(n=>visible.has(n.id)&&moved.has(n.id)))obstacles.push(rect(world(n)));
+  for(const note of Object.values(state.notes)){
+    if(!noteVisible(note))continue;
+    const p=noteAnchor(note),z=Math.max(.08,state.zoom),el=noteEls.get(note.id);
+    const x=WORLD_WIDTH/2+(p.x-space.clientWidth/2-state.panX)/z,y=WORLD_HEIGHT/2+(p.y-space.clientHeight/2-state.panY)/z;
+    // Free notes share the map scale; attached notes remain small annotations
+    // on their already-reserved owner, not independently placed source cards.
+    if(!note.target)obstacles.push(rect({x,y,width:el?.offsetWidth||150,height:el?.offsetHeight||64}));
+  }
+  const automatic=scope.records.filter(n=>visible.has(n.id)&&!moved.has(n.id)).map(n=>({...world(n),stockIds:eventHoldings(n)}));
+  const prior=new Map(automatic.map(n=>[n.id,memberRelationshipSlots.get(n.id)||memberRelationshipBases.get(n.id)]));
+  const slots=memberRelationshipSlotsFor(automatic,stocks,obstacles,prior);
+  for(const [id,p] of slots){
+    const n=nodeById[id],offset={x:p.x/WORLD_WIDTH-n.x,y:p.y/WORLD_HEIGHT-n.y};
+    memberRelationshipSlots.set(id,p);memberDisplayOffsets.set(id,offset);focusOffsets.set(id,offset);
+  }
+}
+const memberRelationshipStyle=document.createElement('style');memberRelationshipStyle.textContent=`
+#an-map-design .an-body{grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(180px,1fr) 200px;grid-template-areas:'map detail' 'library detail'}
+#an-map-design .an-map{grid-area:map;min-width:0;min-height:0}
+#an-map-design .an-detail{grid-area:detail}
+#an-map-design .an-inbox{grid-area:library;display:grid!important;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));align-content:start;align-items:start;gap:12px;padding:16px 20px;background:light-dark(#f8f9fb,#1d242c);scrollbar-gutter:stable}
+#an-map-design .an-inbox>h3{grid-column:1/-1;margin:0;font-size:14px;font-weight:800;color:light-dark(#191f28,#e3e7ec)}
+#an-map-design .an-inbox>[data-member-list]{margin:0;min-width:0;box-shadow:0 2px 8px light-dark(rgb(25 31 40 / 4%),rgb(0 0 0 / 12%))}
+#an-map-design .an-inbox>[data-member-list]>summary{min-height:44px;padding:10px 12px}
+#an-map-design .an-inbox>[data-member-list]>[data-select]{display:block;text-align:left;width:calc(100% - 16px);font-size:12px;white-space:normal;overflow-wrap:anywhere}
+#an-map-design .an-inbox>[data-member-list]>[data-select] strong{display:block;white-space:normal;font-size:12px;line-height:1.5;font-weight:700}
+#an-map-design .an-inbox>[data-member-list]>[data-select] small{display:block;font-size:11px;font-weight:600;line-height:1.5;margin-top:4px}
+#an-map-design .an-inbox>[data-member-list]>[data-select] .an-record-date{display:none}
+#an-map-design .an-inbox .an-aside-note{grid-column:1/-1;margin:0;font-size:11px;font-weight:600}
+#an-map-design #an-member-groups,#an-map-design #an-member-sections{visibility:hidden;pointer-events:none}
+#an-map-design .an-inbox .an-node{position:static;transform:none}
+#an-map-design .an-note-marker[data-free=true]{transform:translate(-50%,-50%) scale(var(--an-relationship-zoom,1))}
+#an-map-design #an-nodes .an-node[data-overview-title=true] .an-category-icon{width:18px;height:18px;flex-basis:18px}
+#an-map-design #an-nodes .an-node.event[data-overview-title=true] :is(.an-record-category,.an-record-date,.an-record-criteria,.an-relation-summary){display:none!important}
+#an-map-design #an-nodes .an-node.event[data-overview-title=true] strong{display:block!important;white-space:nowrap!important;line-height:18px!important;-webkit-line-clamp:unset}
+@media(max-width:1100px){#an-map-design .an-body{grid-template-columns:minmax(0,1fr) 280px}}
+@media(max-width:700px){#an-map-design .an-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(160px,1fr) 164px;grid-template-areas:'map' 'library'}#an-map-design .an-inbox{grid-template-columns:minmax(0,1fr);padding:12px;gap:10px}#an-map-design .an-detail{grid-area:auto}}
+`;root.append(memberRelationshipStyle);
+inbox.setAttribute('aria-label','종목별 근거 자료');inbox.querySelector('h3').textContent='근거 자료 · 사건과 구분해 보기';
+const memberRelationshipDrawGroups=drawMemberGroups;
+drawMemberGroups=function(){
+  memberRelationshipDrawGroups();memberGroupLines.replaceChildren();memberSectionLayer.replaceChildren();
+  root.style.setProperty('--an-relationship-zoom',String(state.zoom));
+  root.dataset.relationshipCentered='true';
+  root.querySelector('#an-counts').textContent='종목 '+memberScope().stocks.length+' · 사건·고정 자료 '+memberEligible.filter(n=>memberVisible.has(n.id)).length+' · 전체 자료 '+memberEligible.length;
+  root.querySelector('.an-foot > span:last-of-type').textContent='사건 중심 지도 · 아래 자료함에서 원문 펼치기 · Space+드래그로 이동';
+  for(const button of inbox.querySelectorAll('[data-select]')){
+    const n=nodeById[button.dataset.select],small=button.querySelector('small');if(!n||!small)continue;
+    const kind=memberRelationshipIsMapRecord(n)?'사건·관계':n.layer==='candidates'?'미검수 후보':'근거 자료';
+    small.textContent=[kind,memberRecordDateText(n)].filter(Boolean).join(' · ');
+  }
+};
       renderMap();renderDetail();
       if(!hasSavedCamera){requestAnimationFrame(function(){fitNodes(false);});}
       if(!introSeen)openIntro();
