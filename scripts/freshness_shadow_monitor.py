@@ -140,10 +140,22 @@ def _schedule_active(schedule: str, now: datetime) -> bool:
     return True  # always / weekly / monthly
 
 
-def glob_freshness(pattern: str, ts_field: str | None, data_dir=None):
-    """Measure every matched member; one recent file cannot refresh its siblings."""
-    paths = sorted(p for p in glob.glob(os.path.join(data_dir or DATA_DIR, pattern))
-                   if os.path.isfile(p))
+_GLOB_MEMBERS = object()
+
+
+def glob_freshness(pattern: str, ts_field: str | None, data_dir=None, expected_files=_GLOB_MEMBERS):
+    """Measure all current members; declared members remain counted when missing."""
+    root = data_dir or DATA_DIR
+    if expected_files is not _GLOB_MEMBERS:
+        if (not isinstance(expected_files, list) or not expected_files
+                or any(not isinstance(name, str) or not name.strip()
+                       or glob.has_magic(name) or os.path.isabs(name)
+                       or ".." in name.split("/") for name in expected_files)):
+            return {"oldest": None, "newest": None, "members": 0,
+                    "measured": 0, "unmeasured": 0, "error": "invalid_expected_files"}
+        paths = [os.path.join(root, name) for name in dict.fromkeys(expected_files)]
+    else:
+        paths = sorted(p for p in glob.glob(os.path.join(root, pattern)) if os.path.isfile(p))
     stamps = []
     for path in paths:
         ts = _extract_ts(_load_any(path), ts_field)
@@ -193,7 +205,7 @@ def build_observations() -> dict:
             continue
         f = s.get("file", "")
         sched = s.get("schedule", "always")
-        is_glob = "*" in f
+        is_glob = "*" in f or "expected_files" in s
         # owner=local 이어도 산출물이 저장소에 커밋되면 CI 에서 나이 판정 가능(event_study 17MB).
         # 미커밋 로컬 전용(kr_flow_observations.parquet)만 heartbeat 소관으로 남긴다.
         if s.get("owner") == "local" and not os.path.exists(os.path.join(DATA_DIR, f)):
@@ -208,10 +220,12 @@ def build_observations() -> dict:
                     "quality_reason": status, "criticality": s.get("criticality"),
                     "schedule": sched, "would_alarm": active, **extra}
         if is_glob:
-            group = glob_freshness(f, s.get("ts_field"))
+            declared = {"expected_files": s["expected_files"]} if "expected_files" in s else {}
+            group = glob_freshness(f, s.get("ts_field"), **declared)
             t = group["oldest"]
             if t is None:
-                rows.append(unavailable("no_ts" if group["members"] else "missing"))
+                rows.append(unavailable(group.get("error") or ("no_ts" if group["members"] else "missing"),
+                    group_counts={k: group[k] for k in ("members", "measured", "unmeasured")}))
                 continue
         else:
             path = os.path.join(DATA_DIR, f)

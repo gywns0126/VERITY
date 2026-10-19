@@ -1,6 +1,8 @@
 """Missing evidence and partial refreshes must not become a healthy stream."""
 import json
+import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -172,3 +174,65 @@ def test_pipeline_reuses_invalid_source_metadata_contract(tmp_path, monkeypatch,
     row = pipeline._diagnose_one(source)
     assert row["status"] == "stale"
     assert row["source_issues"] == ["invalid_source_metadata"]
+
+
+def crypto_stream_spec():
+    root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((root / "data/freshness_sla.json").read_text())
+    return next(s for s in manifest["streams"] if s["id"] == "crypto")
+
+
+def test_crypto_expected_members_match_producer_and_publication_lists():
+    root = Path(__file__).resolve().parents[1]
+    spec = crypto_stream_spec()
+    workflow = (root / ".github/workflows/crypto_collect.yml").read_text()
+    producer_line = next(line for line in workflow.splitlines()
+                         if line.strip().startswith("git add data/crypto_macro.json"))
+    producer_files = {Path(path).name for path in producer_line.split()
+                      if path.endswith(".json")}
+    publisher = (root / ".github/actions/publish-data/action.yml").read_text()
+    public_files = set(re.findall(r"\bcrypto_[a-z_]+\.json\b", publisher))
+    assert len(spec["expected_files"]) == 11
+    assert set(spec["expected_files"]) == producer_files == public_files
+    assert (spec["max_age_minutes"], spec["schedule"], spec["criticality"]) == (90, "always", "P0")
+
+
+@pytest.mark.parametrize("missing_count", [0, 1, 11])
+def test_crypto_archives_excluded_but_expected_missing_members_counted(tmp_path, monkeypatch, missing_count):
+    spec = crypto_stream_spec()
+    setup_stream(tmp_path, monkeypatch, **spec)
+    present = spec["expected_files"][:11 - missing_count]
+    for name in present:
+        (tmp_path / name).write_text(json.dumps({"collected_at": NOW.isoformat()}))
+    for name in ("crypto_exogenous_history.json", "crypto_regime_history.json"):
+        (tmp_path / name).write_text(json.dumps({"collected_at": (NOW - timedelta(days=63)).isoformat()}))
+    row = monitor.build_observations()["rows"][0]
+    counts = {"members": 11, "measured": 11 - missing_count, "unmeasured": missing_count}
+    assert row["group_counts"] == counts
+    assert row["would_alarm"] is bool(missing_count)
+    result = board.build_board()
+    if missing_count == 11:
+        assert row["measured"] is False
+        assert result["summary"]["p0"]["unmeasured"] == 1
+        assert result["_skipped"][0]["group_counts"] == counts
+    else:
+        assert row["age_eff_min"] == 0
+        public = result["streams"][0]
+        assert public["group_counts"] == counts
+        assert public["status"] == ("stale" if missing_count else "fresh")
+        if missing_count:
+            assert row["quality_reason"] == public["stale_reason"] == "partial_group"
+
+
+@pytest.mark.parametrize("expected", [None, [], {}, "crypto_macro.json", [None], [""],
+                                      ["crypto_*.json"], ["../outside.json"]])
+def test_invalid_expected_members_cannot_fall_back_to_a_fresh_glob(tmp_path, monkeypatch, expected):
+    setup_stream(tmp_path, monkeypatch, file="crypto_*.json", expected_files=expected)
+    (tmp_path / "crypto_macro.json").write_text(json.dumps({"collected_at": NOW.isoformat()}))
+    row = monitor.build_observations()["rows"][0]
+    assert row["would_alarm"] is True
+    assert row["status"] == "invalid_expected_files"
+    result = board.build_board()
+    assert result["summary"]["fresh"] == 0
+    assert result["summary"]["p0"]["unmeasured"] == 1
+    assert result["_skipped"][0]["reason"] == "invalid_expected_files"

@@ -6,6 +6,7 @@
   "field_schema": {
    "id": "스트림 식별자",
    "file": "발행 아티팩트 경로 (data/ 기준)",
+   "expected_files": "선택: 그룹의 예상 현재 산출물 명시 목록(data/ 기준). file 글롭보다 우선하며 누락 파일도 미측정 분모에 포함",
    "max_age_minutes": "이 나이 초과 = SLA 위반(능동 알람 대상). cadence 의 ~2-3x 허용.",
    "owner": "ci = GitHub Actions cron 갱신 | local = 이 맥 로컬 잡(레이크 의존, CI 못 닿음)",
    "schedule": "always | weekday | market_hours | weekly | monthly | event_driven",
@@ -24,6 +25,19 @@
   {
    "id": "crypto",
    "file": "crypto_*.json",
+   "expected_files": [
+    "crypto_macro.json",
+    "crypto_universe.json",
+    "crypto_news.json",
+    "crypto_defillama.json",
+    "crypto_governance.json",
+    "crypto_etf_flow.json",
+    "crypto_options.json",
+    "crypto_stablecoins.json",
+    "crypto_positioning.json",
+    "crypto_trends.json",
+    "crypto_regime.json"
+   ],
    "max_age_minutes": 90,
    "owner": "ci",
    "schedule": "always",
