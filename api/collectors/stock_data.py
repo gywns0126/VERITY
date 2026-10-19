@@ -505,6 +505,15 @@ def _measured_stock_call(fn, *, label: str, metrics: Optional[Dict], kind: str):
             metrics[prefix + "_elapsed_s"] = metrics.get(prefix + "_elapsed_s", 0.0) + _perf.perf_counter() - started
 
 
+def _daily_bar_price_metadata(hist, price):
+    """Preserve the provider's bar clock, never represent it as a trade clock."""
+    index = pd.Timestamp(hist.index[-1])
+    return {"price_source": "yfinance.history", "price_adjustment": "auto_adjust",
+            "price_time_kind": "daily_bar_start", "price_bar_value": price,
+            "price_bar_date": index.date().isoformat() if not pd.isna(index) else None,
+            "price_bar_as_of": index.isoformat() if not pd.isna(index) and index.tzinfo is not None else None}
+
+
 def get_stock_data(
     ticker_yf: str,
     period: str = "1y",
@@ -539,7 +548,7 @@ def get_stock_data(
         t = yf.Ticker(ticker_yf)
         # rate limit 대응 wrapper — 429 retry + cooler pause + metric 적재
         hist = _measured_stock_call(
-            lambda: t.history(period=period),
+            lambda: t.history(period=period, interval="1d", auto_adjust=True),
             label=f"{ticker_yf}.history",
             metrics=_metrics,
             kind="history",
@@ -649,6 +658,7 @@ def get_stock_data(
             "market": market,
             "currency": currency,
             "price": price,
+            **_daily_bar_price_metadata(hist, price),
             "volume": volume,
             "trading_value": trading_value,
             "market_cap": market_cap,

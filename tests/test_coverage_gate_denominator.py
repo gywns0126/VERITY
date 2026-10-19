@@ -229,3 +229,127 @@ def test_all_report_scopes_count_numeric_multiple_values_only(monkeypatch):
     for field in ("fields", "us_fields", "us_smallcap_fields"):
         assert result[field]["facts.PER"]["filled"] == 2
         assert result[field]["facts.PBR"]["filled"] == 2
+
+
+@pytest.mark.parametrize("shape,value", [
+    (dict, {"000001": {}, "000002": {}, "999999": {}}),
+    (list, [{"ticker": "000001"}, {"ticker": "000002"}, {"ticker": "999999"}]),
+])
+def test_companion_coverage_uses_report_intersection(shape, value):
+    rows = [{"ticker": "000001"}, {"ticker": "000001"}, {"ticker": "000002"}]
+    result = cb._companion_coverage({"stocks": value}, "stocks", rows, "pct_of_kr", shape)
+    assert result["count"] == 3  # raw source count remains inspectable
+    assert result["report_ticker_count"] == 2
+    assert result["matched_count"] == 2
+    assert result["unmatched_count"] == 1
+    assert result["pct_of_kr"] == 100.0
+
+
+def test_duplicate_companion_rows_do_not_inflate_coverage():
+    value = [{"ticker": ticker} for ticker in ("A", "A", "Z")]
+    result = cb._companion_coverage({"stocks": value}, "stocks", [{"ticker": "A"}], "pct_of_us", list)
+    assert result["count"] == 3
+    assert result["matched_count"] == 1
+    assert result["unmatched_count"] == 1
+    assert result["duplicate_count"] == 1
+    assert result["unidentified_count"] == 0
+    assert result["pct_of_us"] == 100.0
+
+
+@pytest.mark.parametrize("value,shape,reason", [
+    ([{"name": "not a ticker"}], list, "unidentified_ticker"),
+    ([{"ticker": None}], list, "unidentified_ticker"),
+    ([{"ticker": 123}], list, "unidentified_ticker"),
+    (["A"], list, "unidentified_ticker"),
+    ({"": {}}, dict, "unidentified_ticker"),
+    ({"A": {}}, list, "unexpected_companion_schema"),
+    ([], dict, "unexpected_companion_schema"),
+    (None, dict, "unexpected_companion_schema"),
+])
+def test_unidentifiable_companion_is_not_zero_or_complete(value, shape, reason):
+    result = cb._companion_coverage({"stocks": value}, "stocks", [{"ticker": "A"}], "pct_of_us", shape)
+    assert result["pct_of_us"] is None
+    assert result["unmeasurable_reason"] == reason
+
+
+@pytest.mark.parametrize("shape", [dict, list])
+def test_valid_empty_companion_measures_zero(shape):
+    result = cb._companion_coverage({"stocks": shape()}, "stocks", [{"ticker": "A"}], "pct_of_us", shape)
+    assert result["count"] == result["matched_count"] == 0
+    assert result["pct_of_us"] == 0.0
+    assert result["unmeasurable_reason"] is None
+
+
+def test_all_seven_companions_use_their_confirmed_schema(monkeypatch):
+    docs = {"stock_report_public.json": {"stocks": [{"ticker": "000001"}]},
+            "us_stock_report_public.json": {"stocks": [{"ticker": "A"}]}}
+    for name, key, shape, ticker in [
+        ("dart_quarterly_public.json", "stocks", dict, "000001"),
+        ("disclosure_forensics.json", "stocks", list, "000001"),
+        ("insider_trades.json", "stocks", list, "000001"),
+        ("securities_lending.json", "stocks", list, "000001"),
+        ("stock_flow_5d.json", "flows", dict, "000001"),
+        ("us_quarterly_public.json", "stocks", dict, "A"),
+        ("us_insider_trades.json", "stocks", list, "A"),
+    ]:
+        docs[name] = {key: {ticker: {}, "EXTRA": {}} if shape is dict
+                      else [{"ticker": ticker}, {"ticker": "EXTRA"}]}
+    monkeypatch.setattr(cb, "_load", docs.get)
+    result = cb.build()
+    for group, pct_key in (("companions", "pct_of_kr"), ("us_companions", "pct_of_us")):
+        for metric in result[group].values():
+            assert metric["count"] == 2
+            assert metric["matched_count"] == 1
+            assert metric["unmatched_count"] == 1
+            assert metric[pct_key] == 100.0
+
+
+def _intersection_report(total, raw_count, matched_count):
+    result = _report(total, total, raw_count)
+    result["us_companions"]["us_quarterly"].update(
+        coverage_basis=cb.COMPANION_BASIS, matched_count=matched_count,
+        pct_of_us=round(matched_count / total * 100, 1))
+    return result
+
+
+def test_legacy_raw_baseline_migration_does_not_fake_a_collapse(monkeypatch, tmp_path):
+    previous = _report(1000, 1000, 1000)
+    current = _intersection_report(1000, 1000, 600)
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    cb.main()
+    assert json.loads(path.read_text()) == current
+    history = json.loads((tmp_path / "coverage_history.jsonl").read_text())
+    assert history["basis_migrations"] == ["us.companion.us_quarterly"]
+    assert history["us.companion.us_quarterly"] == 60.0
+    assert cb._flat_counts(current)["us.companion.us_quarterly"] == 600
+
+
+@pytest.mark.parametrize("previous,current", [
+    (_report(1000, 1000, 1000), _intersection_report(1000, 100, 100)),
+    (_report(1000, 1000, 1000), _intersection_report(1000, 1000, 0)),
+    (_intersection_report(1000, 1000, 600), _intersection_report(1000, 1000, 100)),
+])
+def test_intersection_gate_keeps_raw_loss_floor_and_matched_loss_guards(monkeypatch, tmp_path, previous, current):
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    with pytest.raises(SystemExit):
+        cb.main()
+    assert json.loads(path.read_text()) == previous
+
+
+def test_intersection_denominator_growth_preserves_existing_exemption(monkeypatch, tmp_path):
+    previous = _intersection_report(1000, 1000, 800)
+    current = _intersection_report(3000, 1000, 800)
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    cb.main()
+    assert json.loads(path.read_text()) == current
+
+
+def test_new_basis_unmeasurable_core_does_not_replace_legacy_good(monkeypatch, tmp_path):
+    previous = _report(1000, 1000, 1000)
+    current = _intersection_report(1000, 1000, 600)
+    current["us_companions"]["us_quarterly"].update(
+        pct_of_us=None, unmeasurable_reason="unidentified_ticker")
+    path = _run_gate(monkeypatch, tmp_path, current, previous)
+    with pytest.raises(SystemExit):
+        cb.main()
+    assert json.loads(path.read_text()) == previous

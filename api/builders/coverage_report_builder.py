@@ -39,6 +39,7 @@ CORE_FAIL_PP = 30.0
 #   회귀 게이트의 사각(초기 run·만성 결손·baseline 오염 = 급락으로 안 잡힘) 보완. 2026-07-12.
 CORE_FLOOR_PCT = 5.0
 MIN_UNIVERSE = 100
+COMPANION_BASIS = "report_ticker_intersection_v1"
 CORE_PREFIXES = ("field.facts", "us.field.facts", "us_smallcap.field.facts",
                  "field.financials", "us.field.financials",
                  # 동반 파일 붕괴도 게이트 (2026-07-11 us_quarterly 1,494→10종 실사고)
@@ -87,6 +88,49 @@ def _finite_multiple(value: Any) -> bool:
         return False
 
 
+def _companion_coverage(doc: Any, key: str, rows: list, pct_key: str,
+                        shape: type) -> Optional[Dict[str, Any]]:
+    """Measure membership in this report, not the unrelated raw source universe.
+
+    Known public schemas are ticker-keyed maps or lists of ticker objects.
+    Do not infer identities from names, position, or nested event records.
+    """
+    if doc is None:
+        return None
+    value = doc.get(key) if isinstance(doc, dict) else None
+    result = {"count": len(value) if isinstance(value, (list, dict)) else None,
+              "coverage_basis": COMPANION_BASIS, "matched_count": None,
+              "unmatched_count": None, "duplicate_count": None,
+              "unidentified_count": None, "report_ticker_count": None,
+              pct_key: None, "unmeasurable_reason": None}
+
+    def identity(v: Any) -> Optional[str]:
+        return v.strip() if isinstance(v, str) and v.strip() else None
+
+    report_ids = [identity(row.get("ticker")) if isinstance(row, dict) else None
+                  for row in rows]
+    universe = {ticker for ticker in report_ids if ticker is not None}
+    result["report_ticker_count"] = len(universe)
+    if not isinstance(value, shape):
+        result["unmeasurable_reason"] = "unexpected_companion_schema"
+        return result
+    raw_ids = list(value) if shape is dict else [
+        row.get("ticker") if isinstance(row, dict) else None for row in value]
+    ids = [identity(ticker) for ticker in raw_ids]
+    identifiable = [ticker for ticker in ids if ticker is not None]
+    unique = set(identifiable)
+    result.update(matched_count=len(unique & universe), unmatched_count=len(unique - universe),
+                  duplicate_count=len(identifiable) - len(unique),
+                  unidentified_count=len(ids) - len(identifiable))
+    if None in report_ids or result["unidentified_count"]:
+        result["unmeasurable_reason"] = "unidentified_ticker"
+    elif not universe:
+        result["unmeasurable_reason"] = "report_universe_unavailable"
+    else:
+        result[pct_key] = _pct(result["matched_count"], len(universe))
+    return result
+
+
 def build() -> Dict[str, Any]:
     report_doc = _load("stock_report_public.json")
     kr = [s for s in ((report_doc or {}).get("stocks") or []) if str(s.get("ticker", "")).isdigit()]
@@ -106,22 +150,15 @@ def build() -> Dict[str, Any]:
         filled = sum(1 for s in kr if _finite_multiple((s.get("facts") or {}).get(sub)))
         fields[f"facts.{sub}"] = {"filled": filled, "pct": _pct(filled, kr_total)}
 
-    def _companion(name: str, key: str = "stocks") -> Optional[Dict[str, Any]]:
-        doc = _load(name)
-        if doc is None:
-            return None
-        v = doc.get(key)
-        cnt = len(v) if isinstance(v, (list, dict)) else None
-        if cnt is None:
-            return None
-        return {"count": cnt, "pct_of_kr": _pct(cnt, kr_total)}
+    def _companion(name: str, shape: type, key: str = "stocks") -> Optional[Dict[str, Any]]:
+        return _companion_coverage(_load(name), key, kr, "pct_of_kr", shape)
 
     companions = {
-        "quarterly": _companion("dart_quarterly_public.json"),
-        "forensics": _companion("disclosure_forensics.json"),
-        "insider_kr": _companion("insider_trades.json"),
-        "lending": _companion("securities_lending.json"),
-        "flow_5d": _companion("stock_flow_5d.json", "flows"),
+        "quarterly": _companion("dart_quarterly_public.json", dict),
+        "forensics": _companion("disclosure_forensics.json", list),
+        "insider_kr": _companion("insider_trades.json", list),
+        "lending": _companion("securities_lending.json", list),
+        "flow_5d": _companion("stock_flow_5d.json", dict, "flows"),
     }
 
     # 미장 축 (2026-07-04 확대) — us_stock_report + us_quarterly
@@ -142,19 +179,12 @@ def build() -> Dict[str, Any]:
         filled = sum(1 for s in us if _finite_multiple((s.get("facts") or {}).get(sub)))
         us_fields[f"facts.{sub}"] = {"filled": filled, "pct": _pct(filled, us_total)}
 
-    def _us_companion(name: str, key: str = "stocks") -> Optional[Dict[str, Any]]:
-        doc = _load(name)
-        if doc is None:
-            return None
-        v = doc.get(key)
-        cnt = len(v) if isinstance(v, (list, dict)) else None
-        if cnt is None:
-            return None
-        return {"count": cnt, "pct_of_us": _pct(cnt, us_total)}
+    def _us_companion(name: str, shape: type) -> Optional[Dict[str, Any]]:
+        return _companion_coverage(_load(name), "stocks", us, "pct_of_us", shape)
 
     us_companions = {
-        "us_quarterly": _us_companion("us_quarterly_public.json"),
-        "us_insider": _us_companion("us_insider_trades.json"),
+        "us_quarterly": _us_companion("us_quarterly_public.json", dict),
+        "us_insider": _us_companion("us_insider_trades.json", list),
     }
 
     # 미장 스몰캡 트랙 (2026-07-04 S1) — 별도 파일이라 별도 축
@@ -178,6 +208,7 @@ def build() -> Dict[str, Any]:
     return {
         "_meta": {
             "generated_at": datetime.now(KST).isoformat(),
+            "companion_coverage_basis": COMPANION_BASIS,
             "source": "coverage_report_builder — 리포트 필드·동반 파일 채움율 측정 (판정·수정 0)",
         },
         "kr_total": kr_total,
@@ -227,14 +258,18 @@ def _flat_counts(report: Dict[str, Any]) -> Dict[str, int]:
         if isinstance(v, dict) and v.get("filled") is not None:
             out[f"field.{k}"] = v["filled"]
     for k, v in (report.get("companions") or {}).items():
-        if isinstance(v, dict) and v.get("count") is not None:
-            out[f"companion.{k}"] = v["count"]
+        if isinstance(v, dict):
+            count = v.get("matched_count") if v.get("coverage_basis") == COMPANION_BASIS else v.get("count")
+            if count is not None:
+                out[f"companion.{k}"] = count
     for k, v in (report.get("us_fields") or {}).items():
         if isinstance(v, dict) and v.get("filled") is not None:
             out[f"us.field.{k}"] = v["filled"]
     for k, v in (report.get("us_companions") or {}).items():
-        if isinstance(v, dict) and v.get("count") is not None:
-            out[f"us.companion.{k}"] = v["count"]
+        if isinstance(v, dict):
+            count = v.get("matched_count") if v.get("coverage_basis") == COMPANION_BASIS else v.get("count")
+            if count is not None:
+                out[f"us.companion.{k}"] = count
     for k, v in (report.get("us_smallcap_fields") or {}).items():
         if isinstance(v, dict) and v.get("filled") is not None:
             out[f"us_smallcap.field.{k}"] = v["filled"]
@@ -248,6 +283,14 @@ def _universe_for(key: str, report: Dict[str, Any]) -> int:
     if key.startswith("us."):
         return int(report.get("us_total") or 0)
     return int(report.get("kr_total") or 0)
+
+
+def _companion_metric(key: str, report: Dict[str, Any]) -> dict:
+    for prefix, group in (("companion.", "companions"), ("us.companion.", "us_companions")):
+        if key.startswith(prefix):
+            value = (report.get(group) or {}).get(key[len(prefix):])
+            return value if isinstance(value, dict) else {}
+    return {}
 
 
 def main() -> None:
@@ -264,6 +307,7 @@ def main() -> None:
 
     warns = fails = 0
     reasons = []
+    basis_migrations = []
 
     # Missing sources have null percentages, not 0%. They must not disappear
     # from the gate merely because _flat_pcts omits unmeasurable values.
@@ -290,6 +334,19 @@ def main() -> None:
         before_n, now_n = _flat_counts(prev), _flat_counts(report)
         for k, pct in now.items():
             old = before.get(k)
+            o_n, n_n = before_n.get(k), now_n.get(k)
+            previous_metric, current_metric = _companion_metric(k, prev), _companion_metric(k, report)
+            if (old is not None and current_metric.get("coverage_basis") == COMPANION_BASIS
+                    and not previous_metric.get("coverage_basis")):
+                # Legacy GOOD measured all raw rows, not report membership.
+                # Compare raw-to-raw once, retain source-loss/floor gates, then
+                # save the intersection basis for subsequent matched-to-matched runs.
+                n_n = current_metric.get("count")
+                pct = _pct(n_n, _universe_for(k, report)) if n_n is not None else None
+                basis_migrations.append(k)
+                print(f"[coverage] BASIS {k} legacy raw count comparison; new baseline uses {COMPANION_BASIS}")
+                if pct is None:
+                    continue
             if old is None or old - pct <= REGRESSION_WARN_PP:
                 continue
             if old - pct > CORE_FAIL_PP and k.startswith(CORE_PREFIXES):
@@ -298,7 +355,6 @@ def main() -> None:
                 #   커진 것이다. 이때 차단하면 커버리지 개선이 배포를 막는다.
                 #   2026-07-11 실사고(us_quarterly 1,494→10종)는 건수가 실제로 붕괴했으므로
                 #   이 완화로도 그대로 잡힌다 — 게이트의 원래 목적은 보존된다.
-                o_n, n_n = before_n.get(k), now_n.get(k)
                 if o_n is not None and n_n is not None and n_n >= o_n:
                     print(f"[coverage] WARN {k} 비율 {old}%→{pct}% 하락이나 "
                           f"절대 건수 {o_n}→{n_n} 유지·증가 — 분모 증가로 판정, 차단 안 함")
@@ -333,7 +389,8 @@ def main() -> None:
         f.write(json.dumps({"date": datetime.now(KST).strftime("%Y-%m-%d"),
                             "ts": datetime.now(KST).isoformat(),
                             "kr_total": report["kr_total"], "blocked": blocked,
-                            "fails": fails, "warns": warns, **now}, ensure_ascii=False) + "\n")
+                            "fails": fails, "warns": warns,
+                            "basis_migrations": basis_migrations, **now}, ensure_ascii=False) + "\n")
 
     if blocked:
         # 결함 산출물 = GOOD baseline(REPORT_PATH) 덮지 않음 → 다음 run 도 급락/붕괴 계속 탐지(지속 fail-closed).

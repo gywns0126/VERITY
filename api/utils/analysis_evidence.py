@@ -179,11 +179,26 @@ def _quote(stock, captured_at=None):
     as_of = as_of if parsed else None
     source = stock.get("price_source")
     adjustment = stock.get("price_adjustment")
+    bar_as_of = stock.get("price_bar_as_of")
+    bar_parsed = _timestamp(bar_as_of)
+    bar_kind = stock.get("price_time_kind")
+    bar_bound = (_valid_price(stock.get("price_bar_value")) and
+                 stock.get("price_bar_value") == stock.get("price"))
     reasons = []
     if not _valid_price(stock.get("price")):
         reasons.append("price_missing_or_invalid")
     if not as_of:
         reasons.append("quote_timestamp_missing_or_invalid")
+    if bar_kind == "daily_bar_start":
+        if not bar_bound:
+            reasons.append("daily_bar_value_mismatch")
+            source, adjustment = "unknown", "unknown"
+        elif not bar_parsed:
+            reasons.append("daily_bar_timestamp_missing_or_invalid")
+        elif capture_time and bar_parsed > capture_time:
+            reasons.append("daily_bar_timestamp_after_capture")
+        else:
+            reasons.append("daily_bar_timestamp_is_not_trade_timestamp")
     if parsed and capture_time and parsed > capture_time:
         reasons.append("quote_timestamp_after_capture")
     if not isinstance(source, str) or not source or source == "unknown":
@@ -193,6 +208,9 @@ def _quote(stock, captured_at=None):
     return {"value": stock.get("price") if _valid_price(stock.get("price")) else None, "as_of": as_of,
             "source": source if isinstance(source, str) and source else "unknown",
             "adjustment": adjustment if isinstance(adjustment, (str, bool)) else "unknown",
+            "bar_as_of": bar_as_of if bar_parsed and bar_bound else None,
+            "bar_date": stock.get("price_bar_date") if bar_bound else None,
+            "time_kind": bar_kind if bar_bound else None,
             "status": "missing" if not _valid_price(stock.get("price")) else
                       "captured" if not reasons else "unknown", "reasons": reasons}
 
@@ -280,6 +298,9 @@ def attach_analysis_evidence(records, previous, inputs, provenance, captured_at,
                           if is_new and rec_price == quote["value"] else "unknown",
                 "captured_at": captured_at if is_new else None,
                 "quote_as_of": quote["as_of"] if is_new else None,
+                "bar_as_of": quote["bar_as_of"] if is_new and rec_price == quote["value"] else None,
+                "bar_date": quote["bar_date"] if is_new and rec_price == quote["value"] else None,
+                "time_kind": quote["time_kind"] if is_new and rec_price == quote["value"] else None,
                 "source": quote["source"] if is_new else "unknown",
                 "adjustment": quote["adjustment"] if is_new else "unknown",
                 "reason": "first_observed_rec_price" if is_new else "legacy_origin_unavailable",

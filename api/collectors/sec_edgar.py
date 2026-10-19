@@ -8,8 +8,10 @@ SEC EDGAR 미국 공시 데이터 수집기 (DART 대체)
 Rate limit: 10 req/sec, User-Agent 필수
 """
 import logging
+import math
 import re
 import time
+from datetime import date
 
 import requests
 from typing import Dict, List, Optional
@@ -158,6 +160,91 @@ def get_insider_transactions(ticker: str, user_agent: str) -> List[Dict]:
         return []
 
 
+def _coherent_operands(us_gaap, groups, *, instant, required_context=None):
+    """Choose operands only from the latest observed common reporting context.
+
+    All alternatives are considered before selection. A deprecated concept's
+    old nonzero value must not win over a current alternative. Missing operands
+    are not reported zeroes; no fallback to an older complete period is allowed.
+    """
+    candidates = []
+    for alternatives in groups:
+        rows = []
+        for concept in alternatives:
+            for row in (us_gaap.get(concept, {}).get("units", {}).get("USD", []) or []):
+                if not isinstance(row, dict) or row.get("form") not in ("10-K", "10-K/A"):
+                    continue
+                value = row.get("val")
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                    continue
+                try:
+                    end, filed = date.fromisoformat(row["end"]), date.fromisoformat(row["filed"])
+                    if filed < end or not isinstance(row.get("accn"), str) or not row["accn"]:
+                        continue
+                    if instant:
+                        if row.get("start"):
+                            continue
+                    elif not 350 <= (end - date.fromisoformat(row["start"])).days <= 380:
+                        continue
+                except (KeyError, TypeError, ValueError):
+                    continue
+                rows.append((concept, row))
+        candidates.append(rows)
+    all_rows = [row for rows in candidates for _, row in rows]
+    if not all_rows:
+        return None, {"reason": "no_eligible_annual_operands", "candidate_counts": [len(r) for r in candidates]}
+    latest = max(all_rows, key=lambda row: (row["end"], row["filed"], row["accn"]))
+    context = required_context or (latest["end"], latest["accn"], None if instant else latest["start"])
+    selected = []
+    for rows in candidates:
+        matches = [(concept, row) for concept, row in rows
+                   if (row["end"], row["accn"], None if instant else row["start"]) == context]
+        if not matches:
+            return None, {"reason": "no_same_period_disclosure_operands",
+                          "end": context[0], "document_id": context[1],
+                          "candidate_counts": [len(r) for r in candidates]}
+        # Prefer the first declared equivalent concept, but reject conflicting
+        # duplicate rows within that concept/context instead of relying on order.
+        concept = matches[0][0]
+        same = [row for tag, row in matches if tag == concept]
+        if len({row["val"] for row in same}) > 1:
+            return None, {"reason": "conflicting_operand_values", "concept": concept,
+                          "end": context[0], "document_id": context[1]}
+        selected.append((concept, same[0]))
+    return selected, None
+
+
+def _coherent_debt_operands(us_gaap):
+    """Use explicit, non-overlapping debt bundles; current debt is not an alias.
+
+    Anchor every bundle to the latest available debt/equity context so an old
+    complete definition cannot beat a newer incomplete definition.
+    """
+    groups = [("LongTermDebt", "LongTermDebtNoncurrent"),
+              ("ShortTermBorrowings", "DebtCurrent"), ("StockholdersEquity",)]
+    anchor, rejection = _coherent_operands(us_gaap, groups, instant=True)
+    if anchor:
+        context = (anchor[0][1]["end"], anchor[0][1]["accn"], None)
+    elif rejection.get("end") and rejection.get("document_id"):
+        context = (rejection["end"], rejection["document_id"], None)
+    else:
+        return None, None, rejection
+    definitions = (
+        ("long_term_plus_short_borrowings_over_equity",
+         [("LongTermDebt", "LongTermDebtNoncurrent"), ("ShortTermBorrowings",), ("StockholdersEquity",)]),
+        ("noncurrent_plus_current_debt_over_equity",
+         [("LongTermDebtNoncurrent",), ("DebtCurrent",), ("StockholdersEquity",)]),
+    )
+    failures = {}
+    for definition, operands in definitions:
+        rows, failure = _coherent_operands(us_gaap, operands, instant=True, required_context=context)
+        if rows:
+            return rows, definition, None
+        failures[definition] = failure
+    return None, None, {"reason": "no_coherent_debt_bundle", "end": context[0],
+                        "document_id": context[1], "bundles": failures}
+
+
 def get_financial_facts(ticker: str, user_agent: str) -> Dict:
     """XBRL 핵심 재무 데이터 추출 (Brain용 FCF, 순이익, 부채 등)."""
     result = {
@@ -200,35 +287,64 @@ def get_financial_facts(ticker: str, user_agent: str) -> Dict:
         result["revenue"] = _latest_annual("Revenues") or _latest_annual("RevenueFromContractWithCustomerExcludingAssessedTax")
         result["operating_income"] = _latest_annual("OperatingIncomeLoss")
 
-        ops_cf = _latest_annual("NetCashProvidedByUsedInOperatingActivities")
-        capex = _latest_annual("PaymentsToAcquirePropertyPlantAndEquipment")
-        if ops_cf is not None:
-            result["fcf"] = ops_cf - (capex or 0)
+        rejections = result["_source_rejections"] = {}
+        def coherent(field, groups, *, instant):
+            response_cik = str(data.get("cik", ""))
+            if not response_cik.isdigit() or response_cik.zfill(10) != str(cik).zfill(10):
+                rejections[field] = {"reason": "issuer_identity_missing_or_mismatch"}
+                return None
+            chosen, rejection = _coherent_operands(us_gaap, groups, instant=instant)
+            if rejection:
+                rejections[field] = rejection
+                return None
+            for tag, row in chosen:
+                selected_rows[tag] = dict(row)
+            return chosen
 
-        total_debt = _latest_annual("LongTermDebt") or _latest_annual("LongTermDebtNoncurrent")
-        short_debt = _latest_annual("ShortTermBorrowings") or 0
-        if total_debt is not None:
-            result["total_debt"] = total_debt + (short_debt or 0)
+        fcf_rows = coherent("fcf", [("NetCashProvidedByUsedInOperatingActivities",),
+                                   ("PaymentsToAcquirePropertyPlantAndEquipment",)], instant=False)
+        if fcf_rows:
+            result["fcf"] = float(fcf_rows[0][1]["val"]) - float(fcf_rows[1][1]["val"])
 
+        debt_rows, debt_definition, debt_rejection = _coherent_debt_operands(us_gaap)
+        response_cik = str(data.get("cik", ""))
+        if not response_cik.isdigit() or response_cik.zfill(10) != str(cik).zfill(10):
+            debt_rows, debt_definition = None, None
+            debt_rejection = {"reason": "issuer_identity_missing_or_mismatch"}
+        if debt_rejection:
+            rejections["debt_ratio"] = debt_rejection
+        elif debt_rows:
+            for tag, row in debt_rows:
+                selected_rows[tag] = dict(row)
         equity = _latest_annual("StockholdersEquity")
-        if equity:
+        if equity is not None:
             result["total_equity"] = equity
-            if result["total_debt"] and equity > 0:
+        if debt_rows:
+            result["total_debt"] = float(debt_rows[0][1]["val"]) + float(debt_rows[1][1]["val"])
+            equity = float(debt_rows[2][1]["val"])
+            result["total_equity"] = equity
+            selected_rows["StockholdersEquity"] = dict(debt_rows[2][1])
+            if equity > 0:
                 result["debt_ratio"] = round(result["total_debt"] / equity * 100, 1)
+            else:
+                rejections["debt_ratio"] = {"reason": "nonpositive_equity_denominator"}
 
         # 2026-07-24 US 재무 확장 (2차 산식 감사: Altman/graham US 결측 해소). Assets/유동자산·부채·이익잉여금
         # 추가 → Altman X1(운전자본/총자산)·X2(이익잉여금/총자산)·graham 유동비율(200%) US 활성화.
         # XBRL 태그 실 SEC 호출 검증(AAPL). 통화=USD(비율이라 currency 상쇄, KR KRW 와 무관).
         result["total_assets"] = _latest_annual("Assets")
         result["retained_earnings"] = _latest_annual("RetainedEarningsAccumulatedDeficit")
-        _ca = _latest_annual("AssetsCurrent")
-        _cl = _latest_annual("LiabilitiesCurrent")
-        if _ca is not None and _cl is not None:
+        result.update(current_assets=None, current_liabilities=None, working_capital=None, current_ratio=None)
+        current_rows = coherent("current_ratio", [("AssetsCurrent",), ("LiabilitiesCurrent",)], instant=True)
+        if current_rows:
+            _ca, _cl = (float(row["val"]) for _, row in current_rows)
             result["current_assets"] = _ca
             result["current_liabilities"] = _cl
             result["working_capital"] = _ca - _cl  # Altman X1 분자
             if _cl > 0:
                 result["current_ratio"] = round(_ca / _cl * 100, 1)  # % 스케일 (graham 200 임계·KIS crnt_rate 정합)
+            else:
+                rejections["current_ratio"] = {"reason": "nonpositive_current_liabilities_denominator"}
 
         from api.utils.source_alignment import field_evidence, sec_input
         result["_source_identity"] = {"ticker": ticker, "cik": cik,
@@ -244,12 +360,13 @@ def get_financial_facts(ticker: str, user_agent: str) -> Dict:
                                   concept=c, instant=instant) if c in selected_rows else None
                         for c in concepts])
         rev_tag = "Revenues" if selected_rows.get("Revenues", {}).get("val") else "RevenueFromContractWithCustomerExcludingAssessedTax"
-        debt_tag = "LongTermDebt" if selected_rows.get("LongTermDebt", {}).get("val") else "LongTermDebtNoncurrent"
         _evidence("net_income", ["NetIncomeLoss"], "annual_net_income", "USD")
         _evidence("revenue", [rev_tag], "annual_revenue", "USD")
         _evidence("operating_income", ["OperatingIncomeLoss"], "annual_operating_income", "USD")
         _evidence("fcf", ["NetCashProvidedByUsedInOperatingActivities", "PaymentsToAcquirePropertyPlantAndEquipment"], "annual_operating_cf_minus_ppe_capex", "USD")
-        _evidence("debt_ratio", [debt_tag, "ShortTermBorrowings", "StockholdersEquity"], "long_term_plus_short_borrowings_over_equity", "percent", True)
+        _evidence("debt_ratio", [tag for tag, _ in debt_rows] if debt_rows else
+                  ["LongTermDebt", "ShortTermBorrowings", "StockholdersEquity"],
+                  debt_definition or "long_term_plus_short_borrowings_over_equity", "percent", True)
         _evidence("current_ratio", ["AssetsCurrent", "LiabilitiesCurrent"], "current_assets_over_current_liabilities", "percent", True)
         for field, concept in (("total_assets", "Assets"), ("total_equity", "StockholdersEquity"),
                                ("retained_earnings", "RetainedEarningsAccumulatedDeficit"),
