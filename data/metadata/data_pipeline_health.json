@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-10-19T16:03:11+09:00",
-  "overall_status": "error",
+  "collected_at": "2026-10-19T16:32:48+09:00",
+  "overall_status": "ok",
   "summary": {
-    "fresh": 14,
+    "fresh": 15,
     "stale": 0,
-    "missing": 1,
+    "missing": 0,
     "total": 15
   },
   "items": [
@@ -16,12 +16,12 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "mtime",
-      "last_update_kst": "2026-10-19T16:01:12.258015+09:00",
-      "age_hours": 0.03,
+      "last_update_kst": "2026-10-19T16:31:21.539232+09:00",
+      "age_hours": 0.02,
       "status": "fresh",
-      "line_count": 741,
+      "line_count": 745,
       "last_entry": {
-        "ts": "2026-10-16T21:18:25.251397+09:00",
+        "ts": "2026-10-19T16:02:29.858956+09:00",
         "step": "f_sector_diversified",
         "mode": "SHADOW",
         "input_n": 100,
@@ -36,12 +36,12 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "mtime",
-      "last_update_kst": "2026-10-19T16:01:11.794014+09:00",
-      "age_hours": 0.03,
+      "last_update_kst": "2026-10-19T16:31:21.083239+09:00",
+      "age_hours": 0.02,
       "status": "fresh",
-      "line_count": 37009,
+      "line_count": 39751,
       "last_entry": {
-        "ts": "2026-10-16T21:18:29.000287+09:00"
+        "ts": "2026-10-19T16:02:33.549186+09:00"
       }
     },
     {
@@ -53,7 +53,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-19T01:18:13+09:00",
-      "age_hours": 14.75,
+      "age_hours": 15.24,
       "status": "fresh",
       "diagnostics": {
         "ok": true,
@@ -76,11 +76,11 @@
       "max_fresh_hours": 6.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-10-19T16:02:23+09:00",
+      "last_update_kst": "2026-10-19T16:32:22+09:00",
       "age_hours": 0.01,
       "status": "fresh",
       "diagnostics": {
-        "elapsed_s": 47.82,
+        "elapsed_s": 25.0,
         "used_prev_snapshot": []
       }
     },
@@ -92,15 +92,15 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-10-16T20:50:55+09:00",
-      "age_hours": 67.2,
-      "status": "missing",
+      "last_update_kst": "2026-10-19T15:32:51+09:00",
+      "age_hours": 1.0,
+      "status": "fresh",
       "diagnostics": {
         "ok": true,
         "candidates_count": 45,
         "kr_count": 30,
         "us_count": 15,
-        "elapsed_s": 1653.23,
+        "elapsed_s": 1783.03,
         "used_prev_snapshot": false
       }
     },
@@ -112,16 +112,18 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "mtime",
-      "last_update_kst": "2026-10-19T16:01:11.062013+09:00",
-      "age_hours": 0.03,
+      "last_update_kst": "2026-10-19T16:31:20.354249+09:00",
+      "age_hours": 0.02,
       "status": "fresh",
-      "line_count": 1569,
+      "line_count": 1570,
       "last_entry": {
-        "mode": "quick",
-        "ramp_up_stage": 0,
-        "execution_time_seconds": 0.0,
-        "fail_triggers": [],
-        "yfinance_failure_rate": 0.0
+        "mode": "universe_scan",
+        "ramp_up_stage": 5000,
+        "execution_time_seconds": 1782.39,
+        "fail_triggers": [
+          "execution_time_50pct_overrun"
+        ],
+        "yfinance_failure_rate": 0.0024
       }
     },
     {
@@ -133,7 +135,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-17T13:23:14.947237+09:00",
-      "age_hours": 50.67,
+      "age_hours": 51.16,
       "status": "fresh"
     },
     {
@@ -145,7 +147,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-18T18:01:26.373547+09:00",
-      "age_hours": 22.03,
+      "age_hours": 22.52,
       "status": "fresh"
     },
     {
@@ -157,7 +159,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-17T13:19:37.973581+09:00",
-      "age_hours": 50.73,
+      "age_hours": 51.22,
       "status": "fresh"
     },
     {
@@ -169,7 +171,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-17T02:30:22.293980+09:00",
-      "age_hours": 61.55,
+      "age_hours": 62.04,
       "status": "fresh"
     },
     {
@@ -181,7 +183,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-17T13:29:09.193017+09:00",
-      "age_hours": 50.57,
+      "age_hours": 51.06,
       "status": "fresh"
     },
     {
@@ -193,7 +195,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-17T13:19:55.910557+09:00",
-      "age_hours": 50.72,
+      "age_hours": 51.21,
       "status": "fresh"
     },
     {
@@ -204,7 +206,7 @@
       "max_fresh_hours": 72.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-10-19T15:32:39.259615+09:00",
+      "last_update_kst": "2026-10-19T16:02:24.629210+09:00",
       "age_hours": 0.51,
       "status": "fresh"
     },
@@ -217,7 +219,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-01T16:14:45.419861+09:00",
-      "age_hours": 431.81,
+      "age_hours": 432.3,
       "status": "fresh"
     },
     {
@@ -229,7 +231,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-17T13:20:22.126945+09:00",
-      "age_hours": 50.71,
+      "age_hours": 51.21,
       "status": "fresh"
     }
   ],
