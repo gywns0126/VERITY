@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           # 전체 히스토리 clone 이 41초였다. price_pulse 커밋만 13,140건이라 누적이 크다.
-          # commit + `git pull --rebase` 재시도가 있어 0(=전체) 대신 얕은 이력을 남긴다.
+          # Prepared commit의 부모를 읽고 원격 HEAD만 제한해서 가져온다.
           # dart_catalyst_pulse 선례와 동일 값.
           fetch-depth: 10
 
@@ -90,8 +90,8 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python api/cron/price_pulse.py
 
-      - name: Commit data/price_pulse.json
-        id: commit
+      - name: Prepare price pulse output commit
+        id: prepare
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
@@ -106,21 +106,39 @@ jobs:
           fi
           TIME_KST=$(TZ=Asia/Seoul date +%H:%M)
           git commit -m "💓 price_pulse ${TIME_KST}"
-          BRANCH="${{ github.ref_name }}"
-          for i in 1 2 3 4 5; do
-            git rebase --abort 2>/dev/null || true
-            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
-              echo "changed=1" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-            echo "[pulse] push attempt $i failed, retrying in $((i * 5))s..."
-            sleep $((i * 5))
-          done
-          echo "changed=0" >> $GITHUB_OUTPUT
-          echo "::warning::[pulse] push 5회 실패 — 다음 cron 에서 재시도"
+          mkdir -p _pulse_recovery
+          git archive HEAD -- data/price_pulse.json | tar -x -C _pulse_recovery
+          if git cat-file -e HEAD:data/.kis_issued_date.txt 2>/dev/null; then
+            git archive HEAD -- data/.kis_issued_date.txt | tar -x -C _pulse_recovery
+          fi
+          echo "changed=1" >> $GITHUB_OUTPUT
+
+      - name: Retain prepared price pulse before transport
+        if: steps.prepare.outputs.changed == '1'
+        timeout-minutes: 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: price-pulse-persistence-${{ github.run_id }}-${{ github.run_attempt }}
+          # Explicit outputs only: the date lock is not a token or token cache.
+          path: |
+            _pulse_recovery/data/price_pulse.json
+            _pulse_recovery/data/.kis_issued_date.txt
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error
+
+      - name: Persist price pulse with bounded retries
+        id: commit
+        if: steps.prepare.outputs.changed == '1'
+        timeout-minutes: 3
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          python scripts/ci/persist_price_pulse.py "$TARGET_BRANCH"
+          echo "changed=1" >> $GITHUB_OUTPUT
 
       - name: Publish price_pulse.json to gh-pages
-        if: steps.commit.outputs.changed == '1'
+        if: success() && steps.commit.outputs.changed == '1'
         # gh-pages 갱신 — 프론트가 raw.githubusercontent gh-pages 에서 fetch
         # force_orphan publish 라 다른 워크플로 산출물도 main HEAD 기준 함께 재발행됨 (race 안전)
         uses: ./.github/actions/publish-data
