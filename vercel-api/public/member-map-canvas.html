@@ -5209,6 +5209,7 @@ const memberNetworkStyle=document.createElement('style');memberNetworkStyle.text
 #an-map-design .an-network-space{position:relative;min-width:0;min-height:0;overflow:hidden;touch-action:none;cursor:grab}
 #an-map-design .an-network-space:focus-visible{outline:none}
 #an-map-design .an-network-space>svg{display:none}
+#an-map-design .an-network-space>.an-network-grid{display:block;position:absolute;inset:0;width:100%;height:100%;pointer-events:none;fill:none;stroke:light-dark(var(--an-grid),var(--an-divider));stroke-width:1;shape-rendering:crispEdges}
 #an-map-design .an-network-graph{position:absolute;inset:0}
 #an-map-design .an-network-nodes{position:absolute;inset:0;pointer-events:none}
 #an-map-design .an-network-space:not([data-stage=cards]) .an-network-node{pointer-events:none;background:transparent;box-shadow:none}
@@ -5242,7 +5243,7 @@ const memberNetworkStyle=document.createElement('style');memberNetworkStyle.text
 `;root.append(memberNetworkStyle);
 const memberNetworkButton=document.createElement('button');memberNetworkButton.type='button';memberNetworkButton.className='an-tool';memberNetworkButton.textContent='전체 관계망';memberNetworkButton.setAttribute('aria-expanded','false');root.querySelector('.an-zoom').append(memberNetworkButton);
 const memberNetworkHost=document.createElement('section');memberNetworkHost.className='an-network-view';memberNetworkHost.hidden=true;memberNetworkHost.setAttribute('aria-label','전체 관계망 탐색');
-memberNetworkHost.innerHTML='<header class="an-network-head"><h2>전체 관계망</h2><button type="button" data-network-action="out" aria-label="관계망 축소">−</button><output aria-label="관계망 배율"></output><button type="button" data-network-action="in" aria-label="관계망 확대">+</button><button type="button" data-network-action="fit">한눈에</button><button type="button" data-network-action="close">원래 보기</button></header><div class="an-network-main"><div class="an-network-space" tabindex="0" role="group" aria-label="고정 관계망 · 드래그로 이동, 휠로 확대축소"><div class="an-network-graph" aria-hidden="true"></div><svg aria-hidden="true"></svg><div class="an-network-nodes"></div></div><aside class="an-network-inspector" aria-label="관계망 선택 자료"></aside></div><footer class="an-network-foot"></footer>';
+memberNetworkHost.innerHTML='<header class="an-network-head"><h2>전체 관계망</h2><button type="button" data-network-action="out" aria-label="관계망 축소">−</button><output aria-label="관계망 배율"></output><button type="button" data-network-action="in" aria-label="관계망 확대">+</button><button type="button" data-network-action="fit">한눈에</button><button type="button" data-network-action="close">원래 보기</button></header><div class="an-network-main"><div class="an-network-space" tabindex="0" role="group" aria-label="고정 관계망 · 드래그로 이동, 휠로 확대축소"><svg aria-hidden="true"></svg><svg class="an-network-grid" aria-hidden="true"><path class="an-network-grid-fine"/><path class="an-network-grid-coarse"/></svg><div class="an-network-graph" aria-hidden="true"></div><div class="an-network-nodes"></div></div><aside class="an-network-inspector" aria-label="관계망 선택 자료"></aside></div><footer class="an-network-foot"></footer>';
 root.append(memberNetworkHost);
 const memberNetworkSpace=memberNetworkHost.querySelector('.an-network-space'),memberNetworkGraph=memberNetworkHost.querySelector('.an-network-graph'),memberNetworkSvg=memberNetworkHost.querySelector('svg'),memberNetworkNodes=memberNetworkHost.querySelector('.an-network-nodes'),memberNetworkInspector=memberNetworkHost.querySelector('.an-network-inspector');
 let memberNetworkSession=null,memberNetworkOpening=false;
@@ -5275,11 +5276,30 @@ function memberNetworkHighlight(id){
   for(const [e,el] of s.paths)el.dataset.faded=String(!!id&&e.from!==id&&e.to!==id);
   s.engine?.highlight(id);
 }
+function renderMemberNetworkGrid(){
+  const s=memberNetworkSession;if(!s)return;
+  const {width:w,height:h}=memberNetworkSpace.getBoundingClientRect();let step=24*s.camera.zoom;
+  // Native workboard lattice/fade; at extreme zoom-out retain every fourth line until spacing is readable.
+  while(step<8)step*=4;
+  const originX=w/2+s.camera.panX,originY=h/2+s.camera.panY,fade=Math.max(0,Math.min(1,(step-8)/16)),fineOpacity=fade*.8,paths=['',''];
+  for(let i=Math.ceil(-originX/step);i<=Math.floor((w-originX)/step);i++){
+    const major=i%4===0;if(!major&&!fineOpacity)continue;
+    const x=Math.round(originX+i*step)+.5;paths[major?1:0]+='M '+x+' 0 V '+h+' ';
+  }
+  for(let i=Math.ceil(-originY/step);i<=Math.floor((h-originY)/step);i++){
+    const major=i%4===0;if(!major&&!fineOpacity)continue;
+    const y=Math.round(originY+i*step)+.5;paths[major?1:0]+='M 0 '+y+' H '+w+' ';
+  }
+  const fine=memberNetworkSpace.querySelector('.an-network-grid-fine'),coarse=memberNetworkSpace.querySelector('.an-network-grid-coarse');
+  fine.setAttribute('d',paths[0]);coarse.setAttribute('d',paths[1]);
+  fine.style.opacity=String(fineOpacity);coarse.style.opacity=String(1-(1-fineOpacity)*(1-(.65-fade*.25)));
+}
 function drawMemberNetwork(){
   const s=memberNetworkSession;if(!s)return;
   const {width,height}=memberNetworkSpace.getBoundingClientRect(),z=s.camera.zoom,project=p=>({x:width/2+(p.x-500)*z+s.camera.panX,y:height/2+(p.y-340)*z+s.camera.panY});
   const stage=memberNetworkStage(z);memberNetworkSpace.dataset.stage=stage;memberNetworkSpace.style.setProperty('--an-network-label-width',Math.max(40,145*z)+'px');
   s.engine?.setCamera(s.camera);s.engine?.setStage(stage,z);
+  renderMemberNetworkGrid();
   for(const [id,el] of s.elements){const p=project(s.positions.get(id));el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.transform='translate(-50%,-50%)'+(stage==='cards'?' scale('+z+')':'');}
   memberNetworkHost.querySelector('output').textContent=Math.round(z*100)+'%';
 }

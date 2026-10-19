@@ -39,6 +39,8 @@ function fixture(){
   selected:'source',marks:{source:{important:true}},history:{past:[{before:{source:{x:.5,y:.5}},after:{source:{x:.62,y:.71}}}],future:[]}});
  const root=element(),host=element('section'),space=element(),nodes=element(),svg=element('svg'),inspector=element(),live=element();
  const rootParts=new Map([['#an-live',live]]);root.querySelector=selector=>rootParts.get(selector)||null;
+ const gridFine=element('path'),gridCoarse=element('path'),gridParts=new Map([['.an-network-grid-fine',gridFine],['.an-network-grid-coarse',gridCoarse]]);
+ space.querySelector=selector=>gridParts.get(selector)||null;
  const button=element('button'),controls=element(),alreadyInert=element(),style=element('style'),script=element('script');
  alreadyInert.inert=true;root.dataset.other='kept';root.children=[controls,alreadyInert,style,script,host];
  root.contains=el=>root.children.includes(el);host.hidden=true;
@@ -67,14 +69,14 @@ function fixture(){
   initialPositions:readOnlyMap([['source',{x:.5,y:.5}]]),focusOffsets:readOnlyMap([['source',{x:.01,y:.02}]]),
   memberLayoutBases:readOnlyMap([['source',{x:.5,y:.5}]])};
  const names=['memberNetworkStage','memberNetworkSnapshot','memberNetworkKind','memberNetworkKindText','memberNetworkSelect',
-  'memberNetworkHighlight','drawMemberNetwork','zoomMemberNetwork','fitMemberNetwork','closeMemberNetwork','openMemberNetwork'];
+  'memberNetworkHighlight','renderMemberNetworkGrid','drawMemberNetwork','zoomMemberNetwork','fitMemberNetwork','closeMemberNetwork','openMemberNetwork'];
  vm.runInNewContext(geometry+'\n'+functionSource(relationship,'memberRelationshipIsMapRecord')+'\n'+names.map(name=>functionSource(source,name)).join('\n'),context);
  const actualLayout=context.memberNetworkLayout;let layoutCalls=0;
  context.memberNetworkLayout=(items,links)=>{layoutCalls++;return actualLayout(items,links);};
  const nativeValues=()=>clone({scope,edges,native,initial:[...context.initialPositions],offsets:[...context.focusOffsets],bases:[...context.memberLayoutBases]});
  const before=nativeValues();
  return{context,scope,edges,stock,record,candidate,native,root,host,space,nodes,svg,inspector,live,button,controls,alreadyInert,observer,hostParts,
-  visualContext,visualCalls,reference,engine,engineCalls,engineState,graph,layoutCalls:()=>layoutCalls,assertNative:()=>assert.deepEqual(nativeValues(),before)};
+  visualContext,visualCalls,reference,engine,engineCalls,engineState,graph,gridFine,gridCoarse,layoutCalls:()=>layoutCalls,assertNative:()=>assert.deepEqual(nativeValues(),before)};
 }
 test('stage thresholds are dots / names / cards at the exact boundaries',()=>{
  const {context:c}=fixture();
@@ -197,6 +199,31 @@ test('draw/zoom/pan/resize/fit preserve every world position, raw value and path
  f.space.rect={width:390,height:844,left:0,top:0};c.drawMemberNetwork();c.fitMemberNetwork();c.fitMemberNetwork();
  assert.deepEqual(clone([...s.positions]),positions);assert.deepEqual([...s.elements.values()],elements);assert.deepEqual(s.paths.map(([,el])=>el),paths);
  assert.equal(f.layoutCalls(),1);f.assertNative();
+});
+test('network background reuses the native themed grid behind the graph, without intercepting gestures',()=>{
+ const rule=source.match(/#an-map-design \.an-network-space>\.an-network-grid\{([^}]+)\}/)[1];
+ for(const declaration of ['pointer-events:none','stroke:light-dark(var(--an-grid),var(--an-divider))','stroke-width:1','shape-rendering:crispEdges'])assert.ok(rule.includes(declaration));
+ const markup=source.match(/memberNetworkHost\.innerHTML='([^']+)';/)[1];
+ assert.ok(markup.indexOf('class="an-network-grid"')<markup.indexOf('class="an-network-graph"'),'grid is behind the vendor canvas');
+ assert.ok(markup.includes('<svg class="an-network-grid" aria-hidden="true">'));
+});
+test('native 24px grid tracks camera pan/zoom/resize with bounded low-zoom spacing and no layout/raw changes',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,before=clone([...s.positions]);
+ const lines=()=>[f.gridFine,f.gridCoarse].flatMap(el=>[...el.attributes.d.matchAll(/M ([\d.]+) 0 V ([\d.]+)|M 0 ([\d.]+) H ([\d.]+)/g)].map(m=>m[1]?{axis:'x',value:+m[1],limit:+m[2]}:{axis:'y',value:+m[3],limit:+m[4]}));
+ for(const zoom of [.02,.08,.2,.28,.649999,.65,1,2,4]){
+  s.camera={zoom,panX:13,panY:-9};c.drawMemberNetwork();
+  const r=f.space.getBoundingClientRect(),all=lines();assert.ok(all.length>0&&all.length<2*(r.width+r.height)/8+4);
+  for(const line of all){const origin=(line.axis==='x'?r.width:r.height)/2+(line.axis==='x'?13:-9);
+   const world=(line.value-.5-origin)/zoom,multiple=Math.round(world/24);
+   assert.ok(Math.abs(world-multiple*24)*zoom<=.500001,'line stays on native world lattice within pixel snapping');}
+  for(const el of [f.gridFine,f.gridCoarse])assert.ok(+el.style.opacity>=0&&+el.style.opacity<=1);
+ }
+ s.camera={zoom:1,panX:0,panY:0};c.drawMemberNetwork();const baseline=lines().filter(n=>n.axis==='x').map(n=>n.value);
+ assert.ok(baseline.includes(450.5)&&baseline.includes(474.5),'native 24px spacing at reference zoom');
+ s.camera.panX=7;c.drawMemberNetwork();const moved=lines().filter(n=>n.axis==='x').map(n=>n.value);
+ for(const x of baseline.filter(x=>x+7<900))assert.ok(moved.includes(x+7),'grid translates with camera, not viewport-fixed');
+ f.space.rect={width:390,height:844,left:0,top:0};c.drawMemberNetwork();assert.ok(lines().some(n=>n.axis==='x'&&n.value===202.5));
+ c.fitMemberNetwork();assert.deepEqual(clone([...s.positions]),before);assert.equal(f.layoutCalls(),1);f.assertNative();
 });
 test('zoom preserves the cursor world point, clamps camera bounds, and fit remains finite without changing geometry',async()=>{
  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,r=f.space.getBoundingClientRect(),at={x:131,y:227};
