@@ -1,10 +1,19 @@
 {
-  "checked_at": "2026-10-20T15:14:50.881249Z",
+  "checked_at": "2026-10-20T16:14:10.083329Z",
   "slot": "2026-10-20T10:30:00Z",
   "status": "delivered",
   "severity": "PASS",
   "acceptance_scope": "workflow_delivery_only",
   "inspected_runs": [
+    {
+      "id": 39447073638,
+      "event": "schedule",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "15b71d7d6c0712b57f6ed25dbb5d9a6355cb4780",
+      "created_at": "2026-10-20T15:17:44Z",
+      "duplicate_noop": true
+    },
     {
       "id": 39410133615,
       "event": "repository_dispatch",
@@ -17,7 +26,7 @@
   "attempt_count": 1,
   "delivery_run_id": 39410133615,
   "expected_slot_count": 1,
-  "inspected_run_count": 1,
+  "inspected_run_count": 2,
   "reason": "required_workflow_steps_delivered",
   "alert_state": {
     "2026-10-19T10:30:00Z|unknown": "2026-10-19T20:14:04.764398Z"
