@@ -78,3 +78,54 @@ def test_error_vocabulary_and_api_mirror():
     root = Path(__file__).resolve().parents[1]
     assert (root / "api/collectors/member_map_refresh_store.py").read_bytes() == (
         root / "vercel-api/api/portfolio_core/member_map_refresh_store.py").read_bytes()
+
+
+@pytest.mark.parametrize("background,expected", [(False, 3), (True, 10)])
+def test_store_uses_separate_bounded_read_and_rpc_deadlines(monkeypatch, background, expected):
+    calls = []
+    monkeypatch.setattr(storage.time, "monotonic", lambda: 100)
+    def request(method, url, **kwargs):
+        calls.append((method, kwargs))
+        return {} if method == "POST" else [
+            {"source": source, "revision": 0, "feed_revision": 0} for source in storage.SOURCES]
+    monkeypatch.setattr(storage, "_request_json", request)
+    store = storage.RefreshStore("synthetic-role", background=background)
+    store._states = {source: {} for source in storage.SOURCES}
+    store._state_revisions = {source: 0 for source in storage.SOURCES}
+    store._feed_revisions = {source: 0 for source in storage.SOURCES}
+    store.read_states()
+    store._rpc("member_map_refresh_claim", {})
+    assert calls[0][1]["deadline"] == 100 + expected
+    assert [kw["timeout_seconds"] for _, kw in calls] == [expected, expected]
+
+
+@pytest.mark.parametrize("background", ["true", 1, None])
+def test_background_opt_in_is_not_coerced(background):
+    with pytest.raises(storage.RefreshStoreError, match="refresh-config-rejected"):
+        storage.RefreshStore("synthetic-role", background=background)
+
+
+def test_stream_deadline_is_transient_not_invalid_payload(monkeypatch):
+    class Response:
+        status_code = 200
+        headers = {}
+        def iter_content(self, **_):
+            yield b"{}"
+    monkeypatch.setattr(storage.time, "monotonic", lambda: 4)
+    with pytest.raises(storage.RefreshStoreError, match="refresh-read-timeout"):
+        storage._read_json_response(Response(), 100, 3)
+
+
+@pytest.mark.parametrize("timeout_seconds", [None, 10])
+def test_transport_receives_selected_timeout_and_never_retries(monkeypatch, timeout_seconds):
+    received = []
+    class Session:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def request(self, *args, **kwargs):
+            received.append(kwargs["timeout"])
+            raise storage.requests.exceptions.ReadTimeout("private fixture")
+    monkeypatch.setattr(storage.requests, "Session", Session)
+    with pytest.raises(storage.RefreshStoreError, match="refresh-transport-timeout"):
+        storage._request_json("GET", storage.PROJECT_URL, headers={}, timeout_seconds=timeout_seconds)
+    assert received == [3 if timeout_seconds is None else 10]

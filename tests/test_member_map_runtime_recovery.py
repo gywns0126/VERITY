@@ -19,7 +19,10 @@ SPEC.loader.exec_module(runner)
 def test_transient_read_recovers_on_next_bounded_cycle(monkeypatch, capsys, code):
     from api.collectors import member_map_refresh_store as storage
     monkeypatch.setenv("DART_API_KEY", "synthetic")
-    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda: object())
+    def background_store(*, background):
+        assert background is True
+        return object()
+    monkeypatch.setattr(storage.RefreshStore, "from_environment", background_store)
     clock = [0]
     monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(runner.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
@@ -41,7 +44,7 @@ def test_transient_read_recovers_on_next_bounded_cycle(monkeypatch, capsys, code
 def test_unknown_and_auth_errors_stop_without_repeating(monkeypatch, capsys):
     from api.collectors import member_map_refresh_store as storage
     monkeypatch.setenv("DART_API_KEY", "synthetic")
-    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda: object())
+    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: object())
     calls = []
     def cycle(*args):
         calls.append(1)
@@ -57,7 +60,7 @@ def test_unknown_and_auth_errors_stop_without_repeating(monkeypatch, capsys):
 @pytest.mark.parametrize("failure", ["store", "key"])
 def test_initial_config_failure_emits_safe_terminal_event(monkeypatch, capsys, failure):
     from api.collectors import member_map_refresh_store as storage
-    def store():
+    def store(**_):
         if failure == "store":
             raise RefreshStoreError("refresh-config-rejected")
         return object()
@@ -98,7 +101,7 @@ def test_ambiguous_save_is_never_replayed_inside_cycle(monkeypatch):
 def test_exponential_delay_caps_at_five_minutes(monkeypatch, capsys):
     from api.collectors import member_map_refresh_store as storage
     monkeypatch.setenv("DART_API_KEY", "synthetic")
-    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda: object())
+    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: object())
     clock = [0]
     monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(runner.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
