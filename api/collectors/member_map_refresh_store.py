@@ -19,6 +19,7 @@ ENVELOPE_MAX_BYTES = 16 * 1024
 RESPONSE_MAX_BYTES = 3 * STATE_MAX_BYTES + ENVELOPE_MAX_BYTES
 TABLE = "member_map_refresh_checkpoint"
 RPC_TIMEOUT_SECONDS = 3
+BACKGROUND_TIMEOUT_SECONDS = 10
 RPC_NAMES = frozenset(("member_map_refresh_claim", "member_map_refresh_renew", "member_map_refresh_save"))
 SOURCES = frozenset(("DART", "SEC", "news"))
 DART_REQUEST_BUDGET = 10
@@ -84,8 +85,10 @@ def _read_json_response(response, limit, deadline):
     chunks, size = [], 0
     for chunk in response.iter_content(chunk_size=16384):
         size += len(chunk)
-        if size > limit or time.monotonic() >= deadline:
+        if size > limit:
             raise RefreshStoreError("refresh-response-rejected")
+        if time.monotonic() >= deadline:
+            raise RefreshStoreError("refresh-read-timeout")
         chunks.append(chunk)
     try:
         return json.loads(b"".join(chunks).decode("utf-8"), object_pairs_hook=_unique,
@@ -94,8 +97,9 @@ def _read_json_response(response, limit, deadline):
         raise RefreshStoreError("refresh-response-rejected") from None
 
 
-def _request_json(method, url, *, headers, body=None, limit=RESPONSE_MAX_BYTES, deadline=None):
-    remaining = RPC_TIMEOUT_SECONDS if deadline is None else min(RPC_TIMEOUT_SECONDS, deadline - time.monotonic())
+def _request_json(method, url, *, headers, body=None, limit=RESPONSE_MAX_BYTES, deadline=None, timeout_seconds=None):
+    timeout_seconds = RPC_TIMEOUT_SECONDS if timeout_seconds is None else timeout_seconds
+    remaining = timeout_seconds if deadline is None else min(timeout_seconds, deadline - time.monotonic())
     if remaining <= 0:
         raise RefreshStoreError("refresh-read-timeout")
     deadline = deadline if deadline is not None else time.monotonic() + remaining
@@ -361,11 +365,13 @@ def validate_state(source, value, *, public_sources=None):
 class RefreshStore:
     """멤버용 인증 클라이언트와 분리된 service-role RPC 전용 어댑터."""
 
-    def __init__(self, service_key, *, project_url=PROJECT_URL):
-        if project_url != PROJECT_URL or type(service_key) is not str or not service_key.strip() or any(
+    def __init__(self, service_key, *, project_url=PROJECT_URL, background=False):
+        if type(background) is not bool or project_url != PROJECT_URL or type(service_key) is not str or not service_key.strip() or any(
                 ord(c) < 33 or ord(c) == 127 for c in service_key):
             raise RefreshStoreError("refresh-config-rejected")
         self._key = service_key
+        # Interactive overlays remain bounded to 3s; the unattended worker may wait 10s.
+        self._timeout_seconds = BACKGROUND_TIMEOUT_SECONDS if background else RPC_TIMEOUT_SECONDS
         self._states = {}
         # 메타데이터 head와 달리, 이 revision은 캐시된 전체 state에만 묶인다.
         self._state_revisions = {}
@@ -375,9 +381,9 @@ class RefreshStore:
         self._read_inflight = None
 
     @classmethod
-    def from_environment(cls):
+    def from_environment(cls, *, background=False):
         return cls(os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
-                   project_url=os.environ.get("SUPABASE_URL", "").rstrip("/"))
+                   project_url=os.environ.get("SUPABASE_URL", "").rstrip("/"), background=background)
 
     def _rpc(self, name, parameters):
         if name not in RPC_NAMES:
@@ -386,7 +392,7 @@ class RefreshStore:
             headers={"apikey": self._key, "Authorization": "Bearer " + self._key,
                      "Content-Type": "application/json", "Accept": "application/json"},
             body=_json_bytes(parameters, STATE_MAX_BYTES + ENVELOPE_MAX_BYTES),
-            limit=STATE_MAX_BYTES + ENVELOPE_MAX_BYTES)
+            limit=STATE_MAX_BYTES + ENVELOPE_MAX_BYTES, timeout_seconds=self._timeout_seconds)
         if type(result) is not dict:
             raise RefreshStoreError("refresh-response-rejected")
         return result
@@ -395,8 +401,8 @@ class RefreshStore:
         return {"apikey": self._key, "Authorization": "Bearer " + self._key, "Accept": "application/json"}
 
     def read_states(self):
-        """작은 head 후 변경 피드만 조회한다. 본문·검증 포함 호출자 대기는 총 3초다."""
-        deadline, done, outcome = time.monotonic() + RPC_TIMEOUT_SECONDS, threading.Event(), {}
+        """작은 head 후 변경 피드만 조회한다. 전체 대기는 화면 3초, 수집 작업 10초다."""
+        deadline, done, outcome = time.monotonic() + self._timeout_seconds, threading.Event(), {}
         if not self._cache_lock.acquire(timeout=max(0, deadline - time.monotonic())):
             raise RefreshStoreError("refresh-read-timeout")
         try:
@@ -440,7 +446,8 @@ class RefreshStore:
         states, revisions, feeds, uncertain = (part.copy() for part in snapshot)
         url = PROJECT_URL + "/rest/v1/" + TABLE
         heads = _request_json("GET", url + "?select=source,revision,feed_revision&source=in.(DART,SEC,news)&limit=3",
-                              headers=self._headers(), limit=ENVELOPE_MAX_BYTES, deadline=deadline)
+                              headers=self._headers(), limit=ENVELOPE_MAX_BYTES, deadline=deadline,
+                              timeout_seconds=self._timeout_seconds)
         if type(heads) is not list or len(heads) != 3:
             raise RefreshStoreError("refresh-response-rejected")
         observed = {}
@@ -456,7 +463,8 @@ class RefreshStore:
         if changed:
             selector = ",".join(changed)
             rows = _request_json("GET", url + "?select=source,state,revision,feed_revision&source=in.(" + selector + ")&limit=3",
-                headers=self._headers(), limit=len(changed) * STATE_MAX_BYTES + ENVELOPE_MAX_BYTES, deadline=deadline)
+                headers=self._headers(), limit=len(changed) * STATE_MAX_BYTES + ENVELOPE_MAX_BYTES, deadline=deadline,
+                timeout_seconds=self._timeout_seconds)
             if type(rows) is not list or len(rows) != len(changed):
                 raise RefreshStoreError("refresh-response-rejected")
             seen = set()

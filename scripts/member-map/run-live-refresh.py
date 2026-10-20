@@ -129,7 +129,7 @@ def run_supabase(catalog, duration_seconds):
     from api.collectors.member_map_refresh_store import RefreshStore, RefreshStoreError, read_public_catalog, safe_error_code
     # 환경값 조회는 명시 실행 이후에만 한다. 로컬 .env fallback은 사용하지 않는다.
     try:
-        store = RefreshStore.from_environment()
+        store = RefreshStore.from_environment(background=True)
         api_key = os.environ.get("DART_API_KEY", "")
         if not api_key.strip():
             raise RefreshStoreError("refresh-config-rejected")

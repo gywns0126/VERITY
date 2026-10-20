@@ -352,7 +352,7 @@ def test_runtime_loop_cadence_no_provider_after_duration(monkeypatch, capsys):
     clock, starts = [0.0], []
     monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(runner.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0]+seconds))
-    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda: object())
+    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: object())
     monkeypatch.setenv("DART_API_KEY", "synthetic-key")
     def cycle(*args):
         starts.append(clock[0]); clock[0] += 20
@@ -528,13 +528,13 @@ def test_reader_deadline_covers_head_body_and_validation(monkeypatch):
 
 def test_late_read_result_cannot_commit_and_does_not_spawn_repeated_workers(monkeypatch):
     _, _, request = cached_rest(monkeypatch)
+    monkeypatch.setattr(storage, "RPC_TIMEOUT_SECONDS", 0.03)
     store = storage.RefreshStore("synthetic-role")
     entered, release = threading.Event(), threading.Event()
     def blocked(method, url, **kwargs):
         entered.set(); release.wait(1)
         return request(method, url, **kwargs)
     monkeypatch.setattr(storage, "_request_json", blocked)
-    monkeypatch.setattr(storage, "RPC_TIMEOUT_SECONDS", 0.03)
     with pytest.raises(storage.RefreshStoreError, match="refresh-read-timeout"):
         store.read_states()
     assert entered.is_set()
