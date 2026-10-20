@@ -29,6 +29,26 @@ class RefreshStoreError(ValueError):
     """원문 응답·키·주소를 포함하지 않는 고정 오류 코드만 전달한다."""
 
 
+SAFE_ERROR_CODES = frozenset((
+    "refresh-cache-conflict", "refresh-catalog-rejected", "refresh-config-rejected",
+    "refresh-http-failure", "refresh-http-unavailable", "refresh-http-rate-limited",
+    "refresh-auth-rejected", "refresh-lease-lost", "refresh-owner-rejected",
+    "refresh-payload-rejected", "refresh-read-busy", "refresh-read-rejected",
+    "refresh-read-timeout", "refresh-response-rejected", "refresh-revision-rejected",
+    "refresh-rpc-rejected", "refresh-save-conflict", "refresh-source-rejected",
+    "refresh-state-rejected", "refresh-transport-failure", "refresh-transport-timeout",
+))
+
+
+def safe_error_code(error):
+    """Only our closed vocabulary may cross the worker/log/health boundary."""
+    if isinstance(error, RefreshStoreError) and len(error.args) == 1:
+        code = error.args[0]
+        if type(code) is str and code in SAFE_ERROR_CODES:
+            return code
+    return "refresh-unexpected-error"
+
+
 def _json_bytes(value, limit):
     try:
         raw = json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode()
@@ -50,6 +70,13 @@ def _unique(pairs):
 
 def _read_json_response(response, limit, deadline):
     if response.status_code != 200:
+        # Never read/log an error body: it may contain SQL, credentials or URLs.
+        if response.status_code in (401, 403):
+            raise RefreshStoreError("refresh-auth-rejected")
+        if response.status_code == 429:
+            raise RefreshStoreError("refresh-http-rate-limited")
+        if 500 <= response.status_code < 600:
+            raise RefreshStoreError("refresh-http-unavailable")
         raise RefreshStoreError("refresh-http-failure")
     length = response.headers.get("Content-Length")
     if length is not None and (not re.fullmatch(r"[0-9]+", length) or int(length) > limit):
@@ -85,6 +112,8 @@ def _request_json(method, url, *, headers, body=None, limit=RESPONSE_MAX_BYTES, 
                 return result
     except RefreshStoreError:
         raise
+    except requests.exceptions.Timeout:
+        raise RefreshStoreError("refresh-transport-timeout") from None
     except Exception:
         raise RefreshStoreError("refresh-transport-failure") from None
 
@@ -381,16 +410,18 @@ class RefreshStore:
         def fetch():
             try:
                 outcome["value"] = self._read_states_changed(snapshot, deadline)
-            except Exception:
-                outcome["failed"] = True
+            except Exception as error:
+                outcome["error_code"] = safe_error_code(error)
             finally:
                 done.set()
         # requests의 DNS/소켓 지연도 호출자를 붙잡지 않게 한다. 늦은 결과는 캐시를 수정하지 않는다.
         threading.Thread(target=fetch, daemon=True).start()
         if not done.wait(max(0, deadline - time.monotonic())) or time.monotonic() >= deadline:
             raise RefreshStoreError("refresh-read-timeout")
-        if outcome.get("failed"):
-            raise RefreshStoreError("refresh-read-rejected")
+        if "error_code" in outcome:
+            # Keep a safe cause (503/auth/timeout/schema), not the original exception.
+            code = outcome["error_code"]
+            raise RefreshStoreError(code if code in SAFE_ERROR_CODES else "refresh-read-rejected")
         states, revisions, feeds, returned = outcome["value"]
         if not self._cache_lock.acquire(timeout=max(0, deadline - time.monotonic())):
             raise RefreshStoreError("refresh-read-timeout")
