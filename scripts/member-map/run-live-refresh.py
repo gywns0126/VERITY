@@ -52,6 +52,20 @@ def read_json(path, limit):
 
 RUNTIME_SOURCES = ("DART",)
 RUNTIME_DISABLED_SOURCES = ("SEC", "news")
+RECOVERABLE_STORE_CODES = frozenset((
+    "refresh-read-timeout", "refresh-read-busy", "refresh-transport-failure",
+    "refresh-transport-timeout", "refresh-http-unavailable", "refresh-http-rate-limited",
+    "refresh-cache-conflict", "refresh-save-conflict", "refresh-lease-lost",
+))
+SOURCE_ERROR_CODES = frozenset(("dart-quota-exceeded", "transport_timeout", "transport_failure",
+                                "dart_api_failure", "incomplete_page", "page_limit", "record_limit"))
+
+
+def runtime_event(*, checked_at, attempt, status, last_success_at=None, error_code=None, backoff_seconds=None):
+    return {"checked_at": checked_at, "source": "DART", "attempt": attempt,
+            "last_success_at": last_success_at, "status": status, "error_code": error_code,
+            "backoff_seconds": backoff_seconds, "disabled_sources": list(RUNTIME_DISABLED_SOURCES),
+            "ai_calls": 0, "blob_writes": 0, "screen_delivery_verified": False}
 
 
 def supabase_cycle(store, catalog, api_key, owner, now=None, *, transport=None):
@@ -66,14 +80,15 @@ def supabase_cycle(store, catalog, api_key, owner, now=None, *, transport=None):
         raise RefreshStoreError("refresh-catalog-rejected")
     previous = store.read_states().get("DART", {})
     if not due("DART", previous, now):
-        return {"status": "not-due", "requests": 0}
+        return {"status": "not-due", "requests": 0, "last_success_at": previous.get("last_success_at")}
     claim = store.claim("DART", owner)
     # 불명확했던 claim 응답을 재호출해도 같은 예약으로 수집을 반복하지 않는다.
     if claim["status"] != "claimed":
-        return {"status": claim["status"], "requests": 0}
+        return {"status": claim["status"], "requests": 0,
+                "last_success_at": previous.get("last_success_at")}
     previous = claim["state"]
     if not due("DART", previous, now):
-        return {"status": "not-due", "requests": 0}
+        return {"status": "not-due", "requests": 0, "last_success_at": previous.get("last_success_at")}
     generation, revision = claim["generation"], claim["revision"]
     calls, lease_failed = 0, False
     def guarded_transport(endpoint, **kwargs):
@@ -111,23 +126,59 @@ def supabase_cycle(store, catalog, api_key, owner, now=None, *, transport=None):
 
 
 def run_supabase(catalog, duration_seconds):
-    from api.collectors.member_map_refresh_store import RefreshStore, read_public_catalog
+    from api.collectors.member_map_refresh_store import RefreshStore, RefreshStoreError, read_public_catalog, safe_error_code
     # 환경값 조회는 명시 실행 이후에만 한다. 로컬 .env fallback은 사용하지 않는다.
-    store = RefreshStore.from_environment()
-    api_key = os.environ.get("DART_API_KEY", "")
-    if not api_key.strip():
-        raise ValueError("refresh-config-rejected")
-    catalog = catalog if catalog is not None else read_public_catalog()
+    try:
+        store = RefreshStore.from_environment()
+        api_key = os.environ.get("DART_API_KEY", "")
+        if not api_key.strip():
+            raise RefreshStoreError("refresh-config-rejected")
+    except Exception as error:
+        print(json.dumps(runtime_event(checked_at=datetime.now(timezone.utc).isoformat(), attempt=0,
+            status="failed", error_code=safe_error_code(error))), flush=True)
+        raise RuntimeError("refresh-unclassified") from None
     owner = str(uuid4())
     deadline = time.monotonic() + duration_seconds
+    attempt, failures, last_success_at = 0, 0, None
     while True:
         started = time.monotonic()
-        result = supabase_cycle(store, catalog, api_key, owner)
-        print(json.dumps({"sources": {"DART": result}, "disabled_sources": list(RUNTIME_DISABLED_SOURCES),
-                          "ai_calls": 0, "blob_writes": 0, "screen_delivery_verified": False}), flush=True)
+        attempt += 1
+        try:
+            if catalog is None:
+                catalog = read_public_catalog()
+            result = supabase_cycle(store, catalog, api_key, owner)
+        except Exception as error:
+            checked_at = datetime.now(timezone.utc).isoformat()
+            code = safe_error_code(error)
+            if code not in RECOVERABLE_STORE_CODES:
+                print(json.dumps(runtime_event(checked_at=checked_at, attempt=attempt,
+                    status="failed", last_success_at=last_success_at, error_code=code)), flush=True)
+                raise RuntimeError("refresh-unclassified") from None
+            failures += 1
+            interval = min(300, POLL_SECONDS["DART"] * (2 ** min(failures - 1, 2)))
+            event = runtime_event(checked_at=checked_at, attempt=attempt, status="degraded",
+                last_success_at=last_success_at, error_code=code, backoff_seconds=interval)
+        else:
+            checked_at = datetime.now(timezone.utc).isoformat()
+            failures = 0
+            last_success_at = result.get("last_success_at") or last_success_at
+            source_status = result.get("status")
+            error_code = result.get("error")
+            if type(error_code) is not str or error_code not in SOURCE_ERROR_CODES:
+                error_code = "source-error" if source_status in ("error", "partial", "lease-lost") else None
+            if source_status not in ("success", "partial", "error", "not-due", "busy",
+                    "quota-blocked", "budget-exhausted", "lease-lost", "already-claimed"):
+                print(json.dumps(runtime_event(checked_at=checked_at, attempt=attempt,
+                    status="failed", last_success_at=last_success_at,
+                    error_code="refresh-unexpected-error")), flush=True)
+                raise RuntimeError("refresh-unclassified") from None
+            event = runtime_event(checked_at=checked_at, attempt=attempt, status=source_status,
+                last_success_at=last_success_at, error_code=error_code)
+            interval = POLL_SECONDS["DART"]
+        print(json.dumps(event), flush=True)
         if time.monotonic() >= deadline:
             break
-        time.sleep(max(0, min(deadline - time.monotonic(), POLL_SECONDS["DART"] - (time.monotonic() - started))))
+        time.sleep(max(0, min(deadline - time.monotonic(), interval - (time.monotonic() - started))))
         if time.monotonic() >= deadline:
             break
 
@@ -207,5 +258,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as error:
-        print(json.dumps({"status": "failed", "error_type": type(error).__name__}), file=sys.stderr)
+        print(json.dumps({"status": "failed", "error_code": "refresh-unclassified"}), file=sys.stderr)
         raise SystemExit(1)

@@ -77,7 +77,7 @@ def test_failed_start_has_fixed_log_and_bounded_backoff(monkeypatch, caplog):
     monkeypatch.setattr(refresh.asyncio, "sleep", sleep)
     with pytest.raises(End):
         asyncio.run(refresh.run())
-    assert seen == [30]
+    assert seen == [120]
     assert "private-key-not-for-logs" not in caplog.text
     assert "worker-unavailable" in caplog.text
     assert not refresh.status()["worker_alive"]
