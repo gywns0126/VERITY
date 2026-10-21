@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "producer": "kr_company_facts_backfill.dividends",
+  "clock_kind": "bounded_source_query_attempt",
+  "started_at": "2026-10-22T01:14:41+09:00",
+  "finished_at": "2026-10-22T01:14:56+09:00",
+  "outcome": "complete",
+  "successful_checked_at": "2026-10-22T01:14:56+09:00",
+  "all_records_revalidated": false,
+  "source": {
+    "provider": "OpenDART",
+    "endpoint": "alotMatter.json",
+    "business_year": "2025",
+    "report_date_min": "2026-03-12",
+    "report_date_max": "2026-06-02"
+  },
+  "scope": {
+    "kind": "bounded_ticker_rotation",
+    "universe_count": 1501,
+    "universe_sha256": "91e2fbe737f9862f1fe8cee4c459619999909376de75de5140436a82af680522",
+    "selected_count": 20,
+    "selected_sha256": "77c1d186427482fe054610c88f59d4374274fc9cdfaee211fc5be0ea30392b8a",
+    "definitive_count": 20,
+    "failure_count": 0,
+    "rotation_checked_count": 20
+  },
+  "rotation": {
+    "business_year": "2025",
+    "universe_sha256": "91e2fbe737f9862f1fe8cee4c459619999909376de75de5140436a82af680522",
+    "started_at": "2026-10-22T01:14:41+09:00",
+    "checked_tickers": [
+      "001750",
+      "003960",
+      "004430",
+      "025860",
+      "033270",
+      "035810",
+      "037710",
+      "049070",
+      "054950",
+      "092460",
+      "096760",
+      "105840",
+      "110990",
+      "136480",
+      "194700",
+      "200670",
+      "204610",
+      "244920",
+      "265520",
+      "286940"
+    ]
+  },
+  "artifact": {
+    "path": "data/dividends_kr.json",
+    "status": "bound",
+    "sha256": "9582a4d58088661a369f9f72d83c269be94c5548e14ddbe00e2819a3e5b02620",
+    "tickers": 2635,
+    "rows": 2639
+  }
+}
