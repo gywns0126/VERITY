@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-10-22T02:14:35.100530+09:00",
+  "generated_at": "2026-10-22T03:12:56.246830+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "red",
@@ -13,7 +13,7 @@
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-10-22T02:14:35.020541+09:00",
+   "generated_at": "2026-10-22T03:12:56.156068+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -21,11 +21,11 @@
   "coverage": {
    "generated_at": "2026-10-21T19:49:48.425082+09:00",
    "max_age_h": 96,
-   "age_h": 6.413,
+   "age_h": 7.386,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-10-22T02:14:27.103001+09:00",
+   "generated_at": "2026-10-22T03:12:49.192748+09:00",
    "max_age_h": 3,
    "age_h": 0.002,
    "status": "fresh"
@@ -33,7 +33,7 @@
   "annual_backfill": {
    "generated_at": "2026-10-20T20:32:40.127080+00:00",
    "max_age_h": 48,
-   "age_h": 20.699,
+   "age_h": 21.671,
    "status": "fresh"
   }
  },
@@ -42,11 +42,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-10-22T02:14:35.020541+09:00",
+  "generated_at": "2026-10-22T03:12:56.156068+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 68503,
+  "max_cdn_age_s": 32838,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -56,7 +56,7 @@
      "PBR": 95.9
     },
     "total": 2550,
-    "cdn_age_s": 28894,
+    "cdn_age_s": 32838,
     "error": null
    },
    {
@@ -67,7 +67,7 @@
      "PBR": 73.6
     },
     "total": 5272,
-    "cdn_age_s": 21696,
+    "cdn_age_s": 24502,
     "error": null
    },
    {
@@ -78,7 +78,7 @@
      "PBR": 75.2
     },
     "total": 3972,
-    "cdn_age_s": 68503,
+    "cdn_age_s": 13449,
     "error": null
    },
    {
@@ -107,7 +107,7 @@
   "last_run_at": "2026-10-21T19:49:48.554703+09:00"
  },
  "freshness": {
-  "generated_at": "2026-10-22T02:14:27.103001+09:00",
+  "generated_at": "2026-10-22T03:12:49.192748+09:00",
   "summary": {
    "fresh": 58,
    "stale": 2,
@@ -148,7 +148,7 @@
   "producer_evidence": {
    "news_flash": {
     "status": "bound_query_complete",
-    "completed_at": "2026-10-22T02:02:26.605356+09:00",
+    "completed_at": "2026-10-22T03:02:34.768678+09:00",
     "clock_kind": "source_query_attempt",
     "asset_binding": "verified_sha256",
     "source_freshness_verified": false,
@@ -199,12 +199,12 @@
    {
     "id": "crypto",
     "label": "크립토 시세·파생",
-    "age_min": 131.9
+    "age_min": 190.2
    },
    {
     "id": "macro_snapshot",
     "label": "매크로 스냅샷",
-    "age_min": 12.0
+    "age_min": 10.5
    }
   ],
   "stale_other": [],
