@@ -34,6 +34,30 @@ def test_accepts_exact_ex21_1_type():
     assert find_exhibit(html, cik=CIK, accession=ACCESSION) == BASE + "zbh-ex21-1.htm"
 
 
+def test_accepts_sec_co_registrant_archive_wrapper_for_matching_accession():
+    cik = "0000006201"
+    accession = "0000006201-26-000014"
+    wrapper = ("https://www.sec.gov/Archives/edgar/data/4515/"
+               "000000620126000014/ex211q42510k.htm")
+    index = _index(("7", "EX-21.1", "ex211q42510k.htm", "EX-21.1", wrapper))
+
+    assert find_exhibit(index, cik=cik, accession=accession) == wrapper
+    metadata = {"cik": cik, "accession": accession, "filedDate": "2026-02-18",
+                "periodEnd": "2025-12-31", "url": wrapper}
+    parsed = parse_exhibit(_exhibit([("American Airlines, Inc.", "Delaware")]), metadata)
+    assert parsed["status"] == "parsed"
+    assert parsed["cik"] == cik
+    assert parsed["url"] == wrapper
+
+
+def test_co_registrant_archive_wrapper_still_requires_exact_accession():
+    wrapper = ("https://www.sec.gov/Archives/edgar/data/4515/"
+               "000000620126000015/ex211q42510k.htm")
+    with pytest.raises(ValueError, match="invalid-sec-document-url"):
+        find_exhibit(_index(("7", "EX-21.1", "ex211q42510k.htm", "EX-21.1", wrapper)),
+                     cik="0000006201", accession="0000006201-26-000014")
+
+
 def test_20f_selects_only_ex8_subsidiaries_description_and_default_stays_10k():
     html = _index(("1", "List of Subsidiaries", "issuer-ex8.htm", "EX-8", "issuer-ex8.htm"),
                   ("2", "List of Subsidiaries", "issuer-ex8-1.htm", "EX-8.1", "issuer-ex8-1.htm"))

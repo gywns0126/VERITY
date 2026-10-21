@@ -5,7 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { createHash } = require('node:crypto');
-const { buildArtifacts, writeArtifacts, main, MAX_BYTES } = require('../scripts/member-map/build-live-company-structure.cjs');
+const { spawnSync } = require('node:child_process');
+const { buildArtifacts, writeArtifacts, main, secUrl, MAX_BYTES } = require('../scripts/member-map/build-live-company-structure.cjs');
+const { loadArtifacts, sanitizeUsSources } = require('../scripts/member-map/publish-company-structure.cjs');
 const { makeCatalog } = require('../review/member-map/company-structure-data.cjs');
 
 const at = '2026-10-21T10:00:00Z', oldAt = '2026-10-03T10:00:00Z';
@@ -183,6 +185,51 @@ function usFixture() {
         url: 'https://www.sec.gov/Archives/edgar/data/1234/000000123426000001/ex21.htm', documentSha256: 'a'.repeat(64),
         rows: [{ name: 'Subsidiary Ltd.', jurisdiction: 'Delaware', ownershipPct: null, directOwnership: 'unspecified', sourceRow: { text: 'Subsidiary Ltd. Delaware' } }] } } } } };
 }
+test('SEC parser, publisher sanitizer, builder and publisher retain accession-bound co-filer evidence offline', () => {
+  const cik = '0000006201', accession = '0000006201-26-000014';
+  const url = 'https://www.sec.gov/Archives/edgar/data/4515/000000620126000014/ex211q42510k.htm';
+  assert.equal(secUrl(url, cik, accession), url);
+  assert.equal(secUrl(url, cik), null);
+  assert.equal(secUrl(url.replace('000000620126000014', '000000620126000015'), cik, accession), null);
+  const agentFiledAccession = '0001047469-26-000123';
+  const issuerArchiveUrl = 'https://www.sec.gov/Archives/edgar/data/1750/000104746926000123/ex21.htm';
+  const wrongCoFilerUrl = 'https://www.sec.gov/Archives/edgar/data/4515/000104746926000123/ex21.htm';
+  assert.equal(secUrl(issuerArchiveUrl, '0000001750', agentFiledAccession), issuerArchiveUrl);
+  assert.equal(secUrl(wrongCoFilerUrl, '0000001750', agentFiledAccession), null);
+  const html = '<html><table><tr><th>Name</th><th>Jurisdiction of Incorporation</th></tr><tr><td>American Airlines, Inc.</td><td>Delaware</td></tr></table></html>';
+  const metadata = { cik, accession, filedDate: '2026-02-18', periodEnd: '2025-12-31', url };
+  const parsed = spawnSync('python3', ['-c', [
+    'import json,sys',
+    'from api.intelligence.company_structure_sec import parse_exhibit',
+    'v=json.load(sys.stdin)',
+    'print(json.dumps(parse_exhibit(v["html"],v["metadata"])))',
+  ].join(';')], { cwd: path.resolve(__dirname, '..'), input: JSON.stringify({ html, metadata }), encoding: 'utf8' });
+  assert.equal(parsed.status, 0, parsed.stderr);
+  const exhibit = JSON.parse(parsed.stdout);
+  assert.equal(exhibit.status, 'parsed'); assert.equal(exhibit.url, url);
+  const sourceDoc = { schema: 'alphanest-company-structure-us-sources-v1', generatedAt: at,
+    issuers: { [cik]: { tickerAliases: ['AAL'], attemptStatus: 'success', attemptedAt: '2026-02-19T12:00:00Z',
+      lastSuccessAt: '2026-02-19T12:00:00Z', exhibit } } };
+  const sanitized = sanitizeUsSources(sourceDoc), issuer = sanitized.issuers[cik];
+  assert.equal(issuer.exhibit.url, url); assert.equal(issuer.exhibit.filedDate, '2026-02-18');
+  assert.equal(issuer.exhibit.rows[0].ownershipPct, null);
+  assert.equal(issuer.exhibit.rows[0].directOwnership, 'unspecified');
+  const built = buildArtifacts({ universe: { stocks: [{ ticker: 'AAL', name: 'American Airlines Group Inc.', market: 'US' }] },
+    cikMap: { AAL: cik }, usSources: sanitized, generatedAt: at, strictSources: true });
+  const payloadBytes = built.payloads.get(built.manifest.issuers['US:AAL'].sha256);
+  const value = JSON.parse(payloadBytes), edge = value.relations[0];
+  assert.equal(value.relations.length, 1); assert.equal(edge.evidence[0].url, url);
+  assert.equal(edge.evidence[0].asOf, '2026-02-18'); assert.equal(edge.asOf, '2025-12-31');
+  assert.equal(edge.ownershipPct, null);
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'sec-cofiler-publish-'));
+  try {
+    fs.writeFileSync(path.join(directory, 'member_map_company_structure_index.json'), built.manifestBytes);
+    fs.mkdirSync(path.join(directory, 'company-structure'));
+    fs.writeFileSync(path.join(directory, 'company-structure', built.manifest.issuers['US:AAL'].sha256 + '.json'), payloadBytes);
+    const loaded = loadArtifacts(directory);
+    assert.equal(loaded.payloads.get(built.manifest.issuers['US:AAL'].sha256).payload.relations[0].evidence[0].url, url);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
 test('US CIK deduped denominator does not merge security-root graphs or infer direct control/country', () => {
   const args = usFixture(), before = JSON.stringify(args), r = buildArtifacts(args);
   assert.equal(JSON.stringify(args), before);
@@ -208,6 +255,16 @@ test('US failed retained sources stay old; wrong CIK/unsafe URL never produce pr
   }
   const a = usFixture(); a.usSources.issuers['0000001234'].attemptedAt = null;
   assert.equal(buildArtifacts(a).payloads.size, 0);
+});
+test('US successful source cannot be checked without a valid accession bound to its URL', () => {
+  for (const mutate of [e => { delete e.accession; }, e => { e.accession = null; },
+    e => { e.accession = '0000001234-26-000002'; }]) {
+    const args = usFixture(); mutate(args.usSources.issuers['0000001234'].exhibit);
+    const p = payload(buildArtifacts(args), 'US:ACME');
+    assert.equal(p.coverage.sourceChecked, false);
+    assert.equal(p.coverage.status, 'refresh-error');
+    assert.equal(p.relations.length, 0);
+  }
 });
 test('DART original qy is authoritative, missing original quantity never turns parser-default zero into ended proof', () => {
   const s = source([], [rawRow('Active Corp.', true)]), row = s.issuers['KR:0001A0'].endpoints.otrCprInvstmntSttus.rows[0];

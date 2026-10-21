@@ -36,7 +36,13 @@ def _identity(cik: str, accession: str) -> tuple[str, str, str]:
 
 
 def _archive_url(href: str, directory: str) -> str:
-    """Resolve only a safe file in the exact filing directory."""
+    """Resolve only a safe file in this filing's SEC archive directory.
+
+    SEC sometimes links a co-registrant's archive CIK for an exhibit while
+    retaining the requested issuer's accession directory. Accept that
+    alternate archive CIK only when this accession's leading CIK is the
+    requested issuer; all other filings must use the exact requested CIK path.
+    """
     if not isinstance(href, str) or not href or re.search(r"%(?:2f|5c|2e)", href, re.I):
         raise ValueError("invalid-sec-document-url")
     parts = urlsplit(href)
@@ -51,13 +57,23 @@ def _archive_url(href: str, directory: str) -> str:
         if path in ("", ".") or path.startswith("../") or "/" in path or "\\" in path:
             raise ValueError("invalid-sec-document-url")
         path = directory + path
-    if ("\\" in path or any(piece in (".", "..") for piece in path.split("/"))
-            or not path.startswith(directory)):
+    if "\\" in path or any(piece in (".", "..") for piece in path.split("/")):
         raise ValueError("invalid-sec-document-url")
-    filename = path[len(directory):]
+    if path.startswith(directory):
+        filename = path[len(directory):]
+    else:
+        expected = directory.strip("/").split("/")
+        parts_path = path.strip("/").split("/")
+        if (len(expected) != 5 or len(parts_path) != 6
+                or parts_path[:3] != expected[:3]
+                or parts_path[4] != expected[4]
+                or not re.fullmatch(r"[1-9][0-9]{0,9}", parts_path[3], re.ASCII)
+                or expected[3].zfill(10) != expected[4][:10]):
+            raise ValueError("invalid-sec-document-url")
+        filename = parts_path[5]
     if not _SAFE_FILE.fullmatch(filename) or "/" in filename:
         raise ValueError("invalid-sec-document-url")
-    return f"https://{_SEC_HOST}{directory}{filename}"
+    return f"https://{_SEC_HOST}{path.rsplit('/', 1)[0]}/{filename}"
 
 
 def find_exhibit(index_html, *, cik, accession, form="10-K"):

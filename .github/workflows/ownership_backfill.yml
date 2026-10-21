@@ -21,6 +21,11 @@ on:
     - cron: '40 19 * * *'   # UTC 19:40 = KST 04:40 — 타 DART 워크플로 슬롯 회피
   workflow_dispatch:
     inputs:
+      publish_only:
+        description: 'Publish saved main sources only; no collection (counts as a daily attempt)'
+        required: false
+        default: false
+        type: boolean
       chunk:
         description: '이번 run 에서 채울 종목 수 (기본 300)'
         required: false
@@ -62,6 +67,8 @@ jobs:
             // A killed CI job can spend GETs before its local budget reaches Git.
             // The remote run registry conservatively permits ONE attempt per KST
             // day, across dispatch, delayed native schedule AND manual events.
+            // Publish-only manual runs also count conservatively; they cannot
+            // reset/bypass the collection allowance, even on a rerun.
             const kst = new Date(created.getTime() + 9 * 60 * 60 * 1000);
             const dayStart = new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) - 9 * 60 * 60 * 1000);
             const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
@@ -77,7 +84,7 @@ jobs:
             core.info(duplicate ? 'Idle: ownership already attempted this KST day (not a new collection success)' : 'First ownership attempt this KST day');
   backfill:
     needs: cadence
-    if: always() && !cancelled() && github.ref == 'refs/heads/main' && needs.cadence.result == 'success' && needs.cadence.outputs.run == 'true'
+    if: always() && !cancelled() && github.ref == 'refs/heads/main' && needs.cadence.result == 'success' && needs.cadence.outputs.run == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.publish_only == true)
     runs-on: ubuntu-latest
     concurrency:
       group: verity-ownership-backfill
@@ -87,7 +94,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0
+          fetch-depth: 100
+
+      - &structure-credential
+        name: Check existing publication credential before source calls
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BLOB_READ_WRITE_TOKEN:-}" ]; then
+            echo '::error::Existing publication credential unavailable'
+            exit 1
+          fi
 
       - uses: actions/setup-python@v5
         with:
@@ -101,11 +119,13 @@ jobs:
         #   최소 설치로 아끼려다 실패하느니 다른 DART 워크플로와 같은 기준을 쓴다.
         run: pip install -r requirements.txt
 
-      - uses: actions/setup-node@v4
+      - &structure-node
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Install existing Blob dependency
+      - &structure-dependency
+        name: Install existing Blob dependency
         run: npm ci --workspaces=false --omit=dev --ignore-scripts --no-audit --no-fund
 
       - name: Validate tracked input and normalize durable stores
@@ -194,7 +214,8 @@ jobs:
           export OWNERSHIP_CHUNK=$(python -c 'import os; n=int(os.environ["REQUESTED_CHUNK"]); assert 0 <= n <= 300; print(n)')
           python -m api.builders.ownership_backfill_builder
 
-      - name: Build and validate compact public artifacts offline
+      - &structure-build
+        name: Build and validate compact public artifacts offline
         id: build
         if: ${{ always() && steps.safe.outcome == 'success' }}
         run: |
@@ -234,11 +255,12 @@ jobs:
           git fetch origin main
           git merge-base --is-ancestor HEAD origin/main
 
-      - name: Publish verified immutable payloads then manifest
+      - &structure-publish
+        name: Publish verified immutable payloads then manifest
         # Source failures are represented in the manifest, not used to hide healthy sources.
         if: ${{ always() && steps.safe.outcome == 'success' && steps.durable.outcome == 'success' && steps.build.outcome == 'success' }}
         env:
-          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
         run: node scripts/member-map/publish-company-structure.cjs --output-dir "$RUNNER_TEMP/company-structure-public" --committed-manifest data/member_map_company_structure_index.json --publish
 
       - name: Report collection failures after durable checkpoint
@@ -257,3 +279,53 @@ jobs:
               raise SystemExit(1)
           print('Bounded daily budget reached without source errors; remaining requests are deferred.')
           PY
+
+  # Recovery is offline with respect to DART/SEC. No normalization or source
+  # writes: replay the committed snapshots and retain their failure labels.
+  # Independent of cadence idle, but registered as a conservative daily attempt.
+  publish-only:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_only == true
+    runs-on: ubuntu-latest
+    concurrency:
+      group: verity-ownership-backfill
+      cancel-in-progress: false
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 100
+      - *structure-credential
+      - *structure-node
+      - *structure-dependency
+      - name: Require saved public inputs from clean main checkout
+        id: safe
+        run: |
+          set -euo pipefail
+          git ls-files --error-unmatch data/member_map_company_structure_sources.json data/member_map_company_structure_us_sources.json
+          git diff --quiet
+          git diff --cached --quiet
+          echo "source_head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - *structure-build
+      - name: Persist only rebuilt index before publication
+        id: durable
+        env:
+          SOURCE_HEAD: ${{ steps.safe.outputs.source_head }}
+        run: |
+          set -euo pipefail
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git diff --cached --quiet
+          git add data/member_map_company_structure_index.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Rebuild company structure publication index from saved sources"
+          fi
+          git pull --rebase --autostash origin main
+          # Autostash restoration can leave conflicts after a successful rebase.
+          test -z "$(git ls-files -u)"
+          # Reject upstream input/code drift rather than publishing an obsolete replay.
+          git diff --quiet "$SOURCE_HEAD" HEAD -- data/kr_listed.json data/universe_search.json data/sec_ticker_cik_map.json data/group_structure.json data/kr_ownership.json data/member_map_company_structure_sources.json data/member_map_company_structure_us_sources.json vercel-api/public/member-map-review/company-structure.json scripts/member-map/build-live-company-structure.cjs review/member-map/company-structure-data.cjs scripts/member-map/publish-company-structure.cjs
+          git push origin HEAD:main
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main
+      - *structure-publish

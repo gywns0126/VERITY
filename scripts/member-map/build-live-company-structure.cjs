@@ -128,12 +128,22 @@ function reusableCurations(legacy) {
     ['source-dated', 'official-undated'].includes(r.status) && (r.asOf === null || day(r.asOf)) && r.evidence?.length && r.evidence.every(e => primaryEvidenceUrl(e.url))).map(r => ({ ...r, evidence: r.evidence.map(e => ({ title: clean(e.title), url: e.url, ...(day(e.asOf) ? { asOf: e.asOf } : {}) })) }));
 }
 
-function secUrl(value, cik) {
-  if (typeof value !== 'string' || value.length > 2048) return null;
+function secUrl(value, cik, accession = null) {
+  if (typeof value !== 'string' || value.length > 2048 || !/^\d{1,10}$/u.test(String(cik || '')) || Number(cik) <= 0) return null;
+  const issuerArchiveCik = String(Number(cik));
+  const accessionPattern = /^\d{10}-\d{2}-\d{6}$/u;
+  if (accession !== null && !accessionPattern.test(accession)) return null;
+  const accessionDirectory = accession === null ? '[0-9]{18}' : accession.replace(/-/gu, '');
+  const coFilerAllowed = accession !== null && accession.slice(0, 10) === issuerArchiveCik.padStart(10, '0');
+  const archivePath = accession === null
+    ? `${issuerArchiveCik}/[0-9]{18}`
+    : coFilerAllowed
+      ? `(?:${issuerArchiveCik}|[1-9][0-9]{0,9})/${accessionDirectory}`
+      : `${issuerArchiveCik}/${accessionDirectory}`;
   try {
     const u = new URL(value);
-    return u.protocol === 'https:' && u.hostname === 'www.sec.gov' && !u.port && !u.username && !u.password && !u.search && !u.hash &&
-      new RegExp(`^/Archives/edgar/data/${Number(cik)}/[0-9]{18}/[A-Za-z0-9_.-]+\\.(?:htm|html|txt)$`, 'u').test(u.pathname) ? value : null;
+    return u.href === value && u.protocol === 'https:' && u.hostname === 'www.sec.gov' && !u.port && !u.username && !u.password && !u.search && !u.hash &&
+      new RegExp(`^/Archives/edgar/data/${archivePath}/[A-Za-z0-9_.-]+\\.(?:htm|html|txt)$`, 'u').test(u.pathname) ? value : null;
   } catch { return null; }
 }
 
@@ -142,7 +152,7 @@ function usPayload(aliases, source, generatedAt) {
   const e = source.exhibit, cik = aliases[0].cik;
   const observedAt = stamp(source.lastSuccessAt);
   const valid = e?.schema === 'sec-company-subsidiaries-v1' && e.cik === cik && Array.isArray(e.rows) && observedAt &&
-    secUrl(e.url, cik) && /^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') && e.url.includes('/' + e.accession.replace(/-/gu, '') + '/') &&
+    /^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') && secUrl(e.url, cik, e.accession) &&
     day(e.periodEnd) && day(e.filedDate) && e.periodEnd <= e.filedDate && e.filedDate <= observedAt.slice(0, 10) && /^[a-f0-9]{64}$/u.test(e.documentSha256 || '') &&
     ['ok', 'success', 'parsed', 'source-checked'].includes(e.status);
   const checked = !!valid && ['success', 'cached-same-accession'].includes(source.attemptStatus);
