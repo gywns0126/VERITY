@@ -1,5 +1,7 @@
 """Offline budget, partial-result and receipt contracts for bond collection."""
 import builtins
+from collections import Counter
+from threading import Event, Lock
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
@@ -171,7 +173,8 @@ def test_fred_complete_curve_and_credit_keep_individual_receipts(monkeypatch):
 
     monkeypatch.setattr(requests, "get", get)
     out = bondus.get_us_bond_summary()
-    assert requested == [series for _, series in bondus._TREASURY_SERIES] + list(bondus._CREDIT_SERIES.values())
+    assert Counter(requested) == Counter(
+        [series for _, series in bondus._TREASURY_SERIES] + list(bondus._CREDIT_SERIES.values()))
     assert out["available"] and not out["partial"] and not out["stale"]
     assert len(out["curve"]) == 11
     assert out["spread_2y_10y"] == out["spread_3m_10y"] == 0
@@ -192,18 +195,15 @@ def test_fred_shared_budget_includes_retries_and_backoff(monkeypatch, offline, c
     def get(url, **kwargs):
         assert sum(kwargs["timeout"]) <= runtime.request_timeout(25) + 1e-9
         calls.append(kwargs["params"]["series_id"])
-        if len(calls) == 1:
-            return fred_response()
         offline[0] += sum(kwargs["timeout"])
         raise requests.Timeout("https://fixture.invalid?api_key=fixture-fred-secret")
 
     monkeypatch.setattr(requests, "get", get)
     monkeypatch.setattr(bondus.time, "sleep", sleep)
-    out = bondus.get_us_bond_summary()
+    with runtime.collection_budget(25):
+        assert bondus._fetch_latest_point("DGS10", retries=99) is None
     assert offline[0] == pytest.approx(25)
-    assert len(calls) < 14 and sleeps
-    assert out["available"] and out["partial"] and out["stale"]
-    assert [p["tenor"] for p in out["curve"]] == ["1M"]
+    assert len(calls) == 4 and sleeps == pytest.approx([0.6, 1.2, 1.8])
     log = capsys.readouterr().err
     assert "https://" not in log and "fixture-fred-secret" not in log
 
@@ -409,3 +409,45 @@ def test_nonobject_previous_snapshot_does_not_discard_new_collection(monkeypatch
         "curve": [{"tenor": "10Y", "yield": 4, "as_of": "2026-10-16"}]})
     out = yieldcurve.get_full_yield_curve_data(previous)
     assert out["available"] and out["yield_curves"]["us"]["curve"][0]["yield"] == 4
+
+
+def test_slow_first_us_source_cannot_starve_long_maturities_or_credit(monkeypatch):
+    """A blocked first attempt leaves other workers free for every later field."""
+    series = [sid for _, sid in bondus._TREASURY_SERIES] + list(bondus._CREDIT_SERIES.values())
+    all_started, lock = Event(), Lock()
+    calls, active, peak = Counter(), [0], [0]
+
+    def fetch(sid, **kwargs):
+        with lock:
+            calls[sid] += 1
+            first_attempt = calls[sid] == 1
+            active[0] += 1
+            peak[0] = max(peak[0], active[0])
+            if len(calls) == len(series):
+                all_started.set()
+        try:
+            assert 0 < runtime.request_timeout(25) <= 25
+            if sid == series[0]:
+                if first_attempt:
+                    assert kwargs["retries"] == 1
+                    assert all_started.wait(2), "later fields were starved"
+                else:
+                    assert len(calls) == 14, "retry ran before all first attempts"
+                return None
+            return {"value": 4.0, "as_of": "2026-10-16", "source_as_of": "2026-10-16",
+                    "source": "fred", "fetched_at": "2026-10-18T12:00:00+09:00",
+                    "last_successful_at": "2026-10-18T12:00:00+09:00", "stale": False}
+        finally:
+            with lock:
+                active[0] -= 1
+
+    monkeypatch.setattr(bondus, "_fetch_latest_point", fetch)
+    out = bondus.get_us_bond_summary()
+    assert set(calls) == set(series) and calls[series[0]] == 2
+    assert all(calls[sid] == 1 for sid in series[1:])
+    assert 2 <= peak[0] <= 4
+    assert out["partial"] and out["stale"]
+    assert out["missing_tenors"] == ["1M"] and out["missing_credit"] == []
+    assert len(out["curve"]) == 10 and len(out["credit_spreads_meta"]) == 3
+    assert out["curve"][-1]["tenor"] == "30Y"
+    assert out["curve"][-1]["fetched_at"] == "2026-10-18T12:00:00+09:00"

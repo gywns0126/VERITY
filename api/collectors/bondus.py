@@ -14,7 +14,7 @@ import requests
 
 from api.config import FRED_API_KEY
 from api.utils.macro_provenance import now_iso, observation_meta
-from api.utils.macro_runtime import CollectionDeadline, collection_budget, request_timeout, timed_source
+from api.utils.macro_runtime import CollectionDeadline, bounded_sources, collection_budget, request_timeout, timed_source
 
 FRED_OBS_URL = "https://api.stlouisfed.org/fred/series/observations"
 
@@ -53,13 +53,14 @@ def _fetch_latest(series_id: str, limit: int = 10, retries: int = 3) -> Optional
     return point["value"] if point else None
 
 
-def _fetch_latest_point(series_id: str, limit: int = 10, retries: int = 3) -> Optional[Dict[str, Any]]:
+def _fetch_latest_point(series_id: str, limit: int = 10, retries: int = 3,
+                        timeout_s: float = 6) -> Optional[Dict[str, Any]]:
     """Retry only within the shared US/parent budget, keeping partial results."""
     if not FRED_API_KEY:
         return None
     for attempt in range(retries):
         try:
-            remaining = request_timeout(6)
+            remaining = request_timeout(timeout_s)
             r = timed_source("bonds:fred", lambda: requests.get(
                 FRED_OBS_URL,
                 params={
@@ -193,6 +194,21 @@ def get_us_bond_summary() -> Dict[str, Any]:
         return _collect_us_bonds()
 
 
+def _fetch_summary_points():
+    """Give all 14 sources a first attempt before spending budget on retries."""
+    series = [series_id for _, series_id in _TREASURY_SERIES] + list(_CREDIT_SERIES.values())
+    sources = {series_id: (lambda sid=series_id: _fetch_latest_point(sid, retries=1, timeout_s=5))
+               for series_id in series}
+    points = bounded_sources(sources, timeout=25, max_workers=4)
+    # If any first attempt is still running/queued, do not overlap a retry pool.
+    # The outer process will stop any late socket thread after returning partials.
+    if len(points) == len(series):
+        missing = {series_id: (lambda sid=series_id: _fetch_latest_point(sid, retries=2))
+                   for series_id in series if points[series_id] is None}
+        points.update(bounded_sources(missing, timeout=25, max_workers=4))
+    return points
+
+
 def _collect_us_bonds() -> Dict[str, Any]:
     """
     미국 채권 시장 요약.
@@ -206,13 +222,10 @@ def _collect_us_bonds() -> Dict[str, Any]:
         sys.stderr.write("[bond_source] source=us outcome=skipped_no_credentials\n")
         return result
 
+    points = _fetch_summary_points()
     curve: List[Dict[str, Any]] = []
     for tenor, series_id in _TREASURY_SERIES:
-        try:
-            request_timeout(1)
-        except CollectionDeadline:
-            break
-        point = _fetch_latest_point(series_id)
+        point = points.get(series_id)
         if point is not None:
             entry = {k: v for k, v in point.items() if k != "value"}
             entry.update(tenor=tenor, **{"yield": round(point["value"], 3)})
@@ -238,11 +251,7 @@ def _collect_us_bonds() -> Dict[str, Any]:
 
     credit_points = {}
     for key, series_id in _CREDIT_SERIES.items():
-        try:
-            request_timeout(1)
-        except CollectionDeadline:
-            break
-        point = _fetch_latest_point(series_id)
+        point = points.get(series_id)
         if point is not None:
             credit_points[key] = point
     ig_val = credit_points.get("us_ig_oas", {}).get("value")

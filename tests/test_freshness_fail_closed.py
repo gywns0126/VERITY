@@ -72,6 +72,50 @@ def test_declared_observation_clock_does_not_fall_back_to_generation(tmp_path, m
     assert board.build_board()["summary"]["fresh"] == 0
 
 
+def test_dividends_source_clock_missing_is_unmeasurable_not_fresh(tmp_path, monkeypatch):
+    setup_stream(
+        tmp_path, monkeypatch, id="dividends_kr", ts_field="_meta.source_as_of",
+        missing_ts_status="unmeasurable", measurement_reason="source_as_of_missing",
+    )
+    (tmp_path / "input.json").write_text(json.dumps({
+        "005930": [{
+            "updated_at": NOW.isoformat(),
+            "checked_at": NOW.isoformat(),
+            "ex_date": "2027-12-31",
+        }],
+    }))
+    observed = monitor.build_observations()["rows"][0]
+    assert observed["status"] == "unmeasurable"
+    assert observed["quality_reason"] == "source_as_of_missing"
+    assert observed["would_alarm"] is True
+    assert "last_ts" not in observed
+
+    result = board.build_board()
+    assert result["streams"] == []
+    assert result["_skipped"] == [{
+        "id": "dividends_kr", "reason": "no_ts",
+        "measurement_reason": "source_as_of_missing",
+    }]
+    assert result["summary"]["p0"] == {
+        "total": 1, "fresh": 0, "closed": 0, "active": 1, "unmeasured": 1,
+    }
+
+
+def test_dividends_source_as_of_wins_over_future_ex_date(tmp_path, monkeypatch):
+    setup_stream(
+        tmp_path, monkeypatch, id="dividends_kr", ts_field="_meta.source_as_of",
+        missing_ts_status="unmeasurable", measurement_reason="source_as_of_missing",
+    )
+    (tmp_path / "input.json").write_text(json.dumps({
+        "_meta": {"source_as_of": (NOW - timedelta(hours=1)).isoformat()},
+        "005930": [{"updated_at": NOW.isoformat(), "ex_date": "2027-12-31"}],
+    }))
+    observed = monitor.build_observations()["rows"][0]
+    assert observed["status"] == "checked"
+    assert observed["age_eff_min"] == 60
+    assert board.build_board()["streams"][0]["status"] == "fresh"
+
+
 def test_partial_macro_source_cannot_be_fresh_just_because_rebuilt(tmp_path, monkeypatch):
     setup_stream(tmp_path, monkeypatch, id="macro_snapshot")
     (tmp_path / "input.json").write_text(json.dumps({"collected_at": NOW.isoformat(),

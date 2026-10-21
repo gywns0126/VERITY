@@ -24,7 +24,8 @@ def check_envelope(body, doc):
             or body["schema"] != "portfolio-ai-result-v1"
             or (body["provider"], body["model"], body["reasoning_effort"])
                 != (ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT)
-            or body["task_version"] not in (ai.VERSION, ai.CONTEXT_VERSION, claim_version, business.VERSION)
+            or body["task_version"] not in (ai.VERSION, ai.CONTEXT_VERSION, claim_version,
+                                               business.VERSION)
             or body["status"] not in ("ok", "error")
             or type(body["charge_micro_usd"]) is not int
             or not 0 <= body["charge_micro_usd"] <= ai.RESERVE_MICRO_USD):
@@ -73,7 +74,11 @@ def replay_result(saved, doc, *, judgment_as_of=None):
     if saved["document"] != doc:
         raise ValueError("private-result-source-mismatch")
     version = body["task_version"]
-    if saved["key"] != ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT, version, doc]):
+    accepted_keys = {ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT, version, doc])}
+    if version == business.VERSION:
+        accepted_keys.add(ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT,
+                                      business.CACHE_VERSION, doc]))
+    if saved["key"] not in accepted_keys:
         raise ValueError("private-result-key-mismatch")
     if (judgment_as_of is not None) != (version == business.VERSION):
         raise ValueError("private-result-task-mismatch")

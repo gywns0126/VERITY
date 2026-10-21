@@ -18,7 +18,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from api.intelligence import portfolio_ai_fallback as ai
 from api.intelligence.portfolio_ai_budget_ledger import SupabaseBudgetLedger
-from api.intelligence.portfolio_business_judgment import prepare_judgment_packet, SYSTEM, SCHEMA
+from api.intelligence.portfolio_business_judgment import (
+    DIAGNOSTIC_ERROR_REASONS, prepare_judgment_packet, SYSTEM, SCHEMA, VERSION,
+)
 
 MAX_PROBES = 40
 _STOP = {"error", "missing-key", "budget-ledger-unavailable", "result-store-unavailable",
@@ -28,7 +30,7 @@ _ERROR_TYPES = {"HTTPError", "URLError", "TimeoutError", "SSLError", "ValueError
 _ERROR_REASONS = {"response-incomplete", "response-too-large", "usage-invalid",
                   "response-max-output-tokens", "response-content-filter",
                   "response-message-incomplete", "response-refused", "response-content-shape",
-                  "response-status-absent", "response-status-failed", "response-status-pending"}
+                  "response-status-absent", "response-status-failed", "response-status-pending"} | DIAGNOSTIC_ERROR_REASONS
 _PROVIDER_ERRORS = {"insufficient_quota", "rate_limit_exceeded", "invalid_api_key",
                     "model_not_found", "unsupported_country_region_territory"}
 
@@ -159,7 +161,7 @@ def main():
                         as_of=as_of, limit=args.limit)
     summary.update(schema="member-map-operating-judgment-run-v1", coverage=coverage,
                    model=ai.MODEL, reasoning_effort=ai.REASONING_EFFORT,
-                   task="company-business-judgment-v1", requested_as_of=as_of,
+                   task=VERSION, requested_as_of=as_of,
                    budget_backend="supabase", result_archive="private-supabase",
                    monthly_internal_target_krw=ai.MONTH_BUDGET_KRW,
                    source_scope="bounded-shared-public-DART-excerpts-not-full-market",

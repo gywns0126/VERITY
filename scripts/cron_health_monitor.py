@@ -22,6 +22,7 @@ Verdict:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -995,11 +996,15 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             sys.path.insert(0, _REPO_ROOT)
         from scripts.freshness_shadow_monitor import build_observations, format_freshness_alarm
         _fresh_obs = build_observations()
-        _stale_rows = [r for r in _fresh_obs.get("rows", []) if r.get("would_alarm")]
-        _stale_ids_for_sweep = [r["id"] for r in _stale_rows]
+        _issue_rows = [r for r in _fresh_obs.get("rows", []) if r.get("would_alarm")]
+        _unmeasurable_rows = [r for r in _issue_rows if r.get("status") == "unmeasurable"]
+        _stale_rows = [r for r in _issue_rows if r.get("status") != "unmeasurable"]
+        # Sweep must not call an unmeasurable artifact fresh, even though it is not stale.
+        _stale_ids_for_sweep = [r["id"] for r in _issue_rows]
         freshness_summary = {
             "checked": _fresh_obs.get("checked"),
             "stale_ids": [r["id"] for r in _stale_rows],
+            "unmeasurable_ids": [r["id"] for r in _unmeasurable_rows],
         }
         _stale_p0 = [r for r in _stale_rows if r.get("criticality") == "P0"]
         _stale_rest = [r for r in _stale_rows if r.get("criticality") != "P0"]
@@ -1019,6 +1024,13 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             findings.append(
                 "freshness stale(P1+): " + ", ".join(
                     format_freshness_alarm(r) for r in _stale_rest
+                )
+            )
+        if _unmeasurable_rows:
+            severity = "WARNING" if severity == "PASS" else severity
+            findings.append(
+                "freshness 측정불가: " + ", ".join(
+                    format_freshness_alarm(r) for r in _unmeasurable_rows
                 )
             )
     except Exception as e:  # 판정 실패 = 모니터 결함 가시화 (silent pass 금지)
@@ -1105,9 +1117,11 @@ def _format_summary(report: Dict[str, Any]) -> List[str]:
     fs = report.get("freshness_summary") or {}
     if fs.get("checked") is not None:
         _stale_ids = fs.get("stale_ids") or []
+        _unmeasurable_ids = fs.get("unmeasurable_ids") or []
         lines.append(
             f"<b>freshness SLA</b>: checked {fs['checked']}, stale "
             + (", ".join(_stale_ids) if _stale_ids else "0")
+            + ", 측정불가 " + (", ".join(_unmeasurable_ids) if _unmeasurable_ids else "0")
         )
     rm = report["runtime_metrics"]
     lines.append(f"<b>yf_fail_max</b>: {rm['yf_fail_max']:.1%} / <b>rate_limit_max</b>: {rm['rate_limit_max']}")
@@ -1131,15 +1145,166 @@ def _format_summary(report: Dict[str, Any]) -> List[str]:
     return lines
 
 
-def _notify_telegram(lines: List[str]) -> None:
+def _format_recovery_summary(report: Dict[str, Any]) -> List[str]:
+    return [
+        "<b>✅ cron health — RECOVERED</b>",
+        f"<i>checked {_esc(report['checked_at'])}</i>",
+        "",
+        "이전 cron health 비정상 상태가 회복됐습니다.",
+    ]
+
+
+_INCIDENT_NUMBER_RE = re.compile(
+    r"(?<![a-z0-9_])[-+]?\d+(?:[.,]\d+)*(?:시간|분|일|회|건|개|h|%)?(?![a-z0-9_])",
+    re.IGNORECASE,
+)
+_ALERT_SENT_STATES = {"sent", "already_sent"}
+
+
+def _canonical_incident_finding(value: Any) -> Optional[str]:
+    """Finding identity without clocks, ages, counters, or known informational noise."""
+    text = str(value or "").strip().casefold()
+    if not text:
+        return None
+    # This line is diagnostic context only and never changes severity.
+    if text.startswith("rate_limit ") and "wrapper cooler" in text:
+        return None
+    text = re.sub(r"\(최근:[^)]*\)", "", text)
+    text = _INCIDENT_NUMBER_RE.sub("#", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _finding_is_failure_driver(issue: str) -> bool:
+    """True when a canonical finding is one of analyze()'s FAIL drivers."""
+    if issue.startswith("🔴 "):
+        return True
+    if issue.startswith("daily_analysis_full fail "):
+        return True
+    if issue.startswith("universe_scan fail ") and "주말 transient" not in issue:
+        return True
+    if issue.startswith("fail_triggers:"):
+        return True
+    if issue.startswith("freshness p0 stale:"):
+        return True
+    if issue.startswith("🚨 regime_drift breach"):
+        return True
+    if issue.startswith("🚨 kis 토큰 발급 "):
+        return True
+    if issue.startswith("🌀 price_pulse 산출물 stale ") and "실 outage" in issue:
+        return True
+    return False
+
+
+def _incident_fingerprint(report: Dict[str, Any]) -> Optional[str]:
+    severity = str(report.get("severity") or "")
+    if severity == "PASS":
+        return None
+    all_issues = sorted({
+        issue for issue in (
+            _canonical_incident_finding(value)
+            for value in (report.get("findings") or [])
+        ) if issue
+    })
+    # While FAIL is active, changes in incidental WARNING context (ages, stale P1
+    # inventory, counters) must not create a fresh incident every hour.  Keep the
+    # actual FAIL-driving set.  Fall back to every finding if a future FAIL source
+    # is not yet classified, so an unknown critical failure is never hidden.
+    failure_drivers = [issue for issue in all_issues if _finding_is_failure_driver(issue)]
+    issues = failure_drivers if severity == "FAIL" and failure_drivers else all_issues
+    payload = json.dumps(
+        {"severity": severity, "issues": issues},
+        ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:24]
+
+
+def _alert_history_path() -> str:
+    return os.path.join(_REPO_ROOT, "data", "metadata", "cron_health.jsonl")
+
+
+def _load_previous_alert_entry(path: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    try:
+        with open(path or _alert_history_path(), "r", encoding="utf-8") as f:
+            lines = [line for line in f.read().splitlines() if line.strip()]
+        return json.loads(lines[-1]) if lines else None
+    except (OSError, json.JSONDecodeError, TypeError):
+        return None
+
+
+def _entry_incident_fingerprint(entry: Optional[Dict[str, Any]]) -> Optional[str]:
+    if not entry or entry.get("severity") == "PASS":
+        return None
+    saved = entry.get("alert_incident_fingerprint")
+    return str(saved) if saved else _incident_fingerprint(entry)
+
+
+def _plan_alert(
+    report: Dict[str, Any],
+    previous: Optional[Dict[str, Any]],
+    *,
+    notify_enabled: bool,
+    always_notify: bool,
+) -> Dict[str, Any]:
+    """Plan one durable transition notification from the previous persisted report."""
+    current_fp = _incident_fingerprint(report)
+    previous_fp = _entry_incident_fingerprint(previous)
+    previous_status = str((previous or {}).get("alert_notification_status") or "")
+    severity = report.get("severity")
+    recovery_fp = None
+
+    if severity != "PASS":
+        if always_notify:
+            event, wanted = "snapshot", True
+        elif previous_fp is None:
+            event, wanted = "opened", True
+        elif current_fp != previous_fp:
+            event, wanted = "changed", True
+        elif previous_status not in _ALERT_SENT_STATES:
+            event, wanted = "retry", True
+        else:
+            event, wanted = "unchanged", False
+    else:
+        if previous_fp is not None:
+            recovery_fp = previous_fp
+            event, wanted = "recovered", True
+        elif (previous or {}).get("alert_event") == "recovered" \
+                and previous_status not in _ALERT_SENT_STATES:
+            recovery_fp = (previous or {}).get("alert_recovered_fingerprint")
+            event, wanted = "recovered", bool(recovery_fp)
+        elif always_notify:
+            event, wanted = "snapshot", True
+        else:
+            event, wanted = "healthy", False
+
+    should_notify = bool(notify_enabled and wanted)
+    if should_notify:
+        notification_status = "pending"
+    elif wanted:
+        notification_status = "disabled"
+    elif severity != "PASS" and previous_status in _ALERT_SENT_STATES:
+        notification_status = "already_sent"
+    else:
+        notification_status = "not_needed"
+    return {
+        "should_notify": should_notify,
+        "event": event,
+        "notification_status": notification_status,
+        "incident_fingerprint": current_fp,
+        "recovered_fingerprint": recovery_fp,
+    }
+
+
+def _notify_telegram(lines: List[str]) -> bool:
     try:
         sys.path.insert(0, _REPO_ROOT)
         from api.notifications.telegram import send_message
         msg = "\n".join(lines)
-        send_message(msg, dedupe=False, bypass_quiet=True)
-        sys.stderr.write("[cron_health] telegram sent\n")
+        sent = bool(send_message(msg, dedupe=False, bypass_quiet=True))
+        sys.stderr.write(f"[cron_health] telegram sent={sent}\n")
+        return sent
     except Exception as e:
         sys.stderr.write(f"[cron_health] telegram FAIL: {e}\n")
+        return False
 
 
 def _persist_report(report: Dict[str, Any]) -> None:
@@ -1151,7 +1316,7 @@ def _persist_report(report: Dict[str, Any]) -> None:
 
     silent skip 차단 — feedback_data_collection_verification_mandatory 정합.
     """
-    path = os.path.join(_REPO_ROOT, "data", "metadata", "cron_health.jsonl")
+    path = _alert_history_path()
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         # 경량 entry — 큰 nested 산출물 제외 (findings 만 + summary scalar)
@@ -1170,6 +1335,10 @@ def _persist_report(report: Dict[str, Any]) -> None:
             "macro_age_h": report.get("macro_age_h"),
             "fred_age_h": report.get("fred_age_h"),
             "freshness_summary": report.get("freshness_summary"),
+            "alert_incident_fingerprint": report.get("alert_incident_fingerprint"),
+            "alert_event": report.get("alert_event"),
+            "alert_notification_status": report.get("alert_notification_status"),
+            "alert_recovered_fingerprint": report.get("alert_recovered_fingerprint"),
         }
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
@@ -1179,11 +1348,39 @@ def _persist_report(report: Dict[str, Any]) -> None:
         sys.stderr.write(f"[cron_health] persist FAIL: {type(e).__name__}: {e}\n")
 
 
+def _mark_persisted_notification(
+    report: Dict[str, Any], status: str, path: Optional[str] = None,
+) -> bool:
+    """Atomically mark only the current persisted row after the send attempt."""
+    target = path or _alert_history_path()
+    try:
+        with open(target, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+        index = next(i for i in range(len(lines) - 1, -1, -1) if lines[i].strip())
+        current = json.loads(lines[index])
+        if (current.get("ts_kst") != report.get("checked_at")
+                or current.get("alert_event") != report.get("alert_event")
+                or current.get("alert_incident_fingerprint")
+                != report.get("alert_incident_fingerprint")):
+            raise ValueError("latest persisted report does not match notification")
+        current["alert_notification_status"] = status
+        lines[index] = json.dumps(current, ensure_ascii=False, default=str)
+        tmp = target + ".notify.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+        os.replace(tmp, target)
+        report["alert_notification_status"] = status
+        return True
+    except Exception as e:
+        sys.stderr.write(f"[cron_health] notification state persist FAIL: {type(e).__name__}: {e}\n")
+        return False
+
+
 def _prev_run_severity() -> Optional[str]:
     """직전 cron_health run 의 severity. jsonl 마지막에서 두 번째 = 직전
     (이번 entry 는 main 에서 _persist_report 가 이미 추가한 상태). 없으면 None.
     """
-    path = os.path.join(_REPO_ROOT, "data", "metadata", "cron_health.jsonl")
+    path = _alert_history_path()
     try:
         with open(path, "r", encoding="utf-8") as f:
             lines = [ln for ln in f.read().splitlines() if ln.strip()]
@@ -1238,12 +1435,27 @@ def main() -> int:
     lines = _format_summary(report)
     print("\n".join(lines))
 
+    previous_alert = _load_previous_alert_entry()
+    alert_plan = _plan_alert(
+        report, previous_alert,
+        notify_enabled=args.notify,
+        always_notify=args.always_notify,
+    )
+    report["alert_incident_fingerprint"] = alert_plan["incident_fingerprint"]
+    report["alert_event"] = alert_plan["event"]
+    report["alert_notification_status"] = alert_plan["notification_status"]
+    report["alert_recovered_fingerprint"] = alert_plan["recovered_fingerprint"]
+
     # 2026-05-17 Phase 3 — jsonl persist (텔레그램 push 와 별개, 항상 append)
     _persist_report(report)
 
-    should_notify = args.notify and (args.always_notify or report["severity"] != "PASS")
-    if should_notify:
-        _notify_telegram(lines)
+    if alert_plan["should_notify"]:
+        telegram_lines = (
+            _format_recovery_summary(report)
+            if alert_plan["event"] == "recovered" else lines
+        )
+        sent = _notify_telegram(telegram_lines)
+        _mark_persisted_notification(report, "sent" if sent else "failed")
 
     # 2026-05-27 Hybrid exit policy (PM 명시 승인, AskUserQuestion):
     #   - PASS/WARNING → exit 0 (기존 그대로)

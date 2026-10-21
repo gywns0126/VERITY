@@ -211,7 +211,7 @@ def test_actual_cached_answer_preserves_old_assessment_and_spends_nothing(worker
     doc, ledger = _doc(), tmp_path / "ledger.sqlite3"
     answer = _cached_answer(doc)
     saved = {"status": "ok", "assessed_as_of": "2026-10-10", "raw_answer": answer}
-    key = worker.ai._digest([worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT, business.VERSION, doc])
+    key = worker.ai._digest([worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT, business.CACHE_VERSION, doc])
     with sqlite3.connect(ledger) as db:
         db.execute("CREATE TABLE calls (key TEXT PRIMARY KEY, day TEXT NOT NULL, reserved INTEGER NOT NULL, result TEXT)")
         db.execute("INSERT INTO calls VALUES (?,?,?,?)", (key, "2026-10-10", 123, json.dumps(saved)))
@@ -234,7 +234,7 @@ def test_cached_failed_diagnostic_answer_is_free_and_not_a_successful_grade(work
     doc, ledger = _doc(), tmp_path / "failed-ledger.sqlite3"
     saved = {"status": "error", "error_type": "ValueError", "assessed_as_of": "2026-10-10",
              "raw_answer": _cached_answer(doc)}
-    key = worker.ai._digest([worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT, business.VERSION, doc])
+    key = worker.ai._digest([worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT, business.CACHE_VERSION, doc])
     with sqlite3.connect(ledger) as db:
         db.execute("CREATE TABLE calls (key TEXT PRIMARY KEY, day TEXT NOT NULL, reserved INTEGER NOT NULL, result TEXT)")
         db.execute("INSERT INTO calls VALUES (?,?,?,?)", (key, "2026-10-10", 10000, json.dumps(saved)))
@@ -262,6 +262,8 @@ def test_cached_failed_diagnostic_answer_is_free_and_not_a_successful_grade(work
       "reason": "response-incomplete", "error_type": "HTTPError"}, "HTTP_401"),
     ({"provider_error_code": ["insufficient_quota"], "http_status": "429",
       "reason": "response-incomplete", "error_type": "ValueError"}, "response-incomplete"),
+    ({"reason": "judgment-incomplete-sentence", "error_type": "ValueError"},
+     "judgment-incomplete-sentence"),
     ({"provider_error_code": {}, "http_status": True,
       "reason": ["response-incomplete"], "error_type": "ValueError"}, "ValueError"),
     ({"provider_error_code": [], "http_status": {"code": 429},
@@ -284,6 +286,58 @@ def test_error_summary_uses_only_closed_labels_and_stops_without_leaking(worker,
     assert summary["archived_failed_documents"] == summary["pending_judgments"] == 0
     rendered = json.dumps(summary, ensure_ascii=False)
     assert all(value not in rendered for value in (private, QUOTE, SOURCE_URL, "synthetic-key"))
+
+
+def test_mid_sentence_quote_is_rejected_with_closed_reason_and_no_acceptance(worker, tmp_path):
+    doc = _doc("당사는 2025년 Synthetic A에 부품을 공급하며, Synthetic A는 당사의 주요 매출처입니다.")
+    answer = _cached_answer(doc)
+    answer["judgments"][0]["quote"] = "Synthetic A는 당사의 주요 매출처입니다."
+    answer["judgments"][0]["scope_quote"] = "Synthetic A는 당사의 주요 매출처"
+    answer["judgments"][0]["period_quote"] = None
+    # A full source sentence remains eligible; only a unique literal fragment
+    # beginning after a comma inside the sentence must fail the strict validator.
+    full_sentence = _cached_answer(doc)
+    full_sentence["judgments"][0]["quote"] = doc["text"]
+    full_sentence["judgments"][0]["scope_quote"] = "Synthetic A는 당사의 주요 매출처"
+    full_sentence["judgments"][0]["period_quote"] = None
+    assert business.validate_company_judgments(full_sentence, [doc], as_of=AS_OF)["judgments"]
+    validation = business.validate_company_judgments(answer, [doc], as_of=AS_OF)
+    assert validation["judgments"] == []
+    assert validation["rejected"] == [{"index": 0, "reason": "judgment-incomplete-sentence"}]
+
+    calls = []
+    def transport(payload, key):
+        calls.append(payload)
+        return answer, {"input_tokens": 10, "output_tokens": 5}
+
+    ledger = tmp_path / "ledger.sqlite3"
+    legacy_answer = _cached_answer(doc)
+    legacy_answer["judgments"][0]["quote"] = answer["judgments"][0]["quote"]
+    legacy = {"status": "error", "error_type": "ValueError", "assessed_as_of": AS_OF,
+              "raw_answer": legacy_answer}
+    legacy_key = worker.ai._digest([worker.ai.PROVIDER, worker.ai.MODEL,
+                                    worker.ai.REASONING_EFFORT,
+                                    "company-business-judgment-v1", doc])
+    with sqlite3.connect(ledger) as db:
+        db.execute("CREATE TABLE calls (key TEXT PRIMARY KEY, day TEXT NOT NULL, reserved INTEGER NOT NULL, result TEXT)")
+        db.execute("INSERT INTO calls VALUES (?,?,?,?)", (legacy_key, AS_OF, 100, json.dumps(legacy)))
+    result = worker.ai.run_document(doc, ledger, "synthetic-key",
+                                    enabled=True, judgment_as_of=AS_OF, transport=transport)
+    assert len(calls) == 1  # v2 prompt/cache key forces a fresh assessment for this source.
+    assert calls[0]["instructions"] == business.SYSTEM
+    assert "Do not start at a later\nclause after a comma or semicolon" in calls[0]["instructions"]
+    assert result["status"] == "error"
+    assert result.get("reason") == "judgment-incomplete-sentence", result
+    assert result["rejected"] == [{"index": 0, "reason": "judgment-incomplete-sentence"}]
+    assert result["raw_answer"] == answer and result.get("judgments", []) == []
+
+    summary = worker.run_batch([doc], tmp_path / "batch.sqlite3", "synthetic-key", object(),
+                               as_of=AS_OF, limit=1, runner=lambda *args, **kwargs: result)
+    assert summary["error_counts"] == {"judgment-incomplete-sentence": 1}
+    assert summary["paid_attempts"] == 1 and summary["accepted_judgments"] == 0
+    assert summary["published"] is False
+    rendered = json.dumps(summary, ensure_ascii=False)
+    assert all(value not in rendered for value in (QUOTE, SOURCE_URL, "synthetic-key"))
 
 
 def test_run_document_preserves_only_numeric_http_status_not_exception_text(worker, tmp_path, capsys):

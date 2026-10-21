@@ -29,6 +29,7 @@ class PersistenceTests(unittest.TestCase):
         self.health_base = '{\n"scan":0,\n"a":0,\n"b":0,\n"c":0,\n"d":0,\n"macro":0\n}\n'
         self.write(self.producer, 'data/metadata/data_pipeline_health.json', self.health_base)
         self.write(self.producer, 'data/stock_history/2026-Q4.jsonl', '{"base":1}\n')
+        self.write(self.producer, module.RUNTIME_LOG_PATH, '{"base":1}\n')
         self.write(self.producer, 'byproduct.json', 'base\n')
         self.commit(self.producer, 'base')
         self.run_git(self.producer, 'push', '-u', 'origin', 'main')
@@ -38,6 +39,7 @@ class PersistenceTests(unittest.TestCase):
         self.write(self.producer, 'data/metadata/analysis_rotation_state.json', '{"cursor":2}\n')
         self.write(self.producer, 'data/metadata/data_pipeline_health.json', '{"status":"scan"}\n')
         self.write(self.producer, 'data/stock_history/2026-Q4.jsonl', '{"base":1}\n{"scan":2}\n')
+        self.write(self.producer, module.RUNTIME_LOG_PATH, '{"base":1}\n{"scan":2}\n')
         self.commit(self.producer, 'scan')
         self.source = self.run_git(self.producer, 'rev-parse', 'HEAD')
 
@@ -225,6 +227,66 @@ class PersistenceTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'generation changed'):
             module.persist(self.producer, 'main', retry_delay=0)
         self.assertEqual(before, self.run_git(self.remote, 'rev-parse', 'main'))
+        self.assert_producer_preserved()
+
+    def test_runtime_and_health_collision_preserves_both_writers(self):
+        self.write(self.producer, 'byproduct.json', 'local dirty\n')
+        self.write(self.producer, 'untracked.txt', 'keep\n')
+        self.write(self.writer, 'data/metadata/data_pipeline_health.json', '{"status":"macro"}\n')
+        self.push_writer(module.RUNTIME_LOG_PATH, '{"base":1}\n{"remote":3}\n')
+        module.persist(self.producer, 'main', retry_delay=0)
+        self.assertEqual('{"status":"macro"}', self.remote_text('data/metadata/data_pipeline_health.json'))
+        self.assertEqual('{"base":1}\n{"remote":3}\n{"scan":2}', self.remote_text(module.RUNTIME_LOG_PATH))
+        before = self.run_git(self.remote, 'rev-parse', 'main')
+        module.persist(self.producer, 'main', retry_delay=0)
+        self.assertEqual(before, self.run_git(self.remote, 'rev-parse', 'main'))
+        self.assertEqual('local dirty\n', (self.producer / 'byproduct.json').read_text())
+        self.assertEqual('keep\n', (self.producer / 'untracked.txt').read_text())
+        self.assertIn('new', self.remote_text('data/universe_candidates.json'))
+        self.assert_producer_preserved()
+
+    def test_runtime_rewrite_rejected(self):
+        self.push_writer(module.RUNTIME_LOG_PATH, '{"remote":3}\n')
+        before = self.run_git(self.remote, 'rev-parse', 'main')
+        with self.assertRaisesRegex(RuntimeError, 'Remote runtime log.*append-only'):
+            module.persist(self.producer, 'main', retry_delay=0)
+        self.assertEqual(before, self.run_git(self.remote, 'rev-parse', 'main'))
+        self.assert_producer_preserved()
+
+    def test_prepared_runtime_rewrite_and_partial_row_rejected(self):
+        for content in ('{"scan":2}\n', '{"base":1}\n{"partial":'):
+            self.write(self.producer, module.RUNTIME_LOG_PATH, content)
+            self.run_git(self.producer, 'add', module.RUNTIME_LOG_PATH)
+            self.run_git(self.producer, 'commit', '--amend', '--no-edit')
+            self.source = self.run_git(self.producer, 'rev-parse', 'HEAD')
+            with self.assertRaisesRegex(RuntimeError, 'Prepared runtime log.*append-only'):
+                module.persist(self.producer, 'main', retry_delay=0)
+            self.assert_producer_preserved()
+
+    def test_runtime_push_race_preserves_remote_rows(self):
+        original, raced = module.git, False
+        def race(repo, *args, **kwargs):
+            nonlocal raced
+            if args[0] == 'push' and not raced:
+                raced = True
+                self.write(self.writer, 'data/metadata/data_pipeline_health.json', '{"status":"macro-race"}\n')
+                self.push_writer(module.RUNTIME_LOG_PATH, '{"base":1}\n{"race":4}\n')
+            return original(repo, *args, **kwargs)
+        with patch.object(module, 'git', side_effect=race):
+            module.persist(self.producer, 'main', retry_delay=0)
+        self.assertTrue(raced)
+        self.assertEqual('{"base":1}\n{"race":4}\n{"scan":2}', self.remote_text(module.RUNTIME_LOG_PATH))
+        self.assertEqual('{"status":"macro-race"}', self.remote_text('data/metadata/data_pipeline_health.json'))
+        self.assert_producer_preserved()
+
+    def test_runtime_duplicate_rows_preserve_multiplicity(self):
+        self.write(self.producer, module.RUNTIME_LOG_PATH, '{"base":1}\n{"scan":2}\n{"scan":2}\n')
+        self.run_git(self.producer, 'add', module.RUNTIME_LOG_PATH)
+        self.run_git(self.producer, 'commit', '--amend', '--no-edit')
+        self.source = self.run_git(self.producer, 'rev-parse', 'HEAD')
+        self.push_writer(module.RUNTIME_LOG_PATH, '{"base":1}\n{"scan":2}\n')
+        module.persist(self.producer, 'main', retry_delay=0)
+        self.assertEqual(2, self.remote_text(module.RUNTIME_LOG_PATH).count('{"scan":2}'))
         self.assert_producer_preserved()
 
     def test_failed_push_exhausts_without_touching_source(self):

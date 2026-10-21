@@ -1,6 +1,7 @@
 """Shared cooperative budget and safe stage timing for macro collection."""
 from contextlib import contextmanager
-from contextvars import ContextVar
+from contextvars import ContextVar, copy_context
+from concurrent.futures import ThreadPoolExecutor, wait
 import sys
 import time
 
@@ -53,3 +54,40 @@ def timed_source(label, fn):
     finally:
         elapsed_ms = round((time.monotonic() - started) * 1000)
         sys.stderr.write(f"[macro_source] source={label} phase=end outcome={outcome} elapsed_ms={elapsed_ms}\n")
+
+
+def bounded_sources(sources, *, timeout, max_workers=1, reserve=0):
+    """Return completed source results without waiting for late socket threads.
+
+    Callers run inside the builder's disposable process: its hard deadline and
+    process-group cleanup remain responsible for stopping late work. Contexts
+    are copied per task so queued requests inherit the same parent deadline.
+    """
+    try:
+        timeout = max(0, request_timeout(timeout + reserve) - reserve)
+    except CollectionDeadline:
+        timeout = 0
+    if not sources or timeout <= 0:
+        return {}
+
+    def collect(fn):
+        with collection_budget(timeout):
+            return fn()
+
+    executor = ThreadPoolExecutor(max_workers=max_workers)
+    futures = {executor.submit(copy_context().run, collect, fn): label
+               for label, fn in sources.items()}
+    try:
+        done, _ = wait(futures, timeout=timeout)
+        results = {}
+        for future in done:
+            label = futures[future]
+            try:
+                results[label] = future.result()
+            except Exception as error:
+                sys.stderr.write(f"[macro_source] source={label} outcome={type(error).__name__}\n")
+        for future in futures.keys() - done:
+            sys.stderr.write(f"[macro_source] source={futures[future]} outcome=deadline\n")
+        return results
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)

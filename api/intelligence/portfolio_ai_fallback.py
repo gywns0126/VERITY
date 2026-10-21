@@ -876,7 +876,8 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
     version = claim_version if with_claims else CONTEXT_VERSION if with_context else VERSION
     if judgment_mode:
         version = business.VERSION
-    key = _digest([PROVIDER, MODEL, REASONING_EFFORT, version, doc])
+    cache_version = business.CACHE_VERSION if judgment_mode else version
+    key = _digest([PROVIDER, MODEL, REASONING_EFFORT, cache_version, doc])
     prior_keys = list(dict.fromkeys([key, *[
         _digest([PROVIDER, MODEL, REASONING_EFFORT, old, doc])
         for old in (() if judgment_mode else (VERSION, CONTEXT_VERSION, claim_version))]]))
@@ -1000,15 +1001,17 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
                 diagnostic = getattr(error, "portfolio_error_code", None)
                 if type(diagnostic) is str and diagnostic in _PROVIDER_ERROR_CODES:
                     result["provider_error_code"] = diagnostic
-            if isinstance(error, ValueError) and str(error) in {
+            error_reason = str(error)
+            known_reason = error_reason in {
                 "candidate-shape", "candidate-count", "candidate-fields", "candidate-evidence",
                 "candidate-uncertain-sentence", "candidate-direction-uncertain", "candidate-duplicate", "candidate-context",
                 "response-incomplete", "response-too-large", "usage-invalid",
                 "response-max-output-tokens", "response-content-filter",
                 "response-message-incomplete", "response-refused", "response-content-shape",
                 "response-status-absent", "response-status-failed", "response-status-pending",
-            }:
-                result["reason"] = str(error)
+            } or (judgment_mode and error_reason in business.DIAGNOSTIC_ERROR_REASONS)
+            if isinstance(error, ValueError) and known_reason:
+                result["reason"] = error_reason
             if counts is not None:
                 result.update(usage=counts, estimated_usd=estimate)
             if validation is not None:
