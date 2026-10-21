@@ -164,3 +164,97 @@ def test_cross_asset_each_asset_honors_remaining_budget(monkeypatch):
         assert corr.compute_cross_asset_corr()["available"] is False
     assert len(created) == 1
     assert requested == [1]
+
+
+def test_bounded_sources_propagates_deadline_and_returns_completed_without_waiting():
+    from threading import Event
+    release = Event()
+    started = time.monotonic()
+    def slow():
+        release.wait(2)
+        return "late"
+    try:
+        with runtime.collection_budget(1):
+            result = runtime.bounded_sources(
+                {"slow": slow, "fast": lambda: runtime.request_timeout(5)},
+                timeout=0.05, max_workers=2,
+            )
+        assert set(result) == {"fast"}
+        assert 0 < result["fast"] <= 0.05
+        assert time.monotonic() - started < 0.5
+    finally:
+        release.set()
+
+
+def _mock_core_macro(monkeypatch):
+    from api.collectors import macro_data as macro
+    from api.quant import cross_asset_corr
+    quote = lambda *a, **k: {"value": 4.0, "change_pct": 0, "source": "fixture",
+                             "source_as_of": "2026-10-16", "fetched_at": "core-receipt",
+                             "last_successful_at": "core-receipt", "stale": False}
+    for name in ("_get_usd_krw", "_get_fx", "_get_commodity", "_get_index_change_fred", "_get_index_change"):
+        monkeypatch.setattr(macro, name, quote)
+    monkeypatch.setattr(macro, "_get_commodity_bundle", lambda: {})
+    monkeypatch.setattr(macro, "get_fred_macro_block", lambda: {"available": True})
+    monkeypatch.setattr(macro, "get_ecos_macro_block", lambda: {"available": True})
+    monkeypatch.setattr(macro, "merge_ecos_into_fred", lambda *args: None)
+    monkeypatch.setattr(cross_asset_corr, "compute_cross_asset_corr", lambda: {"available": False})
+    return macro
+
+
+def test_hanging_optional_macro_stage_returns_core_before_process_deadline(monkeypatch):
+    macro = _mock_core_macro(monkeypatch)
+    monkeypatch.setattr(macro, "_get_micro_signals", lambda: time.sleep(30))
+    started = time.monotonic()
+    # _safe_call provides a 1.2s cooperative budget; optional work reserves its
+    # final second for returning core data, leaving ~0.2s for the hanging stage.
+    result, error = builder._safe_call(macro.get_macro_indicators, "fixture", 3.2)
+    assert error is None and time.monotonic() - started < 2
+    assert result["usd_krw"]["value"] == 4.0
+    assert result["usd_krw"]["fetched_at"] == "core-receipt"
+    assert result["fred"]["available"]
+    assert result["micro_signals"] == []
+    assert result["micro_signals_meta"]["stale"]
+    assert builder._has_stale_macro_row(result), "failed optional source must stay visible"
+
+
+def test_optional_error_preserves_core_and_records_failure_without_secret(monkeypatch, capsys):
+    macro = _mock_core_macro(monkeypatch)
+    def fail():
+        raise RuntimeError("https://fixture.invalid?key=DO_NOT_LOG")
+    monkeypatch.setattr(macro, "_get_micro_signals", fail)
+    result = macro.get_macro_indicators()
+    assert result["usd_krw"]["fetched_at"] == "core-receipt"
+    assert result["micro_signals_meta"]["status"] == "deadline_or_error"
+    assert "DO_NOT_LOG" not in capsys.readouterr().err
+    previous = {"macro": {"usd_krw": {"value": 1, "source": "fixture", "fetched_at": "old"}},
+                "collector_meta": {"macro": {"last_successful_at": "old"}}}
+    monkeypatch.setattr(builder, "_load_existing", lambda: previous)
+    collected = {"macro": result, "bonds": {"available": True}, "global_events": []}
+    monkeypatch.setattr(builder, "_safe_call", lambda fn, name, timeout_s: (collected[name], None))
+    snapshot = builder.build()
+    assert snapshot["macro"]["usd_krw"]["fetched_at"] == "core-receipt"
+    assert snapshot["macro"]["usd_krw"]["value"] == 4.0
+    assert snapshot["collector_meta"]["macro"]["stale"]
+    assert not snapshot["collector_meta"]["macro"]["reused"]
+    assert snapshot["collector_meta"]["macro"]["last_successful_at"] == "old"
+
+
+def test_optional_work_does_not_start_without_core_return_margin(monkeypatch):
+    macro = _mock_core_macro(monkeypatch)
+    monkeypatch.setattr(macro, "_get_micro_signals", lambda: pytest.fail("no optional budget"))
+    with runtime.collection_budget(0.5):
+        result = macro.get_macro_indicators()
+    assert result["usd_krw"]["fetched_at"] == "core-receipt"
+    assert result["micro_signals_meta"]["stale"]
+
+
+def test_hanging_us_sockets_return_partial_before_outer_process_deadline(monkeypatch):
+    from api.collectors import bondus
+    monkeypatch.setattr(bondus, "FRED_API_KEY", "fixture-key")
+    monkeypatch.setattr(bondus, "_fetch_latest_point", lambda *a, **k: time.sleep(30))
+    started = time.monotonic()
+    result, error = builder._safe_call(bondus.get_us_bond_summary, "fixture", 2.2)
+    assert error is None and time.monotonic() - started < 1.5
+    assert result["available"] is False and result["stale"] and result["partial"]
+    assert len(result["missing_tenors"]) == 11 and len(result["missing_credit"]) == 3

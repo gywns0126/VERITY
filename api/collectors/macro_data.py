@@ -22,7 +22,7 @@ from api.collectors.fred_macro import get_fred_macro_block
 from api.collectors.ecos_macro import get_ecos_macro_block, merge_ecos_into_fred
 from api.config import MACRO_DGS10_DEFENSE_PCT
 from api.utils.macro_provenance import copy_meta, derived_meta
-from api.utils.macro_runtime import CollectionDeadline, request_timeout, timed_source
+from api.utils.macro_runtime import CollectionDeadline, bounded_sources, request_timeout, timed_source
 
 logger = logging.getLogger(__name__)
 _KST = timezone(timedelta(hours=9))
@@ -218,7 +218,17 @@ def get_macro_indicators() -> dict:
     result["macro_diagnosis"] = _build_diagnosis(result, market="kr")
     result["market_mood_us"] = _assess_market_mood(result, market="us")
     result["macro_diagnosis_us"] = _build_diagnosis(result, market="us")
-    result["micro_signals"] = _stage("micro_signals", _get_micro_signals, [])
+    # Optional Naver work must not discard already collected core observations.
+    # Leave time to serialize the result before the parent process hard deadline.
+    micro = bounded_sources(
+        {"micro_signals": lambda: timed_source("micro_signals", _get_micro_signals)},
+        timeout=5, reserve=1,
+    )
+    result["micro_signals"] = micro.get("micro_signals", [])
+    result["micro_signals_meta"] = {
+        "source": "naver", "stale": "micro_signals" not in micro,
+        "status": "returned" if "micro_signals" in micro else "deadline_or_error",
+    }
     result["capital_flow"] = _compute_capital_flow(result)
 
     if "source" not in result.get("us_10y", {}):
@@ -928,7 +938,9 @@ def _get_micro_signals() -> list:
             bottom3 = sectors[-3:]
             signals.append({"type": "hot_sector", "label": "상승 업종 TOP3", "data": top3})
             signals.append({"type": "cold_sector", "label": "하락 업종 TOP3", "data": bottom3})
-    except Exception as e:
-        _log_collector_fail("_get_micro_signals/sectors", "ALL", e)
+    except Exception as error:
+        # The bounded stage records failure without exposing request URLs/keys.
+        sys.stderr.write(f"[macro_data] source=micro_signals outcome={type(error).__name__}\n")
+        raise
 
     return signals
