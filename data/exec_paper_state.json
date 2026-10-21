@@ -9,14 +9,14 @@
   {
    "side": "buy",
    "ticker": "005930",
-   "created": "2026-09-02",
-   "ref_price": 260000.0,
-   "alloc_krw": 555556,
+   "created": "2026-10-21",
+   "ref_price": 211500.0,
+   "alloc_krw": 270333,
    "signal_snapshot": {
     "formula_version": "brain-current/fact-v1.1-20260823",
-    "brain": 65.0,
+    "brain": 70.0,
     "fact": {
-     "score": 69,
+     "score": 72,
      "weights_effective": {
       "graham_value": 0.28,
       "canslim_growth": 0.19,
@@ -24,13 +24,12 @@
       "quant_volatility": 0.25
      },
      "missing_components": [
-      "perplexity_risk",
+      "analyst_report",
+      "consensus",
+      "quant_volatility",
       "us_fscore"
      ],
      "unmeasured_subaxes": {
-      "quality": [
-       "gross_profitability(총자산 부재)"
-      ],
       "volatility": [
        "beta",
        "idiosyncratic"
@@ -43,24 +42,24 @@
     },
     "grade": "WATCH",
     "rank": 1,
-    "candidate_pool_n": 17,
-    "eligible_n": 9,
-    "target_exposure": 0.5,
-    "price_as_of": "2026-09-01T21:51:18+09:00",
-    "market_clock_state": "preopen_clock"
+    "candidate_pool_n": 47,
+    "eligible_n": 4,
+    "target_exposure": 0.0811,
+    "price_as_of": "2026-10-21T09:06:45+09:00",
+    "market_clock_state": "regular_session_clock_holiday_unverified"
    }
   },
   {
    "side": "buy",
-   "ticker": "003550",
-   "created": "2026-09-02",
-   "ref_price": 119400.0,
-   "alloc_krw": 555556,
+   "ticker": "017670",
+   "created": "2026-10-21",
+   "ref_price": 77300.0,
+   "alloc_krw": 270333,
    "signal_snapshot": {
     "formula_version": "brain-current/fact-v1.1-20260823",
-    "brain": 62.0,
+    "brain": 63.0,
     "fact": {
-     "score": 67,
+     "score": 68,
      "weights_effective": {
       "graham_value": 0.28,
       "canslim_growth": 0.19,
@@ -69,12 +68,12 @@
      },
      "missing_components": [
       "analyst_report",
+      "consensus",
+      "perplexity_risk",
+      "quant_volatility",
       "us_fscore"
      ],
      "unmeasured_subaxes": {
-      "quality": [
-       "gross_profitability(총자산 부재)"
-      ],
       "volatility": [
        "beta",
        "idiosyncratic"
@@ -87,34 +86,28 @@
     },
     "grade": "WATCH",
     "rank": 2,
-    "candidate_pool_n": 17,
-    "eligible_n": 9,
-    "target_exposure": 0.5,
-    "price_as_of": "2026-09-01T21:51:18+09:00",
-    "market_clock_state": "preopen_clock"
+    "candidate_pool_n": 47,
+    "eligible_n": 4,
+    "target_exposure": 0.0811,
+    "price_as_of": "2026-10-21T09:06:45+09:00",
+    "market_clock_state": "regular_session_clock_holiday_unverified"
    }
   }
  ],
  "target_tickers": [
   "005930",
-  "003550",
-  "013030",
-  "030200",
-  "012330",
-  "028050",
   "017670",
-  "028260",
-  "035420"
+  "030200"
  ],
  "target_snapshots": {
   "005930": {
    "ticker": "005930",
    "name": "삼성전자",
-   "current_price": 260000.0,
-   "brain_score": 65.0,
+   "current_price": 211500.0,
+   "brain_score": 70.0,
    "grade": "WATCH",
    "fact": {
-    "score": 69,
+    "score": 72,
     "weights_effective": {
      "graham_value": 0.28,
      "canslim_growth": 0.19,
@@ -122,13 +115,12 @@
      "quant_volatility": 0.25
     },
     "missing_components": [
-     "perplexity_risk",
+     "analyst_report",
+     "consensus",
+     "quant_volatility",
      "us_fscore"
     ],
     "unmeasured_subaxes": {
-     "quality": [
-      "gross_profitability(총자산 부재)"
-     ],
      "volatility": [
       "beta",
       "idiosyncratic"
@@ -141,20 +133,20 @@
    },
    "rank": 1,
    "signal_rank": 1,
-   "candidate_pool_n": 17,
-   "eligible_n": 9,
-   "signal_eligible_n": 11,
-   "price_as_of": "2026-09-01T21:51:18+09:00",
-   "market_clock_state": "preopen_clock"
+   "candidate_pool_n": 47,
+   "eligible_n": 4,
+   "signal_eligible_n": 8,
+   "price_as_of": "2026-10-21T09:06:45+09:00",
+   "market_clock_state": "regular_session_clock_holiday_unverified"
   },
-  "003550": {
-   "ticker": "003550",
-   "name": "LG",
-   "current_price": 119400.0,
-   "brain_score": 62.0,
+  "017670": {
+   "ticker": "017670",
+   "name": "SK텔레콤",
+   "current_price": 77300.0,
+   "brain_score": 63.0,
    "grade": "WATCH",
    "fact": {
-    "score": 67,
+    "score": 68,
     "weights_effective": {
      "graham_value": 0.28,
      "canslim_growth": 0.19,
@@ -163,12 +155,12 @@
     },
     "missing_components": [
      "analyst_report",
+     "consensus",
+     "perplexity_risk",
+     "quant_volatility",
      "us_fscore"
     ],
     "unmeasured_subaxes": {
-     "quality": [
-      "gross_profitability(총자산 부재)"
-     ],
      "volatility": [
       "beta",
       "idiosyncratic"
@@ -181,20 +173,20 @@
    },
    "rank": 2,
    "signal_rank": 2,
-   "candidate_pool_n": 17,
-   "eligible_n": 9,
-   "signal_eligible_n": 11,
-   "price_as_of": "2026-09-01T21:51:18+09:00",
-   "market_clock_state": "preopen_clock"
+   "candidate_pool_n": 47,
+   "eligible_n": 4,
+   "signal_eligible_n": 8,
+   "price_as_of": "2026-10-21T09:06:45+09:00",
+   "market_clock_state": "regular_session_clock_holiday_unverified"
   },
-  "013030": {
-   "ticker": "013030",
-   "name": "하이록코리아",
-   "current_price": 34000.0,
-   "brain_score": 61.0,
+  "030200": {
+   "ticker": "030200",
+   "name": "KT",
+   "current_price": 50600.0,
+   "brain_score": 59.0,
    "grade": "WATCH",
    "fact": {
-    "score": 64,
+    "score": 61,
     "weights_effective": {
      "graham_value": 0.28,
      "canslim_growth": 0.19,
@@ -205,12 +197,10 @@
      "analyst_report",
      "consensus",
      "perplexity_risk",
+     "quant_volatility",
      "us_fscore"
     ],
     "unmeasured_subaxes": {
-     "quality": [
-      "gross_profitability(총자산 부재)"
-     ],
      "volatility": [
       "beta",
       "idiosyncratic"
@@ -222,260 +212,19 @@
     }
    },
    "rank": 3,
-   "signal_rank": 3,
-   "candidate_pool_n": 17,
-   "eligible_n": 9,
-   "signal_eligible_n": 11,
-   "price_as_of": "2026-09-01T21:51:18+09:00",
-   "market_clock_state": "preopen_clock"
-  },
-  "030200": {
-   "ticker": "030200",
-   "name": "KT",
-   "current_price": 53400.0,
-   "brain_score": 60.0,
-   "grade": "WATCH",
-   "fact": {
-    "score": 62,
-    "weights_effective": {
-     "graham_value": 0.28,
-     "canslim_growth": 0.19,
-     "quant_quality": 0.28,
-     "quant_volatility": 0.25
-    },
-    "missing_components": [
-     "us_fscore"
-    ],
-    "unmeasured_subaxes": {
-     "quality": [
-      "gross_profitability(총자산 부재)"
-     ],
-     "volatility": [
-      "beta",
-      "idiosyncratic"
-     ],
-     "mean_reversion": [
-      "zscore",
-      "hurst"
-     ]
-    }
-   },
-   "rank": 4,
    "signal_rank": 4,
-   "candidate_pool_n": 17,
-   "eligible_n": 9,
-   "signal_eligible_n": 11,
-   "price_as_of": "2026-09-01T21:51:18+09:00",
-   "market_clock_state": "preopen_clock"
-  },
-  "012330": {
-   "ticker": "012330",
-   "name": "현대모비스",
-   "current_price": 453500.0,
-   "brain_score": 59.0,
-   "grade": "WATCH",
-   "fact": {
-    "score": 60,
-    "weights_effective": {
-     "graham_value": 0.28,
-     "canslim_growth": 0.19,
-     "quant_quality": 0.28,
-     "quant_volatility": 0.25
-    },
-    "missing_components": [
-     "analyst_report",
-     "perplexity_risk",
-     "us_fscore"
-    ],
-    "unmeasured_subaxes": {
-     "quality": [
-      "gross_profitability(총자산 부재)"
-     ],
-     "volatility": [
-      "beta",
-      "idiosyncratic"
-     ],
-     "mean_reversion": [
-      "zscore",
-      "hurst"
-     ]
-    }
-   },
-   "rank": 5,
-   "signal_rank": 6,
-   "candidate_pool_n": 17,
-   "eligible_n": 9,
-   "signal_eligible_n": 11,
-   "price_as_of": "2026-09-01T21:51:18+09:00",
-   "market_clock_state": "preopen_clock"
-  },
-  "028050": {
-   "ticker": "028050",
-   "name": "삼성E&A",
-   "current_price": 45800.0,
-   "brain_score": 59.0,
-   "grade": "WATCH",
-   "fact": {
-    "score": 60,
-    "weights_effective": {
-     "graham_value": 0.28,
-     "canslim_growth": 0.19,
-     "quant_quality": 0.28,
-     "quant_volatility": 0.25
-    },
-    "missing_components": [
-     "analyst_report",
-     "perplexity_risk",
-     "us_fscore"
-    ],
-    "unmeasured_subaxes": {
-     "quality": [
-      "gross_profitability(총자산 부재)"
-     ],
-     "volatility": [
-      "beta",
-      "idiosyncratic"
-     ],
-     "mean_reversion": [
-      "zscore",
-      "hurst"
-     ]
-    }
-   },
-   "rank": 6,
-   "signal_rank": 7,
-   "candidate_pool_n": 17,
-   "eligible_n": 9,
-   "signal_eligible_n": 11,
-   "price_as_of": "2026-09-01T21:51:18+09:00",
-   "market_clock_state": "preopen_clock"
-  },
-  "017670": {
-   "ticker": "017670",
-   "name": "SK텔레콤",
-   "current_price": 94200.0,
-   "brain_score": 58.0,
-   "grade": "WATCH",
-   "fact": {
-    "score": 58,
-    "weights_effective": {
-     "graham_value": 0.28,
-     "canslim_growth": 0.19,
-     "quant_quality": 0.28,
-     "quant_volatility": 0.25
-    },
-    "missing_components": [
-     "us_fscore"
-    ],
-    "unmeasured_subaxes": {
-     "quality": [
-      "gross_profitability(총자산 부재)"
-     ],
-     "volatility": [
-      "beta",
-      "idiosyncratic"
-     ],
-     "mean_reversion": [
-      "zscore",
-      "hurst"
-     ]
-    }
-   },
-   "rank": 7,
-   "signal_rank": 8,
-   "candidate_pool_n": 17,
-   "eligible_n": 9,
-   "signal_eligible_n": 11,
-   "price_as_of": "2026-09-01T21:51:18+09:00",
-   "market_clock_state": "preopen_clock"
-  },
-  "028260": {
-   "ticker": "028260",
-   "name": "삼성물산",
-   "current_price": 376500.0,
-   "brain_score": 56.0,
-   "grade": "WATCH",
-   "fact": {
-    "score": 56,
-    "weights_effective": {
-     "graham_value": 0.28,
-     "canslim_growth": 0.19,
-     "quant_quality": 0.28,
-     "quant_volatility": 0.25
-    },
-    "missing_components": [
-     "analyst_report",
-     "us_fscore"
-    ],
-    "unmeasured_subaxes": {
-     "quality": [
-      "gross_profitability(총자산 부재)"
-     ],
-     "volatility": [
-      "beta",
-      "idiosyncratic"
-     ],
-     "mean_reversion": [
-      "zscore",
-      "hurst"
-     ]
-    }
-   },
-   "rank": 8,
-   "signal_rank": 10,
-   "candidate_pool_n": 17,
-   "eligible_n": 9,
-   "signal_eligible_n": 11,
-   "price_as_of": "2026-09-01T21:51:18+09:00",
-   "market_clock_state": "preopen_clock"
-  },
-  "035420": {
-   "ticker": "035420",
-   "name": "NAVER",
-   "current_price": 215000.0,
-   "brain_score": 55.0,
-   "grade": "WATCH",
-   "fact": {
-    "score": 57,
-    "weights_effective": {
-     "graham_value": 0.28,
-     "canslim_growth": 0.19,
-     "quant_quality": 0.28,
-     "quant_volatility": 0.25
-    },
-    "missing_components": [
-     "analyst_report",
-     "perplexity_risk",
-     "us_fscore"
-    ],
-    "unmeasured_subaxes": {
-     "quality": [
-      "gross_profitability(총자산 부재)"
-     ],
-     "volatility": [
-      "beta",
-      "idiosyncratic"
-     ],
-     "mean_reversion": [
-      "zscore",
-      "hurst"
-     ]
-    }
-   },
-   "rank": 9,
-   "signal_rank": 11,
-   "candidate_pool_n": 17,
-   "eligible_n": 9,
-   "signal_eligible_n": 11,
-   "price_as_of": "2026-09-01T21:51:18+09:00",
-   "market_clock_state": "preopen_clock"
+   "candidate_pool_n": 47,
+   "eligible_n": 4,
+   "signal_eligible_n": 8,
+   "price_as_of": "2026-10-21T09:06:45+09:00",
+   "market_clock_state": "regular_session_clock_holiday_unverified"
   }
  },
- "last_date": "2026-10-19",
- "last_price_fingerprint": "77afaa6300bc5d6c4f0049f23830b51d241c14a489a428bd80b0f6d70dae1f33",
- "market_sessions": 29,
- "sessions_since_rebalance": 28,
- "last_rebalance_date": "2026-09-02",
+ "last_date": "2026-10-21",
+ "last_price_fingerprint": "2c6929f7d45dc541c1b363755a7bee023eb283179b74a48b952e62cf25f74003",
+ "market_sessions": 30,
+ "sessions_since_rebalance": 0,
+ "last_rebalance_date": "2026-10-21",
  "trades": 0,
  "realized_pnl": 0.0,
  "cost_paid": 0.0,
@@ -740,6 +489,15 @@
    "cost_paid": 0.0,
    "benchmark_date": "20261015",
    "benchmark_close": 5554.22
+  },
+  {
+   "date": "2026-10-21",
+   "equity": 10000000.0,
+   "positions_n": 0,
+   "trades_total": 0,
+   "cost_paid": 0.0,
+   "benchmark_date": "20261019",
+   "benchmark_close": 5768.01
   }
  ],
  "benchmark_start": {
@@ -754,40 +512,41 @@
   "last_date": "2026-09-02",
   "trades": 0
  },
- "target_exposure": 0.0727,
+ "target_exposure": 0.0811,
  "price_snapshot": {
   "source": "portfolio.recommendations.current_price",
-  "as_of": "2026-10-21T06:34:34+09:00",
-  "market_clock_state": "preopen_clock",
-  "holiday_calendar": "not_connected"
+  "as_of": "2026-10-21T09:06:45+09:00",
+  "market_clock_state": "regular_session_clock_holiday_unverified",
+  "holiday_calendar": "not_connected",
+  "fingerprint_source": "analysis_plus_active_live_quotes",
+  "active_live_quotes_n": 2
  },
  "last_denominator": {
-  "kr_candidate_n": 37,
-  "eligible_n": 0,
-  "signal_eligible_n": 0,
-  "selected_n": 0,
+  "kr_candidate_n": 47,
+  "eligible_n": 4,
+  "signal_eligible_n": 8,
+  "selected_n": 3,
   "target_capacity_n": 10,
-  "slot_budget_krw": 0,
+  "slot_budget_krw": 270333,
   "whole_share_only": true,
-  "not_selected_by_rank_n": 0,
+  "not_selected_by_rank_n": 1,
   "rejected": {
-   "liquidity": 26,
-   "grade_below_watch": 10,
-   "critical_red_flag": 1
+   "liquidity": 31,
+   "critical_red_flag": 1,
+   "grade_below_watch": 7,
+   "one_share_above_slot": 4
   }
  },
- "selection_slot_krw": 555556,
+ "selection_slot_krw": 270333,
  "last_flags": [
   "candidate_pool_rank_not_full_kr_universe",
   "e2_next_run_fill",
   "e3_1m_proxy",
-  "fill_live_quote_20260826",
-  "market_clock_not_executable",
-  "waiting_new_market_snapshot"
+  "fill_live_quote_20260826"
  ],
  "benchmark_latest": {
-  "date": "20261015",
-  "close": 5554.22,
+  "date": "20261019",
+  "close": 5768.01,
   "source": "금융위원회 지수시세정보",
   "freshness": "T+1 EOD"
  }
