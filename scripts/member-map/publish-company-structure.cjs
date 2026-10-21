@@ -132,41 +132,84 @@ function loadArtifacts(dir) {
   return { manifest, manifestBytes, payloads };
 }
 
-async function readRemote(fetch, name) {
-  const response = await fetch(BASE + name + '?verify=' + Date.now(), { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000) });
-  if (response.status === 404) return null;
-  if (!response.ok || Number(response.headers.get('content-length') || 0) > MAX_BYTES) throw Error('Blob read failed');
-  const chunks = []; let size = 0;
-  for await (const chunk of response.body) { size += chunk.length; if (size > MAX_BYTES) throw Error('Blob read limit'); chunks.push(chunk); }
-  return Buffer.concat(chunks);
-}
-async function publish(dir, { put, head, fetch, token, pause = ms => new Promise(resolve => setTimeout(resolve, ms)) } = {}) {
+const SDK_ERRORS = new Set(['BlobError', 'BlobAccessError', 'BlobContentTypeNotAllowedError', 'BlobPathnameMismatchError',
+  'BlobClientTokenExpiredError', 'BlobFileTooLargeError', 'BlobStoreNotFoundError', 'BlobStoreSuspendedError', 'BlobUnknownError',
+  'BlobNotFoundError', 'BlobServiceNotAvailable', 'BlobServiceRateLimited', 'BlobRequestAbortedError', 'BlobPreconditionFailedError']);
+const TRANSPORT_ERRORS = new Set(['AbortError', 'TimeoutError', 'TypeError']);
+const TRANSPORT_CODES = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'ABORT_ERR',
+  'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'UND_ERR_SOCKET', 'CERT_HAS_EXPIRED', 'ERR_TLS_CERT_ALTNAME_INVALID']);
+async function publish(dir, { put, head, fetch, token, pause = ms => new Promise(resolve => setTimeout(resolve, ms)),
+  clock = () => performance.now(), diagnostic = value => process.stderr.write('Company structure operation failed: ' + JSON.stringify(value) + '\n') } = {}) {
   const data = loadArtifacts(dir); // Validate EVERY local file before any remote mutation.
   if (!/^vercel_blob_rw_rte5guenhonw9fzn_/iu.test(token || '')) throw Error('Expected Blob store credential missing');
+  const diagnosed = new WeakSet();
+  function stop(stage, category, fields = {}) {
+    // All callers supply fixed stages/categories. Never copy an exception,
+    // message, body, URL, headers, retryAfter or environment into this record.
+    try { diagnostic({ stage, category, ...fields }); } catch { /* Logging must not hide a publication failure. */ }
+    const error = new Error('Company structure publication failed'); diagnosed.add(error); throw error;
+  }
+  let gate = Promise.resolve(), lastStart = -Infinity;
+  async function remote(stage, action) {
+    const prior = gate; let release;
+    gate = new Promise(resolve => { release = resolve; });
+    try {
+      await prior;
+      let wait;
+      while ((wait = 100 - (clock() - lastStart)) > 0) await pause(Math.ceil(wait));
+      lastStart = clock();
+      const pending = action(); // Start under the shared gate, don't serialize completion.
+      release(); release = () => {};
+      return await pending;
+    } catch (error) {
+      if (diagnosed.has(error)) throw error;
+      const sdk = [error?.constructor?.name, error?.name].find(name => SDK_ERRORS.has(name));
+      const transport = TRANSPORT_ERRORS.has(error?.name) ? error.name : null;
+      const code = [error?.code, error?.cause?.code].find(value => TRANSPORT_CODES.has(value));
+      const status = [error?.status, error?.statusCode].find(value => Number.isInteger(value) && value >= 100 && value <= 599);
+      stop(stage, sdk ? 'sdk' : transport || code ? 'transport' : 'unknown', {
+        ...(sdk || transport ? { errorClass: sdk || transport } : {}), ...(code ? { transportCode: code } : {}),
+        ...(status ? { httpStatus: status } : {}) });
+    } finally { release(); }
+  }
+  async function readRemote(name, stage) {
+    return remote(stage, async () => {
+      const response = await fetch(BASE + name + '?verify=' + Date.now(), { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000) });
+      if (response.status === 404) return null;
+      if (!response.ok) stop(stage, 'http', Number.isInteger(response.status) && response.status >= 100 && response.status <= 599 ? { httpStatus: response.status } : {});
+      if (Number(response.headers.get('content-length') || 0) > MAX_BYTES) stop(stage, 'read-limit');
+      const chunks = []; let size = 0;
+      for await (const chunk of response.body) { size += chunk.length; if (size > MAX_BYTES) stop(stage, 'read-limit'); chunks.push(chunk); }
+      return Buffer.concat(chunks);
+    });
+  }
   let uploaded = 0, unchanged = 0;
   async function sync(name, bytes, expected) {
-    const prior = expected ? expected.prior : await readRemote(fetch, name);
+    const prefix = name === INDEX ? 'manifest' : 'payload';
+    const prior = expected ? expected.prior : await readRemote(name, 'payload-read');
     if (prior?.equals(bytes)) { unchanged++; return; }
-    const metadata = expected ? expected.metadata : prior ? await head(BASE + name, { token, abortSignal: AbortSignal.timeout(30000) }) : null;
-    if (prior && !metadata?.etag) throw Error('Blob conditional write unavailable');
-    if (metadata && (metadata.url !== BASE + name || metadata.pathname !== name)) throw Error('Unexpected Blob metadata');
-    const result = await put(name, bytes, { token, access: 'public', addRandomSuffix: false, allowOverwrite: !!prior,
-      ...(prior ? { ifMatch: metadata.etag } : {}), abortSignal: AbortSignal.timeout(30000), contentType: 'application/json', cacheControlMaxAge: name === INDEX ? 60 : 31536000 });
-    if (result.url !== BASE + name) throw Error('Unexpected Blob store');
+    const metadata = expected ? expected.metadata : prior ? await remote(prefix + '-metadata', () => head(BASE + name, { token, abortSignal: AbortSignal.timeout(30000) })) : null;
+    if (prior && !metadata?.etag) stop(prefix + '-metadata', 'conditional-write-unavailable');
+    if (metadata && (metadata.url !== BASE + name || metadata.pathname !== name)) stop(prefix + '-metadata', 'metadata-mismatch');
+    const result = await remote(prefix + '-write', () => put(name, bytes, { token, access: 'public', addRandomSuffix: false, allowOverwrite: !!prior,
+      ...(prior ? { ifMatch: metadata.etag } : {}), abortSignal: AbortSignal.timeout(30000), contentType: 'application/json', cacheControlMaxAge: name === INDEX ? 60 : 31536000 }));
+    if (result.url !== BASE + name) stop(prefix + '-write', 'destination-mismatch');
     uploaded++;
     for (let i = 0; i < 12; i++) {
-      const actual = await readRemote(fetch, name);
+      const actual = await readRemote(name, prefix + '-readback');
       if (actual?.equals(bytes)) return;
       if (i < 11) await pause(5000);
     }
-    throw Error('Blob exact-byte readback failed');
+    stop(prefix + '-readback', 'readback-mismatch');
   }
   // Snapshot the index BEFORE uploads; a later/foreign publisher must not be overwritten.
-  const before = await readRemote(fetch, INDEX);
-  const indexMetadata = before ? await head(BASE + INDEX, { token, abortSignal: AbortSignal.timeout(30000) }) : null;
+  const before = await readRemote(INDEX, 'initial-manifest-read');
+  const indexMetadata = before ? await remote('manifest-metadata', () => head(BASE + INDEX, { token, abortSignal: AbortSignal.timeout(30000) })) : null;
   if (before) {
-    const prior = JSON.parse(before);
-    if (!Number.isFinite(Date.parse(prior.generatedAt)) || Date.parse(prior.generatedAt) > Date.parse(data.manifest.generatedAt)) throw Error('Refusing older manifest');
+    let prior;
+    try { prior = JSON.parse(before); } catch { stop('initial-manifest-read', 'manifest-invalid'); }
+    if (!Number.isFinite(Date.parse(prior?.generatedAt))) stop('initial-manifest-read', 'manifest-invalid');
+    if (Date.parse(prior.generatedAt) > Date.parse(data.manifest.generatedAt)) stop('initial-manifest-read', 'manifest-older');
   }
   const queue = [...data.payloads]; let next = 0, failure;
   async function worker() {
@@ -180,8 +223,8 @@ async function publish(dir, { put, head, fetch, token, pause = ms => new Promise
   // rejected Promise.all while another payload worker is still mutating storage.
   await Promise.all(Array.from({ length: Math.min(4, queue.length) }, worker));
   if (failure) throw failure;
-  const current = await readRemote(fetch, INDEX);
-  if ((before === null) !== (current === null) || before && !before.equals(current)) throw Error('Manifest changed during upload');
+  const current = await readRemote(INDEX, 'manifest-cas');
+  if ((before === null) !== (current === null) || before && !before.equals(current)) stop('manifest-cas', 'manifest-changed');
   await sync(INDEX, data.manifestBytes, { prior: before, metadata: indexMetadata }); // Last write, only after every immutable payload is verified.
   return { issuers: Object.keys(data.manifest.issuers).length, payloads: data.payloads.size, uploaded, unchanged };
 }
