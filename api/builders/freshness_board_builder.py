@@ -36,6 +36,7 @@ from api.observability.content_freshness import (  # noqa: E402
 )
 from scripts.freshness_shadow_monitor import (  # noqa: E402
     _extract_ts,
+    _clock_evidence,
     _load_any,
     _parse_ts_kst,
     _schedule_active,
@@ -90,7 +91,7 @@ PUBLIC_LABELS = {
     "ipo_watch": ("IPO 워치", "주 1회"),
     "new_listings": ("신규 상장", "주 1회"),
     "broker_guide": ("증권사 가이드", "월 1회"),
-    "dividends_kr": ("KR 배당", "매일 1회"),
+    "dividends_kr": ("KR 배당 조회", "매일 일부 종목 순환 확인"),
     "market_warnings": ("KRX 시장경보", "매일 1회"),
     # 2026-07-30 커버리지 확장분 — 라벨 미등재 시 영문 id 가 공개 노출되므로 함께 등재
     "public_disclosure_feed": ("KR 공시 피드", "평일 1회"),
@@ -125,7 +126,7 @@ PUBLIC_LABELS = {
     "us_smallcap_corner_filters": ("US 소형주 필터", "월 1회"),
     "us_disclosure_forensics": ("US 공시 포렌식", "월 1회"),
     "nps_fund_returns": ("국민연금 수익률", "수집 중단 — 생산 경로 부재로 은퇴"),
-    "logo_map": ("로고 매핑", "비정기"),
+    "logo_map": ("로고 URL 점검", "일부 주소 확인·접근 제한 시 중단"),
 }
 
 _CRIT_ORDER = {"P0": 0, "P1": 1, "P2": 2}
@@ -162,6 +163,7 @@ def build_board() -> dict:
         f = s.get("file", "")
         obj = None   # glob 분기에서도 아래 내용 신선도 블록이 참조 — 미초기화 시 NameError
         group = None
+        proof = None
         if "*" in f or "expected_files" in s:
             declared = {"expected_files": s["expected_files"]} if "expected_files" in s else {}
             group = glob_freshness(f, s.get("ts_field"), DATA_DIR, **declared)
@@ -170,21 +172,21 @@ def build_board() -> dict:
             path = os.path.join(DATA_DIR, f)
             exists = os.path.exists(path)
             obj = _load_any(path) if exists else None
-            ts = _extract_ts(obj, s.get("ts_field")) if obj is not None else None
-            if obj is not None and not ts and not s.get("ts_field"):
-                proof = collection_receipt(sid, path) or producer_evidence(sid)
-                if proof:
-                    # Keep workflow names, run identifiers, and internal scope labels
-                    # in the shadow observation, not the public board whitelist.
-                    pipeline[sid] = {key: proof[key] for key in (
-                        "status", "completed_at", "clock_kind", "asset_binding",
-                        "source_freshness_verified", "all_records_revalidated",
-                        "outcome", "expected_feeds", "successful_feeds", "new_rows",
-                    ) if key in proof}
-                    if proof.get("status") == "bound_query_complete":
-                        ts = proof["completed_at"]
-                        row["clock_kind"] = proof["clock_kind"]
-                        row["all_records_revalidated"] = False
+            ts, proof = _clock_evidence(s, path, obj, extract_ts=_extract_ts)
+            if proof:
+                # Public aggregate counts contain no ticker IDs or workflow details.
+                pipeline[sid] = {key: proof[key] for key in (
+                    "status", "completed_at", "clock_kind", "asset_binding",
+                    "source_freshness_verified", "all_records_revalidated",
+                    "outcome", "expected_feeds", "successful_feeds", "new_rows",
+                    "scope_counts", "quality_reason", "source_report_date_min",
+                    "source_report_date_max", "bounded_scope_completed",
+                ) if key in proof}
+                if proof.get("status") == "bound_query_complete":
+                    row["clock_kind"] = proof["clock_kind"]
+                    row["all_records_revalidated"] = proof.get("all_records_revalidated", False)
+                    if "scope_counts" in proof:
+                        row["scope_counts"] = proof["scope_counts"]
             t = _parse_ts_kst(ts) if ts else None
         if t is None:
             if group is not None:
@@ -197,7 +199,8 @@ def build_board() -> dict:
             omitted = {"id": sid, "reason": reason}
             if reason == "no_ts" and s.get("missing_ts_status") == "unmeasurable":
                 omitted["measurement_reason"] = (
-                    s.get("measurement_reason") or "required_source_timestamp_missing")
+                    (proof or {}).get("quality_reason") or s.get("measurement_reason")
+                    or "required_source_timestamp_missing")
             if group is not None:
                 omitted["group_counts"] = {k: group[k] for k in ("members", "measured", "unmeasured")}
             skipped.append(omitted)

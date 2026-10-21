@@ -40,6 +40,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -58,6 +59,7 @@ MKTCAP_PATH = os.path.join(DATA, "krx_mktcap.json")
 MAPPING_PATH = os.path.join(DATA, "mapping.json")
 LISTED_PATH = os.path.join(DATA, "kr_listed.json")
 DIVIDENDS_PATH = os.path.join(DATA, "dividends_kr.json")
+DIVIDENDS_RECEIPT_PATH = os.path.join(DATA, "metadata", "dividends_kr_source_receipt.json")
 
 # 🚨 2026-08-17 kam 을 LLM → FREE 로 이동. PM 지시 "재미나이 호출이 무의미하면 아예 배제해".
 #   실측 근거: Gemini 가 5/5 종목을 `kam_count=0` 으로 냈고, 원인은 모델이 아니라 슬라이스가
@@ -140,8 +142,8 @@ def _stocks_dict(univ: List[Tuple[str, str]], year: str) -> Dict[str, Dict[str, 
 
 # ── 축별 실행 ────────────────────────────────────────────────────────────────
 def run_dividends(univ, year, delay, dry, limit=None) -> Dict[str, int]:
-    """DART 사업보고서 배당 = 종목당 1콜. 기존 dividends_kr.json 에 upsert."""
-    from api.collectors.dividend_kr import sweep_annual_plans, load_dividends_db
+    """DART 사업보고서 배당을 누락 우선·기존 자료 회전 순서로 재확인한다."""
+    from api.collectors.dividend_kr import sweep_annual_plans_detailed, load_dividends_db
     db = load_dividends_db()
 
     def _done(tk: str) -> bool:
@@ -149,70 +151,178 @@ def run_dividends(univ, year, delay, dry, limit=None) -> Dict[str, int]:
         for r in (db.get(tk) or []):
             if not r.get("_meta"):
                 return True
-            if r.get("_meta") == _NO_DIV and str(r.get("bsns_year")) == str(year):
+            if r.get("_meta") in (_NO_DIV, _NO_DATA) and str(r.get("bsns_year")) == str(year):
                 return True
         return False
 
-    todo = [tk for tk, _ in univ if not _done(tk)]
-    total_todo = len(todo)
-    todo = _cap(todo, limit)
-    print(f"  [dividends] 대상 {len(univ)} · 미보유 {total_todo} · 이번 run {len(todo)}")
+    universe = list(dict.fromkeys(tk for tk, _ in univ))
+    universe_hash = _ticker_hash(universe)
+    prior = _load(DIVIDENDS_RECEIPT_PATH, {}) or {}
+    rotation = prior.get("rotation") if isinstance(prior, dict) else None
+    if (not isinstance(rotation, dict)
+            or rotation.get("business_year") != str(year)
+            or rotation.get("universe_sha256") != universe_hash
+            or rotation.get("bounded_scope_completed_at")):
+        rotation = {"business_year": str(year), "universe_sha256": universe_hash,
+                    "started_at": _now_iso(), "checked_tickers": []}
+    checked = {str(t) for t in rotation.get("checked_tickers") or [] if str(t) in universe}
+    missing = [tk for tk in universe if tk not in checked and not _done(tk)]
+    existing = [tk for tk in universe if tk not in checked and _done(tk)]
+    existing.sort(key=lambda tk: (_last_source_check(db.get(tk) or []), tk))
+    todo = _cap(missing + existing, limit)
+    print(f"  [dividends] 대상 {len(universe)} · 신규/미확인 {len(missing)} · "
+          f"회전완료 {len(checked)} · 이번 run {len(todo)}")
     if dry or not todo:
-        return {"todo": len(todo), "ok": 0}
+        return {"todo": len(todo), "ok": 0, "progressed": 0,
+                "scope_total": len(universe), "scope_checked": len(checked)}
     # 🚨 청크 저장 — `sweep_annual_plans` 는 루프 종료 후 한 번만 save 한다.
     #   1,244종을 한 번에 넘기면 15~20분간 진도가 메모리에만 있고 중단 1회로 전량 소멸한다
     #   (2026-08-08 '백필 체크포인트 유실'과 동형). 공유 라이브러리는 소량 cron 이 쓰므로
     #   건드리지 않고 여기서 끊는다.
     CH = 100
-    ok = tried = nodiv = 0
+    started_at = _now_iso()
+    ok = tried = nodiv = no_data = 0
+    details: Dict[str, Dict[str, Any]] = {}
     for i in range(0, len(todo), CH):
         chunk = todo[i:i + CH]
-        res = sweep_annual_plans(chunk, int(year))
-        ok += sum(1 for v in res.values() if v in ("insert", "update"))
+        res = sweep_annual_plans_detailed(chunk, int(year))
+        details.update(res)
+        ok += sum(1 for v in res.values()
+                  if v.get("artifact_status") in ("insert", "update"))
         tried += len(res)
-        # 🚨 '무배당 확정' 을 남긴다. 안 남기면 흔적이 0이라 (a) 매 run 재조회하고
-        #   (b) "조회했는데 없음" 과 "아직 안 함" 이 구분되지 않아 완주 판정이 영영 안 선다.
-        #   CB/BW 는 이미 '오버행 없음' 을 확정으로 남긴다 — 배당만 빠져 있었다.
-        nodiv += _mark_no_dividend([t for t, v in res.items() if v == "fail"], year)
+        marked = _mark_dividend_source_results(res, year)
+        nodiv += marked["no_dividend"]
+        no_data += marked["no_data"]
         print(f"  [dividends] {min(i+CH, len(todo))}/{len(todo)} · 누적 갱신 {ok} "
-              f"· 무배당 확정 {nodiv}", flush=True)
-    print(f"  [dividends] 갱신 {ok} · 무배당 확정 {nodiv} / 시도 {tried}")
+              f"· 무배당 확인 {nodiv} · 원천자료 없음 {no_data}", flush=True)
+    definitive = {tk for tk, result in details.items()
+                  if result.get("outcome") in ("record", "no_cash_dividend", "no_data")}
+    failed = tried - len(definitive)
+    finished_at = _now_iso()
+    checked.update(definitive)
+    rotation["checked_tickers"] = sorted(checked)
+    if len(checked) == len(universe):
+        rotation["bounded_scope_completed_at"] = finished_at
+    print(f"  [dividends] 갱신 {ok} · 무배당 확인 {nodiv} · 원천자료 없음 {no_data} "
+          f"· 실패 {failed} / 시도 {tried}")
     q = quarantine_implausible_dividends()
     if q:
         print(f"  [dividends] 🚨 비현실 DPS {q}건 격리 (implausible=true 표기, 값 보존)")
+    _write_dividend_receipt(
+        prior, rotation, universe, todo, details, started_at, finished_at,
+    )
     # 🚨 '무배당 확정' 도 진도다 — ok 에 합산하지 않으면 아래 완주 가드가 오작동한다
     #   (배당 없는 종목만 남은 run 을 '전량 실패' 로 오판해 exit 1).
     return {"todo": len(todo), "ok": ok, "no_dividend": nodiv,
-            "progressed": ok + nodiv, "quarantined": q}
+            "source_no_data": no_data, "failed": failed,
+            "progressed": len(definitive), "quarantined": q,
+            "scope_total": len(universe), "scope_checked": len(checked)}
 
 
 _NO_DIV = "no_dividend"
+_NO_DATA = "source_no_data"
 
 
-def _mark_no_dividend(tickers, year) -> int:
-    """DART 사업보고서에 배당 기재가 없는 종목에 '무배당 확정' 마커를 남긴다.
-
-    `_meta` 키를 쓰므로 기존 소비자(실배당 레코드만 읽는 쪽)는 영향이 없다.
-    """
-    if not tickers:
-        return 0
+def _now_iso() -> str:
     from datetime import datetime, timedelta, timezone
+    return datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds")
+
+
+def _ticker_hash(tickers) -> str:
+    return hashlib.sha256("\n".join(sorted(tickers)).encode()).hexdigest()
+
+
+def _last_source_check(rows) -> str:
+    clocks = [str(r.get("source_checked_at") or r.get("checked_at")
+                  or r.get("updated_at") or "") for r in rows if isinstance(r, dict)]
+    return max(clocks, default="")
+
+
+def _mark_dividend_source_results(results, year) -> Dict[str, int]:
+    """확정 DART 응답만 종목별 조회 흔적으로 남기고 실패에서는 원장을 보존한다."""
     db = _load(DIVIDENDS_PATH, {}) or {}
-    now = datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds")
-    n = 0
-    for tk in tickers:
-        arr = db.setdefault(tk, [])
-        if any(r.get("_meta") == _NO_DIV and str(r.get("bsns_year")) == str(year) for r in arr):
+    counts = {"no_dividend": 0, "no_data": 0}
+    changed = False
+    for tk, result in results.items():
+        outcome = result.get("outcome")
+        if outcome not in ("record", "no_cash_dividend", "no_data"):
             continue
-        arr.append({"_meta": _NO_DIV, "bsns_year": str(year), "checked_at": now,
-                    "note": "DART 사업보고서 배당 기재 없음 — 미조회가 아니라 '무배당 확정'"})
-        n += 1
-    if n:
+        arr = db.setdefault(tk, [])
+        kept = [r for r in arr if not (
+            r.get("_meta") in (_NO_DIV, _NO_DATA)
+            and str(r.get("bsns_year")) == str(year)
+        )]
+        if len(kept) != len(arr):
+            changed = True
+        db[tk] = kept
+        if outcome == "record":
+            continue
+        marker = _NO_DIV if outcome == "no_cash_dividend" else _NO_DATA
+        note = ("DART 사업보고서 응답은 성공했으나 보통주 현금배당 항목 없음"
+                if marker == _NO_DIV else "DART status 013 — 해당 사업연도 원천자료 없음")
+        kept.append({"_meta": marker, "bsns_year": str(year),
+                     "checked_at": result["source_checked_at"],
+                     "source_status": result.get("source_status"), "note": note})
+        counts["no_dividend" if marker == _NO_DIV else "no_data"] += 1
+        changed = True
+    if changed:
         tmp = DIVIDENDS_PATH + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(db, f, ensure_ascii=False)
+            json.dump(db, f, ensure_ascii=False, indent=2, allow_nan=False)
         os.replace(tmp, DIVIDENDS_PATH)
-    return n
+    return counts
+
+
+def _write_dividend_receipt(prior, rotation, universe, selected, details,
+                            started_at, finished_at) -> None:
+    """현재 bounded query와 원장을 해시로 묶는다. 전체 원장 재검증 주장은 하지 않는다."""
+    with open(DIVIDENDS_PATH, "rb") as f:
+        payload = f.read()
+    db = json.loads(payload)
+    successes = [r for r in details.values()
+                 if r.get("outcome") in ("record", "no_cash_dividend", "no_data")]
+    source_dates = sorted({r.get("source_as_of") for r in successes
+                           if r.get("source_as_of")})
+    complete = len(successes) == len(selected) and bool(selected)
+    previous_success = prior.get("successful_checked_at") if isinstance(prior, dict) else None
+    receipt = {
+        "schema_version": 1,
+        "producer": "kr_company_facts_backfill.dividends",
+        "clock_kind": "bounded_source_query_attempt",
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "outcome": "complete" if complete else "partial_failure",
+        "successful_checked_at": finished_at if complete else previous_success,
+        "all_records_revalidated": False,
+        "source": {
+            "provider": "OpenDART", "endpoint": "alotMatter.json",
+            "business_year": rotation["business_year"],
+            "report_date_min": source_dates[0] if source_dates else None,
+            "report_date_max": source_dates[-1] if source_dates else None,
+        },
+        "scope": {
+            "kind": "bounded_ticker_rotation",
+            "universe_count": len(universe),
+            "universe_sha256": rotation["universe_sha256"],
+            "selected_count": len(selected),
+            "selected_sha256": _ticker_hash(selected),
+            "definitive_count": len(successes),
+            "failure_count": len(selected) - len(successes),
+            "rotation_checked_count": len(rotation["checked_tickers"]),
+        },
+        "rotation": rotation,
+        "artifact": {
+            "path": "data/dividends_kr.json", "status": "bound",
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "tickers": sum(1 for v in db.values() if isinstance(v, list)),
+            "rows": sum(len(v) for v in db.values() if isinstance(v, list)),
+        },
+    }
+    os.makedirs(os.path.dirname(DIVIDENDS_RECEIPT_PATH), exist_ok=True)
+    tmp = DIVIDENDS_RECEIPT_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(receipt, f, ensure_ascii=False, indent=2, allow_nan=False)
+    os.replace(tmp, DIVIDENDS_RECEIPT_PATH)
 
 
 # 배당수익률 상한 — 이 위는 '주당 배당금' 이 아니라 총액/누적 행을 잘못 집은 것이다.
