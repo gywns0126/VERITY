@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
+const { execFileSync } = require('node:child_process');
 const { buildArtifacts, writeArtifacts, MAX_BYTES } = require('../scripts/member-map/build-live-company-structure.cjs');
 const { loadArtifacts, publish, main, sanitizeUsSources, BASE, INDEX } = require('../scripts/member-map/publish-company-structure.cjs');
 const at = '2026-10-21T10:00:00Z';
@@ -192,7 +193,7 @@ test('actual workflow cadence uses remote KST-day attempts across all events, in
     const outputs = {}, queries = [];
     const context = { runId: 100, eventName, repo: { owner: 'offline', repo: 'offline' }, payload: {
       repository: { default_branch: 'main' }, client_payload: { schedule_slot: slot } } };
-    const github = { rest: { actions: { getWorkflowRun: async () => ({ data: { created_at: createdAt } }), listWorkflowRuns: () => {} } },
+    const github = { rest: { actions: { getWorkflowRun: async () => ({ data: { created_at: createdAt, run_attempt: 1 } }), listWorkflowRuns: () => {} } },
       paginate: async (_, args) => {
         queries.push(args); assert.equal(args.workflow_id, 'ownership_backfill.yml'); assert.equal(args.branch, 'main');
         if (failQuery) throw Error('synthetic history lookup failure');
@@ -218,4 +219,110 @@ test('actual workflow cadence uses remote KST-day attempts across all events, in
   assert.match(source, /needs\.cadence\.result == 'success' && needs\.cadence\.outputs\.run == 'true'/u);
   assert.match(source, /repository_dispatch:\n\s+types: \[ownership_backfill\]/u);
   assert.match(source, /actions: read/u);
+});
+
+function cachedUsSource(review = false) {
+  const cik = '0000001234', accession = '0000001234-26-000001';
+  const exhibit = { schema: 'sec-company-subsidiaries-v1', cik, accession, filedDate: '2026-02-01', periodEnd: '2025-12-31',
+    url: 'https://www.sec.gov/Archives/edgar/data/1234/000000123426000001/ex21.htm', documentSha256: 'a'.repeat(64),
+    status: review ? 'needs-review' : 'parsed', rows: [], html: 'PRIVATE', sourceRow: { text: 'PRIVATE' } };
+  const source = { tickerAliases: ['ABC', 'ABC.A'], attemptStatus: review ? 'needs-review' : 'HTTP403', attemptedAt: at,
+    metadataCheckedAt: at, filingMetadata: { issuer_id: 'US:ABC', issuer_name: 'ABC Corp.', cik, accession, filed_date: '2026-02-01',
+      period_end: '2025-12-31', form: '10-K', primary_document: 'annual.htm',
+      url: 'https://www.sec.gov/Archives/edgar/data/1234/000000123426000001/annual.htm',
+      filings: { recent: ['PRIVATE'] }, rawResponse: 'PRIVATE', member: { name: 'PRIVATE' } } };
+  if (review) source.reviewExhibit = exhibit;
+  else Object.assign(source, { exhibit, lastSuccessAt: '2026-10-03T10:00:00Z', checkedAt: '2026-10-03T10:00:00Z' });
+  return { schema: 'alphanest-company-structure-us-sources-v1', generatedAt: at,
+    issuers: { [cik]: source }, submissions: { raw: 'PRIVATE' }, member: 'PRIVATE' };
+}
+
+function cachedRefreshOffline(document, directory) {
+  // Run the real tracked collector with every network/helper path forbidden.
+  // Synthetic fixtures live only in the test directory; no source store is saved.
+  const code = `
+import importlib.util, json, sys
+from datetime import datetime
+from types import SimpleNamespace
+spec = importlib.util.spec_from_file_location('offline_us_refresh', 'api/collectors/company_structure_us_refresh.py')
+core = importlib.util.module_from_spec(spec); spec.loader.exec_module(core)
+doc = json.load(sys.stdin)
+now = datetime.fromisoformat('2026-10-22T10:00:00+00:00')
+doc = core.build_document(sys.argv[1], doc, now)
+def forbidden(*args, **kwargs):
+    raise AssertionError('Unexpected source request/helper; saved metadata was not reused')
+helpers = SimpleNamespace(get_public=forbidden, latest_metadata=forbidden, find_exhibit=forbidden, parse_exhibit=forbidden)
+result, summary = core.refresh(doc, source_dir=sys.argv[1], limit=1, fetch_public=True, now=now,
+    checkpoint=lambda _: None, helpers=helpers, clock=lambda: 0, sleep=lambda _: None)
+print(json.dumps({'document': result, 'summary': summary}))
+`;
+  return JSON.parse(execFileSync('python3', ['-c', code, directory], { cwd: path.resolve(__dirname, '..'), input: JSON.stringify(document),
+    encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' }, maxBuffer: 1024 * 1024 }));
+}
+
+test('US filing metadata round-trips durably and the real collector reuses it with zero synthetic HTTP calls', t => {
+  const { dir } = fixture(t);
+  fs.writeFileSync(path.join(dir, 'universe_search.json'), JSON.stringify({ stocks: [{ ticker: 'ABC', name: 'ABC Corp.', market: 'US' }] }));
+  fs.writeFileSync(path.join(dir, 'sec_ticker_cik_map.json'), JSON.stringify({ ABC: '0000001234' }));
+  const doc = cachedUsSource(), before = JSON.stringify(doc), safe = sanitizeUsSources(doc), source = safe.issuers['0000001234'];
+  assert.equal(JSON.stringify(doc), before); assert.deepEqual(sanitizeUsSources(JSON.parse(JSON.stringify(safe))), safe);
+  assert.equal(source.metadataCheckedAt, at); assert.equal(source.lastSuccessAt, '2026-10-03T10:00:00Z'); assert.equal(source.checkedAt, source.lastSuccessAt);
+  assert.equal(source.filingMetadata.form, '10-K'); assert.equal(source.filingMetadata.primary_document, 'annual.htm');
+  assert.ok(Buffer.byteLength(JSON.stringify(source.filingMetadata)) <= 4096);
+  assert.equal(JSON.stringify(safe).includes('PRIVATE'), false);
+  for (const key of ['filings', 'rawResponse', 'member']) assert.equal(Object.hasOwn(source.filingMetadata, key), false);
+  const replay = cachedRefreshOffline(safe, dir), reused = replay.document.issuers['0000001234'];
+  assert.equal(replay.summary.cached, 1); assert.equal(replay.summary.dailyRequests, 0); assert.equal(replay.summary.error, 0);
+  assert.equal(reused.lastSuccessAt, source.lastSuccessAt); assert.equal(reused.metadataCheckedAt, at);
+  assert.deepEqual(sanitizeUsSources(replay.document).issuers['0000001234'].filingMetadata, source.filingMetadata);
+  const input = { universe: { stocks: [{ ticker: 'ABC', name: 'ABC Corp.', market: 'US' }] }, cikMap: { ABC: '1234' }, generatedAt: at };
+  const first = buildArtifacts({ ...input, usSources: safe }).manifest.issuers['US:ABC'].sha256;
+  const cacheOnlyUpdate = JSON.parse(JSON.stringify(safe)); cacheOnlyUpdate.issuers['0000001234'].metadataCheckedAt = '2026-10-22T10:00:00Z';
+  assert.equal(buildArtifacts({ ...input, usSources: cacheOnlyUpdate }).manifest.issuers['US:ABC'].sha256, first);
+  // A metadata check may find a newer filing without refreshing the old relationship snapshot.
+  const newer = cachedUsSource(); newer.issuers['0000001234'].filingMetadata.filed_date = '2026-10-15';
+  assert.equal(sanitizeUsSources(newer).issuers['0000001234'].lastSuccessAt, source.lastSuccessAt);
+});
+
+test('US cached filing metadata validates issuer identity, bounded fields, annual form, dates and exact SEC path', () => {
+  const mutations = [
+    (m, s) => m.cik = '0000009999', m => m.issuer_id = 'US:OTHER', m => m.issuer_id = 'KR:ABC',
+    m => m.accession = '0000001234-26-000002', m => m.primary_document = '../annual.htm',
+    m => m.url += '?token=PRIVATE', m => m.url = 'https://evil.example/annual.htm', m => m.form = '10-K/A',
+    m => m.form = '6-K', m => m.period_end = '2026-03-01', m => m.filed_date = '2026-02-30',
+    m => m.issuer_name = 'A'.repeat(181), m => m.issuer_name = '<html>PRIVATE</html>',
+    (m, s) => s.metadataCheckedAt = null, (m, s) => s.metadataCheckedAt = '2026-02-30T10:00:00Z',
+    (m, s) => s.metadataCheckedAt = '2026-01-31T10:00:00Z',
+    (m, s) => s.metadataCheckedAt = '2026-10-21T24:00:00Z',
+  ];
+  for (const mutate of mutations) {
+    const doc = cachedUsSource(), source = doc.issuers['0000001234']; mutate(source.filingMetadata, source);
+    assert.throws(() => sanitizeUsSources(doc));
+  }
+  const foreign = cachedUsSource(); foreign.schema = 'another-source-v1'; assert.throws(() => sanitizeUsSources(foreign));
+  foreign.schema = 'alphanest-company-structure-us-sources-v1'; foreign.issuers = true; assert.throws(() => sanitizeUsSources(foreign));
+  const doc = cachedUsSource(); doc.issuers['0000001234'].filingMetadata.form = '20-F';
+  assert.equal(sanitizeUsSources(doc).issuers['0000001234'].filingMetadata.form, '20-F');
+  delete doc.issuers['0000001234'].filingMetadata;
+  assert.equal(sanitizeUsSources(doc).issuers['0000001234'].metadataCheckedAt, undefined);
+});
+
+test('unresolved reviewExhibit retains only safe original identifiers for zero-HTTP reuse, never rows or source success', t => {
+  const { dir } = fixture(t);
+  fs.writeFileSync(path.join(dir, 'universe_search.json'), JSON.stringify({ stocks: [{ ticker: 'ABC', name: 'ABC Corp.', market: 'US' }] }));
+  fs.writeFileSync(path.join(dir, 'sec_ticker_cik_map.json'), JSON.stringify({ ABC: '0000001234' }));
+  const doc = cachedUsSource(true), safe = sanitizeUsSources(doc), source = safe.issuers['0000001234'];
+  assert.equal(source.reviewExhibit.status, 'needs-review'); assert.equal(source.reviewExhibit.rows, undefined);
+  assert.equal(source.lastSuccessAt, undefined); assert.equal(source.exhibit, undefined); assert.equal(JSON.stringify(safe).includes('PRIVATE'), false);
+  assert.deepEqual(sanitizeUsSources(JSON.parse(JSON.stringify(safe))), safe);
+  const replay = cachedRefreshOffline(safe, dir), reused = replay.document.issuers['0000001234'];
+  assert.equal(replay.summary.cached, 1); assert.equal(replay.summary.dailyRequests, 0); assert.equal(reused.attemptStatus, 'needs-review');
+  assert.equal(reused.lastSuccessAt, undefined); assert.equal(reused.exhibit, undefined);
+  for (const mutate of [e => e.cik = '0000009999', e => e.accession = '0000001234-26-000002',
+    e => e.url += '?member=PRIVATE', e => e.status = 'parsed', e => e.periodEnd = '2026-03-01', e => e.filedDate = '2026-02-30',
+    e => e.schema = 'raw-html-v1', e => e.documentSha256 = 'PRIVATE']) {
+    const invalid = cachedUsSource(true); mutate(invalid.issuers['0000001234'].reviewExhibit);
+    const result = sanitizeUsSources(invalid).issuers['0000001234'];
+    assert.equal(result.reviewExhibit, undefined); assert.equal(result.attemptStatus, 'needs-review'); assert.equal(result.lastSuccessAt, undefined);
+  }
 });

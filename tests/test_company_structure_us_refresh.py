@@ -290,3 +290,25 @@ def test_20f_form_forwarded_ex81_jurisdiction_and_budget(tmp_path):
         item = review["issuers"]["0000000001"]
         assert item["attemptStatus"] == "needs-review" and "lastSuccessAt" not in item and "exhibit" not in item
         assert summary["success"] == 0 and summary["sourceGap"] == 1 and len(calls) <= 3
+
+
+def test_fair_due_selection_100_errors_cannot_starve_stale_and_clocks_unchanged(tmp_path):
+    doc = catalog(tmp_path, 103)
+    for index in range(1, 101):
+        doc["issuers"][f"{index:010d}"].update(attemptStatus="source-gap", attemptedAt=NOW.isoformat())
+    for index, age in ((101, 20), (102, 10)):
+        stamp = (NOW - timedelta(days=age)).isoformat()
+        doc["issuers"][f"{index:010d}"].update(exhibit={"status": "parsed"},
+            attemptedAt=stamp, checkedAt=stamp, lastSuccessAt=stamp)
+    before = copy.deepcopy(doc)
+    assert core._selection(doc, NOW, 3) == ["0000000103", "0000000101", "0000000102"]
+    assert doc == before
+    # Remove the unvisited issuer: original 100 errors versus 2 healthy stale.
+    doc["currentCiks"].remove("0000000103")
+    assert core._selection(doc, NOW, 100)[:2] == ["0000000101", "0000000102"]
+    doc["issuers"]["0000000101"]["checkedAt"] = (NOW - timedelta(days=1)).isoformat()
+    doc["issuers"]["0000000102"]["checkedAt"] = (NOW + timedelta(days=1)).isoformat()
+    before = copy.deepcopy(doc)
+    selected = core._selection(doc, NOW, 100)
+    assert selected[0] == "0000000102" and "0000000101" not in selected
+    assert doc == before  # Fresh skipped; future check due; no source clock edits.

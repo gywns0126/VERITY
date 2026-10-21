@@ -354,7 +354,12 @@ def select_issuers(document, limit=300, now=None):
         if checked and now - checked < TTL and checked <= now:
             fresh.append(key)
         else:
-            candidates.append((checked is not None, checked or datetime.min.replace(tzinfo=timezone.utc), key))
+            # A partial/error attempt must rotate behind genuinely unvisited
+            # issuers, then compete with successful-stale issuers by last try.
+            attempts = [_time(b.get("attemptedAt")) or _time(b.get("lastSuccessAt"))
+                        for b in issuer.get("endpoints", {}).values()]
+            attempted = max((t for t in attempts if t is not None), default=None)
+            candidates.append((attempted is not None, attempted or datetime.min.replace(tzinfo=timezone.utc), key))
     candidates.sort()
     return [item[2] for item in candidates[:limit]], unmapped, fresh, [item[2] for item in candidates[limit:]]
 

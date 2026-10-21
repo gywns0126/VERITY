@@ -186,7 +186,10 @@ def _due_issuers(document, now):
         checked = _time(issuer.get("checkedAt"))
         if checked and timedelta(0) <= now - checked < TTL:
             continue
-        due.append(("exhibit" in issuer, _time(issuer.get("attemptedAt")) or datetime.min.replace(tzinfo=timezone.utc), cik))
+        # Missing exhibits/source gaps cannot permanently outrank healthy stale
+        # issuers. Historical success is an attempt fallback for legacy stores.
+        attempted = _time(issuer.get("attemptedAt")) or _time(issuer.get("lastSuccessAt"))
+        due.append((attempted is not None, attempted or datetime.min.replace(tzinfo=timezone.utc), cik))
     return [row[2] for row in sorted(due)]
 
 

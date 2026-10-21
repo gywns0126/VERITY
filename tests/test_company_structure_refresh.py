@@ -158,6 +158,42 @@ def test_hard_issuer_limit_and_validation(tmp_path):
         core.refresh(doc, source_dir=tmp_path, now=NOW)
 
 
+def test_fair_due_selection_rotates_300_errors_before_stale_and_preserves_clocks(tmp_path):
+    doc = document(tmp_path, 602)
+    for index in range(1, 301):
+        # One failed endpoint already makes the issuer attempted, not unvisited.
+        doc["issuers"][f"KR:{index:06d}"]["endpoints"]["hyslrSttus"].update(
+            attemptStatus="error", attemptedAt=NOW.isoformat())
+    later = NOW + timedelta(days=1)
+    before = copy.deepcopy(doc)
+    selected = core.select_issuers(doc, 300, later)[0]
+    assert selected == [f"KR:{index:06d}" for index in range(301, 601)]
+    assert doc == before  # Selection never rewrites source/check/attempt clocks.
+    for key in selected:
+        for block in doc["issuers"][key]["endpoints"].values():
+            block.update(attemptStatus="error", attemptedAt=later.isoformat())
+    next_batch = core.select_issuers(doc, 300, later + timedelta(days=1))[0]
+    assert next_batch[:2] == ["KR:000601", "KR:000602"]
+    assert next_batch[2:] == [f"KR:{index:06d}" for index in range(1, 299)]
+
+    mixed = document(tmp_path, 3)
+    for index, age, status in ((1, 1, "error"), (2, 20, "000"), (3, 10, "error")):
+        for block in mixed["issuers"][f"KR:{index:06d}"]["endpoints"].values():
+            stamp = (NOW - timedelta(days=age)).isoformat()
+            block.update(status=status, attemptedAt=stamp)
+            if status == "000":
+                block.update(lastSuccessAt=stamp, checkedAt=stamp)
+    assert core.select_issuers(mixed, 3, NOW)[0] == ["KR:000002", "KR:000003", "KR:000001"]
+    for block in mixed["issuers"]["KR:000002"]["endpoints"].values():
+        block["checkedAt"] = (NOW - timedelta(days=1)).isoformat()
+    for block in mixed["issuers"]["KR:000003"]["endpoints"].values():
+        block.update(status="000", checkedAt=(NOW + timedelta(days=1)).isoformat())
+    before = copy.deepcopy(mixed)
+    selected, _, fresh, _ = core.select_issuers(mixed, 3, NOW)
+    assert selected == ["KR:000003", "KR:000001"] and fresh == ["KR:000002"]
+    assert mixed == before  # Future checks remain due, never promoted as fresh.
+
+
 def test_same_response_rows_and_provenance(tmp_path, helpers):
     doc = document(tmp_path, 1)
     raw = {"nm": "Owner Inc", "corp_code": "00000001", "rcept_no": "20260301000001", "stlm_dt": "2025-12-31", "trmend_posesn_stock_qota_rt": "51.00"}

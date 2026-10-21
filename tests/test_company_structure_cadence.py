@@ -66,10 +66,11 @@ def test_actual_guard_reserves_failed_and_cancelled_attempts_for_the_kst_day(eve
     script = doc['jobs']['cadence']['steps'][0]['with']['script']
     context = {'repo': {'owner': 'test', 'repo': 'test'}, 'eventName': event, 'runId': 100,
                'payload': {'repository': {'default_branch': 'main'}, 'client_payload': {'schedule_slot': slot}}}
+    current_attempt = 1
     harness = f'''
     const context={json.dumps(context)};
     const core={{setOutput:(k,v)=>{{if(k==='run')process.stdout.write(v);}},info:()=>{{}}}};
-    const github={{rest:{{actions:{{getWorkflowRun:async()=>({{data:{{created_at:{json.dumps(created)}}}}}),listWorkflowRuns:{{}}}}}},
+    const github={{rest:{{actions:{{getWorkflowRun:async()=>({{data:{{created_at:{json.dumps(created)},run_attempt:{current_attempt}}}}}),listWorkflowRuns:{{}}}}}},
       paginate:async(_,args)=>{{
         if(args.workflow_id!=='ownership_backfill.yml'||args.branch!=='main'||args.created!=='>=2026-10-21T15:00:00.000Z')throw Error('Wrong day boundary');
         return {json.dumps(prior + [{'id': 100}])};
@@ -78,4 +79,27 @@ def test_actual_guard_reserves_failed_and_cancelled_attempts_for_the_kst_day(eve
     '''
     result = subprocess.run(['node', '-e', harness], capture_output=True, text=True, check=True)
     assert result.stdout == str(expected).lower()
+
+
+@pytest.mark.parametrize(('attempt', 'expected', 'fails'), [
+    (2, 'false', False),
+    (0, '', True),
+    (-1, '', True),
+    (1.5, '', True),
+])
+def test_same_run_rerun_consumes_daily_slot_and_invalid_attempt_fails_closed(attempt, expected, fails):
+    doc = yaml.safe_load((ROOT / '.github/workflows/ownership_backfill.yml').read_text())
+    script = doc['jobs']['cadence']['steps'][0]['with']['script']
+    context = {'repo': {'owner': 'test', 'repo': 'test'}, 'eventName': 'workflow_dispatch', 'runId': 100,
+               'payload': {'repository': {'default_branch': 'main'}, 'client_payload': {}}}
+    harness = f'''
+    const context={json.dumps(context)};
+    const core={{setOutput:(k,v)=>{{if(k==='run')process.stdout.write(v);}},info:()=>{{}}}};
+    const github={{rest:{{actions:{{getWorkflowRun:async()=>({{data:{{created_at:"2026-10-21T18:00:00Z",run_attempt:{attempt}}}}}),listWorkflowRuns:{{}}}}}},
+      paginate:async()=>[]}};
+    (async()=>{{{script}}})().catch(()=>process.exit(1));
+    '''
+    result = subprocess.run(['node', '-e', harness], capture_output=True, text=True, check=False)
+    assert (result.returncode != 0) is fails
+    assert result.stdout == expected
 

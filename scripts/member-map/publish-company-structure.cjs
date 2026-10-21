@@ -206,7 +206,7 @@ async function main(argv = process.argv.slice(2)) {
   return publish(dir, { put, head, fetch: globalThis.fetch, token: process.env.BLOB_READ_WRITE_TOKEN });
 }
 function sanitizeUsSources(doc) {
-  if (doc?.schema !== 'alphanest-company-structure-us-sources-v1' || !doc.issuers || Array.isArray(doc.issuers)) fail();
+  if (doc?.schema !== 'alphanest-company-structure-us-sources-v1' || !doc.issuers || typeof doc.issuers !== 'object' || Array.isArray(doc.issuers)) fail();
   const clean = { schema: doc.schema, generatedAt: doc.generatedAt, issuers: {} }; time(clean.generatedAt);
   // Only company labels and document provenance survive into PUBLIC Git. No HTML,
   // complete submissions cache, raw sourceRow text, server paths or request URLs.
@@ -216,6 +216,39 @@ function sanitizeUsSources(doc) {
     if (!Array.isArray(item.tickerAliases) || item.tickerAliases.some(t => !/^[A-Z][A-Z0-9.-]{0,11}$/u.test(t))) fail();
     text(item.attemptStatus, 60); time(item.attemptedAt, true);
     for (const k of ['lastSuccessAt', 'checkedAt']) if (k in source) { time(source[k], true); item[k] = source[k]; }
+    if (source.filingMetadata != null) {
+      const m = source.filingMetadata;
+      if (!m || typeof m !== 'object' || Array.isArray(m) || m.cik !== cik ||
+        !item.tickerAliases.includes(typeof m.issuer_id === 'string' && m.issuer_id.startsWith('US:') ? m.issuer_id.slice(3) : null) ||
+        !/^\d{10}-\d{2}-\d{6}$/u.test(m.accession || '') || !['10-K', '20-F'].includes(m.form) ||
+        typeof m.primary_document !== 'string' || !/^[A-Za-z0-9_.-]+\.(?:htm|html|txt)$/u.test(m.primary_document) ||
+        typeof m.filed_date !== 'string' || typeof m.period_end !== 'string') fail();
+      text(m.issuer_name, 180); text(m.primary_document, 180);
+      day(m.filed_date); day(m.period_end); time(source.metadataCheckedAt); day(source.metadataCheckedAt.slice(0, 10));
+      if (Number(source.metadataCheckedAt.slice(11, 13)) > 23) fail(); // Match Python datetime cache parsing.
+      const url = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${m.accession.replace(/-/gu, '')}/${m.primary_document}`;
+      if (m.url !== url || !secUrl(m.url, cik) || m.period_end > m.filed_date || m.filed_date > source.metadataCheckedAt.slice(0, 10)) fail();
+      item.filingMetadata = { issuer_id: m.issuer_id, issuer_name: m.issuer_name, cik, accession: m.accession,
+        filed_date: m.filed_date, period_end: m.period_end, form: m.form, primary_document: m.primary_document, url };
+      if (Buffer.byteLength(JSON.stringify(item.filingMetadata)) > 4096) fail();
+      // This timestamp validates metadata-cache reuse only. It never advances
+      // checkedAt/lastSuccessAt or the filing/relationship's original dates.
+      item.metadataCheckedAt = source.metadataCheckedAt;
+    }
+    if (source.reviewExhibit) {
+      const e = source.reviewExhibit;
+      try {
+        if (e.schema !== 'sec-company-subsidiaries-v1' || e.cik !== cik || e.status !== 'needs-review' ||
+          !/^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') || !SHA.test(e.documentSha256 || '') || !secUrl(e.url, cik) ||
+          !e.url.startsWith(`https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${e.accession.replace(/-/gu, '')}/`) ||
+          typeof e.filedDate !== 'string' || typeof e.periodEnd !== 'string' || !item.attemptedAt) fail();
+        day(e.filedDate); day(e.periodEnd); day(item.attemptedAt.slice(0, 10));
+        if (e.periodEnd > e.filedDate || e.filedDate > item.attemptedAt.slice(0, 10)) fail();
+        // Cache the unresolved original, not its rows, HTML or a success claim.
+        item.reviewExhibit = { schema: e.schema, cik, accession: e.accession, filedDate: e.filedDate,
+          periodEnd: e.periodEnd, url: e.url, documentSha256: e.documentSha256, status: 'needs-review' };
+      } catch { /* An unsafe review snapshot is omitted, never copied raw. */ }
+    }
     if ('sourceGap' in source) {
       if (source.sourceGap !== null && !/^[a-z0-9:-]{1,100}$/u.test(source.sourceGap)) fail();
       item.sourceGap = source.sourceGap;

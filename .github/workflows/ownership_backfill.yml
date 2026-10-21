@@ -45,6 +45,8 @@ jobs:
             // Use GitHub's current-run timestamp, not a new clock/cron service.
             // A delayed GH schedule still belongs to its original 19:40 UTC cycle.
             const current = await github.rest.actions.getWorkflowRun({ ...context.repo, run_id: context.runId });
+            const attempt = current.data.run_attempt;
+            if (!Number.isInteger(attempt) || attempt < 1) throw new Error('Invalid run attempt');
             const created = new Date(current.data.created_at);
             if (!Number.isFinite(created.getTime())) throw new Error('Invalid run timestamp');
             const due = new Date(created);
@@ -69,7 +71,7 @@ jobs:
             });
             // A failed/cancelled/queued prior attempt still consumes the daily
             // allowance, even if it predates 19:40. Query failure fails closed.
-            const duplicate = runs.some(run => run.id < context.runId);
+            const duplicate = attempt > 1 || runs.some(run => run.id < context.runId);
             core.setOutput('run', String(!duplicate));
             core.setOutput('status', duplicate ? 'idle-already-attempted' : 'first-daily-attempt');
             core.info(duplicate ? 'Idle: ownership already attempted this KST day (not a new collection success)' : 'First ownership attempt this KST day');
