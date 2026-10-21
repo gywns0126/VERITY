@@ -28,6 +28,13 @@ const cooperation = name => /\bTSMC\b|Taiwan Semiconductor Manufacturing/iu.test
 const jsonBytes = value => Buffer.from(JSON.stringify(value) + '\n', 'utf8');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
+// Explicit legal form seen in the SEC ACU list; US projection only, never a
+// broader KR shareholder/name heuristic. Keep existing personal/vehicle bans.
+function usCooperatieLabel(name) {
+  return typeof name === 'string' && !/\b(?:fund|trust|individual)\b|펀드|개인|투자조합/iu.test(name) &&
+    /^.+\sCooperatie\s+U\.A\.$/iu.test(name);
+}
+
 function exclusion(row) {
   const type = String(row?.type || row?.kind || row?.asset_type || '').toUpperCase();
   const market = String(row?.market || '').toUpperCase();
@@ -164,7 +171,7 @@ function usPayload(aliases, source, generatedAt) {
     const name = clean(row?.name);
     // SEC reported lists can include direct AND indirect entities, never a direct-control tree.
     if (!name || row.ownershipPct !== null || row.directOwnership !== 'unspecified' || aggregate(name) || /\b(?:fund|trust|individual)\b|펀드|개인|투자조합/iu.test(name) ||
-      !/(?:\b(?:inc|incorporated|corp|corporation|company|co|ltd|limited|llc|llp|plc|gmbh|sarl|pte|bv|sa)\b|주식회사|유한회사|有限公司)/iu.test(name) ||
+      !(/(?:\b(?:inc|incorporated|corp|corporation|company|co|ltd|limited|llc|llp|plc|gmbh|sarl|pte|bv|sa)\b|주식회사|유한회사|有限公司)/iu.test(name) || usCooperatieLabel(name)) ||
       aliases.some(a => norm(a.name).toLowerCase() === norm(name).toLowerCase())) { unsupported++; continue; }
     if (row.jurisdiction != null && (typeof row.jurisdiction !== 'string' || row.jurisdiction.length > 160)) { unsupported++; continue; }
     const peer = `FOREIGN:${hash(Buffer.from(`${cik}|${norm(row.name).toLowerCase()}|${norm(row.jurisdiction).toLowerCase()}`)).slice(0, 20)}`;
@@ -364,5 +371,5 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { buildArtifacts, writeArtifacts, main, verifiedRow, secUrl, MAX_BYTES, MAX_ISSUERS };
+module.exports = { buildArtifacts, writeArtifacts, main, verifiedRow, secUrl, usCooperatieLabel, MAX_BYTES, MAX_ISSUERS };
 if (require.main === module) { try { main(); } catch (e) { process.stderr.write(e.message + '\n'); process.exitCode = 1; } }

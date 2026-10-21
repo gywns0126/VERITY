@@ -173,3 +173,158 @@ def test_omits_non_entity_and_ambiguous_rows_and_enforces_row_cap():
 def test_exhibit_size_limit():
     with pytest.raises(ValueError, match="sec-exhibit-size"):
         parse_exhibit(b" " * (8 * 1024 * 1024 + 1), META)
+
+
+def test_acu_paragraph_pairs_in_one_physical_row_are_two_complete_entities():
+    # Synthetic DOM mirrors the original ACU table: a blank spacer column and
+    # two font-wrapped paragraphs in each cell of the last physical row.
+    # Original URL: /data/2098/000119312526102079/acu-ex21.htm
+    # Original SHA256: c729628bfab992a92e7123eb73c13baf61d5eaba7847940113cd4fa9e133294d
+    singles = [("Acme United Limited", "Canada"), ("Acme United Europe GmbH", "Germany"),
+               ("Acme United (Asia Pacific) Limited", "Hong Kong"), ("Acme United China Limited", "China")]
+    body = "".join(f"<tr><td><p><font>{name}</font></p></td><td>&nbsp;</td>"
+                   f"<td><p><font>{jurisdiction}</font></p></td></tr>" for name, jurisdiction in singles)
+    fixture = ("<table><tr style='visibility:collapse'><td></td><td></td><td></td></tr>"
+               "<tr><td><p><font>Name</font></p></td><td>&nbsp;</td>"
+               "<td><p>Country of Incorporation</p></td></tr>" + body +
+               "<tr><td><p><font>Acme United Netherlands Cooperatie U.A.</font></p>"
+               "<p><font>Acme United (APAC) Pte.Ltd.</font></p></td><td><p>&nbsp;</p></td>"
+               "<td><p><font>Netherlands</font></p><p><font>Singapore</font></p></td></tr></table>")
+    result = parse_exhibit(fixture, META)
+    assert result["status"] == "parsed"
+    assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == singles + [
+        ("Acme United Netherlands Cooperatie U.A.", "Netherlands"), ("Acme United (APAC) Pte.Ltd.", "Singapore")]
+    assert len(result["rows"]) == 6
+    assert [r["sourceRow"]["blockIndex"] for r in result["rows"][-2:]] == [0, 1]
+    assert result["rows"][-1]["sourceRow"]["index"] == result["rows"][-2]["sourceRow"]["index"]
+    assert all(r["ownershipPct"] is None and r["directOwnership"] == "unspecified" for r in result["rows"])
+
+
+@pytest.mark.parametrize("wrapper", ["p", "div", "br"])
+def test_explicit_matched_blocks_split_but_inline_spans_remain_whole(wrapper):
+    names = ["<span>Example </span><font>Holdings, </font><span>Inc.</span>", "<b>Other </b><span>Ltd.</span>"]
+    jurisdictions = ["<span>New </span><font>Zealand</font>", "Singapore"]
+    wrap = lambda values: "<br>".join(values) if wrapper == "br" else "".join(f"<{wrapper}>{v}</{wrapper}>" for v in values)
+    result = parse_exhibit(_exhibit([(wrap(names), wrap(jurisdictions))]), META)
+    assert result["status"] == "parsed"
+    assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == [
+        ("Example Holdings, Inc.", "New Zealand"), ("Other Ltd.", "Singapore")]
+    single = parse_exhibit(_exhibit([(names[0], jurisdictions[0])]), META)
+    assert single["status"] == "parsed"
+    assert single["rows"][0]["name"] == "Example Holdings, Inc."
+
+
+@pytest.mark.parametrize("name,jurisdiction", [
+    ("<p>First Inc.</p><p>Second Ltd.</p>", "<p>Netherlands</p>"),
+    ("<p>First Inc.</p>", "<p>Netherlands</p><p>Singapore</p>"),
+    ("<p>Example Holdings</p><p>Inc.</p>", "<p>New</p><p>Zealand</p>"),
+    ("<p>First Inc.</p><p>Second</p>", "<p>Netherlands</p><p>Singapore</p>"),
+    ("First Inc.; Second Ltd.", "Netherlands; Singapore"),
+    ("First Inc. Second Ltd.", "Netherlands Singapore"),
+    ("<span>First Inc.</span><span>Second Ltd.</span>", "Netherlands Singapore"),
+    ("<p>Inc.</p><p>Ltd.</p>", "<p>Netherlands</p><p>Singapore</p>"),
+    ("<p>First Inc. Second Ltd.</p><p>Third LLC</p>", "<p>Netherlands</p><p>Singapore</p>"),
+])
+def test_ambiguous_or_mismatched_multi_entry_cells_never_concatenate_fake_entities(name, jurisdiction):
+    result = parse_exhibit(_exhibit([("Safe Inc.", "Delaware"), (name, jurisdiction)]), META)
+    assert result["status"] == "needs-review"
+    assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == [("Safe Inc.", "Delaware")]
+
+
+def test_split_entities_still_obey_row_cap_and_vie_quarantine():
+    pairs = [("<p>First Inc.</p><p>Second Ltd.</p>", "<p>Delaware</p><p>Singapore</p>")]
+    capped = parse_exhibit(_exhibit(pairs * 501), META)
+    assert capped["status"] == "needs-review"
+    assert len(capped["rows"]) == 1000
+    assert parse_exhibit(_exhibit(pairs) + "<p>Variable Interest Entities</p>", META)["rows"] == []
+
+
+@pytest.mark.parametrize("issuer_name", ["AMREP CORP.", "Amrep Corporation", "AMREP, CORP."])
+def test_explicit_axr_registrant_is_excluded_only_after_official_root_name_match(issuer_name):
+    fixture = _exhibit([("AMREP Corporation (Registrant)", "Oklahoma"), ("Subsidiary Inc.", "Delaware")])
+    metadata = {**META, "issuerName": issuer_name}
+    before = metadata.copy()
+    result = parse_exhibit(fixture, metadata)
+    assert result["status"] == "parsed"
+    assert [r["name"] for r in result["rows"]] == ["Subsidiary Inc."]
+    assert metadata == before
+
+
+@pytest.mark.parametrize("issuer_name", [None, "", "Other Corporation", "AMREP Holdings Corp.", 42])
+def test_registrant_without_matching_root_is_quarantined_not_a_subsidiary(issuer_name):
+    result = parse_exhibit(_exhibit([("AMREP Corporation (Registrant)", "Oklahoma"),
+                                     ("Subsidiary Inc.", "Delaware")]), {**META, "issuerName": issuer_name})
+    assert result["status"] == "needs-review"
+    assert [r["name"] for r in result["rows"]] == ["Subsidiary Inc."]
+
+
+def test_registrant_guard_does_not_globally_strip_or_alias_other_company_names():
+    result = parse_exhibit(_exhibit([("AMREP Corporation", "Oklahoma"),
+                                     ("AMREP Holdings Corporation", "Delaware")]), {**META, "issuerName": "AMREP CORP."})
+    assert result["status"] == "parsed"
+    assert [r["name"] for r in result["rows"]] == ["AMREP Corporation", "AMREP Holdings Corporation"]
+    paired = _exhibit([("<p>AMREP Corporation (Registrant)</p><p>Subsidiary Inc.</p>",
+                        "<p>Oklahoma</p><p>Delaware</p>")])
+    result = parse_exhibit(paired, {**META, "issuerName": "AMREP CORP."})
+    assert result["status"] == "parsed"
+    assert [r["name"] for r in result["rows"]] == ["Subsidiary Inc."]
+    assert result["rows"][0]["sourceRow"]["blockIndex"] == 1
+
+
+@pytest.mark.parametrize("marker", ["1", "(2)", "*", "†", "‡", "¹"])
+def test_trailing_numeric_symbol_sup_footnotes_leave_complete_inline_names_intact(marker):
+    fixture = _exhibit([(f"<p><font>Example </font><span>Corp.</span><sup><a>{marker}</a></sup></p>",
+                         "<p>New <span>Zealand</span><sup>1</sup></p>")])
+    result = parse_exhibit(fixture, META)
+    assert result["status"] == "parsed"
+    assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == [("Example Corp.", "New Zealand")]
+    self_row = _exhibit([(f"AMREP Corporation (Registrant)<sup>{marker}</sup>", "Oklahoma"),
+                         ("Subsidiary Inc.", "Delaware")])
+    assert [r["name"] for r in parse_exhibit(self_row, {**META, "issuerName": "AMREP CORP."})["rows"]] == ["Subsidiary Inc."]
+
+
+@pytest.mark.parametrize("name", ["Example<sup>2</sup> Corp.", "Example Corp.<sup>Other Ltd.</sup>",
+                                  "Example Corp.<sup>a</sup>", "Example Corp.<sup>1</sup> Holdings",
+                                  "Example<sup>1</sup>"])
+def test_ambiguous_or_embedded_sup_content_requires_review_instead_of_deleting_legal_text(name):
+    result = parse_exhibit(_exhibit([(name, "Delaware")]), META)
+    assert result["status"] == "needs-review"
+    assert result["rows"] == []
+
+
+@pytest.mark.parametrize("annotation", [
+    "f/k/a Neuman USA Ltd.", "FKA Neuman USA Ltd.", "formerly known as Neuman USA Ltd.",
+    "f/k/a Neuman USA Ltd.; Name Change on 09/06/13", "f/k/a Neuman (USA) Ltd.",
+])
+def test_explicit_balanced_ball_historical_alias_keeps_current_name_and_original_source_text(annotation):
+    current = "Ball Advanced Aluminum Technologies Corp."
+    original = f"{current} ({annotation})"
+    result = parse_exhibit(_exhibit([(original, "Delaware")]), META)
+    assert result["status"] == "parsed"
+    assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == [(current, "Delaware")]
+    assert result["rows"][0]["sourceRow"]["text"] == original + " Delaware"
+    assert result["rows"][0]["ownershipPct"] is None
+    assert result["rows"][0]["directOwnership"] == "unspecified"
+
+
+@pytest.mark.parametrize("name", [
+    "Ball Corp. (f/k/a Old Ltd.", "Ball Corp. (FKA )", "(f/k/a Old Ltd.)", "Ball (f/k/a Old Ltd.)",
+    "Ball Corp. (f/k/a Old Ltd.))", "Ball Corp. (f/k/a Old Ltd.) and Other Inc.",
+    "Ball Corp. Old Ltd.", "Ball Corp.; Old Ltd.", "First Inc. Second Ltd. (f/k/a Old Corp.)",
+])
+def test_alias_guard_does_not_rescue_incomplete_annotations_or_unmarked_multiple_companies(name):
+    result = parse_exhibit(_exhibit([(name, "Delaware")]), META)
+    assert result["status"] == "needs-review"
+    assert result["rows"] == []
+
+
+def test_alias_guard_preserves_general_parentheses_and_wrapped_inline_text():
+    for name in ["Ball (Asia Pacific) Corp.", "Ball Corp. (100% owned)"]:
+        result = parse_exhibit(_exhibit([(name, "Delaware")]), META)
+        assert result["status"] == "parsed"
+        assert result["rows"][0]["name"] == name
+    name = "<span>Ball Advanced Aluminum </span><font>Technologies Corp.</font> (f/k/a <span>Neuman USA Ltd.</span>)<sup>1</sup>"
+    result = parse_exhibit(_exhibit([(name, "Delaware")]), META)
+    assert result["status"] == "parsed"
+    assert result["rows"][0]["name"] == "Ball Advanced Aluminum Technologies Corp."
+    assert "f/k/a Neuman USA Ltd." in result["rows"][0]["sourceRow"]["text"]

@@ -59,8 +59,8 @@ def catalog(tmp_path, count=1, cached=False):
     return core.build_document(tmp_path, now=NOW)
 
 
-def run(doc, tmp_path, replies=None, now=NOW, limit=100):
-    helpers = core.load_helpers()
+def run(doc, tmp_path, replies=None, now=NOW, limit=100, helpers=None):
+    helpers = helpers or core.load_helpers()
     pending, calls, saves, clock = iter(replies or []), [], [], [0.0]
 
     def transport(url, maximum):
@@ -130,6 +130,51 @@ def test_missing_submissions_online_bootstrap_and_minimal_metadata(tmp_path):
     assert "tickers" not in json.dumps(issuer)
     core.atomic_json(tmp_path / "store.json", result)
     assert core.read_json(tmp_path / "store.json", maximum=None) == result
+
+
+def test_full_refresh_accepts_accession_bound_cofiler_exhibit_and_passes_issuer_name(tmp_path):
+    data = tmp_path / "data"
+    data.mkdir()
+    cik, accession = "0000006201", "0000006201-26-000014"
+    core.atomic_json(data / "universe_search.json", {"stocks": [
+        {"ticker": "AAL", "market": "US", "name": "American Airlines Group Inc."}]})
+    core.atomic_json(data / "sec_ticker_cik_map.json", {"AAL": cik})
+    doc = core.build_document(tmp_path, now=NOW)
+    annual = submission(cik, "AAL", accession)
+    annual["name"] = "American Airlines Group Inc."
+    cofile_url = "https://www.sec.gov/Archives/edgar/data/4515/000000620126000014/ex211q42510k.htm"
+    index = INDEX.replace(b'href="ex21.htm"', f'href="{cofile_url}"'.encode())
+    helpers = core.load_helpers()
+    parsed_metadata = []
+    parse_exhibit = helpers.parse_exhibit
+
+    def capture_issuer_name(raw, metadata):
+        parsed_metadata.append(copy.deepcopy(metadata))
+        return parse_exhibit(raw, metadata)
+
+    helpers.parse_exhibit = capture_issuer_name
+    result, summary, calls, _ = run(doc, tmp_path,
+        [json.dumps(annual).encode(), index, TABLE], helpers=helpers)
+    issuer = result["issuers"][cik]
+    assert summary["success"] == 1 and summary["requests"] == len(calls) == 3
+    assert calls[1][0] == f"https://www.sec.gov/Archives/edgar/data/6201/000000620126000014/{accession}-index.html"
+    assert calls[2][0] == cofile_url
+    assert parsed_metadata[0]["issuerName"] == "American Airlines Group Inc."
+    assert issuer["exhibit"]["url"] == cofile_url
+    assert issuer["exhibit"]["filedDate"] == "2026-03-01"
+    assert issuer["exhibit"]["rows"][0]["directOwnership"] == "unspecified"
+
+
+def test_exhibit_url_binding_allows_own_agent_filed_accession_but_not_unbound_cofiler():
+    cik, accession = "0000001750", "0001047469-26-000123"
+    own = "https://www.sec.gov/Archives/edgar/data/1750/000104746926000123/ex21.htm"
+    cofile = "https://www.sec.gov/Archives/edgar/data/4515/000104746926000123/ex21.htm"
+    assert core._valid_exhibit_url(own, cik, accession)
+    assert not core._valid_exhibit_url(cofile, cik, accession)
+    assert not core._valid_exhibit_url(cofile.replace("000104746926000123", "000104746926000124"), cik, accession)
+    for unsafe in (cofile + "?q=1", cofile + "#fragment", cofile.replace("www.sec.gov", "user@www.sec.gov"),
+                   cofile.replace("ex21.htm", "nested/../ex21.htm"), cofile.replace("4515", "9999")):
+        assert not core._valid_exhibit_url(unsafe, cik, accession)
 
 
 def test_same_accession_reuses_exhibit_and_stale_metadata_only_get(tmp_path):
