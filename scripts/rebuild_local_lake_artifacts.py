@@ -11,7 +11,7 @@ import time
 
 REMOTE = "https://github.com/gywns0126/VERITY.git"
 LAKE = Path.home() / "VERITY_data_lake"
-JOB = LAKE / "event_study_job"
+JOB = Path(os.environ.get("VERITY_EVENT_STUDY_JOB", str(LAKE / "event_study_job"))).expanduser()
 REPO = JOB / "repo"
 OUTPUT = "data/event_study.json"
 SPARSE = ["/api/", "/data/dart_catalyst_backfill.jsonl",
@@ -66,7 +66,7 @@ def rebuild():
             return 0
         if not REPO.exists():
             # Independent .git (not a worktree of the interactive repo).
-            network("git", "clone", "--depth", "1", "--filter=blob:none",
+            network("git", "clone", "--filter=blob:none",
                     "--sparse", REMOTE, str(REPO), cwd=JOB)
         if not (REPO / ".git").is_dir():
             raise RuntimeError("Expected independent clone, not a shared worktree")
@@ -74,7 +74,7 @@ def rebuild():
             raise RuntimeError("Unexpected remote")
         if command("git", "status", "--porcelain").strip():
             raise RuntimeError("Pending local changes preserved; review before retry")
-        network("git", "fetch", "origin", "main", "--depth=10")
+        network("git", "fetch", "origin", "main")
         # A prior failed push must not be discarded by moving HEAD.
         ahead = command("git", "rev-list", "--count", "origin/main..HEAD").strip()
         if ahead != "0":
@@ -112,7 +112,7 @@ def rebuild():
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
                 if attempt == 2:
                     raise
-                network("git", "fetch", "origin", "main", "--depth=10")
+                network("git", "fetch", "origin", "main")
                 # Rebase refuses overlapping remote artifact edits; no force push.
                 command("git", "rebase", "origin/main")
         return 1
