@@ -2,6 +2,21 @@
 const fs = require('node:fs'), path = require('node:path'), util = require('node:util'), crypto = require('node:crypto');
 const sourceRoot = path.resolve(process.argv[2] || '.');
 const repo = path.resolve(__dirname, '../..');
+// Regenerate only the reviewed runtime addition inside the accepted canvas.
+// Vendor code, styles, private-draft protocol and the remaining artifact stay exact.
+const runtime = fs.readFileSync(path.join(__dirname, 'prototype-network-runtime.js'), 'utf8');
+const bridgeMarker = '// Share only public company identities with the separate parent view.';
+const bridgeStart = runtime.indexOf(bridgeMarker);
+if (bridgeStart < 0) throw Error('Company structure runtime boundary missing');
+const canvasPath = path.join(repo, 'vercel-api/public/member-map-canvas.html');
+const canvas = fs.readFileSync(canvasPath, 'utf8');
+if (!canvas.includes(runtime.trimEnd())) {
+    const baseRuntime = runtime.slice(0, bridgeStart).trimEnd();
+    if (canvas.split(baseRuntime).length !== 2 || canvas.includes(bridgeMarker)) throw Error('Accepted canvas runtime changed; reconcile before building');
+    const next = canvas.replace(baseRuntime, runtime.trimEnd());
+    if (next.replace(runtime.trimEnd(), baseRuntime) !== canvas) throw Error('Canvas boundary mismatch');
+    fs.writeFileSync(canvasPath, next);
+}
 const env = util.parseEnv(fs.readFileSync(path.join(sourceRoot, '.env'), 'utf8'));
 const url = env.SUPABASE_URL?.replace(/\/+$/, ''), anon = env.SUPABASE_ANON_KEY;
 if (url !== 'https://lykqebdcurreppowulsl.supabase.co' || !anon) throw Error('Expected AlphaNest public auth config');

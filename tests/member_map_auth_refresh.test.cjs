@@ -65,7 +65,7 @@ function harness(options = {}) {
     const requests = [], writes = [], events = [], timers = new Map(), intervals = new Map(), listeners = new Map();
     const env = {
         onCanvas: false, url: 'https://auth.invalid', anonKey: 'fixture-anon', loginReturnRef: { current: false },
-        navigateAfterLogin() {}, setErr() {}, setSession(s) { env.session = s; }, setSignedIn(s) { env.signedIn = s; },
+        navigateAfterLogin() {}, setErr() {}, setSession(s) { env.session = s; }, setMemberId(id) { env.memberId = id; env.signedIn = !!id; },
         Date: { now: () => now }, AbortController: options.noAbort ? undefined : AbortController,
         CustomEvent: class { constructor(type) { this.type = type; } },
         localStorage: {

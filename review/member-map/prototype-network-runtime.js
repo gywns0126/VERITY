@@ -184,3 +184,12 @@ memberNetworkHost.addEventListener('keydown',e=>{
 const memberNetworkResize=new ResizeObserver(()=>{if(memberNetworkSession){memberNetworkSession.engine?.resize();drawMemberNetwork();}});
 const memberNetworkRemoval=new MutationObserver(()=>{if(!memberNetworkHost.isConnected){closeMemberNetwork();memberNetworkResize.disconnect();memberNetworkRemoval.disconnect();}});memberNetworkRemoval.observe(root,{childList:true});
 window.addEventListener('pagehide',()=>{closeMemberNetwork();memberNetworkRemoval.disconnect();});
+// Share only public company identities with the separate parent view. No draft,
+// notes, positions, quantities, member records or authentication enter this bridge.
+const memberStructureRequest=event=>{
+  if(memberReset||event.source!==window.parent||!event.data||event.data.type!=='an-company-structure-request'||typeof event.data.request!=='string'||!/^[a-f0-9-]{36}$/.test(event.data.request))return;
+  const stocks=memberScope().stocks.slice(0,30).map(n=>({id:n.id,name:n.name,ticker:n.ticker,market:n.market,logo:memberLogos.get(n.market+':'+n.ticker)||null}));
+  window.parent.postMessage({type:'an-company-structure-snapshot',request:event.data.request,stocks,flags:memberFlags},'*');
+};
+window.addEventListener('message',memberStructureRequest);
+window.addEventListener('pagehide',()=>window.removeEventListener('message',memberStructureRequest));
