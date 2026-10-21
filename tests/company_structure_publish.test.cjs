@@ -18,9 +18,9 @@ function fixture(t) {
   writeArtifacts(result, dir); return { dir, result };
 }
 function mock() {
-  const store = new Map(), writes = [], reads = [], diagnostics = []; let now = 0;
+  const store = new Map(), writes = [], reads = [], diagnostics = [], readWarnings = []; let now = 0;
   const options = { token: 'vercel_blob_rw_rte5guenhonw9fzn_OFFLINE_TEST_ONLY', pause: async ms => { now += ms; }, clock: () => now,
-    diagnostic: value => diagnostics.push(value),
+    diagnostic: value => diagnostics.push(value), readWarning: value => readWarnings.push(value),
     fetch: async (url, opts) => {
       assert.ok(url.startsWith(BASE)); assert.equal(opts.redirect, 'error');
       const name = new URL(url).pathname.slice(1); reads.push(name);
@@ -33,7 +33,7 @@ function mock() {
       else assert.equal(opts.allowOverwrite, false);
       writes.push(name); store.set(name, Buffer.from(bytes)); return { url: BASE + name };
     } };
-  return { store, writes, reads, diagnostics, options };
+  return { store, writes, reads, diagnostics, readWarnings, options };
 }
 function editPayload(dir, fn) {
   const m = JSON.parse(fs.readFileSync(path.join(dir, INDEX))), meta = m.issuers['KR:111111'];
@@ -315,7 +315,7 @@ test('fixed diagnostics identify every remote stage, redact HTTP bodies/SDK mess
       if (method === 'fetch' && isIndex) indexReads++;
       const actualStage = method === 'head' ? (isIndex ? 'manifest-metadata' : 'payload-metadata') :
         method === 'put' ? (isIndex ? 'manifest-write' : 'payload-write') :
-        isIndex ? (r.writes.includes(INDEX) ? 'manifest-readback' : indexReads === 1 ? 'initial-manifest-read' : 'manifest-cas') :
+        isIndex ? (r.writes.includes(INDEX) ? 'manifest-readback' : indexReads === 1 || stage === 'initial-manifest-read' && indexReads <= 3 ? 'initial-manifest-read' : 'manifest-cas') :
         r.writes.includes(name) ? 'payload-readback' : 'payload-read';
       if (actualStage === stage) {
         failures++;
@@ -328,12 +328,35 @@ test('fixed diagnostics identify every remote stage, redact HTTP bodies/SDK mess
     await assert.rejects(publish(dir, r.options), error => {
       assert.equal(error.message, 'Company structure publication failed'); assert.equal(error.cause, undefined); return true;
     });
-    assert.equal(failures, 1); assert.equal(r.diagnostics.length, 1);
+    const attempts = category === 'http' && [429, 500, 502, 503, 504].includes(detail) ? 3 : 1;
+    assert.equal(failures, attempts); assert.equal(r.diagnostics.length, 1);
+    assert.equal(r.readWarnings.length, attempts - 1);
+    assert.equal(JSON.stringify(r.readWarnings).includes('PRIVATE'), false);
     assert.deepEqual(r.diagnostics[0], { stage, category, ...(category === 'http' ? { httpStatus: detail } : { errorClass: detail }) });
     assert.equal(JSON.stringify(r.diagnostics).includes('PRIVATE'), false);
     assert.equal(new Set(r.writes).size, r.writes.length);
     if (stage !== 'manifest-readback') assert.equal(r.writes.includes(INDEX), false);
     else assert.equal(r.writes.at(-1), INDEX); // Already-written bytes are never reported as confirmed.
+  }
+});
+
+test('transient GET readback recovery is bounded, paced and never rewrites an already uploaded payload', async t => {
+  for (const status of [429, 500, 502, 503, 504]) {
+    const { dir } = fixture(t), r = mock(); const fetch = r.options.fetch; let failures = 0;
+    r.options.fetch = async (...args) => {
+      const name = new URL(args[0]).pathname.slice(1);
+      if (name !== INDEX && r.writes.includes(name) && failures < 2) {
+        failures++; return new Response('PRIVATE_TOKEN https://secret.example', { status });
+      }
+      return fetch(...args);
+    };
+    const result = await publish(dir, r.options);
+    assert.equal(failures, 2); assert.equal(result.uploaded, 2);
+    assert.equal(r.writes.length, 2); assert.equal(new Set(r.writes).size, 2);
+    assert.equal(r.writes.at(-1), INDEX); assert.deepEqual(r.diagnostics, []);
+    assert.deepEqual(r.readWarnings, [1, 2].map(attempt => ({ stage: 'payload-readback', category: 'transient-http-read', httpStatus: status, attempt, maxAttempts: 3 })));
+    assert.equal(JSON.stringify(r.readWarnings).includes('PRIVATE'), false);
+    assert.ok(r.options.clock() >= 3000);
   }
 });
 

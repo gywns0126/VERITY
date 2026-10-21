@@ -139,7 +139,8 @@ const TRANSPORT_ERRORS = new Set(['AbortError', 'TimeoutError', 'TypeError']);
 const TRANSPORT_CODES = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'ABORT_ERR',
   'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'UND_ERR_SOCKET', 'CERT_HAS_EXPIRED', 'ERR_TLS_CERT_ALTNAME_INVALID']);
 async function publish(dir, { put, head, fetch, token, pause = ms => new Promise(resolve => setTimeout(resolve, ms)),
-  clock = () => performance.now(), diagnostic = value => process.stderr.write('Company structure operation failed: ' + JSON.stringify(value) + '\n') } = {}) {
+  clock = () => performance.now(), diagnostic = value => process.stderr.write('Company structure operation failed: ' + JSON.stringify(value) + '\n'),
+  readWarning = value => process.stderr.write('Company structure read retry: ' + JSON.stringify(value) + '\n') } = {}) {
   const data = loadArtifacts(dir); // Validate EVERY local file before any remote mutation.
   if (!/^vercel_blob_rw_rte5guenhonw9fzn_/iu.test(token || '')) throw Error('Expected Blob store credential missing');
   const diagnosed = new WeakSet();
@@ -173,15 +174,26 @@ async function publish(dir, { put, head, fetch, token, pause = ms => new Promise
     } finally { release(); }
   }
   async function readRemote(name, stage) {
-    return remote(stage, async () => {
-      const response = await fetch(BASE + name + '?verify=' + Date.now(), { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000) });
-      if (response.status === 404) return null;
-      if (!response.ok) stop(stage, 'http', Number.isInteger(response.status) && response.status >= 100 && response.status <= 599 ? { httpStatus: response.status } : {});
-      if (Number(response.headers.get('content-length') || 0) > MAX_BYTES) stop(stage, 'read-limit');
-      const chunks = []; let size = 0;
-      for await (const chunk of response.body) { size += chunk.length; if (size > MAX_BYTES) stop(stage, 'read-limit'); chunks.push(chunk); }
-      return Buffer.concat(chunks);
-    });
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const result = await remote(stage, async () => {
+        const response = await fetch(BASE + name + '?verify=' + Date.now(), { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000) });
+        if (response.status === 404) return null;
+        // Only a known transient HTTP response to an idempotent GET is replayed.
+        // PUT/HEAD, credentials, redirects, transport and byte/schema failures are not retried.
+        if ([429, 500, 502, 503, 504].includes(response.status) && attempt < 3) {
+          try { await response.body?.cancel(); } catch { /* No response body enters diagnostics. */ }
+          return { retryStatus: response.status };
+        }
+        if (!response.ok) stop(stage, 'http', Number.isInteger(response.status) && response.status >= 100 && response.status <= 599 ? { httpStatus: response.status } : {});
+        if (Number(response.headers.get('content-length') || 0) > MAX_BYTES) stop(stage, 'read-limit');
+        const chunks = []; let size = 0;
+        for await (const chunk of response.body) { size += chunk.length; if (size > MAX_BYTES) stop(stage, 'read-limit'); chunks.push(chunk); }
+        return Buffer.concat(chunks);
+      });
+      if (!result?.retryStatus) return result;
+      try { readWarning({ stage, category: 'transient-http-read', httpStatus: result.retryStatus, attempt, maxAttempts: 3 }); } catch { /* Logs do not control acceptance. */ }
+      await pause(attempt * 1000);
+    }
   }
   let uploaded = 0, unchanged = 0;
   async function sync(name, bytes, expected) {
