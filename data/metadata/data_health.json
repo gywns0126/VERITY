@@ -1,20 +1,19 @@
 {
  "_meta": {
-  "generated_at": "2026-10-22T01:12:57.632826+09:00",
+  "generated_at": "2026-10-22T02:14:35.100530+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "red",
  "reasons": [
-  "P0 stale 1건",
+  "P0 stale 2건",
   "연간 재무 수집 실패 5/55칸",
   "연간 재무 미해결 수집 오류 5칸",
   "연간 재무 원천 기간 공란 1칸",
-  "신선도 감시 대상 누락·미측정",
-  "비P0 stale 1건"
+  "신선도 감시 대상 누락·미측정"
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-10-22T01:12:57.544645+09:00",
+   "generated_at": "2026-10-22T02:14:35.020541+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -22,11 +21,11 @@
   "coverage": {
    "generated_at": "2026-10-21T19:49:48.425082+09:00",
    "max_age_h": 96,
-   "age_h": 5.386,
+   "age_h": 6.413,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-10-22T01:12:50.802556+09:00",
+   "generated_at": "2026-10-22T02:14:27.103001+09:00",
    "max_age_h": 3,
    "age_h": 0.002,
    "status": "fresh"
@@ -34,7 +33,7 @@
   "annual_backfill": {
    "generated_at": "2026-10-20T20:32:40.127080+00:00",
    "max_age_h": 48,
-   "age_h": 19.672,
+   "age_h": 20.699,
    "status": "fresh"
   }
  },
@@ -43,11 +42,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-10-22T01:12:57.544645+09:00",
+  "generated_at": "2026-10-22T02:14:35.020541+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 25639,
+  "max_cdn_age_s": 68503,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -57,7 +56,7 @@
      "PBR": 95.9
     },
     "total": 2550,
-    "cdn_age_s": 25639,
+    "cdn_age_s": 28894,
     "error": null
    },
    {
@@ -68,7 +67,7 @@
      "PBR": 73.6
     },
     "total": 5272,
-    "cdn_age_s": 17303,
+    "cdn_age_s": 21696,
     "error": null
    },
    {
@@ -79,7 +78,7 @@
      "PBR": 75.2
     },
     "total": 3972,
-    "cdn_age_s": 6251,
+    "cdn_age_s": 68503,
     "error": null
    },
    {
@@ -108,7 +107,7 @@
   "last_run_at": "2026-10-21T19:49:48.554703+09:00"
  },
  "freshness": {
-  "generated_at": "2026-10-22T01:12:50.802556+09:00",
+  "generated_at": "2026-10-22T02:14:27.103001+09:00",
   "summary": {
    "fresh": 58,
    "stale": 2,
@@ -117,7 +116,7 @@
    "unmeasured": 1,
    "p0": {
     "total": 8,
-    "fresh": 4,
+    "fresh": 3,
     "closed": 3,
     "active": 5,
     "unmeasured": 0
@@ -131,7 +130,7 @@
    },
    "p2": {
     "total": 37,
-    "fresh": 34,
+    "fresh": 35,
     "closed": 0,
     "active": 36,
     "unmeasured": 1
@@ -141,15 +140,15 @@
   "skipped_count": 1,
   "unmeasured_streams": [
    {
-    "id": "dividends_kr",
+    "id": "logo_map",
     "reason": "no_ts",
-    "measurement_reason": "source_as_of_missing"
+    "measurement_reason": "source_access_stop"
    }
   ],
   "producer_evidence": {
    "news_flash": {
     "status": "bound_query_complete",
-    "completed_at": "2026-10-22T01:02:32.130453+09:00",
+    "completed_at": "2026-10-22T02:02:26.605356+09:00",
     "clock_kind": "source_query_attempt",
     "asset_binding": "verified_sha256",
     "source_freshness_verified": false,
@@ -158,26 +157,58 @@
     "expected_feeds": 3,
     "successful_feeds": 3,
     "new_rows": 0
+   },
+   "dividends_kr": {
+    "status": "bound_query_complete",
+    "completed_at": "2026-10-22T01:14:56+09:00",
+    "clock_kind": "bounded_source_query_attempt",
+    "asset_binding": "verified_sha256",
+    "source_freshness_verified": false,
+    "all_records_revalidated": false,
+    "outcome": "complete",
+    "scope_counts": {
+     "selected": 20,
+     "attempted": 20,
+     "successful": 20,
+     "total": 1501,
+     "rotation_checked": 20
+    },
+    "source_report_date_min": "2026-03-12",
+    "source_report_date_max": "2026-06-02",
+    "bounded_scope_completed": false
+   },
+   "logo_map": {
+    "status": "bound_query_incomplete",
+    "clock_kind": "bounded_logo_url_query",
+    "asset_binding": "verified_sha256",
+    "source_freshness_verified": false,
+    "all_records_revalidated": false,
+    "outcome": "source_blocked",
+    "scope_counts": {
+     "selected": 16,
+     "attempted": 12,
+     "passed": 10,
+     "failed": 2,
+     "unattempted": 4,
+     "total": 9361
+    },
+    "quality_reason": "source_access_stop"
    }
   },
   "stale_p0": [
    {
+    "id": "crypto",
+    "label": "크립토 시세·파생",
+    "age_min": 131.9
+   },
+   {
     "id": "macro_snapshot",
     "label": "매크로 스냅샷",
-    "age_min": 10.2
+    "age_min": 12.0
    }
   ],
-  "stale_other": [
-   "logo_map"
-  ],
-  "stale_other_details": [
-   {
-    "id": "logo_map",
-    "last_ts": "2026-07-10T21:28:23.192812+09:00",
-    "age_eff_min": 148544.5,
-    "max_age_min": 129600
-   }
-  ]
+  "stale_other": [],
+  "stale_other_details": []
  },
  "annual_backfill": {
   "generated_at": "2026-10-20T20:32:40.127080+00:00",
