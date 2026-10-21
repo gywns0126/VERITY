@@ -28,13 +28,13 @@
           "reason": "missing_entry_price"
         }
       ],
-      "price_gap_count": 5,
+      "price_gap_count": 6,
       "price_gaps": [
         {
           "ticker": "000270",
           "role": "evaluation",
           "snapshot_date": "2026-10-21",
-          "snapshot_updated_at": "2026-10-21T06:09:47+09:00",
+          "snapshot_updated_at": "2026-10-21T16:05:41+09:00",
           "market": "KOSPI",
           "currency": "KRW",
           "price_basis": null,
@@ -51,6 +51,22 @@
           "role": "entry",
           "snapshot_date": "2026-10-15",
           "snapshot_updated_at": "2026-10-15T23:09:47+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "XOM",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-21",
+          "snapshot_updated_at": "2026-10-21T16:05:41+09:00",
           "market": "NYSE",
           "currency": "USD",
           "price_basis": null,
@@ -98,7 +114,7 @@
           "ticker": "012330",
           "role": "evaluation",
           "snapshot_date": "2026-10-21",
-          "snapshot_updated_at": "2026-10-21T06:09:47+09:00",
+          "snapshot_updated_at": "2026-10-21T16:05:41+09:00",
           "market": "KOSPI",
           "currency": "KRW",
           "price_basis": null,
@@ -115,11 +131,11 @@
       "observed": {
         "hit_rate_gross": 20.0,
         "hit_rate_net": 20.0,
-        "avg_return_gross": -4.1,
-        "avg_return_net": -4.55,
+        "avg_return_gross": -3.12,
+        "avg_return_net": -3.57,
         "max_return": 1.17,
-        "min_return": -15.38,
-        "sharpe": -0.63,
+        "min_return": -10.46,
+        "sharpe": -0.7,
         "sample": 5,
         "hits_gross": 1,
         "hits_net": 1
@@ -289,7 +305,7 @@
       "name": "Alphabet",
       "rec_date": "2026-10-14",
       "rec_price": 354.3399963378906,
-      "current_price": 340.2749938964844,
+      "current_price": 340.2799987792969,
       "return_pct_gross": -3.97,
       "return_pct_net": -4.3,
       "slippage_pct": 0.3,
@@ -307,9 +323,9 @@
       "name": "SK하이닉스",
       "rec_date": "2026-10-14",
       "rec_price": 1443000.0,
-      "current_price": 1223000.0,
-      "return_pct_gross": -15.25,
-      "return_pct_net": -15.38,
+      "current_price": 1294000.0,
+      "return_pct_gross": -10.33,
+      "return_pct_net": -10.46,
       "slippage_pct": 0.1,
       "hit_gross": false,
       "hit_net": false,
@@ -317,14 +333,14 @@
       "recommendation": "WATCH",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": -15.25,
+      "return_pct": -10.33,
       "hit": false
     }
   ],
-  "updated_at": "2026-10-21 10:16:53.988420+09:00",
+  "updated_at": "2026-10-21 16:55:15.146010+09:00",
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-10-21 10:16:53.988439+09:00",
+    "applied_at": "2026-10-21 16:55:15.146030+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -334,7 +350,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-10-21 10:16:53.988443+09:00"
+      "fixed_at": "2026-10-21 16:55:15.146033+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",

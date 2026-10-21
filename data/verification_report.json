@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-10-21 10:16:53.988439+09:00",
+    "applied_at": "2026-10-21 16:55:15.146030+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-10-21 10:16:53.988443+09:00"
+      "fixed_at": "2026-10-21 16:55:15.146033+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -74,13 +74,13 @@
       ],
       "evaluation_date": "2026-10-21",
       "snapshot_date": "2026-10-14",
-      "price_gap_count": 5,
+      "price_gap_count": 6,
       "price_gaps": [
         {
           "ticker": "000270",
           "role": "evaluation",
           "snapshot_date": "2026-10-21",
-          "snapshot_updated_at": "2026-10-21T06:09:47+09:00",
+          "snapshot_updated_at": "2026-10-21T16:05:41+09:00",
           "market": "KOSPI",
           "currency": "KRW",
           "price_basis": null,
@@ -97,6 +97,22 @@
           "role": "entry",
           "snapshot_date": "2026-10-15",
           "snapshot_updated_at": "2026-10-15T23:09:47+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "XOM",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-21",
+          "snapshot_updated_at": "2026-10-21T16:05:41+09:00",
           "market": "NYSE",
           "currency": "USD",
           "price_basis": null,
@@ -144,7 +160,7 @@
           "ticker": "012330",
           "role": "evaluation",
           "snapshot_date": "2026-10-21",
-          "snapshot_updated_at": "2026-10-21T06:09:47+09:00",
+          "snapshot_updated_at": "2026-10-21T16:05:41+09:00",
           "market": "KOSPI",
           "currency": "KRW",
           "price_basis": null,
@@ -188,19 +204,20 @@
   },
   "factor_health": {
     "healthy": [
-      "volatility",
-      "flow"
+      "flow",
+      "volatility"
     ],
     "weakening": [],
     "decaying": [
+      "technical",
       "quality",
-      "technical"
+      "safety_score"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "prediction",
+      "factor": "consensus",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
@@ -212,18 +229,18 @@
       "ic_recent": 0.0
     },
     {
-      "factor": "consensus",
+      "factor": "timing",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     },
     {
-      "factor": "timing",
+      "factor": "prediction",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-10-21 10:16:54.023109+09:00"
+  "generated_at": "2026-10-21 16:55:15.201164+09:00"
 }
