@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import fcntl
 import json
+import math
 import os
 from pathlib import Path
 import sys
@@ -17,7 +18,7 @@ from api.collectors.member_map_listing_delta import (
     build_issuer_map, build_kr_universe, collect_sec_delta, collect_dart_delta)
 from api.collectors.member_map_live_refresh import (
     FILES, read_state, save_source, state_path, due, apply_result, news_result)
-from api.observability.member_map_freshness import POLL_SECONDS, TARGET_SECONDS
+from api.observability.member_map_freshness import POLL_SECONDS, TARGET_SECONDS, instant
 
 
 def cycle(path, collectors, now):
@@ -68,6 +69,14 @@ def runtime_event(*, checked_at, attempt, status, last_success_at=None, error_co
             "ai_calls": 0, "blob_writes": 0, "screen_delivery_verified": False}
 
 
+def not_due_result(previous, now):
+    # Keep the 120-second guard; an early tick waits only the remaining time.
+    remaining = POLL_SECONDS["DART"] - (instant(now) - instant(previous["last_attempt_at"])).total_seconds()
+    return {"status": "not-due", "requests": 0,
+            "last_success_at": previous.get("last_success_at"),
+            "retry_after_seconds": max(1, math.ceil(remaining))}
+
+
 def supabase_cycle(store, catalog, api_key, owner, now=None, *, transport=None):
     """DART 공개 목록만 수집한다. 원자 예약/lease/CAS 이외 원격 쓰기는 없다."""
     from api.collectors.member_map_listing_delta import DART_LIST, ListingError, bounded_transport
@@ -80,15 +89,16 @@ def supabase_cycle(store, catalog, api_key, owner, now=None, *, transport=None):
         raise RefreshStoreError("refresh-catalog-rejected")
     previous = store.read_states().get("DART", {})
     if not due("DART", previous, now):
-        return {"status": "not-due", "requests": 0, "last_success_at": previous.get("last_success_at")}
+        return not_due_result(previous, now)
     claim = store.claim("DART", owner)
     # 불명확했던 claim 응답을 재호출해도 같은 예약으로 수집을 반복하지 않는다.
     if claim["status"] != "claimed":
         return {"status": claim["status"], "requests": 0,
-                "last_success_at": previous.get("last_success_at")}
+                "last_success_at": previous.get("last_success_at"),
+                "retry_after_seconds": claim.get("retry_after_seconds")}
     previous = claim["state"]
     if not due("DART", previous, now):
-        return {"status": "not-due", "requests": 0, "last_success_at": previous.get("last_success_at")}
+        return not_due_result(previous, now)
     generation, revision = claim["generation"], claim["revision"]
     calls, lease_failed = 0, False
     def guarded_transport(endpoint, **kwargs):
@@ -146,6 +156,8 @@ def run_supabase(catalog, duration_seconds):
         try:
             if catalog is None:
                 catalog = read_public_catalog()
+                # Initial catalog loading is not part of the collection cadence.
+                started = time.monotonic()
             result = supabase_cycle(store, catalog, api_key, owner)
         except Exception as error:
             checked_at = datetime.now(timezone.utc).isoformat()
@@ -175,6 +187,12 @@ def run_supabase(catalog, duration_seconds):
             event = runtime_event(checked_at=checked_at, attempt=attempt, status=source_status,
                 last_success_at=last_success_at, error_code=error_code)
             interval = POLL_SECONDS["DART"]
+            retry_after = result.get("retry_after_seconds")
+            if source_status == "not-due" and type(retry_after) is int and 0 <= retry_after <= 300:
+                # RPC delay is relative to its response, not the previous tick.
+                # At least one second prevents zero-delay retries at the boundary.
+                interval = max(1, retry_after)
+                started = time.monotonic()
         print(json.dumps(event), flush=True)
         if time.monotonic() >= deadline:
             break
