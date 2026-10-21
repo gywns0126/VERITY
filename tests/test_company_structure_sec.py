@@ -319,7 +319,7 @@ def test_alias_guard_does_not_rescue_incomplete_annotations_or_unmarked_multiple
 
 
 def test_alias_guard_preserves_general_parentheses_and_wrapped_inline_text():
-    for name in ["Ball (Asia Pacific) Corp.", "Ball Corp. (100% owned)"]:
+    for name in ["Ball (Asia Pacific) Corp.", "Ball Corp. (wholly owned)"]:
         result = parse_exhibit(_exhibit([(name, "Delaware")]), META)
         assert result["status"] == "parsed"
         assert result["rows"][0]["name"] == name
@@ -328,3 +328,52 @@ def test_alias_guard_preserves_general_parentheses_and_wrapped_inline_text():
     assert result["status"] == "parsed"
     assert result["rows"][0]["name"] == "Ball Advanced Aluminum Technologies Corp."
     assert "f/k/a Neuman USA Ltd." in result["rows"][0]["sourceRow"]["text"]
+
+
+def test_ap_plain_trailing_star_is_footnote_without_rewriting_legal_names_or_source_text():
+    names = ["Air &amp; Liquid Systems Corporation*", "Ampco-Pittsburgh Securities V L.L.C.*", "Åkers AB*"]
+    result = parse_exhibit(_exhibit([(name, "Delaware") for name in names]), META)
+    assert result["status"] == "parsed"
+    assert [r["name"] for r in result["rows"]] == ["Air & Liquid Systems Corporation", "Ampco-Pittsburgh Securities V L.L.C.", "Åkers AB"]
+    assert all("*" in r["sourceRow"]["text"] for r in result["rows"])
+
+
+@pytest.mark.parametrize("tag,style", [
+    ("font", "font-size:6.5pt;position:relative;top:-3.5pt;vertical-align:baseline"),
+    ("font", "font-size:6.5pt;vertical-align:super"),
+    ("span", "font-size:7pt;vertical-align:super"),
+])
+def test_apog_explicit_small_raised_numeric_fonts_are_endnotes_not_name_suffixes(tag, style):
+    names = ["Apogee Services, Inc.", "Viracon Singapore Pte. Ltd", "Glassec Vidros de Seguranca Ltda.",
+             "Harmon Facades ULC", "Universal Woods EMEA, BVBA"]
+    html = _exhibit([(f'<div><font style="font-size:10pt">{name}</font><{tag} style="{style}">({i})</{tag}></div>', "Delaware")
+                     for i, name in enumerate(names, 1)])
+    result = parse_exhibit(html, META)
+    assert result["status"] == "parsed"
+    assert [r["name"] for r in result["rows"]] == names
+    assert all(f"({i})" in r["sourceRow"]["text"] for i, r in enumerate(result["rows"], 1))
+
+
+@pytest.mark.parametrize("annotation", ["50% owned", "100% owned", "50.5% owned"])
+def test_cal_exact_trailing_percent_owned_is_separate_annotation_never_an_inferred_percentage(annotation):
+    original = f"CLT Brand Solutions Limited ({annotation})"
+    result = parse_exhibit(_exhibit([(original, "United Kingdom")]), META)
+    assert result["status"] == "parsed"
+    assert result["rows"][0]["name"] == "CLT Brand Solutions Limited"
+    assert result["rows"][0]["sourceRow"]["text"] == original + " United Kingdom"
+    assert result["rows"][0]["ownershipPct"] is None
+    assert result["rows"][0]["directOwnership"] == "unspecified"
+    generic = "CLT Brand Solutions Trading Limited (Hong Kong)"
+    assert parse_exhibit(_exhibit([(generic, "Hong Kong")]), META)["rows"][0]["name"] == generic
+
+
+@pytest.mark.parametrize("name", [
+    "Example* Corp.", "*", "Example Corp.**", "Example Corp. (50% owned", "Example Corp. (150% owned)",
+    "Example Corp. (50% owned))", "Example Corp. (50% owned) Other Ltd.", "Example Corp. (HK",
+    'Example<font style="font-size:6.5pt;position:relative;top:-3.5pt">(1)</font> Corp.',
+    'Example Corp.<font style="font-size:6.5pt;vertical-align:super">Other Ltd.</font>',
+])
+def test_unsafe_footnotes_unbalanced_names_and_nonexact_ownership_annotations_stay_quarantined(name):
+    result = parse_exhibit(_exhibit([(name, "Delaware")]), META)
+    assert result["status"] == "needs-review"
+    assert result["rows"] == []

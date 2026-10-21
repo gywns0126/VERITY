@@ -188,6 +188,7 @@ _REGISTRANT = re.compile(r"\s*\(\s*registrant\s*\)\s*$", re.I)
 _FOOTNOTE = re.compile(r"(?:[0-9]{1,3}|\([0-9]{1,3}\)|[¹²³⁰⁴⁵⁶⁷⁸⁹*†‡§¶]{1,3})\Z")
 _ALIAS_HINT = re.compile(r"\(\s*(?:f/k/a|fka|formerly\s+known\s+as)\b", re.I)
 _ALIAS_START = re.compile(r"^(?:f/k/a|fka|formerly\s+known\s+as)\s+(.+)$", re.I)
+_PERCENT_OWNED = re.compile(r"\s*\(\s*(?:100(?:\.0{1,3})?|[0-9]{1,2}(?:\.[0-9]{1,3})?)\s*%\s+owned\s*\)\s*$", re.I)
 
 
 def _issuer_name_key(value):
@@ -208,9 +209,16 @@ def _complete_legal_name(name):
 
 
 def _current_legal_name(name):
-    """Remove only an explicit balanced trailing historical-name annotation."""
-    if not _ALIAS_HINT.search(name):
-        return name
+    """Separate explicit trailing annotations; never turn them into ownership facts."""
+    if name.endswith("*"):
+        name = name[:-1].rstrip()
+    if "*" in name or not re.search(r"\w", name):
+        return None
+    if re.search(r"%\s*owned\b", name, re.I):
+        owned = _PERCENT_OWNED.search(name)
+        if not owned or not _complete_legal_name(name[:owned.start()].rstrip()):
+            return None
+        name = name[:owned.start()].rstrip()
     depth, opening, trailing = 0, None, None
     for index, char in enumerate(name):
         if char == "(":
@@ -223,7 +231,11 @@ def _current_legal_name(name):
                 return None
             if depth == 0 and index == len(name) - 1:
                 trailing = opening
-    if depth or trailing is None:
+    if depth:
+        return None
+    if not _ALIAS_HINT.search(name):
+        return name
+    if trailing is None:
         return None
     alias = _ALIAS_START.fullmatch(name[trailing + 1:-1].strip())
     prefix = name[:trailing].strip()
@@ -231,6 +243,18 @@ def _current_legal_name(name):
             not _complete_legal_name(prefix) or _ALIAS_HINT.search(prefix)):
         return None
     return prefix
+
+
+def _small_raised_marker(node):
+    """Explicit small raised font/span only, not a general font-size heuristic."""
+    if node.name not in {"font", "span"}:
+        return False
+    style = dict(part.strip().lower().split(":", 1) for part in node.get("style", "").split(";") if ":" in part)
+    style = {key.strip(): value.strip() for key, value in style.items()}
+    size = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)pt", style.get("font-size", ""))
+    return bool(size and 0 < float(size.group(1)) <= 8 and
+                (style.get("vertical-align") == "super" or
+                 style.get("position") == "relative" and re.fullmatch(r"-(?:[0-9]+(?:\.[0-9]+)?)pt", style.get("top", ""))))
 
 
 def _cell_blocks(cell, *, name_cell=False):
@@ -258,12 +282,17 @@ def _cell_blocks(cell, *, name_cell=False):
                 ambiguous = True  # Superscript inside a name is not an endnote.
             pending.append(str(node))
             return
-        if node.name == "sup":
+        raised_marker = _small_raised_marker(node)
+        if node.name == "sup" or raised_marker:
             marker = _norm(node.get_text("", strip=True))
             preceding = _norm("".join(pending))
             current = _current_legal_name(_REGISTRANT.sub("", preceding))
+            # Additional complete legal endings in APOG's explicit raised-font
+            # rows; this does not broaden the downstream corporate filter.
+            complete = current and (_complete_legal_name(current) or raised_marker and
+                                    re.fullmatch(r".+\s(?:Ltda|ULC|BVBA)\.?", current, re.I))
             if (not _FOOTNOTE.fullmatch(marker) or not preceding or
-                    name_cell and (not current or not _complete_legal_name(current))):
+                    name_cell and not complete):
                 ambiguous = True
             footnote = True
             return
