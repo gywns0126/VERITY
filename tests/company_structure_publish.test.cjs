@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
-const { buildArtifacts, writeArtifacts, MAX_BYTES } = require('../scripts/member-map/build-live-company-structure.cjs');
+const { buildArtifacts, writeArtifacts, usCooperatieLabel, MAX_BYTES } = require('../scripts/member-map/build-live-company-structure.cjs');
 const { loadArtifacts, publish, main, sanitizeUsSources, BASE, INDEX } = require('../scripts/member-map/publish-company-structure.cjs');
 const at = '2026-10-21T10:00:00Z';
 const sha = b => createHash('sha256').update(b).digest('hex');
@@ -156,6 +156,87 @@ test('workflow preserves schedule/concurrency, original annual backfill, explici
   assert.doesNotMatch(source, /git add data\/$|git add .*raw|upload-artifact|kis_broker|KISBroker|build_mapping\(|sys\.modules/mu);
   assert.match(source, /python -m api\.builders\.ownership_backfill_builder/u);
   assert.match(source, /NOT a proven <=900 physical/u);
+});
+
+function ownershipWorkflow() {
+  return JSON.parse(execFileSync('python3', ['-c',
+    'import json,yaml; print(json.dumps(yaml.safe_load(open(".github/workflows/ownership_backfill.yml"))))'],
+  { cwd: path.resolve(__dirname, '..'), encoding: 'utf8' }));
+}
+
+test('publish-only is manual/main exclusive, collection still requires the daily guard, and credential checks precede source calls', () => {
+  const doc = ownershipWorkflow(), triggers = doc.on || doc.true;
+  assert.deepEqual(triggers.workflow_dispatch.inputs.publish_only, {
+    description: 'Publish saved main sources only; no collection (counts as a daily attempt)', required: false, default: false, type: 'boolean' });
+  const backfill = doc.jobs.backfill, recovery = doc.jobs['publish-only'];
+  const eligible = (job, event, selected, daily, ref = 'refs/heads/main') => new Function('github', 'inputs', 'needs', 'always', 'cancelled',
+    `return (${job.if})`)({ event_name: event, ref }, { publish_only: selected },
+    { cadence: { result: 'success', outputs: { run: String(daily) } } }, () => true, () => false);
+  for (const event of ['workflow_dispatch', 'repository_dispatch', 'schedule']) for (const selected of [true, false]) for (const daily of [true, false]) {
+    const publishOnly = event === 'workflow_dispatch' && selected;
+    assert.equal(eligible(backfill, event, selected, daily), daily && !publishOnly);
+    assert.equal(eligible(recovery, event, selected, daily), publishOnly);
+    assert.equal(eligible(recovery, event, selected, daily, 'refs/heads/other'), false);
+  }
+  assert.equal(recovery.needs, undefined); assert.deepEqual(recovery.concurrency, backfill.concurrency);
+  assert.equal(recovery.concurrency['cancel-in-progress'], false);
+  for (const job of [backfill, recovery]) {
+    assert.equal(job.steps[0].with['fetch-depth'], 100);
+    assert.equal(job.env, undefined);
+    const check = job.steps.find(s => s.name === 'Check existing publication credential before source calls');
+    assert.deepEqual(check.env, { BLOB_READ_WRITE_TOKEN: '${{ secrets.VERCEL_BLOB_TOKEN }}' });
+    assert.equal(job.steps.indexOf(check), 1);
+    for (const step of job.steps) {
+      if (step.env?.BLOB_READ_WRITE_TOKEN) assert.ok(step === check || step.name === 'Publish verified immutable payloads then manifest');
+      assert.equal(JSON.stringify(step).includes('secrets.BLOB_READ_WRITE_TOKEN'), false);
+    }
+    assert.throws(() => execFileSync('bash', ['-c', check.run], { env: { PATH: process.env.PATH, BLOB_READ_WRITE_TOKEN: '' }, stdio: 'pipe' }));
+    const dummy = 'OFFLINE_DUMMY_DO_NOT_LOG';
+    assert.equal(execFileSync('bash', ['-c', check.run], { env: { PATH: process.env.PATH, BLOB_READ_WRITE_TOKEN: dummy }, encoding: 'utf8' }).includes(dummy), false);
+  }
+});
+
+test('publish-only reuses offline validation/publication steps and persists index alone with fail-closed replay binding', () => {
+  const doc = ownershipWorkflow(), normal = doc.jobs.backfill.steps, steps = doc.jobs['publish-only'].steps;
+  assert.equal(steps[0].with.ref, 'main'); assert.equal(steps[0].with['fetch-depth'], 100);
+  for (const name of ['Install existing Blob dependency', 'Build and validate compact public artifacts offline', 'Publish verified immutable payloads then manifest']) {
+    assert.deepEqual(steps.find(s => s.name === name), normal.find(s => s.name === name));
+  }
+  const scripts = steps.map(s => s.run || '').join('\n');
+  assert.doesNotMatch(scripts, /--fetch-public|refresh-company|refresh-us|sanitize|atomic_json|rawResponse|DART_API_KEY|ownership_backfill_builder/u);
+  const durable = steps.find(s => s.id === 'durable').run;
+  assert.deepEqual([...durable.matchAll(/^git add (.+)$/gmu)].map(m => m[1]), ['data/member_map_company_structure_index.json']);
+  assert.match(durable, /set -euo pipefail/u); assert.match(durable, /git pull --rebase --autostash origin main/u);
+  assert.match(durable, /test -z "\$\(git ls-files -u\)"/u);
+  assert.match(durable, /git diff --quiet "\$SOURCE_HEAD" HEAD -- .*data\/member_map_company_structure_sources.json .*data\/member_map_company_structure_us_sources.json/u);
+  assert.ok(durable.indexOf('git diff --quiet "$SOURCE_HEAD" HEAD') < durable.indexOf('git push origin HEAD:main'));
+  assert.match(durable, /git merge-base --is-ancestor HEAD origin\/main/u);
+  assert.doesNotMatch(durable, /\|\| true|-X (?:ours|theirs)/u);
+  const publication = steps.at(-1);
+  for (const id of ['safe', 'build', 'durable']) assert.ok(publication.if.includes(`steps.${id}.outcome == 'success'`));
+  assert.match(publication.run, /--committed-manifest data\/member_map_company_structure_index.json --publish$/u);
+});
+
+test('actual publish-only durable shell stops on rebase, conflict, input drift or push failure without running later commands', () => {
+  const script = ownershipWorkflow().jobs['publish-only'].steps.find(s => s.id === 'durable').run;
+  const stub = `git() {
+    printf 'MOCK git %s\\n' "$*" >&2
+    case "$*" in
+      'pull --rebase --autostash origin main') [ "$FAIL_AT" != rebase ] ;;
+      'ls-files -u') if [ "$FAIL_AT" = conflict ]; then printf 'unmerged'; fi ;;
+      'diff --quiet offline-head HEAD -- '*) [ "$FAIL_AT" != inputs ] ;;
+      'push origin HEAD:main') [ "$FAIL_AT" != push ] ;;
+      *) return 0 ;;
+    esac
+  }\n`;
+  for (const failAt of ['rebase', 'conflict', 'inputs', 'push']) {
+    let error;
+    try { execFileSync('bash', ['-c', stub + script], { env: { PATH: process.env.PATH, SOURCE_HEAD: 'offline-head', FAIL_AT: failAt }, stdio: 'pipe' }); }
+    catch (e) { error = e; }
+    assert.ok(error, failAt); const log = error.stderr.toString();
+    assert.equal(log.includes('MOCK git fetch origin main'), false);
+    if (failAt !== 'push') assert.equal(log.includes('MOCK git push origin HEAD:main'), false);
+  }
 });
 
 test('immutable uploads use at most four workers and drain in-flight failure before refusing manifest', async t => {
@@ -325,4 +406,156 @@ test('unresolved reviewExhibit retains only safe original identifiers for zero-H
     const result = sanitizeUsSources(invalid).issuers['0000001234'];
     assert.equal(result.reviewExhibit, undefined); assert.equal(result.attemptStatus, 'needs-review'); assert.equal(result.lastSuccessAt, undefined);
   }
+});
+
+test('SEC co-filer archive preserves issuer/accession binding in review cache and public payload without changing primary metadata ownership', t => {
+  const { dir } = fixture(t), cik = '0000006201', accession = '0000006201-26-000014';
+  const url = 'https://www.sec.gov/Archives/edgar/data/4515/000000620126000014/ex21.htm';
+  const source = { tickerAliases: ['AAL'], attemptedAt: at, attemptStatus: 'needs-review', metadataCheckedAt: at,
+    filingMetadata: { issuer_id: 'US:AAL', issuer_name: 'American Airlines Group Inc.', cik, accession, form: '10-K',
+      filed_date: '2026-02-01', period_end: '2025-12-31', primary_document: 'annual.htm',
+      url: 'https://www.sec.gov/Archives/edgar/data/6201/000000620126000014/annual.htm' },
+    reviewExhibit: { schema: 'sec-company-subsidiaries-v1', cik, accession, url, filedDate: '2026-02-01', periodEnd: '2025-12-31',
+      status: 'needs-review', documentSha256: 'a'.repeat(64), rows: [{ name: 'PRIVATE' }], html: 'PRIVATE' } };
+  const doc = { schema: 'alphanest-company-structure-us-sources-v1', generatedAt: at, issuers: { [cik]: source } };
+  const safe = sanitizeUsSources(doc), item = safe.issuers[cik];
+  assert.equal(item.reviewExhibit.url, url); assert.equal(item.reviewExhibit.accession, accession);
+  assert.equal(item.reviewExhibit.rows, undefined); assert.equal(item.lastSuccessAt, undefined);
+  assert.equal(item.attemptStatus, 'needs-review'); assert.equal(JSON.stringify(safe).includes('PRIVATE'), false);
+  assert.deepEqual(sanitizeUsSources(safe), safe);
+  for (const badUrl of [url.replace('www.sec.gov', 'evil.example'), url.replace('000000620126000014', '000000451526000014'),
+    url.replace('000000620126000014', '000000620126000015'), url.replace('ex21.htm', '../ex21.htm'),
+    url.replace('ex21.htm', 'nested/../ex21.htm'), url.replace('ex21.htm', 'nested/%2e%2e/ex21.htm'),
+    url.replace('ex21.htm', '%2e%2e/ex21.htm'), url + '?token=PRIVATE', url + '#x', url.replace('https:', 'http:')]) {
+    const bad = JSON.parse(JSON.stringify(doc)); bad.issuers[cik].reviewExhibit.url = badUrl;
+    assert.equal(sanitizeUsSources(bad).issuers[cik].reviewExhibit, undefined, badUrl);
+  }
+  const wrongPrimary = JSON.parse(JSON.stringify(doc)); wrongPrimary.issuers[cik].filingMetadata.url = source.filingMetadata.url.replace('/6201/', '/4515/');
+  assert.throws(() => sanitizeUsSources(wrongPrimary));
+  // Synthetic accepted snapshot only; never upgrade the saved failed AAL state.
+  const accepted = { ...source, attemptStatus: 'HTTP403', lastSuccessAt: at,
+    exhibit: { ...source.reviewExhibit, status: 'parsed', rows: [{ name: 'Subsidiary Corp.', jurisdiction: 'Delaware', ownershipPct: null, directOwnership: 'unspecified' }] } };
+  const result = buildArtifacts({ generatedAt: at, strictSources: true, universe: { stocks: [{ ticker: 'AAL', name: 'American Airlines Group Inc.', market: 'US' }] },
+    cikMap: { AAL: cik }, usSources: sanitizeUsSources({ ...doc, issuers: { [cik]: accepted } }) });
+  const output = path.join(path.dirname(dir), 'cofiler'); writeArtifacts(result, output);
+  const p = [...loadArtifacts(output).payloads.values()][0].payload;
+  assert.equal(p.relations.length, 1); assert.equal(p.relations[0].evidence[0].url, url);
+  assert.equal(p.coverage.sourceChecked, false); assert.equal(p.coverage.attemptStatus, 'HTTP403');
+});
+
+const ballRecheck = { cik: '0000009389', accession: '0001104659-26-017410',
+  url: 'https://www.sec.gov/Archives/edgar/data/9389/000110465926017410/ball-20251231xex21.htm',
+  documentSha256: '531013e1bbb187ba0b4aa075ef1c02f12aae2eea5ae7966497106cae0af20c55' };
+function explicitBaselineQuarantine(cik, s) {
+  const e = s.reviewExhibit;
+  return cik === ballRecheck.cik && !s.exhibit && s.attemptStatus === 'needs-review' &&
+    s.sourceGap === 'source-gap:parser-recheck-needs-review' && e?.status === 'needs-review' &&
+    Object.entries(ballRecheck).every(([key, value]) => e[key] === value);
+}
+
+test('ACU original six names survive parser, US sanitizer, builder and publication validation; Cooperatie is not a KR exception', async t => {
+  const { dir } = fixture(t), cik = '0000002098';
+  const names = ['Acme United Limited', 'Acme United Europe GmbH', 'Acme United (Asia Pacific) Limited',
+    'Acme United China Limited', 'Acme United Netherlands Cooperatie U.A.', 'Acme United (APAC) Pte.Ltd.'];
+  const jurisdictions = ['Canada', 'Germany', 'Hong Kong', 'China', 'Netherlands', 'Singapore'];
+  const p = text => `<p><font>${text}</font></p>`;
+  const single = names.slice(0, 4).map((name, i) => `<tr><td>${p(name)}</td><td>&nbsp;</td><td>${p(jurisdictions[i])}</td></tr>`).join('');
+  const html = '<table><tr><th>Name</th><th></th><th>Country of Incorporation</th></tr>' + single +
+    `<tr><td>${names.slice(4).map(p).join('')}</td><td>&nbsp;</td><td>${jurisdictions.slice(4).map(p).join('')}</td></tr></table>`;
+  const metadata = { cik, accession: '0001193125-26-102079', filedDate: '2026-04-01', periodEnd: '2025-12-31',
+    url: 'https://www.sec.gov/Archives/edgar/data/2098/000119312526102079/acu-ex21.htm', issuerName: 'Acme United Corporation' };
+  const exhibit = JSON.parse(execFileSync('python3', ['-c',
+    'import json,sys; from api.intelligence.company_structure_sec import parse_exhibit; d=json.load(sys.stdin); print(json.dumps(parse_exhibit(d["html"],d["metadata"])))'],
+  { cwd: path.resolve(__dirname, '..'), input: JSON.stringify({ html, metadata }), encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } }));
+  assert.equal(exhibit.status, 'parsed'); assert.deepEqual(exhibit.rows.map(r => r.name), names);
+  const doc = { schema: 'alphanest-company-structure-us-sources-v1', generatedAt: at, issuers: { [cik]: {
+    tickerAliases: ['ACU'], attemptedAt: at, lastSuccessAt: at, attemptStatus: 'success', exhibit } } };
+  const before = JSON.stringify(doc), safe = sanitizeUsSources(doc);
+  assert.equal(JSON.stringify(doc), before); assert.deepEqual(safe.issuers[cik].exhibit.rows.map(r => r.name), names);
+  const result = buildArtifacts({ generatedAt: at, strictSources: true, usSources: safe, cikMap: { ACU: cik },
+    universe: { stocks: [{ ticker: 'ACU', market: 'US', name: 'Acme United Corporation' }] } });
+  const output = path.join(path.dirname(dir), 'acu-six'); writeArtifacts(result, output);
+  const payload = [...loadArtifacts(output).payloads.values()][0].payload;
+  assert.equal(payload.companies.length, 7); assert.equal(payload.relations.length, 6);
+  assert.deepEqual(payload.companies.filter(c => c.id !== 'US:ACU').map(c => c.name), names);
+  assert.ok(payload.companies.every(c => !Object.hasOwn(c, 'country')));
+  assert.ok(payload.relations.every(r => r.from === 'US:ACU' && r.ownershipPct === null && r.label === '공시상 자회사·직간접 미구분'));
+  const remote = mock(); await publish(output, remote.options); assert.equal(remote.writes.at(-1), INDEX);
+  for (const name of ['Cooperatie', 'U.A.', 'Example Cooperatie', 'Example Cooperatie U.A. Fund',
+    'Individual Cooperatie U.A.', 'Trust Cooperatie U.A.', 'Example Fund Cooperatie U.A.', '개인 Cooperatie U.A.']) assert.equal(usCooperatieLabel(name), false, name);
+  editPayload(dir, p => { p.companies.find(c => c.id.startsWith('FOREIGN:')).name = names[4]; });
+  assert.throws(() => loadArtifacts(dir)); // KR public admission was not broadened.
+});
+
+test('only the original SHA-bound BALL parser-recheck quarantine can count toward the 22-document baseline', async t => {
+  const { dir } = fixture(t), cik = ballRecheck.cik;
+  const s = { tickerAliases: ['BALL'], attemptStatus: 'needs-review', attemptedAt: at, lastSuccessAt: '2026-10-03T10:00:00Z',
+    sourceGap: 'source-gap:parser-recheck-needs-review', reviewExhibit: { ...ballRecheck, schema: 'sec-company-subsidiaries-v1',
+      status: 'needs-review', filedDate: '2026-02-01', periodEnd: '2025-12-31', rows: [{ name: 'PRIVATE' }], html: 'PRIVATE' } };
+  assert.equal(explicitBaselineQuarantine(cik, s), true);
+  for (const mutate of [s => delete s.sourceGap, s => s.sourceGap = 'source-gap:other', s => s.attemptStatus = 'success',
+    s => s.reviewExhibit.documentSha256 = 'a'.repeat(64), s => s.reviewExhibit.url += '?x=1', s => s.reviewExhibit.status = 'parsed',
+    s => s.reviewExhibit.accession = '0001104659-26-017411']) {
+    const bad = JSON.parse(JSON.stringify(s)); mutate(bad); assert.equal(explicitBaselineQuarantine(cik, bad), false);
+  }
+  const doc = { schema: 'alphanest-company-structure-us-sources-v1', generatedAt: at, issuers: { [cik]: s },
+    requestBudget: { day: '2026-10-22', requests: 198, ciks: [cik] } };
+  const safe = sanitizeUsSources(doc);
+  assert.equal(explicitBaselineQuarantine(cik, safe.issuers[cik]), true);
+  assert.equal(safe.issuers[cik].lastSuccessAt, s.lastSuccessAt); assert.deepEqual(safe.requestBudget, doc.requestBudget);
+  assert.equal(JSON.stringify(safe).includes('PRIVATE'), false);
+  const result = buildArtifacts({ generatedAt: at, strictSources: true, usSources: safe, cikMap: { BALL: cik },
+    universe: { stocks: [{ ticker: 'BALL', name: 'Ball Corporation', market: 'US' }] } });
+  assert.equal(result.manifest.coverage.US.checkedCiks, 0);
+  const output = path.join(path.dirname(dir), 'ball-review'); writeArtifacts(result, output);
+  assert.equal((await main(['--output-dir', output])).validated, true);
+  const payload = [...loadArtifacts(output).payloads.values()][0].payload;
+  assert.equal(payload.relations.length, 0); assert.equal(payload.coverage.sourceChecked, false);
+  assert.equal(payload.coverage.status, 'refresh-error');
+});
+
+test('committed US snapshots preserve the 22-document baseline as parsed or explicitly SHA-bound parser quarantine, never fake parsed', async t => {
+  const { dir } = fixture(t);
+  const committed = name => JSON.parse(execFileSync('git', ['show', 'HEAD:data/' + name], {
+    cwd: path.resolve(__dirname, '..'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }));
+  const original = committed('member_map_company_structure_us_sources.json'), before = JSON.stringify(original);
+  const parsed = Object.entries(original.issuers).filter(([, s]) => s.exhibit?.status === 'parsed');
+  const quarantined = Object.entries(original.issuers).filter(([cik, s]) => explicitBaselineQuarantine(cik, s));
+  assert.ok(parsed.length + quarantined.length >= 22, 'The 22-document baseline needs admitted proof or exact original parser-recheck quarantine');
+  assert.ok(parsed.some(([cik, s]) => !s.exhibit.accession.startsWith(cik)), 'Includes ordinary own-CIK archives with filing-agent accessions');
+  const safe = sanitizeUsSources(original);
+  for (const [cik, s] of quarantined) {
+    assert.equal(safe.issuers[cik].reviewExhibit.documentSha256, s.reviewExhibit.documentSha256);
+    assert.equal(explicitBaselineQuarantine(cik, safe.issuers[cik]), true);
+  }
+  for (const [cik, s] of parsed) {
+    assert.equal(safe.issuers[cik].exhibit.url, s.exhibit.url);
+    assert.equal(safe.issuers[cik].exhibit.status, 'parsed');
+    assert.equal(safe.issuers[cik].attemptStatus, s.attemptStatus);
+    assert.equal(safe.issuers[cik].lastSuccessAt, s.lastSuccessAt);
+  }
+  assert.equal(JSON.stringify(original), before); assert.deepEqual(safe.requestBudget, original.requestBudget);
+  const result = buildArtifacts({ universe: committed('universe_search.json'), cikMap: committed('sec_ticker_cik_map.json'),
+    generatedAt: original.generatedAt, usSources: safe, strictSources: true });
+  assert.equal(result.manifest.coverage.US.checkedCiks, parsed.length);
+  const retained = new Set([...result.payloads.values()].map(bytes => JSON.parse(bytes)).filter(p => p.relations.length).map(p => p.coverage.cik));
+  for (const [cik] of parsed) assert.ok(retained.has(cik), `Original parsed source lost: ${cik}`);
+  let retainedCollectorErrors = 0;
+  for (const [cik, s] of Object.entries(original.issuers).filter(([, s]) => !s.exhibit && s.attemptedAt && s.attemptStatus !== 'success' && s.attemptStatus !== 'not-attempted')) {
+    assert.equal(safe.issuers[cik].attemptStatus, s.attemptStatus);
+    if (s.attemptStatus === 'error' || /^HTTP[1-5][0-9]{2}$/u.test(s.attemptStatus)) retainedCollectorErrors++;
+    for (const ticker of s.tickerAliases) {
+      const entry = result.manifest.issuers['US:' + ticker];
+      if (entry) {
+        assert.equal(entry.status, 'refresh-error');
+        const payload = JSON.parse(result.payloads.get(entry.sha256));
+        assert.equal(payload.coverage.sourceChecked, false);
+        assert.notEqual(payload.coverage.attemptStatus, 'success');
+      }
+    }
+  }
+  const output = path.join(path.dirname(dir), 'committed-us'); writeArtifacts(result, output);
+  assert.equal((await main(['--output-dir', output])).validated, true);
+  t.diagnostic(JSON.stringify({ parsedCiks: parsed.length, quarantinedCiks: quarantined.length, checkedCiks: result.manifest.coverage.US.checkedCiks,
+    checkedSecurities: result.manifest.coverage.US.checked, payloads: result.payloads.size, retainedCollectorErrors, requestsPreserved: safe.requestBudget.requests }));
 });

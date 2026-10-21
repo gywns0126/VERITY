@@ -20,7 +20,9 @@ env:
 jobs:
   pytest:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # PR582 checkout took8m05s; setup plus the5m17s passing suite exceeded15m.
+    # Retain every gate and a bounded job deadline, including slow Git transfer.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -55,6 +57,8 @@ jobs:
           #   넣었다가 `Dependencies lock file is not found` 로 CI 가 죽었다(1차 시도 실패).
 
       - name: Install isolated Node test tools
+        # 2026-10-19 이후 루트 manifests도 추적됨. 아래는 과거 도입 배경이며,
+        # 현재도 이 검사의 도구 버전은 명시적으로 고정해 설치한다.
         # 🚨 `npm ci` 가 아니라 직접 설치다. 이유 = `.gitignore:10-11` 이 루트
         #   `package.json` / `package-lock.json` 을 **의도적으로** 제외한다
         #   (`/node_modules/` 와 함께 8~11행). 저장소 루트는 파이썬 프로젝트이고

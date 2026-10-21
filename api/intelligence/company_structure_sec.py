@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 import hashlib
 import re
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment, NavigableString
 
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
@@ -36,7 +36,13 @@ def _identity(cik: str, accession: str) -> tuple[str, str, str]:
 
 
 def _archive_url(href: str, directory: str) -> str:
-    """Resolve only a safe file in the exact filing directory."""
+    """Resolve only a safe file in this filing's SEC archive directory.
+
+    SEC sometimes links a co-registrant's archive CIK for an exhibit while
+    retaining the requested issuer's accession directory. Accept that
+    alternate archive CIK only when this accession's leading CIK is the
+    requested issuer; all other filings must use the exact requested CIK path.
+    """
     if not isinstance(href, str) or not href or re.search(r"%(?:2f|5c|2e)", href, re.I):
         raise ValueError("invalid-sec-document-url")
     parts = urlsplit(href)
@@ -51,13 +57,23 @@ def _archive_url(href: str, directory: str) -> str:
         if path in ("", ".") or path.startswith("../") or "/" in path or "\\" in path:
             raise ValueError("invalid-sec-document-url")
         path = directory + path
-    if ("\\" in path or any(piece in (".", "..") for piece in path.split("/"))
-            or not path.startswith(directory)):
+    if "\\" in path or any(piece in (".", "..") for piece in path.split("/")):
         raise ValueError("invalid-sec-document-url")
-    filename = path[len(directory):]
+    if path.startswith(directory):
+        filename = path[len(directory):]
+    else:
+        expected = directory.strip("/").split("/")
+        parts_path = path.strip("/").split("/")
+        if (len(expected) != 5 or len(parts_path) != 6
+                or parts_path[:3] != expected[:3]
+                or parts_path[4] != expected[4]
+                or not re.fullmatch(r"[1-9][0-9]{0,9}", parts_path[3], re.ASCII)
+                or expected[3].zfill(10) != expected[4][:10]):
+            raise ValueError("invalid-sec-document-url")
+        filename = parts_path[5]
     if not _SAFE_FILE.fullmatch(filename) or "/" in filename:
         raise ValueError("invalid-sec-document-url")
-    return f"https://{_SEC_HOST}{directory}{filename}"
+    return f"https://{_SEC_HOST}{path.rsplit('/', 1)[0]}/{filename}"
 
 
 def find_exhibit(index_html, *, cik, accession, form="10-K"):
@@ -165,6 +181,133 @@ def _header_role(value):
 
 
 _OMIT = re.compile(r"\b(?:subtotal|total|domestic|foreign|d\s*/\s*b\s*/\s*a|doing business as|trust|branch|footnote|see note)\b", re.I)
+_LEGAL_FORM = r"\b(?:Inc(?:orporated)?|Corp(?:oration)?|Ltd|Limited|GmbH|LLC|LLP|PLC|L\.L\.C|L\.P|U\.A|B\.V|N\.V|S\.A|S\.r\.l)\.?"
+_LEGAL_END = re.compile(_LEGAL_FORM + r"$", re.I)
+_LEGAL_TERMINATOR = re.compile(_LEGAL_FORM + r"(?=$|[\s,;.])", re.I)
+_REGISTRANT = re.compile(r"\s*\(\s*registrant\s*\)\s*$", re.I)
+_FOOTNOTE = re.compile(r"(?:[0-9]{1,3}|\([0-9]{1,3}\)|[¹²³⁰⁴⁵⁶⁷⁸⁹*†‡§¶]{1,3})\Z")
+_ALIAS_HINT = re.compile(r"\(\s*(?:f/k/a|fka|formerly\s+known\s+as)\b", re.I)
+_ALIAS_START = re.compile(r"^(?:f/k/a|fka|formerly\s+known\s+as)\s+(.+)$", re.I)
+_PERCENT_OWNED = re.compile(r"\s*\(\s*(?:100(?:\.0{1,3})?|[0-9]{1,2}(?:\.[0-9]{1,3})?)\s*%\s+owned\s*\)\s*$", re.I)
+
+
+def _issuer_name_key(value):
+    """Narrow root comparison only; never rewrite emitted company names."""
+    if not isinstance(value, str) or not value.strip() or len(value) > 300:
+        return None
+    if re.search(r"[<>\x00-\x1f]", value):
+        return None
+    words = re.sub(r"[^\w\s]", "", value.casefold()).split()
+    if words and words[-1] in {"corp", "corporation"}:
+        words[-1] = "corp"
+    return " ".join(words) or None
+
+
+def _complete_legal_name(name):
+    ending = _LEGAL_END.search(name)
+    return ending is not None and re.search(r"\w", name[:ending.start()]) is not None
+
+
+def _current_legal_name(name):
+    """Separate explicit trailing annotations; never turn them into ownership facts."""
+    if name.endswith("*"):
+        name = name[:-1].rstrip()
+    if "*" in name or not re.search(r"\w", name):
+        return None
+    if re.search(r"%\s*owned\b", name, re.I):
+        owned = _PERCENT_OWNED.search(name)
+        if not owned or not _complete_legal_name(name[:owned.start()].rstrip()):
+            return None
+        name = name[:owned.start()].rstrip()
+    depth, opening, trailing = 0, None, None
+    for index, char in enumerate(name):
+        if char == "(":
+            if depth == 0:
+                opening = index
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth < 0:
+                return None
+            if depth == 0 and index == len(name) - 1:
+                trailing = opening
+    if depth:
+        return None
+    if not _ALIAS_HINT.search(name):
+        return name
+    if trailing is None:
+        return None
+    alias = _ALIAS_START.fullmatch(name[trailing + 1:-1].strip())
+    prefix = name[:trailing].strip()
+    if (not alias or not re.search(r"\w", alias.group(1)) or len(prefix) > 300 or
+            not _complete_legal_name(prefix) or _ALIAS_HINT.search(prefix)):
+        return None
+    return prefix
+
+
+def _small_raised_marker(node):
+    """Explicit small raised font/span only, not a general font-size heuristic."""
+    if node.name not in {"font", "span"}:
+        return False
+    style = dict(part.strip().lower().split(":", 1) for part in node.get("style", "").split(";") if ":" in part)
+    style = {key.strip(): value.strip() for key, value in style.items()}
+    size = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)pt", style.get("font-size", ""))
+    return bool(size and 0 < float(size.group(1)) <= 8 and
+                (style.get("vertical-align") == "super" or
+                 style.get("position") == "relative" and re.fullmatch(r"-(?:[0-9]+(?:\.[0-9]+)?)pt", style.get("top", ""))))
+
+
+def _cell_blocks(cell, *, name_cell=False):
+    """Keep explicit paragraph/BR boundaries, never split inline font/span wraps."""
+    if cell.find(["table", "script", "style", "pre", "hr"]):
+        return []  # No unambiguous flat cell layout.
+    blocks, pending = [], []
+    footnote = False
+    ambiguous = False
+
+    def flush():
+        nonlocal footnote
+        value = _norm("".join(pending))
+        if value:
+            blocks.append(value)
+        pending.clear()
+        footnote = False
+
+    def visit(node):
+        nonlocal footnote, ambiguous
+        if isinstance(node, Comment):
+            return
+        if isinstance(node, NavigableString):
+            if footnote and _norm(str(node)):
+                ambiguous = True  # Superscript inside a name is not an endnote.
+            pending.append(str(node))
+            return
+        raised_marker = _small_raised_marker(node)
+        if node.name == "sup" or raised_marker:
+            marker = _norm(node.get_text("", strip=True))
+            preceding = _norm("".join(pending))
+            current = _current_legal_name(_REGISTRANT.sub("", preceding))
+            # Additional complete legal endings in APOG's explicit raised-font
+            # rows; this does not broaden the downstream corporate filter.
+            complete = current and (_complete_legal_name(current) or raised_marker and
+                                    re.fullmatch(r".+\s(?:Ltda|ULC|BVBA)\.?", current, re.I))
+            if (not _FOOTNOTE.fullmatch(marker) or not preceding or
+                    name_cell and not complete):
+                ambiguous = True
+            footnote = True
+            return
+        boundary = node.name in {"p", "div", "li", "br"}
+        if boundary:
+            flush()
+        for child in node.children:
+            visit(child)
+        if boundary:
+            flush()
+
+    for child in cell.children:
+        visit(child)
+    flush()
+    return [] if ambiguous else blocks
 
 
 def parse_exhibit(raw_html, metadata):
@@ -216,18 +359,44 @@ def parse_exhibit(raw_html, metadata):
         if max(name_i, jurisdiction_i) >= len(cells):
             needs_review = True
             continue
-        name = _norm(cells[name_i].get_text(" ", strip=True))
-        jurisdiction = _norm(cells[jurisdiction_i].get_text(" ", strip=True))
-        if not name or not jurisdiction or len(cells) != len(roles):
+        names = _cell_blocks(cells[name_i], name_cell=True)
+        jurisdictions = _cell_blocks(cells[jurisdiction_i])
+        if not names or len(names) != len(jurisdictions) or len(cells) != len(roles):
             needs_review = True
             continue
-        if len(name) > 300 or len(jurisdiction) > 160 or re.search(r"\b(?:d/b/a|doing business as|formerly known as|f/k/a)\b", name, re.I):
+        entries = []
+        for block_index, (name, jurisdiction) in enumerate(zip(names, jurisdictions)):
+            name = _current_legal_name(name)
+            if name is None:
+                needs_review = True
+                continue
+            marker = _REGISTRANT.search(name)
+            if marker:
+                root = _issuer_name_key(metadata.get("issuerName"))
+                if not root or _issuer_name_key(name[:marker.start()]) != root:
+                    needs_review = True
+                continue  # Matching registrant is self; unknown/mismatch is quarantined.
+            entries.append((block_index, name, jurisdiction))
+        # Matching block counts alone are not proof: a wrapped partial name
+        # must not become a separate company. Reject the entire physical row.
+        if any(";" in name or len(_LEGAL_TERMINATOR.findall(name)) > 1
+               or (len(names) > 1 and not _complete_legal_name(name)) for _, name, _ in entries):
+            needs_review = True
             continue
-        rows.append({"name": name, "jurisdiction": jurisdiction, "ownershipPct": None,
-                     "directOwnership": "unspecified", "sourceRow": {"index": row_index, "text": text}})
-        if len(rows) > _MAX_ROWS:
-            result["rows"] = rows[:_MAX_ROWS]
-            return result
+        if any(len(name) > 300 or len(jurisdiction) > 160 or ";" in jurisdiction
+               or re.search(r"\b(?:d/b/a|doing business as|formerly known as|f/k/a)\b", name, re.I)
+               for _, name, jurisdiction in entries):
+            needs_review = True
+            continue
+        for block_index, name, jurisdiction in entries:
+            source_row = {"index": row_index, "text": text}
+            if len(names) > 1:
+                source_row["blockIndex"] = block_index
+            rows.append({"name": name, "jurisdiction": jurisdiction, "ownershipPct": None,
+                         "directOwnership": "unspecified", "sourceRow": source_row})
+            if len(rows) > _MAX_ROWS:
+                result["rows"] = rows[:_MAX_ROWS]
+                return result
     result["rows"] = rows
     result["status"] = "parsed" if rows and not needs_review else "needs-review"
     return result

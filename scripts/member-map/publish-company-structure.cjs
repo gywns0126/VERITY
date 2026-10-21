@@ -7,7 +7,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { primaryEvidenceUrl } = require('../../review/member-map/company-structure-data.cjs');
-const { secUrl, MAX_BYTES, MAX_ISSUERS } = require('./build-live-company-structure.cjs');
+const { secUrl, usCooperatieLabel, MAX_BYTES, MAX_ISSUERS } = require('./build-live-company-structure.cjs');
 const BASE = 'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/';
 const INDEX = 'member_map_company_structure_index.json';
 const SHA = /^[a-f0-9]{64}$/u;
@@ -78,7 +78,7 @@ function validatePayload(p) {
     if (!ID.test(c.id) || ids.has(c.id)) fail(); ids.add(c.id);
     if (c.id.startsWith('KR:') || c.id.startsWith('US:')) {
       if (c.ticker !== c.id.slice(3) || c.market !== c.id.slice(0, 2)) fail();
-    } else if ('ticker' in c || 'market' in c || !corporateLabel(c.name)) fail();
+    } else if ('ticker' in c || 'market' in c || !(corporateLabel(c.name) || p.coverage.cik && usCooperatieLabel(c.name))) fail();
     if ('country' in c && !/^[A-Z]{2}$/u.test(c.country)) fail();
   }
   const edges = new Set();
@@ -91,7 +91,8 @@ function validatePayload(p) {
     if (!Array.isArray(r.evidence) || r.evidence.length > 10 || (r.status === 'source-dated' && (!r.asOf || !r.evidence.length))) fail();
     for (const e of r.evidence) {
       keys(e, ['title', 'url', 'asOf']); text(e.title, 180);
-      if (!(p.coverage.cik ? secUrl(e.url, p.coverage.cik) : primaryEvidenceUrl(e.url))) fail();
+      const accession = typeof e.url === 'string' && e.url.match(/\/(\d{10})(\d{2})(\d{6})\/[^/]+$/u);
+      if (!(p.coverage.cik ? accession && secUrl(e.url, p.coverage.cik, `${accession[1]}-${accession[2]}-${accession[3]}`) : primaryEvidenceUrl(e.url))) fail();
       const u = new URL(e.url);
       if (u.port || u.hash || [...u.searchParams.keys()].some(k => u.hostname !== 'dart.fss.or.kr' || k !== 'rcpNo')) fail();
       if ('asOf' in e) day(e.asOf);
@@ -227,7 +228,7 @@ function sanitizeUsSources(doc) {
       day(m.filed_date); day(m.period_end); time(source.metadataCheckedAt); day(source.metadataCheckedAt.slice(0, 10));
       if (Number(source.metadataCheckedAt.slice(11, 13)) > 23) fail(); // Match Python datetime cache parsing.
       const url = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${m.accession.replace(/-/gu, '')}/${m.primary_document}`;
-      if (m.url !== url || !secUrl(m.url, cik) || m.period_end > m.filed_date || m.filed_date > source.metadataCheckedAt.slice(0, 10)) fail();
+      if (m.url !== url || !secUrl(m.url, cik, m.accession) || m.period_end > m.filed_date || m.filed_date > source.metadataCheckedAt.slice(0, 10)) fail();
       item.filingMetadata = { issuer_id: m.issuer_id, issuer_name: m.issuer_name, cik, accession: m.accession,
         filed_date: m.filed_date, period_end: m.period_end, form: m.form, primary_document: m.primary_document, url };
       if (Buffer.byteLength(JSON.stringify(item.filingMetadata)) > 4096) fail();
@@ -239,8 +240,7 @@ function sanitizeUsSources(doc) {
       const e = source.reviewExhibit;
       try {
         if (e.schema !== 'sec-company-subsidiaries-v1' || e.cik !== cik || e.status !== 'needs-review' ||
-          !/^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') || !SHA.test(e.documentSha256 || '') || !secUrl(e.url, cik) ||
-          !e.url.startsWith(`https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${e.accession.replace(/-/gu, '')}/`) ||
+          !/^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') || !SHA.test(e.documentSha256 || '') || !secUrl(e.url, cik, e.accession) ||
           typeof e.filedDate !== 'string' || typeof e.periodEnd !== 'string' || !item.attemptedAt) fail();
         day(e.filedDate); day(e.periodEnd); day(item.attemptedAt.slice(0, 10));
         if (e.periodEnd > e.filedDate || e.filedDate > item.attemptedAt.slice(0, 10)) fail();
@@ -255,13 +255,13 @@ function sanitizeUsSources(doc) {
     }
     if (source.exhibit) {
       const e = source.exhibit;
-      if (e.schema !== 'sec-company-subsidiaries-v1' || e.cik !== cik || !secUrl(e.url, cik) || !SHA.test(e.documentSha256 || '') || !Array.isArray(e.rows)) fail();
+      if (e.schema !== 'sec-company-subsidiaries-v1' || e.cik !== cik || !secUrl(e.url, cik, e.accession) || !SHA.test(e.documentSha256 || '') || !Array.isArray(e.rows)) fail();
       day(e.filedDate); day(e.periodEnd); text(e.status, 40);
       const rows = [];
       for (const r of e.rows) {
         text(r.name, 180);
         if (r.ownershipPct !== null || r.directOwnership !== 'unspecified') fail();
-        if (!corporateLabel(r.name)) continue;
+        if (!corporateLabel(r.name) && !usCooperatieLabel(r.name)) continue;
         const jurisdiction = r.jurisdiction ?? '';
         if (typeof jurisdiction !== 'string') fail();
         if (jurisdiction) text(jurisdiction, 160);

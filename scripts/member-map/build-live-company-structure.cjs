@@ -28,6 +28,13 @@ const cooperation = name => /\bTSMC\b|Taiwan Semiconductor Manufacturing/iu.test
 const jsonBytes = value => Buffer.from(JSON.stringify(value) + '\n', 'utf8');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
+// Explicit legal form seen in the SEC ACU list; US projection only, never a
+// broader KR shareholder/name heuristic. Keep existing personal/vehicle bans.
+function usCooperatieLabel(name) {
+  return typeof name === 'string' && !/\b(?:fund|trust|individual)\b|펀드|개인|투자조합/iu.test(name) &&
+    /^.+\sCooperatie\s+U\.A\.$/iu.test(name);
+}
+
 function exclusion(row) {
   const type = String(row?.type || row?.kind || row?.asset_type || '').toUpperCase();
   const market = String(row?.market || '').toUpperCase();
@@ -128,12 +135,22 @@ function reusableCurations(legacy) {
     ['source-dated', 'official-undated'].includes(r.status) && (r.asOf === null || day(r.asOf)) && r.evidence?.length && r.evidence.every(e => primaryEvidenceUrl(e.url))).map(r => ({ ...r, evidence: r.evidence.map(e => ({ title: clean(e.title), url: e.url, ...(day(e.asOf) ? { asOf: e.asOf } : {}) })) }));
 }
 
-function secUrl(value, cik) {
-  if (typeof value !== 'string' || value.length > 2048) return null;
+function secUrl(value, cik, accession = null) {
+  if (typeof value !== 'string' || value.length > 2048 || !/^\d{1,10}$/u.test(String(cik || '')) || Number(cik) <= 0) return null;
+  const issuerArchiveCik = String(Number(cik));
+  const accessionPattern = /^\d{10}-\d{2}-\d{6}$/u;
+  if (accession !== null && !accessionPattern.test(accession)) return null;
+  const accessionDirectory = accession === null ? '[0-9]{18}' : accession.replace(/-/gu, '');
+  const coFilerAllowed = accession !== null && accession.slice(0, 10) === issuerArchiveCik.padStart(10, '0');
+  const archivePath = accession === null
+    ? `${issuerArchiveCik}/[0-9]{18}`
+    : coFilerAllowed
+      ? `(?:${issuerArchiveCik}|[1-9][0-9]{0,9})/${accessionDirectory}`
+      : `${issuerArchiveCik}/${accessionDirectory}`;
   try {
     const u = new URL(value);
-    return u.protocol === 'https:' && u.hostname === 'www.sec.gov' && !u.port && !u.username && !u.password && !u.search && !u.hash &&
-      new RegExp(`^/Archives/edgar/data/${Number(cik)}/[0-9]{18}/[A-Za-z0-9_.-]+\\.(?:htm|html|txt)$`, 'u').test(u.pathname) ? value : null;
+    return u.href === value && u.protocol === 'https:' && u.hostname === 'www.sec.gov' && !u.port && !u.username && !u.password && !u.search && !u.hash &&
+      new RegExp(`^/Archives/edgar/data/${archivePath}/[A-Za-z0-9_.-]+\\.(?:htm|html|txt)$`, 'u').test(u.pathname) ? value : null;
   } catch { return null; }
 }
 
@@ -142,7 +159,7 @@ function usPayload(aliases, source, generatedAt) {
   const e = source.exhibit, cik = aliases[0].cik;
   const observedAt = stamp(source.lastSuccessAt);
   const valid = e?.schema === 'sec-company-subsidiaries-v1' && e.cik === cik && Array.isArray(e.rows) && observedAt &&
-    secUrl(e.url, cik) && /^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') && e.url.includes('/' + e.accession.replace(/-/gu, '') + '/') &&
+    /^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') && secUrl(e.url, cik, e.accession) &&
     day(e.periodEnd) && day(e.filedDate) && e.periodEnd <= e.filedDate && e.filedDate <= observedAt.slice(0, 10) && /^[a-f0-9]{64}$/u.test(e.documentSha256 || '') &&
     ['ok', 'success', 'parsed', 'source-checked'].includes(e.status);
   const checked = !!valid && ['success', 'cached-same-accession'].includes(source.attemptStatus);
@@ -154,7 +171,7 @@ function usPayload(aliases, source, generatedAt) {
     const name = clean(row?.name);
     // SEC reported lists can include direct AND indirect entities, never a direct-control tree.
     if (!name || row.ownershipPct !== null || row.directOwnership !== 'unspecified' || aggregate(name) || /\b(?:fund|trust|individual)\b|펀드|개인|투자조합/iu.test(name) ||
-      !/(?:\b(?:inc|incorporated|corp|corporation|company|co|ltd|limited|llc|llp|plc|gmbh|sarl|pte|bv|sa)\b|주식회사|유한회사|有限公司)/iu.test(name) ||
+      !(/(?:\b(?:inc|incorporated|corp|corporation|company|co|ltd|limited|llc|llp|plc|gmbh|sarl|pte|bv|sa)\b|주식회사|유한회사|有限公司)/iu.test(name) || usCooperatieLabel(name)) ||
       aliases.some(a => norm(a.name).toLowerCase() === norm(name).toLowerCase())) { unsupported++; continue; }
     if (row.jurisdiction != null && (typeof row.jurisdiction !== 'string' || row.jurisdiction.length > 160)) { unsupported++; continue; }
     const peer = `FOREIGN:${hash(Buffer.from(`${cik}|${norm(row.name).toLowerCase()}|${norm(row.jurisdiction).toLowerCase()}`)).slice(0, 20)}`;
@@ -354,5 +371,5 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { buildArtifacts, writeArtifacts, main, verifiedRow, secUrl, MAX_BYTES, MAX_ISSUERS };
+module.exports = { buildArtifacts, writeArtifacts, main, verifiedRow, secUrl, usCooperatieLabel, MAX_BYTES, MAX_ISSUERS };
 if (require.main === module) { try { main(); } catch (e) { process.stderr.write(e.message + '\n'); process.exitCode = 1; } }

@@ -16,6 +16,7 @@ import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from urllib.parse import urlsplit
 import urllib.error
 import urllib.request
 
@@ -85,6 +86,31 @@ def get_public(url, maximum=MAX_BYTES):
     if not raw or len(raw) > maximum:
         raise ValueError("sec-response-size")
     return raw
+
+
+def _valid_exhibit_url(url, cik, accession):
+    """Validate an exact filing-bound SEC document URL, including co-filers."""
+    if (not isinstance(cik, str) or not re.fullmatch(r"[0-9]{10}", cik)
+            or not isinstance(accession, str) or not re.fullmatch(r"[0-9]{10}-[0-9]{2}-[0-9]{6}", accession)
+            or not isinstance(url, str) or len(url) > 2048):
+        return False
+    try:
+        parts = urlsplit(url)
+        if (parts.scheme != "https" or parts.netloc != "www.sec.gov" or parts.query or parts.fragment
+                or "?" in url or "#" in url
+                or not parts.path.startswith("/Archives/edgar/data/")
+                or re.search(r"%(?:2f|5c|2e)", url, re.I) or "\\" in parts.path
+                or any(piece in (".", "..") for piece in parts.path.split("/"))):
+            return False
+        match = re.fullmatch(
+            r"/Archives/edgar/data/([1-9][0-9]{0,9})/([0-9]{18})/([A-Za-z0-9_.-]+\.(?:htm|html|txt))",
+            parts.path, re.I)
+        if not match or match.group(2) != accession.replace("-", ""):
+            return False
+        archive_cik = match.group(1)
+        return archive_cik == str(int(cik)) or accession[:10] == cik
+    except (ValueError, UnicodeError):
+        return False
 
 
 def latest_metadata(ticker, cik, submission):
@@ -305,12 +331,12 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
                     exhibit_url = helpers.find_exhibit(index, cik=cik, accession=accession, form=metadata["form"])
                     if exhibit_url is None:
                         raise ValueError("source-gap:ex21-missing")
-                    # find_exhibit enforces this exact CIK/accession directory.
-                    if not exhibit_url.startswith(directory) or not re.fullmatch(r"[A-Za-z0-9_.-]+\.(?:htm|html|txt)", exhibit_url[len(directory):], re.I):
+                    if not _valid_exhibit_url(exhibit_url, cik, accession):
                         raise ValueError("sec-exhibit-url-invalid")
                     raw = get(exhibit_url, cik, {exhibit_url})
                     parsed = helpers.parse_exhibit(raw, {"cik": cik, "accession": accession,
-                        "filedDate": metadata["filed_date"], "periodEnd": metadata["period_end"], "url": exhibit_url})
+                        "filedDate": metadata["filed_date"], "periodEnd": metadata["period_end"], "url": exhibit_url,
+                        "issuerName": metadata["issuer_name"]})
                     if parsed["status"] != "parsed":
                         issuer["reviewExhibit"] = parsed
                         raise ValueError("source-gap:ex21-needs-review")
