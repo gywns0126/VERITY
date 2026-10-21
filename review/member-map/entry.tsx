@@ -2,16 +2,19 @@ import * as React from "react"
 import { createRoot } from "react-dom/client"
 import AlphaNestAuth, { getVeritySession } from "./Auth.snapshot"
 import PublicPortfolioMapReview from "./Map.snapshot"
+import CompanyStructureView, { useCompanyStructureBridge } from "./company-structure-view"
 
 declare const __PUBLIC_AUTH__: { url: string; anon: string }
 const RETURN_URL = "https://project-yw131.vercel.app/member-map-review"
 
 function Review() {
-    const [signedIn, setSignedIn] = React.useState(false)
+    const [memberId, setMemberId] = React.useState<string | null>(null)
+    const signedIn = !!memberId
     const [accountOpen, setAccountOpen] = React.useState(false)
+    const structure = useCompanyStructureBridge(memberId)
     React.useEffect(() => {
         // PublicAuth owns normal login. Never transfer sessions across origins.
-        const sync = () => setSignedIn(Boolean(getVeritySession()?.user?.id))
+        const sync = () => setMemberId(getVeritySession()?.user?.id || null)
         sync()
         window.addEventListener("verity_auth_change", sync)
         window.addEventListener("storage", sync)
@@ -23,6 +26,7 @@ function Review() {
     return <>
         <header className="review-bar">
             <strong><i aria-hidden="true">α</i> ALPHANEST <span>회원 검수</span></strong>
+            {signedIn && <button type="button" className="review-structure-toggle" aria-pressed={!!structure.snapshot} disabled={structure.waiting} onClick={structure.open}>{structure.waiting ? "지도 확인 중…" : "기업 구조"}</button>}
             {signedIn ? <button type="button" aria-expanded={accountOpen} onClick={() => setAccountOpen(value => !value)}>
                 계정
             </button> : <span>로그인 필요</span>}
@@ -35,6 +39,7 @@ function Review() {
         </section>
         {signedIn ? <main><PublicPortfolioMapReview /></main> :
             <p className="review-help">기존 알파네스트 계정으로 로그인하면 내 보유종목과 비공개 지도 기록을 불러와요.</p>}
+        {signedIn && structure.snapshot && <CompanyStructureView snapshot={structure.snapshot} onClose={structure.close} />}
     </>
 }
 
