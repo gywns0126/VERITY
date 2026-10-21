@@ -1,30 +1,58 @@
 {
  "_meta": {
-  "generated_at": "2026-10-20T18:41:12+09:00",
+  "generated_at": "2026-10-21T18:41:16+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 29,
+  "sessions_scanned": 30,
   "sessions_missed": [
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 832,
-   "companies": 241,
+   "filings": 849,
+   "companies": 245,
    "by_stage": {
-    "신청": 94,
-    "정정(심사중)": 114,
+    "신청": 95,
+    "정정(심사중)": 116,
     "가격확정": 10,
-    "거래소등록": 23
+    "거래소등록": 24
    },
    "spac_likely": 28,
-   "has_ticker_now": 185,
+   "has_ticker_now": 189,
    "priced_secondary_excluded": 8,
-   "foreign_issuer": 72,
+   "foreign_issuer": 74,
    "priced_parse_ok": 7
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
  },
  "items": [
+  {
+   "cik": "1806540",
+   "name": "Lycia Therapeutics, Inc.",
+   "forms": {
+    "8-A12B": 1,
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20261005",
+   "last_filed": "20261020",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1806540&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2836",
+    "sic_desc": "Biological Products, (No Diagnostic Substances)",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "SOUTH SAN FRANCISCO, CA",
+    "state_of_inc": "DE"
+   }
+  },
   {
    "cik": "2131303",
    "name": "SPACCircle Acquisition Corp.",
@@ -1111,6 +1139,164 @@
    "pre_existing_reporter": true
   },
   {
+   "cik": "2023153",
+   "name": "HomesToLife Ltd",
+   "forms": {
+    "F-1/A": 1
+   },
+   "first_filed": "20261020",
+   "last_filed": "20261020",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2023153&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "5712",
+    "sic_desc": "Retail-Furniture Stores",
+    "is_blank_check": false,
+    "ticker": "HTLM",
+    "region": "SINGAPORE",
+    "state_of_inc": null
+   }
+  },
+  {
+   "cik": "1814067",
+   "name": "Lixiang Education Holding Co. Ltd.",
+   "forms": {
+    "F-1/A": 1,
+    "F-1": 1
+   },
+   "first_filed": "20260911",
+   "last_filed": "20261020",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1814067&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "8200",
+    "sic_desc": "Services-Educational Services",
+    "is_blank_check": false,
+    "ticker": "LXEH",
+    "region": "LISHUI CITY. ZHEJIANG PROVINCE, F4",
+    "state_of_inc": null
+   }
+  },
+  {
+   "cik": "2143060",
+   "name": "Essential Minerals Acquisition Corp",
+   "forms": {
+    "S-1/A": 3
+   },
+   "first_filed": "20261001",
+   "last_filed": "20261020",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 3,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2143060&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "EMAC",
+    "region": "EAST PERTH",
+    "state_of_inc": "E9"
+   }
+  },
+  {
+   "cik": "1070965",
+   "name": "GEORGIA BANKING CO INC",
+   "forms": {
+    "S-1/A": 2,
+    "S-1": 1
+   },
+   "first_filed": "20261002",
+   "last_filed": "20261020",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1070965&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6022",
+    "sic_desc": "State Commercial Banks",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "ATLANTA, GA",
+    "state_of_inc": "GA"
+   }
+  },
+  {
+   "cik": "720762",
+   "name": "NON INVASIVE MONITORING SYSTEMS INC /FL/",
+   "forms": {
+    "S-1/A": 4
+   },
+   "first_filed": "20260917",
+   "last_filed": "20261020",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 4,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=720762&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3760",
+    "sic_desc": "Guided Missiles & Space Vehicles & Parts",
+    "is_blank_check": false,
+    "ticker": "NIMU",
+    "region": "MIAMI BEACH, FL",
+    "state_of_inc": "FL"
+   }
+  },
+  {
+   "cik": "1787518",
+   "name": "T3 Defense Inc.",
+   "forms": {
+    "S-1/A": 4
+   },
+   "first_filed": "20261002",
+   "last_filed": "20261020",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 4,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1787518&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "8742",
+    "sic_desc": "Services-Management Consulting Services",
+    "is_blank_check": false,
+    "ticker": "DFNS",
+    "region": "NEW YORK, NY",
+    "state_of_inc": "DE"
+   }
+  },
+  {
    "cik": "1888014",
    "name": "AKANDA CORP.",
    "forms": {
@@ -1508,33 +1694,6 @@
    }
   },
   {
-   "cik": "1070965",
-   "name": "GEORGIA BANKING CO INC",
-   "forms": {
-    "S-1/A": 1,
-    "S-1": 1
-   },
-   "first_filed": "20261002",
-   "last_filed": "20261014",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1070965&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6022",
-    "sic_desc": "State Commercial Banks",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "ATLANTA, GA",
-    "state_of_inc": "GA"
-   }
-  },
-  {
    "cik": "1506983",
    "name": "Glucotrack, Inc.",
    "forms": {
@@ -1640,32 +1799,6 @@
    }
   },
   {
-   "cik": "720762",
-   "name": "NON INVASIVE MONITORING SYSTEMS INC /FL/",
-   "forms": {
-    "S-1/A": 3
-   },
-   "first_filed": "20260917",
-   "last_filed": "20261013",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 3,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=720762&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "3760",
-    "sic_desc": "Guided Missiles & Space Vehicles & Parts",
-    "is_blank_check": false,
-    "ticker": "NIMU",
-    "region": "MIAMI BEACH, FL",
-    "state_of_inc": "FL"
-   }
-  },
-  {
    "cik": "1966126",
    "name": "NuvOx Therapeutics, Inc.",
    "forms": {
@@ -1707,16 +1840,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2113640&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "3533",
-    "sic_desc": "Oil & Gas Field Machinery & Equipment",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "TYLER, TX",
-    "state_of_inc": "TX"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2113640&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2120528",
@@ -1733,16 +1857,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2120528&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7363",
-    "sic_desc": "Services-Help Supply Services",
-    "is_blank_check": false,
-    "ticker": "KHG",
-    "region": "SHAH ALAM",
-    "state_of_inc": "D8"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2120528&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2071166",
@@ -1759,16 +1874,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2071166&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "1531",
-    "sic_desc": "Operative Builders",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "TORONTO",
-    "state_of_inc": "Z4"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2071166&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2141983",
@@ -1786,16 +1892,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": true,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2141983&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "ALLN",
-    "region": "TARPON SPRINGS, FL",
-    "state_of_inc": "E9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2141983&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1670747",
@@ -1812,16 +1909,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1670747&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2834",
-    "sic_desc": "Pharmaceutical Preparations",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "KING CITY, A6",
-    "state_of_inc": "A1"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1670747&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2030763",
@@ -1961,23 +2049,6 @@
    "is_spac_likely": true,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2154056&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2143060",
-   "name": "Essential Minerals Acquisition Corp",
-   "forms": {
-    "S-1/A": 2
-   },
-   "first_filed": "20261001",
-   "last_filed": "20261008",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2143060&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2123380",
@@ -2150,23 +2221,6 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2109686&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1787518",
-   "name": "T3 Defense Inc.",
-   "forms": {
-    "S-1/A": 2
-   },
-   "first_filed": "20261002",
-   "last_filed": "20261002",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1787518&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2137360",
@@ -3317,6 +3371,57 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2074652&type=S-1&dateb=&owner=include&count=20"
   },
   {
+   "cik": "1995075",
+   "name": "Megan Holdings Ltd.",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20261020",
+   "last_filed": "20261020",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1995075&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1826892",
+   "name": "BioAtla, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261020",
+   "last_filed": "20261020",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1826892&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1435617",
+   "name": "POWERDYNE INTERNATIONAL, INC.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261020",
+   "last_filed": "20261020",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1435617&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
    "cik": "2100713",
    "name": "iStep Learning plc",
    "forms": {
@@ -3825,23 +3930,6 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2118192&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1806540",
-   "name": "Lycia Therapeutics, Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261005",
-   "last_filed": "20261005",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1806540&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1517681",
@@ -4607,23 +4695,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2092314&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1814067",
-   "name": "Lixiang Education Holding Co. Ltd.",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20260911",
-   "last_filed": "20260911",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1814067&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2134106",
