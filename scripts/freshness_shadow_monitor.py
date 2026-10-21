@@ -68,10 +68,11 @@ def _extract_ts(obj, ts_field: str | None):
 
 
 
-def _clock_evidence(stream, path, obj):
+def _clock_evidence(stream, path, obj, extract_ts=None):
     """Receipt clocks never fall back to rebuild or workflow-completion clocks."""
     receipt_only = stream.get("receipt_clock") is True
-    ts = None if receipt_only else _extract_ts(obj, stream.get("ts_field"))
+    extractor = _extract_ts if extract_ts is None else extract_ts
+    ts = None if receipt_only else extractor(obj, stream.get("ts_field"))
     proof = None
     if obj is not None and (receipt_only or (not ts and not stream.get("ts_field"))):
         proof = collection_receipt(stream["id"], path)

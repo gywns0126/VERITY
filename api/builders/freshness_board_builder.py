@@ -172,7 +172,7 @@ def build_board() -> dict:
             path = os.path.join(DATA_DIR, f)
             exists = os.path.exists(path)
             obj = _load_any(path) if exists else None
-            ts, proof = _clock_evidence(s, path, obj)
+            ts, proof = _clock_evidence(s, path, obj, extract_ts=_extract_ts)
             if proof:
                 # Public aggregate counts contain no ticker IDs or workflow details.
                 pipeline[sid] = {key: proof[key] for key in (
