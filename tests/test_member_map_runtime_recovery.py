@@ -111,3 +111,72 @@ def test_exponential_delay_caps_at_five_minutes(monkeypatch, capsys):
     runner.run_supabase({"stocks": []}, 661)
     events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert [event["backoff_seconds"] for event in events] == [120, 240, 300, 300]
+
+
+def test_startup_catalog_delay_does_not_advance_next_collection_tick(monkeypatch, capsys):
+    from api.collectors import member_map_refresh_store as storage
+    clock, starts = [0.0], []
+    monkeypatch.setenv("DART_API_KEY", "synthetic")
+    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: object())
+    monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(runner.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+    def catalog():
+        clock[0] += .2
+        return {}
+    def cycle(*args):
+        starts.append(clock[0])
+        clock[0] += 9
+        return {"status": "success"}
+    monkeypatch.setattr(storage, "read_public_catalog", catalog)
+    monkeypatch.setattr(runner, "supabase_cycle", cycle)
+    runner.run_supabase(None, 241)
+    assert starts == pytest.approx([.2, 120.2, 240.2])
+
+
+@pytest.mark.parametrize("remaining, delay", [(0, 1), (1, 1), (5, 5), (300, 300),
+                                              (None, 120), (True, 120), (-1, 120), (301, 120)])
+def test_not_due_wait_is_bounded_and_relative_to_response(monkeypatch, capsys, remaining, delay):
+    from api.collectors import member_map_refresh_store as storage
+    clock, starts = [0.0], []
+    monkeypatch.setenv("DART_API_KEY", "synthetic")
+    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: object())
+    monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(runner.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+    def cycle(*args):
+        starts.append(clock[0])
+        clock[0] += 4  # A slow read must not consume the server's remaining wait.
+        if len(starts) == 1:
+            return {"status": "not-due", "retry_after_seconds": remaining}
+        return {"status": "success"}
+    monkeypatch.setattr(runner, "supabase_cycle", cycle)
+    expected = 4 + delay if type(remaining) is int and 0 <= remaining <= 300 else 120
+    runner.run_supabase({}, expected + 1)
+    assert starts == [0, expected]
+    events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert [event["status"] for event in events] == ["not-due", "success"]
+    assert events[0]["last_success_at"] is None
+
+
+def test_early_local_tick_returns_remaining_wait_without_claim(monkeypatch):
+    class Store:
+        def read_states(self):
+            return {"DART": {"last_attempt_at": "2026-10-12T01:00:00.200000+00:00"}}
+        def claim(self, *_):
+            pytest.fail("Early boundary must not reserve another request batch")
+    monkeypatch.setattr(runner, "build_kr_universe", lambda *_: {"123456": "synthetic"})
+    result = runner.supabase_cycle(Store(), {}, "synthetic", "owner", "2026-10-12T01:02:00+00:00")
+    assert result["status"] == "not-due" and result["requests"] == 0
+    assert result["retry_after_seconds"] == 1
+
+
+def test_database_due_guard_delay_survives_runner_boundary(monkeypatch):
+    class Store:
+        def read_states(self):
+            return {"DART": {}}
+        def claim(self, *_):
+            return {"status": "not-due", "retry_after_seconds": 2}
+    monkeypatch.setattr(runner, "build_kr_universe", lambda *_: {"123456": "synthetic"})
+    monkeypatch.setattr(runner, "collect_dart_delta", lambda *a, **k: pytest.fail("DB guard must prevent collection"))
+    result = runner.supabase_cycle(Store(), {}, "synthetic", "owner", "2026-10-12T01:02:00+00:00")
+    assert result["status"] == "not-due" and result["retry_after_seconds"] == 2
+    assert result["requests"] == 0
