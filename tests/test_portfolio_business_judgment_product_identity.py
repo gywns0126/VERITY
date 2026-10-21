@@ -157,7 +157,7 @@ def test_raw_pack_get_replay_preserves_old_answer_identity_and_revision():
     doc, answer = _case("APS (Accelrator Pedal Sensor)")
     source = business.prepare_judgment_packet([doc], as_of=AS_OF)["sources"][0]
     literal = business._validate_row(answer["judgments"][0], source, AS_OF)
-    assert business.VERSION == "company-business-judgment-v1"
+    assert business.VERSION == "company-business-judgment-v2"
     assert _validate(doc, answer)["judgments"][0] == literal
     safe = business.safe_saved_judgment_answer(answer, [doc], as_of=AS_OF)
     assert safe == answer and safe is not answer and safe["judgments"][0] is not answer["judgments"][0]
@@ -173,6 +173,28 @@ def test_raw_pack_get_replay_preserves_old_answer_identity_and_revision():
     assert replay["judgments"][0]["display"] == {"degree": "unrated", "impact": "unknown", "importance": "unrated"}
     assert (doc, answer, saved) == before and budget.get_calls == 1
     assert budget.reserve_calls == budget.settle_calls == 0
+
+
+def test_v1_archived_judgment_remains_readable_after_v2_prompt_namespace():
+    doc, answer = _case("APS (Accelrator Pedal Sensor)")
+    _validate(doc, answer)
+    legacy_version = "company-business-judgment-v1"
+    raw = {"status": "error", "provider": ai.PROVIDER, "model": ai.MODEL,
+           "reasoning_effort": ai.REASONING_EFFORT, "assessed_as_of": AS_OF,
+           "usage": {"input_tokens": 100, "output_tokens": 30,
+                     "thinking_tokens": 0, "cached_input_tokens": 0}, "raw_answer": answer}
+    legacy_result = archive.pack_result(raw, doc, legacy_version, 25)
+    legacy_key = ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT, legacy_version, doc])
+    restored = {"status": "stored", "key": legacy_key, "document": deepcopy(doc),
+                "result": legacy_result}
+    budget = ReadOnlyBudget(restored)
+    fetched = archive.SupabaseResultStore(budget).get([legacy_key])
+    replay = archive.replay_result(fetched, doc, judgment_as_of=NEXT_DAY)
+    assert replay["status"] == "cached" and replay["original_status"] == "error"
+    assert replay["raw_answer"] == answer and replay["provider_calls"] == 0
+    assert budget.get_calls == 1 and budget.reserve_calls == budget.settle_calls == 0
+    assert business.VERSION == "company-business-judgment-v2"
+    assert business.VERSION != legacy_version
 
 
 def test_product_flag_reaches_pending_projection_and_blocks_even_complete_accept_receipt():
