@@ -18,8 +18,9 @@ function fixture(t) {
   writeArtifacts(result, dir); return { dir, result };
 }
 function mock() {
-  const store = new Map(), writes = [], reads = [];
-  const options = { token: 'vercel_blob_rw_rte5guenhonw9fzn_OFFLINE_TEST_ONLY', pause: async () => {},
+  const store = new Map(), writes = [], reads = [], diagnostics = []; let now = 0;
+  const options = { token: 'vercel_blob_rw_rte5guenhonw9fzn_OFFLINE_TEST_ONLY', pause: async ms => { now += ms; }, clock: () => now,
+    diagnostic: value => diagnostics.push(value),
     fetch: async (url, opts) => {
       assert.ok(url.startsWith(BASE)); assert.equal(opts.redirect, 'error');
       const name = new URL(url).pathname.slice(1); reads.push(name);
@@ -32,7 +33,7 @@ function mock() {
       else assert.equal(opts.allowOverwrite, false);
       writes.push(name); store.set(name, Buffer.from(bytes)); return { url: BASE + name };
     } };
-  return { store, writes, reads, options };
+  return { store, writes, reads, diagnostics, options };
 }
 function editPayload(dir, fn) {
   const m = JSON.parse(fs.readFileSync(path.join(dir, INDEX))), meta = m.issuers['KR:111111'];
@@ -86,17 +87,20 @@ test('manifest is path-free with closed schema, issuer bound and exact-byte coun
 test('a newer public manifest blocks rollback; concurrent manifest change blocks final write', async t => {
   const { dir } = fixture(t), r = mock();
   r.store.set(INDEX, Buffer.from(JSON.stringify({ generatedAt: '2026-10-22T00:00:00Z' })));
-  await assert.rejects(publish(dir, r.options), /older/u); assert.equal(r.writes.length, 0);
+  await assert.rejects(publish(dir, r.options)); assert.equal(r.writes.length, 0);
+  assert.deepEqual(r.diagnostics.at(-1), { stage: 'initial-manifest-read', category: 'manifest-older' });
   r.store.set(INDEX, Buffer.from(JSON.stringify({ generatedAt: '2026-10-20T00:00:00Z' })));
   const put = r.options.put;
   r.options.put = async (...args) => { const value = await put(...args); r.store.set(INDEX, Buffer.from(JSON.stringify({ generatedAt: '2026-10-21T09:00:00Z' }))); return value; };
-  await assert.rejects(publish(dir, r.options), /changed/u); assert.equal(r.writes.includes(INDEX), false);
+  await assert.rejects(publish(dir, r.options)); assert.equal(r.writes.includes(INDEX), false);
+  assert.deepEqual(r.diagnostics.at(-1), { stage: 'manifest-cas', category: 'manifest-changed' });
 });
 test('wrong store credential/endpoint, SDK destination and non-committed publication fail closed', async t => {
   const { dir } = fixture(t), r = mock();
   await assert.rejects(publish(dir, { ...r.options, token: 'other' })); assert.equal(r.writes.length, 0);
   r.options.put = async () => ({ url: 'https://other.public.blob.vercel-storage.com/a' });
-  await assert.rejects(publish(dir, r.options), /store/u); assert.equal(r.writes.includes(INDEX), false);
+  await assert.rejects(publish(dir, r.options)); assert.equal(r.writes.includes(INDEX), false);
+  assert.deepEqual(r.diagnostics.at(-1), { stage: 'payload-write', category: 'destination-mismatch' });
   await assert.rejects(main(['--output-dir', dir, '--publish']));
   await assert.rejects(main(['--output-dir', dir, '--url', 'https://evil.example/']));
 });
@@ -262,6 +266,123 @@ test('immutable uploads use at most four workers and drain in-flight failure bef
     else { await publish(output, r.options); assert.equal(r.writes.at(-1), INDEX); assert.equal(r.writes.length, 10); }
     assert.equal(active, 0); assert.equal(peak, 4);
   }
+});
+
+test('one shared pacing gate spaces aggregate GET/HEAD/PUT starts by at least 100ms while retaining four workers', async t => {
+  const { dir } = fixture(t), listed = {}, structures = {};
+  for (let n = 0; n < 9; n++) {
+    const ticker = String(300000 + n); listed[ticker] = { name: `Issuer ${n} Corp.` };
+    structures[ticker] = { collected_at: at, major_shareholders: [{ name: 'Holder Ltd.' }], subsidiaries: [] };
+  }
+  const result = buildArtifacts({ listed, groups: { structures }, generatedAt: at });
+  const output = path.join(path.dirname(dir), 'paced'); writeArtifacts(result, output);
+  const r = mock(), starts = []; let active = 0, peak = 0;
+  r.store.set(INDEX, Buffer.from(JSON.stringify({ generatedAt: '2026-10-20T00:00:00Z' })));
+  for (const key of [...result.payloads.keys()].slice(0, 4)) r.store.set(`company-structure/${key}.json`, Buffer.from('corrupt'));
+  for (const kind of ['fetch', 'head', 'put']) {
+    const action = r.options[kind];
+    r.options[kind] = async (...args) => {
+      starts.push({ kind, at: r.options.clock() }); active++; peak = Math.max(peak, active);
+      try { await new Promise(resolve => setImmediate(resolve)); return await action(...args); }
+      finally { active--; }
+    };
+  }
+  await publish(output, r.options);
+  assert.equal(active, 0); assert.equal(peak, 4);
+  assert.deepEqual(new Set(starts.map(s => s.kind)), new Set(['fetch', 'head', 'put']));
+  for (let i = 1; i < starts.length; i++) assert.ok(starts[i].at - starts[i - 1].at >= 100);
+  for (const start of starts) assert.ok(starts.filter(s => s.at >= start.at && s.at < start.at + 1000).length <= 10);
+  assert.equal(r.writes.at(-1), INDEX); assert.equal(r.writes.length, 10);
+  assert.equal(new Set(r.writes).size, r.writes.length); // No write retry.
+});
+
+test('fixed diagnostics identify every remote stage, redact HTTP bodies/SDK messages and preserve manifest-last failure boundaries', async t => {
+  const cases = [
+    ['initial-manifest-read', 'fetch', 'http', 429], ['payload-read', 'fetch', 'http', 503],
+    ['payload-metadata', 'head', 'sdk', 'BlobAccessError'], ['manifest-metadata', 'head', 'sdk', 'BlobStoreSuspendedError'],
+    ['payload-write', 'put', 'sdk', 'BlobServiceRateLimited'], ['payload-readback', 'fetch', 'http', 403],
+    ['manifest-cas', 'fetch', 'http', 409], ['manifest-write', 'put', 'sdk', 'BlobPreconditionFailedError'],
+    ['manifest-readback', 'fetch', 'http', 502],
+  ];
+  const secret = 'vercel_blob_rw_PRIVATE Bearer PRIVATE https://private.example/raw?token=PRIVATE ENV_PRIVATE';
+  for (const [stage, method, category, detail] of cases) {
+    const { dir, result } = fixture(t), r = mock(); let indexReads = 0, failures = 0;
+    if (stage === 'manifest-metadata') r.store.set(INDEX, Buffer.from(JSON.stringify({ generatedAt: '2026-10-20T00:00:00Z' })));
+    if (stage === 'payload-metadata') r.store.set(`company-structure/${[...result.payloads.keys()][0]}.json`, Buffer.from('corrupt'));
+    const action = r.options[method];
+    r.options[method] = async (...args) => {
+      const name = method === 'put' ? args[0] : new URL(args[0]).pathname.slice(1), isIndex = name === INDEX;
+      if (method === 'fetch' && isIndex) indexReads++;
+      const actualStage = method === 'head' ? (isIndex ? 'manifest-metadata' : 'payload-metadata') :
+        method === 'put' ? (isIndex ? 'manifest-write' : 'payload-write') :
+        isIndex ? (r.writes.includes(INDEX) ? 'manifest-readback' : indexReads === 1 ? 'initial-manifest-read' : 'manifest-cas') :
+        r.writes.includes(name) ? 'payload-readback' : 'payload-read';
+      if (actualStage === stage) {
+        failures++;
+        if (category === 'http') return new Response(secret, { status: detail });
+        const error = new Error(secret); error.name = detail; error.body = secret; error.url = secret; error.env = secret;
+        throw error;
+      }
+      return action(...args);
+    };
+    await assert.rejects(publish(dir, r.options), error => {
+      assert.equal(error.message, 'Company structure publication failed'); assert.equal(error.cause, undefined); return true;
+    });
+    assert.equal(failures, 1); assert.equal(r.diagnostics.length, 1);
+    assert.deepEqual(r.diagnostics[0], { stage, category, ...(category === 'http' ? { httpStatus: detail } : { errorClass: detail }) });
+    assert.equal(JSON.stringify(r.diagnostics).includes('PRIVATE'), false);
+    assert.equal(new Set(r.writes).size, r.writes.length);
+    if (stage !== 'manifest-readback') assert.equal(r.writes.includes(INDEX), false);
+    else assert.equal(r.writes.at(-1), INDEX); // Already-written bytes are never reported as confirmed.
+  }
+});
+
+test('transport diagnostics use only allowlisted names/codes and never inspect secret-like message/body/url/environment', async t => {
+  for (const [name, code, expected] of [
+    ['TypeError', 'ECONNRESET', { category: 'transport', errorClass: 'TypeError', transportCode: 'ECONNRESET' }],
+    ['TimeoutError', 'UND_ERR_CONNECT_TIMEOUT', { category: 'transport', errorClass: 'TimeoutError', transportCode: 'UND_ERR_CONNECT_TIMEOUT' }],
+    ['BlobServiceRateLimited', 'PRIVATE_ENV', { category: 'sdk', errorClass: 'BlobServiceRateLimited', httpStatus: 429 }],
+    ['PRIVATE https://secret.example', 'PRIVATE_ENV', { category: 'unknown' }],
+  ]) {
+    const { dir } = fixture(t), r = mock(); let calls = 0;
+    r.options.put = async () => {
+      calls++; const error = new Error('PRIVATE_TOKEN'); error.name = name; error.cause = { code }; error.status = 'PRIVATE_STATUS';
+      if (name === 'BlobServiceRateLimited') error.statusCode = 429;
+      for (const key of ['message', 'body', 'url', 'env']) Object.defineProperty(error, key, { get() { throw Error('PRIVATE field was read'); } });
+      throw error;
+    };
+    await assert.rejects(publish(dir, r.options), error => error.message === 'Company structure publication failed');
+    assert.equal(calls, 1); assert.equal(r.writes.includes(INDEX), false);
+    assert.deepEqual(r.diagnostics, [{ stage: 'payload-write', ...expected }]);
+    assert.equal(JSON.stringify(r.diagnostics).includes('PRIVATE'), false);
+  }
+  // SDK 2.4 subclasses inherit name='BlobError'; retain the specific class.
+  for (const ErrorClass of [class BlobServiceRateLimited extends Error {}, class BlobStoreSuspendedError extends Error {}]) {
+    const { dir } = fixture(t), r = mock();
+    r.options.put = async () => {
+      const error = new ErrorClass('PRIVATE_TOKEN https://private.example ENV_PRIVATE'); error.name = 'BlobError'; throw error;
+    };
+    await assert.rejects(publish(dir, r.options), error => error.message === 'Company structure publication failed');
+    assert.deepEqual(r.diagnostics, [{ stage: 'payload-write', category: 'sdk', errorClass: ErrorClass.name }]);
+    assert.equal(JSON.stringify(r.diagnostics).includes('PRIVATE'), false); assert.equal(r.writes.includes(INDEX), false);
+  }
+  // Exercise the default formatter in a child with entirely mocked transport;
+  // separately keep the real CLI's generic final failure boundary closed.
+  const { dir } = fixture(t);
+  const entrypoint = fs.readFileSync(path.resolve(__dirname, '../scripts/member-map/publish-company-structure.cjs'), 'utf8').split('if (require.main === module)')[1];
+  assert.match(entrypoint, /\.catch\(\(\) =>/u);
+  assert.match(entrypoint, /manifest publication not confirmed/u);
+  assert.doesNotMatch(entrypoint, /\.message|\.stack|\.cause|console\./u);
+  const code = `const {publish}=require(${JSON.stringify(path.resolve(__dirname, '../scripts/member-map/publish-company-structure.cjs'))});
+    let now=0; publish(process.argv[1], {token:'vercel_blob_rw_rte5guenhonw9fzn_OFFLINE_TEST_ONLY',clock:()=>now,pause:async ms=>{now+=ms},
+    fetch:async()=>new Response(null,{status:404}),head:async()=>{},put:async()=>{throw Object.assign(new Error('PRIVATE_TOKEN https://secret.example ENV_PRIVATE'),{name:'BlobServiceRateLimited'})}})
+    .catch(()=>{process.stderr.write('Company structure validation/publication failed; manifest publication not confirmed.\\n');process.exitCode=1});`;
+  let output;
+  try { execFileSync(process.execPath, ['-e', code, dir], { env: { PATH: process.env.PATH }, stdio: 'pipe' }); }
+  catch (error) { assert.equal(error.status, 1); output = error.stderr.toString(); }
+  assert.ok(output); assert.doesNotMatch(output, /PRIVATE|secret\.example|vercel_blob_rw_/u);
+  assert.match(output, /"stage":"payload-write","category":"sdk","errorClass":"BlobServiceRateLimited"/u);
+  assert.match(output, /manifest publication not confirmed/u);
 });
 
 test('actual workflow cadence uses remote KST-day attempts across all events, includes failed/cancelled, and fails closed', async () => {
