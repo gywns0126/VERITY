@@ -18,12 +18,13 @@ vm.runInNewContext(code, {
   module: box,
   exports: box.exports,
   URL,
+  TextDecoder,
   require(name) {
     if (name === 'react') return {};
     throw new Error(`unexpected module: ${name}`);
   },
 }, { timeout: 1000 });
-const { makeStructureLayout, validateStructure } = box.exports;
+const { makeStructureLayout, validateStructure, loadCompanyStructure, structureCoverageText, resolveFocus } = box.exports;
 
 const company = id => ({ id, name: `Company ${id}` });
 const relation = (id, from, to, extra = {}) => ({
@@ -107,4 +108,30 @@ test('validation and layout leave the source catalogue unchanged', () => {
   validateStructure(catalogue);
   makeStructureLayout(catalogue, company('focus'));
   assert.deepEqual(catalogue, before);
+});
+
+const catalogueFor = ticker => ({schema:'alphanest-company-structure-v1',companies:[{id:`KR:${ticker}`,ticker,market:'KR',name:'Fixture'}],relations:[],coverage:{sourceStatus:'not-attempted'}});
+const responseFor = doc => new Response(JSON.stringify(doc),{headers:{'Content-Type':'application/json'}});
+test('targeted reader accepts alphanumeric KR tickers and never sends member credentials', async () => {
+  const calls=[]; const signal=new AbortController().signal;
+  const value=await loadCompanyStructure({market:'KR',ticker:'0068Y0'},signal,async (url,init)=>{calls.push({url,init});return responseFor(catalogueFor('0068Y0'));});
+  assert.equal(calls.length,1); assert.equal(calls[0].url,'/api/company_structure?market=KR&ticker=0068Y0');
+  assert.equal(calls[0].init.credentials,'omit'); assert.equal(value.companies[0].ticker,'0068Y0');
+  assert.match(structureCoverageText(value),/수집 대기/);
+});
+test('failed live reader labels retained data and does not invent a fresh clock', async () => {
+  const old={...catalogueFor('000660'),observedAt:'2026-01-01T00:00:00Z'}; let calls=0;
+  const value=await loadCompanyStructure({market:'KR',ticker:'000660'},new AbortController().signal,async()=>{if(calls++===0) throw Error('offline');return responseFor(old);});
+  assert.equal(calls,2); assert.equal(value.observedAt,old.observedAt); assert.equal(value.coverage.fallback,true);
+  assert.match(structureCoverageText(value),/이전 저장 자료/);
+});
+test('invalid ticker and cancelled reader never trigger a fallback request', async () => {
+  let calls=0; const c=new AbortController(); c.abort();
+  await assert.rejects(loadCompanyStructure({market:'KR',ticker:'../../etc'},c.signal,async()=>{calls++;}),/ticker/);
+  await assert.rejects(loadCompanyStructure({market:'KR',ticker:'000660'},c.signal,async()=>{calls++;throw Error('aborted');}),/aborted/);
+  assert.equal(calls,1);
+});
+test('two US securities mapped to one filing retain the canonical company connections', () => {
+  const catalogue={schema:'alphanest-company-structure-v1',companies:[{id:'US:ABC',name:'ABC Corporation',market:'US',ticker:'ABC'},{id:'US:ABC.A',name:'ABC Class A',market:'US',ticker:'ABC.A'}],relations:[],coverage:{canonicalId:'US:ABC',securityIds:['US:ABC','US:ABC.A']}};
+  assert.equal(resolveFocus(catalogue,{id:'US:ABC.A',name:'ABC Class A',market:'US',ticker:'ABC.A'}).id,'US:ABC');
 });

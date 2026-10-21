@@ -1,24 +1,22 @@
 name: ownership-backfill
 
-# KR 지분구조 drip 백필 — 공개 리포트 ownership 섹션을 전 종목으로 확대.
-#
-# PM 2026-08-08 "안채워진 국장 정보 ... 이후에 자동으로 모아지게 해".
-# 커버리지 래칫이 ownership 18.8% 를 표적으로 지목 → 원인은 소스 부재가 아니라 범위였다
-# (공정위 = 대규모기업집단 ~346개사 상한 / DART 사업보고서 = 전 상장사 제출).
-#
-# 자가완주 설계: 매 run CHUNK(300) 만큼만 채우고 다음 run 이 이어받는다. 미보유 종목만
-# 조회하므로 완주 후에는 사실상 no-op(신규 상장·사업연도 전환 시 자동 재개).
-# 종목당 정확히 1콜 → 1,795종목 약 6일 완주.
-#
-# 7축 audit: env=DART_API_KEY 만 · push trigger 없음(data/ 커밋뿐 = RULE 2 가드 자동 skip) ·
-#   전용 concurrency group · cron 일1(silent skip 저위험) · KIS 무관(RULE 1) ·
-#   pip requirements(requests 기존) · N=2 = manual + 다음 scheduled.
-#
-# 🚨 DART 일일 한도 20K 를 dart_catalyst / quarterly_backfill 등과 나눠 쓴다
-#   ([[project_dart_api_2026_constraints]]). CHUNK 를 올려 빨리 채우려다 다른 수집기를
-#   굶기면 손해가 더 크다 — 6일 완주가 의도한 속도다.
+# Public normalized company structure. No raw capture/submissions cache is staged.
+# Physical request budgets (durable KST day): KR <=300 issuers /600 GET;
+# US <=100 distinct CIK /200 HTTP. New structure path reads tracked mapping: 0 HTTP.
+# Existing legacy mapping freshness behavior is unchanged, not a new self-repair path.
+# Legacy ownership is preserved separately: <=300 initial calls + new <=600 GET
+# = <=900 initial/logical requests. Existing DartScout has nested HTTP retries:
+# this is NOT a proven <=900 physical HTTP bound (legacy retry policy unchanged).
+# Endpoints: opendart.fss.or.kr/api/{hyslrSttus,otrCprInvstmntSttus}.json;
+# www.sec.gov/Archives/edgar/data/{CIK}/{accession}/ (index + reported list:
+# 10-K EX-21 / 20-F EX-8.1, as validated by the existing parser; never VIE inference).
+# 7-axis audit: scoped existing secrets; no push trigger; unchanged concurrency;
+# unchanged daily cron; no KIS/LLM execution; requirements + locked Blob SDK;
+# manual + next scheduled audits remain REQUIRED after authorized rollout (not run here).
 
 on:
+  repository_dispatch:
+    types: [ownership_backfill]
   schedule:
     - cron: '40 19 * * *'   # UTC 19:40 = KST 04:40 — 타 DART 워크플로 슬롯 회피
   workflow_dispatch:
@@ -29,19 +27,65 @@ on:
         default: '300'
         type: string
 
-concurrency:
-  group: verity-ownership-backfill
-  cancel-in-progress: false
-
 permissions:
   contents: write
+  actions: read
 
 jobs:
-  backfill:
+  cadence:
     runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.slot.outputs.run }}
+      status: ${{ steps.slot.outputs.status }}
+    steps:
+      - uses: actions/github-script@v7
+        id: slot
+        with:
+          script: |
+            // Use GitHub's current-run timestamp, not a new clock/cron service.
+            // A delayed GH schedule still belongs to its original 19:40 UTC cycle.
+            const current = await github.rest.actions.getWorkflowRun({ ...context.repo, run_id: context.runId });
+            const created = new Date(current.data.created_at);
+            if (!Number.isFinite(created.getTime())) throw new Error('Invalid run timestamp');
+            const due = new Date(created);
+            due.setUTCHours(19, 40, 0, 0);
+            if (due > created) due.setUTCDate(due.getUTCDate() - 1);
+            const slot = due.toISOString();
+            if (context.eventName === 'repository_dispatch') {
+              const supplied = context.payload.client_payload?.schedule_slot;
+              if (!supplied || !Number.isFinite(Date.parse(supplied)) || new Date(supplied).toISOString() !== slot) {
+                throw new Error('Invalid ownership schedule_slot');
+              }
+            }
+            // A killed CI job can spend GETs before its local budget reaches Git.
+            // The remote run registry conservatively permits ONE attempt per KST
+            // day, across dispatch, delayed native schedule AND manual events.
+            const kst = new Date(created.getTime() + 9 * 60 * 60 * 1000);
+            const dayStart = new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) - 9 * 60 * 60 * 1000);
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              ...context.repo, workflow_id: 'ownership_backfill.yml',
+              branch: context.payload.repository.default_branch,
+              created: `>=${dayStart.toISOString()}`, per_page: 100
+            });
+            // A failed/cancelled/queued prior attempt still consumes the daily
+            // allowance, even if it predates 19:40. Query failure fails closed.
+            const duplicate = runs.some(run => run.id < context.runId);
+            core.setOutput('run', String(!duplicate));
+            core.setOutput('status', duplicate ? 'idle-already-attempted' : 'first-daily-attempt');
+            core.info(duplicate ? 'Idle: ownership already attempted this KST day (not a new collection success)' : 'First ownership attempt this KST day');
+  backfill:
+    needs: cadence
+    if: always() && !cancelled() && github.ref == 'refs/heads/main' && needs.cadence.result == 'success' && needs.cadence.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: verity-ownership-backfill
+      cancel-in-progress: false
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -55,24 +99,157 @@ jobs:
         #   최소 설치로 아끼려다 실패하느니 다른 DART 워크플로와 같은 기준을 쓴다.
         run: pip install -r requirements.txt
 
-      - name: Backfill ownership
-        env:
-          VERITY_MODE: prod   # 🚨 기본 dev = mock. 실호출 명시 (export_trade 2026-08-07 사고 교훈)
-          DART_API_KEY: ${{ secrets.DART_API_KEY }}
-          OWNERSHIP_CHUNK: ${{ github.event.inputs.chunk || '300' }}
-        run: python -m api.builders.ownership_backfill_builder
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-      - name: Commit
+      - name: Install existing Blob dependency
+        run: npm ci --workspaces=false --omit=dev --ignore-scripts --no-audit --no-fund
+
+      - name: Validate tracked input and normalize durable stores
+        id: prepare
         run: |
+          set -euo pipefail
+          git ls-files --error-unmatch data/mapping.json
+          python - <<'PY'
+          import importlib.util, json, pathlib
+          p = pathlib.Path('api/collectors/company_structure_refresh.py')
+          spec = importlib.util.spec_from_file_location('kr_structure', p)
+          core = importlib.util.module_from_spec(spec); spec.loader.exec_module(core)
+          mapping = core.read_json('data/mapping.json')
+          assert isinstance(mapping, dict) and mapping, 'tracked mapping required; no self-repair'
+          store = pathlib.Path('data/member_map_company_structure_sources.json')
+          doc = core.build_document('data', core.read_json(store) if store.exists() else None)
+          core.atomic_json(store, doc)
+          us = pathlib.Path('data/member_map_company_structure_us_sources.json')
+          if not us.exists():
+              core.atomic_json(us, {'schema':'alphanest-company-structure-us-sources-v1', 'generatedAt':doc['generatedAt'], 'issuers':{}})
+          PY
+          node - <<'JS'
+          const fs = require('node:fs');
+          const {sanitizeUsSources} = require('./scripts/member-map/publish-company-structure.cjs');
+          const file = 'data/member_map_company_structure_us_sources.json';
+          fs.writeFileSync(file + '.tmp', JSON.stringify(sanitizeUsSources(JSON.parse(fs.readFileSync(file)))) + '\n');
+          fs.renameSync(file + '.tmp', file); // Clears any previous-run summary before the current attempt.
+          JS
+
+      - name: Refresh bounded KR corporate sources
+        id: kr
+        continue-on-error: true
+        env:
+          VERITY_MODE: prod
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          REQUESTED_CHUNK: ${{ github.event.inputs.chunk || '300' }}
+        run: |
+          set -euo pipefail
+          limit=$(python -c 'import os; n=int(os.environ["REQUESTED_CHUNK"]); assert 0 <= n <= 300; print(n)')
+          python scripts/member-map/refresh-company-structure.py --source-dir data --store data/member_map_company_structure_sources.json --limit "$limit" --fetch-public
+
+      - name: Refresh bounded SEC exhibits
+        id: us
+        continue-on-error: true
+        run: python scripts/member-map/refresh-us-company-structure.py --source-dir data --store data/member_map_company_structure_us_sources.json --limit 100 --fetch-public
+
+      - name: Normalize public durable source fields even after refresh failure
+        id: safe
+        if: ${{ always() && steps.prepare.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import importlib.util, os, pathlib
+          spec = importlib.util.spec_from_file_location('kr_structure', 'api/collectors/company_structure_refresh.py')
+          core = importlib.util.module_from_spec(spec); spec.loader.exec_module(core)
+          store = 'data/member_map_company_structure_sources.json'
+          original = core.read_json(store)
+          statuses = {}
+          for market, value in [('KR', original), ('US', core.read_json('data/member_map_company_structure_us_sources.json'))]:
+              summary = value.get('summary', {})
+              reason = summary.get('stopReason')
+              statuses[market] = {'hasSummary': bool(summary), 'error': summary.get('error', 1),
+                  'normalDeferred': reason in ('daily-request-budget', 'daily-http-budget')
+                      and summary.get('error') == 0 and summary.get('guardedBudget', {}).get('valid') is True}
+          core.atomic_json(pathlib.Path(os.environ['RUNNER_TEMP']) / 'company-structure-run-status.json', statuses)
+          doc = core.sanitize_document(original)
+          core.atomic_json(store, doc)  # requestBudget + per-endpoint failures retained; no rawResponse/personal rows.
+          PY
+          node - <<'JS'
+          const fs = require('node:fs');
+          const {sanitizeUsSources} = require('./scripts/member-map/publish-company-structure.cjs');
+          const file = 'data/member_map_company_structure_us_sources.json';
+          const safe = sanitizeUsSources(JSON.parse(fs.readFileSync(file)));
+          fs.writeFileSync(file + '.tmp', JSON.stringify(safe) + '\n'); fs.renameSync(file + '.tmp', file);
+          JS
+
+      - name: Backfill ownership (existing annual collector unchanged)
+        id: legacy
+        if: ${{ always() && steps.safe.outcome == 'success' }}
+        env:
+          VERITY_MODE: prod
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          REQUESTED_CHUNK: ${{ github.event.inputs.chunk || '300' }}
+        run: |
+          set -euo pipefail
+          export OWNERSHIP_CHUNK=$(python -c 'import os; n=int(os.environ["REQUESTED_CHUNK"]); assert 0 <= n <= 300; print(n)')
+          python -m api.builders.ownership_backfill_builder
+
+      - name: Build and validate compact public artifacts offline
+        id: build
+        if: ${{ always() && steps.safe.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          node scripts/member-map/build-live-company-structure.cjs --source-dir "$GITHUB_WORKSPACE/data" --sources data/member_map_company_structure_sources.json --us-sources data/member_map_company_structure_us_sources.json --output-dir "$RUNNER_TEMP/company-structure-public"
+          node scripts/member-map/publish-company-structure.cjs --output-dir "$RUNNER_TEMP/company-structure-public"
+          cp "$RUNNER_TEMP/company-structure-public/member_map_company_structure_index.json" data/member_map_company_structure_index.json
+
+      - name: Persist sanitized sources and failure budgets before publication
+        id: durable
+        if: ${{ always() && steps.safe.outcome == 'success' }}
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          LEGACY_OUTCOME: ${{ steps.legacy.outcome }}
+        run: |
+          set -euo pipefail
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          # RULE 4 — 산출물 + 진도 커서 둘 다. 커서가 빠지면 매 run 처음부터 다시 긁는다.
-          git add data/kr_ownership.json data/metadata/kr_ownership_cursor.json 2>/dev/null || true
-          git diff --staged --quiet && echo "변화 없음(완주 상태)" && exit 0
-          git commit -m "🧬 지분구조 백필 $(TZ=Asia/Seoul date +%Y-%m-%d)"
-          for i in 1 2 3 4 5 6; do
-            git rebase --abort 2>/dev/null || true
-            if git pull --rebase --autostash -X theirs origin main && git push origin main; then exit 0; fi
-            sleep $(( i * 7 + RANDOM % 15 ))
-          done
-          echo "::warning::push 실패 — 다음 run 에서 누적 재시도"
+          git diff --cached --quiet
+          git add data/member_map_company_structure_sources.json
+          git add data/member_map_company_structure_us_sources.json
+          if [ "$LEGACY_OUTCOME" = success ]; then
+            git add data/kr_ownership.json
+            git add data/metadata/kr_ownership_cursor.json
+          fi
+          if [ "$BUILD_OUTCOME" = success ]; then
+            git add data/member_map_company_structure_index.json
+          fi
+          if ! git diff --cached --quiet; then
+            git commit -m "Refresh public corporate structure sources and budgets"
+          fi
+          # Fail closed on concurrent data changes: no -X theirs/ours and no swallowed push failure.
+          git pull --rebase origin main
+          git push origin HEAD:main
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main
+
+      - name: Publish verified immutable payloads then manifest
+        # Source failures are represented in the manifest, not used to hide healthy sources.
+        if: ${{ always() && steps.safe.outcome == 'success' && steps.durable.outcome == 'success' && steps.build.outcome == 'success' }}
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: node scripts/member-map/publish-company-structure.cjs --output-dir "$RUNNER_TEMP/company-structure-public" --committed-manifest data/member_map_company_structure_index.json --publish
+
+      - name: Report collection failures after durable checkpoint
+        if: ${{ always() && (steps.kr.outcome == 'failure' || steps.us.outcome == 'failure') }}
+        env:
+          KR_OUTCOME: ${{ steps.kr.outcome }}
+          US_OUTCOME: ${{ steps.us.outcome }}
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          status = json.loads((pathlib.Path(os.environ['RUNNER_TEMP']) / 'company-structure-run-status.json').read_text())
+          errors = [m for m in ('KR', 'US') if os.environ[m + '_OUTCOME'] == 'failure'
+                    and not status.get(m, {}).get('normalDeferred', False)]
+          if errors:
+              print('::error::Source refresh error: ' + ','.join(errors) + '; retained snapshot/failure labels can publish only after safe/build/durable checks.')
+              raise SystemExit(1)
+          print('Bounded daily budget reached without source errors; remaining requests are deferred.')
+          PY
