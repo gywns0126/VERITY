@@ -362,12 +362,15 @@
   {
    "id": "dividends_kr",
    "file": "dividends_kr.json",
+   "ts_field": "_meta.source_as_of",
+   "missing_ts_status": "unmeasurable",
+   "measurement_reason": "source_as_of_missing",
    "max_age_minutes": 4320,
    "owner": "ci",
    "schedule": "weekday",
-   "cadence": "전용 cron 없이 daily_analysis api/main.py 동승",
+   "cadence": "매일 kr_company_facts_backfill.yml (종목별 누락 배당 보강)",
    "criticality": "P2",
-   "known_issue": "독립 git add 경로 없음 → 신선도 보장 약함(6/18 이후 정체 흔적)."
+   "note": "파일·producer 실행 시각과 종목별 배당락일은 source 기준일이 아니다. _meta.source_as_of가 없으면 신선도 측정불가로 유지한다."
   },
   {
    "id": "dividends_kr_ksd",

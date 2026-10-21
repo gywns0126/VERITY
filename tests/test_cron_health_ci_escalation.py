@@ -249,7 +249,11 @@ def test_freshness_findings_preserve_non_age_failures(monkeypatch, tmp_path):
     states = ["missing", "no_ts", "bad_ts", "partial_group", "source_quality"]
     rows = [{"id": state, "status": state, "would_alarm": True,
              "criticality": "P0" if index == 0 else "P1"}
-            for index, state in enumerate(states)]
+            for index, state in enumerate(states)] + [{
+                "id": "dividends_kr", "status": "unmeasurable",
+                "quality_reason": "source_as_of_missing", "would_alarm": True,
+                "criticality": "P2",
+            }]
     monkeypatch.setattr(freshness, "build_observations", lambda: {"checked": 5, "rows": rows})
     sweep_ids = []
 
@@ -261,8 +265,10 @@ def test_freshness_findings_preserve_non_age_failures(monkeypatch, tmp_path):
     report = m.analyze()
     text = "\n".join(report["findings"])
     assert report["severity"] == "FAIL"
-    assert sweep_ids == states
+    assert sweep_ids == states + ["dividends_kr"]
     assert report["freshness_summary"]["stale_ids"] == states
+    assert report["freshness_summary"]["unmeasurable_ids"] == ["dividends_kr"]
+    assert "freshness 측정불가: dividends_kr source_as_of_missing" in text
     assert "0.0h>0.0h" not in text
     for row in rows:
         assert freshness.format_freshness_alarm(row) in text

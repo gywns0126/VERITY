@@ -216,8 +216,13 @@ def build_observations() -> dict:
         group = None
         active = _schedule_active(sched, now)
         def unavailable(status, **extra):
-            return {"id": s["id"], "status": status, "measured": False,
-                    "quality_reason": status, "criticality": s.get("criticality"),
+            reported_status = status
+            reason = status
+            if status == "no_ts" and s.get("missing_ts_status") == "unmeasurable":
+                reported_status = "unmeasurable"
+                reason = s.get("measurement_reason") or "required_source_timestamp_missing"
+            return {"id": s["id"], "status": reported_status, "measured": False,
+                    "quality_reason": reason, "criticality": s.get("criticality"),
                     "schedule": sched, "would_alarm": active, **extra}
         if is_glob:
             declared = {"expected_files": s["expected_files"]} if "expected_files" in s else {}

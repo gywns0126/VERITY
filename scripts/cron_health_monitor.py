@@ -996,11 +996,15 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             sys.path.insert(0, _REPO_ROOT)
         from scripts.freshness_shadow_monitor import build_observations, format_freshness_alarm
         _fresh_obs = build_observations()
-        _stale_rows = [r for r in _fresh_obs.get("rows", []) if r.get("would_alarm")]
-        _stale_ids_for_sweep = [r["id"] for r in _stale_rows]
+        _issue_rows = [r for r in _fresh_obs.get("rows", []) if r.get("would_alarm")]
+        _unmeasurable_rows = [r for r in _issue_rows if r.get("status") == "unmeasurable"]
+        _stale_rows = [r for r in _issue_rows if r.get("status") != "unmeasurable"]
+        # Sweep must not call an unmeasurable artifact fresh, even though it is not stale.
+        _stale_ids_for_sweep = [r["id"] for r in _issue_rows]
         freshness_summary = {
             "checked": _fresh_obs.get("checked"),
             "stale_ids": [r["id"] for r in _stale_rows],
+            "unmeasurable_ids": [r["id"] for r in _unmeasurable_rows],
         }
         _stale_p0 = [r for r in _stale_rows if r.get("criticality") == "P0"]
         _stale_rest = [r for r in _stale_rows if r.get("criticality") != "P0"]
@@ -1020,6 +1024,13 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             findings.append(
                 "freshness stale(P1+): " + ", ".join(
                     format_freshness_alarm(r) for r in _stale_rest
+                )
+            )
+        if _unmeasurable_rows:
+            severity = "WARNING" if severity == "PASS" else severity
+            findings.append(
+                "freshness 측정불가: " + ", ".join(
+                    format_freshness_alarm(r) for r in _unmeasurable_rows
                 )
             )
     except Exception as e:  # 판정 실패 = 모니터 결함 가시화 (silent pass 금지)
@@ -1106,9 +1117,11 @@ def _format_summary(report: Dict[str, Any]) -> List[str]:
     fs = report.get("freshness_summary") or {}
     if fs.get("checked") is not None:
         _stale_ids = fs.get("stale_ids") or []
+        _unmeasurable_ids = fs.get("unmeasurable_ids") or []
         lines.append(
             f"<b>freshness SLA</b>: checked {fs['checked']}, stale "
             + (", ".join(_stale_ids) if _stale_ids else "0")
+            + ", 측정불가 " + (", ".join(_unmeasurable_ids) if _unmeasurable_ids else "0")
         )
     rm = report["runtime_metrics"]
     lines.append(f"<b>yf_fail_max</b>: {rm['yf_fail_max']:.1%} / <b>rate_limit_max</b>: {rm['rate_limit_max']}")

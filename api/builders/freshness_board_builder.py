@@ -195,6 +195,9 @@ def build_board() -> dict:
             # Internal diagnostics must name omitted streams even while schedule is closed.
             # Never substitute file/commit time or event dates for collection evidence.
             omitted = {"id": sid, "reason": reason}
+            if reason == "no_ts" and s.get("missing_ts_status") == "unmeasurable":
+                omitted["measurement_reason"] = (
+                    s.get("measurement_reason") or "required_source_timestamp_missing")
             if group is not None:
                 omitted["group_counts"] = {k: group[k] for k in ("members", "measured", "unmeasured")}
             skipped.append(omitted)
