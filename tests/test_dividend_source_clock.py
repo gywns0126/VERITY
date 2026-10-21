@@ -254,3 +254,15 @@ def test_bounded_rotation_receipt_preserves_last_success_after_failure(monkeypat
     assert second_receipt["rotation"]["checked_tickers"] == ["000001", "000002"]
     assert all(isinstance(value, list) for value in json.loads(ledger.read_text()).values())
     assert evidence.collection_receipt("dividends_kr", ledger)["status"] == "bound_query_incomplete"
+
+
+def test_empty_and_boolean_amounts_are_not_confirmed_zero_dividends(monkeypatch):
+    monkeypatch.setattr(config, "DART_API_KEY", "fixture")
+    monkeypatch.setattr(dart_corp_code, "get_corp_code", lambda ticker: "00126380")
+    for value in ("", "   ", False, True):
+        monkeypatch.setattr(DartScout, "_call", lambda endpoint, params, value=value: {
+            "status": "000", "list": [{"se": "주당 현금배당금(원)",
+                                       "thstrm": value, "frmtrm": value}]})
+        result = dividend_kr.fetch_tier1_dart_annual_result("005930", 2025)
+        assert result["outcome"] == "failed"
+        assert "source_checked_at" not in result

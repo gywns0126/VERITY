@@ -100,12 +100,12 @@ def _normalized_annual_row(row: dict) -> dict:
 
 def _is_explicit_no_cash_value(value: Any) -> bool:
     """무배당을 뜻하는 명시적 0/공란 표기만 허용한다."""
-    if value is None:
+    if value is None or isinstance(value, bool):
         return False
     if isinstance(value, (int, float)):
         return float(value) == 0
     normalized = str(value).replace(",", "").strip()
-    if normalized in {"", "-"}:
+    if normalized == "-":
         return True
     try:
         return float(normalized) == 0
@@ -328,6 +328,10 @@ def fetch_tier1_dart_annual_result(
     if not cash_rows:
         return {"outcome": "failed", "source_status": status,
                 "reason": "missing_cash_dividend_rows"}
+    if any(isinstance(row.get(field), bool) for row in cash_rows
+           for field in ("current", "previous")):
+        return {"outcome": "failed", "source_status": status,
+                "reason": "invalid_cash_dividend_amount"}
     source_as_of = _dart_source_date(rows)
     record = _annual_record(rows, int(bsns_year), checked_at)
     if record is None:
