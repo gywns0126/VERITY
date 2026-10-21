@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Refresh SEC 10-K EX-21 / 20-F EX-8.1 sources. Network requires --fetch-public.
+
+The store is separate from KR sources; saving is not operational publication.
+Only --source-dir's fixed universe/map/submission-cache paths select sources.
+"""
+import argparse
+import fcntl
+import importlib.util
+import json
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+spec = importlib.util.spec_from_file_location("us_structure_refresh", ROOT / "api/collectors/company_structure_us_refresh.py")
+core = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(core)
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-dir", type=Path, required=True)
+    parser.add_argument("--store", type=Path, required=True)
+    parser.add_argument("--limit", type=int, default=100)
+    parser.add_argument("--fetch-public", action="store_true")
+    return parser.parse_args(argv)
+
+
+def run(args):
+    def execute():
+        document = core.build_document(args.source_dir, core.read_json(args.store, maximum=None) if args.store.exists() else None)
+        document, summary = core.refresh(document, source_dir=args.source_dir, limit=args.limit,
+            fetch_public=args.fetch_public, checkpoint=lambda value: core.atomic_json(args.store, value))
+        if args.fetch_public:
+            document["summary"] = summary
+            core.atomic_json(args.store, document)
+        print(json.dumps(summary, ensure_ascii=False))
+        return summary["exitCode"]
+
+    if args.fetch_public:
+        args.store.parent.mkdir(parents=True, exist_ok=True)
+        with args.store.with_name(args.store.name + ".lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return execute()
+    return execute()
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(run(parse_args()))
+    except Exception as exc:
+        print(json.dumps({"error": type(exc).__name__}))
+        raise SystemExit(1)

@@ -2,7 +2,7 @@ import * as React from "react"
 
 type Company = { id: string; name: string; ticker?: string; market?: string; country?: string }
 type Evidence = { title: string; url: string; asOf?: string | null }
-type Relation = { id: string; from: string; to: string; type: string; label: string; asOf: string | null; observedAt?: string; status: string; ownershipPct: number | null; evidence: Evidence[] }
+type Relation = { id: string; from: string; to: string; type: string; label: string; asOf: string | null; observedAt?: string; status: string; ownershipPct: number | null; evidence: Evidence[]; directOwnership?: string }
 type Catalogue = { schema: string; companies: Company[]; relations: Relation[]; coverage?: Record<string, unknown> }
 type Stock = Company & { logo?: string }
 type Snapshot = { stocks: Stock[]; flags: Record<string, string> }
@@ -60,6 +60,8 @@ const officialRelation = (r: Relation) => r.evidence.length > 0 && (r.status ===
 const relationDate = (r: Relation) => r.asOf ? `자료 기준 ${r.asOf}` : r.status === "official-undated" ? "공식 안내 · 원문 기준일 미표시" : "원문 기준일이 확인되지 않은 저장 자료입니다."
 
 function RelationshipProof({ relation: r }: { relation: Relation }) {
+    if (r.status === "undated-snapshot") return <><p><strong>{r.label}</strong>{"\n" + relationDate(r)}{r.observedAt ? `\n저장 자료 시각 ${r.observedAt.slice(0, 10)}` : ""}</p><p>이름이 남아 있는 참고 자료입니다. 현재 지분·자회사 여부나 새 원문 확인 시각으로 해석하지 않습니다.</p>{r.evidence.length ? r.evidence.map((e, i) => <a key={i} href={e.url} target="_blank" rel="noopener noreferrer">{e.title} ↗</a>) : <p>검증 가능한 원문 주소가 아직 제공되지 않았어요.</p>}</>
+    if (r.directOwnership === "unspecified" || r.label.includes("직간접 미구분")) return <><p><strong>{r.label}</strong>{"\n" + relationDate(r)}{r.observedAt ? `\n자료 수집 ${r.observedAt.slice(0, 10)}` : ""}</p><p>공시의 자회사 목록입니다. 직접·간접 소유와 지분율은 구분되지 않았으며 전체 계열사를 뜻하지 않습니다.</p>{r.evidence.map((e, i) => <a key={i} href={e.url} target="_blank" rel="noopener noreferrer">{e.title} ↗</a>)}</>
     return <><p><strong>{r.label}</strong>{r.status === "source-dated" && r.ownershipPct !== null ? ` · ${r.ownershipPct}%` : ""}{"\n" + relationDate(r)}{r.observedAt ? `\n자료 수집 ${r.observedAt.slice(0, 10)}` : ""}</p><p>{r.type === "investment" ? "타법인 출자 내역입니다. 자회사 여부와 현재 지배 관계는 이 항목만으로 확정하지 않습니다." : "관계 유형과 원문 기준일을 함께 확인해 주세요."}</p>{r.evidence.length ? r.evidence.map((e, i) => <a key={i} href={e.url} target="_blank" rel="noopener noreferrer">{e.title} ↗</a>) : <p>이 저장 항목에는 검증 가능한 원문 주소가 제공되지 않았어요.</p>}</>
 }
 export function validateStructure(value: unknown): Catalogue {
@@ -70,7 +72,11 @@ export function validateStructure(value: unknown): Catalogue {
         if (!n || typeof n.id !== "string" || !n.id || n.id.length > 180 || typeof n.name !== "string" || !n.name || n.name.length > 300 || ids.has(n.id)) throw Error("company")
         ids.add(n.id)
     }
-    for (const r of c.relations) if (!r || !ids.has(r.from) || !ids.has(r.to) || !["major-shareholder", "investment", "subsidiary"].includes(r.type) || typeof r.label !== "string" || !Array.isArray(r.evidence) || r.evidence.length > 10 || !r.evidence.every(safeEvidence) || (r.asOf !== null && !/^\d{4}-\d{2}-\d{2}$/.test(r.asOf))) throw Error("relation")
+    const relationIds = new Set<string>()
+    for (const r of c.relations) {
+        if (!r || typeof r.id !== "string" || !r.id || r.id.length > 600 || relationIds.has(r.id) || !ids.has(r.from) || !ids.has(r.to) || !["major-shareholder", "investment", "subsidiary"].includes(r.type) || typeof r.label !== "string" || r.label.length > 300 || !["source-dated", "official-undated", "undated-snapshot"].includes(r.status) || !(r.ownershipPct === null || typeof r.ownershipPct === "number" && Number.isFinite(r.ownershipPct) && r.ownershipPct >= 0 && r.ownershipPct <= 100) || !Array.isArray(r.evidence) || r.evidence.length > 10 || !r.evidence.every(safeEvidence) || (r.asOf !== null && !/^\d{4}-\d{2}-\d{2}$/.test(r.asOf))) throw Error("relation")
+        relationIds.add(r.id)
+    }
     return c
 }
 
@@ -83,6 +89,36 @@ async function boundedBytes(response: Response, max: number) {
     try { while (true) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > max) throw Error("size"); parts.push(value) } }
     finally { await reader.cancel().catch(() => {}) }
     const all = new Uint8Array(size); let cursor = 0; for (const part of parts) { all.set(part, cursor); cursor += part.length } return all
+}
+export async function loadCompanyStructure(stock: Company, signal: AbortSignal, fetcher: typeof fetch = fetch): Promise<Catalogue> {
+    if (!(stock.market === "KR" && /^[A-Z0-9]{6}$/.test(stock.ticker || "") || stock.market === "US" && /^[A-Z][A-Z0-9.-]{0,11}$/.test(stock.ticker || ""))) throw Error("ticker")
+    try {
+        const response = await fetcher(`/api/company_structure?market=${stock.market}&ticker=${encodeURIComponent(stock.ticker!)}`, { credentials: "omit", redirect: "error", signal })
+        return validateStructure(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await boundedBytes(response, 2 * 1024 * 1024))))
+    } catch (cause) {
+        if (signal.aborted) throw cause
+        // Retained public snapshot is a visible outage fallback, never a new source check.
+        const response = await fetcher("/member-map-review/company-structure.json", { credentials: "omit", redirect: "error", signal })
+        const retained = validateStructure(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await boundedBytes(response, 2 * 1024 * 1024))))
+        return { ...retained, coverage: { ...retained.coverage, sourceStatus: "retained-snapshot", fallback: true } }
+    }
+}
+export function structureCoverageText(catalogue: Catalogue | null): string {
+    const coverage = catalogue?.coverage
+    if (!coverage) return "관계별 원문과 기준일을 확인해 주세요"
+    if (coverage.fallback) return "최신 조회 연결 실패 · 이전 저장 자료를 표시하고 있어요"
+    const state = coverage.sourceStatus || coverage.status
+    if (state === "refresh-error") return "최근 원문 조회 실패 · 이전 근거와 기준일 유지"
+    if (state === "source-checked") {
+        const endpoints = coverage.endpoints && typeof coverage.endpoints === "object" ? Object.values(coverage.endpoints) : []
+        const stamps = [coverage.lastSuccessAt, ...endpoints.map(e => e && typeof e === "object" ? (e as Record<string, unknown>).lastSuccessAt : null)].filter((s): s is string => typeof s === "string" && Number.isFinite(Date.parse(s)))
+        const last = stamps.sort((a, b) => Date.parse(a) - Date.parse(b))[0]
+        if (last) return `원문 조회 ${last.slice(0, 10)}${Date.now() - Date.parse(last) > 7 * 86400000 ? " · 새 자료 확인 대기" : " · 소유 관계는 자료 기준일로 확인"}`
+        return "원문 근거 연결 · 현재 소유 여부는 자료 기준일로 확인"
+    }
+    if (state === "legacy-only" || state === "curated-only" || state === "partial") return "원문 확인이 일부 남아 있어요 · 확인된 연결 우선 표시"
+    if (state === "not-attempted") return "원문 수집 대기 · 연결 없음이 아니라 아직 확인 전이에요"
+    return "관계별 원문과 기준일을 확인해 주세요"
 }
 async function loadLogos(companies: Company[], signal: AbortSignal): Promise<Record<string, string>> {
     const manifestResponse = await fetch(LOGO_MANIFEST, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", signal })
@@ -100,7 +136,12 @@ async function loadLogos(companies: Company[], signal: AbortSignal): Promise<Rec
     return logos
 }
 
-function resolveFocus(catalogue: Catalogue, stock: Stock): Company {
+export function resolveFocus(catalogue: Catalogue, stock: Stock): Company {
+    const canonicalId = catalogue.coverage?.canonicalId, aliases = catalogue.coverage?.securityIds
+    if (typeof canonicalId === "string" && Array.isArray(aliases) && aliases.includes(stock.market + ":" + stock.ticker)) {
+        const company = catalogue.companies.find(c => c.id === canonicalId)
+        if (company) return company
+    }
     return catalogue.companies.find(c => c.ticker === stock.ticker && c.market === stock.market) || { ...stock, id: stock.market + ":" + stock.ticker }
 }
 
@@ -108,10 +149,13 @@ export default function CompanyStructureView({ snapshot, onClose }: { snapshot: 
     const [catalogue, setCatalogue] = React.useState<Catalogue | null>(null), [error, setError] = React.useState(false)
     const [focusIndex, setFocusIndex] = React.useState(0), [collapsed, setCollapsed] = React.useState<Set<string>>(new Set())
     const [includeStored, setIncludeStored] = React.useState(false)
+    const [pendingCatalogue, setPendingCatalogue] = React.useState<Catalogue | null>(null), [checking, setChecking] = React.useState(false), [checkFailed, setCheckFailed] = React.useState(false)
     const [selected, setSelected] = React.useState<string | null>(null), [camera, setCamera] = React.useState({ x: 0, y: 0, zoom: 1 })
     const [logos, setLogos] = React.useState<Record<string, string>>({})
     const [brokenLogos, setBrokenLogos] = React.useState<Set<string>>(new Set())
     const cameraRef = React.useRef(camera); cameraRef.current = camera
+    const catalogueRef = React.useRef(catalogue); catalogueRef.current = catalogue
+    const refreshRef = React.useRef<(() => void) | null>(null)
     const space = React.useRef<HTMLDivElement>(null), host = React.useRef<HTMLElement>(null), initialFocus = React.useRef<string | null>(null)
     const drag = React.useRef<{ x: number; y: number; startX: number; startY: number; pointer: number } | null>(null)
     const current = snapshot.stocks[focusIndex] || snapshot.stocks[0]
@@ -122,10 +166,29 @@ export default function CompanyStructureView({ snapshot, onClose }: { snapshot: 
         const result: TreeNode[] = []; function add(id: string) { const n = layout!.byId.get(id)!; result.push(n); if (!collapsed.has(id)) n.children.forEach(add) } layout.roots.forEach(add); return result
     }, [layout, collapsed])
     React.useEffect(() => {
-        const c = new AbortController(), timer = setTimeout(() => c.abort(), 12000)
-        fetch("/member-map-review/company-structure.json", { credentials: "omit", redirect: "error", signal: c.signal }).then(r => boundedBytes(r, 2 * 1024 * 1024)).then(bytes => validateStructure(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)))).then(value => { if (!c.signal.aborted) setCatalogue(value) }).catch(() => setError(true)).finally(() => clearTimeout(timer))
-        return () => { c.abort(); clearTimeout(timer) }
-    }, [])
+        if (!current) return
+        const c = new AbortController(); let active: AbortController | null = null
+        catalogueRef.current = null; setCatalogue(null); setPendingCatalogue(null); setError(false); setCheckFailed(false)
+        async function check(initial = false) {
+            if (active || c.signal.aborted || (!initial && document.hidden)) return
+            const request = new AbortController(); active = request; setChecking(true)
+            const timer = setTimeout(() => request.abort(), 22000)
+            try {
+                const value = await loadCompanyStructure(current, request.signal)
+                if (c.signal.aborted) return
+                setCheckFailed(false); setError(false)
+                if (initial || !catalogueRef.current) { catalogueRef.current = value; setCatalogue(value) }
+                else if (value.coverage?.fallback && !catalogueRef.current?.coverage?.fallback) setCheckFailed(true)
+                else if (JSON.stringify(value) !== JSON.stringify(catalogueRef.current)) setPendingCatalogue(value)
+                else setPendingCatalogue(null)
+            } catch { if (!c.signal.aborted) initial ? setError(true) : setCheckFailed(true) }
+            finally { clearTimeout(timer); active = null; if (!c.signal.aborted) setChecking(false) }
+        }
+        refreshRef.current = () => { void check(false) }
+        void check(true)
+        const poll = setInterval(() => { void check(false) }, 5 * 60 * 1000)
+        return () => { c.abort(); active?.abort(); clearInterval(poll); refreshRef.current = null }
+    }, [current?.id, current?.ticker, current?.market])
     React.useEffect(() => {
         if (!layout) return
         const c = new AbortController(), timer = setTimeout(() => c.abort(), 18000)
@@ -210,7 +273,7 @@ export default function CompanyStructureView({ snapshot, onClose }: { snapshot: 
                 {!!selectedConnections.length && <section aria-label="선택 회사의 연결 자료"><h3 style={{ fontSize: 13, fontWeight: 700, margin: "22px 0 8px" }}>연결 자료 {selectedConnections.length}건</h3><p>화면에서 생략된 연결도 이 목록에서 확인할 수 있어요.</p>{selectedConnections.map(r => <details key={r.id} style={{ padding: "10px 0" }}><summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700 }}>{companyNames.get(r.to)} · {r.label}</summary><RelationshipProof relation={r} /></details>)}</section>}
             </aside>}
         </div>
-        <footer className="acs-foot"><span className="acs-key"><i />공식 근거 · 날짜는 관계별 확인</span><span className="acs-key" data-kind="undated"><i />기준일 미확인 저장 자료</span><span className="acs-status" role="status">{visible.length}개 회사{layout?.omitted ? ` · ${layout.omitted}개 연결은 표시 범위 밖` : ""}{layout && layout.byId.size === 1 ? " · 공식 연결 근거가 제공되지 않았어요" : ""}</span></footer>
+        <footer className="acs-foot"><span className="acs-key"><i />공식 근거 · 날짜는 관계별 확인</span><span className="acs-key" data-kind="undated"><i />기준일 미확인 저장 자료</span><span>{checkFailed ? "최근 조회 실패 · 표시 중인 근거 유지" : structureCoverageText(catalogue)}</span>{pendingCatalogue ? <button type="button" onClick={() => { initialFocus.current = null; catalogueRef.current = pendingCatalogue; setCatalogue(pendingCatalogue); setPendingCatalogue(null) }}>변경 자료 반영</button> : <button type="button" disabled={checking} onClick={() => refreshRef.current?.()}>{checking ? "자료 확인 중" : "자료 확인"}</button>}<span className="acs-status" role="status">{visible.length}개 회사{layout?.omitted ? ` · ${layout.omitted}개 연결은 표시 범위 밖` : ""}{layout && layout.byId.size === 1 ? " · 공식 연결 근거가 제공되지 않았어요" : ""}</span></footer>
     </section>
 }
 
@@ -224,7 +287,7 @@ export function useCompanyStructureBridge(owner: string | null) {
         const receive = (event: MessageEvent) => {
             const frame = [...document.querySelectorAll("iframe")].find(f => { try { return new URL(f.src).pathname === "/member-map-canvas" && f.contentWindow === event.source } catch { return false } })
             if (!frame || event.origin !== "null" || !event.data || event.data.type !== "an-company-structure-snapshot" || event.data.request !== request.current || !Array.isArray(event.data.stocks) || event.data.stocks.length > 30) return
-            const stocks = event.data.stocks.filter((s: Stock) => s && typeof s.name === "string" && s.name.length < 301 && typeof s.ticker === "string" && (s.market === "KR" && /^\d{6}$/.test(s.ticker) || s.market === "US" && /^[A-Z][A-Z0-9.-]{0,11}$/.test(s.ticker))).map((s: Stock) => ({ id: s.market + ":" + s.ticker, ticker: s.ticker, market: s.market, name: s.name, logo: imageData(s.logo) }))
+            const stocks = event.data.stocks.filter((s: Stock) => s && typeof s.name === "string" && s.name.length < 301 && typeof s.ticker === "string" && (s.market === "KR" && /^[A-Z0-9]{6}$/.test(s.ticker) || s.market === "US" && /^[A-Z][A-Z0-9.-]{0,11}$/.test(s.ticker))).map((s: Stock) => ({ id: s.market + ":" + s.ticker, ticker: s.ticker, market: s.market, name: s.name, logo: imageData(s.logo) }))
             if (!stocks.length) { setWaiting(false); return }
             const flags: Record<string, string> = {}; for (const code of ["KR", "US", "TW"]) { const data = imageData(event.data.flags?.[code]); if (data) flags[code] = data }
             clearTimeout(timer.current); request.current = null; setWaiting(false); setView({ owner, snapshot: { stocks, flags } })

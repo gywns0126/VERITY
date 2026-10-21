@@ -14,6 +14,7 @@ Vercel Cron → GitHub Actions repository_dispatch (시각별 multi-event)
   - cockpit_aggregate  — 매 5분
   - cron_health_monitor — 매시 :10
   - dart_kr_fin_backfill — UTC 20:30 (KST 05:30), 자동 cap 3000
+  - ownership_backfill — UTC 19:40 (KST 04:40), bounded corporate sources
 
 필요 env:
   - GH_DISPATCH_PAT: GitHub PAT (Contents: Read and write)
@@ -216,6 +217,12 @@ def _resolve_events(now_utc: datetime) -> list[str]:
         # KST midnight: an earlier manual run today also consumes this day's drip.
         day_start = now_utc.replace(hour=15, minute=0, second=0, microsecond=0)
         events.append(("dart_kr_fin_backfill", {"schedule_slot": day_start.isoformat()}))
+
+    # Reuse the deployed clock: native daily GitHub schedules have started hours late.
+    # The workflow guards this original due slot before taking its collection lock.
+    if hour == 19 and 40 <= minute < 45:
+        events.append(("ownership_backfill", {"schedule_slot":
+                       now_utc.replace(hour=19, minute=40, second=0, microsecond=0).isoformat()}))
 
     # One weekday financial slot, using the already-deployed Vercel clock.
     # Catch-up attempts are bounded and carry the ORIGINAL due time, not now.

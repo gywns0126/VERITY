@@ -64,19 +64,21 @@ function timestamp(value) {
 }
 
 function pct(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100 ? value : null; }
-function ticker(value) { return typeof value === 'string' && TICKER.test(value) ? value : null; }
+function ticker(value, pattern = TICKER) { return typeof value === 'string' && pattern.test(value) ? value : null; }
 function key(value) { return clean(value).toLocaleLowerCase('en-US'); }
 function identityKey(value) { return clean(value, 10000).toLocaleLowerCase('en-US').replace(/\(주\)|㈜|주식회사/gu, '').replace(/\s+/gu, ''); }
-function listedIdentity(row) {
-  const symbol = ticker(row?.symbol) || ticker(row?.ticker) || /^(\d{6})\.K[QS]$/u.exec(row?.ticker_yf || '')?.[1];
+function listedIdentity(row, pattern = TICKER) {
+  const symbol = ticker(row?.symbol, pattern) || ticker(row?.ticker, pattern) || ticker(/^([0-9A-Z]{6})\.K[QS]$/u.exec(row?.ticker_yf || '')?.[1], pattern);
   if (symbol) return { id: `KR:${symbol}`, ticker: symbol, market: 'KR', country: 'KR' };
   const us = row?.symbol || row?.ticker;
   if (['US', 'NASDAQ', 'NYSE', 'AMEX'].includes(row?.market) && typeof us === 'string' && /^[A-Z][A-Z0-9.-]{0,11}$/u.test(us)) return { id: `US:${us}`, ticker: us, market: 'US' };
   return null;
 }
-function companyLike(row) { return !VEHICLE.test(clean(row?.name)) && (!!listedIdentity(row) || ALIASES.has(key(row?.name)) || (!!clean(row?.name) && COMPANY_FORM.test(row.name))); }
+function companyLike(row, pattern = TICKER) { return !VEHICLE.test(clean(row?.name)) && (!!listedIdentity(row, pattern) || ALIASES.has(key(row?.name)) || (!!clean(row?.name) && COMPANY_FORM.test(row.name))); }
 
 function makeCatalog(input, options = {}) {
+  const tickerPattern = options.allowAlphanumericKR ? /^[0-9A-Z]{6}$/u : TICKER;
+  const identify = row => listedIdentity(row, tickerPattern);
   if (!input || !input.structures || typeof input.structures !== 'object' || Array.isArray(input.structures)) throw Error('Invalid structures');
   const entries = Object.entries(input.structures);
   if (!entries.length || entries.length > MAX || input.count !== entries.length) throw Error('Invalid snapshot count');
@@ -95,20 +97,20 @@ function makeCatalog(input, options = {}) {
     else if (!knownNames.has(k)) knownNames.set(k, identity);
     if (!knownTickers.has(identity.id)) knownTickers.set(identity.id, clean(name, 100));
   }
-  for (const [code, name] of Object.entries(options.names || {})) if (TICKER.test(code)) register(name, { id: `KR:${code}`, ticker: code, market: 'KR', country: 'KR' });
-  for (const [, row] of entries) for (const item of [row, row?.parent, ...(row?.subsidiaries || []), ...(row?.major_shareholders || [])]) if (item) register(item.name, listedIdentity(item));
-  const eligible = row => !VEHICLE.test(clean(row?.name)) && (companyLike(row) || !!knownNames.get(identityKey(row?.name)));
+  for (const [code, name] of Object.entries(options.names || {})) if (tickerPattern.test(code)) register(name, { id: `KR:${code}`, ticker: code, market: 'KR', country: 'KR' });
+  for (const [, row] of entries) for (const item of [row, row?.parent, ...(row?.subsidiaries || []), ...(row?.major_shareholders || [])]) if (item) register(item.name, identify(item));
+  const eligible = row => !VEHICLE.test(clean(row?.name)) && (companyLike(row, tickerPattern) || !!knownNames.get(identityKey(row?.name)));
 
   function entity(row, issuer = false) {
     const rawName = clean(row?.name, 100);
-    const identity = listedIdentity(row);
+    const identity = identify(row);
     if (!rawName && !identity) return null;
     const alias = ALIASES.get(key(rawName));
     const resolved = identity || knownNames.get(identityKey(row?.name));
     const id = identity?.id || alias || resolved?.id || `FOREIGN:${createHash('sha256').update(identityKey(row?.name)).digest('hex').slice(0, 20)}`;
     const known = companies.get(id);
     const display = id === 'FOREIGN:solidigm-inc' ? 'Solidigm' : id === 'KR:000660' ? 'SK하이닉스' : id === 'KR:402340' ? 'SK스퀘어' : knownTickers.get(id) || (/^\d{6}\.K[QS]$/u.test(rawName) ? `기업 ${id.slice(3)}` : rawName);
-    const code = /^KR:(\d{6})$/u.exec(id)?.[1];
+    const code = id.startsWith('KR:') && tickerPattern.test(id.slice(3)) ? id.slice(3) : null;
     const next = { ...(resolved || {}), id, name: display || id,
       ...(code ? { ticker: code, market: 'KR', country: 'KR' } : {}),
       // Country is supplied by the FAQ, never inferred from a US listing.
@@ -126,32 +128,36 @@ function makeCatalog(input, options = {}) {
     if (relations.has(id)) { skipped.duplicateEdges++; return; }
     relations.set(id, { id, from, to, type,
       label: type === 'major-shareholder' ? '주요주주' : type === 'investment' ? '투자 지분' : '자회사',
-      asOf, observedAt, status: asOf ? 'source-dated' : 'undated-snapshot',
+      asOf, observedAt: options.sourceVerified && source?.observedAt ? timestamp(source.observedAt) : observedAt, status: asOf ? 'source-dated' : 'undated-snapshot',
       ownershipPct: asOf ? pct(ownershipPct) : null, evidence: evidence.length ? evidence : evidenceFromLinks(source?.links) });
     if (relations.size > MAX) throw Error('Relation limit exceeded');
   }
 
   for (const [code, row] of entries) {
-    if (!TICKER.test(code) || row?.ticker !== code || !Array.isArray(row.major_shareholders) || !Array.isArray(row.subsidiaries)) throw Error(`Invalid issuer ${code}`);
+    if (!tickerPattern.test(code) || row?.ticker !== code || !Array.isArray(row.major_shareholders) || !Array.isArray(row.subsidiaries)) throw Error(`Invalid issuer ${code}`);
     const observedAt = timestamp(row.collected_at);
     const issuer = entity({ ...row, symbol: code }, true);
     const parent = row.parent;
     // Collector parent is the highest-ranked shareholder, not proof of control.
-    if (parent && eligible(parent)) {
-      const holder = entity(parent);
-      addRelation(holder, issuer, 'major-shareholder', parent, observedAt, date(parent.as_of || parent.asOf || row.as_of || row.asOf), parent.ownership_pct);
-    } else if (parent) skipped.ambiguousShareholders++;
+    for (const shareholder of options.allCorporateShareholders ? row.major_shareholders : parent ? [parent] : []) {
+      if (eligible(shareholder)) {
+        const holder = entity(shareholder);
+        addRelation(holder, issuer, 'major-shareholder', shareholder, observedAt, date(shareholder.as_of || shareholder.asOf || row.as_of || row.asOf), shareholder.ownership_pct);
+      } else skipped.ambiguousShareholders++;
+    }
     for (const investment of row.subsidiaries) {
-      if (/\bTSMC\b|Taiwan Semiconductor Manufacturing/iu.test(clean(investment?.name)) || /협력|cooperation|partnership/iu.test(clean(investment?.relate))) { skipped.cooperation++; continue; }
+      if ((!options.sourceVerified && /\bTSMC\b|Taiwan Semiconductor Manufacturing/iu.test(clean(investment?.name))) || /협력|cooperation|partnership/iu.test(clean(investment?.relate))) { skipped.cooperation++; continue; }
       if (!eligible(investment)) { skipped.unresolvedOrNonCompanyInvestments++; continue; }
       const target = entity(investment);
       addRelation(issuer, target, 'investment', investment, observedAt, date(investment.as_of || investment.asOf || row.as_of || row.asOf), investment.ownership_pct);
     }
   }
 
-  const hynix = entity({ name: 'SK하이닉스', symbol: '000660', ticker_yf: '000660.KS' });
-  const square = entity({ name: 'SK스퀘어', symbol: '402340', ticker_yf: '402340.KS' });
-  const solidigm = entity({ name: 'Solidigm' });
+  let hynix, square, solidigm;
+  if (options.includeCurations !== false) {
+  hynix = entity({ name: 'SK하이닉스', symbol: '000660', ticker_yf: '000660.KS' });
+  square = entity({ name: 'SK스퀘어', symbol: '402340', ticker_yf: '402340.KS' });
+  solidigm = entity({ name: 'Solidigm' });
   function replacePair(from, to) { for (const [id, r] of relations) if (r.from === from && r.to === to) relations.delete(id); }
   replacePair(square, hynix);
   addRelation(square, hynix, 'major-shareholder', null, officialObservedAt, '2026-05-06', 20.5,
@@ -161,9 +167,10 @@ function makeCatalog(input, options = {}) {
     [{ title: 'Solidigm company FAQ', url: 'https://www.solidigm.com/support/faqs.html' },
       { title: 'SK hynix filing: distinct legacy NAND company and Solidigm Inc.', url: 'https://kind.krx.co.kr/external/2026/03/03/001376/20260303001013/91765.htm', asOf: '2026-03-03' }]);
   relations.get(`${hynix}|subsidiary|${solidigm}`).status = 'official-undated';
+  }
 
   const sortedCompanies = [...companies.values()].sort((a, b) => a.id.localeCompare(b.id));
-  const curatedIds = new Set([`${square}|major-shareholder|${hynix}`, `${hynix}|subsidiary|${solidigm}`]);
+  const curatedIds = new Set(options.includeCurations === false ? [] : [`${square}|major-shareholder|${hynix}`, `${hynix}|subsidiary|${solidigm}`]);
   const priority = r => {
     if (curatedIds.has(r.id)) return 0;
     const related = companies.get(r.type === 'major-shareholder' ? r.from : r.to);
@@ -174,7 +181,7 @@ function makeCatalog(input, options = {}) {
   return { schema: SCHEMA, observedAt: officialObservedAt, companies: sortedCompanies, relations: sortedRelations,
     coverage: { snapshotObservedAt: snapshotAt, sourceIssuers: entries.length, sourceMajorShareholderRows: entries.reduce((n, [, r]) => n + r.major_shareholders.length, 0),
       sourceInvestmentRows: entries.reduce((n, [, r]) => n + r.subsidiaries.length, 0), companies: sortedCompanies.length, relations: sortedRelations.length,
-      skipped, limits: { companies: MAX, relations: MAX }, curatedRelations: 2,
+      skipped, limits: { companies: MAX, relations: MAX }, curatedRelations: options.includeCurations === false ? 0 : 2,
       relationsWithoutOriginalUrls: sortedRelations.filter(r => r.evidence.length === 0).length,
       officialVerifiedAt: officialObservedAt,
       note: 'Parent means major shareholder; subsidiaries rows mean investment. Group labels create no edges. Undated percentages are suppressed. Other major_shareholders are counted but not expanded. Unresolved names and investment vehicles are excluded conservatively; this is not complete corporate coverage.',
