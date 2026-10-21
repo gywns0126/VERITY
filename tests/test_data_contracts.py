@@ -38,6 +38,31 @@ def test_manifest_three_way():
     assert r.returncode == 0, f"대장 3자 대조 위반:\n{r.stdout[-2000:]}"
 
 
+def test_company_structure_manifest_publish_boundary():
+    """Only the compact index is a published artifact; source stores are not Blob uploads."""
+    import importlib.util
+    import json
+
+    spec = importlib.util.spec_from_file_location("company_structure_manifest", MANIFEST_CHECK)
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    with open(os.path.join(ROOT, "data", "manifest.json"), encoding="utf-8") as handle:
+        artifacts = {row["path"]: row for row in json.load(handle)["artifacts"]}
+    published = checker.publish_names()
+    for name, public in (
+        ("member_map_company_structure_index.json", True),
+        ("member_map_company_structure_sources.json", False),
+        ("member_map_company_structure_us_sources.json", False),
+    ):
+        entry = artifacts["data/" + name]
+        assert entry["publish"] is public
+        assert entry["visibility"] == ("public" if public else "work")
+        assert (name in published) is public
+    assert checker.find_producers("member_map_company_structure_index.json", {}) == [
+        "scripts/member-map/build-live-company-structure.cjs"
+    ]
+
+
 PANEL = os.path.join(ROOT, "data", "metadata", "kr_fundamental_panel.jsonl")
 PANEL_HEALTH = os.path.join(ROOT, "data", "metadata", "kr_fundamental_panel_health.json")
 

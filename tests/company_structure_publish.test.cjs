@@ -147,6 +147,7 @@ test('workflow preserves schedule/concurrency, original annual backfill, explici
   assert.match(source, /--limit 100 --fetch-public/u); assert.match(source, /0 <= n <= 300/u);
   for (const file of ['member_map_company_structure_sources.json', 'member_map_company_structure_us_sources.json', INDEX, 'kr_ownership.json', 'metadata/kr_ownership_cursor.json']) assert.ok(source.includes('git add data/' + file));
   assert.match(source, /steps\.durable\.outcome == 'success'/u); assert.match(source, /git merge-base --is-ancestor HEAD origin\/main/u);
+  assert.match(source, /git pull --rebase --autostash origin main\n\s+# Autostash[^\n]*\n\s+test -z "\$\(git ls-files -u\)"\n\s+git push origin HEAD:main/u);
   const publication = source.split('name: Publish verified immutable payloads then manifest')[1].split('name: Report collection failures')[0];
   assert.match(publication, /always\(\).*steps\.safe\.outcome == 'success'/u);
   assert.doesNotMatch(publication, /steps\.(?:kr|us)\.outcome/u);

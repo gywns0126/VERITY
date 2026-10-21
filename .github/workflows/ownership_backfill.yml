@@ -225,7 +225,9 @@ jobs:
             git commit -m "Refresh public corporate structure sources and budgets"
           fi
           # Fail closed on concurrent data changes: no -X theirs/ours and no swallowed push failure.
-          git pull --rebase origin main
+          git pull --rebase --autostash origin main
+          # Autostash restoration can leave conflicts after a successful rebase.
+          test -z "$(git ls-files -u)"
           git push origin HEAD:main
           git fetch origin main
           git merge-base --is-ancestor HEAD origin/main
