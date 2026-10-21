@@ -876,7 +876,8 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
     version = claim_version if with_claims else CONTEXT_VERSION if with_context else VERSION
     if judgment_mode:
         version = business.VERSION
-    key = _digest([PROVIDER, MODEL, REASONING_EFFORT, version, doc])
+    cache_version = business.CACHE_VERSION if judgment_mode else version
+    key = _digest([PROVIDER, MODEL, REASONING_EFFORT, cache_version, doc])
     prior_keys = list(dict.fromkeys([key, *[
         _digest([PROVIDER, MODEL, REASONING_EFFORT, old, doc])
         for old in (() if judgment_mode else (VERSION, CONTEXT_VERSION, claim_version))]]))

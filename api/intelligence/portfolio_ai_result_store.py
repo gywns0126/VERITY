@@ -25,7 +25,7 @@ def check_envelope(body, doc):
             or (body["provider"], body["model"], body["reasoning_effort"])
                 != (ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT)
             or body["task_version"] not in (ai.VERSION, ai.CONTEXT_VERSION, claim_version,
-                                               *business.SUPPORTED_VERSIONS)
+                                               business.VERSION)
             or body["status"] not in ("ok", "error")
             or type(body["charge_micro_usd"]) is not int
             or not 0 <= body["charge_micro_usd"] <= ai.RESERVE_MICRO_USD):
@@ -39,7 +39,7 @@ def check_envelope(body, doc):
         raise ValueError("private-result-usage")
     if body["status"] == "ok" and usage is None:
         raise ValueError("private-result-usage")
-    judgment = body["task_version"] in business.SUPPORTED_VERSIONS
+    judgment = body["task_version"] == business.VERSION
     if judgment:
         stamp = body["assessed_as_of"]
         if type(stamp) is not str or date.fromisoformat(stamp).isoformat() != stamp or stamp < doc["as_of"]:
@@ -74,9 +74,13 @@ def replay_result(saved, doc, *, judgment_as_of=None):
     if saved["document"] != doc:
         raise ValueError("private-result-source-mismatch")
     version = body["task_version"]
-    if saved["key"] != ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT, version, doc]):
+    accepted_keys = {ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT, version, doc])}
+    if version == business.VERSION:
+        accepted_keys.add(ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT,
+                                      business.CACHE_VERSION, doc]))
+    if saved["key"] not in accepted_keys:
         raise ValueError("private-result-key-mismatch")
-    if (judgment_as_of is not None) != (version in business.SUPPORTED_VERSIONS):
+    if (judgment_as_of is not None) != (version == business.VERSION):
         raise ValueError("private-result-task-mismatch")
     raw = body["raw_answer"]
     if raw is None:

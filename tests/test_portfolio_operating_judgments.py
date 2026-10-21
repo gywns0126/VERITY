@@ -211,7 +211,7 @@ def test_actual_cached_answer_preserves_old_assessment_and_spends_nothing(worker
     doc, ledger = _doc(), tmp_path / "ledger.sqlite3"
     answer = _cached_answer(doc)
     saved = {"status": "ok", "assessed_as_of": "2026-10-10", "raw_answer": answer}
-    key = worker.ai._digest([worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT, business.VERSION, doc])
+    key = worker.ai._digest([worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT, business.CACHE_VERSION, doc])
     with sqlite3.connect(ledger) as db:
         db.execute("CREATE TABLE calls (key TEXT PRIMARY KEY, day TEXT NOT NULL, reserved INTEGER NOT NULL, result TEXT)")
         db.execute("INSERT INTO calls VALUES (?,?,?,?)", (key, "2026-10-10", 123, json.dumps(saved)))
@@ -234,7 +234,7 @@ def test_cached_failed_diagnostic_answer_is_free_and_not_a_successful_grade(work
     doc, ledger = _doc(), tmp_path / "failed-ledger.sqlite3"
     saved = {"status": "error", "error_type": "ValueError", "assessed_as_of": "2026-10-10",
              "raw_answer": _cached_answer(doc)}
-    key = worker.ai._digest([worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT, business.VERSION, doc])
+    key = worker.ai._digest([worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT, business.CACHE_VERSION, doc])
     with sqlite3.connect(ledger) as db:
         db.execute("CREATE TABLE calls (key TEXT PRIMARY KEY, day TEXT NOT NULL, reserved INTEGER NOT NULL, result TEXT)")
         db.execute("INSERT INTO calls VALUES (?,?,?,?)", (key, "2026-10-10", 10000, json.dumps(saved)))

@@ -127,7 +127,7 @@ def _saved(doc, answer):
            "reasoning_effort": ai.REASONING_EFFORT, "assessed_as_of": AS_OF,
            "usage": {"input_tokens": 100, "output_tokens": 30,
                      "thinking_tokens": 0, "cached_input_tokens": 0}, "raw_answer": answer}
-    key = ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT, business.VERSION, doc])
+    key = ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT, business.CACHE_VERSION, doc])
     return {"status": "stored", "key": key, "document": deepcopy(doc),
             "result": archive.pack_result(raw, doc, business.VERSION, 25)}
 
@@ -157,11 +157,14 @@ def test_raw_pack_get_replay_preserves_old_answer_identity_and_revision():
     doc, answer = _case("APS (Accelrator Pedal Sensor)")
     source = business.prepare_judgment_packet([doc], as_of=AS_OF)["sources"][0]
     literal = business._validate_row(answer["judgments"][0], source, AS_OF)
-    assert business.VERSION == "company-business-judgment-v2"
+    assert business.VERSION == "company-business-judgment-v1"
     assert _validate(doc, answer)["judgments"][0] == literal
     safe = business.safe_saved_judgment_answer(answer, [doc], as_of=AS_OF)
     assert safe == answer and safe is not answer and safe["judgments"][0] is not answer["judgments"][0]
     saved = _saved(doc, answer)
+    assert saved["result"]["task_version"] == business.VERSION
+    assert saved["key"] == ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT,
+                                       business.CACHE_VERSION, doc])
     before = deepcopy((doc, answer, saved))
     budget = ReadOnlyBudget(saved)
     restored = archive.SupabaseResultStore(budget).get([saved["key"]])
@@ -193,8 +196,8 @@ def test_v1_archived_judgment_remains_readable_after_v2_prompt_namespace():
     assert replay["status"] == "cached" and replay["original_status"] == "error"
     assert replay["raw_answer"] == answer and replay["provider_calls"] == 0
     assert budget.get_calls == 1 and budget.reserve_calls == budget.settle_calls == 0
-    assert business.VERSION == "company-business-judgment-v2"
-    assert business.VERSION != legacy_version
+    assert business.VERSION == legacy_version
+    assert business.CACHE_VERSION == "company-business-judgment-prompt-v2"
 
 
 def test_product_flag_reaches_pending_projection_and_blocks_even_complete_accept_receipt():

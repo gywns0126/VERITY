@@ -13,8 +13,8 @@ import hashlib
 import json
 import re
 
-VERSION = "company-business-judgment-v2"
-SUPPORTED_VERSIONS = frozenset({"company-business-judgment-v1", VERSION})
+VERSION = "company-business-judgment-v1"
+CACHE_VERSION = "company-business-judgment-prompt-v2"
 MAX_DOCUMENTS = 8
 MAX_JUDGMENTS = 16
 _MISSING = {"entity_scope", "role", "object", "period", "scale", "denominator",
