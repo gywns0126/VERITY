@@ -243,7 +243,23 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+      - name: Preserve source query evidence before Git transport
+        # Retain failed-query receipts as well as successes; job exit stays failed.
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: company-facts-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            data/dividends_kr.json
+            data/metadata/dividends_kr_source_receipt.json
+            data/metadata/logo_map_source_receipt.json
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Commit
+        # A collector failure must not erase its receipt on the ephemeral runner.
+        # Persisting diagnostics does not turn that original step into success.
+        if: success() || failure()
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
