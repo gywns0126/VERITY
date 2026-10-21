@@ -13,11 +13,17 @@
 """
 from __future__ import annotations
 
+import concurrent.futures
+import hashlib
+import io as _io
 import json
 import os
+import random
 import re
 import sys
 import time
+import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
@@ -73,7 +79,6 @@ def _cid() -> str:
 
 # 🚨 Brandfetch 는 미보유 브랜드에 404 대신 자사 'B' 플레이스홀더 이미지를 반환 (fallback=404 무시,
 #   2026-07-10 실측 — 크기 기준(1KB) 판별이 뚫려 'B' 로고 대량 채택 사고). 콘텐츠 md5 로 판별.
-import hashlib
 _PLACEHOLDER_MD5 = {"ad18dbe2ba", "38926c4ecb"}  # w미지정 310B / w=76 2588B 두 변형
 
 
@@ -159,9 +164,363 @@ def _resolve_kr(tk: str, market: str, domain: str, cid: str) -> Optional[str]:
     return None  # 플레이스홀더/미보유 = 이니셜 (B 로고 채택 금지)
 
 
+_TOSS_HOST = "static.toss.im"
+_TOSS_PATH = re.compile(r"^/png-icons/securities/icn-sec-fill-[A-Za-z0-9.-]+\.png$")
+_VERIFY_MAX_BODY = 256 * 1024
+_VERIFY_TIMEOUT = 5
+_VERIFY_MAX_SECONDS = 55
+_VERIFY_RECEIPT = os.path.join(_ROOT, "data", "metadata", "logo_map_source_receipt.json")
+_VERIFY_LEGACY_RECEIPT = os.path.join(_ROOT, "output", "logo-map-url-verification.json")
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _open_toss_url(request, timeout: int):
+    return urllib.request.build_opener(_NoRedirectHandler()).open(request, timeout=timeout)
+
+
+def _is_toss_logo_url(url: str) -> bool:
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        return (parsed.scheme == "https" and parsed.hostname == _TOSS_HOST
+                and parsed.port in (None, 443) and not parsed.username and not parsed.password
+                and not parsed.query and not parsed.fragment and bool(_TOSS_PATH.fullmatch(parsed.path)))
+    except (TypeError, ValueError):
+        return False
+
+
+def _stratified_logo_sample(doc: dict, universe: dict, sample_size: int = 16) -> list[dict]:
+    if sample_size != 16:
+        raise ValueError("initial logo URL verification is fixed at 16 samples")
+    logos = doc.get("logos") or {}
+    stocks = universe.get("stocks") or []
+    markets = {str(row.get("ticker")): str(row.get("market") or "").upper()
+               for row in stocks if isinstance(row, dict) and row.get("ticker")}
+    eligible = {str(tk): url for tk, url in logos.items()
+                if isinstance(tk, str) and _is_toss_logo_url(url)}
+    groups = {
+        "KR": sorted(tk for tk in eligible if markets.get(tk) in {"KR", "KONEX"}),
+        "ETF": sorted(tk for tk in eligible if markets.get(tk) in {"ETF", "ETN"}),
+        "US": sorted(tk for tk in eligible if markets.get(tk) == "US"),
+    }
+    if any(len(groups[name]) < 4 for name in groups) or len(eligible) < 16:
+        raise ValueError("insufficient eligible Toss URLs for the approved 16-sample plan")
+    seed = int(hashlib.sha256(json.dumps(doc.get("logos", {}), sort_keys=True).encode()).hexdigest()[:16], 16)
+    rng = random.Random(seed)
+    chosen: list[dict] = []
+    chosen_tickers: set[str] = set()
+    for name in ("KR", "ETF", "US"):
+        for ticker in rng.sample(groups[name], 4):
+            chosen.append({"group": name, "ticker": ticker, "url": eligible[ticker]})
+            chosen_tickers.add(ticker)
+    remaining = sorted(set(eligible) - chosen_tickers)
+    for ticker in rng.sample(remaining, 4):
+        chosen.append({"group": "random", "ticker": ticker, "url": eligible[ticker]})
+    return chosen
+
+
+def _check_toss_logo(sample: dict) -> dict:
+    url = sample["url"]
+    started = time.monotonic()
+    result = {"group": sample["group"], "url_sha256": hashlib.sha256(url.encode()).hexdigest(),
+              "host": _TOSS_HOST, "http_status": None, "content_type": "", "bytes_read": 0,
+              "body_truncated": False, "width": None, "height": None, "sha256": "",
+              "decoded": False, "blank": None, "query_ok": False,
+              "source_quality_bad": False, "ok": False, "failure": "", "stop_required": False}
+    try:
+        if not _is_toss_logo_url(url):
+            result["failure"] = "unapproved_host_or_path"
+            result["elapsed_ms"] = round((time.monotonic() - started) * 1000, 1)
+            return result
+        request = urllib.request.Request(url, headers={"User-Agent": "VERITY-logo-url-check/1.0"}, method="GET")
+        with _open_toss_url(request, timeout=_VERIFY_TIMEOUT) as response:
+            result["http_status"] = response.getcode()
+            if hasattr(response, "geturl") and not _is_toss_logo_url(response.geturl()):
+                result["failure"] = "unapproved_redirect_target"
+                result["elapsed_ms"] = round((time.monotonic() - started) * 1000, 1)
+                return result
+            result["content_type"] = (response.headers.get("content-type") or "").split(";", 1)[0].lower()
+            body = response.read(_VERIFY_MAX_BODY + 1)
+        result["bytes_read"] = min(len(body), _VERIFY_MAX_BODY)
+        result["body_truncated"] = len(body) > _VERIFY_MAX_BODY
+        if result["http_status"] != 200:
+            result["failure"] = "http_status"
+        elif not result["content_type"].startswith("image/"):
+            result["failure"] = "non_image_mime"
+        elif result["body_truncated"]:
+            result["failure"] = "body_over_limit"
+        else:
+            result["query_ok"] = True
+            result["sha256"] = hashlib.sha256(body).hexdigest()
+            from PIL import Image
+            image = Image.open(_io.BytesIO(body))
+            image.verify()
+            image = Image.open(_io.BytesIO(body)).convert("RGBA")
+            result["width"], result["height"] = image.size
+            result["decoded"] = result["width"] > 0 and result["height"] > 0
+            result["blank"] = _is_blank(body)
+            result["ok"] = result["decoded"] and not result["blank"]
+            if not result["ok"]:
+                result["source_quality_bad"] = True
+                result["failure"] = "blank_or_undecodable"
+    except urllib.error.HTTPError as exc:
+        result["http_status"] = exc.code
+        result["failure"] = "http_status"
+    except Exception as exc:  # noqa: BLE001
+        result["failure"] = type(exc).__name__
+        if result["query_ok"]:
+            result["source_quality_bad"] = True
+    result["elapsed_ms"] = round((time.monotonic() - started) * 1000, 1)
+    result["stop_required"] = result["http_status"] in (403, 429)
+    return result
+
+
+def validate_logo_map_source_receipt(receipt_path: str = _VERIFY_RECEIPT, map_path: str = OUT_PATH,
+                                      expected_total: Optional[int] = None, now: Optional[datetime] = None) -> dict:
+    """Validate receipt provenance and expose a bounded-query clock without claiming map-wide freshness."""
+    try:
+        receipt = json.load(open(receipt_path, encoding="utf-8"))
+        map_bytes = open(map_path, "rb").read()
+    except (OSError, ValueError) as exc:
+        raise ValueError("logo-map source receipt or map unavailable") from exc
+    map_hash = hashlib.sha256(map_bytes).hexdigest()
+    try:
+        map_doc = json.loads(map_bytes)
+    except ValueError as exc:
+        raise ValueError("logo-map source map is invalid") from exc
+    if not isinstance(receipt, dict) or not isinstance(map_doc, dict):
+        raise ValueError("logo-map source receipt or map structure invalid")
+    logos = map_doc.get("logos") or {}
+    if not isinstance(logos, dict):
+        raise ValueError("logo-map source map entries invalid")
+    actual_total = sum(1 for value in logos.values() if _is_toss_logo_url(value))
+    if receipt.get("map_sha256") != map_hash:
+        raise ValueError("logo-map source receipt map hash mismatch")
+    raw_counts = {
+        "total": receipt.get("total", receipt.get("eligible_toss_url_count")),
+        "selected": receipt.get("selected", receipt.get("sample_target")),
+        "checked": receipt.get("checked", receipt.get("sampled")),
+        "passed": receipt.get("passed", receipt.get("ok")),
+        "failed": receipt.get("failed"),
+    }
+    if any(type(value) is not int for value in raw_counts.values()):
+        raise ValueError("logo-map source receipt counts must be integers")
+    total, selected, checked, passed, failed = (raw_counts[k] for k in ("total", "selected", "checked", "passed", "failed"))
+    if (expected_total is not None and (type(expected_total) is not int or expected_total < 0)):
+        raise ValueError("expected logo-map source denominator invalid")
+    if ((expected_total is not None and total != expected_total) or total != actual_total
+            or not (0 <= passed <= checked <= selected <= total)):
+        raise ValueError("logo-map source receipt scope invalid")
+    if receipt.get("source_host", _TOSS_HOST) != _TOSS_HOST:
+        raise ValueError("logo-map source receipt host invalid")
+    if failed != checked - passed:
+        raise ValueError("logo-map source receipt result counts inconsistent")
+    rows = receipt.get("results")
+    if not isinstance(rows, list) or len(rows) != checked:
+        raise ValueError("logo-map source receipt result rows inconsistent")
+    row_passed = 0
+    row_blocked = False
+    row_quality_bad = 0
+    for row in rows:
+        if not isinstance(row, dict) or type(row.get("ok")) is not bool:
+            raise ValueError("logo-map source receipt result row invalid")
+        if any(key in row for key in ("ticker", "url", "body", "response_body")):
+            raise ValueError("logo-map source receipt contains disallowed detail")
+        if row.get("host", _TOSS_HOST) != _TOSS_HOST:
+            raise ValueError("logo-map source receipt result host invalid")
+        code = row.get("http_status")
+        if code is not None and type(code) is not int:
+            raise ValueError("logo-map source receipt HTTP status invalid")
+        blocked_row = code in (403, 429)
+        row_blocked = row_blocked or blocked_row
+        if "stop_required" in row and (type(row["stop_required"]) is not bool or row["stop_required"] != blocked_row):
+            raise ValueError("logo-map source receipt stop flag inconsistent")
+        if row["ok"] and (code != 200 or row.get("decoded") is not True
+                           or row.get("blank") is not False
+                           or not str(row.get("content_type", "")).startswith("image/")):
+            raise ValueError("logo-map source receipt success row inconsistent")
+        row_passed += int(row["ok"])
+        row_quality = row.get("source_quality_bad")
+        inferred_quality_bad = bool(code == 200 and (row.get("decoded") is False or row.get("blank") is True))
+        if row_quality is None:
+            row_quality = inferred_quality_bad
+        elif type(row_quality) is not bool or row_quality != inferred_quality_bad:
+            raise ValueError("logo-map source receipt quality row invalid")
+        row_quality_bad += int(row_quality)
+    if row_passed != passed:
+        raise ValueError("logo-map source receipt passed count inconsistent")
+    source_blocked = row_blocked
+    for flag in ("source_blocked", "stopped_on_403_or_429"):
+        if flag in receipt and (type(receipt[flag]) is not bool or receipt[flag] != source_blocked):
+            raise ValueError("logo-map source receipt block summary inconsistent")
+    if "source_quality_bad" in receipt:
+        quality_summary = receipt["source_quality_bad"]
+        if type(quality_summary) is not int or quality_summary != row_quality_bad:
+            raise ValueError("logo-map source receipt quality summary inconsistent")
+    all_records_revalidated = checked == total and passed == total and not source_blocked
+    if "all_records_revalidated" in receipt:
+        if type(receipt["all_records_revalidated"]) is not bool or receipt["all_records_revalidated"] != all_records_revalidated:
+            raise ValueError("logo-map source receipt full-scope summary inconsistent")
+    if "query_complete" in receipt:
+        if type(receipt["query_complete"]) is not bool or receipt["query_complete"] != (checked == selected):
+            raise ValueError("logo-map source receipt query summary inconsistent")
+    stamp = receipt.get("checked_at")
+    try:
+        checked_at = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        raise ValueError("logo-map source receipt timestamp invalid")
+    if checked_at.tzinfo is None or checked_at.utcoffset() is None:
+        raise ValueError("logo-map source receipt timestamp must include a timezone")
+    now_utc = now or datetime.now(timezone.utc)
+    if now_utc.tzinfo is None or now_utc.utcoffset() is None:
+        raise ValueError("validation clock must include a timezone")
+    if checked_at.astimezone(timezone.utc) > now_utc.astimezone(timezone.utc):
+        raise ValueError("logo-map source receipt timestamp is in the future")
+    unattempted = selected - checked
+    quality_bad = row_quality_bad
+    if source_blocked:
+        status, quality_reason = "source_blocked", "source_access_stop"
+        expected_receipt_status = "source_blocked"
+    elif checked < selected:
+        status, quality_reason = "incomplete", "query_incomplete"
+        expected_receipt_status = "partial"
+    elif passed == selected:
+        status, quality_reason = "sample_complete", ""
+        expected_receipt_status = "sampled"
+    elif quality_bad:
+        status, quality_reason = "source_quality_error", "bad_image_payload"
+        expected_receipt_status = "source_or_quality_error"
+    else:
+        status, quality_reason = "query_error", "source_query_failed"
+        expected_receipt_status = "source_or_quality_error"
+    declared_status = receipt.get("status")
+    if declared_status is not None and declared_status != expected_receipt_status:
+        raise ValueError("logo-map source receipt status inconsistent with scope")
+    normalized = {
+        "clock_kind": "bounded_logo_url_query",
+        "bound_query_incomplete": checked < total,
+        "checked_at": checked_at.astimezone(timezone.utc).isoformat(),
+        "map_sha256": map_hash,
+        "source_host": receipt.get("source_host", _TOSS_HOST),
+        "scope_counts": {"selected": selected, "attempted": checked, "passed": passed,
+                         "failed": failed, "unattempted": unattempted, "total": total},
+        "status": status,
+        "quality_reason": quality_reason,
+        "source_quality_bad": quality_bad,
+        "all_records_revalidated": all_records_revalidated,
+    }
+    if not source_blocked and checked == selected and passed == selected and passed > 0:
+        normalized["completed_at"] = checked_at.astimezone(timezone.utc).isoformat()
+    return normalized
+
+
+def verify_existing_toss_urls(receipt_path: str = _VERIFY_RECEIPT, max_seconds: float = _VERIFY_MAX_SECONDS,
+                              resume: bool = False) -> int:
+    """Check a bounded sample of existing public Toss URLs without touching the map artifact."""
+    with open(OUT_PATH, "rb") as f:
+        map_bytes = f.read()
+    doc = json.loads(map_bytes)
+    map_hash = hashlib.sha256(map_bytes).hexdigest()
+    receipts_to_check = [receipt_path]
+    if receipt_path != _VERIFY_LEGACY_RECEIPT:
+        receipts_to_check.append(_VERIFY_LEGACY_RECEIPT)
+    if not resume:
+        for existing_path in receipts_to_check:
+            if not os.path.exists(existing_path):
+                continue
+            try:
+                previous = json.load(open(existing_path, encoding="utf-8"))
+            except (OSError, ValueError):
+                previous = {}
+            if (previous.get("map_sha256") == map_hash
+                    and (previous.get("source_blocked") or previous.get("stopped_on_403_or_429"))):
+                print("[logo_map] verify-only blocked receipt exists for unchanged map; network skipped", file=sys.stderr)
+                return 1
+    with open(UNIVERSE_SEARCH, encoding="utf-8") as f:
+        universe = json.load(f)
+    sample = _stratified_logo_sample(doc, universe)
+    started = time.monotonic()
+    results: list[dict] = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        for offset in range(0, len(sample), 2):
+            if time.monotonic() - started >= max_seconds:
+                break
+            batch = sample[offset:offset + 2]
+            futures = [pool.submit(_check_toss_logo, item) for item in batch]
+            blocked = False
+            for future in concurrent.futures.as_completed(futures):
+                row = future.result()
+                results.append(row)
+                blocked = blocked or row["stop_required"]
+            if blocked:
+                break
+            if offset + 2 < len(sample):
+                time.sleep(THROTTLE)
+    elapsed = [row["elapsed_ms"] for row in results]
+    successful_bytes = [row["bytes_read"] for row in results if row["ok"]]
+    logos = doc.get("logos") or {}
+    total_urls = sum(1 for value in logos.values() if _is_toss_logo_url(value))
+    selected = len(sample)
+    checked = len(results)
+    passed = sum(1 for row in results if row["ok"])
+    source_blocked = any(row["stop_required"] for row in results)
+    receipt = {
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "source": "existing_logo_map_url_sample",
+        "source_host": _TOSS_HOST,
+        "map_sha256": map_hash,
+        "map_entry_count": len(logos),
+        "selected": selected,
+        "checked": checked,
+        "passed": passed,
+        "failed": checked - passed,
+        "total": total_urls,
+        "all_records_revalidated": checked == total_urls and passed == total_urls and not source_blocked,
+        "query_complete": checked == selected,
+        "source_blocked": source_blocked,
+        "source_block_reason": "http_403_or_429" if source_blocked else "",
+        "source_quality_bad": sum(1 for row in results if row["source_quality_bad"]),
+        "source_quality_unverified": sum(1 for row in results if not row["query_ok"]),
+        "status": ("source_blocked" if source_blocked else
+                   "partial" if checked < selected else
+                   "sampled" if passed == selected else "source_or_quality_error"),
+        "max_seconds": max_seconds,
+        "elapsed_seconds": round(time.monotonic() - started, 2),
+        "p50_elapsed_ms": round(sorted(elapsed)[(len(elapsed) - 1) // 2], 1) if elapsed else None,
+        "mean_elapsed_ms": round(sum(elapsed) / len(elapsed), 1) if elapsed else None,
+        "mean_success_bytes": round(sum(successful_bytes) / len(successful_bytes), 1) if successful_bytes else None,
+        "estimated_full_request_count": total_urls,
+        "estimated_full_bytes_from_sample": round(sum(successful_bytes) / len(successful_bytes) * total_urls) if successful_bytes else None,
+        "results": results,
+    }
+    os.makedirs(os.path.dirname(receipt_path), exist_ok=True)
+    temp_path = receipt_path + ".tmp"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(receipt, f, ensure_ascii=False, indent=2)
+    os.replace(temp_path, receipt_path)
+    print("[logo_map] verify-only logged=True · map unchanged · "
+          f"sample {passed}/{checked}/{selected} · Toss URLs {total_urls} · status={receipt['status']}", file=sys.stderr)
+    return 0 if checked == selected and passed == selected and not source_blocked else 1
+
+
 def main() -> int:
     ok = False
     try:
+        if os.environ.get("LOGO_MAP_VERIFY_EXISTING") == "1":
+            result = verify_existing_toss_urls(resume=os.environ.get("LOGO_MAP_VERIFY_RESUME") == "1")
+            ok = True  # A current or newly written receipt exists; block state is the nonzero exit.
+            return result
+        try:
+            previous = json.load(open(OUT_PATH, encoding="utf-8"))
+        except (OSError, ValueError):
+            previous = {}
+        if (previous.get("_meta") or {}).get("logo_source") == "toss_temp":
+            print("[logo_map] toss_temp map preserved; use verify-only mode; no source migration performed", file=sys.stderr)
+            ok = True
+            return 0
         cid = _cid()
         if not cid:
             print("[logo_map] BRANDFETCH_CLIENT_ID 없음 — skip", file=sys.stderr)
@@ -271,6 +630,7 @@ def main() -> int:
             cache: Dict[str, str] = dict(_prev.get("logos", {}))
             cache.update({k: "" for k in (_prev.get("_tried") or {})})  # 미보유 시도분도 skip (증분)
         except (OSError, ValueError):
+            _prev = {}
             cache = {}
 
         # 유니버스 = universe_search 전체 (KR+ETF+ETN+KONEX+US ≈ 9,363) — 검색되는 종목 전부 커버.
@@ -322,14 +682,23 @@ def main() -> int:
             fetched += 1
             time.sleep(THROTTLE)
 
+        if fetched == 0:
+            print("[logo_map] fetched_this_run=0; artifact and generated_at preserved", file=sys.stderr)
+            ok = True
+            return 0
         got = sum(1 for v in cache.values() if v)
+        meta = dict(_prev.get("_meta") or {})
+        meta.update({"generated_at": datetime.now(KST).isoformat(),
+                     "source": "Brandfetch Logo Link incremental coverage check",
+                     "total": len(cache), "with_logo": got, "fetched_this_run": fetched})
         doc = {
-            "_meta": {"generated_at": datetime.now(KST).isoformat(),
-                      "source": "Brandfetch Logo Link 커버리지 실측 (빌드타임 확정)",
-                      "total": len(cache), "with_logo": got, "fetched_this_run": fetched},
+            "_meta": meta,
             "logos": {k: v for k, v in cache.items() if v},  # 발행은 보유분만 (경량)
             "_tried": {k: "" for k, v in cache.items() if not v},  # 증분 skip 용 시도 기록
         }
+        for field in ("colors", "shapes", "style"):
+            if field in _prev:
+                doc[field] = _prev[field]
         with open(OUT_PATH, "w", encoding="utf-8") as f:
             json.dump(doc, f, ensure_ascii=False)
         print(f"[logo_map] logged=True · 캐시 {len(cache)} · 로고 {got} · 이번확정 {fetched}", file=sys.stderr)

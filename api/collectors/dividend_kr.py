@@ -38,7 +38,7 @@ import json
 import os
 import re
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from api.config import DATA_DIR, now_kst
 
@@ -87,6 +87,30 @@ def _is_common_cash_dividend_row(row: dict) -> bool:
     if "우선주" in cat:
         return False
     return True
+
+
+def _normalized_annual_row(row: dict) -> dict:
+    """OpenDART 원문과 기존 변환 캐시의 필드명을 하나로 맞춘다."""
+    return {
+        "category": row.get("se", row.get("category", "")),
+        "current": row.get("thstrm", row.get("current")),
+        "previous": row.get("frmtrm", row.get("previous")),
+    }
+
+
+def _is_explicit_no_cash_value(value: Any) -> bool:
+    """무배당을 뜻하는 명시적 0/공란 표기만 허용한다."""
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return float(value) == 0
+    normalized = str(value).replace(",", "").strip()
+    if normalized in {"", "-"}:
+        return True
+    try:
+        return float(normalized) == 0
+    except ValueError:
+        return False
 
 
 def _estimate_ex_date(bsns_year: int, dividend_type: str = "year_end") -> str:
@@ -203,62 +227,128 @@ def fetch_tier0_pykrx(ticker: str, year: Optional[int] = None) -> Optional[dict]
 # Tier 1 — DART alotMatter.json (연간 배당 계획/확정)
 # ──────────────────────────────────────────────────────────────
 
-def fetch_tier1_dart_annual(ticker: str, bsns_year: Optional[int] = None) -> Optional[dict]:
-    """DART 사업보고서 배당정보 → 보통주 주당 현금배당.
-    current(당기) 있으면 그 해 배당, previous(전기)로 fallback.
-    배당락일은 결산월 말일 추정(정확한 ex_date 는 Tier 2/3 에서 덮어씀).
+def _dart_source_date(rows: List[dict]) -> Optional[str]:
+    """alotMatter 원문 접수번호에서 최신 공시 접수일만 추출한다."""
+    dates = []
+    for row in rows:
+        receipt = str(row.get("rcept_no") or "")
+        day = receipt[:8]
+        if len(day) == 8 and day.isdigit():
+            try:
+                dates.append(datetime.strptime(day, "%Y%m%d").date().isoformat())
+            except ValueError:
+                continue
+    return max(dates) if dates else None
+
+
+def _annual_record(rows: List[dict], bsns_year: int, source_checked_at: str) -> Optional[dict]:
+    """OpenDART 원문 행을 기존 배당 레코드로 변환한다."""
+    amount = None
+    for row in rows:
+        normalized = _normalized_annual_row(row)
+        if not _is_common_cash_dividend_row(normalized):
+            continue
+        amount = (_parse_amount(normalized.get("current"))
+                  or _parse_amount(normalized.get("previous")))
+        if amount:
+            break
+    if amount is None:
+        return None
+    return {
+        "ex_date": _estimate_ex_date(bsns_year, "year_end"),
+        # 🚨 alotMatter 는 배당락일을 주지 않아 이 값은 `{사업연도}-12-30` 추정이다.
+        # 실측 2026-08-22 당시 원장 1,322행이 모두 2025-12-30이었다. 금액이 확정돼도
+        # 날짜가 확정된 것은 아니다. 한국의 배당절차 개선으로 기준일이 배당액 결정 뒤로
+        # 이동할 수 있으므로, 확정일은 별도 현금·현물배당결정 공시 본문에서 확인해야 한다.
+        # 이 경고와 ex_date_estimated 필드는 캘린더가 추정일을 사실처럼 표시한 회귀 방지다.
+        "ex_date_estimated": True,
+        "announced_amount_per_share": amount,
+        "confirmed_amount_per_share": amount,
+        "is_confirmed": True,
+        "dividend_type": "year_end",
+        "payment_date": None,
+        "source": "dart_alot",
+        # 공시 접수일과 실제 조회 성공시각은 다른 축이다.
+        "source_as_of": _dart_source_date(rows),
+        "source_checked_at": source_checked_at,
+        "updated_at": source_checked_at,
+    }
+
+
+def fetch_tier1_dart_annual_result(
+    ticker: str, bsns_year: Optional[int] = None,
+) -> Dict[str, Any]:
+    """DART 배당 조회 결과와 전송 실패를 분리해 반환한다.
+
+    ``000``(자료 있음)과 ``013``(조회 성공·자료 없음)만 확정 조회다. API 키,
+    종목 매핑, 전송 또는 다른 DART 상태 실패는 자료 없음으로 바꾸지 않는다.
     """
     try:
-        from api.collectors.DartScout import fetch_dividends
+        from api.collectors.DartScout import _call
         from api.collectors.dart_corp_code import get_corp_code
         from api.config import DART_API_KEY
-    except ImportError:
-        return None
+    except ImportError as exc:
+        return {"outcome": "failed", "reason": type(exc).__name__}
     if not DART_API_KEY:
-        return None
+        return {"outcome": "failed", "reason": "missing_api_key"}
 
     bsns_year = bsns_year or (now_kst().year - 1)
     corp_code = get_corp_code(str(ticker).zfill(6))
     if not corp_code:
-        return None
+        return {"outcome": "failed", "reason": "missing_corp_code"}
     try:
-        rows = fetch_dividends(corp_code, str(bsns_year))
+        response = _call("alotMatter.json", {
+            "corp_code": corp_code,
+            "bsns_year": str(bsns_year),
+            "reprt_code": "11011",
+        })
     except Exception as e:
-        print(f"[dividend_kr/tier1] {ticker} DART 실패: {e}")
-        return None
-    if not rows:
-        return None
+        print(
+            f"[dividend_kr/tier1] {ticker} DART 실패: "
+            f"{type(e).__name__}"
+        )
+        return {"outcome": "failed", "reason": type(e).__name__}
+    if not isinstance(response, dict):
+        return {"outcome": "failed", "reason": "invalid_response"}
+    status = str(response.get("status") or "")
+    checked_at = now_kst().isoformat()
+    if status == "013":
+        return {"outcome": "no_data", "source_status": status,
+                "source_checked_at": checked_at, "source_as_of": None}
+    if status != "000":
+        return {"outcome": "failed", "source_status": status or "missing_status"}
+    rows = response.get("list")
+    if (not isinstance(rows, list) or not rows
+            or any(not isinstance(row, dict) for row in rows)):
+        return {"outcome": "failed", "source_status": status,
+                "reason": "empty_or_invalid_list"}
+    normalized_rows = [_normalized_annual_row(row) for row in rows]
+    cash_rows = [row for row in normalized_rows
+                 if _is_common_cash_dividend_row(row)]
+    if not cash_rows:
+        return {"outcome": "failed", "source_status": status,
+                "reason": "missing_cash_dividend_rows"}
+    source_as_of = _dart_source_date(rows)
+    record = _annual_record(rows, int(bsns_year), checked_at)
+    if record is None:
+        if not all(
+            _is_explicit_no_cash_value(row.get(field))
+            for row in cash_rows
+            for field in ("current", "previous")
+        ):
+            return {"outcome": "failed", "source_status": status,
+                    "reason": "invalid_cash_dividend_amount"}
+        return {"outcome": "no_cash_dividend", "source_status": status,
+                "source_checked_at": checked_at, "source_as_of": source_as_of}
+    return {"outcome": "record", "source_status": status,
+            "source_checked_at": checked_at, "source_as_of": source_as_of,
+            "record": record}
 
-    amount = None
-    for row in rows:
-        if not _is_common_cash_dividend_row(row):
-            continue
-        # current 먼저 시도, 없으면 previous
-        a = _parse_amount(row.get("current")) or _parse_amount(row.get("previous"))
-        if a:
-            amount = a
-            break
-    if amount is None:
-        return None
 
-    return {
-        "ex_date": _estimate_ex_date(bsns_year, "year_end"),
-        # 🚨 2026-08-22 — ex_date 는 **추정치**다. alotMatter/pykrx 어느 쪽도 배당락일을
-        #   주지 않아 _estimate_ex_date() 가 "{연도}-12-30" 을 넣는다. 실측(2026-08-22):
-        #   dividends_kr.json 1,322행의 ex_date 가 **전부 정확히 2025-12-30** = 100% 추정.
-        #   그런데 소비처(캘린더)가 이걸 확정 사실처럼 표시하고 있었다(RULE 7 위반 소지).
-        #   🚨 한국은 배당절차 개선으로 배당기준일이 배당액 결정 **이후**로 이동 중이라
-        #   12/30 가정은 시간이 갈수록 빗나간다. 확정일이 필요하면 현금·현물배당결정
-        #   공시 본문의 배당기준일을 봐야 한다(Tier 2 확장 = 별건, 쿼터 설계 필요).
-        "ex_date_estimated": True,
-        "announced_amount_per_share": amount,
-        "confirmed_amount_per_share": amount,
-        "is_confirmed": True,  # 사업보고서 기재 = 주총 확정 후
-        "dividend_type": "year_end",
-        "payment_date": None,
-        "source": "dart_alot",
-        "updated_at": now_kst().isoformat(),
-    }
+def fetch_tier1_dart_annual(ticker: str, bsns_year: Optional[int] = None) -> Optional[dict]:
+    """기존 Optional 레코드 API. 상세 조회 상태는 ``*_result``가 보존한다."""
+    result = fetch_tier1_dart_annual_result(ticker, bsns_year)
+    return result.get("record") if result.get("outcome") == "record" else None
 
 
 # ──────────────────────────────────────────────────────────────
@@ -325,14 +415,33 @@ def sweep_annual_plans(tickers: List[str], year: Optional[int] = None) -> Dict[s
     """
     db = load_dividends_db()
     results: Dict[str, str] = {}
+    for ticker in tickers:
+        record = fetch_tier1_dart_annual(ticker, year)
+        if record is None:
+            record = fetch_tier0_pykrx(ticker, year)
+        results[ticker] = _upsert(db, ticker, record) if record is not None else "fail"
+    save_dividends_db(db)
+    return results
+
+
+def sweep_annual_plans_detailed(
+    tickers: List[str], year: Optional[int] = None,
+) -> Dict[str, Dict[str, Any]]:
+    """Tier 1 조회 상태를 보존하는 sweep.
+
+    DART 실패·자료 없음에서는 원장을 그대로 둔다. legacy ``sweep_annual_plans``의
+    pykrx 폴백은 별도 경로로 유지하며 source-query 영수증에는 섞지 않는다.
+    """
+    db = load_dividends_db()
+    results: Dict[str, Dict[str, Any]] = {}
     for tk in tickers:
-        rec = fetch_tier1_dart_annual(tk, year)
-        if not rec:
-            rec = fetch_tier0_pykrx(tk, year)
-        if not rec:
-            results[tk] = "fail"
-            continue
-        results[tk] = _upsert(db, tk, rec)
+        query = fetch_tier1_dart_annual_result(tk, year)
+        rec = query.get("record")
+        if rec is not None:
+            query["artifact_status"] = _upsert(db, tk, rec)
+        else:
+            query["artifact_status"] = "preserved"
+        results[tk] = query
     save_dividends_db(db)
     return results
 

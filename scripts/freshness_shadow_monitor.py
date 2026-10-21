@@ -67,6 +67,21 @@ def _extract_ts(obj, ts_field: str | None):
     return None
 
 
+
+def _clock_evidence(stream, path, obj):
+    """Receipt clocks never fall back to rebuild or workflow-completion clocks."""
+    receipt_only = stream.get("receipt_clock") is True
+    ts = None if receipt_only else _extract_ts(obj, stream.get("ts_field"))
+    proof = None
+    if obj is not None and (receipt_only or (not ts and not stream.get("ts_field"))):
+        proof = collection_receipt(stream["id"], path)
+        if not receipt_only and not proof:
+            proof = producer_evidence(stream["id"])
+        if proof and proof.get("status") == "bound_query_complete":
+            ts = proof["completed_at"]
+    return ts, proof
+
+
 def _load_any(path: str):
     """json 또는 jsonl(마지막 라인) 로드."""
     try:
@@ -238,15 +253,13 @@ def build_observations() -> dict:
                 rows.append(unavailable("missing"))
                 continue
             obj = _load_any(path)
-            ts = _extract_ts(obj, s.get("ts_field"))
-            if obj is not None and not ts and not s.get("ts_field"):
-                proof = collection_receipt(s["id"], path) or producer_evidence(s["id"])
-                if proof and proof.get("status") == "bound_query_complete":
-                    ts = proof["completed_at"]
+            ts, proof = _clock_evidence(s, path, obj)
             if not ts:
                 row = unavailable("unreadable" if obj is None else "no_ts")
                 if proof:
                     row["producer_evidence"] = proof
+                    if proof.get("quality_reason"):
+                        row["quality_reason"] = proof["quality_reason"]
                 rows.append(row)
                 continue
             t = _parse_ts_kst(ts)

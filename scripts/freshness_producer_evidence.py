@@ -29,6 +29,10 @@ def collection_receipt(sid, artifact_path):
     A partial query or a mismatched file remains unmeasured, not a new timestamp.
     Missing legacy receipts fall back only to separately labelled job diagnostics.
     """
+    if sid == "dividends_kr":
+        return _dividend_collection_receipt(artifact_path)
+    if sid == "logo_map":
+        return _logo_collection_receipt(artifact_path)
     if sid != "news_flash":
         return None
     path = Path(artifact_path)
@@ -95,6 +99,137 @@ def collection_receipt(sid, artifact_path):
                 "expected_feeds": len(feeds), "successful_feeds": successes,
                 "new_rows": doc["new_rows"], "source_freshness_verified": False,
                 "all_records_revalidated": False}
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return invalid
+
+
+def _dividend_collection_receipt(artifact_path):
+    """Validate a bounded OpenDART query without claiming full-ledger revalidation."""
+    path = Path(artifact_path)
+    receipt_path = path.parent / "metadata/dividends_kr_source_receipt.json"
+    if not receipt_path.exists():
+        return None
+    invalid = {"status": "invalid_receipt", "asset_binding": "unverified",
+               "source_freshness_verified": False, "all_records_revalidated": False}
+    try:
+        doc = json.loads(receipt_path.read_bytes())
+        payload = path.read_bytes()
+        rows = json.loads(payload)
+        if (not isinstance(doc, dict) or not isinstance(rows, dict)
+                or any(not isinstance(value, list) for value in rows.values())):
+            return invalid
+        scope, artifact, rotation = doc.get("scope"), doc.get("artifact"), doc.get("rotation")
+        source = doc.get("source")
+        if not all(isinstance(value, dict) for value in (scope, artifact, rotation, source)):
+            return invalid
+        if (doc.get("schema_version") != 1
+                or doc.get("producer") != "kr_company_facts_backfill.dividends"
+                or doc.get("clock_kind") != "bounded_source_query_attempt"
+                or doc.get("all_records_revalidated") is not False
+                or source.get("provider") != "OpenDART"
+                or source.get("endpoint") != "alotMatter.json"
+                or scope.get("kind") != "bounded_ticker_rotation"
+                or artifact.get("path") != "data/dividends_kr.json"
+                or artifact.get("status") != "bound"
+                or artifact.get("sha256") != hashlib.sha256(payload).hexdigest()
+                or artifact.get("tickers") != len(rows)
+                or artifact.get("rows") != sum(len(value) for value in rows.values())):
+            return invalid
+
+        def stamp(value):
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                raise ValueError("clock must include timezone")
+            return parsed
+
+        started, finished = stamp(doc["started_at"]), stamp(doc["finished_at"])
+        if started > finished or finished > datetime.now(timezone.utc):
+            return invalid
+        selected = scope.get("selected_count")
+        definitive = scope.get("definitive_count")
+        failures = scope.get("failure_count")
+        total = scope.get("universe_count")
+        checked = scope.get("rotation_checked_count")
+        if (any(type(value) is not int for value in
+                (selected, definitive, failures, total, checked))
+                or not (0 < selected <= total)
+                or definitive + failures != selected
+                or not (0 <= checked <= total)
+                or scope.get("universe_sha256") != rotation.get("universe_sha256")
+                or rotation.get("business_year") != source.get("business_year")
+                or len(rotation.get("checked_tickers") or []) != checked
+                or len(set(rotation.get("checked_tickers") or [])) != checked
+                or any(not re.fullmatch(r"\d{6}", str(ticker))
+                       for ticker in rotation.get("checked_tickers") or [])):
+            return invalid
+        outcome = doc.get("outcome")
+        expected = "complete" if definitive == selected else "partial_failure"
+        if outcome != expected:
+            return invalid
+        successful = doc.get("successful_checked_at")
+        if outcome == "complete":
+            if stamp(successful) != finished:
+                return invalid
+        elif successful is not None and stamp(successful) > finished:
+            return invalid
+        first, last = source.get("report_date_min"), source.get("report_date_max")
+        if (first is None) != (last is None):
+            return invalid
+        if first is not None:
+            if (not re.fullmatch(r"\d{4}-\d{2}-\d{2}", first)
+                    or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", last)
+                    or first > last):
+                return invalid
+        proof = {
+            "status": ("bound_query_complete" if outcome == "complete"
+                       else "bound_query_incomplete"),
+            "asset_binding": "verified_sha256",
+            "clock_kind": doc["clock_kind"],
+            "outcome": outcome,
+            "source_freshness_verified": False,
+            "all_records_revalidated": False,
+            "scope_counts": {"selected": selected, "attempted": selected,
+                             "successful": definitive, "total": total,
+                             "rotation_checked": checked},
+            "source_report_date_min": first,
+            "source_report_date_max": last,
+            "bounded_scope_completed": bool(rotation.get("bounded_scope_completed_at")),
+        }
+        if successful is not None:
+            proof["successful_checked_at"] = successful
+        if outcome == "complete":
+            proof["completed_at"] = successful
+        return proof
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return invalid
+
+
+def _logo_collection_receipt(artifact_path):
+    """A checked sample never certifies every mapped logo or a new provider."""
+    path = Path(artifact_path)
+    receipt_path = path.parent / "metadata/logo_map_source_receipt.json"
+    if not receipt_path.exists():
+        return None
+    invalid = {"status": "invalid_receipt", "asset_binding": "unverified",
+               "source_freshness_verified": False, "all_records_revalidated": False}
+    try:
+        from api.builders.logo_map_builder import validate_logo_map_source_receipt
+        checked = validate_logo_map_source_receipt(str(receipt_path), str(path))
+        proof = {
+            "status": ("bound_query_complete" if "completed_at" in checked
+                       else "bound_query_incomplete"),
+            "asset_binding": "verified_sha256",
+            "clock_kind": checked["clock_kind"],
+            "outcome": checked["status"],
+            "source_freshness_verified": False,
+            "all_records_revalidated": checked["all_records_revalidated"],
+            "scope_counts": checked["scope_counts"],
+        }
+        if checked.get("quality_reason"):
+            proof["quality_reason"] = checked["quality_reason"]
+        if "completed_at" in checked:
+            proof["completed_at"] = checked["completed_at"]
+        return proof
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
         return invalid
 

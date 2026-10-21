@@ -331,3 +331,66 @@ def test_even_near_future_query_clocks_are_not_promoted(tmp_path, monkeypatch, l
     receipt.write_text(json.dumps(doc))
     result = evidence.collection_receipt("news_flash", path)
     assert (result["status"] == "bound_query_complete") is (lead_seconds == 0)
+
+
+def bound_dividend_receipt(tmp_path):
+    path = tmp_path / "dividends_kr.json"
+    path.write_text(json.dumps({"005930": [{"ex_date": "2025-12-30"}]}))
+    doc = {
+        "schema_version": 1,
+        "producer": "kr_company_facts_backfill.dividends",
+        "clock_kind": "bounded_source_query_attempt",
+        "started_at": "2026-10-18T07:00:00Z",
+        "finished_at": "2026-10-18T07:00:02Z",
+        "outcome": "complete",
+        "successful_checked_at": "2026-10-18T07:00:02Z",
+        "all_records_revalidated": False,
+        "source": {"provider": "OpenDART", "endpoint": "alotMatter.json",
+                   "business_year": "2025", "report_date_min": "2026-03-19",
+                   "report_date_max": "2026-03-19"},
+        "scope": {"kind": "bounded_ticker_rotation", "universe_count": 100,
+                  "universe_sha256": "a" * 64, "selected_count": 2,
+                  "selected_sha256": "b" * 64, "definitive_count": 2,
+                  "failure_count": 0, "rotation_checked_count": 2},
+        "rotation": {"business_year": "2025", "universe_sha256": "a" * 64,
+                     "started_at": "2026-10-18T07:00:00Z",
+                     "checked_tickers": ["005930", "000660"]},
+        "artifact": {"path": "data/dividends_kr.json", "status": "bound",
+                     "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                     "tickers": 1, "rows": 1},
+    }
+    receipt = tmp_path / "metadata/dividends_kr_source_receipt.json"
+    receipt.parent.mkdir(exist_ok=True)
+    receipt.write_text(json.dumps(doc))
+    return path, receipt, doc
+
+
+def test_dividend_receipt_reports_bounded_denominators_without_full_ledger_claim(tmp_path):
+    path, _, _ = bound_dividend_receipt(tmp_path)
+
+    proof = evidence.collection_receipt("dividends_kr", path)
+
+    assert proof["status"] == "bound_query_complete"
+    assert proof["completed_at"] == "2026-10-18T07:00:02Z"
+    assert proof["all_records_revalidated"] is False
+    assert proof["scope_counts"] == {
+        "selected": 2, "attempted": 2, "successful": 2, "total": 100,
+        "rotation_checked": 2,
+    }
+
+
+@pytest.mark.parametrize("defect", ["wrong_hash", "full_claim", "zero_selected", "bad_balance"])
+def test_invalid_dividend_receipt_never_supplies_a_clock(tmp_path, defect):
+    path, receipt, doc = bound_dividend_receipt(tmp_path)
+    if defect == "wrong_hash":
+        doc["artifact"]["sha256"] = "0" * 64
+    elif defect == "full_claim":
+        doc["all_records_revalidated"] = True
+    elif defect == "zero_selected":
+        doc["scope"]["selected_count"] = 0
+        doc["scope"]["definitive_count"] = 0
+    else:
+        doc["scope"]["failure_count"] = 1
+    receipt.write_text(json.dumps(doc))
+
+    assert evidence.collection_receipt("dividends_kr", path)["status"] == "invalid_receipt"
