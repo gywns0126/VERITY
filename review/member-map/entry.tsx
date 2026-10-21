@@ -26,7 +26,7 @@ function Review() {
     return <>
         <header className="review-bar">
             <strong><i aria-hidden="true">α</i> ALPHANEST <span>회원 검수</span></strong>
-            {signedIn && <button type="button" className="review-structure-toggle" aria-pressed={!!structure.snapshot} disabled={structure.waiting} onClick={structure.open}>{structure.waiting ? "지도 확인 중…" : "기업 구조"}</button>}
+            {signedIn && <button type="button" className="review-structure-toggle" style={{ marginLeft: "auto", marginRight: 8, fontWeight: 700 }} aria-pressed={!!structure.snapshot} disabled={structure.waiting} onClick={structure.open}>{structure.waiting ? "지도 확인 중…" : "기업 구조"}</button>}
             {signedIn ? <button type="button" aria-expanded={accountOpen} onClick={() => setAccountOpen(value => !value)}>
                 계정
             </button> : <span>로그인 필요</span>}
