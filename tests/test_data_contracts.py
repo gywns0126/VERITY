@@ -50,6 +50,7 @@ def test_company_structure_manifest_publish_boundary():
         artifacts = {row["path"]: row for row in json.load(handle)["artifacts"]}
     published = checker.publish_names()
     for name, public in (
+        ("member_map_company_structure_aliases.json", False),
         ("member_map_company_structure_index.json", True),
         ("member_map_company_structure_sources.json", False),
         ("member_map_company_structure_us_sources.json", False),
