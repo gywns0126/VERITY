@@ -3,6 +3,9 @@
 
 The store is separate from KR sources; saving is not operational publication.
 Only --source-dir's fixed universe/map/submission-cache paths select sources.
+The 1800s soft deadline stops new work; an in-flight bounded HTTP request may
+extend it by up to its 30s transport timeout, plus parsing/checkpoint time.
+The socket timeout is not a hard total-response deadline.
 """
 import argparse
 import fcntl
@@ -23,7 +26,8 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-dir", type=Path, required=True)
     parser.add_argument("--store", type=Path, required=True)
-    parser.add_argument("--limit", type=int, default=100)
+    parser.add_argument("--limit", type=int, default=core.MAX_CIKS)
+    parser.add_argument("--max-elapsed-seconds", type=float, default=core.MAX_ELAPSED_SECONDS)
     parser.add_argument("--fetch-public", action="store_true")
     return parser.parse_args(argv)
 
@@ -32,7 +36,8 @@ def run(args):
     def execute():
         document = core.build_document(args.source_dir, core.read_json(args.store, maximum=None) if args.store.exists() else None)
         document, summary = core.refresh(document, source_dir=args.source_dir, limit=args.limit,
-            fetch_public=args.fetch_public, checkpoint=lambda value: core.atomic_json(args.store, value))
+            fetch_public=args.fetch_public, checkpoint=lambda value: core.atomic_json(args.store, value),
+            max_elapsed_seconds=args.max_elapsed_seconds)
         if args.fetch_public:
             document["summary"] = summary
             core.atomic_json(args.store, document)

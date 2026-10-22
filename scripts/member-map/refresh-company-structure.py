@@ -52,7 +52,7 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-dir", type=Path, default=ROOT)
     parser.add_argument("--store", type=Path, required=True)
-    parser.add_argument("--limit", type=int, default=300)
+    parser.add_argument("--limit", type=int, default=400)
     parser.add_argument("--fetch-public", action="store_true")
     parser.add_argument("--seed", type=Path)
     return parser.parse_args(argv)

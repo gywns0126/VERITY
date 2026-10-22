@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -22,10 +23,11 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = "alphanest-company-structure-us-sources-v1"
-MAX_CIKS, MAX_HTTP, MAX_BYTES = 100, 200, 8 * 1024 * 1024
+MAX_CIKS, MAX_HTTP, MAX_BYTES = 800, 2400, 8 * 1024 * 1024
+MAX_ELAPSED_SECONDS = 1800
 TTL = timedelta(days=7)
 KST = timezone(timedelta(hours=9))
-BUDGET_STOPS = frozenset({"daily-http-budget", "daily-cik-budget", "daily-cik-already-attempted"})
+BUDGET_STOPS = frozenset({"daily-http-budget", "daily-cik-budget", "daily-cik-already-attempted", "time-budget"})
 
 
 class BudgetDeferred(RuntimeError):
@@ -45,7 +47,7 @@ def atomic_json(path, document):
     fd, temp = tempfile.mkstemp(prefix=path.name + ".", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(document, handle, ensure_ascii=False, indent=2, allow_nan=False)
+            json.dump(document, handle, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
@@ -113,10 +115,34 @@ def _valid_exhibit_url(url, cik, accession):
         return False
 
 
+def _ticker_variants(ticker):
+    """Only the separator before a final single class letter is equivalent."""
+    if not isinstance(ticker, str) or not re.fullmatch(r"[A-Z][A-Z0-9.-]{0,11}", ticker):
+        return ()
+    match = re.fullmatch(r"([A-Z][A-Z0-9]*)([.-])([A-Z])", ticker)
+    if not match:
+        return (ticker,)
+    other = match[1] + ("-" if match[2] == "." else ".") + match[3]
+    return (ticker, other)
+
+
+def _submission_has_ticker(submission, ticker):
+    tickers = submission.get("tickers", [])
+    return isinstance(tickers, list) and any(value in tickers for value in _ticker_variants(ticker))
+
+
+def _mapped_cik(value):
+    if isinstance(value, dict):
+        value = value.get("cik") or value.get("cik_str")
+    if type(value) not in (int, str) or not re.fullmatch(r"[0-9]{1,10}", str(value)):
+        return None
+    return str(value).zfill(10) if int(value) > 0 else None
+
+
 def latest_metadata(ticker, cik, submission):
     """Same annual selection/identity/amendment checks as capture-sec-relationships."""
     from api.intelligence.portfolio_sec_relationships import validate_sec_capture
-    if str(submission.get("cik", "")).zfill(10) != cik or ticker not in submission.get("tickers", []):
+    if str(submission.get("cik", "")).zfill(10) != cik or not _submission_has_ticker(submission, ticker):
         raise ValueError("sec-submission-identity")
     recent = submission.get("filings", {}).get("recent", {})
     fields = ("form", "filingDate", "reportDate", "accessionNumber", "primaryDocument")
@@ -187,11 +213,14 @@ def build_document(source_dir, existing=None, now=None):
     tickers = sorted({r["ticker"] for r in universe if isinstance(r, dict)
                       and r.get("market") == "US" and isinstance(r.get("ticker"), str)})
     for ticker in tickers:
-        cik = mapping.get(ticker)
-        cik = str(cik).zfill(10) if type(cik) in (int, str) else ""
-        if not re.fullmatch(r"[0-9]{10}", cik) or int(cik) == 0:
-            unmapped[ticker] = "source-gap:cik-missing"
+        candidates = {_mapped_cik(mapping[key]) for key in _ticker_variants(ticker) if key in mapping}
+        if None in candidates:
+            unmapped[ticker] = "source-gap:cik-invalid"
             continue
+        if len(candidates) != 1:
+            unmapped[ticker] = "source-gap:cik-ambiguous" if candidates else "source-gap:cik-missing"
+            continue
+        cik = next(iter(candidates))
         aliases.setdefault(cik, []).append(ticker)
     for cik, tickers_for_cik in aliases.items():
         item = document["issuers"].setdefault(cik, {"cik": cik, "attemptStatus": "not-attempted", "attemptedAt": None})
@@ -221,12 +250,24 @@ def _due_issuers(document, now):
 
 def _selection(document, now, limit):
     if type(limit) is not int or not 0 <= limit <= MAX_CIKS:
-        raise ValueError("CIK limit must be 0..100")
+        raise ValueError(f"CIK limit must be 0..{MAX_CIKS}")
     return _due_issuers(document, now)[:limit]
 
 
-def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=None,
-            now=None, helpers=None, clock=time.monotonic, sleep=time.sleep):
+def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpoint=None,
+            now=None, helpers=None, clock=time.monotonic, sleep=time.sleep,
+            max_elapsed_seconds=MAX_ELAPSED_SECONDS):
+    """Stop new work at a monotonic soft deadline, preserving reservations/results.
+
+    An already-started HTTP request is not cancelled by this deadline: its 30s
+    transport timeout can extend collection beyond the deadline (up to 30s for
+    a single bounded request). Parsing/checkpoint time is additional; urllib's
+    socket timeout is not a strict total-response wall-clock guarantee.
+    """
+    if (type(max_elapsed_seconds) not in (int, float) or not math.isfinite(max_elapsed_seconds)
+            or max_elapsed_seconds < 0):
+        raise ValueError("sec-time-budget-invalid")
+    started = clock()
     now = now or datetime.now(timezone.utc)
     stamp, day = now.isoformat(), now.astimezone(KST).date().isoformat()
     document = copy.deepcopy(document)
@@ -247,6 +288,13 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
                "dryRun": not fetch_public, "requestedTickers": len(document["universe"]["US"]),
                "requestedCiks": len(document["currentCiks"]), "unmapped": document["unmapped"],
                "stopReason": None, "published": False}
+
+    def time_exhausted():
+        if clock() - started >= max_elapsed_seconds:
+            summary["stopReason"] = "time-budget"
+            return True
+        return False
+
     if not fetch_public:
         lists["sourceGap"] = [{"cik": c, "reason": document["issuers"][c]["sourceGap"]}
                               for c in document["currentCiks"] if document["issuers"][c].get("sourceGap")]
@@ -263,12 +311,19 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
             if budget["requests"] >= MAX_HTTP:
                 summary["stopReason"] = "daily-http-budget"
                 raise BudgetDeferred()
-            if last_get is not None:
-                sleep(max(0, 0.5 - (clock() - last_get)))
-            last_get = clock()
+            if time_exhausted():
+                raise BudgetDeferred()
             budget["requests"] += 1
             document["requestBudget"] = copy.deepcopy(budget)
             checkpoint(document)  # Reserve before the one physical GET.
+            if time_exhausted():
+                raise BudgetDeferred()  # Keep the reservation even without a GET.
+            # Checkpoint latency must not collapse physical GET start spacing.
+            if last_get is not None:
+                sleep(max(0, 0.5 - (clock() - last_get)))
+            if time_exhausted():
+                raise BudgetDeferred()
+            last_get = clock()
             lists["requests"].append({"cik": cik, "url": url})
             raw = helpers.get_public(url, MAX_BYTES)
             if not isinstance(raw, bytes) or not raw or len(raw) > MAX_BYTES:
@@ -276,7 +331,7 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
             return raw
 
         for cik in selected:
-            if summary["stopReason"]:
+            if summary["stopReason"] or time_exhausted():
                 break
             issuer = document["issuers"][cik]
             budget["ciks"].append(cik)
@@ -304,7 +359,8 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
                         submission = json.loads(get(url, cik, {url}))
                         metadata_checked = now
                         issuer["metadataSource"] = "sec-submissions"
-                    candidates = sorted(set(issuer["tickerAliases"]) & set(submission.get("tickers", [])))
+                    candidates = sorted(ticker for ticker in issuer["tickerAliases"]
+                                        if _submission_has_ticker(submission, ticker))
                     if not candidates:
                         raise ValueError("source-gap:representative-ticker-missing")
                     metadata = helpers.latest_metadata(candidates[0], cik, submission)
@@ -313,8 +369,12 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
                                   representativeTicker=candidates[0])
                     checkpoint(document)
                 old = issuer.get("reviewExhibit") or issuer.get("exhibit")
+                reusable = isinstance(old, dict) and old.get("status") == "parsed"
+                if isinstance(old, dict) and old.get("status") == "needs-review":
+                    from api.intelligence.company_structure_sec import PARSER_REVISION
+                    reusable = old.get("parserRevision") == PARSER_REVISION
                 if (isinstance(old, dict) and old.get("cik") == cik and old.get("accession") == metadata["accession"]
-                        and old.get("status") in ("parsed", "needs-review")):
+                        and reusable):
                     issuer.update(attemptStatus="cached-same-accession" if old["status"] == "parsed" else "needs-review",
                                   checkedAt=stamp, sourceGap=None if old["status"] == "parsed" else "source-gap:ex21-needs-review")
                     lists["cached"].append(cik)
@@ -382,6 +442,7 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
     summary["exitCode"] = int(bool(summary["sourceError"]) or
                               summary["stopReason"] is not None and summary["stopReason"] not in BUDGET_STOPS)
     summary.update(lists=lists, dailyRequests=budget["requests"], dailyCiks=len(budget["ciks"]),
+                   elapsedSeconds=max(0, clock() - started), maxElapsedSeconds=max_elapsed_seconds,
                    guardedBudget={"valid": budget["requests"] <= MAX_HTTP and len(budget["ciks"]) <= MAX_CIKS,
                                   "maxCiks": MAX_CIKS, "maxHttp": MAX_HTTP})
     return document, summary

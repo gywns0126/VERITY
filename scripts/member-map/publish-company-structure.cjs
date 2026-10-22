@@ -302,6 +302,7 @@ function sanitizeUsSources(doc) {
         // Cache the unresolved original, not its rows, HTML or a success claim.
         item.reviewExhibit = { schema: e.schema, cik, accession: e.accession, filedDate: e.filedDate,
           periodEnd: e.periodEnd, url: e.url, documentSha256: e.documentSha256, status: 'needs-review' };
+        if (typeof e.parserRevision === 'string' && /^[a-z0-9-]{1,80}$/u.test(e.parserRevision)) item.reviewExhibit.parserRevision = e.parserRevision;
       } catch { /* An unsafe review snapshot is omitted, never copied raw. */ }
     }
     if ('sourceGap' in source) {
@@ -326,6 +327,7 @@ function sanitizeUsSources(doc) {
         periodEnd: e.periodEnd, documentSha256: e.documentSha256, status: e.status, rows,
         sourceRowCount: Number.isSafeInteger(e.sourceRowCount) ? Math.max(e.sourceRowCount, e.rows.length) : e.rows.length,
         corporateRowCount: rows.length };
+      if (typeof e.parserRevision === 'string' && /^[a-z0-9-]{1,80}$/u.test(e.parserRevision)) item.exhibit.parserRevision = e.parserRevision;
       if (!/^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '')) fail();
     }
     clean.issuers[cik] = item;
@@ -333,7 +335,7 @@ function sanitizeUsSources(doc) {
   if (doc.requestBudget) {
     const b = doc.requestBudget;
     integer(b.requests); day(b.day);
-    if (b.requests > 200 || !Array.isArray(b.ciks) || b.ciks.length > 100 || new Set(b.ciks).size !== b.ciks.length || b.ciks.some(c => !/^\d{10}$/u.test(c))) fail();
+    if (b.requests > 2400 || !Array.isArray(b.ciks) || b.ciks.length > 800 || new Set(b.ciks).size !== b.ciks.length || b.ciks.some(c => !/^\d{10}$/u.test(c))) fail();
     clean.requestBudget = { day: b.day, requests: b.requests, ciks: [...b.ciks] };
   }
   return clean;

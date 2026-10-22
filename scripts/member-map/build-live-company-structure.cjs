@@ -44,6 +44,20 @@ function exclusion(row) {
   return null;
 }
 
+function mappedCik(ticker, mapping) {
+  // Share-class punctuation only; never strip a suffix or rename the user's node.
+  const variants = [ticker];
+  const match = /^([A-Z][A-Z0-9]*)[.-]([A-Z])$/u.exec(ticker);
+  if (match) variants.push(`${match[1]}${ticker.includes('.') ? '-' : '.'}${match[2]}`);
+  const values = [];
+  for (const key of variants) if (Object.hasOwn(mapping, key)) {
+    const raw = mapping[key], value = raw && typeof raw === 'object' ? raw.cik || raw.cik_str : raw;
+    if (!/^\d{1,10}$/u.test(String(value || '')) || Number(value) <= 0) return null;
+    values.push(String(value).padStart(10, '0'));
+  }
+  return values.length && new Set(values).size === 1 ? values[0] : null;
+}
+
 function targetSet(listed, universe, cikMap) {
   const targets = new Map(), excluded = { ETF: 0, ETN: 0, index: 0, other: 0, invalidTicker: 0 };
   const seenExcluded = new Set();
@@ -53,8 +67,7 @@ function targetSet(listed, universe, cikMap) {
     if (reason) return exclude({ ...row, ticker }, reason);
     if (!(market === 'KR' ? KR : US).test(ticker)) return exclude({ ...row, ticker, market }, 'invalidTicker');
     const id = `${market}:${ticker}`;
-    const cik = cikMap[ticker];
-    const cikValue = typeof cik === 'object' && cik ? cik.cik || cik.cik_str : cik;
+    const cikValue = mappedCik(ticker, cikMap);
     targets.set(id, { ticker, market, name: clean(row?.name || ticker),
       ...(market === 'US' && /^\d{1,10}$/u.test(String(cikValue || '')) && Number(cikValue) > 0 ? { cik: String(cikValue).padStart(10, '0') } : {}) });
   }
@@ -371,5 +384,5 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { buildArtifacts, writeArtifacts, main, verifiedRow, secUrl, usCooperatieLabel, MAX_BYTES, MAX_ISSUERS };
+module.exports = { buildArtifacts, writeArtifacts, main, verifiedRow, secUrl, usCooperatieLabel, mappedCik, MAX_BYTES, MAX_ISSUERS };
 if (require.main === module) { try { main(); } catch (e) { process.stderr.write(e.message + '\n'); process.exitCode = 1; } }

@@ -377,3 +377,67 @@ def test_unsafe_footnotes_unbalanced_names_and_nonexact_ownership_annotations_st
     result = parse_exhibit(_exhibit([(name, "Delaware")]), META)
     assert result["status"] == "needs-review"
     assert result["rows"] == []
+
+
+def _paged_exhibit(gap="", second=None, heading="Example Inc."):
+    # Repeated explicit headers reflect ADI's two-page Exhibit 21 structure.
+    first = _exhibit([("First Ltd.", "Ireland")])
+    second = second or _exhibit([("Second GmbH", "Germany")])
+    return ("<html><head><style>td { padding: 2px; }</style></head><body>"
+            f"<h1>SUBSIDIARIES OF {heading}</h1><div>{first}</div>{gap}"
+            f"<div>{second}</div></body></html>")
+
+
+@pytest.mark.parametrize("gap", ["", "<div>1</div>", "<div>Page 1</div>"])
+def test_identical_page_headers_keep_rows_and_original_table_identity(gap):
+    result = parse_exhibit(_paged_exhibit(gap), {**META, "issuerName": "EXAMPLE INC."})
+    assert result["status"] == "parsed"
+    assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == [
+        ("First Ltd.", "Ireland"), ("Second GmbH", "Germany")]
+    assert [r["sourceRow"]["tableIndex"] for r in result["rows"]] == [0, 1]
+    assert all(r["ownershipPct"] is None and r["directOwnership"] == "unspecified" for r in result["rows"])
+
+
+@pytest.mark.parametrize("gap", ["<h2>Subsidiaries of Other Inc.</h2>", "<p>Joint ventures</p>",
+                               "<p>Former subsidiaries</p>", "<p>50% owned</p>"])
+def test_repeated_headers_do_not_join_different_parent_or_relationship_scopes(gap):
+    result = parse_exhibit(_paged_exhibit(gap), {**META, "issuerName": "Example Inc."})
+    assert result["status"] == "needs-review" and result["rows"] == []
+
+
+@pytest.mark.parametrize("issuer", [None, "Other Inc.", "Example Holdings Inc."])
+def test_multiple_tables_require_explicit_matching_registrant_heading(issuer):
+    result = parse_exhibit(_paged_exhibit(), {**META, "issuerName": issuer})
+    assert result["status"] == "needs-review" and result["rows"] == []
+
+
+def test_registrant_name_is_not_a_prefix_match_for_another_parent():
+    result = parse_exhibit(_paged_exhibit(heading="Example Inc. Holdings"),
+                           {**META, "issuerName": "Example Inc."})
+    assert result["status"] == "needs-review" and result["rows"] == []
+
+
+@pytest.mark.parametrize("prefix", ["Former ", "Previous ", "Non-", "Not "])
+def test_continuation_rejects_past_or_negated_root_heading(prefix):
+    html = _paged_exhibit().replace("SUBSIDIARIES OF", prefix + "SUBSIDIARIES OF")
+    result = parse_exhibit(html, {**META, "issuerName": "Example Inc."})
+    assert result["status"] == "needs-review" and result["rows"] == []
+
+
+def test_single_candidate_nested_under_another_scope_is_quarantined():
+    html = "<table><tr><td>Other parent's subsidiaries" + _exhibit([("First Ltd.", "Ireland")]) + "</td></tr></table>"
+    result = parse_exhibit(html, {**META, "issuerName": "Example Inc."})
+    assert result["status"] == "needs-review" and result["rows"] == []
+
+
+def test_continuation_does_not_relax_headers_ambiguous_rows_or_total_row_cap():
+    different = _exhibit([("Second GmbH", "Germany")]).replace("Subsidiary Name", "Company Name")
+    result = parse_exhibit(_paged_exhibit(second=different), {**META, "issuerName": "Example Inc."})
+    assert result["status"] == "needs-review" and result["rows"] == []
+    ambiguous = _exhibit([("Second Inc. Third Ltd.", "Germany")])
+    result = parse_exhibit(_paged_exhibit(second=ambiguous), {**META, "issuerName": "Example Inc."})
+    assert result["status"] == "needs-review"
+    assert [r["name"] for r in result["rows"]] == ["First Ltd."]
+    huge = _exhibit([(f"Subsidiary {i} Ltd.", "Ireland") for i in range(1000)])
+    result = parse_exhibit(_paged_exhibit(second=huge), {**META, "issuerName": "Example Inc."})
+    assert result["status"] == "needs-review" and len(result["rows"]) == 1000

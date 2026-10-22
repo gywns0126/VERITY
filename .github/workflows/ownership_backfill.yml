@@ -1,12 +1,15 @@
 name: ownership-backfill
 
 # Public normalized company structure. No raw capture/submissions cache is staged.
-# Physical request budgets (durable KST day): KR <=300 issuers /600 GET;
-# US <=100 distinct CIK /200 HTTP. New structure path reads tracked mapping: 0 HTTP.
+# Physical request budgets (durable KST day): KR <=400 issuers /800 GET;
+# US <=800 distinct CIK /2400 HTTP, unchanged 2 GET/sec per collector.
+# Soft collection deadlines: KR 15min, US 30min, then save/build/publish.
+# In-flight transport/parsing/checkpoint can exceed these soft deadlines.
+# New structure path reads tracked mapping: 0 HTTP.
 # Existing legacy mapping freshness behavior is unchanged, not a new self-repair path.
-# Legacy ownership is preserved separately: <=300 initial calls + new <=600 GET
-# = <=900 initial/logical requests. Existing DartScout has nested HTTP retries:
-# this is NOT a proven <=900 physical HTTP bound (legacy retry policy unchanged).
+# Legacy ownership is preserved separately: <=300 initial calls + new <=800 GET
+# = <=1100 initial/logical requests. Existing DartScout has nested HTTP retries:
+# this is NOT a proven <=1100 physical HTTP bound (legacy retry policy unchanged).
 # Endpoints: opendart.fss.or.kr/api/{hyslrSttus,otrCprInvstmntSttus}.json;
 # www.sec.gov/Archives/edgar/data/{CIK}/{accession}/ (index + reported list:
 # 10-K EX-21 / 20-F EX-8.1, as validated by the existing parser; never VIE inference).
@@ -27,9 +30,9 @@ on:
         default: false
         type: boolean
       chunk:
-        description: '이번 run 에서 채울 종목 수 (기본 300)'
+        description: '기업 구조 수집 종목 수 (기본 400, 기존 연간 수집은 최대 300 유지)'
         required: false
-        default: '300'
+        default: '400'
         type: string
 
 permissions:
@@ -89,7 +92,7 @@ jobs:
     concurrency:
       group: verity-ownership-backfill
       cancel-in-progress: false
-    timeout-minutes: 45
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:
@@ -161,16 +164,16 @@ jobs:
         env:
           VERITY_MODE: prod
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
-          REQUESTED_CHUNK: ${{ github.event.inputs.chunk || '300' }}
+          REQUESTED_CHUNK: ${{ github.event.inputs.chunk || '400' }}
         run: |
           set -euo pipefail
-          limit=$(python -c 'import os; n=int(os.environ["REQUESTED_CHUNK"]); assert 0 <= n <= 300; print(n)')
+          limit=$(python -c 'import os; n=int(os.environ["REQUESTED_CHUNK"]); assert 0 <= n <= 400; print(n)')
           python scripts/member-map/refresh-company-structure.py --source-dir data --store data/member_map_company_structure_sources.json --limit "$limit" --fetch-public
 
       - name: Refresh bounded SEC exhibits
         id: us
         continue-on-error: true
-        run: python scripts/member-map/refresh-us-company-structure.py --source-dir data --store data/member_map_company_structure_us_sources.json --limit 100 --fetch-public
+        run: python scripts/member-map/refresh-us-company-structure.py --source-dir data --store data/member_map_company_structure_us_sources.json --limit 800 --fetch-public
 
       - name: Normalize public durable source fields even after refresh failure
         id: safe
@@ -188,7 +191,7 @@ jobs:
               summary = value.get('summary', {})
               reason = summary.get('stopReason')
               statuses[market] = {'hasSummary': bool(summary), 'error': summary.get('error', 1),
-                  'normalDeferred': reason in ('daily-request-budget', 'daily-http-budget')
+                  'normalDeferred': reason in ('daily-request-budget', 'daily-http-budget', 'daily-cik-budget', 'daily-cik-already-attempted', 'time-budget')
                       and summary.get('error') == 0 and summary.get('guardedBudget', {}).get('valid') is True}
           core.atomic_json(pathlib.Path(os.environ['RUNNER_TEMP']) / 'company-structure-run-status.json', statuses)
           doc = core.sanitize_document(original)
@@ -211,7 +214,7 @@ jobs:
           REQUESTED_CHUNK: ${{ github.event.inputs.chunk || '300' }}
         run: |
           set -euo pipefail
-          export OWNERSHIP_CHUNK=$(python -c 'import os; n=int(os.environ["REQUESTED_CHUNK"]); assert 0 <= n <= 300; print(n)')
+          export OWNERSHIP_CHUNK=$(python -c 'import os; n=int(os.environ["REQUESTED_CHUNK"]); assert 0 <= n <= 400; print(min(n, 300))')
           python -m api.builders.ownership_backfill_builder
 
       - &structure-build
@@ -289,7 +292,7 @@ jobs:
     concurrency:
       group: verity-ownership-backfill
       cancel-in-progress: false
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:

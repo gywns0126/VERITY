@@ -1,6 +1,9 @@
 """Corporate source scheduling reuses the existing clock without sending requests."""
 import importlib.util
 import json
+import ast
+import os
+import re
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -9,6 +12,30 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_collection_headroom_preserves_legacy_limit_and_only_accepts_clean_deferral():
+    doc = yaml.safe_load((ROOT / '.github/workflows/ownership_backfill.yml').read_text())
+    job = doc['jobs']['backfill']
+    assert job['timeout-minutes'] == 120
+    steps = {step.get('id'): step for step in job['steps'] if step.get('id')}
+    assert '--limit 800 --fetch-public' in steps['us']['run']
+    code = re.search(r"OWNERSHIP_CHUNK=\$\(python -c '([^']+)'\)", steps['legacy']['run'])[1]
+    for requested, expected in [('0', '0'), ('200', '200'), ('400', '300')]:
+        result = subprocess.run(['python3', '-c', code], env={**os.environ, 'REQUESTED_CHUNK': requested},
+                                check=True, text=True, capture_output=True)
+        assert result.stdout.strip() == expected
+    script = steps['safe']['run'].split("python - <<'PY'\n")[1].split('\nPY')[0]
+    tree = ast.parse(script)
+    value = next(value for node in ast.walk(tree) if isinstance(node, ast.Dict)
+                 for key, value in zip(node.keys, node.values) if isinstance(key, ast.Constant) and key.value == 'normalDeferred')
+    condition = compile(ast.Expression(value), 'actual_workflow_deferral', 'eval')
+    for reason in ['daily-request-budget', 'daily-http-budget', 'daily-cik-budget', 'time-budget', 'HTTP429', 'source-error']:
+        for error in [0, 1]:
+            for valid in [True, False]:
+                summary = {'error': error, 'guardedBudget': {'valid': valid}}
+                assert eval(condition, {'reason': reason, 'summary': summary}) is (
+                    reason not in ['HTTP429', 'source-error'] and error == 0 and valid)
 
 
 def dispatcher():

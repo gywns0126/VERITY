@@ -148,12 +148,12 @@ def test_selection_missing_then_oldest_and_seven_day_ttl(tmp_path):
 
 
 def test_hard_issuer_limit_and_validation(tmp_path):
-    doc = document(tmp_path, 305)
-    assert len(core.select_issuers(doc, now=NOW)[0]) == 300
-    for limit in (-1, 301, True):
+    doc = document(tmp_path, 405)
+    assert len(core.select_issuers(doc, now=NOW)[0]) == 400
+    for limit in (-1, 401, True):
         with pytest.raises(ValueError):
             core.select_issuers(doc, limit, NOW)
-    doc["requestBudget"] = {"day": "2026-10-21", "requests": 601}
+    doc["requestBudget"] = {"day": "2026-10-21", "requests": 801}
     with pytest.raises(ValueError):
         core.refresh(doc, source_dir=tmp_path, now=NOW)
 
@@ -276,9 +276,9 @@ def test_immediate_global_stop_for_dart_and_http(tmp_path, helpers):
 
 def test_daily_budget_persists_across_runs_and_resets_kst(tmp_path, helpers, monkeypatch):
     doc = document(tmp_path, 2)
-    doc["requestBudget"] = {"day": "2026-10-21", "requests": 599}
+    doc["requestBudget"] = {"day": "2026-10-21", "requests": 799}
     result, summary, _ = refresh(doc, tmp_path, helpers, [{"status": "013", "list": []}])
-    assert summary["requests"] == 1 and summary["dailyRequestsAfter"] == 600
+    assert summary["requests"] == 1 and summary["dailyRequestsAfter"] == 800
     assert summary["sourceError"] == summary["exitCode"] == 0 and summary["budgetDeferred"] == 2
     _, repeated, _ = refresh(result, tmp_path, helpers, [])
     assert repeated["requests"] == 0 and repeated["stopReason"] == "daily-request-budget"
@@ -296,12 +296,49 @@ def test_daily_budget_persists_across_runs_and_resets_kst(tmp_path, helpers, mon
     assert next_day["dailyRequestsBefore"] == 0 and next_day["requests"] == 4
     assert next_day["guardedBudget"]["valid"]
     # A complete synthetic day exercises both hard ceilings physically.
-    scout, capture, physical = scout_with(helpers, [{"status": "013", "list": []}] * 600)
-    _, ceiling = core.refresh(document(tmp_path, 305), source_dir=tmp_path,
+    scout, capture, physical = scout_with(helpers, [{"status": "013", "list": []}] * 800)
+    _, ceiling = core.refresh(document(tmp_path, 405), source_dir=tmp_path,
                               fetch_public=True, now=NOW, helpers=capture, scout=scout,
                               checkpoint=lambda _: None)
-    assert ceiling["attempted"] == 300 and ceiling["requests"] == len(physical) == 600
+    assert ceiling["attempted"] == 400 and ceiling["requests"] == len(physical) == 800
     assert ceiling["deferred"] == 5
+
+
+def test_old_daily_reservations_survive_higher_limit(tmp_path, helpers):
+    doc = document(tmp_path, 1)
+    doc["requestBudget"] = {"day": "2026-10-21", "requests": 600, "limit": 600}
+    _, summary, _ = refresh(doc, tmp_path, helpers, [{"status": "013", "list": []}] * 2)
+    assert summary["dailyRequestsBefore"] == 600 and summary["dailyRequestsAfter"] == 602
+
+
+@pytest.mark.parametrize("expire_during_reservation", [False, True])
+def test_time_budget_preserves_sources_and_defers_without_false_error(tmp_path, helpers, expire_during_reservation):
+    doc = document(tmp_path, 2)
+    clock = [0.0]
+    scout, capture, physical = scout_with(helpers, [{"status": "013", "list": []}] * 4)
+    before = copy.deepcopy(doc["issuers"])
+    saves = []
+
+    def checkpoint(value):
+        saves.append(copy.deepcopy(value))
+        # Either the reservation itself is slow, or the first result write is.
+        if len(saves) == (1 if expire_during_reservation else 2):
+            clock[0] = 901
+
+    result, summary = core.refresh(doc, source_dir=tmp_path, fetch_public=True, now=NOW,
+        helpers=capture, scout=scout, checkpoint=checkpoint, monotonic=lambda: clock[0])
+    assert summary["stopReason"] == "time-budget"
+    assert summary["error"] == summary["exitCode"] == 0
+    assert summary["budgetDeferred"] == 2 and summary["guardedBudget"]["valid"]
+    assert summary["dailyRequestsAfter"] == 1  # Includes reserved-but-not-sent.
+    assert summary["requests"] == len(physical) == (0 if expire_during_reservation else 1)
+    assert summary["attempted"] == (0 if expire_during_reservation else 1)
+    if expire_during_reservation:
+        assert result["issuers"] == before
+    else:
+        assert result["issuers"]["KR:000001"]["endpoints"]["hyslrSttus"]["checkedAt"] == NOW.isoformat()
+    assert result["issuers"]["KR:000001"]["endpoints"]["otrCprInvstmntSttus"] == before["KR:000001"]["endpoints"]["otrCprInvstmntSttus"]
+    assert result["issuers"]["KR:000002"] == before["KR:000002"]
 
 
 def test_timeout_and_parser_mismatch_no_retries_or_freshness(tmp_path, helpers):
