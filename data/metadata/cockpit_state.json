@@ -1,9 +1,9 @@
 {
-  "collected_at": "2026-10-22T08:47:00.653109+00:00",
+  "collected_at": "2026-10-22T08:51:40.242118+00:00",
   "schema_version": 1,
-  "severity": "RED",
+  "severity": "YELLOW",
   "severity_reasons": [
-    "data_health.core_sources_ok=false"
+    "data delivery AMBER: 연간 재무 수집 실패 5/55칸"
   ],
   "n_verification_days": 63,
   "n_milestones": {
@@ -20,7 +20,7 @@
     "to_50": 50,
     "to_100": 100
   },
-  "one_liner": "과열 (Euphoria) · 25 BUY / 32 WATCH / 16 CAUTION / 7 AVOID · VAMS 1% 현금 · 가설 N=63",
+  "one_liner": "과열 (Euphoria) · 0 BUY / 56 WATCH / 22 CAUTION / 6 AVOID · VAMS 1% 현금 · 가설 N=63",
   "ttd_recent_p50_minutes": null,
   "days_clean": {
     "kis": 0,
@@ -39,8 +39,8 @@
   },
   "pre_registration_pending": [],
   "alert_volume_24h": {
-    "sent": 17,
-    "dedupe_skip": 2,
+    "sent": 21,
+    "dedupe_skip": 1,
     "quiet_skip": 17,
     "fp_repeat_max": 11
   },
@@ -49,12 +49,12 @@
     "kis_lock_commits_24h": 1,
     "fred_age_h": 0.18,
     "fred_24h_failure_rate": 0.652,
-    "core_sources_ok": false,
+    "core_sources_ok": true,
     "delivery_status": "amber",
     "delivery_generated_at": "2026-10-22T17:13:12.566387+09:00",
     "publish_verify_ok": true,
     "publish_verify_failed": 0,
-    "runtime_mode": "universe_scan",
+    "runtime_mode": "full",
     "ramp_up_stage": 5000,
     "brain_anomaly_24h": 0,
     "vams_days_since_reset": 158,
