@@ -280,7 +280,8 @@ def test_missing_key_fails_without_transport(prepared):
 
 
 @pytest.mark.parametrize("body", ['{"inputs":{},"inputs":{}}', '{"inputs":NaN}',
-                                  '{"inputs":{"period_documents":null}}', " " * 1_000_001])
+                                  '{"inputs":{"period_documents":null}}', " " * 1_000_001],
+                         ids=["duplicate-fields", "non-finite", "null-documents", "oversized"])
 def test_dispatch_file_rejected_before_key(prepared, body):
     namespace, env, _, _, archive, _ = prepared
     Path(env["GITHUB_EVENT_PATH"]).write_text(body, encoding="utf-8")
@@ -331,7 +332,9 @@ def test_workflow_seven_axes_and_unchanged_jobs():
     assert sha256(prefix.encode()).hexdigest() == "8520fbe7b0fbe65cb0b202a0b2ba1cda3c85b52c0a243e264c5383f9e56f0137"
     judge = text.split("  judge:\n", 1)[1].split("  publish-reviewed:\n", 1)[0]
     contracts = text.split("  publish-contracts:\n", 1)[1]
-    assert sha256(judge.encode()).hexdigest() == "67e36882b51dce26c6aeaa86c0934b4694191a73528006c74bbdf42e4b622653"
+    # Judgment timeout repair changes only its job ceiling; publication jobs stay fixed.
+    assert sha256(judge.encode()).hexdigest() == "fa79914b12aa5f02571721eb776d956ca91c3400437b47b7d15bc491cc76fdf2"
+    assert _workflow()["jobs"]["judge"]["timeout-minutes"] == 30
     assert sha256(contracts.encode()).hexdigest() == "e7ac89cf48931c2377ed3eadd7786b8f8b4649d03791e616cb76d4fdfe8af5a4"
     workflow = _workflow()
     publish = workflow["jobs"]["publish-reviewed"]
