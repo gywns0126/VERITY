@@ -121,7 +121,7 @@ def _auto_block(ip: str, reason: str, hits: int) -> None:
     logger.warning("security auto-block ip=%s reason=%s hits=%s", ip, reason, hits)
 
 
-def _refresh_blocklist() -> None:
+def _refresh_blocklist() -> int | None:
     global _blocked
     if not (SUPABASE_URL and SUPABASE_KEY):
         return
@@ -136,6 +136,7 @@ def _refresh_blocklist() -> None:
         if r.status_code == 200:
             ips = {row["ip"] for row in r.json() if row.get("ip")}
             _blocked = ips  # 원자적 참조 스왑
+        return r.status_code
     except Exception as e:  # noqa: BLE001
         logger.warning("security blocklist refresh fail: %s", e)
 
@@ -191,7 +192,8 @@ def start_security(app) -> None:
     """미들웨어 등록 + 블록리스트 백그라운드 갱신 시작. main.py 에서 CORS 등록 뒤 호출."""
     if not (SUPABASE_URL and SUPABASE_KEY):
         logger.warning("security: SUPABASE_URL/SERVICE_ROLE_KEY 미설정 — 미들웨어 관측만(차단 로직 no-op).")
-    _refresh_blocklist()
+    startup_status = _refresh_blocklist()
+    logger.info("security Supabase startup read status=%s", startup_status)
     threading.Thread(target=_bg_refresher, daemon=True).start()
     app.add_middleware(SecurityMiddleware)
     logger.info(
