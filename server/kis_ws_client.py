@@ -54,6 +54,13 @@ _TRADE_FIELDS = [
 ]
 
 
+def _ws_enabled() -> bool:
+    """Unset preserves the existing feed; explicit invalid values disable it."""
+    return os.environ.get("KIS_WS_ENABLED", "1").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
 class KISWebSocketClient:
     """KIS 실시간 WebSocket 클라이언트 — 1분봉 집계 + idle 자동 해제."""
 
@@ -180,6 +187,8 @@ class KISWebSocketClient:
             logger.debug("접속키 캐시 저장 실패 (무시): %s", e)
 
     def _get_approval_key(self, force: bool = False) -> str:
+        if not _ws_enabled():
+            raise RuntimeError("KIS WebSocket disabled by KIS_WS_ENABLED")
         if not force and self._is_approval_key_valid():
             return self._approval_key  # type: ignore
         if not force and self._load_cached_approval_key():
@@ -404,6 +413,10 @@ class KISWebSocketClient:
             self._schedule_reconnect()
 
     def _schedule_reconnect(self) -> None:
+        if not _ws_enabled():
+            self._should_run = False
+            logger.info("KIS WebSocket disabled by KIS_WS_ENABLED")
+            return
         delay = min(self._reconnect_delay, self._max_reconnect_delay)
         logger.info("%.1f초 후 재연결 시도...", delay)
         time.sleep(delay)
@@ -414,6 +427,10 @@ class KISWebSocketClient:
     # ── 연결/종료 ──
 
     def _connect(self) -> None:
+        if not _ws_enabled():
+            self._should_run = False
+            logger.info("KIS WebSocket disabled by KIS_WS_ENABLED")
+            return
         try:
             self._approval_key = self._get_approval_key()
         except Exception as e:
@@ -432,6 +449,10 @@ class KISWebSocketClient:
         self._ws.run_forever(ping_interval=30, ping_timeout=10)
 
     def start(self) -> None:
+        if not _ws_enabled():
+            self._should_run = False
+            logger.info("KIS WebSocket disabled by KIS_WS_ENABLED")
+            return
         if not KIS_APP_KEY or not KIS_APP_SECRET:
             logger.warning("KIS API 키 미설정 — WebSocket 미시작")
             return
