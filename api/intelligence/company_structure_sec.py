@@ -5,14 +5,14 @@ exhaustiveness, or direct parentage. Network access belongs to the caller.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from urllib.parse import urlsplit
 import hashlib
 import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-22-repeated-tables-v1"
+PARSER_REVISION = "2026-10-23-exact-organization-headers-v3"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -173,10 +173,11 @@ def _norm(value):
 def _header_role(value):
     value = re.sub(r"[^a-z0-9 ]", " ", value.casefold())
     value = " ".join(value.split())
-    if value == "name" or any(word in value for word in (
+    if value in {"name", "company"} or any(word in value for word in (
             "subsidiary", "subsidiaries", "company name", "legal name", "entity name")):
         return "name"
-    if any(word in value for word in ("jurisdiction", "incorporation", "organized", "formed under")):
+    if value in {"state of organization", "state or country of organization"} or any(
+            word in value for word in ("jurisdiction", "incorporation", "organized", "formed under")):
         return "jurisdiction"
     return None
 
@@ -311,6 +312,15 @@ def _cell_blocks(cell, *, name_cell=False):
     return [] if ambiguous else blocks
 
 
+def _jurisdiction_qualified_legal_name(name, jurisdiction, issuer_name):
+    """One issuer-prefixed flat name, e.g. Analog Devices Limited Egypt LLC."""
+    if not isinstance(issuer_name, str) or not jurisdiction:
+        return False
+    match = re.fullmatch(r"(.+) Limited " + re.escape(jurisdiction) + r" LLC", name)
+    issuer = _LEGAL_END.sub("", issuer_name).strip()
+    return bool(match and _issuer_name_key(match[1]) == _issuer_name_key(issuer))
+
+
 def parse_exhibit(raw_html, metadata):
     """Parse explicit subsidiary/name and jurisdiction columns without ownership inference."""
     cik, accession, filed, period, url = _metadata(metadata)
@@ -346,6 +356,28 @@ def parse_exhibit(raw_html, metadata):
                 break
     if not candidates:
         return result
+    # Downstream currently dates relationships with periodEnd. An explicit
+    # different exhibit date must not silently inherit the financial year end.
+    prefix = []
+    for node in soup.descendants:
+        if node is candidates[0][0]:
+            break
+        if (isinstance(node, NavigableString) and not isinstance(node, Comment)
+                and not node.find_parent(["head", "style", "script"])):
+            prefix.append(str(node))
+    heading_text = _norm(" ".join(prefix))
+    for match in re.finditer(r"\bas of\s+([A-Za-z]+\s+\d{1,2},\s*\d{4}|\d{4}-\d{2}-\d{2})\b", heading_text, re.I):
+        stated = match.group(1)
+        try:
+            stated_day = (date.fromisoformat(stated).isoformat() if re.match(r"\d", stated)
+                          else datetime.strptime(re.sub(r",\s*", ", ", stated), "%B %d, %Y").date().isoformat())
+        except ValueError:
+            result["reviewReason"] = "invalid-exhibit-as-of-date"
+            return result
+        if stated_day != period:
+            result["reviewReason"] = "exhibit-as-of-differs-from-period-end"
+            result["statedAsOf"] = stated_day
+            return result
     if any(table.find_parent("table") is not None for table, *_ in candidates):
         return result
     if len(candidates) > 1:
@@ -418,11 +450,15 @@ def parse_exhibit(raw_html, metadata):
                 if not root or _issuer_name_key(name[:marker.start()]) != root:
                     needs_review = True
                 continue  # Matching registrant is self; unknown/mismatch is quarantined.
+            issuer_name = metadata.get("issuerName")
+            if isinstance(issuer_name, str) and _norm(name).casefold() == _norm(issuer_name).casefold():
+                continue  # Exact stated registrant only; no punctuation/legal-form aliases.
             entries.append((block_index, name, jurisdiction))
         # Matching block counts alone are not proof: a wrapped partial name
         # must not become a separate company. Reject the entire physical row.
-        if any(";" in name or len(_LEGAL_TERMINATOR.findall(name)) > 1
-               or (len(names) > 1 and not _complete_legal_name(name)) for _, name, _ in entries):
+        if any(";" in name or (len(_LEGAL_TERMINATOR.findall(name)) > 1 and
+               not (len(names) == 1 and _jurisdiction_qualified_legal_name(name, jurisdiction, metadata.get("issuerName"))))
+               or (len(names) > 1 and not _complete_legal_name(name)) for _, name, jurisdiction in entries):
             needs_review = True
             continue
         if any(len(name) > 300 or len(jurisdiction) > 160 or ";" in jurisdiction

@@ -203,6 +203,10 @@ def build_document(source_dir, existing=None, now=None):
     universe = read_json(data / "universe_search.json").get("stocks", [])
     universe = list(universe.values()) if isinstance(universe, dict) else universe
     mapping = read_json(data / "sec_ticker_cik_map.json")
+    reviewed_path = data / "member_map_company_structure_aliases.json"
+    reviewed = read_json(reviewed_path) if reviewed_path.is_file() else {}
+    if reviewed and reviewed.get("schema") != "alphanest-company-structure-reviewed-ticker-aliases-v1":
+        raise ValueError("sec-reviewed-alias-schema")
     if not isinstance(universe, list) or not isinstance(mapping, dict):
         raise ValueError("sec-universe-shape")
     document = copy.deepcopy(existing or {})
@@ -212,8 +216,31 @@ def build_document(source_dir, existing=None, now=None):
     aliases, unmapped = {}, {}
     tickers = sorted({r["ticker"] for r in universe if isinstance(r, dict)
                       and r.get("market") == "US" and isinstance(r.get("ticker"), str)})
+    eligible_current = {r["ticker"] for r in universe if isinstance(r, dict)
+                        and r.get("market") == "US" and isinstance(r.get("ticker"), str)
+                        and re.fullmatch(r"[A-Z][A-Z0-9.-]{0,11}", r["ticker"])
+                        and not any(kind in str(r.get("type") or r.get("kind") or r.get("asset_type") or "").upper()
+                                    for kind in ("ETF", "ETN", "INDEX"))
+                        and not re.search(r"\bETF\b", str(r.get("name") or ""))}
     for ticker in tickers:
         candidates = {_mapped_cik(mapping[key]) for key in _ticker_variants(ticker) if key in mapping}
+        # Reviewed same-issuer renames only. Never override an existing/invalid
+        # mapping, follow alias chains, or turn a CIK into a source success.
+        if not candidates:
+            alias = reviewed.get("aliases", {}).get(ticker, {})
+            current = alias.get("currentTicker")
+            effective = alias.get("effectiveDate")
+            expected = _mapped_cik(alias.get("cik"))
+            checked = _time(alias.get("reviewedAt"))
+            if (alias.get("kind") == "same-issuer-ticker-change" and current != ticker
+                    and current in eligible_current and expected and checked and checked <= now
+                    and isinstance(effective, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", effective)
+                    and _time(effective + "T00:00:00Z") and effective <= now.date().isoformat()
+                    and isinstance(alias.get("sources"), list) and len(alias["sources"]) >= 2
+                    and f"https://data.sec.gov/submissions/CIK{expected}.json" in alias["sources"]):
+                current_candidates = {_mapped_cik(mapping[key]) for key in _ticker_variants(current) if key in mapping}
+                if current_candidates == {expected}:
+                    candidates = {expected}
         if None in candidates:
             unmapped[ticker] = "source-gap:cik-invalid"
             continue
@@ -235,23 +262,31 @@ def build_document(source_dir, existing=None, now=None):
 
 
 def _due_issuers(document, now):
+    from api.intelligence.company_structure_sec import PARSER_REVISION
     due = []
     for cik in document["currentCiks"]:
         issuer = document["issuers"][cik]
+        review = issuer.get("reviewExhibit")
+        revised_review = (issuer.get("attemptStatus") == "needs-review" and isinstance(review, dict)
+                          and review.get("status") == "needs-review"
+                          and review.get("parserRevision") != PARSER_REVISION)
         checked = _time(issuer.get("checkedAt"))
-        if checked and timedelta(0) <= now - checked < TTL:
+        if not revised_review and checked and timedelta(0) <= now - checked < TTL:
             continue
         # Missing exhibits/source gaps cannot permanently outrank healthy stale
         # issuers. Historical success is an attempt fallback for legacy stores.
         attempted = _time(issuer.get("attemptedAt")) or _time(issuer.get("lastSuccessAt"))
-        due.append((attempted is not None, attempted or datetime.min.replace(tzinfo=timezone.utc), cik))
-    return [row[2] for row in sorted(due)]
+        # One reconsideration for an actually changed parser, within the same
+        # durable budgets. A same-revision rejection re-enters the ordinary queue.
+        due.append((not revised_review, attempted is not None, attempted or datetime.min.replace(tzinfo=timezone.utc), cik))
+    return [row[3] for row in sorted(due)]
 
 
-def _selection(document, now, limit):
+def _selection(document, now, limit, excluded=()):
     if type(limit) is not int or not 0 <= limit <= MAX_CIKS:
         raise ValueError(f"CIK limit must be 0..{MAX_CIKS}")
-    return _due_issuers(document, now)[:limit]
+    reserved = set(excluded)
+    return [cik for cik in _due_issuers(document, now) if cik not in reserved][:limit]
 
 
 def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpoint=None,
@@ -278,10 +313,10 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
             or len(budget["ciks"]) > MAX_CIKS
             or any(not isinstance(c, str) or not re.fullmatch(r"[0-9]{10}", c) for c in budget["ciks"])):
         raise ValueError("sec-durable-budget-invalid")
-    selected = _selection(document, now, limit)
+    selected = _selection(document, now, limit, excluded=budget["ciks"])
     due = _due_issuers(document, now)
     # Same-day attempts are never retried, including interrupted reservations.
-    selected = [c for c in selected if c not in budget["ciks"]][:MAX_CIKS - len(budget["ciks"])]
+    selected = selected[:MAX_CIKS - len(budget["ciks"])]
     lists = {k: [] for k in ("attempted", "requests", "success", "cached", "sourceGap", "error", "retained", "budgetDeferred", "deferred")}
     lists["selected"] = selected
     summary = {"schema": "alphanest-company-structure-us-refresh-summary-v1", "generatedAt": stamp,

@@ -9,6 +9,7 @@ const { execFileSync } = require('node:child_process');
 const { buildArtifacts, writeArtifacts, usCooperatieLabel, MAX_BYTES } = require('../scripts/member-map/build-live-company-structure.cjs');
 const { loadArtifacts, publish, main, sanitizeUsSources, BASE, INDEX } = require('../scripts/member-map/publish-company-structure.cjs');
 const at = '2026-10-21T10:00:00Z';
+const parserRevision = /^PARSER_REVISION = "([^"]+)"$/m.exec(fs.readFileSync(path.join(__dirname, '../api/intelligence/company_structure_sec.py'), 'utf8'))[1];
 const sha = b => createHash('sha256').update(b).digest('hex');
 function fixture(t) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'structure-publish-')); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
@@ -455,7 +456,7 @@ test('actual workflow cadence uses remote KST-day attempts across all events, in
 function cachedUsSource(review = false) {
   const cik = '0000001234', accession = '0000001234-26-000001';
   const exhibit = { schema: 'sec-company-subsidiaries-v1', cik, accession, filedDate: '2026-02-01', periodEnd: '2025-12-31',
-    parserRevision: '2026-10-22-repeated-tables-v1',
+    parserRevision,
     url: 'https://www.sec.gov/Archives/edgar/data/1234/000000123426000001/ex21.htm', documentSha256: 'a'.repeat(64),
     status: review ? 'needs-review' : 'parsed', rows: [], html: 'PRIVATE', sourceRow: { text: 'PRIVATE' } };
   const source = { tickerAliases: ['ABC', 'ABC.A'], attemptStatus: review ? 'needs-review' : 'HTTP403', attemptedAt: at,
@@ -545,7 +546,7 @@ test('unresolved reviewExhibit retains only safe original identifiers for zero-H
   fs.writeFileSync(path.join(dir, 'sec_ticker_cik_map.json'), JSON.stringify({ ABC: '0000001234' }));
   const doc = cachedUsSource(true), safe = sanitizeUsSources(doc), source = safe.issuers['0000001234'];
   assert.equal(source.reviewExhibit.status, 'needs-review'); assert.equal(source.reviewExhibit.rows, undefined);
-  assert.equal(source.reviewExhibit.parserRevision, '2026-10-22-repeated-tables-v1');
+  assert.equal(source.reviewExhibit.parserRevision, parserRevision);
   assert.equal(source.lastSuccessAt, undefined); assert.equal(source.exhibit, undefined); assert.equal(JSON.stringify(safe).includes('PRIVATE'), false);
   assert.deepEqual(sanitizeUsSources(JSON.parse(JSON.stringify(safe))), safe);
   const replay = cachedRefreshOffline(safe, dir), reused = replay.document.issuers['0000001234'];

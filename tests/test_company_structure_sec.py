@@ -128,6 +128,24 @@ def test_parses_explicit_rows_and_keeps_ownership_and_parentage_unknown():
     assert len(result["documentSha256"]) == 64
 
 
+@pytest.mark.parametrize("stated", ["March 1, 2026", "2026-03-01"])
+def test_exhibit_date_cannot_inherit_a_different_financial_period(stated):
+    fixture = f"<p>Subsidiaries of Example Inc. As of {stated}</p>" + _exhibit([("Other Inc.", "Delaware")])
+    meta = {**META, "periodEnd": "2026-02-28"}
+    result = parse_exhibit(fixture, meta)
+    assert result["status"] == "needs-review"
+    assert result["rows"] == []
+    assert result["statedAsOf"] == "2026-03-01"
+    assert result["reviewReason"] == "exhibit-as-of-differs-from-period-end"
+    assert result["periodEnd"] == "2026-02-28"
+
+
+@pytest.mark.parametrize("stated", ["May 3,2026", "2026-05-03"])
+def test_matching_explicit_exhibit_date_keeps_supported_rows(stated):
+    fixture = f"<p>As of {stated}</p>" + _exhibit([("Other Inc.", "Delaware")])
+    assert parse_exhibit(fixture, META)["status"] == "parsed"
+
+
 @pytest.mark.parametrize("metadata", [
     {**META, "cik": "1136869"}, {**META, "accession": "bad"},
     {**META, "url": "https://evil.example/zbh-ex21.htm"},
@@ -441,3 +459,89 @@ def test_continuation_does_not_relax_headers_ambiguous_rows_or_total_row_cap():
     huge = _exhibit([(f"Subsidiary {i} Ltd.", "Ireland") for i in range(1000)])
     result = parse_exhibit(_paged_exhibit(second=huge), {**META, "issuerName": "Example Inc."})
     assert result["status"] == "needs-review" and len(result["rows"]) == 1000
+
+
+def test_adi_flat_issuer_qualified_name_contains_explicit_jurisdiction_between_legal_words():
+    # ADI SHA 51f57873bca72de428ff4b99d1b8f77a9a5c6f95ab5664976fa9ef1468d22342:
+    # a single font-wrapped name and a single explicit Egypt jurisdiction cell.
+    row = '<font>Analog\xa0Devices\xa0Limited\xa0Egypt\xa0LLC</font>'
+    html = _paged_exhibit(heading="ANALOG DEVICES, INC.", second=_exhibit([(row, "Egypt")]))
+    result = parse_exhibit(html, {**META, "issuerName": "ANALOG DEVICES INC"})
+    assert result["status"] == "parsed"
+    assert result["rows"][-1]["name"] == "Analog Devices Limited Egypt LLC"
+    assert result["rows"][-1]["jurisdiction"] == "Egypt"
+    assert result["rows"][-1]["sourceRow"]["text"] == "Analog Devices Limited Egypt LLC Egypt"
+    assert result["rows"][-1]["ownershipPct"] is None
+
+
+@pytest.mark.parametrize("name,jurisdiction", [
+    ("Other Devices Limited Egypt LLC", "Egypt"),
+    ("Analog Devices Limited Egypt LLC", "Ireland"),
+    ("Analog Devices Limited Egypt LLC Other Inc.", "Egypt"),
+    ("Analog Devices Limited; Egypt LLC", "Egypt"),
+    ("<p>Analog Devices Limited Egypt</p><p>LLC</p>", "<p>Egypt</p><p>Egypt</p>"),
+    ("Analog Devices Limited Egypt LLC (f/k/a Old Inc.", "Egypt"),
+])
+def test_jurisdiction_qualified_legal_name_does_not_rescue_other_roots_or_multiple_entities(name, jurisdiction):
+    result = parse_exhibit(_exhibit([(name, jurisdiction)]), {**META, "issuerName": "ANALOG DEVICES INC"})
+    assert result["status"] == "needs-review" and result["rows"] == []
+
+
+@pytest.mark.parametrize("name_header,jurisdiction_header,spacer", [
+    ("Name of Subsidiary", "State of Organization", True),
+    ("Name", "State or Country of Organization", False),
+    ("Company", "Jurisdiction of Formation", False),
+    ("COMPANY", "STATE OF ORGANIZATION", True),
+])
+def test_exact_original_organization_headers_preserve_flat_rows_and_optional_spacer(
+        name_header, jurisdiction_header, spacer):
+    # ALX/BRT have a blank middle column; HWM/ARTW have two direct cells.
+    middle = "<td></td>" if spacer else ""
+    html = ("<table><tr>" + "<td></td>" * 9 + "</tr>"
+            f"<tr><td>{name_header}</td>{middle}<td>{jurisdiction_header}</td></tr>"
+            f"<tr><td></td>{middle}<td></td></tr>"
+            f"<tr><td><font>Explicit Services LLC</font></td>{middle}<td><font>Delaware</font></td></tr></table>")
+    result = parse_exhibit(html, META)
+    assert result["status"] == "parsed"
+    assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == [("Explicit Services LLC", "Delaware")]
+    assert result["rows"][0]["sourceRow"]["index"] == 3
+    assert result["rows"][0]["ownershipPct"] is None
+    assert result["rows"][0]["directOwnership"] == "unspecified"
+
+
+@pytest.mark.parametrize("name_header,jurisdiction_header", [
+    ("Company Profile", "State of Organization"),
+    ("Company Group", "State of Organization"),
+    ("Company", "State"), ("Company", "Country"), ("Company", "Organization"),
+    ("Company", "State of Organization Summary"),
+    ("Name", "State or Country of Organization Unknown"),
+])
+def test_new_header_synonyms_do_not_accept_partial_or_fuzzy_organization_labels(name_header, jurisdiction_header):
+    html = (f"<table><tr><td>{name_header}</td><td>{jurisdiction_header}</td></tr>"
+            "<tr><td>Explicit Services LLC</td><td>Delaware</td></tr></table>")
+    result = parse_exhibit(html, META)
+    assert result["status"] == "needs-review" and result["rows"] == []
+
+
+def test_hwm_exact_metadata_registrant_is_excluded_without_aliasing_similar_entities():
+    names = ["Howmet Aerospace Inc.", "Howmet Aerospace Inc", "Howmet Aerospace Incorporated",
+             "Howmet Aerospace Holdings Inc.", "Howmet International Inc."]
+    html = _exhibit([(name, "Delaware, US") for name in names]).replace(
+        "Subsidiary Name", "Name").replace("Jurisdiction of Incorporation", "State or Country of Organization")
+    result = parse_exhibit(html, {**META, "issuerName": "Howmet Aerospace Inc."})
+    assert result["status"] == "parsed"
+    assert [r["name"] for r in result["rows"]] == names[1:]
+    assert [r["sourceRow"]["index"] for r in result["rows"]] == [2, 3, 4, 5]
+    unknown = parse_exhibit(html, META)
+    assert [r["name"] for r in unknown["rows"]] == names
+
+
+def test_hwm_header_recovery_does_not_relax_multiple_legal_terminator_guard():
+    html = _exhibit([("Howmet Aerospace Inc.", "Delaware, US"),
+                     ("Howmet International Inc.", "Delaware, US"),
+                     ("FR Acquisition Corporation (US), Inc.", "Delaware, US"),
+                     ("FR Acquisitions Corporation Europe Limited", "United Kingdom")]).replace(
+        "Subsidiary Name", "Name").replace("Jurisdiction of Incorporation", "State or Country of Organization")
+    result = parse_exhibit(html, {**META, "issuerName": "Howmet Aerospace Inc."})
+    assert result["status"] == "needs-review"
+    assert [r["name"] for r in result["rows"]] == ["Howmet International Inc."]

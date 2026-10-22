@@ -327,7 +327,7 @@ jobs:
           # Autostash restoration can leave conflicts after a successful rebase.
           test -z "$(git ls-files -u)"
           # Reject upstream input/code drift rather than publishing an obsolete replay.
-          git diff --quiet "$SOURCE_HEAD" HEAD -- data/kr_listed.json data/universe_search.json data/sec_ticker_cik_map.json data/group_structure.json data/kr_ownership.json data/member_map_company_structure_sources.json data/member_map_company_structure_us_sources.json vercel-api/public/member-map-review/company-structure.json scripts/member-map/build-live-company-structure.cjs review/member-map/company-structure-data.cjs scripts/member-map/publish-company-structure.cjs
+          git diff --quiet "$SOURCE_HEAD" HEAD -- data/kr_listed.json data/universe_search.json data/sec_ticker_cik_map.json data/member_map_company_structure_aliases.json data/group_structure.json data/kr_ownership.json data/member_map_company_structure_sources.json data/member_map_company_structure_us_sources.json vercel-api/public/member-map-review/company-structure.json scripts/member-map/build-live-company-structure.cjs review/member-map/company-structure-data.cjs scripts/member-map/publish-company-structure.cjs
           git push origin HEAD:main
           git fetch origin main
           git merge-base --is-ancestor HEAD origin/main
