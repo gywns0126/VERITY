@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-10-22T15:13:16.217114+09:00",
+  "generated_at": "2026-10-22T16:12:55.672739+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
@@ -12,7 +12,7 @@
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-10-22T15:13:16.120375+09:00",
+   "generated_at": "2026-10-22T16:12:55.580323+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -20,11 +20,11 @@
   "coverage": {
    "generated_at": "2026-10-22T10:15:52.002518+09:00",
    "max_age_h": 96,
-   "age_h": 4.957,
+   "age_h": 5.951,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-10-22T15:13:09.063359+09:00",
+   "generated_at": "2026-10-22T16:12:47.115751+09:00",
    "max_age_h": 3,
    "age_h": 0.002,
    "status": "fresh"
@@ -32,7 +32,7 @@
   "annual_backfill": {
    "generated_at": "2026-10-21T20:32:35.749477+00:00",
    "max_age_h": 48,
-   "age_h": 9.678,
+   "age_h": 10.672,
    "status": "fresh"
   }
  },
@@ -41,11 +41,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-10-22T15:13:16.120375+09:00",
+  "generated_at": "2026-10-22T16:12:55.580323+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 67722,
+  "max_cdn_age_s": 64790,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -55,7 +55,7 @@
      "PBR": 95.9
     },
     "total": 2550,
-    "cdn_age_s": 16436,
+    "cdn_age_s": 14409,
     "error": null
    },
    {
@@ -66,7 +66,7 @@
      "PBR": 73.6
     },
     "total": 5272,
-    "cdn_age_s": 67722,
+    "cdn_age_s": 64790,
     "error": null
    },
    {
@@ -77,7 +77,7 @@
      "PBR": 75.2
     },
     "total": 3972,
-    "cdn_age_s": 56669,
+    "cdn_age_s": 64787,
     "error": null
    },
    {
@@ -106,18 +106,18 @@
   "last_run_at": "2026-10-22T10:15:52.145843+09:00"
  },
  "freshness": {
-  "generated_at": "2026-10-22T15:13:09.063359+09:00",
+  "generated_at": "2026-10-22T16:12:47.115751+09:00",
   "summary": {
-   "fresh": 63,
+   "fresh": 60,
    "stale": 0,
-   "closed": 0,
+   "closed": 3,
    "discontinued": 3,
    "unmeasured": 1,
    "p0": {
     "total": 8,
-    "fresh": 8,
-    "closed": 0,
-    "active": 8,
+    "fresh": 5,
+    "closed": 3,
+    "active": 5,
     "unmeasured": 0
    },
    "p1": {
@@ -147,7 +147,7 @@
   "producer_evidence": {
    "news_flash": {
     "status": "bound_query_complete",
-    "completed_at": "2026-10-22T15:02:32.204390+09:00",
+    "completed_at": "2026-10-22T16:02:30.978806+09:00",
     "clock_kind": "source_query_attempt",
     "asset_binding": "verified_sha256",
     "source_freshness_verified": false,
