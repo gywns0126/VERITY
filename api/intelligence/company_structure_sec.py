@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-23-exact-organization-headers-v3"
+PARSER_REVISION = "2026-10-23-footnoted-name-headers-v4"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -171,6 +171,8 @@ def _norm(value):
 
 
 def _header_role(value):
+    if re.fullmatch(r"name\s*\([0-9]{1,3}\)", value, re.I):
+        return "name"
     value = re.sub(r"[^a-z0-9 ]", " ", value.casefold())
     value = " ".join(value.split())
     if value in {"name", "company"} or any(word in value for word in (
@@ -188,8 +190,8 @@ _LEGAL_END = re.compile(_LEGAL_FORM + r"$", re.I)
 _LEGAL_TERMINATOR = re.compile(_LEGAL_FORM + r"(?=$|[\s,;.])", re.I)
 _REGISTRANT = re.compile(r"\s*\(\s*registrant\s*\)\s*$", re.I)
 _FOOTNOTE = re.compile(r"(?:[0-9]{1,3}|\([0-9]{1,3}\)|[¹²³⁰⁴⁵⁶⁷⁸⁹*†‡§¶]{1,3})\Z")
-_ALIAS_HINT = re.compile(r"\(\s*(?:f/k/a|fka|formerly\s+known\s+as)\b", re.I)
-_ALIAS_START = re.compile(r"^(?:f/k/a|fka|formerly\s+known\s+as)\s+(.+)$", re.I)
+_ALIAS_HINT = re.compile(r"\(\s*(?:f/k/a|fka|formerly(?:\s+known\s+as)?)\b", re.I)
+_ALIAS_START = re.compile(r"^(?:f/k/a|fka|formerly(?:\s+known\s+as)?)\s+(.+)$", re.I)
 _PERCENT_OWNED = re.compile(r"\s*\(\s*(?:100(?:\.0{1,3})?|[0-9]{1,2}(?:\.[0-9]{1,3})?)\s*%\s+owned\s*\)\s*$", re.I)
 
 
@@ -366,6 +368,13 @@ def parse_exhibit(raw_html, metadata):
                 and not node.find_parent(["head", "style", "script"])):
             prefix.append(str(node))
     heading_text = _norm(" ".join(prefix))
+    root = _issuer_name_key(metadata.get("issuerName"))
+    heading = _issuer_name_key(heading_text) or ""
+    # AIR states the registrant before "Subsidiaries" and repeats headers on
+    # each page. Require that complete title, not merely a name prefix.
+    root_first_title = bool(root and re.search(
+        r"(?:^|\b)" + re.escape(root) + r" subsidiaries(?= as of |$)", heading)
+        and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
     for match in re.finditer(r"\bas of\s+([A-Za-z]+\s+\d{1,2},\s*\d{4}|\d{4}-\d{2}-\d{2})\b", heading_text, re.I):
         stated = match.group(1)
         try:
@@ -394,7 +403,7 @@ def parse_exhibit(raw_html, metadata):
                 prefix.append(str(node))
         heading = _issuer_name_key(_norm(" ".join(prefix))) or ""
         if (not root or re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading)
-                or not re.search(r"\bsubsidiaries of " + re.escape(root) + r"(?= as of |$)", heading)):
+                or not (root_first_title or re.search(r"\bsubsidiaries of " + re.escape(root) + r"(?= as of |$)", heading))):
             return result
         headers = []
         for table, trs, header_i, roles in candidates:
@@ -411,7 +420,7 @@ def parse_exhibit(raw_html, metadata):
                 if node is following[0]:
                     break
                 if isinstance(node, NavigableString) and not isinstance(node, Comment):
-                    value = _norm(str(node))
+                    value = _norm(str(node).replace("\u200b", ""))
                     if value:
                         gap.append(value)
             if gap and not re.fullmatch(r"(?:page\s*)?[0-9]{1,3}", " ".join(gap), re.I):
@@ -453,6 +462,8 @@ def parse_exhibit(raw_html, metadata):
             issuer_name = metadata.get("issuerName")
             if isinstance(issuer_name, str) and _norm(name).casefold() == _norm(issuer_name).casefold():
                 continue  # Exact stated registrant only; no punctuation/legal-form aliases.
+            if root_first_title and _issuer_name_key(name) == root:
+                continue  # Title-bound registrant; do not emit a self relationship.
             entries.append((block_index, name, jurisdiction))
         # Matching block counts alone are not proof: a wrapped partial name
         # must not become a separate company. Reject the entire physical row.
