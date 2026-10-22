@@ -513,7 +513,7 @@ def test_expanded_budget_ledger_rejects_invalid_values(tmp_path, budget):
     doc = catalog(tmp_path)
     doc["requestBudget"] = {"day": NOW.astimezone(core.KST).date().isoformat(), **budget}
     with pytest.raises(ValueError, match="sec-durable-budget-invalid"):
-        core.refresh(doc, source_dir=tmp_path)
+        core.refresh(doc, source_dir=tmp_path, now=NOW)
 
 
 @pytest.mark.parametrize("maximum", [-1, True, float("nan"), float("inf"), None])
@@ -743,3 +743,50 @@ def test_fair_due_selection_100_errors_cannot_starve_stale_and_clocks_unchanged(
     selected = core._selection(doc, NOW, 100)
     assert selected[0] == "0000000102" and "0000000101" not in selected
     assert doc == before  # Fresh skipped; future check due; no source clock edits.
+
+
+def test_reviewed_ticker_changes_dedupe_without_source_promotion_or_input_mutation(tmp_path):
+    data = tmp_path / "data"
+    catalog(tmp_path)
+    aliases = json.loads((ROOT / "data/member_map_company_structure_aliases.json").read_bytes())
+    now = datetime(2026, 10, 23, tzinfo=timezone.utc)
+    stocks = [{"ticker": t, "market": "US"} for t in ("SATS", "ECHO", "FDP", "DMC")]
+    mapping = {"ECHO": 1415404, "DMC": 1047340}
+    core.atomic_json(data / "universe_search.json", {"stocks": stocks})
+    core.atomic_json(data / "sec_ticker_cik_map.json", mapping)
+    core.atomic_json(data / "member_map_company_structure_aliases.json", aliases)
+    doc = core.build_document(tmp_path, now=now)
+    assert doc["unmapped"] == {}
+    assert len(doc["currentCiks"]) == 2
+    assert doc["issuers"]["0001415404"]["tickerAliases"] == ["ECHO", "SATS"]
+    assert all(i["attemptStatus"] == "not-attempted" for i in doc["issuers"].values())
+    before = copy.deepcopy(doc)
+    core.build_document(tmp_path, existing=doc, now=now)
+    assert doc == before
+    # Existing identities win; corrupt identities cannot be rescued by aliases.
+    for value, expected in ((999, "0000000999"), (0, None)):
+        core.atomic_json(data / "sec_ticker_cik_map.json", {**mapping, "SATS": value})
+        result = core.build_document(tmp_path, now=now)
+        if expected:
+            assert result["issuers"][expected]["tickerAliases"] == ["SATS"]
+        else:
+            assert result["unmapped"]["SATS"] == "source-gap:cik-invalid"
+    core.atomic_json(data / "sec_ticker_cik_map.json", mapping)
+    for patch in ({"kind": "merger"}, {"currentTicker": "SATS"}, {"sources": []},
+                  {"effectiveDate": "2026-02-30"}, {"reviewedAt": "2027-01-01T00:00:00Z"}):
+        invalid = copy.deepcopy(aliases)
+        invalid["aliases"]["SATS"].update(patch)
+        core.atomic_json(data / "member_map_company_structure_aliases.json", invalid)
+        assert "SATS" in core.build_document(tmp_path, now=now)["unmapped"]
+    core.atomic_json(data / "member_map_company_structure_aliases.json", aliases)
+    core.atomic_json(data / "sec_ticker_cik_map.json", {"ECHO": 999, "DMC": 1047340})
+    assert "SATS" in core.build_document(tmp_path, now=now)["unmapped"]
+    core.atomic_json(data / "sec_ticker_cik_map.json", mapping)
+    core.atomic_json(data / "universe_search.json", {"stocks": [{"ticker": "SATS", "market": "US"}]})
+    assert "SATS" in core.build_document(tmp_path, now=now)["unmapped"]
+    core.atomic_json(data / "universe_search.json", {"stocks": [{"ticker": "SATS", "market": "US"},
+                                                               {"ticker": "ECHO", "market": "US", "type": "ETF"}]})
+    assert "SATS" in core.build_document(tmp_path, now=now)["unmapped"]
+    core.atomic_json(data / "member_map_company_structure_aliases.json", {"schema": "wrong"})
+    with pytest.raises(ValueError, match="sec-reviewed-alias-schema"):
+        core.build_document(tmp_path, now=now)

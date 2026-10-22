@@ -44,7 +44,7 @@ function exclusion(row) {
   return null;
 }
 
-function mappedCik(ticker, mapping) {
+function mappedCik(ticker, mapping, reviewed = {}, currentTickers = new Set(), asOf = new Date().toISOString()) {
   // Share-class punctuation only; never strip a suffix or rename the user's node.
   const variants = [ticker];
   const match = /^([A-Z][A-Z0-9]*)[.-]([A-Z])$/u.exec(ticker);
@@ -55,11 +55,22 @@ function mappedCik(ticker, mapping) {
     if (!/^\d{1,10}$/u.test(String(value || '')) || Number(value) <= 0) return null;
     values.push(String(value).padStart(10, '0'));
   }
-  return values.length && new Set(values).size === 1 ? values[0] : null;
+  if (values.length) return new Set(values).size === 1 ? values[0] : null;
+  const alias = reviewed.schema === 'alphanest-company-structure-reviewed-ticker-aliases-v1' ? reviewed.aliases?.[ticker] : null;
+  if (!alias || alias.kind !== 'same-issuer-ticker-change' || alias.currentTicker === ticker ||
+      !currentTickers.has(alias.currentTicker) || !/^\d{10}$/u.test(alias.cik || '') || Number(alias.cik) <= 0 ||
+      !day(alias.effectiveDate) || alias.effectiveDate > asOf.slice(0, 10) ||
+      !stamp(alias.reviewedAt) || !stamp(asOf) || Date.parse(alias.reviewedAt) > Date.parse(asOf) ||
+      !Array.isArray(alias.sources) || alias.sources.length < 2 ||
+      !alias.sources.includes(`https://data.sec.gov/submissions/CIK${alias.cik}.json`)) return null;
+  // No recursive alias resolution; the current SEC mapping must independently agree.
+  return mappedCik(alias.currentTicker, mapping) === alias.cik ? alias.cik : null;
 }
 
-function targetSet(listed, universe, cikMap) {
+function targetSet(listed, universe, cikMap, reviewedAliases, generatedAt) {
   const targets = new Map(), excluded = { ETF: 0, ETN: 0, index: 0, other: 0, invalidTicker: 0 };
+  const rows = Array.isArray(universe) ? universe : universe?.stocks || [];
+  const currentTickers = new Set(rows.filter(r => r?.market === 'US' && US.test(r.ticker || '') && !exclusion(r)).map(r => r.ticker));
   const seenExcluded = new Set();
   function exclude(row, reason) { const id = `${row?.market}:${row?.ticker}`; if (!seenExcluded.has(id)) { seenExcluded.add(id); excluded[reason]++; } }
   function add(ticker, market, row) {
@@ -67,7 +78,7 @@ function targetSet(listed, universe, cikMap) {
     if (reason) return exclude({ ...row, ticker }, reason);
     if (!(market === 'KR' ? KR : US).test(ticker)) return exclude({ ...row, ticker, market }, 'invalidTicker');
     const id = `${market}:${ticker}`;
-    const cikValue = mappedCik(ticker, cikMap);
+    const cikValue = mappedCik(ticker, cikMap, reviewedAliases, currentTickers, generatedAt);
     targets.set(id, { ticker, market, name: clean(row?.name || ticker),
       ...(market === 'US' && /^\d{1,10}$/u.test(String(cikValue || '')) && Number(cikValue) > 0 ? { cik: String(cikValue).padStart(10, '0') } : {}) });
   }
@@ -207,9 +218,10 @@ function usPayload(aliases, source, generatedAt) {
   return payload;
 }
 
-function buildArtifacts({ listed = {}, universe = {}, cikMap = {}, sources, usSources, seed, groups = {}, ownership = {}, legacy, strictSources = false, generatedAt = new Date().toISOString() }) {
+function buildArtifacts({ listed = {}, universe = {}, cikMap = {}, reviewedAliases = {}, sources, usSources, seed, groups = {}, ownership = {}, legacy, strictSources = false, generatedAt = new Date().toISOString() }) {
+  if (Object.keys(reviewedAliases).length && reviewedAliases.schema !== 'alphanest-company-structure-reviewed-ticker-aliases-v1') throw Error('Invalid reviewed alias schema');
   if (!stamp(generatedAt)) throw Error('Invalid generatedAt');
-  const { targets, excluded } = targetSet(listed, universe, cikMap);
+  const { targets, excluded } = targetSet(listed, universe, cikMap, reviewedAliases, generatedAt);
   const live = sourceIndex(sources, SOURCE_SCHEMA), seeded = sourceIndex(seed, SEED_SCHEMA);
   const us = sourceIndex(usSources, 'alphanest-company-structure-us-sources-v1');
   const cikGroups = new Map();
@@ -374,6 +386,7 @@ function main(argv = process.argv.slice(2)) {
   const result = buildArtifacts({
     listed: readJson(path.join(sourceDir, 'kr_listed.json'), {}), universe: readJson(path.join(sourceDir, 'universe_search.json'), {}),
     cikMap: readJson(path.join(sourceDir, 'sec_ticker_cik_map.json'), {}), groups: readJson(path.join(sourceDir, 'group_structure.json'), {}),
+    reviewedAliases: readJson(path.join(sourceDir, 'member_map_company_structure_aliases.json'), {}),
     ownership: readJson(path.join(sourceDir, 'kr_ownership.json'), {}), sources: readJson(args['--sources']),
     usSources: args['--us-sources'] ? readJson(args['--us-sources']) : undefined,
     seed: args['--seed-structured'] ? readJson(args['--seed-structured']) : undefined, legacy: readJson(legacyPath, {}),

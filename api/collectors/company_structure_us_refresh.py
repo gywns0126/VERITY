@@ -203,6 +203,10 @@ def build_document(source_dir, existing=None, now=None):
     universe = read_json(data / "universe_search.json").get("stocks", [])
     universe = list(universe.values()) if isinstance(universe, dict) else universe
     mapping = read_json(data / "sec_ticker_cik_map.json")
+    reviewed_path = data / "member_map_company_structure_aliases.json"
+    reviewed = read_json(reviewed_path) if reviewed_path.is_file() else {}
+    if reviewed and reviewed.get("schema") != "alphanest-company-structure-reviewed-ticker-aliases-v1":
+        raise ValueError("sec-reviewed-alias-schema")
     if not isinstance(universe, list) or not isinstance(mapping, dict):
         raise ValueError("sec-universe-shape")
     document = copy.deepcopy(existing or {})
@@ -212,8 +216,31 @@ def build_document(source_dir, existing=None, now=None):
     aliases, unmapped = {}, {}
     tickers = sorted({r["ticker"] for r in universe if isinstance(r, dict)
                       and r.get("market") == "US" and isinstance(r.get("ticker"), str)})
+    eligible_current = {r["ticker"] for r in universe if isinstance(r, dict)
+                        and r.get("market") == "US" and isinstance(r.get("ticker"), str)
+                        and re.fullmatch(r"[A-Z][A-Z0-9.-]{0,11}", r["ticker"])
+                        and not any(kind in str(r.get("type") or r.get("kind") or r.get("asset_type") or "").upper()
+                                    for kind in ("ETF", "ETN", "INDEX"))
+                        and not re.search(r"\bETF\b", str(r.get("name") or ""))}
     for ticker in tickers:
         candidates = {_mapped_cik(mapping[key]) for key in _ticker_variants(ticker) if key in mapping}
+        # Reviewed same-issuer renames only. Never override an existing/invalid
+        # mapping, follow alias chains, or turn a CIK into a source success.
+        if not candidates:
+            alias = reviewed.get("aliases", {}).get(ticker, {})
+            current = alias.get("currentTicker")
+            effective = alias.get("effectiveDate")
+            expected = _mapped_cik(alias.get("cik"))
+            checked = _time(alias.get("reviewedAt"))
+            if (alias.get("kind") == "same-issuer-ticker-change" and current != ticker
+                    and current in eligible_current and expected and checked and checked <= now
+                    and isinstance(effective, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", effective)
+                    and _time(effective + "T00:00:00Z") and effective <= now.date().isoformat()
+                    and isinstance(alias.get("sources"), list) and len(alias["sources"]) >= 2
+                    and f"https://data.sec.gov/submissions/CIK{expected}.json" in alias["sources"]):
+                current_candidates = {_mapped_cik(mapping[key]) for key in _ticker_variants(current) if key in mapping}
+                if current_candidates == {expected}:
+                    candidates = {expected}
         if None in candidates:
             unmapped[ticker] = "source-gap:cik-invalid"
             continue
