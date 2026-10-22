@@ -1,27 +1,27 @@
 {
  "status": "ready_to_report",
- "checked_at": "2026-10-22T23:28:19+09:00",
+ "checked_at": "2026-10-23T07:35:27+09:00",
  "prereg": "docs/PREREG_STOPLOSS_CAP_2026_08_09.md",
  "rule_change_at": "2026-08-09",
  "progress": {
-  "trades": 21,
+  "trades": 22,
   "target": 20,
   "pct": 100.0
  },
  "metrics": {
-  "trades": 21,
+  "trades": 22,
   "wins": 5,
-  "losses": 16,
-  "win_rate": 0.2381,
+  "losses": 17,
+  "win_rate": 0.2273,
   "avg_win_krw": 96254,
-  "avg_loss_krw": -30016,
-  "pl_ratio": 3.207,
-  "expectancy_krw": 48,
+  "avg_loss_krw": -30751,
+  "pl_ratio": 3.13,
+  "expectancy_krw": -1886,
   "expectancy_pct": null,
   "cost_join_coverage": 0.0,
   "mdd_pct": -8.91,
   "stop_methods": {
-   "individual_atr": 4
+   "individual_atr": 5
   }
  },
  "baseline_before_change": {
@@ -40,23 +40,23 @@
  },
  "note": "판정만 한다. 자동 원복하지 않는다(되돌림은 PM 결정). N<20 구간의 수치는 참고값이며 RULE 7 상 '통계 무의미'.",
  "report": {
-  "headline": "손절 캡 변경 후 21거래 도달 — 사전등록 §4 측정 시점",
+  "headline": "손절 캡 변경 후 22거래 도달 — 사전등록 §4 측정 시점",
   "compare": {
    "win_rate": [
     0.2273,
-    0.2381
+    0.2273
    ],
    "pl_ratio": [
     0.814,
-    3.207
+    3.13
    ],
    "expectancy_krw": [
     -23538,
-    48
+    -1886
    ],
    "individual_atr_fires": [
     0,
-    4
+    5
    ]
   },
   "🚨": "결과로 캡을 다시 만지지 않는다(사전등록 §4). 재조정 = 곡선 맞추기."
