@@ -104,6 +104,114 @@ def test_universe_cik_dedupe_and_dry_cli_no_transport(tmp_path, monkeypatch):
         cli.parse_args(["--url", "https://evil.invalid"])
 
 
+@pytest.mark.parametrize("aliases,mapping,cik,reported", [
+    (["AKO.A", "AKO.B"], {"AKO-A": "0000925261", "AKO-B": {"cik": 925261}},
+     "0000925261", ["AKO-A", "AKO-B"]),
+    (["CIG.C"], {"CIG-C": {"cik_str": "0001157557"}}, "0001157557", ["CIG-C"]),
+    (["PBR.A"], {"PBR-A": 1119639}, "0001119639", ["PBR-A"]),
+    (["AKO-A", "AKO-B"], {"AKO.A": "0000925261", "AKO.B": "0000925261"},
+     "0000925261", ["AKO.A", "AKO.B"]),
+])
+def test_single_class_separator_equivalence_across_map_submission_and_metadata(
+        tmp_path, aliases, mapping, cik, reported):
+    data = tmp_path / "data"
+    data.mkdir()
+    core.atomic_json(data / "universe_search.json", {"stocks": [
+        {"ticker": ticker, "market": "US", "name": "Public Company Inc"} for ticker in aliases]})
+    core.atomic_json(data / "sec_ticker_cik_map.json", mapping)
+    before = (data / "sec_ticker_cik_map.json").read_bytes()
+    doc = core.build_document(tmp_path, now=NOW)
+    assert doc["currentCiks"] == [cik] and doc["unmapped"] == {}
+    assert doc["issuers"][cik]["tickerAliases"] == sorted(aliases)
+    annual = submission(cik, reported[0])
+    annual["tickers"] = reported
+    result, summary, calls, _ = run(doc, tmp_path, [json.dumps(annual).encode(), INDEX, TABLE])
+    issuer = result["issuers"][cik]
+    assert summary["requestedTickers"] == len(aliases) and summary["requestedCiks"] == 1
+    assert summary["success"] == 1 and summary["dailyCiks"] == 1 and len(calls) == 3
+    assert issuer["representativeTicker"] == sorted(aliases)[0]
+    assert issuer["filingMetadata"]["issuer_id"] == "US:" + sorted(aliases)[0]
+    assert result["universe"]["US"] == sorted(aliases)
+    assert (data / "sec_ticker_cik_map.json").read_bytes() == before
+
+
+@pytest.mark.parametrize("exact,variant,expected,reason", [
+    ("0000925261", {"cik_str": 925261}, "0000925261", None),
+    ("invalid", "0000925261", None, "source-gap:cik-invalid"),
+    ("0000925261", "0000000002", None, "source-gap:cik-ambiguous"),
+    ({"cik": "0000925261"}, {"cik_str": "0000000002"}, None, "source-gap:cik-ambiguous"),
+])
+def test_class_mapping_conflicts_fail_closed_without_changing_source_map(tmp_path, exact, variant, expected, reason):
+    catalog(tmp_path)
+    data = tmp_path / "data"
+    core.atomic_json(data / "universe_search.json", {"stocks": [
+        {"ticker": "AKO.A", "market": "US", "name": "Public Company Inc"}]})
+    core.atomic_json(data / "sec_ticker_cik_map.json", {"AKO.A": exact, "AKO-A": variant})
+    before = (data / "sec_ticker_cik_map.json").read_bytes()
+    doc = core.build_document(tmp_path, now=NOW)
+    assert doc["currentCiks"] == ([expected] if expected else [])
+    if expected is None:
+        assert doc["unmapped"] == {"AKO.A": reason}
+        _, summary, calls, _ = run(doc, tmp_path)
+        assert summary["success"] == summary["requests"] == 0 and calls == []
+    assert (data / "sec_ticker_cik_map.json").read_bytes() == before
+
+
+@pytest.mark.parametrize("invalid", [None, 0, "0000000000", "malformed", {}, {"cik": 0}, False])
+@pytest.mark.parametrize("invalid_key", ["AKO.A", "AKO-A"])
+def test_malformed_class_mapping_entry_blocks_valid_counterpart(tmp_path, invalid, invalid_key):
+    catalog(tmp_path)
+    data = tmp_path / "data"
+    core.atomic_json(data / "universe_search.json", {"stocks": [{"ticker": "AKO.A", "market": "US"}]})
+    mapping = {"AKO.A": "0000925261", "AKO-A": "0000925261"}
+    mapping[invalid_key] = invalid
+    core.atomic_json(data / "sec_ticker_cik_map.json", mapping)
+    before = (data / "sec_ticker_cik_map.json").read_bytes()
+    doc = core.build_document(tmp_path, now=NOW)
+    assert doc["currentCiks"] == [] and doc["unmapped"] == {"AKO.A": "source-gap:cik-invalid"}
+    _, summary, calls, _ = run(doc, tmp_path)
+    assert summary["success"] == summary["requests"] == 0 and calls == []
+    assert (data / "sec_ticker_cik_map.json").read_bytes() == before
+
+
+@pytest.mark.parametrize("reported,reported_cik", [
+    ("AKO-B", "0000925261"), ("AKO", "0000925261"),
+    ("AKO-AA", "0000925261"), ("AKOA", "0000925261"),
+    ("AKO-A", "0000000002"),
+])
+def test_normalized_submission_still_requires_same_class_and_cik(tmp_path, reported, reported_cik):
+    catalog(tmp_path)
+    data = tmp_path / "data"
+    core.atomic_json(data / "universe_search.json", {"stocks": [
+        {"ticker": "AKO.A", "market": "US", "name": "Public Company Inc"}]})
+    core.atomic_json(data / "sec_ticker_cik_map.json", {"AKO-A": "0000925261"})
+    doc = core.build_document(tmp_path, now=NOW)
+    annual = submission(reported_cik, reported)
+    with pytest.raises(ValueError, match="sec-submission-identity"):
+        core.latest_metadata("AKO.A", "0000925261", annual)
+    result, summary, calls, _ = run(doc, tmp_path, [json.dumps(annual).encode()])
+    issuer = result["issuers"]["0000925261"]
+    assert summary["success"] == 0 and len(calls) == 1
+    assert "exhibit" not in issuer and "filingMetadata" not in issuer and "lastSuccessAt" not in issuer
+
+
+@pytest.mark.parametrize("ticker,mapped", [
+    ("AKO.AA", "AKO-AA"), ("AKOA", "AKO-A"), ("AKO.A", "AKO-B"),
+    ("AKO.A", "AKOA"), ("AKO.A", "AKO"),
+    ("ABC.A.B", "ABC.A-B"), ("ABC-A.B", "ABC-A-B"),
+    ("ABC.A-B", "ABC.A.B"), ("ABC-A-B", "ABC-A.B"),
+])
+def test_ticker_equivalence_never_broadens_beyond_final_single_class_separator(tmp_path, ticker, mapped):
+    catalog(tmp_path)
+    data = tmp_path / "data"
+    core.atomic_json(data / "universe_search.json", {"stocks": [{"ticker": ticker, "market": "US"}]})
+    core.atomic_json(data / "sec_ticker_cik_map.json", {mapped: "0000925261"})
+    doc = core.build_document(tmp_path, now=NOW)
+    assert doc["currentCiks"] == [] and doc["unmapped"] == {ticker: "source-gap:cik-missing"}
+    with pytest.raises(ValueError, match="sec-submission-identity"):
+        core.latest_metadata(ticker, "0000925261", submission("0000925261", mapped))
+
+
 def test_physical_get_pacing_after_alternating_slow_checkpoints(tmp_path):
     doc = catalog(tmp_path, count=3, cached=True)
     helpers = core.load_helpers()

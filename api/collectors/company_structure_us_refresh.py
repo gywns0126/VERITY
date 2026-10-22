@@ -115,10 +115,34 @@ def _valid_exhibit_url(url, cik, accession):
         return False
 
 
+def _ticker_variants(ticker):
+    """Only the separator before a final single class letter is equivalent."""
+    if not isinstance(ticker, str) or not re.fullmatch(r"[A-Z][A-Z0-9.-]{0,11}", ticker):
+        return ()
+    match = re.fullmatch(r"([A-Z][A-Z0-9]*)([.-])([A-Z])", ticker)
+    if not match:
+        return (ticker,)
+    other = match[1] + ("-" if match[2] == "." else ".") + match[3]
+    return (ticker, other)
+
+
+def _submission_has_ticker(submission, ticker):
+    tickers = submission.get("tickers", [])
+    return isinstance(tickers, list) and any(value in tickers for value in _ticker_variants(ticker))
+
+
+def _mapped_cik(value):
+    if isinstance(value, dict):
+        value = value.get("cik") or value.get("cik_str")
+    if type(value) not in (int, str) or not re.fullmatch(r"[0-9]{1,10}", str(value)):
+        return None
+    return str(value).zfill(10) if int(value) > 0 else None
+
+
 def latest_metadata(ticker, cik, submission):
     """Same annual selection/identity/amendment checks as capture-sec-relationships."""
     from api.intelligence.portfolio_sec_relationships import validate_sec_capture
-    if str(submission.get("cik", "")).zfill(10) != cik or ticker not in submission.get("tickers", []):
+    if str(submission.get("cik", "")).zfill(10) != cik or not _submission_has_ticker(submission, ticker):
         raise ValueError("sec-submission-identity")
     recent = submission.get("filings", {}).get("recent", {})
     fields = ("form", "filingDate", "reportDate", "accessionNumber", "primaryDocument")
@@ -189,11 +213,14 @@ def build_document(source_dir, existing=None, now=None):
     tickers = sorted({r["ticker"] for r in universe if isinstance(r, dict)
                       and r.get("market") == "US" and isinstance(r.get("ticker"), str)})
     for ticker in tickers:
-        cik = mapping.get(ticker)
-        cik = str(cik).zfill(10) if type(cik) in (int, str) else ""
-        if not re.fullmatch(r"[0-9]{10}", cik) or int(cik) == 0:
-            unmapped[ticker] = "source-gap:cik-missing"
+        candidates = {_mapped_cik(mapping[key]) for key in _ticker_variants(ticker) if key in mapping}
+        if None in candidates:
+            unmapped[ticker] = "source-gap:cik-invalid"
             continue
+        if len(candidates) != 1:
+            unmapped[ticker] = "source-gap:cik-ambiguous" if candidates else "source-gap:cik-missing"
+            continue
+        cik = next(iter(candidates))
         aliases.setdefault(cik, []).append(ticker)
     for cik, tickers_for_cik in aliases.items():
         item = document["issuers"].setdefault(cik, {"cik": cik, "attemptStatus": "not-attempted", "attemptedAt": None})
@@ -332,7 +359,8 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
                         submission = json.loads(get(url, cik, {url}))
                         metadata_checked = now
                         issuer["metadataSource"] = "sec-submissions"
-                    candidates = sorted(set(issuer["tickerAliases"]) & set(submission.get("tickers", [])))
+                    candidates = sorted(ticker for ticker in issuer["tickerAliases"]
+                                        if _submission_has_ticker(submission, ticker))
                     if not candidates:
                         raise ValueError("source-gap:representative-ticker-missing")
                     metadata = helpers.latest_metadata(candidates[0], cik, submission)
