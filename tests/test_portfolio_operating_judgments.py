@@ -379,7 +379,7 @@ def test_openai_http429_closed_code_survives_archive_and_free_cache_without_body
 
     def open_request(request, *, timeout):
         assert request.full_url == "https://api.openai.com/v1/responses"
-        assert request.get_method() == "POST" and timeout == 25
+        assert request.get_method() == "POST" and timeout == 90
         calls.append(request.full_url)
         raise urllib.error.HTTPError(request.full_url, 429, private,
                                      {"X-Synthetic-Private": private}, io.BytesIO(body))
@@ -459,7 +459,8 @@ def test_response_failures_keep_only_safe_reason_through_transport_archive_and_s
         raw, calls = json.dumps(variant, ensure_ascii=False).encode(), []
 
         def open_request(request, *, timeout):
-            assert request.full_url == "https://api.openai.com/v1/responses" and timeout == 25
+            expected_timeout = 90 if json.loads(request.data).get("text", {}).get("format", {}).get("name") == "company_judgment" else 25
+            assert request.full_url == "https://api.openai.com/v1/responses" and timeout == expected_timeout
             calls.append(request.full_url)
             return io.BytesIO(raw)
 
@@ -591,3 +592,102 @@ def test_workflow_is_read_only_main_pinned_and_only_accepts_trusted_successful_u
     assert "secrets." not in plan and "--execute" not in plan
     assert "PORTFOLIO_AI_OPERATING_ENABLED: '1'" in execute and "PORTFOLIO_AI_LEDGER: supabase" in execute
     assert "--execute --limit" in execute and "inputs.limit || '3'" in execute
+
+
+@pytest.mark.parametrize("phase,wrapped", [("headers", False), ("body", False), ("headers", True), ("complete", False)])
+def test_timeout_preserves_reservation_archive_and_no_paid_retry(worker, monkeypatch, tmp_path, phase, wrapped):
+    events = []
+    private = "PRIVATE_TIMEOUT_MESSAGE"
+
+    class Budget:
+        def reserve(self, keys):
+            events.append("reserve")
+            return {"status": "reserved", "key": keys[0], "reservation_id": "00000000-0000-4000-8000-000000000001"}
+
+        def settle(self, key, reservation_id, charge):
+            assert charge == (6 if phase == "complete" else worker.ai.RESERVE_MICRO_USD)
+            events.append("settle")
+
+    class Store:
+        def get(self, keys):
+            events.append("get")
+            return None
+
+        def put(self, key, reservation_id, doc, result):
+            assert result["status"] == ("ok" if phase == "complete" else "error")
+            assert (result["usage"] is None) == (phase != "complete")
+            events.append("put")
+
+    def fail():
+        error = TimeoutError(private)
+        raise urllib.error.URLError(error) if wrapped else error
+
+    class Response(io.BytesIO):
+        def read(self, size):
+            if phase == "complete":
+                return json.dumps({"status": "completed", "output": [{"type": "message", "status": "completed",
+                    "content": [{"type": "output_text", "text": json.dumps(_cached_answer(_doc()))}]}],
+                    "usage": {"input_tokens": 20, "output_tokens": 8}}).encode()
+            fail()
+
+    def open_request(request, *, timeout):
+        assert timeout == 90
+        events.append("POST")
+        if phase == "headers":
+            fail()
+        return Response()
+
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *handlers: SimpleNamespace(open=open_request))
+    monkeypatch.setattr(worker.ai, "openai_transport", openai_transport)
+    ledger = tmp_path / "timeout.sqlite3"
+    result = worker.ai.run_document(_doc(), ledger, "synthetic-key", enabled=True,
+                                   judgment_as_of=AS_OF, budget_ledger=Budget(), result_store=Store())
+    assert result["status"] == ("ok" if phase == "complete" else "error")
+    assert result["transport_diagnostic"]["stage"] == "provider-response-" + phase
+    assert result["transport_diagnostic"]["socket_timeout_seconds"] == 90
+    assert type(result["transport_diagnostic"]["elapsed_ms"]) is int
+    assert events == ["get", "reserve", "POST", "put", "settle"]
+    assert private not in json.dumps(result)
+    with sqlite3.connect(ledger) as db:
+        assert db.execute("SELECT reserved FROM calls").fetchone()[0] == (6 if phase == "complete" else 10000)
+    before = ledger.read_bytes()
+    cached = worker.ai.run_document(_doc(), ledger, "synthetic-key", enabled=True,
+                                   judgment_as_of=AS_OF, budget_ledger=Budget(), result_store=Store())
+    assert cached["status"] == "cached" and cached["original_status"] == ("ok" if phase == "complete" else "error")
+    assert events.count("POST") == 1 and ledger.read_bytes() == before
+    summary = worker.run_batch([_doc()], ledger, "synthetic-key", Budget(), as_of=AS_OF,
+                               limit=1, runner=lambda *a, **k: result)
+    assert summary["transport_diagnostics"] == [result["transport_diagnostic"]]
+
+
+@pytest.mark.parametrize("payload,timeout", [({}, 25), ({"text": None}, 25),
+    ({"text": {"format": {"name": "company_judgment"}}}, 90)])
+def test_successful_transport_uses_scoped_wait_and_closed_timing(monkeypatch, payload, timeout):
+    body = {"status": "completed", "output": [{"type": "message", "status": "completed",
+            "content": [{"type": "output_text", "text": "{}"}]}],
+            "usage": {"input_tokens": 20, "output_tokens": 8}}
+
+    def open_request(request, **options):
+        assert options["timeout"] == timeout
+        return io.BytesIO(json.dumps(body).encode())
+
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *handlers: SimpleNamespace(open=open_request))
+    answer, usage = openai_transport(payload, "synthetic-key")
+    assert answer == {} and usage["_transport_diagnostic"]["socket_timeout_seconds"] == timeout
+    assert usage["_transport_diagnostic"]["stage"] == "provider-response-complete"
+
+
+@pytest.mark.parametrize("diagnostic", [
+    {"stage": "PRIVATE", "elapsed_ms": 5, "socket_timeout_seconds": 90},
+    {"stage": ["PRIVATE"], "elapsed_ms": 5, "socket_timeout_seconds": 90},
+    {"stage": "provider-response-body", "elapsed_ms": True, "socket_timeout_seconds": 90},
+    {"stage": "provider-response-body", "elapsed_ms": -1, "socket_timeout_seconds": 90},
+    {"stage": "provider-response-body", "elapsed_ms": float("nan"), "socket_timeout_seconds": 90},
+    {"stage": "provider-response-body", "elapsed_ms": 1, "socket_timeout_seconds": "PRIVATE"},
+    {"stage": "provider-response-body", "elapsed_ms": 1, "socket_timeout_seconds": 90, "body": "PRIVATE"},
+])
+def test_worker_drops_untrusted_transport_diagnostics(worker, tmp_path, diagnostic):
+    result = {"status": "error", "error_type": "TimeoutError", "transport_diagnostic": diagnostic}
+    summary = worker.run_batch([_doc()], tmp_path / "unused", "synthetic-key", object(),
+                               as_of=AS_OF, limit=1, runner=lambda *a, **k: result)
+    assert summary["transport_diagnostics"] == [] and "PRIVATE" not in json.dumps(summary)

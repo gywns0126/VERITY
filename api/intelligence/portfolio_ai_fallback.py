@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import time
 import urllib.request
 
 from .portfolio_business_roles import _names, _source, _UNRESOLVED_SCOPE, _OTHER_SUBJECT, index_business_roles
@@ -48,6 +49,10 @@ RESERVE_MICRO_USD = 10_000
 MAX_PROMPT_BYTES = 8_000
 MAX_OUTPUT_TOKENS = 1_024
 OPENAI_MAX_OUTPUT_TOKENS = 4_096
+# Synchronous judgment responses need more headroom than short extraction.
+# These are socket-operation limits, not a total request deadline or a retry.
+OPENAI_TIMEOUT_SECONDS = 25
+JUDGMENT_TIMEOUT_SECONDS = 90
 _PROVIDER_ERROR_CODES = {"insufficient_quota", "rate_limit_exceeded", "invalid_api_key",
                          "model_not_found", "unsupported_country_region_territory"}
 _ROLE = re.compile(r"고객|매출처|공급|납품|구매|매입|원재료|customer|suppl", re.I)
@@ -741,8 +746,16 @@ def openai_transport(payload, api_key):
         "https://api.openai.com/v1/responses", method="POST",
         data=json.dumps(payload, ensure_ascii=False).encode(),
         headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"})
+    text = payload.get("text")
+    format_ = text.get("format") if type(text) is dict else None
+    timeout = (JUDGMENT_TIMEOUT_SECONDS
+               if type(format_) is dict and format_.get("name") == "company_judgment"
+               else OPENAI_TIMEOUT_SECONDS)
+    started = time.monotonic()
+    stage = "provider-response-headers"  # Includes DNS/TLS/send, before headers exist.
     try:
-        with urllib.request.build_opener(NoRedirect).open(request, timeout=25) as response:
+        with urllib.request.build_opener(NoRedirect).open(request, timeout=timeout) as response:
+            stage = "provider-response-body"
             raw = response.read(65537)
     except urllib.error.HTTPError as error:
         # Extract only closed provider codes; never log an HTTP body or message.
@@ -752,6 +765,12 @@ def openai_transport(payload, api_key):
                 error.portfolio_error_code = diagnostic
         except Exception:
             pass
+        raise
+    except (TimeoutError, urllib.error.URLError) as error:
+        # Closed transport metadata only: no URL, exception text or response body.
+        error.portfolio_transport_stage = stage
+        error.portfolio_elapsed_ms = min(3_600_000, max(0, int((time.monotonic() - started) * 1000)))
+        error.portfolio_timeout_seconds = timeout
         raise
     if len(raw) > 65536:
         raise ValueError("response-too-large")
@@ -780,6 +799,10 @@ def openai_transport(payload, api_key):
         raise ValueError("response-content-shape")
     usage = body.get("usage", {})
     return json.loads(parts[0]["text"]), {
+        "_transport_diagnostic": {
+            "stage": "provider-response-complete",
+            "elapsed_ms": min(3_600_000, max(0, int((time.monotonic() - started) * 1000))),
+            "socket_timeout_seconds": timeout},
         "input_tokens": usage.get("input_tokens"),
         "output_tokens": usage.get("output_tokens"),
         "cached_input_tokens": usage.get("input_tokens_details", {}).get("cached_tokens", 0),
@@ -996,6 +1019,15 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
         except Exception as error:
             # Never persist provider exception strings (may contain keys/source).
             result = {"status": "error", "error_type": type(error).__name__, "candidates": []}
+            stage = getattr(error, "portfolio_transport_stage", None)
+            elapsed = getattr(error, "portfolio_elapsed_ms", None)
+            timeout = getattr(error, "portfolio_timeout_seconds", None)
+            if (type(stage) is str and stage in {"provider-response-headers", "provider-response-body"}
+                    and type(elapsed) is int and 0 <= elapsed <= 3_600_000
+                    and type(timeout) is int
+                    and timeout in {OPENAI_TIMEOUT_SECONDS, JUDGMENT_TIMEOUT_SECONDS}):
+                result["transport_diagnostic"] = {
+                    "stage": stage, "elapsed_ms": elapsed, "socket_timeout_seconds": timeout}
             if isinstance(error, urllib.error.HTTPError) and type(error.code) is int:
                 result["http_status"] = error.code
                 diagnostic = getattr(error, "portfolio_error_code", None)
@@ -1018,6 +1050,15 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
                 result.update(rejected=validation["rejected"],
                               validation_version=VALIDATION_VERSION)
         result.update(provider=PROVIDER, model=MODEL, reasoning_effort=REASONING_EFFORT)
+        diagnostic = usage.get("_transport_diagnostic") if result["status"] == "ok" else None
+        if (transport is None and type(diagnostic) is dict
+                and set(diagnostic) == {"stage", "elapsed_ms", "socket_timeout_seconds"}
+                and diagnostic["stage"] == "provider-response-complete"
+                and type(diagnostic["elapsed_ms"]) is int
+                and 0 <= diagnostic["elapsed_ms"] <= 3_600_000
+                and type(diagnostic["socket_timeout_seconds"]) is int
+                and diagnostic["socket_timeout_seconds"] in {OPENAI_TIMEOUT_SECONDS, JUDGMENT_TIMEOUT_SECONDS}):
+            result["transport_diagnostic"] = dict(diagnostic)
         # Only the closed, literal-safe full judgment answer is retained here;
         # no schema-external model text or review receipt is accepted.
         raw = (business.safe_saved_judgment_answer(answer, [doc], as_of=judgment_as_of)

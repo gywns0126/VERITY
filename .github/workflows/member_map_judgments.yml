@@ -48,7 +48,8 @@ jobs:
        github.event.workflow_run.head_branch == 'main' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Up to ten paid attempts, each with a 90s socket wait plus budget/archive RPCs.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
