@@ -1,8 +1,9 @@
 {
-  "collected_at": "2026-10-22T01:26:32.746120+00:00",
+  "collected_at": "2026-10-22T01:31:37.647490+00:00",
   "schema_version": 1,
   "severity": "RED",
   "severity_reasons": [
+    "data_health.core_sources_ok=false",
     "data delivery RED: P0 stale 1건"
   ],
   "n_verification_days": 63,
@@ -20,7 +21,7 @@
     "to_50": 50,
     "to_100": 100
   },
-  "one_liner": "과열 (Euphoria) · 25 BUY / 29 WATCH / 18 CAUTION / 8 AVOID · VAMS 1% 현금 · 가설 N=63",
+  "one_liner": "과열 (Euphoria) · 25 BUY / 32 WATCH / 16 CAUTION / 7 AVOID · VAMS 1% 현금 · 가설 N=63",
   "ttd_recent_p50_minutes": null,
   "days_clean": {
     "kis": 0,
@@ -40,7 +41,7 @@
   "pre_registration_pending": [],
   "alert_volume_24h": {
     "sent": 16,
-    "dedupe_skip": 6,
+    "dedupe_skip": 5,
     "quiet_skip": 17,
     "fp_repeat_max": 11
   },
@@ -48,8 +49,8 @@
   "_inputs_snapshot": {
     "kis_lock_commits_24h": 1,
     "fred_age_h": 0.18,
-    "fred_24h_failure_rate": 0.496,
-    "core_sources_ok": true,
+    "fred_24h_failure_rate": 0.47,
+    "core_sources_ok": false,
     "delivery_status": "red",
     "delivery_generated_at": "2026-10-22T10:13:16.171041+09:00",
     "publish_verify_ok": true,
