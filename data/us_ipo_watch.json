@@ -1,30 +1,58 @@
 {
  "_meta": {
-  "generated_at": "2026-10-21T18:41:16+09:00",
+  "generated_at": "2026-10-22T18:49:42+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 30,
+  "sessions_scanned": 31,
   "sessions_missed": [
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 849,
-   "companies": 245,
+   "filings": 868,
+   "companies": 250,
    "by_stage": {
-    "신청": 95,
-    "정정(심사중)": 116,
+    "신청": 98,
+    "정정(심사중)": 117,
     "가격확정": 10,
-    "거래소등록": 24
+    "거래소등록": 25
    },
    "spac_likely": 28,
-   "has_ticker_now": 189,
+   "has_ticker_now": 192,
    "priced_secondary_excluded": 8,
-   "foreign_issuer": 74,
+   "foreign_issuer": 75,
    "priced_parse_ok": 7
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
  },
  "items": [
+  {
+   "cik": "1070965",
+   "name": "GEORGIA BANKING CO INC",
+   "forms": {
+    "8-A12B": 1,
+    "S-1/A": 2,
+    "S-1": 1
+   },
+   "first_filed": "20261002",
+   "last_filed": "20261021",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1070965&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6022",
+    "sic_desc": "State Commercial Banks",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "ATLANTA, GA",
+    "state_of_inc": "GA"
+   }
+  },
   {
    "cik": "1806540",
    "name": "Lycia Therapeutics, Inc.",
@@ -1139,6 +1167,85 @@
    "pre_existing_reporter": true
   },
   {
+   "cik": "832370",
+   "name": "Ealixir, Inc.",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20261021",
+   "last_filed": "20261021",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=832370&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7372",
+    "sic_desc": "Services-Prepackaged Software",
+    "is_blank_check": false,
+    "ticker": "EAXR",
+    "region": "MIAMI, FL",
+    "state_of_inc": null
+   }
+  },
+  {
+   "cik": "2142699",
+   "name": "FuturePeak Acquisition Corp",
+   "forms": {
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260911",
+   "last_filed": "20261021",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142699&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": null,
+    "region": "NEW YORK, NY",
+    "state_of_inc": "E9"
+   }
+  },
+  {
+   "cik": "2142855",
+   "name": "PBT Land & Minerals, Inc.",
+   "forms": {
+    "S-1/A": 3
+   },
+   "first_filed": "20260924",
+   "last_filed": "20261021",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 3,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142855&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6792",
+    "sic_desc": "Oil Royalty Traders",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "ABILENE, TX",
+    "state_of_inc": "TX"
+   }
+  },
+  {
    "cik": "2023153",
    "name": "HomesToLife Ltd",
    "forms": {
@@ -1215,33 +1322,6 @@
     "ticker": "EMAC",
     "region": "EAST PERTH",
     "state_of_inc": "E9"
-   }
-  },
-  {
-   "cik": "1070965",
-   "name": "GEORGIA BANKING CO INC",
-   "forms": {
-    "S-1/A": 2,
-    "S-1": 1
-   },
-   "first_filed": "20261002",
-   "last_filed": "20261020",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1070965&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6022",
-    "sic_desc": "State Commercial Banks",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "ATLANTA, GA",
-    "state_of_inc": "GA"
    }
   },
   {
@@ -1761,16 +1841,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": true,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2130219&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "HCAX",
-    "region": "GRAND CAYMAN",
-    "state_of_inc": "E9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2130219&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "95572",
@@ -1787,16 +1858,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=95572&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "1600",
-    "sic_desc": "Heavy Construction Other Than Bldg Const - Contractors",
-    "is_blank_check": false,
-    "ticker": "BYOP",
-    "region": "ANNAPOLIS, MD",
-    "state_of_inc": "NV"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=95572&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1966126",
@@ -1813,16 +1875,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1966126&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2834",
-    "sic_desc": "Pharmaceutical Preparations",
-    "is_blank_check": false,
-    "ticker": "NUOX",
-    "region": "TUCSON, AZ",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1966126&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2113640",
@@ -1945,23 +1998,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2131124&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2142855",
-   "name": "PBT Land & Minerals, Inc.",
-   "forms": {
-    "S-1/A": 2
-   },
-   "first_filed": "20260924",
-   "last_filed": "20261009",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142855&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1779977",
@@ -3369,6 +3405,74 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2074652&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2087307",
+   "name": "Sensing4D AI Ltd",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20261021",
+   "last_filed": "20261021",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2087307&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1953988",
+   "name": "Helio Corp /FL/",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261021",
+   "last_filed": "20261021",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1953988&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1756064",
+   "name": "Our Bond, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261021",
+   "last_filed": "20261021",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1756064&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2141583",
+   "name": "Rezera Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261021",
+   "last_filed": "20261021",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2141583&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1995075",
@@ -4780,23 +4884,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1035354&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2142699",
-   "name": "FutureCore Acquisition Corp",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20260911",
-   "last_filed": "20260911",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142699&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1254699",
