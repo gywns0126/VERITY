@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-22T08:16:45+09:00",
+ "as_of": "2026-10-22T10:23:45+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -8,8 +8,7 @@
  "known_unresolved": [
   "ledger_integrity",
   "rule_discrimination",
-  "flag_coverage",
-  "input_constancy"
+  "flag_coverage"
  ],
  "skipped": [],
  "checks": {
@@ -66,7 +65,20 @@
      ]
     }
    ],
-   "thin_keys": [],
+   "thin_keys": [
+    {
+     "key": "kis_financial_ratio",
+     "coverage": "1/80"
+    },
+    {
+     "key": "kis_short_sale",
+     "coverage": "1/80"
+    },
+    {
+     "key": "kis_credit_balance",
+     "coverage": "1/80"
+    }
+   ],
    "fallback_covered": [
     {
      "key": "close",
@@ -126,7 +138,7 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 18,
+     "events_scanned": 17,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
@@ -221,29 +233,12 @@
    "status": "KNOWN"
   },
   "input_constancy": {
-   "ok": false,
+   "ok": true,
    "inputs_checked": 9,
-   "varying": 5,
-   "constant_inputs": [
-    {
-     "input": "kis_credit_balance.credit_rate",
-     "n_present": 19,
-     "constant_value": 0.0,
-     "severity": "high"
-    },
-    {
-     "input": "kis_financial_ratio.current_ratio",
-     "n_present": 19,
-     "constant_value": 0.0,
-     "severity": "high"
-    }
-   ],
-   "detail": "전 종목 동일값 입력 2종 — kis_credit_balance.credit_rate=0.0, kis_financial_ratio.current_ratio=0.0. 측정이 아니라 상위 공백 의심(규칙이 영원히 발동 못 한다).",
-   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다.",
-   "baseline": {
-    "constant_inputs": 2
-   },
-   "status": "KNOWN"
+   "varying": 2,
+   "constant_inputs": [],
+   "detail": "입력 값 분산 정상",
+   "note": "결측(None)은 검사 B 소관. 여기는 '존재하는데 전부 같은 값'만 본다."
   },
   "guard_inputs": {
    "ok": true,

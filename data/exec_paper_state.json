@@ -220,10 +220,10 @@
    "market_clock_state": "regular_session_clock_holiday_unverified"
   }
  },
- "last_date": "2026-10-21",
- "last_price_fingerprint": "2c6929f7d45dc541c1b363755a7bee023eb283179b74a48b952e62cf25f74003",
- "market_sessions": 30,
- "sessions_since_rebalance": 0,
+ "last_date": "2026-10-22",
+ "last_price_fingerprint": "e5e43393f6c26201b8862d8adc7ea3d8361bef8679675924b864994eaa54645d",
+ "market_sessions": 31,
+ "sessions_since_rebalance": 1,
  "last_rebalance_date": "2026-10-21",
  "trades": 0,
  "realized_pnl": 0.0,
@@ -498,6 +498,15 @@
    "cost_paid": 0.0,
    "benchmark_date": "20261019",
    "benchmark_close": 5768.01
+  },
+  {
+   "date": "2026-10-22",
+   "equity": 10000000.0,
+   "positions_n": 0,
+   "trades_total": 0,
+   "cost_paid": 0.0,
+   "benchmark_date": "20261020",
+   "benchmark_close": 5552.74
   }
  ],
  "benchmark_start": {
@@ -512,27 +521,28 @@
   "last_date": "2026-09-02",
   "trades": 0
  },
- "target_exposure": 0.0811,
+ "target_exposure": 0.128,
  "price_snapshot": {
   "source": "portfolio.recommendations.current_price",
-  "as_of": "2026-10-22T06:34:39+09:00",
-  "market_clock_state": "preopen_clock",
-  "holiday_calendar": "not_connected"
+  "as_of": "2026-10-22T09:10:58+09:00",
+  "market_clock_state": "regular_session_clock_holiday_unverified",
+  "holiday_calendar": "not_connected",
+  "fingerprint_source": "analysis_plus_active_live_quotes",
+  "active_live_quotes_n": 2
  },
  "last_denominator": {
-  "kr_candidate_n": 47,
-  "eligible_n": 4,
-  "signal_eligible_n": 8,
-  "selected_n": 3,
+  "kr_candidate_n": 50,
+  "eligible_n": 5,
+  "signal_eligible_n": 5,
+  "selected_n": 4,
   "target_capacity_n": 10,
-  "slot_budget_krw": 270333,
+  "slot_budget_krw": 320000,
   "whole_share_only": true,
   "not_selected_by_rank_n": 1,
   "rejected": {
-   "liquidity": 31,
-   "critical_red_flag": 1,
-   "grade_below_watch": 7,
-   "one_share_above_slot": 4
+   "liquidity": 28,
+   "grade_below_watch": 13,
+   "critical_red_flag": 4
   }
  },
  "selection_slot_krw": 270333,
@@ -540,13 +550,13 @@
   "candidate_pool_rank_not_full_kr_universe",
   "e2_next_run_fill",
   "e3_1m_proxy",
+  "entry_data_unavailable",
   "fill_live_quote_20260826",
-  "market_clock_not_executable",
-  "waiting_new_market_snapshot"
+  "target_temporarily_ineligible"
  ],
  "benchmark_latest": {
-  "date": "20261019",
-  "close": 5768.01,
+  "date": "20261020",
+  "close": 5552.74,
   "source": "금융위원회 지수시세정보",
   "freshness": "T+1 EOD"
  }
