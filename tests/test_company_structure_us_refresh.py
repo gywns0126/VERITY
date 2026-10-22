@@ -104,6 +104,34 @@ def test_universe_cik_dedupe_and_dry_cli_no_transport(tmp_path, monkeypatch):
         cli.parse_args(["--url", "https://evil.invalid"])
 
 
+def test_physical_get_pacing_after_alternating_slow_checkpoints(tmp_path):
+    doc = catalog(tmp_path, count=3, cached=True)
+    helpers = core.load_helpers()
+    replies = iter([INDEX, TABLE] * 3)
+    delays = iter([1.0, 0.0] * 3)
+    clock, starts, reserved = [0.0], [], [0]
+
+    def checkpoint(document):
+        requests = document.get("requestBudget", {}).get("requests", 0)
+        if requests > reserved[0]:
+            reserved[0] = requests
+            clock[0] += next(delays)
+
+    def transport(url, maximum):
+        assert maximum == core.MAX_BYTES
+        assert reserved[0] == len(starts) + 1
+        starts.append(clock[0])
+        return next(replies)
+
+    helpers.get_public = transport
+    _, summary = core.refresh(doc, source_dir=tmp_path, limit=3, fetch_public=True, now=NOW,
+                              helpers=helpers, checkpoint=checkpoint, clock=lambda: clock[0],
+                              sleep=lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+    assert summary["success"] == 3 and summary["requests"] == 6
+    assert starts == [1.0, 1.5, 2.5, 3.0, 4.0, 4.5]
+    assert all(b - a >= 0.5 for a, b in zip(starts, starts[1:]))
+
+
 def test_local_submissions_two_gets_and_checkpoint_before_get(tmp_path):
     doc = catalog(tmp_path, cached=True)
     result, summary, calls, saved = run(doc, tmp_path, [INDEX, TABLE])
@@ -211,30 +239,32 @@ def test_http_stop_errors_and_prior_exhibit_retention(tmp_path):
 
 def test_daily_budgets_reservations_and_next_day_progress(tmp_path, monkeypatch):
     doc = catalog(tmp_path, 102)
+    doc["requestBudget"] = {"day": NOW.astimezone(core.KST).date().isoformat(),
+                            "requests": core.MAX_HTTP - 200, "ciks": []}
     replies = []
     for i in range(1, 67):
         replies.extend([json.dumps(submission(f"{i:010d}", f"T{i}")).encode(), INDEX, TABLE])
     result, summary, calls, _ = run(doc, tmp_path, replies)
     assert summary["requests"] == len(calls) == 198 and summary["success"] == 66
-    assert summary["dailyCiks"] <= 100 and summary["stopReason"] == "daily-http-budget"
+    assert summary["dailyCiks"] <= core.MAX_CIKS and summary["stopReason"] == "daily-http-budget"
     assert summary["exitCode"] == summary["sourceError"] == summary["error"] == 0
     assert summary["budgetDeferred"] == summary["deferred"] == 36
     # A second run never resets the day's reservations.
     _, again, calls, _ = run(result, tmp_path)
-    assert again["requests"] == 0 and again["dailyRequests"] == 198
+    assert again["requests"] == 0 and again["dailyRequests"] == core.MAX_HTTP - 2
     assert again["exitCode"] == again["sourceError"] == 0
     later = NOW + timedelta(days=1)
     selected = core._selection(result, later, 100)
     assert selected[0] == "0000000068"  # Failed/reserved 67 moves behind never attempted.
     with pytest.raises(ValueError):
-        core._selection(doc, NOW, 101)
-    doc["requestBudget"] = {"day": NOW.astimezone(core.KST).date().isoformat(), "requests": 201, "ciks": []}
+        core._selection(doc, NOW, core.MAX_CIKS + 1)
+    doc["requestBudget"] = {"day": NOW.astimezone(core.KST).date().isoformat(), "requests": core.MAX_HTTP + 1, "ciks": []}
     with pytest.raises(ValueError):
         run(doc, tmp_path)
     doc["requestBudget"] = {"day": NOW.astimezone(core.KST).date().isoformat(), "requests": 0,
-                            "ciks": [f"{i:010d}" for i in range(1, 101)]}
+                            "ciks": [f"{i:010d}" for i in range(1, core.MAX_CIKS + 1)]}
     _, capped, calls, _ = run(doc, tmp_path)
-    assert capped["dailyCiks"] == 100 and capped["attempted"] == 0 and calls == []
+    assert capped["dailyCiks"] == core.MAX_CIKS and capped["attempted"] == 0 and calls == []
     assert capped["stopReason"] == "daily-cik-budget" and capped["exitCode"] == 0
     cli = core._module(ROOT / "scripts/member-map/refresh-us-company-structure.py", "test_us_budget_cli")
     store = tmp_path / "cli-store.json"
@@ -246,6 +276,185 @@ def test_daily_budgets_reservations_and_next_day_progress(tmp_path, monkeypatch)
     monkeypatch.setattr(cli.core, "refresh", lambda document, **kwargs: (document, failed_summary))
     assert cli.run(args) == 1
     assert core.read_json(store)["summary"]["sourceError"] == 1  # Durable before job-error exit.
+
+
+def timed_run(doc, tmp_path, replies, *, maximum, now=NOW, checkpoint_delay=None, transport_delay=None):
+    helpers = core.load_helpers()
+    clock, calls, saves = [0.0], [], []
+    pending = iter(replies)
+
+    def checkpoint(document):
+        saves.append(copy.deepcopy(document))
+        if checkpoint_delay:
+            clock[0] += checkpoint_delay(document)
+
+    def transport(url, maximum_bytes):
+        assert maximum_bytes == core.MAX_BYTES
+        calls.append((url, clock[0]))
+        if transport_delay:
+            clock[0] += transport_delay(len(calls))
+        return next(pending)
+
+    helpers.get_public = transport
+    document, summary = core.refresh(doc, source_dir=tmp_path, fetch_public=True, now=now,
+        helpers=helpers, checkpoint=checkpoint, clock=lambda: clock[0],
+        sleep=lambda seconds: clock.__setitem__(0, clock[0] + seconds), max_elapsed_seconds=maximum)
+    assert summary["requests"] == len(calls)
+    assert all(b[1] - a[1] >= .5 for a, b in zip(calls, calls[1:]))
+    return document, summary, calls, saves
+
+
+@pytest.mark.parametrize("boundary,maximum,reservations,physical,attempted", [
+    ("before-cik", 0, 0, 0, 0),
+    ("before-reservation", 1, 0, 0, 1),
+    ("after-checkpoint", 1, 1, 0, 1),
+    ("after-pacing", .25, 2, 1, 1),
+])
+def test_time_budget_boundaries_keep_reservations_without_unnecessary_gets(
+        tmp_path, boundary, maximum, reservations, physical, attempted):
+    doc = catalog(tmp_path, count=2, cached=True)
+
+    def checkpoint_delay(document):
+        requests = document["requestBudget"]["requests"]
+        return int((boundary == "before-reservation" and requests == 0)
+                   or (boundary == "after-checkpoint" and requests == 1))
+
+    result, summary, calls, saves = timed_run(doc, tmp_path, [INDEX], maximum=maximum,
+                                              checkpoint_delay=checkpoint_delay)
+    assert summary["stopReason"] == "time-budget"
+    assert summary["exitCode"] == summary["sourceError"] == 0
+    assert summary["attempted"] == attempted and len(calls) == physical
+    assert summary["dailyRequests"] == reservations
+    assert summary["dailyCiks"] == attempted
+    assert summary["budgetDeferred"] == summary["deferred"] == 2
+    if attempted:
+        assert result["issuers"]["0000000001"]["attemptStatus"] == "budget-deferred"
+        assert saves[-1]["requestBudget"]["requests"] == reservations
+    else:
+        assert result == doc and saves == []
+    assert result["issuers"]["0000000002"]["attemptStatus"] == "not-attempted"
+
+
+def test_default_deadline_keeps_completed_document_then_resumes_unstarted_cik_same_day(tmp_path):
+    doc = catalog(tmp_path, count=2, cached=True)
+    result, summary, _, saves = timed_run(doc, tmp_path, [INDEX, TABLE], maximum=core.MAX_ELAPSED_SECONDS,
+        transport_delay=lambda ordinal: 1800 if ordinal == 2 else 0)
+    assert summary["maxElapsedSeconds"] == 1800
+    assert summary["stopReason"] == "time-budget" and summary["success"] == 1
+    assert summary["dailyRequests"] == 2 and summary["dailyCiks"] == 1
+    assert summary["lists"]["deferred"] == ["0000000002"]
+    completed = copy.deepcopy(result["issuers"]["0000000001"])
+    assert saves[-1]["issuers"]["0000000001"] == completed
+    resumed, again, calls, _ = timed_run(result, tmp_path, [INDEX, TABLE], maximum=1800)
+    assert again["success"] == 1 and again["dailyRequests"] == 4
+    assert again["dailyCiks"] == 2 and again["deferred"] == 0 and len(calls) == 2
+    assert resumed["issuers"]["0000000001"] == completed
+
+
+def test_partial_replacement_keeps_old_exhibit_and_reservations_then_resumes_next_day(tmp_path):
+    first, _, _, _ = run(catalog(tmp_path), tmp_path,
+        [json.dumps(submission("0000000001", "T1")).encode(), INDEX, TABLE])
+    old = copy.deepcopy(first["issuers"]["0000000001"])
+    later = NOW + timedelta(days=8)
+    accession = "0000000001-26-000002"
+    annual = json.dumps(submission("0000000001", "T1", accession)).encode()
+    result, summary, calls, _ = timed_run(first, tmp_path, [annual, INDEX], maximum=.75, now=later)
+    issuer = result["issuers"]["0000000001"]
+    assert summary["stopReason"] == "time-budget" and summary["retained"] == 1
+    assert summary["dailyRequests"] == 3 and len(calls) == 2 and summary["exitCode"] == 0
+    assert issuer["exhibit"] == old["exhibit"] and issuer["lastSuccessAt"] == old["lastSuccessAt"]
+    assert issuer["checkedAt"] == old["checkedAt"]
+    _, same_day, calls, _ = timed_run(result, tmp_path, [], maximum=1800, now=later)
+    assert same_day["stopReason"] == "daily-cik-already-attempted"
+    assert same_day["dailyRequests"] == 3 and calls == []
+    resumed, next_day, calls, _ = timed_run(result, tmp_path, [INDEX, TABLE], maximum=1800,
+                                            now=later + timedelta(days=1))
+    assert next_day["success"] == 1 and next_day["dailyRequests"] == 2 and len(calls) == 2
+    assert resumed["issuers"]["0000000001"]["exhibit"]["accession"] == accession
+
+
+def test_expanded_caps_respect_legacy_budget_and_enforce_new_edges(tmp_path):
+    doc = catalog(tmp_path, count=102)
+    day = NOW.astimezone(core.KST).date().isoformat()
+    doc["requestBudget"] = {"day": day, "requests": 198,
+                            "ciks": [f"{i:010d}" for i in range(1, 101)]}
+    replies = []
+    for i in (101, 102):
+        replies.extend([json.dumps(submission(f"{i:010d}", f"T{i}")).encode(), INDEX, TABLE])
+    result, summary, calls, _ = timed_run(doc, tmp_path, replies, maximum=1800)
+    assert summary["success"] == 2 and len(calls) == 6
+    assert summary["dailyRequests"] == 204 and summary["dailyCiks"] == 102
+    assert result["requestBudget"]["ciks"][:100] == doc["requestBudget"]["ciks"]
+    assert summary["guardedBudget"] == {"valid": True, "maxCiks": 800, "maxHttp": 2400}
+    edge = catalog(tmp_path)
+    edge["requestBudget"] = {"day": day, "requests": 2397,
+                             "ciks": [f"{i:010d}" for i in range(2, 801)]}
+    _, capped, calls, _ = timed_run(edge, tmp_path,
+        [json.dumps(submission("0000000001", "T1")).encode(), INDEX, TABLE], maximum=1800)
+    assert capped["dailyRequests"] == 2400 and capped["dailyCiks"] == 800
+    assert capped["success"] == 1 and len(calls) == 3
+
+
+@pytest.mark.parametrize("budget", [
+    {"requests": 2401, "ciks": []}, {"requests": -1, "ciks": []},
+    {"requests": True, "ciks": []}, {"requests": 0, "ciks": ["0000000001"] * 2},
+    {"requests": 0, "ciks": [f"{i:010d}" for i in range(1, 802)]},
+    {"requests": 0, "ciks": ["invalid"]},
+])
+def test_expanded_budget_ledger_rejects_invalid_values(tmp_path, budget):
+    doc = catalog(tmp_path)
+    doc["requestBudget"] = {"day": NOW.astimezone(core.KST).date().isoformat(), **budget}
+    with pytest.raises(ValueError, match="sec-durable-budget-invalid"):
+        core.refresh(doc, source_dir=tmp_path)
+
+
+@pytest.mark.parametrize("maximum", [-1, True, float("nan"), float("inf"), None])
+def test_invalid_time_budget_is_rejected_before_work(tmp_path, maximum):
+    with pytest.raises(ValueError, match="sec-time-budget-invalid"):
+        core.refresh({}, source_dir=tmp_path, max_elapsed_seconds=maximum)
+
+
+def test_compact_checkpoint_preserves_fields_and_fsync_before_atomic_replace(tmp_path, monkeypatch):
+    doc = catalog(tmp_path)
+    path = tmp_path / "store.json"
+    core.atomic_json(path, {"old": True})
+    events = []
+    fsync, replace = core.os.fsync, core.os.replace
+
+    def sync(fd):
+        events.append("fsync")
+        fsync(fd)
+
+    def swap(source, target):
+        assert events == ["fsync"]
+        assert core.read_json(target) == {"old": True}
+        events.append("replace")
+        replace(source, target)
+
+    monkeypatch.setattr(core.os, "fsync", sync)
+    monkeypatch.setattr(core.os, "replace", swap)
+    core.atomic_json(path, doc)
+    assert events == ["fsync", "replace"]
+    assert core.read_json(path) == doc
+    assert path.read_text() == json.dumps(doc, ensure_ascii=False, separators=(",", ":"), allow_nan=False) + "\n"
+
+
+def test_cli_expanded_defaults_and_time_budget_forwarding(tmp_path, monkeypatch):
+    catalog(tmp_path)
+    cli = core._module(ROOT / "scripts/member-map/refresh-us-company-structure.py", "test_us_time_cli")
+    argv = ["--source-dir", str(tmp_path), "--store", str(tmp_path / "store.json")]
+    defaults = cli.parse_args(argv)
+    assert defaults.limit == 800 and defaults.max_elapsed_seconds == 1800
+    received = {}
+
+    def refresh(document, **kwargs):
+        received.update(kwargs)
+        return document, {"exitCode": 0, "stopReason": "time-budget"}
+
+    monkeypatch.setattr(cli.core, "refresh", refresh)
+    assert cli.run(cli.parse_args(argv + ["--max-elapsed-seconds", "12.5", "--fetch-public"])) == 0
+    assert received["limit"] == 800 and received["max_elapsed_seconds"] == 12.5
+    assert cli.core.read_json(tmp_path / "store.json")["summary"]["stopReason"] == "time-budget"
 
 
 def test_transport_policy_size_no_redirect_and_url_restriction(monkeypatch):
@@ -279,11 +488,13 @@ def test_transport_policy_size_no_redirect_and_url_restriction(monkeypatch):
         core.get_public("https://data.sec.gov/submissions/CIK0000000001.json", core.MAX_BYTES + 1)
 
 
-def test_needs_review_multiple_tables_identity_gap_and_size(tmp_path):
+def test_needs_review_current_revision_identity_gap_and_size(tmp_path):
+    from api.intelligence.company_structure_sec import PARSER_REVISION
     doc = catalog(tmp_path, cached=True)
-    result, summary, _, _ = run(doc, tmp_path, [INDEX, TABLE + TABLE])
+    result, summary, _, _ = run(doc, tmp_path, [INDEX, b'<p>Variable interest entities</p>' + TABLE])
     issuer = result["issuers"]["0000000001"]
     assert issuer["reviewExhibit"]["status"] == "needs-review"
+    assert issuer["reviewExhibit"]["parserRevision"] == PARSER_REVISION
     assert "lastSuccessAt" not in issuer and "exhibit" not in issuer
     assert issuer["attemptStatus"] == "needs-review"
     # Same accession's review result is also cached, without falsely claiming success.
@@ -309,6 +520,73 @@ def test_needs_review_multiple_tables_identity_gap_and_size(tmp_path):
         recent[key].append(value)
     with pytest.raises(ValueError, match="amendment-needs-review"):
         core.latest_metadata("T1", "0000000001", amended)
+
+
+@pytest.mark.parametrize("old_revision", [None, "previous-parser-v0"])
+def test_review_revision_rechecks_once_then_next_day_reuses_without_http(tmp_path, old_revision):
+    from api.intelligence.company_structure_sec import PARSER_REVISION
+    doc, _, _, _ = run(catalog(tmp_path, cached=True), tmp_path, [INDEX, TABLE])
+    issuer = doc["issuers"]["0000000001"]
+    original = copy.deepcopy(issuer["exhibit"])
+    review = {**copy.deepcopy(original), "status": "needs-review"}
+    review.pop("parserRevision", None)
+    if old_revision is not None:
+        review["parserRevision"] = old_revision
+    issuer.update(reviewExhibit=review, attemptStatus="needs-review", checkedAt=None)
+    doc["requestBudget"] = {"day": "2026-10-21", "requests": 0, "ciks": []}
+    unresolved = b'<p>Variable interest entities</p>' + TABLE
+    # Existing parsed evidence survives an inconclusive revision recheck.
+    result, summary, calls, saved = run(doc, tmp_path, [INDEX, unresolved])
+    source = result["issuers"]["0000000001"]
+    assert summary["requests"] == len(calls) == 2 and summary["success"] == 0
+    assert summary["sourceGap"] == summary["retained"] == 1
+    assert source["exhibit"] == original and source["lastSuccessAt"] == issuer["lastSuccessAt"]
+    assert source["reviewExhibit"]["parserRevision"] == PARSER_REVISION
+    assert source["attemptStatus"] == "needs-review"
+    assert saved[-1]["issuers"]["0000000001"]["reviewExhibit"] == source["reviewExhibit"]
+    # The daily CIK guard suppresses another attempt even if the revision changes.
+    same_day = copy.deepcopy(result)
+    same_day["issuers"]["0000000001"]["reviewExhibit"].pop("parserRevision")
+    _, repeated, calls, _ = run(same_day, tmp_path)
+    assert repeated["requests"] == 0 and calls == []
+    assert repeated["stopReason"] == "daily-cik-already-attempted"
+    reused, cached, calls, _ = run(result, tmp_path, now=NOW + timedelta(days=1))
+    assert cached["cached"] == 1 and cached["requests"] == 0 and calls == []
+    assert reused["issuers"]["0000000001"]["exhibit"] == original
+    assert reused["issuers"]["0000000001"]["reviewExhibit"] == source["reviewExhibit"]
+    assert reused["issuers"]["0000000001"]["lastSuccessAt"] == issuer["lastSuccessAt"]
+
+
+def test_old_review_revision_can_become_parsed_without_forcing_source_success(tmp_path):
+    from api.intelligence.company_structure_sec import PARSER_REVISION
+    doc, _, _, _ = run(catalog(tmp_path, cached=True), tmp_path,
+                         [INDEX, b'<p>Variable interest entities</p>' + TABLE])
+    issuer = doc["issuers"]["0000000001"]
+    issuer["reviewExhibit"]["parserRevision"] = "previous-parser-v0"
+    doc["requestBudget"]["day"] = "2026-10-21"
+    result, summary, calls, saved = run(doc, tmp_path, [INDEX, TABLE])
+    source = result["issuers"]["0000000001"]
+    assert summary["success"] == 1 and summary["requests"] == len(calls) == 2
+    assert "reviewExhibit" not in source
+    assert source["exhibit"]["status"] == "parsed"
+    assert source["exhibit"]["parserRevision"] == PARSER_REVISION
+    assert saved[-1]["issuers"]["0000000001"]["exhibit"] == source["exhibit"]
+
+
+@pytest.mark.parametrize("old_revision", [None, "previous-parser-v0"])
+def test_parsed_success_reuses_same_accession_regardless_of_parser_revision(tmp_path, old_revision):
+    doc, _, _, _ = run(catalog(tmp_path, cached=True), tmp_path, [INDEX, TABLE])
+    issuer = doc["issuers"]["0000000001"]
+    issuer["exhibit"].pop("parserRevision", None)
+    if old_revision is not None:
+        issuer["exhibit"]["parserRevision"] = old_revision
+    original = copy.deepcopy(issuer["exhibit"])
+    issuer["checkedAt"] = None
+    doc["requestBudget"]["day"] = "2026-10-21"
+    result, summary, calls, _ = run(doc, tmp_path)
+    assert summary["cached"] == 1 and summary["requests"] == 0 and calls == []
+    assert result["issuers"]["0000000001"]["exhibit"] == original
+    assert result["issuers"]["0000000001"]["lastSuccessAt"] == issuer["lastSuccessAt"]
 
 
 def test_20f_form_forwarded_ex81_jurisdiction_and_budget(tmp_path):

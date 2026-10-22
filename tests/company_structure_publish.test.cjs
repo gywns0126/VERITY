@@ -127,7 +127,12 @@ test('public US source projection retains budgets/failure/old document dates, dr
   inspect(safe); assert.equal(safe.issuers['0000001234'].exhibit.sourceRowCount, 3);
   assert.equal(safe.issuers['0000001234'].exhibit.corporateRowCount, 1);
   assert.equal(safe.issuers['0000001234'].exhibit.rows[0].jurisdiction, 'Delaware');
-  doc.requestBudget.requests = 201; assert.throws(() => sanitizeUsSources(doc));
+  doc.requestBudget.requests = 2400;
+  doc.requestBudget.ciks = Array.from({ length: 800 }, (_, i) => String(i + 1).padStart(10, '0'));
+  assert.deepEqual(sanitizeUsSources(doc).requestBudget, { day: '2026-10-21', requests: 2400, ciks: doc.requestBudget.ciks });
+  doc.requestBudget.requests = 2401; assert.throws(() => sanitizeUsSources(doc));
+  doc.requestBudget.requests = 2400; doc.requestBudget.ciks.push('0000000801'); assert.throws(() => sanitizeUsSources(doc));
+  doc.requestBudget.ciks.pop(); doc.requestBudget.ciks[0] = doc.requestBudget.ciks[1]; assert.throws(() => sanitizeUsSources(doc));
 });
 
 test('SEC 20-F-style list URL and retained HTTP403 status pass public validation without EX-21 or direct-control claims', async t => {
@@ -149,7 +154,8 @@ test('SEC 20-F-style list URL and retained HTTP403 status pass public validation
 test('workflow preserves schedule/concurrency, original annual backfill, explicit durable paths and no raw staging', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../.github/workflows/ownership_backfill.yml'), 'utf8');
   assert.match(source, /40 19 \* \* \*/u); assert.match(source, /group: verity-ownership-backfill/u); assert.match(source, /cancel-in-progress: false/u);
-  assert.match(source, /--limit 100 --fetch-public/u); assert.match(source, /0 <= n <= 300/u);
+  assert.match(source, /--limit 800 --fetch-public/u); assert.match(source, /0 <= n <= 400/u);
+  assert.match(source, /print\(min\(n, 300\)\)/u);
   for (const file of ['member_map_company_structure_sources.json', 'member_map_company_structure_us_sources.json', INDEX, 'kr_ownership.json', 'metadata/kr_ownership_cursor.json']) assert.ok(source.includes('git add data/' + file));
   assert.match(source, /steps\.durable\.outcome == 'success'/u); assert.match(source, /git merge-base --is-ancestor HEAD origin\/main/u);
   assert.match(source, /git pull --rebase --autostash origin main\n\s+# Autostash[^\n]*\n\s+test -z "\$\(git ls-files -u\)"\n\s+git push origin HEAD:main/u);
@@ -159,7 +165,7 @@ test('workflow preserves schedule/concurrency, original annual backfill, explici
   assert.match(source, /--source-dir "\$GITHUB_WORKSPACE\/data"/u);
   assert.doesNotMatch(source, /git add data\/$|git add .*raw|upload-artifact|kis_broker|KISBroker|build_mapping\(|sys\.modules/mu);
   assert.match(source, /python -m api\.builders\.ownership_backfill_builder/u);
-  assert.match(source, /NOT a proven <=900 physical/u);
+  assert.match(source, /NOT a proven <=1100 physical/u);
 });
 
 function ownershipWorkflow() {
@@ -449,6 +455,7 @@ test('actual workflow cadence uses remote KST-day attempts across all events, in
 function cachedUsSource(review = false) {
   const cik = '0000001234', accession = '0000001234-26-000001';
   const exhibit = { schema: 'sec-company-subsidiaries-v1', cik, accession, filedDate: '2026-02-01', periodEnd: '2025-12-31',
+    parserRevision: '2026-10-22-repeated-tables-v1',
     url: 'https://www.sec.gov/Archives/edgar/data/1234/000000123426000001/ex21.htm', documentSha256: 'a'.repeat(64),
     status: review ? 'needs-review' : 'parsed', rows: [], html: 'PRIVATE', sourceRow: { text: 'PRIVATE' } };
   const source = { tickerAliases: ['ABC', 'ABC.A'], attemptStatus: review ? 'needs-review' : 'HTTP403', attemptedAt: at,
@@ -538,6 +545,7 @@ test('unresolved reviewExhibit retains only safe original identifiers for zero-H
   fs.writeFileSync(path.join(dir, 'sec_ticker_cik_map.json'), JSON.stringify({ ABC: '0000001234' }));
   const doc = cachedUsSource(true), safe = sanitizeUsSources(doc), source = safe.issuers['0000001234'];
   assert.equal(source.reviewExhibit.status, 'needs-review'); assert.equal(source.reviewExhibit.rows, undefined);
+  assert.equal(source.reviewExhibit.parserRevision, '2026-10-22-repeated-tables-v1');
   assert.equal(source.lastSuccessAt, undefined); assert.equal(source.exhibit, undefined); assert.equal(JSON.stringify(safe).includes('PRIVATE'), false);
   assert.deepEqual(sanitizeUsSources(JSON.parse(JSON.stringify(safe))), safe);
   const replay = cachedRefreshOffline(safe, dir), reused = replay.document.issuers['0000001234'];

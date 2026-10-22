@@ -12,6 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
+PARSER_REVISION = "2026-10-22-repeated-tables-v1"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -326,7 +327,7 @@ def parse_exhibit(raw_html, metadata):
     except UnicodeDecodeError:
         html = raw.decode("latin-1")
     soup = BeautifulSoup(html, "html.parser")
-    result = {"schema": "sec-company-subsidiaries-v1", "cik": cik,
+    result = {"schema": "sec-company-subsidiaries-v1", "parserRevision": PARSER_REVISION, "cik": cik,
               "accession": accession, "filedDate": filed, "periodEnd": period,
               "url": url, "documentSha256": hashlib.sha256(raw).hexdigest(),
               "scope": "reported-subsidiary-list-not-exhaustive", "rows": [], "status": "needs-review"}
@@ -343,13 +344,54 @@ def parse_exhibit(raw_html, metadata):
             if "name" in roles and "jurisdiction" in roles:
                 candidates.append((table, trs, hi, roles))
                 break
-    if len(candidates) != 1:
+    if not candidates:
         return result
-    _, trs, header_i, roles = candidates[0]
+    if any(table.find_parent("table") is not None for table, *_ in candidates):
+        return result
+    if len(candidates) > 1:
+        # Repeated page headers are a continuation only when the document names
+        # this registrant and no intervening text changes the table's scope.
+        # Similar-looking tables for multiple parents must remain quarantined.
+        root = _issuer_name_key(metadata.get("issuerName"))
+        prefix = []
+        for node in soup.descendants:
+            if node is candidates[0][0]:
+                break
+            if (isinstance(node, NavigableString) and not isinstance(node, Comment)
+                    and not node.find_parent(["head", "style", "script"])):
+                prefix.append(str(node))
+        heading = _issuer_name_key(_norm(" ".join(prefix))) or ""
+        if (not root or re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading)
+                or not re.search(r"\bsubsidiaries of " + re.escape(root) + r"(?= as of |$)", heading)):
+            return result
+        headers = []
+        for table, trs, header_i, roles in candidates:
+            if table.find_parent("table") is not None:
+                return result
+            headers.append([_norm(cell.get_text(" ", strip=True)).casefold()
+                            for cell in trs[header_i].find_all(["th", "td"], recursive=False)])
+        if any(header != headers[0] for header in headers[1:]):
+            return result
+        for previous, following in zip(candidates, candidates[1:]):
+            last = list(previous[0].descendants)[-1]
+            gap = []
+            for node in last.next_elements:
+                if node is following[0]:
+                    break
+                if isinstance(node, NavigableString) and not isinstance(node, Comment):
+                    value = _norm(str(node))
+                    if value:
+                        gap.append(value)
+            if gap and not re.fullmatch(r"(?:page\s*)?[0-9]{1,3}", " ".join(gap), re.I):
+                return result
+    _, _, _, roles = candidates[0]
     name_i, jurisdiction_i = roles.index("name"), roles.index("jurisdiction")
     rows = []
     needs_review = False
-    for row_index, tr in enumerate(trs[header_i + 1:], start=header_i + 1):
+    source_rows = [(table_index, row_index, tr)
+                   for table_index, (_, trs, header_i, _) in enumerate(candidates)
+                   for row_index, tr in enumerate(trs[header_i + 1:], start=header_i + 1)]
+    for table_index, row_index, tr in source_rows:
         cells = tr.find_all(["th", "td"], recursive=False)
         if not cells:
             continue
@@ -390,6 +432,8 @@ def parse_exhibit(raw_html, metadata):
             continue
         for block_index, name, jurisdiction in entries:
             source_row = {"index": row_index, "text": text}
+            if len(candidates) > 1:
+                source_row["tableIndex"] = table_index
             if len(names) > 1:
                 source_row["blockIndex"] = block_index
             rows.append({"name": name, "jurisdiction": jurisdiction, "ownershipPct": None,

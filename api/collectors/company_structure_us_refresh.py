@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -22,10 +23,11 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = "alphanest-company-structure-us-sources-v1"
-MAX_CIKS, MAX_HTTP, MAX_BYTES = 100, 200, 8 * 1024 * 1024
+MAX_CIKS, MAX_HTTP, MAX_BYTES = 800, 2400, 8 * 1024 * 1024
+MAX_ELAPSED_SECONDS = 1800
 TTL = timedelta(days=7)
 KST = timezone(timedelta(hours=9))
-BUDGET_STOPS = frozenset({"daily-http-budget", "daily-cik-budget", "daily-cik-already-attempted"})
+BUDGET_STOPS = frozenset({"daily-http-budget", "daily-cik-budget", "daily-cik-already-attempted", "time-budget"})
 
 
 class BudgetDeferred(RuntimeError):
@@ -45,7 +47,7 @@ def atomic_json(path, document):
     fd, temp = tempfile.mkstemp(prefix=path.name + ".", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(document, handle, ensure_ascii=False, indent=2, allow_nan=False)
+            json.dump(document, handle, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
@@ -221,12 +223,24 @@ def _due_issuers(document, now):
 
 def _selection(document, now, limit):
     if type(limit) is not int or not 0 <= limit <= MAX_CIKS:
-        raise ValueError("CIK limit must be 0..100")
+        raise ValueError(f"CIK limit must be 0..{MAX_CIKS}")
     return _due_issuers(document, now)[:limit]
 
 
-def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=None,
-            now=None, helpers=None, clock=time.monotonic, sleep=time.sleep):
+def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpoint=None,
+            now=None, helpers=None, clock=time.monotonic, sleep=time.sleep,
+            max_elapsed_seconds=MAX_ELAPSED_SECONDS):
+    """Stop new work at a monotonic soft deadline, preserving reservations/results.
+
+    An already-started HTTP request is not cancelled by this deadline: its 30s
+    transport timeout can extend collection beyond the deadline (up to 30s for
+    a single bounded request). Parsing/checkpoint time is additional; urllib's
+    socket timeout is not a strict total-response wall-clock guarantee.
+    """
+    if (type(max_elapsed_seconds) not in (int, float) or not math.isfinite(max_elapsed_seconds)
+            or max_elapsed_seconds < 0):
+        raise ValueError("sec-time-budget-invalid")
+    started = clock()
     now = now or datetime.now(timezone.utc)
     stamp, day = now.isoformat(), now.astimezone(KST).date().isoformat()
     document = copy.deepcopy(document)
@@ -247,6 +261,13 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
                "dryRun": not fetch_public, "requestedTickers": len(document["universe"]["US"]),
                "requestedCiks": len(document["currentCiks"]), "unmapped": document["unmapped"],
                "stopReason": None, "published": False}
+
+    def time_exhausted():
+        if clock() - started >= max_elapsed_seconds:
+            summary["stopReason"] = "time-budget"
+            return True
+        return False
+
     if not fetch_public:
         lists["sourceGap"] = [{"cik": c, "reason": document["issuers"][c]["sourceGap"]}
                               for c in document["currentCiks"] if document["issuers"][c].get("sourceGap")]
@@ -263,12 +284,19 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
             if budget["requests"] >= MAX_HTTP:
                 summary["stopReason"] = "daily-http-budget"
                 raise BudgetDeferred()
-            if last_get is not None:
-                sleep(max(0, 0.5 - (clock() - last_get)))
-            last_get = clock()
+            if time_exhausted():
+                raise BudgetDeferred()
             budget["requests"] += 1
             document["requestBudget"] = copy.deepcopy(budget)
             checkpoint(document)  # Reserve before the one physical GET.
+            if time_exhausted():
+                raise BudgetDeferred()  # Keep the reservation even without a GET.
+            # Checkpoint latency must not collapse physical GET start spacing.
+            if last_get is not None:
+                sleep(max(0, 0.5 - (clock() - last_get)))
+            if time_exhausted():
+                raise BudgetDeferred()
+            last_get = clock()
             lists["requests"].append({"cik": cik, "url": url})
             raw = helpers.get_public(url, MAX_BYTES)
             if not isinstance(raw, bytes) or not raw or len(raw) > MAX_BYTES:
@@ -276,7 +304,7 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
             return raw
 
         for cik in selected:
-            if summary["stopReason"]:
+            if summary["stopReason"] or time_exhausted():
                 break
             issuer = document["issuers"][cik]
             budget["ciks"].append(cik)
@@ -313,8 +341,12 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
                                   representativeTicker=candidates[0])
                     checkpoint(document)
                 old = issuer.get("reviewExhibit") or issuer.get("exhibit")
+                reusable = isinstance(old, dict) and old.get("status") == "parsed"
+                if isinstance(old, dict) and old.get("status") == "needs-review":
+                    from api.intelligence.company_structure_sec import PARSER_REVISION
+                    reusable = old.get("parserRevision") == PARSER_REVISION
                 if (isinstance(old, dict) and old.get("cik") == cik and old.get("accession") == metadata["accession"]
-                        and old.get("status") in ("parsed", "needs-review")):
+                        and reusable):
                     issuer.update(attemptStatus="cached-same-accession" if old["status"] == "parsed" else "needs-review",
                                   checkedAt=stamp, sourceGap=None if old["status"] == "parsed" else "source-gap:ex21-needs-review")
                     lists["cached"].append(cik)
@@ -382,6 +414,7 @@ def refresh(document, *, source_dir, limit=100, fetch_public=False, checkpoint=N
     summary["exitCode"] = int(bool(summary["sourceError"]) or
                               summary["stopReason"] is not None and summary["stopReason"] not in BUDGET_STOPS)
     summary.update(lists=lists, dailyRequests=budget["requests"], dailyCiks=len(budget["ciks"]),
+                   elapsedSeconds=max(0, clock() - started), maxElapsedSeconds=max_elapsed_seconds,
                    guardedBudget={"valid": budget["requests"] <= MAX_HTTP and len(budget["ciks"]) <= MAX_CIKS,
                                   "maxCiks": MAX_CIKS, "maxHttp": MAX_HTTP})
     return document, summary

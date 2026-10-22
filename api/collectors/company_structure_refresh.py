@@ -12,6 +12,7 @@ import json
 import os
 import re
 import tempfile
+import time
 import unicodedata
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -19,11 +20,11 @@ from pathlib import Path
 
 SCHEMA = "alphanest-company-structure-sources-v1"
 ENDPOINTS = ("hyslrSttus", "otrCprInvstmntSttus")
-MAX_ISSUERS = 300
-MAX_GETS = 600
+MAX_ISSUERS = 400
+MAX_GETS = 800
 TTL = timedelta(days=7)
 KST = timezone(timedelta(hours=9))
-BUDGET_STOPS = frozenset({"daily-request-budget"})
+BUDGET_STOPS = frozenset({"daily-request-budget", "time-budget"})
 
 
 def read_json(path):
@@ -36,7 +37,7 @@ def atomic_json(path, document):
     fd, temporary = tempfile.mkstemp(prefix=path.name + ".", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(document, handle, ensure_ascii=False, indent=2)
+            json.dump(document, handle, ensure_ascii=False, separators=(",", ":"))
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
@@ -63,7 +64,7 @@ class BoundedSession:
 
     def __init__(self, limit):
         if isinstance(limit, bool) or not isinstance(limit, int) or not 0 <= limit <= MAX_GETS:
-            raise ValueError("request limit must be between 0 and 600")
+            raise ValueError("request limit must be between 0 and 800")
         import requests
         from requests.adapters import HTTPAdapter
         from urllib3.util.retry import Retry
@@ -336,7 +337,7 @@ def build_document(source_dir, existing=None, seed=None, now=None):
     return sanitize_document(document)
 
 
-def select_issuers(document, limit=300, now=None):
+def select_issuers(document, limit=400, now=None):
     if isinstance(limit, bool) or not isinstance(limit, int) or not 0 <= limit <= MAX_ISSUERS:
         raise ValueError("limit must be between 0 and 300")
     now = now or datetime.now(timezone.utc)
@@ -364,14 +365,20 @@ def select_issuers(document, limit=300, now=None):
     return [item[2] for item in candidates[:limit]], unmapped, fresh, [item[2] for item in candidates[limit:]]
 
 
-def refresh(document, *, source_dir, limit=300, fetch_public=False, now=None,
-            checkpoint=None, scout=None, helpers=None):
+def refresh(document, *, source_dir, limit=400, fetch_public=False, now=None,
+            checkpoint=None, scout=None, helpers=None, max_elapsed_seconds=900,
+            monotonic=None):
     """Return (merged document, summary). Injected scout/helpers are for offline tests.
 
     Summary selected/attempted/unmapped/deferred/retained count issuers;
     success/empty/error count endpoints. Every category includes its list.
     Durable request reservations include interrupted requests conservatively.
     """
+    if (isinstance(max_elapsed_seconds, bool) or not isinstance(max_elapsed_seconds, (int, float))
+            or not 0 < max_elapsed_seconds <= 900):
+        raise ValueError("elapsed time budget must be positive and at most 900 seconds")
+    monotonic = monotonic or time.monotonic
+    deadline = monotonic() + max_elapsed_seconds
     now = now or datetime.now(timezone.utc)
     stamp = now.isoformat()
     period = expected_period(now)
@@ -385,6 +392,12 @@ def refresh(document, *, source_dir, limit=300, fetch_public=False, now=None,
     lists.update(requested=["KR:" + t for t in document["universe"]["KR"]],
                  selected=selected, unmapped=unmapped, deferred=deferred + fresh)
     summary = {"dryRun": not fetch_public, "stopReason": None}
+
+    def expired():
+        if monotonic() >= deadline:
+            summary["stopReason"] = "time-budget"
+            return True
+        return False
     day = now.astimezone(KST).date().isoformat()
     previous = document.get("requestBudget", {})
     used = previous.get("requests", 0) if previous.get("day") == day else 0
@@ -412,7 +425,7 @@ def refresh(document, *, source_dir, limit=300, fetch_public=False, now=None,
 
         def guarded_get(url, **kwargs):
             nonlocal used
-            if summary["stopReason"] or used >= MAX_GETS:
+            if summary["stopReason"] or used >= MAX_GETS or expired():
                 raise Halt("budget-or-stop")
             if url not in {"https://opendart.fss.or.kr/api/" + key + ".json" for key in ENDPOINTS}:
                 raise Halt("unexpected-endpoint")
@@ -420,6 +433,10 @@ def refresh(document, *, source_dir, limit=300, fetch_public=False, now=None,
             used += 1
             document["requestBudget"] = {"day": day, "requests": used, "limit": MAX_GETS}
             checkpoint(document)
+            # A slow durable write can consume the remaining collection time.
+            # Keep its conservative reservation, but do not start another GET.
+            if expired():
+                raise Halt("time-budget")
             lists["requests"].append(capture["job"])
             response = original_get(url, **kwargs)
             if response.status_code in (401, 403, 429):
@@ -443,17 +460,18 @@ def refresh(document, *, source_dir, limit=300, fetch_public=False, now=None,
         scout._SESSION, scout._call = budget, captured_call
         try:
             for key in selected:
-                if summary["stopReason"] or used >= MAX_GETS:
+                if summary["stopReason"] or used >= MAX_GETS or expired():
                     break
                 issuer = document["issuers"][key]
                 lists["attempted"].append(key)
                 for endpoint, fetcher in zip(ENDPOINTS, (scout.fetch_major_shareholders, scout.fetch_subsidiary_investments)):
-                    if summary["stopReason"] or used >= MAX_GETS:
+                    if summary["stopReason"] or used >= MAX_GETS or expired():
                         break
                     old = issuer["endpoints"][endpoint]
                     job = key + "/" + endpoint
                     capture.clear()
                     capture["job"] = job
+                    previous_block = copy.deepcopy(old)
                     old.update(attemptedAt=stamp, attemptStatus="error", attemptPeriod=period)
                     try:
                         parsed = fetcher(issuer["corp_code"], period["year"])
@@ -494,9 +512,14 @@ def refresh(document, *, source_dir, limit=300, fetch_public=False, now=None,
                         issuer["endpoints"][endpoint] = _safe_block(issuer["endpoints"][endpoint], endpoint, issuer["corp_code"], listed_names)
                         lists["success" if status == "000" else "empty"].append(job)
                     except Exception:
-                        old["attemptStatus"] = summary["stopReason"] or old["attemptStatus"]
-                        lists["error"].append(job)
+                        if summary["stopReason"] == "time-budget" and job not in lists["requests"]:
+                            issuer["endpoints"][endpoint] = previous_block
+                        else:
+                            old["attemptStatus"] = summary["stopReason"] or old["attemptStatus"]
+                            lists["error"].append(job)
                     checkpoint(document)
+                if not any(job.startswith(key + "/") for job in lists["requests"]):
+                    lists["attempted"].remove(key)
                 if all(issuer["endpoints"][e].get("lastSuccessAt") == stamp for e in ENDPOINTS):
                     issuer["collectedAt"] = stamp
                     checkpoint(document)
