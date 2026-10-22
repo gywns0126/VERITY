@@ -790,3 +790,24 @@ def test_reviewed_ticker_changes_dedupe_without_source_promotion_or_input_mutati
     core.atomic_json(data / "member_map_company_structure_aliases.json", {"schema": "wrong"})
     with pytest.raises(ValueError, match="sec-reviewed-alias-schema"):
         core.build_document(tmp_path, now=now)
+
+
+def test_changed_parser_reconsiders_review_once_without_starving_unattempted_or_resetting_budgets(tmp_path):
+    from api.intelligence.company_structure_sec import PARSER_REVISION
+    doc = catalog(tmp_path, 3)
+    item = doc["issuers"]["0000000003"]
+    item.update(attemptStatus="needs-review", attemptedAt=NOW.isoformat(), checkedAt=NOW.isoformat(),
+                reviewExhibit={"status": "needs-review", "parserRevision": "older-parser"})
+    doc["requestBudget"] = {"day": NOW.astimezone(core.KST).date().isoformat(), "requests": 2,
+                            "ciks": ["0000000003"]}
+    before = copy.deepcopy(doc)
+    assert core._selection(doc, NOW, 2) == ["0000000003", "0000000001"]
+    assert doc == before
+    # Real refresh selection still filters out the already reserved CIK.
+    _, summary, calls, _ = run(doc, tmp_path, [json.dumps(submission("0000000001", "T1")).encode(), INDEX, TABLE], limit=1)
+    assert summary["lists"]["attempted"] == ["0000000001"]
+    assert summary["dailyRequests"] == 5 and len(calls) == 3
+    item["reviewExhibit"]["parserRevision"] = PARSER_REVISION
+    assert core._selection(doc, NOW, 3) == ["0000000001", "0000000002"]
+    item.pop("checkedAt")
+    assert core._selection(doc, NOW, 3) == ["0000000001", "0000000002", "0000000003"]

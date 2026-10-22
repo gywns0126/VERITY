@@ -262,23 +262,31 @@ def build_document(source_dir, existing=None, now=None):
 
 
 def _due_issuers(document, now):
+    from api.intelligence.company_structure_sec import PARSER_REVISION
     due = []
     for cik in document["currentCiks"]:
         issuer = document["issuers"][cik]
+        review = issuer.get("reviewExhibit")
+        revised_review = (issuer.get("attemptStatus") == "needs-review" and isinstance(review, dict)
+                          and review.get("status") == "needs-review"
+                          and review.get("parserRevision") != PARSER_REVISION)
         checked = _time(issuer.get("checkedAt"))
-        if checked and timedelta(0) <= now - checked < TTL:
+        if not revised_review and checked and timedelta(0) <= now - checked < TTL:
             continue
         # Missing exhibits/source gaps cannot permanently outrank healthy stale
         # issuers. Historical success is an attempt fallback for legacy stores.
         attempted = _time(issuer.get("attemptedAt")) or _time(issuer.get("lastSuccessAt"))
-        due.append((attempted is not None, attempted or datetime.min.replace(tzinfo=timezone.utc), cik))
-    return [row[2] for row in sorted(due)]
+        # One reconsideration for an actually changed parser, within the same
+        # durable budgets. A same-revision rejection re-enters the ordinary queue.
+        due.append((not revised_review, attempted is not None, attempted or datetime.min.replace(tzinfo=timezone.utc), cik))
+    return [row[3] for row in sorted(due)]
 
 
-def _selection(document, now, limit):
+def _selection(document, now, limit, excluded=()):
     if type(limit) is not int or not 0 <= limit <= MAX_CIKS:
         raise ValueError(f"CIK limit must be 0..{MAX_CIKS}")
-    return _due_issuers(document, now)[:limit]
+    reserved = set(excluded)
+    return [cik for cik in _due_issuers(document, now) if cik not in reserved][:limit]
 
 
 def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpoint=None,
@@ -305,10 +313,10 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
             or len(budget["ciks"]) > MAX_CIKS
             or any(not isinstance(c, str) or not re.fullmatch(r"[0-9]{10}", c) for c in budget["ciks"])):
         raise ValueError("sec-durable-budget-invalid")
-    selected = _selection(document, now, limit)
+    selected = _selection(document, now, limit, excluded=budget["ciks"])
     due = _due_issuers(document, now)
     # Same-day attempts are never retried, including interrupted reservations.
-    selected = [c for c in selected if c not in budget["ciks"]][:MAX_CIKS - len(budget["ciks"])]
+    selected = selected[:MAX_CIKS - len(budget["ciks"])]
     lists = {k: [] for k in ("attempted", "requests", "success", "cached", "sourceGap", "error", "retained", "budgetDeferred", "deferred")}
     lists["selected"] = selected
     summary = {"schema": "alphanest-company-structure-us-refresh-summary-v1", "generatedAt": stamp,
