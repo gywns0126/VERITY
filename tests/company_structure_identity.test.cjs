@@ -39,14 +39,14 @@ test('existing universe recovers four exact punctuation gaps without adding a so
 test('reviewed ticker changes require independent current identity and never rename nodes or prove relationships', () => {
   const reviewedAliases = require('../data/member_map_company_structure_aliases.json');
   const generatedAt = '2026-10-23T00:00:00Z';
-  const tickers = ['SATS', 'ECHO', 'FDP', 'DMC'];
-  const cikMap = { ECHO: 1415404, DMC: 1047340 };
+  const tickers = ['SATS', 'ECHO', 'FDP', 'DMC', 'HWH', 'ESYN'];
+  const cikMap = { ECHO: 1415404, DMC: 1047340, ESYN: 1897245 };
   const input = { reviewedAliases, generatedAt, cikMap,
     universe: { stocks: tickers.map(ticker => ({ ticker, market: 'US', name: ticker })) } };
   const before = JSON.stringify(input), { manifest, payloads } = buildArtifacts(input);
-  assert.deepEqual(Object.keys(manifest.issuers), ['US:DMC', 'US:ECHO', 'US:FDP', 'US:SATS']);
-  assert.equal(manifest.coverage.US.withCik, 4);
-  assert.equal(manifest.coverage.US.uniqueCiks, 2);
+  assert.deepEqual(Object.keys(manifest.issuers), ['US:DMC', 'US:ECHO', 'US:ESYN', 'US:FDP', 'US:HWH', 'US:SATS']);
+  assert.equal(manifest.coverage.US.withCik, 6);
+  assert.equal(manifest.coverage.US.uniqueCiks, 3);
   assert.equal(manifest.coverage.US.checked, 0);
   assert.equal(payloads.size, 0);
   assert.equal(JSON.stringify(input), before);

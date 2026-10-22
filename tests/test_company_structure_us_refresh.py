@@ -750,15 +750,16 @@ def test_reviewed_ticker_changes_dedupe_without_source_promotion_or_input_mutati
     catalog(tmp_path)
     aliases = json.loads((ROOT / "data/member_map_company_structure_aliases.json").read_bytes())
     now = datetime(2026, 10, 23, tzinfo=timezone.utc)
-    stocks = [{"ticker": t, "market": "US"} for t in ("SATS", "ECHO", "FDP", "DMC")]
-    mapping = {"ECHO": 1415404, "DMC": 1047340}
+    stocks = [{"ticker": t, "market": "US"} for t in ("SATS", "ECHO", "FDP", "DMC", "HWH", "ESYN")]
+    mapping = {"ECHO": 1415404, "DMC": 1047340, "ESYN": 1897245}
     core.atomic_json(data / "universe_search.json", {"stocks": stocks})
     core.atomic_json(data / "sec_ticker_cik_map.json", mapping)
     core.atomic_json(data / "member_map_company_structure_aliases.json", aliases)
     doc = core.build_document(tmp_path, now=now)
     assert doc["unmapped"] == {}
-    assert len(doc["currentCiks"]) == 2
+    assert len(doc["currentCiks"]) == 3
     assert doc["issuers"]["0001415404"]["tickerAliases"] == ["ECHO", "SATS"]
+    assert doc["issuers"]["0001897245"]["tickerAliases"] == ["ESYN", "HWH"]
     assert all(i["attemptStatus"] == "not-attempted" for i in doc["issuers"].values())
     before = copy.deepcopy(doc)
     core.build_document(tmp_path, existing=doc, now=now)

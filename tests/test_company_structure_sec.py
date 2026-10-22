@@ -545,3 +545,53 @@ def test_hwm_header_recovery_does_not_relax_multiple_legal_terminator_guard():
     result = parse_exhibit(html, {**META, "issuerName": "Howmet Aerospace Inc."})
     assert result["status"] == "needs-review"
     assert [r["name"] for r in result["rows"]] == ["Howmet International Inc."]
+
+
+def _air_pages(heading="AAR CORP. Subsidiaries", gap="\u200b", header="Name (1)"):
+    def page(rows):
+        return ("<table><tr><td>\u200b</td><td>\u200b</td><td>\u200b</td></tr>"
+                f"<tr><td>{header}</td><td>Place of Incorporation</td><td>Doing Business As</td></tr>"
+                + "".join(f"<tr><td>{name}</td><td>Delaware</td><td>{dba}</td></tr>"
+                          for name, dba in rows) + "</table>")
+    return (f"<h1>{heading}</h1>" + page([
+        ("<b>AAR CORP.</b>", "AAR Aviation Corp."),
+        ("<i>AAR Americas, LLC (formerly HAECO Americas, LLC)</i>", "Old Brand"),
+    ]) + gap + page([("<i>AAR Other Services LLC</i>", "AAR Trading Brand")]))
+
+
+def test_air_footnoted_repeated_headers_exclude_title_bound_self_and_keep_source_annotations():
+    # Structural fixture from AIR Exhibit 21.1, 2026-05-31 financial period.
+    # SHA256 ea75922c9a21204206a458eb84bf3156056d2ca6ce24447b89f3d39392eded51
+    result = parse_exhibit(_air_pages(), {**META, "issuerName": "AAR CORP"})
+    assert result["status"] == "parsed"
+    assert [r["name"] for r in result["rows"]] == ["AAR Americas, LLC", "AAR Other Services LLC"]
+    assert [r["sourceRow"]["tableIndex"] for r in result["rows"]] == [0, 1]
+    assert "formerly HAECO Americas, LLC" in result["rows"][0]["sourceRow"]["text"]
+    assert "Old Brand" in result["rows"][0]["sourceRow"]["text"]
+    assert all(r["ownershipPct"] is None and r["directOwnership"] == "unspecified" for r in result["rows"])
+
+
+@pytest.mark.parametrize("header", ["Name 1", "Name (a)", "Name (1) summary", "Name (1)(2)"])
+def test_footnoted_name_header_does_not_accept_nonexact_labels(header):
+    result = parse_exhibit(_air_pages(header=header), {**META, "issuerName": "AAR CORP"})
+    assert result["status"] == "needs-review" and result["rows"] == []
+
+
+@pytest.mark.parametrize("heading", ["AAR CORP. Holdings Subsidiaries", "Other Corp. Subsidiaries",
+    "Former AAR CORP. Subsidiaries", "AAR CORP. Subsidiaries sold", "AAR CORP. Subsidiaries of Other Corp."])
+def test_root_first_title_does_not_rescue_different_or_historical_scopes(heading):
+    result = parse_exhibit(_air_pages(heading=heading), {**META, "issuerName": "AAR CORP"})
+    assert result["status"] == "needs-review" and result["rows"] == []
+
+
+@pytest.mark.parametrize("gap", ["<p>Other parent's subsidiaries</p>", "<p>Joint ventures</p>"])
+def test_root_first_title_keeps_scope_change_quarantine(gap):
+    result = parse_exhibit(_air_pages(gap=gap), {**META, "issuerName": "AAR CORP"})
+    assert result["status"] == "needs-review" and result["rows"] == []
+
+
+@pytest.mark.parametrize("name", ["Example LLC (formerly )", "Example (formerly Other LLC)",
+    "Example LLC (formerly Other LLC", "Example LLC (formerly Other LLC) and Another Inc."])
+def test_short_formerly_annotation_does_not_rescue_ambiguous_names(name):
+    result = parse_exhibit(_exhibit([(name, "Delaware")]), META)
+    assert result["status"] == "needs-review" and result["rows"] == []
