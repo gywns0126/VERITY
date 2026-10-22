@@ -93,7 +93,7 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
         raise ValueError("operating-limit")
     runner = runner or ai.run_document
     counts, calls, pending, grade_proposals, findings, stop = Counter(), 0, 0, Counter(), 0, None
-    errors, archived_failures = Counter(), 0
+    errors, archived_failures, transport_diagnostics = Counter(), 0, []
     for doc in documents:
         result = runner(doc, ledger_path, api_key, enabled=True,
                         judgment_as_of=as_of, budget_ledger=budget)
@@ -113,6 +113,17 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
                      else reason if type(reason) is str and reason in _ERROR_REASONS
                      else kind if type(kind) is str and kind in _ERROR_TYPES else "unclassified")
             errors[label] += 1
+        diagnostic = result.get("transport_diagnostic")
+        if (status in {"ok", "error"} and type(diagnostic) is dict
+                and set(diagnostic) == {"stage", "elapsed_ms", "socket_timeout_seconds"}
+                and type(diagnostic["stage"]) is str
+                and diagnostic["stage"] in {"provider-response-headers", "provider-response-body",
+                                             "provider-response-complete"}
+                and type(diagnostic["elapsed_ms"]) is int
+                and 0 <= diagnostic["elapsed_ms"] <= 3_600_000
+                and type(diagnostic["socket_timeout_seconds"]) is int
+                and diagnostic["socket_timeout_seconds"] in {25, 90}):
+            transport_diagnostics.append(dict(diagnostic))
         archived_error = status == "cached" and result.get("original_status") == "error"
         if archived_error:
             archived_failures += 1
@@ -134,6 +145,7 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
             "processed_documents": sum(counts.values()), "pending_judgments": pending,
             "proposed_degree_counts": dict(grade_proposals), "quality_findings": findings,
             "error_counts": dict(errors), "archived_failed_documents": archived_failures,
+            "transport_diagnostics": transport_diagnostics,
             "accepted_judgments": 0, "confirmed_relationships": 0, "published": False}
 
 
