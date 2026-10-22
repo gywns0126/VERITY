@@ -128,6 +128,24 @@ def test_parses_explicit_rows_and_keeps_ownership_and_parentage_unknown():
     assert len(result["documentSha256"]) == 64
 
 
+@pytest.mark.parametrize("stated", ["March 1, 2026", "2026-03-01"])
+def test_exhibit_date_cannot_inherit_a_different_financial_period(stated):
+    fixture = f"<p>Subsidiaries of Example Inc. As of {stated}</p>" + _exhibit([("Other Inc.", "Delaware")])
+    meta = {**META, "periodEnd": "2026-02-28"}
+    result = parse_exhibit(fixture, meta)
+    assert result["status"] == "needs-review"
+    assert result["rows"] == []
+    assert result["statedAsOf"] == "2026-03-01"
+    assert result["reviewReason"] == "exhibit-as-of-differs-from-period-end"
+    assert result["periodEnd"] == "2026-02-28"
+
+
+@pytest.mark.parametrize("stated", ["May 3,2026", "2026-05-03"])
+def test_matching_explicit_exhibit_date_keeps_supported_rows(stated):
+    fixture = f"<p>As of {stated}</p>" + _exhibit([("Other Inc.", "Delaware")])
+    assert parse_exhibit(fixture, META)["status"] == "parsed"
+
+
 @pytest.mark.parametrize("metadata", [
     {**META, "cik": "1136869"}, {**META, "accession": "bad"},
     {**META, "url": "https://evil.example/zbh-ex21.htm"},

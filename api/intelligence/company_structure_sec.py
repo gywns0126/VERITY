@@ -5,7 +5,7 @@ exhaustiveness, or direct parentage. Network access belongs to the caller.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from urllib.parse import urlsplit
 import hashlib
 import re
@@ -356,6 +356,28 @@ def parse_exhibit(raw_html, metadata):
                 break
     if not candidates:
         return result
+    # Downstream currently dates relationships with periodEnd. An explicit
+    # different exhibit date must not silently inherit the financial year end.
+    prefix = []
+    for node in soup.descendants:
+        if node is candidates[0][0]:
+            break
+        if (isinstance(node, NavigableString) and not isinstance(node, Comment)
+                and not node.find_parent(["head", "style", "script"])):
+            prefix.append(str(node))
+    heading_text = _norm(" ".join(prefix))
+    for match in re.finditer(r"\bas of\s+([A-Za-z]+\s+\d{1,2},\s*\d{4}|\d{4}-\d{2}-\d{2})\b", heading_text, re.I):
+        stated = match.group(1)
+        try:
+            stated_day = (date.fromisoformat(stated).isoformat() if re.match(r"\d", stated)
+                          else datetime.strptime(re.sub(r",\s*", ", ", stated), "%B %d, %Y").date().isoformat())
+        except ValueError:
+            result["reviewReason"] = "invalid-exhibit-as-of-date"
+            return result
+        if stated_day != period:
+            result["reviewReason"] = "exhibit-as-of-differs-from-period-end"
+            result["statedAsOf"] = stated_day
+            return result
     if any(table.find_parent("table") is not None for table, *_ in candidates):
         return result
     if len(candidates) > 1:
