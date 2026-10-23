@@ -3,7 +3,7 @@ name: Stock Analysis Pipeline (Realtime — KR & US)
 # 5/11 분리: daily_analysis.yml 의 realtime/realtime_us cron 만 이관.
 # 이유: verity-data-write 단일 그룹 11 워크플로 공유 → 5분 간격 trigger 대부분 superseded (cancelled).
 # 같은 group `verity-realtime` 안에서만 직렬화 + cancel-in-progress: false 큐잉.
-# 같은 데이터 파일을 daily_analysis (quick) 가 동시에 쓸 가능성은 git rebase --theirs 5회 retry 가드.
+# daily_analysis 와 겹친 VAMS/history 변경은 분석 시작 HEAD 검증으로 차단하고, 무관한 변경만 검증 후 rebase 한다.
 
 on:
   # 2026-05-12 audit fix (HIGH #1):
@@ -216,6 +216,10 @@ jobs:
           done
           echo "::warning::[lock push] 3회 실패 — 분석 끝 commit step 에서 재시도"
 
+      - name: Capture analysis input HEAD
+        id: analysis_input
+        run: python scripts/ci/realtime_portfolio_write_guard.py capture --output "$GITHUB_OUTPUT"
+
       - name: Run analysis
         env:
           # 🚨 VERITY_MODE 기본값 = dev = LLM 호출이 mock 으로 대체된다. 이 한 줄이 없어서
@@ -270,7 +274,10 @@ jobs:
         run: python api/main.py
 
       - name: Commit & push results
+        env:
+          ANALYSIS_INPUT_HEAD: ${{ steps.analysis_input.outputs.analysis_head }}
         run: |
+          set -euo pipefail
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           git add data/
@@ -282,14 +289,27 @@ jobs:
           # 재시도 8회 + 지터 (2026-08-06 실패 fix) — main 에 push 하는 워크플로가 56개,
           # 봇 커밋 하루 292개. 고정 간격 재시도는 여러 워크플로가 같은 리듬으로 재충돌한다.
           for i in 1 2 3 4 5 6 7 8; do
-            git rebase --abort 2>/dev/null || true
-            git merge --abort 2>/dev/null || true
-            if git pull --rebase --autostash -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
-              PUSHED=true
-              break
+            if python scripts/ci/realtime_portfolio_write_guard.py prepare-push \
+              --analysis-head "$ANALYSIS_INPUT_HEAD" --remote origin --branch "$BRANCH"; then
+              if git push origin "HEAD:$BRANCH"; then
+                PUSHED=true
+                break
+              fi
+              echo "Push attempt $i rejected after snapshot check; re-fetching before retry"
+            else
+              rc=$?
+              if [ "$rc" -eq 3 ]; then
+                echo "::error::VAMS/history changed during realtime analysis; stale output was not pushed"
+                exit 1
+              fi
+              if [ "$rc" -eq 4 ]; then
+                echo "::error::Rebase conflict; this snapshot was not pushed and will not be retried"
+                exit 1
+              fi
+              echo "::error::Snapshot proof failed (code $rc); this snapshot was not pushed"
+              exit 1
             fi
             WAIT=$(( i * 7 + RANDOM % 15 ))
-            echo "Push attempt $i failed, retrying in ${WAIT}s (jittered)..."
             sleep "$WAIT"
           done
           if [ "$PUSHED" != "true" ]; then
