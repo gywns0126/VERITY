@@ -38,6 +38,7 @@ from server.kis_rest_client import (
 )
 from server.kis_ws_client import KISWebSocketClient
 from server.security import start_security
+from server.service_auth import verify_service_auth
 from server import member_map_refresh
 
 logging.basicConfig(
@@ -235,6 +236,19 @@ start_security(app)
 
 
 # ── 엔드포인트 ──
+
+
+@app.post("/internal/service-auth/verify")
+async def service_auth_verify(request: Request):
+    """Check the current service secret only; never enter broker/order routes."""
+    code, payload = verify_service_auth(
+        os.environ.get("RAILWAY_SHARED_SECRET", ""),
+        request.headers.get("X-Service-Auth", ""),
+        request.headers.get("X-Verification-Id", ""),
+    )
+    if code == 200:
+        logger.info("service-auth verified verification_id=%s", payload["verification_id"])
+    return JSONResponse(payload, status_code=code, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/health")
@@ -708,3 +722,4 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run("server.main:app", host="0.0.0.0", port=PORT, reload=False)
+
