@@ -343,8 +343,8 @@
     }
   },
   "vams": {
-    "total_asset": 9150987.469195925,
-    "cash": 1229633.1320236847,
+    "total_asset": 9149067.952555586,
+    "cash": 2272970.8274335163,
     "holdings": [
       {
         "ticker": "003550",
@@ -507,94 +507,6 @@
           "at": "2026-08-29T05:19:18+09:00"
         },
         "beta": 0.5509
-      },
-      {
-        "ticker": "PARR",
-        "ticker_yf": "PARR",
-        "name": "PARR",
-        "currency": "USD",
-        "asset_class": "US_STOCK",
-        "buy_price": 105099.58643702156,
-        "buy_price_original": 76.97000122070312,
-        "current_price": 103882.69597686769,
-        "highest_price": 120763.62061798097,
-        "quantity": 10,
-        "total_cost": 1051152.8643702157,
-        "return_pct": -1.16,
-        "buy_date": "2026-09-24",
-        "buy_reason": "BUY 체결 — 근거 verity_brain BUY(65) · 참고 멀티팩터 관망(55)",
-        "decision_basis": {
-          "recommendation": "BUY",
-          "recommendation_source": "verity_brain",
-          "brain_score": 65,
-          "brain_grade": "BUY",
-          "multi_score": 55,
-          "multi_grade": "관망",
-          "ai_verdict_source": "multi_factor",
-          "scores_disagree": true
-        },
-        "safety_score": 41,
-        "buy_slippage_bps": 0.09,
-        "volatility_adj": {
-          "applied": true,
-          "tier": "high",
-          "atr_14d_pct": 6.08,
-          "scale": 0.7,
-          "source": "atr_14d"
-        },
-        "macro_size_multiplier": 0.8,
-        "sizing_chain": {
-          "executor": "vams.execute_buy",
-          "max_per_stock": 1900393.7857862674,
-          "cash_at_entry": 7329093,
-          "base": 1900394,
-          "max_per_stock_binding": "total_asset_pct",
-          "base_binding": "max_per_stock",
-          "after_kelly": 1901234,
-          "after_volatility": 1330864,
-          "after_macro": 1064691,
-          "brain_position_guide_pct": 7,
-          "note": "brain_position_guide_pct 는 참고값이며 집행에 쓰이지 않는다"
-        },
-        "stop_loss_pct_individual": -15.21,
-        "stop_loss_method": "atr_dynamic",
-        "atr_method_at_entry": "wilder_ema_14",
-        "exit_targets": {
-          "target_1": {
-            "price": 121525.05,
-            "r_multiple": 1.0,
-            "exit_pct": 50.0,
-            "reason": "+1.0R reached, lock in gains"
-          },
-          "target_2": {
-            "price": 137910.45,
-            "r_multiple": 2.0,
-            "exit_pct": 30.0,
-            "reason": "+2.0R reached, scale out"
-          },
-          "target_3": {
-            "method": "trailing_stop",
-            "reason": "let winners run with trailing"
-          }
-        },
-        "stop_price": 88754.25,
-        "risk_per_share": 16344.44,
-        "entry_currency": "USD",
-        "entry_fx_rate": 1365.45,
-        "exit_history": [],
-        "trailing_active": false,
-        "realized_pnl_partial": 0,
-        "mode_tag": "moderate",
-        "sector": "Energy",
-        "beta": -0.3621,
-        "multi_factor": {
-          "quant_factors": {
-            "momentum": 69,
-            "quality": 60,
-            "volatility": 56,
-            "mean_reversion": 55
-          }
-        }
       },
       {
         "ticker": "068270",
@@ -793,11 +705,11 @@
         "asset_class": "US_STOCK",
         "buy_price": 166282.0278636057,
         "buy_price_original": 123.62999725341797,
-        "current_price": 164608.00402313235,
+        "current_price": 164050.1815917969,
         "highest_price": 169061.9363671875,
         "quantity": 7,
         "total_cost": 1164148.19504524,
-        "return_pct": -1.01,
+        "return_pct": -1.34,
         "buy_date": "2026-10-16",
         "buy_reason": "BUY 체결 — 근거 verity_brain BUY(67) · 참고 멀티팩터 관망(58)",
         "decision_basis": {
@@ -1145,11 +1057,11 @@
         "asset_class": "US_STOCK",
         "buy_price": 130308.42841075685,
         "buy_price_original": 97.93000030517578,
-        "current_price": 127775.0592416382,
+        "current_price": 128854.00636718751,
         "highest_price": 130308.42841075685,
         "quantity": 2,
         "total_cost": 260655.8568215137,
-        "return_pct": -1.94,
+        "return_pct": -1.12,
         "buy_date": "2026-10-19",
         "buy_reason": "BUY 체결 — 근거 verity_brain BUY(65) · 참고 멀티팩터 관망(59)",
         "decision_basis": {
@@ -1233,11 +1145,11 @@
         "asset_class": "US_STOCK",
         "buy_price": 33785.058118124005,
         "buy_price_original": 25.459999084472656,
-        "current_price": 34930.30768959046,
-        "highest_price": 34930.30768959046,
+        "current_price": 33759.4603112793,
+        "highest_price": 33785.058118124005,
         "quantity": 4,
         "total_cost": 135160.23247249602,
-        "return_pct": 3.39,
+        "return_pct": -0.08,
         "buy_date": "2026-10-22",
         "buy_reason": "멀티팩터 63점 (매수) — 관찰 필요",
         "decision_basis": {
@@ -1314,16 +1226,16 @@
         }
       }
     ],
-    "total_return_pct": -8.49,
-    "total_realized_pnl": -602025.497646824,
+    "total_return_pct": -8.51,
+    "total_realized_pnl": -609840.6666072081,
     "simulation_stats": {
-      "total_trades": 44,
+      "total_trades": 45,
       "win_count": 10,
-      "loss_count": 34,
-      "win_rate": 22.7,
-      "realized_pnl": -267384.26,
+      "loss_count": 35,
+      "win_rate": 22.2,
+      "realized_pnl": -275199.43,
       "peak_asset": 10081930.036603052,
-      "max_drawdown_pct": -8.91,
+      "max_drawdown_pct": -9.25,
       "best_trade": {
         "name": "티쓰리",
         "pnl": 153282.78,
@@ -1349,49 +1261,49 @@
           "realized_pnl": -517846.46
         },
         "after": {
-          "trades": 22,
+          "trades": 23,
           "wins": 5,
-          "losses": 17,
-          "win_rate": 0.2273,
-          "pl_ratio": 3.13,
-          "expectancy_r": -0.061,
-          "realized_pnl": -41502.6
+          "losses": 18,
+          "win_rate": 0.2174,
+          "pl_ratio": 3.265,
+          "expectancy_r": -0.073,
+          "realized_pnl": -49317.77
         },
         "used_by_gate": true,
         "note": "2026-08-09 이후 구간이 현행 게이트 정본이다. before 구간은 legacy diagnostic only."
       },
       "post_rule_change": {
-        "trades": 22,
-        "realized_pnl": -41502.6
+        "trades": 23,
+        "realized_pnl": -49317.77
       },
       "excluded_pre_reset_trades": 8,
       "excluded_phantom_sells": 59,
       "phantom_pnl_excluded": -1332835.1,
       "partial_exits_folded": true,
       "definition": "청산 episode 기준 (부분청산 부모 합산 · 보유 0 유령매도 배제) · SoT=api/vams/trade_ledger",
-      "updated_at": "2026-10-23T16:54:02+09:00"
+      "updated_at": "2026-10-23T22:35:36+09:00"
     },
     "active_profile": "moderate",
     "adjusted_performance": {
-      "adjusted_total_asset": 8978850.9,
-      "adjusted_return_pct": -10.21,
-      "raw_return_pct": -7.86,
+      "adjusted_total_asset": 8914226.33,
+      "adjusted_return_pct": -10.86,
+      "raw_return_pct": -8.51,
       "gap_pp": 2.35,
       "deductions": {
         "sell_tax_realized": 104619.92,
-        "sell_tax_unrealized_est": 10692.9,
-        "spread_slippage_realized": 37824.08,
-        "spread_slippage_unrealized_est": 3992.14,
+        "sell_tax_unrealized_est": 10670.0,
+        "spread_slippage_realized": 38345.75,
+        "spread_slippage_unrealized_est": 3438.05,
         "dividend_tax": 0.0,
         "dividend_tax_kr": 0.0,
         "dividend_tax_us": 0.0,
         "isa_excess_tax": 0.0,
         "us_capital_gains_tax": 0.0,
         "us_capital_gains_tax_unrealized_est": 0.0,
-        "us_fx_cost_realized": 70014.6,
-        "us_fx_cost_unrealized_est": 7913.47,
+        "us_fx_cost_realized": 73144.61,
+        "us_fx_cost_unrealized_est": 4623.29,
         "kr_capital_gains_tax": 0.0,
-        "total": 235057.12,
+        "total": 234841.63,
         "sell_tax_by_class": {
           "KR_STOCK": 104619.92,
           "US_STOCK": 0.0
@@ -1410,8 +1322,8 @@
         "us_capital_gains_rate_pct": 22.0,
         "us_capital_gains_deduction_krw": 2500000,
         "us_capital_gains_deduction_label": "양도소득 기본공제 (연 1회, 1인당)",
-        "us_capital_gains_realized_pnl_krw": -660948.05,
-        "us_capital_gains_unrealized_pnl_krw": 26707.74,
+        "us_capital_gains_realized_pnl_krw": -668763.22,
+        "us_capital_gains_unrealized_pnl_krw": -18867.16,
         "us_fx_cost_rate_pct": 0.3,
         "kr_capital_gains_realized_pnl_krw": 38367.64,
         "kr_tax_mode": "none",
@@ -1428,7 +1340,7 @@
         },
         "note": "VAMS 본체는 수수료·시장충격 슬리피지까지 반영. 본 보정은 증권거래세(종목 타입별 분기)·호가 스프레드·배당세(KR 15.4% / US 15.0% 한미 조세조약)·US 양도세(250만 공제 후 22% 분리과세)·US 환전 비용(0.3%/년)·KR 양도세(대주주 toggle 또는 금투세 재시행 fallback)·ISA 비과세 한도(mode_tag) 차감. 기본 KR 비대주주 0% 가정 (horizon ~2029 [[project_geumtu_tax_horizon]]). 금융소득 종합과세(연 2000만 초과) = 분리과세 유지 + alert 노출 (사용자 신고 영역)."
       },
-      "computed_at": "2026-10-23 16:53"
+      "computed_at": "2026-10-23 22:35"
     },
     "validation_report": {
       "_meta": {
@@ -1440,9 +1352,9 @@
         "min_detectable": {
           "method": "abs_t_3",
           "unit": "R",
-          "n": 22,
-          "sigma_r": 1.989793,
-          "effect_r": 1.273
+          "n": 23,
+          "sigma_r": 2.030594,
+          "effect_r": 1.27
         },
         "evidence_status": "STATISTICALLY_UNINFORMATIVE",
         "gate_metrics": {
@@ -1499,65 +1411,65 @@
       },
       "metrics": {
         "cumulative_return": {
-          "vams_return_pct": -6.08,
-          "benchmark_return_pct": -11.58,
-          "excess_pp": 5.5,
+          "vams_return_pct": -6.25,
+          "benchmark_return_pct": -11.32,
+          "excess_pp": 5.07,
           "threshold_pp": 0.0,
           "pass": true
         },
         "mdd": {
-          "vams_mdd_pct": -7.96,
+          "vams_mdd_pct": -8.05,
           "benchmark_mdd_pct": -21.85,
-          "ratio": 0.364,
+          "ratio": 0.368,
           "threshold_ratio": 1.0,
           "pass": true
         },
         "win_rate": {
-          "trades": 22,
+          "trades": 23,
           "wins": 5,
-          "losses": 17,
-          "win_rate": 0.2273,
+          "losses": 18,
+          "win_rate": 0.2174,
           "avg_win": 96254.15,
-          "avg_loss": -30751.37,
-          "pl_ratio": 3.13,
-          "expectancy_r": -0.061,
-          "sqn": -0.145,
-          "r_std": 1.989793,
+          "avg_loss": -29477.14,
+          "pl_ratio": 3.265,
+          "expectancy_r": -0.073,
+          "sqn": -0.172,
+          "r_std": 2.030594,
           "threshold": 0.55,
           "pass": false
         },
         "profit_loss_ratio": {
-          "pl_ratio": 3.13,
+          "pl_ratio": 3.265,
           "avg_win": 96254.15,
-          "avg_loss": -30751.37,
+          "avg_loss": -29477.14,
           "threshold": 1.5,
           "pass": true
         },
         "expectancy": {
-          "expectancy_r": -0.061,
+          "expectancy_r": -0.073,
           "threshold": 0.25,
           "pass": false
         },
         "sqn": {
-          "sqn": -0.145,
+          "sqn": -0.172,
           "threshold": 1.7,
           "pass": false
         },
         "sharpe": {
-          "annualized": -2.21,
+          "annualized": -2.27,
           "threshold_pass": 1.0,
           "threshold_redesign_below": 0.5,
           "verdict": "REDESIGN",
           "significance": {
-            "psr": 0.1289,
-            "dsr": 0.0029,
+            "psr": 0.1224,
+            "dsr": 0.0026,
             "T": 63,
             "n_trials_assumed": 10,
             "significant_95": false,
             "_note": "관측 only — verdict 미반영. PSR=SR>0 유의확률, DSR≥0.95=다중검정 보정 95% 신뢰. 저N 미달=엣지 미증명 정상"
           },
           "pass": false,
-          "empyrical_cross_simple": -2.1568599271643674
+          "empyrical_cross_simple": -2.219308965289795
         },
         "regime_coverage": {
           "covered": true,
@@ -1567,29 +1479,29 @@
         },
         "cost_efficiency": {
           "gap_pp_total": 2.35,
-          "alpha_pp": 5.5,
-          "cost_to_alpha_ratio": 0.427,
+          "alpha_pp": 5.07,
+          "cost_to_alpha_ratio": 0.464,
           "threshold_ratio_max": 0.5,
           "pass": true
         },
         "sortino": {
-          "annualized": -2.649958914970965,
+          "annualized": -2.724230856993831,
           "pass": null,
           "note": "informational only — Phase 2 sprint 진행할 때 pass 판정 wire"
         },
         "calmar": {
-          "annualized": -2.785359595545776,
+          "annualized": -2.826039459510984,
           "pass": null,
           "note": "informational only — Phase 2 sprint 진행할 때 pass 판정 wire"
         },
         "alpha_beta": {
-          "alpha": -0.15172297108844923,
-          "beta": 0.18996990424066892,
+          "alpha": -0.15974992328970494,
+          "beta": 0.18968726017871007,
           "pass": null,
           "note": "informational only — Phase 2 sprint 진행할 때 pass 판정 wire"
         },
         "capture_ratios": {
-          "up_capture": 0.009433484235021232,
+          "up_capture": 0.00994685107170269,
           "down_capture": 0.7470660291429378,
           "pass": null,
           "note": "informational only — Phase 2 sprint 진행할 때 pass 판정 wire"
@@ -1612,16 +1524,16 @@
         "source": "자체 일봉 동일가중 프록시 (kr_chart_daily)",
         "window": [
           20250523,
-          20261021
+          20261022
         ],
-        "trading_days": 344,
-        "market_return_pct": 73.77,
-        "momentum_weak_ratio": 31.7,
+        "trading_days": 345,
+        "market_return_pct": 68.32,
+        "momentum_weak_ratio": 34.2,
         "ma200_above_ratio": 100.0,
-        "ma200_days_known": 145,
-        "note": "창 20250523~20261021 · 시장 +73.77% · 20일 모멘텀 약세 32% · 200d MA 위 100% — 🚨 참고용. 200d MA 는 2026-06~08 창을 100% 강세로 오판한 전력이 있다(급등 직후 급락을 후행 지표가 못 잡음)."
+        "ma200_days_known": 146,
+        "note": "창 20250523~20261022 · 시장 +68.32% · 20일 모멘텀 약세 34% · 200d MA 위 100% — 🚨 참고용. 200d MA 는 2026-06~08 창을 100% 강세로 오판한 전력이 있다(급등 직후 급락을 후행 지표가 못 잡음)."
       },
-      "computed_at": "2026-10-23 16:53"
+      "computed_at": "2026-10-23 22:35"
     },
     "reset_meta": {
       "reset_at": "2026-05-17T14:12:07.968520+09:00",
@@ -1632,7 +1544,7 @@
     "fx_hedge_reserve": null,
     "tier_pnl": {
       "conservative": 0,
-      "moderate": -602025.5,
+      "moderate": -609840.67,
       "aggressive": 0
     },
     "fx_hedge_regime": {
@@ -2012,7 +1924,7 @@
         }
       ],
       "last": {
-        "fx": 1325.76,
+        "fx": 1324.16,
         "month": "2026-10",
         "usd_set": [
           "DORM",
@@ -2020,7 +1932,7 @@
           "MGY",
           "PARR"
         ],
-        "at": "2026-10-23T16:53:37+09:00"
+        "at": "2026-10-23T22:35:13+09:00"
       }
     },
     "fx_hedge_reserve_closed": {
