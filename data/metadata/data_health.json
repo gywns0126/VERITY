@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-10-23T19:12:45.867652+09:00",
+  "generated_at": "2026-10-23T20:12:57.412994+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
@@ -12,27 +12,27 @@
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-10-23T19:12:45.802966+09:00",
+   "generated_at": "2026-10-23T20:12:57.322797+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
   },
   "coverage": {
-   "generated_at": "2026-10-23T17:04:32.017737+09:00",
+   "generated_at": "2026-10-23T19:34:32.669058+09:00",
    "max_age_h": 96,
-   "age_h": 2.137,
+   "age_h": 0.64,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-10-23T19:12:39.144618+09:00",
+   "generated_at": "2026-10-23T20:12:44.166287+09:00",
    "max_age_h": 3,
-   "age_h": 0.002,
+   "age_h": 0.004,
    "status": "fresh"
   },
   "annual_backfill": {
    "generated_at": "2026-10-22T20:32:49.310146+00:00",
    "max_age_h": 48,
-   "age_h": 13.666,
+   "age_h": 14.669,
    "status": "fresh"
   }
  },
@@ -41,11 +41,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-10-23T19:12:45.802966+09:00",
+  "generated_at": "2026-10-23T20:12:57.322797+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 79179,
+  "max_cdn_age_s": 161051,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -55,7 +55,7 @@
      "PBR": 96.0
     },
     "total": 2550,
-    "cdn_age_s": 3587,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -66,7 +66,7 @@
      "PBR": 73.6
     },
     "total": 5272,
-    "cdn_age_s": 79179,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -77,7 +77,7 @@
      "PBR": 75.2
     },
     "total": 3972,
-    "cdn_age_s": 57567,
+    "cdn_age_s": 161051,
     "error": null
    },
    {
@@ -91,7 +91,7 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-10-23T17:04:32.017737+09:00",
+  "generated_at": "2026-10-23T19:34:32.669058+09:00",
   "kr_total": 2550,
   "us_total": 5272,
   "core_fill_pct": {
@@ -103,10 +103,10 @@
   "last_run_blocked": false,
   "last_run_fails": 0,
   "last_run_warns": 0,
-  "last_run_at": "2026-10-23T17:04:32.158741+09:00"
+  "last_run_at": "2026-10-23T19:34:32.793051+09:00"
  },
  "freshness": {
-  "generated_at": "2026-10-23T19:12:39.144618+09:00",
+  "generated_at": "2026-10-23T20:12:44.166287+09:00",
   "summary": {
    "fresh": 60,
    "stale": 0,
@@ -147,7 +147,7 @@
   "producer_evidence": {
    "news_flash": {
     "status": "bound_query_complete",
-    "completed_at": "2026-10-23T19:02:56.681951+09:00",
+    "completed_at": "2026-10-23T20:02:20.993105+09:00",
     "clock_kind": "source_query_attempt",
     "asset_binding": "verified_sha256",
     "source_freshness_verified": false,
