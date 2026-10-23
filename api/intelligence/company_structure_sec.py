@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-23-explicit-entity-headers-v5"
+PARSER_REVISION = "2026-10-24-issuer-bound-continuation-v6"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -218,6 +218,13 @@ def _complete_legal_name(name):
     return ending is not None and re.search(r"\w", name[:ending.start()]) is not None
 
 
+def _issuer_title_pattern(root):
+    # Same narrow terminal legal-form equivalence as _issuer_name_key; apply
+    # it to the issuer span, not the whole title ending in an as-of date.
+    return (re.escape(root[:-5]) + r" (?:corp|corporation)"
+            if root.endswith(" corp") else re.escape(root))
+
+
 def _current_legal_name(name):
     """Separate explicit trailing annotations; never turn them into ownership facts."""
     if name.endswith("*"):
@@ -377,11 +384,12 @@ def parse_exhibit(raw_html, metadata):
             prefix.append(str(node))
     heading_text = _norm(" ".join(prefix))
     root = _issuer_name_key(metadata.get("issuerName"))
+    root_pattern = _issuer_title_pattern(root) if root else None
     heading = _issuer_name_key(heading_text) or ""
     # AIR states the registrant before "Subsidiaries" and repeats headers on
     # each page. Require that complete title, not merely a name prefix.
     root_first_title = bool(root and re.search(
-        r"(?:^|\b)" + re.escape(root) + r" subsidiaries(?= as of |$)", heading)
+        r"(?:^|\b)" + root_pattern + r" subsidiaries(?= as of |$)", heading)
         and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
     for match in re.finditer(r"\bas of\s+([A-Za-z]+\s+\d{1,2},\s*\d{4}|\d{4}-\d{2}-\d{2})\b", heading_text, re.I):
         stated = match.group(1)
@@ -412,7 +420,7 @@ def parse_exhibit(raw_html, metadata):
                 prefix.append(str(node))
         heading = _issuer_name_key(_norm(" ".join(prefix))) or ""
         if (not root or re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading)
-                or not (root_first_title or re.search(r"\bsubsidiaries of " + re.escape(root) + r"(?= as of |$)", heading))):
+                or not (root_first_title or re.search(r"\bsubsidiaries of " + root_pattern + r"(?= as of |$)", heading))):
             result["reviewReason"] = "multiple-tables-issuer-scope-unbound"
             return result
         headers = []
@@ -435,7 +443,11 @@ def parse_exhibit(raw_html, metadata):
                     value = _norm(str(node).replace("\u200b", ""))
                     if value:
                         gap.append(value)
-            if gap and not re.fullmatch(r"(?:page\s*)?[0-9]{1,3}", " ".join(gap), re.I):
+            gap_text = " ".join(gap)
+            exhibit_marker = re.fullmatch(r"exhibit\s+(21(?:\.1)?)", gap_text, re.I)
+            repeated_exhibit = bool(exhibit_marker and re.search(
+                r"\bexhibit\s+" + re.escape(exhibit_marker[1]) + r"(?![\w.])", heading_text, re.I))
+            if gap and not (re.fullmatch(r"(?:page\s*)?[0-9]{1,3}", gap_text, re.I) or repeated_exhibit):
                 result["reviewReason"] = "continuation-scope-text"
                 return result
     _, _, _, roles = candidates[0]
