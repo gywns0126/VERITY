@@ -303,6 +303,9 @@ function sanitizeUsSources(doc) {
         item.reviewExhibit = { schema: e.schema, cik, accession: e.accession, filedDate: e.filedDate,
           periodEnd: e.periodEnd, url: e.url, documentSha256: e.documentSha256, status: 'needs-review' };
         if (typeof e.parserRevision === 'string' && /^[a-z0-9-]{1,80}$/u.test(e.parserRevision)) item.reviewExhibit.parserRevision = e.parserRevision;
+        // Fixed machine reasons only: no source paragraphs, HTML or local paths.
+        if (typeof e.reviewReason === 'string' && /^[a-z0-9-]{1,80}$/u.test(e.reviewReason)) item.reviewExhibit.reviewReason = e.reviewReason;
+        if (e.statedAsOf != null) { day(e.statedAsOf); item.reviewExhibit.statedAsOf = e.statedAsOf; }
       } catch { /* An unsafe review snapshot is omitted, never copied raw. */ }
     }
     if ('sourceGap' in source) {

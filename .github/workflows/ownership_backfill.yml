@@ -170,10 +170,29 @@ jobs:
           limit=$(python -c 'import os; n=int(os.environ["REQUESTED_CHUNK"]); assert 0 <= n <= 400; print(n)')
           python scripts/member-map/refresh-company-structure.py --source-dir data --store data/member_map_company_structure_sources.json --limit "$limit" --fetch-public
 
+      - name: Restore public SEC exhibit bytes for parser replay
+        id: sec-raw-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/company-structure-sec-v1
+          key: sec-structure-raw-v1-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: sec-structure-raw-v1-${{ runner.os }}-
+
+      - name: Recheck every cached unresolved SEC original without source calls
+        id: us-replay
+        run: python scripts/member-map/refresh-us-company-structure.py --source-dir data --store data/member_map_company_structure_us_sources.json --replay-cached --raw-cache-dir .cache/company-structure-sec-v1
+
       - name: Refresh bounded SEC exhibits
         id: us
         continue-on-error: true
-        run: python scripts/member-map/refresh-us-company-structure.py --source-dir data --store data/member_map_company_structure_us_sources.json --limit 800 --fetch-public
+        run: python scripts/member-map/refresh-us-company-structure.py --source-dir data --store data/member_map_company_structure_us_sources.json --limit 800 --fetch-public --raw-cache-dir .cache/company-structure-sec-v1
+
+      - name: Preserve public SEC originals even after a partial collection
+        if: ${{ always() && steps.sec-raw-cache.outcome == 'success' && (steps.us.outcome == 'success' || steps.us.outcome == 'failure') && hashFiles('.cache/company-structure-sec-v1/**/*.gz') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/company-structure-sec-v1
+          key: ${{ steps.sec-raw-cache.outputs.cache-primary-key }}
 
       - name: Normalize public durable source fields even after refresh failure
         id: safe

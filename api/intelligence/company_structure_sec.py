@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-23-footnoted-name-headers-v4"
+PARSER_REVISION = "2026-10-23-explicit-entity-headers-v5"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -68,10 +68,16 @@ def _archive_url(href: str, directory: str) -> str:
         if (len(expected) != 5 or len(parts_path) != 6
                 or parts_path[:3] != expected[:3]
                 or parts_path[4] != expected[4]
-                or not re.fullmatch(r"[1-9][0-9]{0,9}", parts_path[3], re.ASCII)
-                or expected[3].zfill(10) != expected[4][:10]):
+                or not re.fullmatch(r"[1-9][0-9]{0,9}", parts_path[3], re.ASCII)):
             raise ValueError("invalid-sec-document-url")
         filename = parts_path[5]
+        if not _SAFE_FILE.fullmatch(filename):
+            raise ValueError("invalid-sec-document-url")
+        if expected[3].zfill(10) != expected[4][:10]:
+            # A valid same-filing co-filer path is not a transport failure.
+            # Its subsidiary list may belong to a different registrant (EMP),
+            # so retain the strict issuer gate rather than accepting all CIKs.
+            raise ValueError("sec-cofiler-issuer-needs-review")
     if not _SAFE_FILE.fullmatch(filename) or "/" in filename:
         raise ValueError("invalid-sec-document-url")
     return f"https://{_SEC_HOST}{path.rsplit('/', 1)[0]}/{filename}"
@@ -175,7 +181,7 @@ def _header_role(value):
         return "name"
     value = re.sub(r"[^a-z0-9 ]", " ", value.casefold())
     value = " ".join(value.split())
-    if value in {"name", "company"} or any(word in value for word in (
+    if value in {"name", "company", "name of company", "name of entity", "entity"} or any(word in value for word in (
             "subsidiary", "subsidiaries", "company name", "legal name", "entity name")):
         return "name"
     if value in {"state of organization", "state or country of organization"} or any(
@@ -344,6 +350,7 @@ def parse_exhibit(raw_html, metadata):
               "url": url, "documentSha256": hashlib.sha256(raw).hexdigest(),
               "scope": "reported-subsidiary-list-not-exhaustive", "rows": [], "status": "needs-review"}
     if _VIE_MARKER.search(html):
+        result["reviewReason"] = "vie-scope-needs-review"
         return result
     candidates = []
     for table in soup.find_all("table"):
@@ -357,6 +364,7 @@ def parse_exhibit(raw_html, metadata):
                 candidates.append((table, trs, hi, roles))
                 break
     if not candidates:
+        result["reviewReason"] = "explicit-name-jurisdiction-header-missing"
         return result
     # Downstream currently dates relationships with periodEnd. An explicit
     # different exhibit date must not silently inherit the financial year end.
@@ -388,6 +396,7 @@ def parse_exhibit(raw_html, metadata):
             result["statedAsOf"] = stated_day
             return result
     if any(table.find_parent("table") is not None for table, *_ in candidates):
+        result["reviewReason"] = "nested-table-scope"
         return result
     if len(candidates) > 1:
         # Repeated page headers are a continuation only when the document names
@@ -404,14 +413,17 @@ def parse_exhibit(raw_html, metadata):
         heading = _issuer_name_key(_norm(" ".join(prefix))) or ""
         if (not root or re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading)
                 or not (root_first_title or re.search(r"\bsubsidiaries of " + re.escape(root) + r"(?= as of |$)", heading))):
+            result["reviewReason"] = "multiple-tables-issuer-scope-unbound"
             return result
         headers = []
         for table, trs, header_i, roles in candidates:
             if table.find_parent("table") is not None:
+                result["reviewReason"] = "nested-table-scope"
                 return result
             headers.append([_norm(cell.get_text(" ", strip=True)).casefold()
                             for cell in trs[header_i].find_all(["th", "td"], recursive=False)])
         if any(header != headers[0] for header in headers[1:]):
+            result["reviewReason"] = "continuation-headers-differ"
             return result
         for previous, following in zip(candidates, candidates[1:]):
             last = list(previous[0].descendants)[-1]
@@ -424,6 +436,7 @@ def parse_exhibit(raw_html, metadata):
                     if value:
                         gap.append(value)
             if gap and not re.fullmatch(r"(?:page\s*)?[0-9]{1,3}", " ".join(gap), re.I):
+                result["reviewReason"] = "continuation-scope-text"
                 return result
     _, _, _, roles = candidates[0]
     name_i, jurisdiction_i = roles.index("name"), roles.index("jurisdiction")
@@ -487,7 +500,10 @@ def parse_exhibit(raw_html, metadata):
                          "directOwnership": "unspecified", "sourceRow": source_row})
             if len(rows) > _MAX_ROWS:
                 result["rows"] = rows[:_MAX_ROWS]
+                result["reviewReason"] = "row-limit"
                 return result
     result["rows"] = rows
     result["status"] = "parsed" if rows and not needs_review else "needs-review"
+    if result["status"] == "needs-review":
+        result["reviewReason"] = "ambiguous-row-binding" if needs_review else "no-eligible-subsidiary-rows"
     return result
