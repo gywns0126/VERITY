@@ -172,6 +172,7 @@ jobs:
 
       - name: Restore public SEC exhibit bytes for parser replay
         id: sec-raw-cache
+        continue-on-error: true
         uses: actions/cache/restore@v4
         with:
           path: .cache/company-structure-sec-v1
@@ -180,6 +181,7 @@ jobs:
 
       - name: Recheck every cached unresolved SEC original without source calls
         id: us-replay
+        continue-on-error: true
         run: python scripts/member-map/refresh-us-company-structure.py --source-dir data --store data/member_map_company_structure_us_sources.json --replay-cached --raw-cache-dir .cache/company-structure-sec-v1
 
       - name: Refresh bounded SEC exhibits
@@ -286,16 +288,22 @@ jobs:
         run: node scripts/member-map/publish-company-structure.cjs --output-dir "$RUNNER_TEMP/company-structure-public" --committed-manifest data/member_map_company_structure_index.json --publish
 
       - name: Report collection failures after durable checkpoint
-        if: ${{ always() && (steps.kr.outcome == 'failure' || steps.us.outcome == 'failure') }}
+        if: ${{ always() && (steps.kr.outcome == 'failure' || steps.us.outcome == 'failure' || steps.us-replay.outcome == 'failure' || steps.sec-raw-cache.outcome == 'failure') }}
         env:
           KR_OUTCOME: ${{ steps.kr.outcome }}
           US_OUTCOME: ${{ steps.us.outcome }}
+          US_REPLAY_OUTCOME: ${{ steps.us-replay.outcome }}
+          SEC_CACHE_OUTCOME: ${{ steps.sec-raw-cache.outcome }}
         run: |
           python - <<'PY'
           import json, os, pathlib
           status = json.loads((pathlib.Path(os.environ['RUNNER_TEMP']) / 'company-structure-run-status.json').read_text())
           errors = [m for m in ('KR', 'US') if os.environ[m + '_OUTCOME'] == 'failure'
                     and not status.get(m, {}).get('normalDeferred', False)]
+          if os.environ['US_REPLAY_OUTCOME'] == 'failure':
+              errors.append('US-cache-replay')
+          if os.environ['SEC_CACHE_OUTCOME'] == 'failure':
+              errors.append('US-cache-restore')
           if errors:
               print('::error::Source refresh error: ' + ','.join(errors) + '; retained snapshot/failure labels can publish only after safe/build/durable checks.')
               raise SystemExit(1)

@@ -1,5 +1,8 @@
 """Public exhibit layout variants; no source calls or ownership inference."""
 import pytest
+import json
+from pathlib import Path
+import yaml
 
 from api.intelligence.company_structure_sec import parse_exhibit, find_exhibit
 from api.collectors.company_structure_us_refresh import latest_metadata
@@ -76,3 +79,29 @@ def test_shared_filing_does_not_prove_the_exhibit_belongs_to_each_issuer(cik, ac
              f"<tr><td><a href='{url}'>ex21.htm</a></td><td>EX-21</td></tr></table>")
     with pytest.raises(ValueError, match="sec-cofiler-issuer-needs-review"):
         find_exhibit(index, cik=cik, accession=accession)
+
+
+@pytest.mark.parametrize("replay_outcome,cache_outcome,should_fail", [("failure", "success", True), ("success", "failure", True), ("success", "success", False)])
+def test_cache_replay_failure_is_reported_without_blocking_other_collectors(tmp_path, monkeypatch, replay_outcome, cache_outcome, should_fail):
+    workflow = yaml.safe_load((Path(__file__).resolve().parents[1] / '.github/workflows/ownership_backfill.yml').read_text())
+    steps = workflow['jobs']['backfill']['steps']
+    by_id = {s['id']: s for s in steps if 'id' in s}
+    assert by_id['us-replay']['continue-on-error'] is True
+    assert by_id['sec-raw-cache']['continue-on-error'] is True
+    assert steps.index(by_id['sec-raw-cache']) < steps.index(by_id['us-replay']) < steps.index(by_id['us'])
+    report = next(s for s in steps if s.get('name') == 'Report collection failures after durable checkpoint')
+    assert "steps.us-replay.outcome == 'failure'" in report['if']
+    assert "steps.sec-raw-cache.outcome == 'failure'" in report['if']
+    # A normal HTTP budget deferral cannot erase an independent replay failure.
+    (tmp_path / 'company-structure-run-status.json').write_text(json.dumps({'US': {'normalDeferred': True}}))
+    for key, value in {'RUNNER_TEMP': str(tmp_path), 'KR_OUTCOME': 'success',
+                       'US_OUTCOME': 'failure', 'US_REPLAY_OUTCOME': replay_outcome,
+                       'SEC_CACHE_OUTCOME': cache_outcome}.items():
+        monkeypatch.setenv(key, value)
+    code = report['run'].split("python - <<'PY'\n")[1].rsplit('\nPY', 1)[0]
+    if should_fail:
+        with pytest.raises(SystemExit) as exc:
+            exec(code, {})
+        assert exc.value.code == 1
+    else:
+        exec(code, {})
