@@ -30,7 +30,7 @@ EXPLICIT_ONLY_DESTS = frozenset({"_operator/dart_fundamentals_kr.json"})
 PORTFOLIO_DEST = "_operator/portfolio_full.json"
 STORAGE_ERROR_CODES = frozenset({
     "EntityTooLarge", "InvalidMimeType", "InvalidRequest", "InvalidKey", "InvalidBucketName",
-    "InvalidJWT", "AccessDenied", "NoSuchKey", "NoSuchBucket", "ResourceAlreadyExists",
+    "InvalidJWT", "AccessDenied", "DatabaseTimeout", "NoSuchKey", "NoSuchBucket", "ResourceAlreadyExists",
     "KeyAlreadyExists", "AlreadyExists", "already_exists", "not_found", "unauthorized",
 })
 STORAGE_CACHE_STATES = frozenset({
@@ -166,6 +166,34 @@ def _storage_diagnostic(stage: str, response, byte_count: int):
     print("[operator_storage] " + json.dumps({
         "stage": stage, "http_status": response.status_code if response is not None else None,
         "bytes": byte_count, "code": code,
+    }, separators=(",", ":")), file=sys.stderr)
+
+
+def _private_bucket_diagnostic(response, *, json_parsed: bool, public, code: str = "unknown",
+                               exception_class=None):
+    """Explain a rejected private-bucket check using metadata only."""
+    content_type = "unknown"
+    status = None
+    if response is not None:
+        status = getattr(response, "status_code", None)
+        headers = getattr(response, "headers", {})
+        media_type = headers.get("Content-Type", "") if hasattr(headers, "get") else ""
+        if isinstance(media_type, str):
+            media_type = media_type.split(";", 1)[0].strip().lower()
+            if media_type in {"application/json", "application/problem+json"}:
+                content_type = media_type
+    known_exceptions = {
+        "ConnectTimeout", "ReadTimeout", "Timeout", "ConnectionError", "SSLError",
+        "ProxyError", "InvalidURL", "TooManyRedirects", "RequestException",
+    }
+    if exception_class not in known_exceptions:
+        exception_class = "request_error" if exception_class else None
+    if code not in STORAGE_ERROR_CODES:
+        code = "unknown"
+    print("[operator_bucket] " + json.dumps({
+        "stage": "verification", "http_status": status, "content_type": content_type,
+        "json_parsed": bool(json_parsed), "public": public if type(public) is bool else None,
+        "code": code, "exception_class": exception_class,
     }, separators=(",", ":")), file=sys.stderr)
 
 
@@ -362,9 +390,28 @@ def main() -> int:
                 headers={"apikey": key, "Authorization": f"Bearer {key}"}, timeout=20,
                 allow_redirects=False,
             )
-            private = check.status_code == 200 and check.json().get("public") is False
-        except (requests.RequestException, ValueError, AttributeError):
+        except requests.RequestException as exc:
+            _private_bucket_diagnostic(None, json_parsed=False, public=None,
+                                       exception_class=type(exc).__name__)
             private = False
+        else:
+            try:
+                payload = check.json()
+                json_parsed = True
+            except (ValueError, AttributeError, TypeError):
+                payload = None
+                json_parsed = False
+            public = payload.get("public") if isinstance(payload, dict) else None
+            private = check.status_code == 200 and public is False
+            if not private:
+                code = "unknown"
+                if isinstance(payload, dict):
+                    for field in ("code", "error"):
+                        value = payload.get(field)
+                        if isinstance(value, str) and value in STORAGE_ERROR_CODES:
+                            code = value
+                            break
+                _private_bucket_diagnostic(check, json_parsed=json_parsed, public=public, code=code)
         if not private:
             print("ERROR: private bucket verification failed; upload blocked", file=sys.stderr)
             return 2

@@ -85,7 +85,7 @@ def _cached_answer(doc):
 
 
 def _payload_size(worker, doc):
-    packet = worker.prepare_judgment_packet([doc], as_of=AS_OF)
+    packet = worker.prepare_judgment_prompt_packet([doc], as_of=AS_OF)
     payload = worker.ai._openai_payload(doc)
     payload.update(instructions=worker.SYSTEM, input=json.dumps(packet, ensure_ascii=False))
     payload["text"]["format"].update(name="company_judgment", schema=worker.SCHEMA)
@@ -303,7 +303,8 @@ def test_mid_sentence_quote_is_rejected_with_closed_reason_and_no_acceptance(wor
     assert business.validate_company_judgments(full_sentence, [doc], as_of=AS_OF)["judgments"]
     validation = business.validate_company_judgments(answer, [doc], as_of=AS_OF)
     assert validation["judgments"] == []
-    assert validation["rejected"] == [{"index": 0, "reason": "judgment-incomplete-sentence"}]
+    assert validation["rejected"] == [{"index": 0, "reason": "judgment-incomplete-sentence",
+                                        "sentence_check": "partial-sentence"}]
 
     calls = []
     def transport(payload, key):
@@ -328,12 +329,14 @@ def test_mid_sentence_quote_is_rejected_with_closed_reason_and_no_acceptance(wor
     assert "Do not start at a later\nclause after a comma or semicolon" in calls[0]["instructions"]
     assert result["status"] == "error"
     assert result.get("reason") == "judgment-incomplete-sentence", result
-    assert result["rejected"] == [{"index": 0, "reason": "judgment-incomplete-sentence"}]
+    assert result["rejected"] == [{"index": 0, "reason": "judgment-incomplete-sentence",
+                                        "sentence_check": "partial-sentence"}]
     assert result["raw_answer"] == answer and result.get("judgments", []) == []
 
     summary = worker.run_batch([doc], tmp_path / "batch.sqlite3", "synthetic-key", object(),
                                as_of=AS_OF, limit=1, runner=lambda *args, **kwargs: result)
     assert summary["error_counts"] == {"judgment-incomplete-sentence": 1}
+    assert summary["sentence_rejection_counts"] == {"partial-sentence": 1}
     assert summary["paid_attempts"] == 1 and summary["accepted_judgments"] == 0
     assert summary["published"] is False
     rendered = json.dumps(summary, ensure_ascii=False)
@@ -691,3 +694,24 @@ def test_worker_drops_untrusted_transport_diagnostics(worker, tmp_path, diagnost
     summary = worker.run_batch([_doc()], tmp_path / "unused", "synthetic-key", object(),
                                as_of=AS_OF, limit=1, runner=lambda *a, **k: result)
     assert summary["transport_diagnostics"] == [] and "PRIVATE" not in json.dumps(summary)
+
+
+@pytest.mark.parametrize("diagnostic", [
+    {"index": 0, "reason": "judgment-incomplete-sentence", "sentence_check": ["partial-sentence"]},
+    {"index": 0, "reason": "judgment-incomplete-sentence", "sentence_check": "PRIVATE_DIAGNOSTIC_CANARY"},
+    {"index": True, "reason": "judgment-incomplete-sentence", "sentence_check": "partial-sentence"},
+    {"index": 16, "reason": "judgment-incomplete-sentence", "sentence_check": "partial-sentence"},
+])
+def test_sentence_diagnostic_summary_rejects_untrusted_shapes_and_keeps_fatal_boundary(worker, tmp_path, diagnostic):
+    result = {"status": "error", "error_type": "ValueError", "reason": "judgment-incomplete-sentence",
+              "rejected": [diagnostic]}
+    calls = []
+    def runner(*args, **kwargs):
+        calls.append(1)
+        return result
+    summary = worker.run_batch([_doc(), _doc()], tmp_path / "closed.sqlite3", "synthetic-key", object(),
+                               as_of=AS_OF, limit=2, runner=runner)
+    assert summary["sentence_rejection_counts"] == {}
+    assert summary["status"] == "stopped" and summary["stop_reason"] == "error"
+    assert summary["paid_attempts"] == len(calls) == 1 and summary["published"] is False
+    assert "PRIVATE_DIAGNOSTIC_CANARY" not in json.dumps(summary)
