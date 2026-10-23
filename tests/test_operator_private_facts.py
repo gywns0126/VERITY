@@ -92,8 +92,15 @@ def test_upload_registry_contains_exact_approved_routes():
                         if rel != "data/recommendations.json"}
 
 
-@pytest.mark.parametrize("public,status,expected", [(False, 200, 0), (True, 200, 2), (None, 200, 2), (False, 403, 2)])
-def test_new_uploads_require_verified_private_bucket(monkeypatch, tmp_path, public, status, expected):
+@pytest.mark.parametrize("status,payload,expected,diagnostic", [
+    (200, {"public": False}, 0, None),
+    (200, {"public": True}, 2, {"http_status": 200, "content_type": "application/json", "json_parsed": True, "public": True, "code": "unknown", "exception_class": None}),
+    (200, {}, 2, {"http_status": 200, "content_type": "application/json", "json_parsed": True, "public": None, "code": "unknown", "exception_class": None}),
+    (403, {"public": False}, 2, {"http_status": 403, "content_type": "application/json", "json_parsed": True, "public": False, "code": "unknown", "exception_class": None}),
+    (544, {"code": "DatabaseTimeout", "message": "SECRET_RESPONSE"}, 2,
+     {"http_status": 544, "content_type": "application/json", "json_parsed": True, "public": None, "code": "DatabaseTimeout", "exception_class": None}),
+])
+def test_new_uploads_require_verified_private_bucket(monkeypatch, tmp_path, capsys, status, payload, expected, diagnostic):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "data").mkdir(exist_ok=True)
     original = b'{"updated_at":"2026-08-14","company_reports":[]}'
@@ -103,12 +110,70 @@ def test_new_uploads_require_verified_private_bucket(monkeypatch, tmp_path, publ
     monkeypatch.setattr(publisher, "BUCKET", "verity-reports")
     monkeypatch.setattr(publisher.sys, "argv", ["upload", "--only", "analyst_reports"])
     monkeypatch.setattr(publisher.requests, "get", lambda *a, **k:
-                        SimpleNamespace(status_code=status, json=lambda: {"public": public}))
+                        SimpleNamespace(status_code=status, headers={"Content-Type": "application/json; charset=utf-8"},
+                                        json=lambda: payload))
     sent = []
     monkeypatch.setattr(publisher.requests, "post", lambda *a, **k:
                         sent.append(k["data"]) or SimpleNamespace(status_code=200))
     assert publisher.main() == expected
     assert sent == ([original] if expected == 0 else [])
+    captured = capsys.readouterr()
+    assert "SECRET_RESPONSE" not in captured.out + captured.err
+    assert "application/secret-response-canary" not in captured.out + captured.err
+    lines = [line for line in captured.err.splitlines() if line.startswith("[operator_bucket] ")]
+    if diagnostic is None:
+        assert lines == []
+    else:
+        assert len(lines) == 1
+        entry = json.loads(lines[0].split("[operator_bucket] ", 1)[1])
+        assert entry == {"stage": "verification", **diagnostic}
+
+
+@pytest.mark.parametrize("error,expected_class", [
+    (ValueError("SECRET_RESPONSE"), None),
+    (None, "ReadTimeout"),
+])
+@pytest.mark.parametrize("content_type,expected_content_type", [
+    ("text/html", "unknown"),
+    ("application/secret-response-canary", "unknown"),
+    ("application/problem+json", "application/problem+json"),
+])
+def test_private_bucket_diagnostic_sanitizes_invalid_json_and_transport_errors(
+        monkeypatch, tmp_path, capsys, error, expected_class, content_type, expected_content_type):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "data").mkdir(exist_ok=True)
+    (tmp_path / "data/analyst_reports.json").write_text('{"company_reports":[]}')
+    monkeypatch.setenv("SUPABASE_URL", "https://private.example.test")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "SECRET")
+    monkeypatch.setattr(publisher, "BUCKET", "verity-reports")
+    monkeypatch.setattr(publisher.sys, "argv", ["upload", "--only", "analyst_reports"])
+
+    def get(*args, **kwargs):
+        if error is None:
+            import requests
+            raise requests.ReadTimeout("SECRET_RESPONSE")
+        return SimpleNamespace(status_code=200, headers={"Content-Type": content_type},
+                               json=lambda: (_ for _ in ()).throw(error))
+
+    monkeypatch.setattr(publisher.requests, "get", get)
+    sent = []
+    monkeypatch.setattr(publisher.requests, "post", lambda *a, **k: sent.append(1))
+    assert publisher.main() == 2
+    assert sent == []
+    captured = capsys.readouterr()
+    assert "SECRET_RESPONSE" not in captured.out + captured.err
+    assert "application/secret-response-canary" not in captured.out + captured.err
+    lines = [line for line in captured.err.splitlines() if line.startswith("[operator_bucket] ")]
+    assert len(lines) == 1
+    entry = json.loads(lines[0].split("[operator_bucket] ", 1)[1])
+    assert entry["stage"] == "verification"
+    expected_content_type = expected_content_type if expected_class is None else "unknown"
+    if expected_class is None:
+        assert entry == {"stage": "verification", "http_status": 200, "content_type": expected_content_type,
+                         "json_parsed": False, "public": None, "code": "unknown", "exception_class": None}
+    else:
+        assert entry == {"stage": "verification", "http_status": None, "content_type": "unknown",
+                         "json_parsed": False, "public": None, "code": "unknown", "exception_class": expected_class}
 
 
 def test_explicit_missing_approved_upload_fails(monkeypatch, tmp_path):

@@ -236,7 +236,7 @@ def _oversized_case():
     packet = business.prepare_judgment_packet([doc], as_of=AS_OF)
     answer["judgments"][0]["source_version"] = packet["sources"][0]["source_version"]
     payload = ai._openai_payload(doc)
-    payload.update(instructions=business.SYSTEM, input=json.dumps(packet, ensure_ascii=False))
+    payload.update(instructions=business.SYSTEM, input=json.dumps(business.prepare_judgment_prompt_packet([doc], as_of=AS_OF), ensure_ascii=False))
     payload["text"]["format"].update(name="company_judgment", schema=business.SCHEMA)
     assert len(doc["text"]) == 600 and ai.MAX_PROMPT_BYTES == 8000
     assert len(json.dumps(payload, ensure_ascii=False).encode()) > ai.MAX_PROMPT_BYTES
@@ -262,3 +262,99 @@ def test_oversized_outbound_payload_allows_free_restore_but_never_a_new_reservat
     with sqlite3.connect(ledger) as db:
         assert db.execute("SELECT COUNT(*) FROM calls").fetchone()[0] == 0
     assert (doc, answer, saved) == before
+
+
+@pytest.mark.parametrize("text", [
+    "  당사는 2025년 APS에 부품을 공급합니다.   합성발행기업 APS dsp     당사는 설계 서비스를 제공합니다.  ",
+    "당사는 2025년 APS에 부품을 공급합니다. 끝나지 않은 추가 문맥",
+    "당사는 APS에 부품을 공급합니다. 당사는 APS에 부품을 공급합니다.",
+    "당사는 APS (Synthetic Inc. 3.5 Module)에 부품을 공급합니다. 다음 문장입니다.",
+])
+def test_prompt_choices_preserve_every_character_and_only_mark_validator_eligible_entries(text):
+    doc, _ = _case()
+    doc["text"] = text
+    before = deepcopy(doc)
+    original = business.prepare_judgment_packet([doc], as_of=AS_OF)
+    prompt = business.prepare_judgment_prompt_packet([doc], as_of=AS_OF)
+    source = prompt["sources"][0]
+    assert "text" not in source and "sentence_choices" not in original["sources"][0]
+    assert "".join(source["sentence_choices"]) == text
+    assert "".join(source["sentence_choices"]).encode() == text.encode()
+    assert source["source_version"] == original["sources"][0]["source_version"] == ai._digest(doc)
+    for index, entry in enumerate(source["sentence_choices"]):
+        if index in source.get("unquotable_choices", []):
+            with pytest.raises(ValueError):
+                business._sentence(entry.strip(), doc)
+        else:
+            business._sentence(entry.strip(), doc)
+    if text.endswith("문맥"):
+        assert source["unquotable_choices"] == [1]
+    if text.count("당사는 APS에 부품을 공급합니다.") == 2:
+        assert source["unquotable_choices"] == [0, 1]
+    assert doc == before
+
+
+def _heading_fragment_case():
+    doc, answer = _case()
+    full = doc["text"]
+    doc["text"] = "합성발행기업 APS dsp     " + full
+    row = answer["judgments"][0]
+    row["source_version"] = ai._digest(doc)
+    row["quote"] = full  # Omits the source's leading label, as in the production rejection.
+    return doc, answer
+
+
+def test_heading_omission_stays_rejected_while_prompt_offers_the_whole_source_sentence(tmp_path):
+    doc, answer = _heading_fragment_case()
+    before = deepcopy((doc, answer))
+    rejected = business.validate_company_judgments(answer, [doc], as_of=AS_OF)
+    assert rejected["judgments"] == []
+    assert rejected["rejected"] == [{"index": 0, "reason": "judgment-incomplete-sentence",
+                                      "sentence_check": "partial-sentence"}]
+    payloads = []
+    def transport(payload, key):
+        payloads.append(payload)
+        full = deepcopy(answer)
+        full["judgments"][0]["quote"] = doc["text"]
+        return full, {"input_tokens": 100, "output_tokens": 30}
+    result = ai.run_document(doc, tmp_path / "choices.sqlite3", "synthetic-key", enabled=True,
+                             judgment_as_of=AS_OF, transport=transport)
+    assert result["status"] == "ok" and result["published"] is False
+    source = json.loads(payloads[0]["input"])["sources"][0]
+    assert source["sentence_choices"] == [doc["text"]]
+    assert "Keep its leading labels" in payloads[0]["instructions"]
+    assert result["raw_answer"]["judgments"][0]["quote"] == doc["text"]
+    assert result["judgments"][0]["display"] == {"degree": "unrated", "impact": "unknown", "importance": "unrated"}
+    assert (doc, answer) == before
+
+
+def test_archived_heading_fragment_remains_an_error_and_never_spends_again(tmp_path):
+    doc, answer = _heading_fragment_case()
+    saved = _saved(doc, answer)
+    saved["result"]["status"] = "error"
+    before = deepcopy(saved)
+    budget = ReadOnlyBudget(saved)
+    result = ai.run_document(doc, tmp_path / "frozen-error.sqlite3", "synthetic-key", enabled=True,
+                             judgment_as_of=NEXT_DAY, budget_ledger=budget,
+                             result_store=archive.SupabaseResultStore(budget))
+    assert result["status"] == "cached" and result["original_status"] == "error"
+    assert result["provider_calls"] == 0 and result["published"] is False
+    assert result["judgments"] == [] and result["raw_answer"] == answer
+    assert result["rejected"] == [{"index": 0, "reason": "judgment-incomplete-sentence",
+                                   "sentence_check": "partial-sentence"}]
+    assert budget.get_calls == 1 and budget.reserve_calls == budget.settle_calls == 0
+    assert saved == before and business.VERSION == "company-business-judgment-v1"
+    assert business.CACHE_VERSION == "company-business-judgment-prompt-v2"
+
+
+@pytest.mark.parametrize("quote,text,check", [
+    ("없는 문장입니다.", "원래 문장입니다.", "source-span-absent"),
+    ("반복 문장입니다.", "반복 문장입니다. 반복 문장입니다.", "source-span-repeated"),
+    ("미완성 문맥", "미완성 문맥", "complete-sentence-boundary"),
+    ("일부입니다.", "앞부분이며, 일부입니다.", "partial-sentence"),
+])
+def test_sentence_rejection_diagnostics_use_fixed_labels_without_source_content(quote, text, check):
+    with pytest.raises(ValueError, match="^judgment-incomplete-sentence$") as caught:
+        business._sentence(quote, {"text": text})
+    assert caught.value.judgment_sentence_check == check
+    assert str(caught.value) == "judgment-incomplete-sentence"

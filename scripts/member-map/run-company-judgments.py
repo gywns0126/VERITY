@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT))
 from api.intelligence import portfolio_ai_fallback as ai
 from api.intelligence.portfolio_ai_budget_ledger import SupabaseBudgetLedger
 from api.intelligence.portfolio_business_judgment import (
-    DIAGNOSTIC_ERROR_REASONS, prepare_judgment_packet, SYSTEM, SCHEMA, VERSION,
+    DIAGNOSTIC_ERROR_REASONS, SENTENCE_REJECTION_CHECKS, prepare_judgment_prompt_packet, SYSTEM, SCHEMA, VERSION,
 )
 
 MAX_PROBES = 40
@@ -69,7 +69,7 @@ def plan(documents, *, as_of):
         if doc["as_of"] > as_of:
             future += 1
             continue
-        packet = prepare_judgment_packet([doc], as_of=as_of)
+        packet = prepare_judgment_prompt_packet([doc], as_of=as_of)
         payload = ai._openai_payload(doc)
         payload.update(instructions=SYSTEM, input=json.dumps(packet, ensure_ascii=False))
         payload["text"]["format"].update(name="company_judgment", schema=SCHEMA)
@@ -94,6 +94,7 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
     runner = runner or ai.run_document
     counts, calls, pending, grade_proposals, findings, stop = Counter(), 0, 0, Counter(), 0, None
     errors, archived_failures, transport_diagnostics = Counter(), 0, []
+    sentence_rejections = Counter()
     for doc in documents:
         result = runner(doc, ledger_path, api_key, enabled=True,
                         judgment_as_of=as_of, budget_ledger=budget)
@@ -113,6 +114,14 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
                      else reason if type(reason) is str and reason in _ERROR_REASONS
                      else kind if type(kind) is str and kind in _ERROR_TYPES else "unclassified")
             errors[label] += 1
+            rejected = result.get("rejected")
+            if type(rejected) is list and len(rejected) <= 16:
+                for row in rejected:
+                    if (type(row) is dict and row.get("reason") == "judgment-incomplete-sentence"
+                            and type(row.get("index")) is int and 0 <= row["index"] < 16
+                            and type(row.get("sentence_check")) is str
+                            and row["sentence_check"] in SENTENCE_REJECTION_CHECKS):
+                        sentence_rejections[row["sentence_check"]] += 1
         diagnostic = result.get("transport_diagnostic")
         if (status in {"ok", "error"} and type(diagnostic) is dict
                 and set(diagnostic) == {"stage", "elapsed_ms", "socket_timeout_seconds"}
@@ -144,7 +153,8 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
             "results": dict(counts), "paid_attempts": calls,
             "processed_documents": sum(counts.values()), "pending_judgments": pending,
             "proposed_degree_counts": dict(grade_proposals), "quality_findings": findings,
-            "error_counts": dict(errors), "archived_failed_documents": archived_failures,
+            "error_counts": dict(errors), "sentence_rejection_counts": dict(sentence_rejections),
+            "archived_failed_documents": archived_failures,
             "transport_diagnostics": transport_diagnostics,
             "accepted_judgments": 0, "confirmed_relationships": 0, "published": False}
 

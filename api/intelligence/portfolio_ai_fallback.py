@@ -869,7 +869,7 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
         from . import portfolio_business_judgment as business
         if with_context or with_claims or archived_answer is not None:
             raise ValueError("judgment-mode-conflict")
-        packet = business.prepare_judgment_packet([doc], as_of=judgment_as_of)
+        packet = business.prepare_judgment_prompt_packet([doc], as_of=judgment_as_of)
     if archived_answer is not None:
         if (type(archived_answer) is not dict or set(archived_answer) != {"document", "answer"}
                 or _digest(validate_document(archived_answer["document"])) != _digest(doc)):
