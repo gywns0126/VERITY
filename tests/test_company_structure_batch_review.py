@@ -12,6 +12,28 @@ META = {"cik": "0000004904", "accession": "0000004904-26-000018",
         "url": "https://www.sec.gov/Archives/edgar/data/4904/000000490426000018/ex21.htm",
         "issuerName": "American Electric Power Company, Inc."}
 
+CBT_META = {"cik": "0000016040", "accession": "0001193125-25-292412",
+            "filedDate": "2025-11-24", "periodEnd": "2025-09-30",
+            "url": "https://www.sec.gov/Archives/edgar/data/16040/000119312525292412/cbt-ex21.htm",
+            "issuerName": "Cabot Corp"}
+
+
+def cbt_table(name, *, name_header="Subsidiary", jurisdiction_header="State/Jurisdiction of Incorporation",
+              jurisdiction="Delaware"):
+    return (f"<table><tr><td>{name_header}</td><td>{jurisdiction_header}</td></tr>"
+            f"<tr><td>{name}</td><td>{jurisdiction}</td></tr></table>")
+
+
+def cbt_three_tables(*, title="Exhibit 21 Subsidiaries of Cabot Corporation (as of September 30, 2025)*",
+                     first_gap="Exhibit 21", second_gap="Exhibit 21", second_header="Subsidiary",
+                     third_row="Cabot Specialty Fluids LLC"):
+    return (f"<p>{title}</p>"
+            + cbt_table("Cabot Holdings LLC")
+            + f"<p>{first_gap}</p>"
+            + cbt_table("Cabot International LLC", name_header=second_header)
+            + f"<p>{second_gap}</p>"
+            + cbt_table(third_row))
+
 
 def table(header, jurisdiction="Location of Incorporation"):
     return (f"<table><tr><td>{header}</td><td></td><td>{jurisdiction}</td></tr>"
@@ -48,6 +70,53 @@ def test_other_parties_and_trade_names_do_not_become_legal_entities(header):
 ])
 def test_batch_review_has_actionable_reasons_without_promotion(html, reason):
     result = parse_exhibit(html, META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == reason
+
+
+@pytest.mark.parametrize("issuer_name,title_name", [
+    ("Cabot Corp", "Cabot Corporation"),
+    ("Cabot Corporation", "Cabot Corp"),
+])
+def test_cbt_title_binds_only_terminal_corp_corporation(issuer_name, title_name):
+    html = cbt_three_tables(title=f"Exhibit 21 Subsidiaries of {title_name} (as of September 30, 2025)*")
+    result = parse_exhibit(html, {**CBT_META, "issuerName": issuer_name})
+    assert result["status"] == "parsed"
+    assert [row["name"] for row in result["rows"]] == [
+        "Cabot Holdings LLC", "Cabot International LLC", "Cabot Specialty Fluids LLC"]
+    assert [row["sourceRow"]["tableIndex"] for row in result["rows"]] == [0, 1, 2]
+    assert all(row["ownershipPct"] is None and row["directOwnership"] == "unspecified"
+               for row in result["rows"])
+
+
+@pytest.mark.parametrize("marker", ["Exhibit 21", "Exhibit 21.1"])
+def test_cbt_three_tables_allow_only_matching_repeated_exhibit_marker(marker):
+    html = cbt_three_tables(title=f"{marker} Subsidiaries of Cabot Corporation (as of September 30, 2025)*",
+                            first_gap=marker, second_gap=marker)
+    result = parse_exhibit(html, CBT_META)
+    assert result["status"] == "parsed"
+    assert len(result["rows"]) == 3
+
+
+@pytest.mark.parametrize("changes,reason", [
+    ({"title": "Exhibit 21 Subsidiaries of Another Corporation (as of September 30, 2025)*"},
+     "multiple-tables-issuer-scope-unbound"),
+    ({"title": "Exhibit 21 Former Subsidiaries of Cabot Corporation (as of September 30, 2025)*"},
+     "multiple-tables-issuer-scope-unbound"),
+    ({"first_gap": "Exhibit 8"}, "continuation-scope-text"),
+    ({"first_gap": "Exhibit 21 additional subsidiaries"}, "continuation-scope-text"),
+    ({"title": "Subsidiaries of Cabot Corporation (as of September 30, 2025)*"},
+     "continuation-scope-text"),
+    ({"first_gap": "Exhibit 21.1"}, "continuation-scope-text"),
+    ({"second_header": "Company Name"}, "continuation-headers-differ"),
+    ({"title": "Exhibit 21 Subsidiaries of Cabot Corporation (as of September 30, 2024)*"},
+     "exhibit-as-of-differs-from-period-end"),
+    ({"third_row": "Cabot Specialty Fluids LLC<br>Unbound Name LLC"}, "ambiguous-row-binding"),
+    ({"third_row": "Cabot Corporation Foundation, Inc."}, "ambiguous-row-binding"),
+    ({"third_row": "Energy Transport Limited LLC"}, "ambiguous-row-binding"),
+])
+def test_cbt_near_misses_remain_held(changes, reason):
+    result = parse_exhibit(cbt_three_tables(**changes), CBT_META)
     assert result["status"] == "needs-review"
     assert result["reviewReason"] == reason
 
