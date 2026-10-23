@@ -190,6 +190,7 @@ class IsolatedRouteTests(unittest.TestCase):
 
 class BuildProbeTests(unittest.TestCase):
     def test_success_uses_only_fixed_destinations_and_five_bounded_requests(self):
+        existing_server = sys.modules.get("server.main")
         opener = FakeOpener()
         result = run_verify(opener, {**ENV, "RAILWAY_URL": "https://synthetic.invalid/",
             "SUPABASE_URL": "https://synthetic.invalid/", "ORDER_SECRET": LEGACY})
@@ -205,7 +206,13 @@ class BuildProbeTests(unittest.TestCase):
             self.assertNotIn("x-verity-user-id", headers)
         sb_headers = Headers((k.lower(), v) for k, v in opener.calls[-1][0].header_items())
         self.assertEqual(dict(sb_headers), {"apikey": SB_KEY})
-        self.assertNotIn("server.main", sys.modules)
+        self.assertIs(sys.modules.get("server.main"), existing_server,
+                      "The verifier must not import or replace the server module")
+
+    def test_preloaded_server_from_other_tests_remains_untouched(self):
+        sentinel = SimpleNamespace(synthetic_preloaded_server=True)
+        with patch.dict(sys.modules, {"server.main": sentinel}):
+            self.test_success_uses_only_fixed_destinations_and_five_bounded_requests()
 
     def test_missing_either_key_makes_no_requests(self):
         for key in ("RAILWAY_SHARED_SECRET", "SUPABASE_SERVICE_ROLE_KEY"):
