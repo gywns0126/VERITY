@@ -17,6 +17,45 @@ CBT_META = {"cik": "0000016040", "accession": "0001193125-25-292412",
             "url": "https://www.sec.gov/Archives/edgar/data/16040/000119312525292412/cbt-ex21.htm",
             "issuerName": "Cabot Corp"}
 
+AVT_META = {"cik": "0000008858", "accession": "0001104659-26-096346",
+            "filedDate": "2026-08-14", "periodEnd": "2026-06-27",
+            "url": "https://www.sec.gov/Archives/edgar/data/8858/000110465926096346/avt-20260627xex21d1.htm",
+            "issuerName": "AVNET INC"}
+
+CPK_META = {"cik": "0000019745", "accession": "0001628280-26-011753",
+            "filedDate": "2026-02-25", "periodEnd": "2025-12-31",
+            "url": "https://www.sec.gov/Archives/edgar/data/19745/000162828026011753/cpk12312025ex-21.htm",
+            "issuerName": "CHESAPEAKE UTILITIES CORP"}
+
+CMI_META = {"cik": "0000026172", "accession": "0000026172-26-000009",
+            "filedDate": "2026-02-10", "periodEnd": "2025-12-31",
+            "url": "https://www.sec.gov/Archives/edgar/data/26172/000002617226000009/cmi202510-kex21.htm",
+            "issuerName": "CUMMINS INC"}
+
+
+def avt_exhibit(*, prefix="<p>Avnet, Inc.</p><p>Foreign and Domestic Subsidiaries</p>",
+                gap="", continuation_name="Avnet Philippines Pty Ltd., Inc.",
+                continuation_country="Philippines", extra_cell=""):
+    # Exact AVT Exhibit 21.1 header and representative rows from the saved
+    # four-table source. Each table is on its own matching page DIV, with an
+    # explicit page-break HR between pages in the archived exhibit.
+    page = '<div style="max-width:100%;padding-left:11.76%;padding-right:11.76%;position:relative;">'
+    break_hr = '<hr style="page-break-after:always;">'
+    return ("<body>" + prefix + page
+            + "<table><tr><td>Company Name</td><td>Country</td></tr>"
+              "<tr><td>Avnet (Asia Pacific Holdings) Limited</td><td>Hong Kong</td></tr>"
+              "<tr><td>Avnet (Holdings) Ltd</td><td>United Kingdom</td></tr></table></div>"
+            + break_hr
+            + gap
+            + page + "<table>"
+            + f"<tr><td>{continuation_name}</td><td>{continuation_country}</td>{extra_cell}</tr>"
+              "<tr><td>Avnet, Inc.</td><td>United States</td></tr>"
+              "<tr><td>Avnet Europe (Branch office in France)</td><td>France</td></tr></table></div>"
+              + break_hr + page
+              + "<table><tr><td>EBV Elektronik SAS</td><td>France</td></tr></table></div>"
+              + break_hr + page
+              + "<table><tr><td>Memec Group Limited</td><td>United Kingdom</td></tr></table></div></body>")
+
 
 def cbt_table(name, *, name_header="Subsidiary", jurisdiction_header="State/Jurisdiction of Incorporation",
               jurisdiction="Delaware"):
@@ -119,6 +158,280 @@ def test_cbt_near_misses_remain_held(changes, reason):
     result = parse_exhibit(cbt_three_tables(**changes), CBT_META)
     assert result["status"] == "needs-review"
     assert result["reviewReason"] == reason
+
+
+def test_avt_issuer_bound_country_header_and_headerless_pages_preserve_exact_rows():
+    result = parse_exhibit(avt_exhibit(), AVT_META)
+    assert result["status"] == "parsed"
+    assert [row["name"] for row in result["rows"]] == [
+        "Avnet (Asia Pacific Holdings) Limited", "Avnet (Holdings) Ltd",
+        "Avnet Philippines Pty Ltd., Inc.", "EBV Elektronik SAS", "Memec Group Limited"]
+    assert [row["sourceRow"]["tableIndex"] for row in result["rows"]] == [0, 0, 1, 2, 3]
+    assert all(row["ownershipPct"] is None and row["directOwnership"] == "unspecified"
+               for row in result["rows"])
+
+
+def test_avt_unrelated_unheaded_two_column_table_does_not_inherit_country_header():
+    html = avt_exhibit().replace(
+        "</body>",
+        "<table><tr><td>Project North LLC</td><td>Delaware</td></tr>"
+        "<tr><td>Account Balance</td><td>USD</td></tr></table></body>")
+    result = parse_exhibit(html, AVT_META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "continuation-page-break-unbound"
+    assert not any(row["name"] == "Project North LLC" for row in result["rows"])
+
+
+def test_avt_pagebreak_does_not_license_financial_rows_as_countries():
+    html = avt_exhibit(continuation_name="Account Balance", continuation_country="USD")
+    result = parse_exhibit(html, AVT_META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "ambiguous-row-binding"
+    assert not any(row["name"] == "Account Balance" for row in result["rows"])
+
+
+@pytest.mark.parametrize("country", ["Millions", "Amount", "USD", "Revenue increased this year", "AlphaLand"])
+def test_avt_exact_pagebreak_holds_unobserved_country_column_values(country):
+    result = parse_exhibit(avt_exhibit(continuation_name="Quarterly Revenue",
+                                       continuation_country=country), AVT_META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "ambiguous-row-binding"
+    assert not any(row["name"] == "Quarterly Revenue" for row in result["rows"])
+
+
+def test_avt_exact_pagebreak_holds_multiple_financial_rows():
+    html = avt_exhibit(continuation_name="Quarterly Revenue", continuation_country="Millions")
+    html = html.replace("<tr><td>Avnet, Inc.</td>",
+                        "<tr><td>Operating Income</td><td>Thousands</td></tr>"
+                        "<tr><td>Avnet, Inc.</td>")
+    result = parse_exhibit(html, AVT_META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "ambiguous-row-binding"
+    assert not {"Quarterly Revenue", "Operating Income"} & {row["name"] for row in result["rows"]}
+
+
+@pytest.mark.parametrize("country", ["Korea, Republic of", "Taiwan (Province of China)"])
+def test_avt_observed_country_spellings_remain_eligible(country):
+    result = parse_exhibit(avt_exhibit(continuation_country=country), AVT_META)
+    assert result["status"] == "parsed"
+    assert result["rows"][2]["jurisdiction"] == country
+    assert result["rows"][2]["ownershipPct"] is None
+    assert result["rows"][2]["directOwnership"] == "unspecified"
+
+
+@pytest.mark.parametrize("meta,title,header,rows", [
+    (CPK_META, "Chesapeake Utilities Corporation Subsidiaries of the Registrant",
+     "<td>Subsidiaries</td><td>State&nbsp;Incorporated</td><td></td>",
+     "<tr><td>Eastern Shore Natural Gas Company</td><td>Delaware</td><td></td></tr>"
+     "<tr><td>Sharp Energy, Inc.</td><td>Delaware</td><td></td></tr>"),
+    (CMI_META, "CUMMINS INC. SUBSIDIARIES OF THE REGISTRANT EXHIBIT 21",
+     "<td>Entity Name</td><td></td><td>Country or State of Organization</td>",
+     "<tr><td>Apollo FC Holdings Ltd</td><td></td><td>British Columbia</td></tr>"
+     "<tr><td>Arvin Environmental Management, LLC</td><td></td><td>Delaware</td></tr>"),
+])
+def test_registrant_bound_jurisdiction_header_synonyms(meta, title, header, rows):
+    html = f"<p>{title}</p><table><tr>{header}</tr>{rows}</table>"
+    result = parse_exhibit(html, meta)
+    assert result["status"] == "parsed"
+    assert len(result["rows"]) == 2
+    assert all(row["ownershipPct"] is None and row["directOwnership"] == "unspecified"
+               for row in result["rows"])
+
+
+def test_cpk_six_intermediate_parent_headers_hold_entire_exhibit():
+    subheaders = [
+        "Subsidiary of Sharp Energy, Inc.",
+        "Subsidiary of Florida Public Utilities Company",
+        "Subsidiaries of Chesapeake Service Company",
+        "Subsidiaries of Chesapeake OnSight Services LLC",
+        "Subsidiaries of OnSight Renewables, LLC",
+        "Subsidiary of Eastern Shore Natural Gas Company",
+    ]
+    rows = "<tr><td>Subsidiaries</td><td>State Incorporated</td><td></td></tr>"
+    rows += "<tr><td>Eastern Shore Natural Gas Company</td><td>Delaware</td><td></td></tr>"
+    for heading in subheaders:
+        rows += f"<tr><td>{heading}</td><td>State Incorporated</td><td></td></tr>"
+        rows += "<tr><td>Sharp Energy, Inc.</td><td>Delaware</td><td></td></tr>"
+    result = parse_exhibit(
+        "<p>Chesapeake Utilities Corporation Subsidiaries of the Registrant</p>"
+        f"<table>{rows}</table>", CPK_META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "ambiguous-row-binding"
+    assert not set(subheaders) & {row["name"] for row in result["rows"]}
+
+
+def test_cpk_exact_repeated_header_is_not_a_company_row():
+    html = ("<p>Chesapeake Utilities Corporation Subsidiaries of the Registrant</p>"
+            "<table><tr><td>Subsidiaries</td><td>State Incorporated</td><td></td></tr>"
+            "<tr><td>Eastern Shore Natural Gas Company</td><td>Delaware</td><td></td></tr>"
+            "<tr><td>Subsidiaries</td><td>State Incorporated</td><td></td></tr>"
+            "<tr><td>Sharp Energy, Inc.</td><td>Delaware</td><td></td></tr></table>")
+    result = parse_exhibit(html, CPK_META)
+    assert result["status"] == "parsed"
+    assert [row["name"] for row in result["rows"]] == [
+        "Eastern Shore Natural Gas Company", "Sharp Energy, Inc."]
+
+
+def test_repeated_exact_registrant_title_continues_same_header_only():
+    title = "CUMMINS INC. SUBSIDIARIES OF THE REGISTRANT EXHIBIT 21"
+    header = "<tr><td>Entity Name</td><td></td><td>Country or State of Organization</td></tr>"
+    first = "<table>" + header + "<tr><td>Apollo FC Holdings Ltd</td><td></td><td>British Columbia</td></tr></table>"
+    second = "<table>" + header + "<tr><td>Arvin Environmental Management, LLC</td><td></td><td>Delaware</td></tr></table>"
+    result = parse_exhibit(f"<p>{title}</p>{first}<p>{title}</p>{second}", CMI_META)
+    assert result["status"] == "parsed"
+    assert [row["sourceRow"]["tableIndex"] for row in result["rows"]] == [0, 1]
+    for gap in ("OTHER INC. SUBSIDIARIES OF THE REGISTRANT EXHIBIT 21",
+                "CUMMINS INC. FORMER SUBSIDIARIES OF THE REGISTRANT EXHIBIT 21",
+                "CUMMINS INC. SUBSIDIARIES OF THE REGISTRANT EXHIBIT 8"):
+        held = parse_exhibit(f"<p>{title}</p>{first}<p>{gap}</p>{second}", CMI_META)
+        assert held["status"] == "needs-review"
+        assert held["reviewReason"] == "continuation-scope-text"
+
+
+@pytest.mark.parametrize("title,header,row,reason", [
+    ("Other Inc. Subsidiaries of the Registrant", "Subsidiaries|State Incorporated",
+     "Eastern Shore Natural Gas Company|Delaware", "issuer-scope-unbound"),
+    ("Chesapeake Utilities Corporation Former Subsidiaries of the Registrant",
+     "Subsidiaries|State Incorporated", "Eastern Shore Natural Gas Company|Delaware", "issuer-scope-unbound"),
+    ("Chesapeake Utilities Corporation Subsidiaries of the Registrant",
+     "Subsidiaries|Incorporated Location|Holding Company (1) or Subsidiary (2)",
+     "Eastern Shore Natural Gas Company|Delaware|2", "explicit-name-jurisdiction-header-missing"),
+    ("Chesapeake Utilities Corporation Subsidiaries of the Registrant",
+     "Subsidiaries|State Incorporated", "Account Balance|USD", "ambiguous-row-binding"),
+    ("Chesapeake Utilities Corporation Subsidiaries of the Registrant As of January 1, 2026",
+     "Subsidiaries|State Incorporated", "Eastern Shore Natural Gas Company|Delaware",
+     "exhibit-as-of-differs-from-period-end"),
+])
+def test_jurisdiction_synonyms_preserve_scope_and_row_boundaries(title, header, row, reason):
+    cells = lambda parts: "".join(f"<td>{value}</td>" for value in parts.split("|"))
+    html = f"<p>{title}</p><table><tr>{cells(header)}</tr><tr>{cells(row)}</tr></table>"
+    result = parse_exhibit(html, CPK_META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == reason
+
+
+@pytest.mark.parametrize("name", [
+    "Prudential Oil & Gas LLC (57.5%)",
+    "Southern Gulf Railway LLC (42.5%)",
+    "PFC Products, Inc.(1)",
+    "General Financial Supply, Inc. (6)",
+    "Example Holdings LLC (123)",
+])
+def test_unresolved_ownership_or_numeric_footnote_never_becomes_a_legal_name(name):
+    html = ("<table><tr><td>Name of Company</td><td>Jurisdiction</td></tr>"
+            f"<tr><td>{name}</td><td>Delaware</td></tr></table>")
+    result = parse_exhibit(html, META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "ambiguous-row-binding"
+    assert result["rows"] == []
+
+
+def test_supported_explicit_owned_annotation_is_not_rewritten_as_ownership():
+    html = ("<table><tr><td>Name of Company</td><td>Jurisdiction</td></tr>"
+            "<tr><td>Parent Holdings LLC (100% owned)</td><td>Delaware</td></tr></table>")
+    result = parse_exhibit(html, META)
+    assert result["status"] == "parsed"
+    assert result["rows"][0]["name"] == "Parent Holdings LLC"
+    assert result["rows"][0]["ownershipPct"] is None
+    assert result["rows"][0]["directOwnership"] == "unspecified"
+
+
+@pytest.mark.parametrize("later", [
+    "<table><tr><td>Hill's Nutrition, Inc.</td><td>Delaware</td></tr></table>",
+    "<table><tr><td>Entergy Nuclear New York Investment Company, LLC</td><td></td>"
+    "<td>Delaware</td></tr></table>",
+    "<table><tr><td>Union Engineering A/S</td><td></td><td>Denmark</td></tr></table>",
+])
+def test_headerless_substantive_following_table_cannot_be_silently_dropped(later):
+    html = ("<p>Subsidiaries of American Electric Power Company, Inc.</p>"
+            "<table><tr><td>Name of Company</td><td>Jurisdiction</td></tr>"
+            "<tr><td>Parent Holdings LLC</td><td>Delaware</td></tr></table>" + later)
+    result = parse_exhibit(html, META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "unreviewed-exhibit-table"
+    assert result["rows"] == []
+
+
+def test_empty_layout_and_numbered_ownership_notes_are_not_subsidiary_tables():
+    html = ("<table><tr><td>Name of Company</td><td>Jurisdiction</td></tr>"
+            "<tr><td>Parent Holdings LLC</td><td>Delaware</td></tr></table>"
+            "<table><tr><td></td><td> </td></tr></table>"
+            "<table><tr><td>(1)</td><td>10.26% owned</td></tr>"
+            "<tr><td>(2)</td><td>50% owned</td></tr></table>")
+    result = parse_exhibit(html, META)
+    assert result["status"] == "parsed"
+    assert [row["name"] for row in result["rows"]] == ["Parent Holdings LLC"]
+
+
+@pytest.mark.parametrize("footnote,expected,reason", [
+    ("This information is as of January 1, 2026.", "needs-review",
+     "exhibit-as-of-differs-from-period-end"),
+    ("This information is as of February 30, 2025.", "needs-review",
+     "invalid-exhibit-as-of-date"),
+    ("This information is as of December 31, 2025.", "parsed", None),
+])
+def test_explicit_as_of_in_visible_bottom_footnote_bounds_entire_exhibit(footnote, expected, reason):
+    html = ("<table><tr><td>Name of Company</td><td>Jurisdiction</td></tr>"
+            "<tr><td>Parent Holdings LLC</td><td>Delaware</td></tr></table>"
+            f"<p><sup>1</sup>{footnote}</p>")
+    result = parse_exhibit(html, META)
+    assert result["status"] == expected
+    assert result.get("reviewReason") == reason
+
+
+def test_dates_in_head_script_or_style_are_not_visible_exhibit_dates():
+    html = ("<html><head><title>As of January 1, 2026</title>"
+            "<style>/* As of January 1, 2026 */</style></head><body>"
+            "<script>const note = 'As of January 1, 2026';</script>"
+            "<table><tr><td>Name of Company</td><td>Jurisdiction</td></tr>"
+            "<tr><td>Parent Holdings LLC</td><td>Delaware</td></tr></table></body></html>")
+    result = parse_exhibit(html, META)
+    assert result["status"] == "parsed"
+    assert result["rows"][0]["name"] == "Parent Holdings LLC"
+
+
+@pytest.mark.parametrize("changes,reason", [
+    ({"prefix": "<p>Subsidiaries of Other Inc.</p><p>Avnet, Inc.</p>"
+                "<p>Foreign and Domestic Subsidiaries</p>"}, "issuer-scope-unbound"),
+    ({"prefix": "<p>Former Avnet, Inc. Foreign and Domestic Subsidiaries</p>"}, "issuer-scope-unbound"),
+    ({"prefix": "<p>Avnet, Inc. Foreign and Domestic Subsidiaries</p>"
+                "<p>Variable interest entities</p>"}, "vie-scope-needs-review"),
+    ({"prefix": "<p>Avnet, Inc. Foreign and Domestic Subsidiaries</p>"
+                "<p>As of June 26, 2026</p>"}, "exhibit-as-of-differs-from-period-end"),
+    ({"gap": "<p>Subsidiaries of Other Inc.</p>"}, "continuation-scope-text"),
+    ({"gap": "<p>New subsidiaries</p>"}, "continuation-scope-text"),
+    ({"continuation_name": "Alpha LLC Beta LLC"}, "ambiguous-row-binding"),
+    ({"continuation_name": "Alpha LLC Beta Pty Ltd., Inc."}, "ambiguous-row-binding"),
+    ({"continuation_name": "Other Inc. Subsidiaries"}, "ambiguous-row-binding"),
+    ({"continuation_country": "Philippines 80%"}, "ambiguous-row-binding"),
+    ({"extra_cell": "<td>100%</td>"}, "continuation-headers-differ"),
+])
+def test_avt_near_misses_do_not_become_relationships(changes, reason):
+    result = parse_exhibit(avt_exhibit(**changes), AVT_META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == reason
+
+
+def test_avt_country_layout_rejects_unbound_metadata_issuer():
+    result = parse_exhibit(avt_exhibit(), {**AVT_META, "issuerName": "Other Inc."})
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "issuer-scope-unbound"
+
+
+def test_arw_semantic_continued_header_is_not_a_flat_country_page():
+    meta = {"cik": "0000007536", "accession": "0001104659-26-012765",
+            "filedDate": "2026-02-11", "periodEnd": "2025-12-31",
+            "url": "https://www.sec.gov/Archives/edgar/data/7536/000110465926012765/arw-20251231xex21.htm",
+            "issuerName": "ARROW ELECTRONICS, INC."}
+    html = ("<p>Exhibit 21 SUBSIDIARIES OF ARROW ELECTRONICS, INC. As of December 31, 2025</p>"
+            "<table><tr><td>Entity Name</td><td></td><td>Jurisdiction of Incorporation or Organization</td></tr>"
+            "<tr><td>Arrow Argentina S.A.</td><td></td><td>Argentina</td></tr></table>"
+            "<table><tr><td>Entity Name (continued)</td><td></td>"
+            "<td>Jurisdiction of Incorporation or Organization (continued)</td></tr>"
+            "<tr><td>Arrow ECS Baltic OU</td><td></td><td>Estonia</td></tr></table>")
+    result = parse_exhibit(html, meta)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "continuation-headers-differ"
 
 
 def test_newer_40f_blocks_fallback_to_historical_20f_paper():

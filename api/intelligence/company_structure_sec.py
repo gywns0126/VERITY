@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-24-issuer-bound-continuation-v6"
+PARSER_REVISION = "2026-10-24-observed-country-column-v10"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -26,6 +26,19 @@ _VIE_MARKER = re.compile(
     r"consolidated\s+affiliated\s+entities",
     re.I,
 )
+# Closed spellings verified in the saved AVT Exhibit 21.1 Country column.
+# This is not a world-country registry or a country-code inference rule; it
+# applies only to the issuer-bound Company Name/Country continuation layout.
+_OBSERVED_COUNTRY_COLUMN_VALUES = frozenset({
+    "Australia", "Austria", "Belgium", "Brazil", "Bulgaria", "Canada", "China",
+    "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany",
+    "Hong Kong", "Hungary", "India", "Ireland", "Israel", "Italy", "Japan",
+    "Korea, Republic of", "Lithuania", "Luxembourg", "Malaysia", "Malta",
+    "Mexico", "Netherlands", "New Zealand", "Norway", "Philippines", "Poland",
+    "Portugal", "Romania", "Serbia", "Singapore", "Slovakia", "Slovenia",
+    "South Africa", "Spain", "Sweden", "Switzerland", "Taiwan (Province of China)",
+    "Thailand", "Turkey", "Ukraine", "United Kingdom", "United States",
+})
 
 
 def _identity(cik: str, accession: str) -> tuple[str, str, str]:
@@ -184,7 +197,8 @@ def _header_role(value):
     if value in {"name", "company", "name of company", "name of entity", "entity"} or any(word in value for word in (
             "subsidiary", "subsidiaries", "company name", "legal name", "entity name")):
         return "name"
-    if value in {"state of organization", "state or country of organization"} or any(
+    if value in {"state of organization", "state or country of organization",
+                 "state incorporated", "country or state of organization"} or any(
             word in value for word in ("jurisdiction", "incorporation", "organized", "formed under")):
         return "jurisdiction"
     return None
@@ -194,6 +208,7 @@ _OMIT = re.compile(r"\b(?:subtotal|total|domestic|foreign|d\s*/\s*b\s*/\s*a|doin
 _LEGAL_FORM = r"\b(?:Inc(?:orporated)?|Corp(?:oration)?|Ltd|Limited|GmbH|LLC|LLP|PLC|L\.L\.C|L\.P|U\.A|B\.V|N\.V|S\.A|S\.r\.l)\.?"
 _LEGAL_END = re.compile(_LEGAL_FORM + r"$", re.I)
 _LEGAL_TERMINATOR = re.compile(_LEGAL_FORM + r"(?=$|[\s,;.])", re.I)
+_COMPOUND_LEGAL_END = re.compile(r".+\sPty Ltd\., Inc\.$", re.I)
 _REGISTRANT = re.compile(r"\s*\(\s*registrant\s*\)\s*$", re.I)
 _FOOTNOTE = re.compile(r"(?:[0-9]{1,3}|\([0-9]{1,3}\)|[¹²³⁰⁴⁵⁶⁷⁸⁹*†‡§¶]{1,3})\Z")
 _ALIAS_HINT = re.compile(r"\(\s*(?:f/k/a|fka|formerly(?:\s+known\s+as)?)\b", re.I)
@@ -360,15 +375,27 @@ def parse_exhibit(raw_html, metadata):
         result["reviewReason"] = "vie-scope-needs-review"
         return result
     candidates = []
-    for table in soup.find_all("table"):
+    country_table = None
+    registrant_header = False
+    all_tables = soup.find_all("table")
+    for table in all_tables:
         trs = table.find_all("tr")
         if not trs:
             continue
         for hi, tr in enumerate(trs[:3]):
             cells = tr.find_all(["th", "td"], recursive=False)
             roles = [_header_role(_norm(cell.get_text(" ", strip=True))) for cell in cells]
+            if (len(cells) == 2 and
+                    [_norm(cell.get_text(" ", strip=True)).casefold() for cell in cells]
+                    == ["company name", "country"]):
+                candidates.append((table, trs, hi, ["name", "jurisdiction"]))
+                country_table = table
+                break
             if "name" in roles and "jurisdiction" in roles:
                 candidates.append((table, trs, hi, roles))
+                if any(_norm(cell.get_text(" ", strip=True)).casefold() in {
+                        "state incorporated", "country or state of organization"} for cell in cells):
+                    registrant_header = True
                 break
     if not candidates:
         result["reviewReason"] = "explicit-name-jurisdiction-header-missing"
@@ -391,7 +418,48 @@ def parse_exhibit(raw_html, metadata):
     root_first_title = bool(root and re.search(
         r"(?:^|\b)" + root_pattern + r" subsidiaries(?= as of |$)", heading)
         and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
-    for match in re.finditer(r"\bas of\s+([A-Za-z]+\s+\d{1,2},\s*\d{4}|\d{4}-\d{2}-\d{2})\b", heading_text, re.I):
+    registrant_title = bool(root and re.search(
+        r"\b" + root_pattern + r" subsidiaries of the registrant(?= |$)", heading)
+        and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
+    if registrant_header and not registrant_title:
+        result["reviewReason"] = "issuer-scope-unbound"
+        return result
+    if registrant_header:
+        root_first_title = True
+    if country_table is not None:
+        # The country-only header is eligible only under the registrant's own
+        # explicit exhibit title. Do not infer the issuer from URL or row names.
+        if (len(candidates) != 1 or candidates[0][0] is not country_table or
+                all_tables[0] is not country_table or not root or
+                not re.search(r"\b" + root_pattern + r" foreign and domestic subsidiaries(?= |$)", heading) or
+                re.search(r"\b(?:former|previous|non|not|disposed|sold|subsidiaries of)\b", heading)):
+            result["reviewReason"] = "issuer-scope-unbound"
+            return result
+        first_trs = candidates[0][1]
+        if any(len(cells := tr.find_all(["th", "td"], recursive=False)) != 2 or
+               any(cell.get("colspan") or cell.get("rowspan") for cell in cells)
+               for tr in first_trs):
+            result["reviewReason"] = "ambiguous-row-binding"
+            return result
+        root_first_title = True
+        for table in all_tables[1:]:
+            trs = table.find_all("tr")
+            if (table.find_parent("table") is not None or not trs or
+                    any(len(cells := tr.find_all(["th", "td"], recursive=False)) != 2 or
+                        any(cell.get("colspan") or cell.get("rowspan") for cell in cells) or
+                        not all(_norm(cell.get_text(" ", strip=True)) for cell in cells)
+                        for tr in trs)):
+                result["reviewReason"] = "continuation-headers-differ"
+                return result
+            candidates.append((table, trs, -1, ["name", "jurisdiction"]))
+    # A dated footnote after the tables also constrains the exhibit's as-of
+    # time. Check the entire visible body, not just the first table's title.
+    visible_root = soup.body or soup
+    visible_text = _norm(" ".join(
+        str(node) for node in visible_root.descendants
+        if isinstance(node, NavigableString) and not isinstance(node, Comment)
+        and not node.find_parent(["head", "style", "script"])))
+    for match in re.finditer(r"\bas of\s+([A-Za-z]+\s+\d{1,2},\s*\d{4}|\d{4}-\d{2}-\d{2})\b", visible_text, re.I):
         stated = match.group(1)
         try:
             stated_day = (date.fromisoformat(stated).isoformat() if re.match(r"\d", stated)
@@ -423,16 +491,17 @@ def parse_exhibit(raw_html, metadata):
                 or not (root_first_title or re.search(r"\bsubsidiaries of " + root_pattern + r"(?= as of |$)", heading))):
             result["reviewReason"] = "multiple-tables-issuer-scope-unbound"
             return result
-        headers = []
-        for table, trs, header_i, roles in candidates:
-            if table.find_parent("table") is not None:
-                result["reviewReason"] = "nested-table-scope"
+        if country_table is None:
+            headers = []
+            for table, trs, header_i, roles in candidates:
+                if table.find_parent("table") is not None:
+                    result["reviewReason"] = "nested-table-scope"
+                    return result
+                headers.append([_norm(cell.get_text(" ", strip=True)).casefold()
+                                for cell in trs[header_i].find_all(["th", "td"], recursive=False)])
+            if any(header != headers[0] for header in headers[1:]):
+                result["reviewReason"] = "continuation-headers-differ"
                 return result
-            headers.append([_norm(cell.get_text(" ", strip=True)).casefold()
-                            for cell in trs[header_i].find_all(["th", "td"], recursive=False)])
-        if any(header != headers[0] for header in headers[1:]):
-            result["reviewReason"] = "continuation-headers-differ"
-            return result
         for previous, following in zip(candidates, candidates[1:]):
             last = list(previous[0].descendants)[-1]
             gap = []
@@ -447,9 +516,51 @@ def parse_exhibit(raw_html, metadata):
             exhibit_marker = re.fullmatch(r"exhibit\s+(21(?:\.1)?)", gap_text, re.I)
             repeated_exhibit = bool(exhibit_marker and re.search(
                 r"\bexhibit\s+" + re.escape(exhibit_marker[1]) + r"(?![\w.])", heading_text, re.I))
-            if gap and not (re.fullmatch(r"(?:page\s*)?[0-9]{1,3}", gap_text, re.I) or repeated_exhibit):
+            repeated_registrant_title = bool(registrant_header and re.search(
+                r"\b" + root_pattern + r" subsidiaries of the registrant exhibit 21(?= |$)", heading)
+                and re.fullmatch(root_pattern + r" subsidiaries of the registrant exhibit 21",
+                                 _issuer_name_key(gap_text) or ""))
+            if gap and not (re.fullmatch(r"(?:page\s*)?[0-9]{1,3}", gap_text, re.I)
+                            or repeated_exhibit or repeated_registrant_title):
                 result["reviewReason"] = "continuation-scope-text"
                 return result
+            if country_table is not None:
+                # AVT's unheaded country tables are separate pages in the same
+                # exhibit, divided by an explicit page-break HR. Adjacent bare
+                # two-column tables alone do not inherit the first header.
+                def page_container(table):
+                    for parent in table.parents:
+                        if parent.parent is soup.body:
+                            return parent
+                    return None
+
+                before, after = page_container(previous[0]), page_container(following[0])
+                separator = before.find_next_sibling() if before is not None else None
+                if (before is None or after is None or before.name != "div" or after.name != "div"
+                        or before.get("style") != after.get("style")
+                        or before.find_all("table") != [previous[0]]
+                        or after.find_all("table") != [following[0]]
+                        or separator is None or separator.name != "hr"
+                        or not re.search(r"(?:^|;)\s*page-break-after\s*:\s*always\s*(?:;|$)",
+                                         separator.get("style", ""), re.I)
+                        or separator.find_next_sibling() is not after):
+                    result["reviewReason"] = "continuation-page-break-unbound"
+                    return result
+    reviewed_tables = {id(table) for table, *_ in candidates}
+    for table in all_tables:
+        if id(table) in reviewed_tables:
+            continue
+        for tr in table.find_all("tr"):
+            values = [_norm(cell.get_text(" ", strip=True))
+                      for cell in tr.find_all(["th", "td"], recursive=False)]
+            values = [value for value in values if value]
+            if len(values) < 2:
+                continue  # Empty layout rows are not another data table.
+            if (re.fullmatch(r"\(?[0-9]{1,3}\)?", values[0])
+                    and not any(_complete_legal_name(value) for value in values[1:])):
+                continue  # Numbered footnote/explanation, not a company row.
+            result["reviewReason"] = "unreviewed-exhibit-table"
+            return result
     _, _, _, roles = candidates[0]
     name_i, jurisdiction_i = roles.index("name"), roles.index("jurisdiction")
     rows = []
@@ -464,9 +575,21 @@ def parse_exhibit(raw_html, metadata):
         text = _norm(tr.get_text(" ", strip=True))
         if not text or _OMIT.search(text):
             continue
+        if country_table is not None and ("%" in text or re.search(
+                r"\b(?:subsidiar(?:y|ies)|ownership|owned)\b", text, re.I)):
+            needs_review = True
+            continue
         if max(name_i, jurisdiction_i) >= len(cells):
             needs_review = True
             continue
+        if registrant_header and _header_role(_norm(cells[name_i].get_text(" ", strip=True))) == "name" and \
+                _header_role(_norm(cells[jurisdiction_i].get_text(" ", strip=True))) == "jurisdiction":
+            first_header = candidates[0][1][candidates[0][2]].find_all(["th", "td"], recursive=False)
+            if any(_norm(cells[index].get_text(" ", strip=True)).casefold() !=
+                   _norm(first_header[index].get_text(" ", strip=True)).casefold()
+                   for index in (name_i, jurisdiction_i)):
+                needs_review = True  # A new intermediate parent changes scope.
+            continue  # Exact repeated headers are not company rows either.
         names = _cell_blocks(cells[name_i], name_cell=True)
         jurisdictions = _cell_blocks(cells[jurisdiction_i])
         if not names or len(names) != len(jurisdictions) or len(cells) != len(roles):
@@ -474,8 +597,19 @@ def parse_exhibit(raw_html, metadata):
             continue
         entries = []
         for block_index, (name, jurisdiction) in enumerate(zip(names, jurisdictions)):
+            if country_table is not None and jurisdiction not in _OBSERVED_COUNTRY_COLUMN_VALUES:
+                needs_review = True  # Unknown Country value needs source review.
+                continue
+            if (country_table is not None or registrant_header) and re.fullmatch(r"[A-Z]{3}", jurisdiction):
+                needs_review = True  # A currency-like code is not country evidence.
+                continue
             name = _current_legal_name(name)
             if name is None:
+                needs_review = True
+                continue
+            if "%" in name or re.search(r"\(\s*[0-9]{1,3}\s*\)$", name):
+                # Unresolved ownership percentages and numbered footnotes are
+                # not part of a verified legal name; retain the exhibit for review.
                 needs_review = True
                 continue
             marker = _REGISTRANT.search(name)
@@ -493,7 +627,10 @@ def parse_exhibit(raw_html, metadata):
         # Matching block counts alone are not proof: a wrapped partial name
         # must not become a separate company. Reject the entire physical row.
         if any(";" in name or (len(_LEGAL_TERMINATOR.findall(name)) > 1 and
-               not (len(names) == 1 and _jurisdiction_qualified_legal_name(name, jurisdiction, metadata.get("issuerName"))))
+               not (len(names) == 1 and (
+                   _jurisdiction_qualified_legal_name(name, jurisdiction, metadata.get("issuerName")) or
+                   country_table is not None and len(_LEGAL_TERMINATOR.findall(name)) == 2 and
+                   _COMPOUND_LEGAL_END.fullmatch(name))))
                or (len(names) > 1 and not _complete_legal_name(name)) for _, name, jurisdiction in entries):
             needs_review = True
             continue
