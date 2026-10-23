@@ -691,8 +691,22 @@ test('committed US snapshots preserve the 22-document baseline as parsed or expl
   const result = buildArtifacts({ universe: committed('universe_search.json'), cikMap: committed('sec_ticker_cik_map.json'),
     generatedAt: original.generatedAt, usSources: safe, strictSources: true });
   assert.equal(result.manifest.coverage.US.checkedCiks, parsed.length);
-  const retained = new Set([...result.payloads.values()].map(bytes => JSON.parse(bytes)).filter(p => p.relations.length).map(p => p.coverage.cik));
-  for (const [cik] of parsed) assert.ok(retained.has(cik), `Original parsed source lost: ${cik}`);
+  const boundPayloads = new Map([...result.payloads.values()].map(bytes => {
+    const payload = JSON.parse(bytes); return [payload.coverage.cik, payload];
+  }));
+  for (const [cik, source] of parsed) {
+    const payload = boundPayloads.get(cik);
+    assert.ok(payload?.coverage.sourceChecked, `Original parsed source lost: ${cik}`);
+    assert.equal(payload.coverage.documentSha256, source.exhibit.documentSha256);
+    if (source.exhibit.rows.length) assert.ok(payload.relations.length, `Admitted relations lost: ${cik}`);
+    else {
+      // Some real exhibits contain only excluded entity labels. Keeping their
+      // source receipt is required; inventing an edge to satisfy this test is not.
+      assert.equal(source.exhibit.corporateRowCount, 0);
+      assert.ok(Number.isSafeInteger(source.exhibit.sourceRowCount));
+      assert.equal(payload.relations.length, 0);
+    }
+  }
   let retainedCollectorErrors = 0;
   for (const [cik, s] of Object.entries(original.issuers).filter(([, s]) => !s.exhibit && s.attemptedAt && s.attemptStatus !== 'success' && s.attemptStatus !== 'not-attempted')) {
     assert.equal(safe.issuers[cik].attemptStatus, s.attemptStatus);

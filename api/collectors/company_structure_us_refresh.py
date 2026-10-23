@@ -7,12 +7,16 @@ bulk ZIPs, ownership percentages or direct-parent conclusions are persisted.
 from __future__ import annotations
 
 import copy
+import gzip
+import hashlib
 import importlib.util
+import io
 import json
 import math
 import os
 from pathlib import Path
 import re
+import stat
 import tempfile
 import time
 from datetime import datetime, timedelta, timezone
@@ -20,10 +24,12 @@ from types import SimpleNamespace
 from urllib.parse import urlsplit
 import urllib.error
 import urllib.request
+import zlib
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = "alphanest-company-structure-us-sources-v1"
 MAX_CIKS, MAX_HTTP, MAX_BYTES = 800, 2400, 8 * 1024 * 1024
+MAX_RAW_CACHE_BYTES = 256 * 1024 * 1024
 MAX_ELAPSED_SECONDS = 1800
 TTL = timedelta(days=7)
 KST = timezone(timedelta(hours=9))
@@ -150,14 +156,20 @@ def latest_metadata(ticker, cik, submission):
             or len({len(recent[k]) for k in fields}) != 1
             or any(not isinstance(v, str) for k in fields for v in recent[k])):
         raise ValueError("sec-submission-shape")
-    eligible = [i for i, form in enumerate(recent["form"]) if form in ("10-K", "20-F")]
+    # Select the newest annual before checking support. A modern 40-F must
+    # never silently fall back to a decades-old 20-F / paper filing.
+    eligible = [i for i, form in enumerate(recent["form"]) if form in ("10-K", "20-F", "40-F")]
     if not eligible:
         raise ValueError("source-gap:annual-missing")
     i = max(eligible, key=lambda j: (recent["filingDate"][j], recent["accessionNumber"][j]))
+    if recent["form"][i] == "40-F":
+        raise ValueError("source-gap:annual-form-40f-needs-review")
     if any(form in ("10-K/A", "20-F/A") and recent["filingDate"][j] >= recent["filingDate"][i]
            for j, form in enumerate(recent["form"])):
         raise ValueError("source-gap:amendment-needs-review")
     accession = recent["accessionNumber"][i]
+    if recent["primaryDocument"][i].endswith(".paper"):
+        raise ValueError("source-gap:annual-paper-document")
     metadata = {"issuer_id": "US:" + ticker, "issuer_name": submission["name"], "cik": cik,
                 "accession": accession, "filed_date": recent["filingDate"][i],
                 "period_end": recent["reportDate"][i], "form": recent["form"][i],
@@ -195,6 +207,152 @@ def _submission_path(source_dir, cik):
                 raise ValueError("sec-cache-outside-source-dir")
             return candidate
     return None
+
+
+def _raw_cache_path(directory, digest):
+    if not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest):
+        raise ValueError("sec-raw-cache-binding")
+    directory = Path(directory)
+    if any(part.is_symlink() for part in (directory, *directory.parents)) or (directory.exists() and not directory.is_dir()):
+        raise ValueError("sec-raw-cache-path")
+    return directory / (digest + ".gz")
+
+
+def _read_raw_exhibit(directory, digest):
+    path = _raw_cache_path(directory, digest)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        with os.fdopen(fd, "rb") as handle:
+            if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+                raise ValueError("sec-raw-cache-path")
+            if os.fstat(handle.fileno()).st_size > MAX_BYTES + 65536:
+                raise ValueError("sec-raw-cache-size")
+            with gzip.GzipFile(fileobj=io.BytesIO(handle.read()), mode="rb") as zipped:
+                raw = zipped.read(MAX_BYTES + 1)
+    except FileNotFoundError:
+        raise
+    except (OSError, EOFError, gzip.BadGzipFile, zlib.error) as exc:
+        raise ValueError("sec-raw-cache-invalid") from exc
+    if not raw or len(raw) > MAX_BYTES or hashlib.sha256(raw).hexdigest() != digest:
+        raise ValueError("sec-raw-cache-mismatch")
+    return raw
+
+
+def _save_raw_exhibit(directory, raw):
+    if not isinstance(raw, bytes) or not 0 < len(raw) <= MAX_BYTES:
+        raise ValueError("sec-raw-cache-size")
+    digest = hashlib.sha256(raw).hexdigest()
+    path = _raw_cache_path(directory, digest)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() or path.is_symlink():
+        _read_raw_exhibit(directory, digest)
+        return digest, False, False
+    compressed = gzip.compress(raw, mtime=0)
+    total = 0
+    with os.scandir(path.parent) as entries:
+        for entry in entries:
+            info = entry.stat(follow_symlinks=False)
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("sec-raw-cache-path")
+            total += info.st_size
+    if total + len(compressed) > MAX_RAW_CACHE_BYTES:
+        return digest, False, True
+    fd, temp = tempfile.mkstemp(prefix=digest + ".", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(compressed)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            os.link(temp, path)  # Atomic create; never replace another writer's blob.
+        except FileExistsError:
+            _read_raw_exhibit(directory, digest)
+            return digest, False, False
+    finally:
+        if os.path.exists(temp):
+            os.unlink(temp)
+    return digest, True, False
+
+
+def _review_cache_binding(issuer, cik, metadata, review):
+    binding = issuer.get("rawExhibitCache")
+    expected = {"cik": cik, "accession": metadata["accession"], "filedDate": metadata["filed_date"],
+                "periodEnd": metadata["period_end"], "url": review.get("url"),
+                "documentSha256": review.get("documentSha256")}
+    if ((binding is not None and binding != expected)
+            or review.get("cik") != cik or review.get("accession") != metadata["accession"]
+            or review.get("filedDate") != metadata["filed_date"]
+            or review.get("periodEnd") != metadata["period_end"]
+            or not _valid_exhibit_url(review.get("url"), cik, metadata["accession"])):
+        raise ValueError("sec-raw-cache-binding")
+    return expected
+
+
+def _parse_raw_exhibit(raw, cik, metadata, exhibit_url, helpers):
+    parsed = helpers.parse_exhibit(raw, {"cik": cik, "accession": metadata["accession"],
+        "filedDate": metadata["filed_date"], "periodEnd": metadata["period_end"], "url": exhibit_url,
+        "issuerName": metadata["issuer_name"]})
+    if not isinstance(parsed, dict) or any(parsed.get(key) != value for key, value in {
+            "cik": cik, "accession": metadata["accession"], "filedDate": metadata["filed_date"],
+            "periodEnd": metadata["period_end"], "url": exhibit_url,
+            "documentSha256": hashlib.sha256(raw).hexdigest()}.items()):
+        raise ValueError("sec-raw-cache-parse-mismatch")
+    return parsed
+
+
+def reparse_cached_reviews(document, raw_cache_dir, now=None, helpers=None, current_ciks=None):
+    """Offline parser replay only; leave source checks and request ledger untouched."""
+    if raw_cache_dir is None:
+        raise ValueError("sec-raw-cache-required")
+    from api.intelligence.company_structure_sec import PARSER_REVISION
+    helpers = helpers or load_helpers()
+    result = copy.deepcopy(document)
+    lists = {key: [] for key in ("eligible", "cacheHits", "missing", "parsed", "held", "errors")}
+    ciks = current_ciks if current_ciks is not None else result.get("currentCiks")
+    if not isinstance(ciks, list) or any(cik not in result.get("issuers", {}) for cik in ciks):
+        raise ValueError("sec-current-ciks-required")
+    for cik in ciks:
+        issuer = result["issuers"][cik]
+        review = issuer.get("reviewExhibit")
+        if not (issuer.get("attemptStatus") == "needs-review" and isinstance(review, dict)
+                and review.get("status") == "needs-review" and review.get("parserRevision") != PARSER_REVISION):
+            continue
+        lists["eligible"].append(cik)
+        metadata = issuer.get("filingMetadata")
+        try:
+            if not isinstance(metadata, dict):
+                raise ValueError("sec-raw-cache-binding")
+            binding = _review_cache_binding(issuer, cik, metadata, review)
+            try:
+                raw = _read_raw_exhibit(raw_cache_dir, binding["documentSha256"])
+            except FileNotFoundError:
+                lists["missing"].append(cik)
+                continue
+            lists["cacheHits"].append(cik)
+            parsed = _parse_raw_exhibit(raw, cik, metadata, binding["url"], helpers)
+            if parsed.get("status") == "parsed":
+                observed = _time(issuer.get("attemptedAt"))
+                filed = _time(metadata["filed_date"] + "T00:00:00Z")
+                if not observed or not filed or observed < filed:
+                    raise ValueError("sec-replay-observation-invalid")
+                issuer.pop("reviewExhibit", None)
+                issuer.update(exhibit=parsed, attemptStatus="success", sourceGap=None,
+                              lastSuccessAt=issuer["attemptedAt"])
+                lists["parsed"].append(cik)
+            elif parsed.get("status") == "needs-review":
+                issuer["reviewExhibit"] = parsed
+                issuer["sourceGap"] = "source-gap:ex21-needs-review"
+                lists["held"].append(cik)
+            else:
+                raise ValueError("sec-raw-cache-parse-mismatch")
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            reason = str(exc) if isinstance(exc, ValueError) and re.fullmatch(r"sec-[a-z0-9-]+", str(exc)) else "sec-raw-cache-error"
+            lists["errors"].append({"cik": cik, "reason": reason})
+    summary = {"schema": "alphanest-company-structure-us-cache-replay-summary-v1",
+               "generatedAt": (now or datetime.now(timezone.utc)).isoformat(),
+               **{key: len(value) for key, value in lists.items()}, "lists": lists,
+               "exitCode": int(bool(lists["errors"]))}
+    return result, summary
 
 
 def build_document(source_dir, existing=None, now=None):
@@ -291,7 +449,7 @@ def _selection(document, now, limit, excluded=()):
 
 def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpoint=None,
             now=None, helpers=None, clock=time.monotonic, sleep=time.sleep,
-            max_elapsed_seconds=MAX_ELAPSED_SECONDS):
+            max_elapsed_seconds=MAX_ELAPSED_SECONDS, raw_cache_dir=None):
     """Stop new work at a monotonic soft deadline, preserving reservations/results.
 
     An already-started HTTP request is not cancelled by this deadline: its 30s
@@ -317,7 +475,7 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
     due = _due_issuers(document, now)
     # Same-day attempts are never retried, including interrupted reservations.
     selected = selected[:MAX_CIKS - len(budget["ciks"])]
-    lists = {k: [] for k in ("attempted", "requests", "success", "cached", "sourceGap", "error", "retained", "budgetDeferred", "deferred")}
+    lists = {k: [] for k in ("attempted", "requests", "success", "cached", "sourceGap", "error", "retained", "budgetDeferred", "deferred", "rawCacheHit", "rawCacheSaved", "rawCacheSkipped")}
     lists["selected"] = selected
     summary = {"schema": "alphanest-company-structure-us-refresh-summary-v1", "generatedAt": stamp,
                "dryRun": not fetch_public, "requestedTickers": len(document["universe"]["US"]),
@@ -414,24 +572,54 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
                                   checkedAt=stamp, sourceGap=None if old["status"] == "parsed" else "source-gap:ex21-needs-review")
                     lists["cached"].append(cik)
                 else:
-                    if MAX_HTTP - budget["requests"] < 2:
-                        summary["stopReason"] = "daily-http-budget"
-                        raise BudgetDeferred()
                     accession = metadata["accession"]
                     if not re.fullmatch(r"[0-9]{10}-[0-9]{2}-[0-9]{6}", accession):
                         raise ValueError("sec-accession-invalid")
-                    directory = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accession.replace('-', '')}/"
-                    index_url = directory + accession + "-index.html"
-                    index = get(index_url, cik, {index_url})
-                    exhibit_url = helpers.find_exhibit(index, cik=cik, accession=accession, form=metadata["form"])
-                    if exhibit_url is None:
-                        raise ValueError("source-gap:ex21-missing")
-                    if not _valid_exhibit_url(exhibit_url, cik, accession):
-                        raise ValueError("sec-exhibit-url-invalid")
-                    raw = get(exhibit_url, cik, {exhibit_url})
-                    parsed = helpers.parse_exhibit(raw, {"cik": cik, "accession": accession,
-                        "filedDate": metadata["filed_date"], "periodEnd": metadata["period_end"], "url": exhibit_url,
-                        "issuerName": metadata["issuer_name"]})
+                    from api.intelligence.company_structure_sec import PARSER_REVISION
+                    revised = (isinstance(old, dict) and old.get("status") == "needs-review"
+                               and old.get("parserRevision") != PARSER_REVISION)
+                    same_filing_review = (revised and old.get("cik") == cik and old.get("accession") == accession)
+                    raw = None
+                    if raw_cache_dir is not None and same_filing_review:
+                        binding = _review_cache_binding(issuer, cik, metadata, old)
+                        if time_exhausted():
+                            raise BudgetDeferred()
+                        try:
+                            raw = _read_raw_exhibit(raw_cache_dir, binding["documentSha256"])
+                        except FileNotFoundError:
+                            pass  # Cache eviction: bounded normal GET remains available.
+                        if raw is not None:
+                            exhibit_url = binding["url"]
+                            lists["rawCacheHit"].append(cik)
+                    if raw is None:
+                        if MAX_HTTP - budget["requests"] < 2:
+                            summary["stopReason"] = "daily-http-budget"
+                            raise BudgetDeferred()
+                        directory = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accession.replace('-', '')}/"
+                        index_url = directory + accession + "-index.html"
+                        index = get(index_url, cik, {index_url})
+                        exhibit_url = helpers.find_exhibit(index, cik=cik, accession=accession, form=metadata["form"])
+                        if exhibit_url is None:
+                            raise ValueError("source-gap:ex21-missing")
+                        if not _valid_exhibit_url(exhibit_url, cik, accession):
+                            raise ValueError("sec-exhibit-url-invalid")
+                        raw = get(exhibit_url, cik, {exhibit_url})
+                        if raw_cache_dir is not None:
+                            digest, saved, skipped = _save_raw_exhibit(raw_cache_dir, raw)
+                            if skipped:
+                                issuer.pop("rawExhibitCache", None)
+                                lists["rawCacheSkipped"].append(cik)
+                            else:
+                                issuer["rawExhibitCache"] = {"cik": cik, "accession": accession,
+                                    "filedDate": metadata["filed_date"], "periodEnd": metadata["period_end"],
+                                    "url": exhibit_url, "documentSha256": digest}
+                                checkpoint(document)  # Durable source binding precedes parsing.
+                                if saved:
+                                    lists["rawCacheSaved"].append(cik)
+                    parsed = (_parse_raw_exhibit(raw, cik, metadata, exhibit_url, helpers) if raw_cache_dir is not None
+                              else helpers.parse_exhibit(raw, {"cik": cik, "accession": accession,
+                                  "filedDate": metadata["filed_date"], "periodEnd": metadata["period_end"],
+                                  "url": exhibit_url, "issuerName": metadata["issuer_name"]}))
                     if parsed["status"] != "parsed":
                         issuer["reviewExhibit"] = parsed
                         raise ValueError("source-gap:ex21-needs-review")
@@ -449,7 +637,8 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
                     summary["stopReason"] = issuer["attemptStatus"]
             except (ValueError, KeyError, TypeError, OSError) as exc:
                 reason = str(exc) if isinstance(exc, ValueError) and re.fullmatch(r"(?:source-gap:)?[a-z0-9-]+", str(exc)) else "sec-source-error"
-                needs_review = reason in ("sec-vie-needs-review", "source-gap:ex21-needs-review")
+                needs_review = reason in ("sec-vie-needs-review", "sec-cofiler-issuer-needs-review",
+                                          "source-gap:ex21-needs-review")
                 issuer["attemptStatus"] = "needs-review" if needs_review else "source-gap" if reason.startswith("source-gap:") else "error"
                 issuer["sourceGap"] = reason
                 lists["sourceGap" if issuer["attemptStatus"] in ("source-gap", "needs-review") else "error"].append({"cik": cik, "reason": reason})

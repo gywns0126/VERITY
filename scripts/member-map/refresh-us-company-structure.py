@@ -28,23 +28,41 @@ def parse_args(argv=None):
     parser.add_argument("--store", type=Path, required=True)
     parser.add_argument("--limit", type=int, default=core.MAX_CIKS)
     parser.add_argument("--max-elapsed-seconds", type=float, default=core.MAX_ELAPSED_SECONDS)
-    parser.add_argument("--fetch-public", action="store_true")
-    return parser.parse_args(argv)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--fetch-public", action="store_true")
+    mode.add_argument("--replay-cached", action="store_true")
+    parser.add_argument("--raw-cache-dir", type=Path)
+    args = parser.parse_args(argv)
+    if args.replay_cached and args.raw_cache_dir is None:
+        parser.error("--replay-cached requires --raw-cache-dir")
+    return args
 
 
 def run(args):
     def execute():
+        if args.replay_cached:
+            if not args.store.is_file():
+                raise ValueError("sec-store-missing")
+            document = core.read_json(args.store, maximum=None)
+            current_ciks = (document["currentCiks"] if "currentCiks" in document else
+                            core.build_document(args.source_dir, document)["currentCiks"])
+            replayed, summary = core.reparse_cached_reviews(document, args.raw_cache_dir,
+                current_ciks=current_ciks)
+            if replayed != document:
+                core.atomic_json(args.store, replayed)
+            print(json.dumps(summary, ensure_ascii=False))
+            return summary["exitCode"]
         document = core.build_document(args.source_dir, core.read_json(args.store, maximum=None) if args.store.exists() else None)
         document, summary = core.refresh(document, source_dir=args.source_dir, limit=args.limit,
             fetch_public=args.fetch_public, checkpoint=lambda value: core.atomic_json(args.store, value),
-            max_elapsed_seconds=args.max_elapsed_seconds)
+            max_elapsed_seconds=args.max_elapsed_seconds, raw_cache_dir=args.raw_cache_dir)
         if args.fetch_public:
             document["summary"] = summary
             core.atomic_json(args.store, document)
         print(json.dumps(summary, ensure_ascii=False))
         return summary["exitCode"]
 
-    if args.fetch_public:
+    if args.fetch_public or args.replay_cached:
         args.store.parent.mkdir(parents=True, exist_ok=True)
         with args.store.with_name(args.store.name + ".lock").open("a") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
