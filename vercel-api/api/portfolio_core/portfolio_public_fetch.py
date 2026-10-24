@@ -10,9 +10,11 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 import hashlib
 import json
+import re
 import sys
 import threading
 import time
+from typing import NamedTuple
 from types import MappingProxyType
 import urllib.error
 import urllib.request
@@ -43,6 +45,18 @@ _CACHE_RESULT = None
 _CACHE_EXPIRES_AT = 0.0
 _LIVE_STATES = {}
 _REFRESH_STORE = None
+_VALIDATED_SOURCES = {}
+_STRONG_ETAG = re.compile(r'"[\x21\x23-\x7e]{1,126}"\Z', re.ASCII)
+
+
+class _SourceResponse(NamedTuple):
+    document: dict
+    etag: str | None
+    revision: str | None
+
+
+def _safe_etag(value):
+    return value if type(value) is str and _STRONG_ETAG.fullmatch(value) else None
 
 
 def _refresh_overlay(documents, reader=None):
@@ -110,19 +124,39 @@ def _download_source_once(filename):
     url = PUBLIC_SOURCE_URLS[filename]
     limit = PUBLIC_SOURCE_MAX_BYTES[filename]
     timeout = AI_SOURCE_TIMEOUT_SECONDS if filename == _OPTIONAL_AI_SOURCE else FETCH_TIMEOUT_SECONDS
-    return _read_public_document(url, limit, timeout=timeout)
+    previous = _VALIDATED_SOURCES.get(filename)
+    etag = previous[1] if previous is not None and previous[0] == url else None
+    document, received_etag, unchanged = _read_public_document(
+        url, limit, timeout=timeout, _etag=etag, _with_etag=True)
+    if unchanged:
+        # Only a successful prior 200 parse and canonical hash can enter this store.
+        return _SourceResponse(previous[2], etag, previous[3])
+    return _SourceResponse(document, received_etag, None)
 
 
-def _read_public_document(url, limit, *, timeout=FETCH_TIMEOUT_SECONDS):
+def _read_public_document(url, limit, *, timeout=FETCH_TIMEOUT_SECONDS,
+                          _etag=None, _with_etag=False):
     """Shared transport for code-owned public URLs, never caller supplied URLs."""
+    if _with_etag and url not in PUBLIC_SOURCE_URLS.values():
+        raise ValueError("public source response rejected")
     opener = urllib.request.build_opener(
         urllib.request.ProxyHandler({}),
         _NoRedirect(),
     )
     # Do not inherit urllib's default User-Agent or accept caller-supplied headers.
     opener.addheaders = []
-    request = urllib.request.Request(url, method="GET")
-    with opener.open(request, timeout=timeout) as response:
+    request = urllib.request.Request(
+        url, headers={"If-None-Match": _etag} if _with_etag and _safe_etag(_etag) else {},
+        method="GET")
+    try:
+        response = opener.open(request, timeout=timeout)
+    except urllib.error.HTTPError as error:
+        if (error.code == 304 and _with_etag and _safe_etag(_etag)
+                and error.geturl() == url and _safe_etag(error.headers.get("ETag")) == _etag):
+            error.close()
+            return None, _etag, True
+        raise
+    with response:
         status = getattr(response, "status", None)
         if status is None:
             status = response.getcode()
@@ -138,6 +172,7 @@ def _read_public_document(url, limit, *, timeout=FETCH_TIMEOUT_SECONDS):
         raw = response.read(limit + 1)
         if len(raw) > limit:
             raise ValueError("public source response rejected")
+        received_etag = _safe_etag(response.headers.get("ETag")) if _with_etag else None
     document = json.loads(
         raw.decode("utf-8"),
         object_pairs_hook=_unique_object,
@@ -145,7 +180,7 @@ def _read_public_document(url, limit, *, timeout=FETCH_TIMEOUT_SECONDS):
     )
     if type(document) is not dict:
         raise ValueError("public source response rejected")
-    return document
+    return (document, received_etag, False) if _with_etag else document
 
 
 def _coverage(documents):
@@ -217,10 +252,12 @@ def _copy_public_bundle(value):
 
 def _log_fetch_timing(*, cache, status, available, started, lock_wait_ms=0,
                       fetch_phase_ms=0, download_parse_max_ms=0, hash_ms=0,
-                      overlay_ms=0, copy_ms=0):
-    """Fixed public-stage timings only; logging must not affect the response."""
+                      overlay_ms=0, copy_ms=0, revalidated=0):
+    """Fixed public-stage timings and 304 count; a warm hit revalidates nothing."""
     try:
         if cache not in {"hit", "miss"} or status not in {"complete", "partial", "unavailable"}:
+            return
+        if type(revalidated) is not int or not 0 <= revalidated <= len(PUBLIC_SOURCE_FILES):
             return
         values = (lock_wait_ms, fetch_phase_ms, download_parse_max_ms,
                   hash_ms, overlay_ms, copy_ms)
@@ -228,7 +265,7 @@ def _log_fetch_timing(*, cache, status, available, started, lock_wait_ms=0,
             ("lock_wait_ms", "fetch_phase_ms", "download_parse_max_ms",
              "hash_ms", "overlay_ms", "copy_ms"), values))
         print(f"member_map_public_fetch cache={cache} status={status} "
-              f"available={int(available)} {metrics} "
+              f"available={int(available)} revalidated={revalidated} {metrics} "
               f"elapsed_ms={max(0, int((time.monotonic() - started) * 1000))}",
               file=sys.stderr)
     except Exception:
@@ -264,6 +301,7 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
 
         documents = {}
         source_revisions = {}
+        revalidated = 0
         hash_ms = 0.0
         download_parse_max_ms = 0.0
         timing_lock = threading.Lock()
@@ -291,16 +329,29 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
             futures = {name: pool.submit(timed_fetch, name) for name in PUBLIC_SOURCE_FILES}
             for name in PUBLIC_SOURCE_FILES:
                 try:
-                    document = futures[name].result()
+                    fetched = futures[name].result()
                 except Exception:
-                    document = None
+                    fetched = None
+                source_response = fetched if isinstance(fetched, _SourceResponse) else None
+                document = source_response.document if source_response else fetched
                 if type(document) is dict:
                     try:
-                        source_revision = timed_revision(document)
+                        source_revision = (source_response.revision if source_response
+                                           and source_response.revision is not None
+                                           else timed_revision(document))
                     except (TypeError, ValueError, OverflowError, RecursionError):
                         continue
                     documents[name] = document
                     source_revisions[name] = source_revision
+                    if source_response and source_response.revision is not None:
+                        revalidated += 1
+                    if source_response and source_response.revision is None:
+                        if source_response.etag is None:
+                            _VALIDATED_SOURCES.pop(name, None)
+                        else:
+                            _VALIDATED_SOURCES[name] = (
+                                PUBLIC_SOURCE_URLS[name], source_response.etag,
+                                document, source_revision)
         fetch_phase_ms = (time.monotonic() - fetch_started) * 1000
 
         # Explicit fake-source hooks remain network-free. Production reads only
@@ -337,6 +388,7 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
         if production:
             _log_fetch_timing(cache="miss", status=result["coverage"]["status"],
                               available=result["coverage"]["available"],
+                              revalidated=revalidated,
                               started=timing_started, lock_wait_ms=lock_wait_ms,
                               fetch_phase_ms=fetch_phase_ms,
                               download_parse_max_ms=download_parse_max_ms,
@@ -353,3 +405,4 @@ def _reset_cache_for_tests():
         _CACHE_EXPIRES_AT = 0.0
         _LIVE_STATES = {}
         _REFRESH_STORE = None
+        _VALIDATED_SOURCES.clear()
