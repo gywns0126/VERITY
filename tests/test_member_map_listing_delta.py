@@ -224,16 +224,42 @@ def test_dart_date_only_and_kst_window_and_projection():
 
 
 def test_dart_replays_same_day_no_receipt_order_assumption():
-    cursor = {"source": "DART", "through_date": "2026-10-12", "ids": ["DART:20261012000002"]}
+    cursor = {"source": "DART", "through_date": "2026-10-12", "ids": [
+        "DART:20261012000002", "DART:20261008000025"]}
     transport = FixtureTransport(dart_page([dart_row(2), dart_row(1)]))
     result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, cursor, CHECKED, "key", transport=transport, window_days=1)
     assert result["status"] == "success"
     assert len(result["records"]) == 1 and result["duplicates"] == 1
-    assert set(result["cursor"]["ids"]) == {"DART:20261012000001", "DART:20261012000002"}
+    assert set(result["cursor"]["ids"]) == {
+        "DART:20261012000001", "DART:20261012000002", "DART:20261008000025"}
+
+
+def test_dart_legacy_boundary_ids_survive_empty_013_replay():
+    old_id = "DART:20261008000025"
+    cursor = {"source": "DART", "through_date": "2026-10-12", "ids": [old_id], "checked_at": CHECKED}
+    checked = "2026-10-14T15:00:00+00:00"  # Oct 15 in Korea
+    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, cursor, checked, "key",
+        transport=FixtureTransport(b'{"status":"013"}'))
+    assert result["status"] == "partial" and result["error"] is None
+    assert result["catchup_phase"] == "replayed" and result["coverage"]["historical_gap"] is True
+    assert result["cursor"]["ids"] == [old_id]
+    assert result["cursor"]["checked_at"] == checked
+    assert result["next_cursor"] == result["cursor"]
+
+
+def test_dart_same_boundary_id_union_overflow_retains_prior_checkpoint():
+    cursor = {"source": "DART", "through_date": "2026-10-12",
+              "ids": [f"DART:20261008{number:06d}" for number in range(1000)], "checked_at": CHECKED}
+    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, cursor, CHECKED, "key",
+        transport=FixtureTransport(dart_page([dart_row(1)])), window_days=1)
+    assert result["status"] == "partial" and result["error"] == "record_limit"
+    assert result["next_cursor"] is None and result["cursor"] == cursor
+    assert result["feed"] == PREVIOUS and result["coverage"]["pages_succeeded"] == 1
 
 
 def test_dart_catchup_exhausts_one_chronological_day_without_false_success():
-    cursor = {"source": "DART", "through_date": "2026-10-12", "ids": [], "checked_at": CHECKED}
+    cursor = {"source": "DART", "through_date": "2026-10-12",
+              "ids": ["DART:20261008000025"], "checked_at": CHECKED}
     checked = "2026-10-14T15:00:00+00:00"  # Oct 15 in Korea
     transport = FixtureTransport(dart_page([dart_row(1)]))
     result = delta.collect_dart_delta(UNIVERSE, {"items": []}, cursor, checked, "key", transport=transport,
@@ -243,6 +269,7 @@ def test_dart_catchup_exhausts_one_chronological_day_without_false_success():
     assert result["catchup_phase"] == "replayed"
     assert result["next_cursor"] == result["cursor"]
     assert result["cursor"]["through_date"] == "2026-10-12"
+    assert set(result["cursor"]["ids"]) == {"DART:20261008000025", "DART:20261012000001"}
     assert transport.calls[0][1]["params"]["bgn_de"] == "20261012"
     assert transport.calls[0][1]["params"]["end_de"] == "20261012"
     row13 = {**dart_row(1), "rcept_no": "20261013000001", "rcept_dt": "20261013"}
@@ -251,6 +278,7 @@ def test_dart_catchup_exhausts_one_chronological_day_without_false_success():
         transport=advance, window_days=90, catchup_phase="replayed")
     assert next_result["status"] == "partial" and next_result["catchup_phase"] == "advanced"
     assert next_result["cursor"]["through_date"] == "2026-10-13"
+    assert next_result["cursor"]["ids"] == ["DART:20261013000001"]
     assert advance.calls[0][1]["params"]["bgn_de"] == "20261013"
     assert advance.calls[0][1]["params"]["end_de"] == "20261013"
 

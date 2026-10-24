@@ -538,8 +538,13 @@ def collect_dart_delta(universe: Mapping[str, str], previous_feed: Mapping[str, 
             if page >= parsed["total_page"]:
                 if len(seen) != parsed["total_count"]:
                     raise ListingError("incomplete_unique_records")
+                # Preserve previously observed IDs when replaying the same boundary.
+                next_ids = (list(dict.fromkeys(last_day + cursor["ids"]))
+                            if cursor is not None and end == boundary_date else last_day)
+                if len(next_ids) > 1000:
+                    raise ListingError("record_limit")
                 next_cursor = {"source": "DART", "through_date": end.isoformat(),
-                               "ids": last_day, "checked_at": checked_at}
+                               "ids": next_ids, "checked_at": checked_at}
                 completed = _success(result, previous_feed, next_cursor, checked_at, max_per_ticker)
                 if end < today:
                     completed.update(status="partial", complete=False, catchup_phase=next_phase)
