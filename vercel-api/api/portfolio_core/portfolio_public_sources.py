@@ -19,6 +19,7 @@ must never become an invented filing/publication date or currency assertion.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import date, datetime, timezone
@@ -29,7 +30,7 @@ import os
 from pathlib import Path
 import re
 import stat
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 
 PUBLIC_SOURCE_FILES = (
@@ -806,6 +807,7 @@ def _append_public_institutional(documents, companies):
               "facts": 0, "shape_errors": 0, "rejection_reasons": {}}
     candidates = {}
     aliases = {}
+    today = date.today().isoformat()
     for identifier, company in companies.items():
         if company["market"] == "US":
             aliases.setdefault(company["ticker"].replace(".", "-"), []).append(identifier)
@@ -836,7 +838,7 @@ def _append_public_institutional(documents, companies):
                 or not 1900 <= int(report[:4]) <= 2100
                 or not 1900 <= int(filed[:4]) <= 2100
                 or report[5:] not in {"03-31", "06-30", "09-30", "12-31"}
-                or filed < report or filed > date.today().isoformat()):
+                or filed < report or filed > today):
             reject("invalid-institution-or-period")
             return
         cik = meta.get("cik")
@@ -1072,7 +1074,7 @@ def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
         # Presence is counted only after the file exposes its fixed top-level
         # record container.  Errors never include the filename or source value.
         if filename in container_fields:
-            tuple(_validated_rows(documents[filename], container_fields[filename]))
+            _validated_rows(documents[filename], container_fields[filename])
 
     def register(
         row: Mapping[str, Any],
