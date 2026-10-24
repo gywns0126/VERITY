@@ -69,8 +69,19 @@ def apply_result(source, previous, result, now):
     complete = status == "success" and result.get("complete") is True
     state.update(last_attempt_at=now, status=status, error=result.get("error"),
                  coverage=result.get("coverage", {}), requests=result.get("requests", 0))
-    if complete or status == "initialized":
+    catchup = (source == "DART" and status == "partial" and result.get("error") is None
+               and result.get("coverage", {}).get("historical_gap") is True
+               and result.get("next_cursor") is not None
+               and result.get("catchup_phase") in ("replayed", "advanced"))
+    if complete or status == "initialized" or catchup:
         state["cursor"] = result.get("cursor")
+    retry = (source == "DART" and not complete and not catchup and result.get("error") is not None
+             and previous.get("catchup_phase") in ("replayed", "advanced")
+             and result.get("next_cursor") is None)
+    if catchup:
+        state["catchup_phase"] = result["catchup_phase"]
+    elif not retry:
+        state.pop("catchup_phase", None)
     if complete:
         state["last_success_at"] = now
     if source != "news":
