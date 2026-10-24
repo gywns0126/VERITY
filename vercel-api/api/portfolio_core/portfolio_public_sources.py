@@ -19,7 +19,10 @@ must never become an invented filing/publication date or currency assertion.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import date, datetime, timezone
+from functools import lru_cache
 import json
 import math
 import os
@@ -207,6 +210,7 @@ _PATH_RE = re.compile(
 )
 _URL_IN_TEXT_RE = re.compile(r"(?i)(?:https?|ftp|data|javascript):")
 _HTML_RE = re.compile(r"<[^>]*>|&(?:lt|gt|#(?:x[0-9a-f]+|\d+));", re.IGNORECASE)
+_TEXT_CACHE = ContextVar("public_text_cache", default=None)
 
 
 class PublicSourceError(ValueError):
@@ -309,6 +313,13 @@ def _ticker(value: Any, market: str) -> str | None:
 
 
 def _safe_text(value: Any, maximum: int) -> str | None:
+    cached = _TEXT_CACHE.get()
+    if cached is not None and type(value) is str and type(maximum) is int:
+        return cached(value, maximum)
+    return _safe_text_uncached(value, maximum)
+
+
+def _safe_text_uncached(value: Any, maximum: int) -> str | None:
     if not isinstance(value, str):
         return None
     text = value.strip()
@@ -330,6 +341,18 @@ def _safe_text(value: Any, maximum: int) -> str | None:
     )):
         return None
     return text
+
+
+@contextmanager
+def _temporary_public_text_cache():
+    """Share validation only while building one public index, never across requests."""
+    cached = lru_cache(maxsize=16_384)(_safe_text_uncached)
+    token = _TEXT_CACHE.set(cached)
+    try:
+        yield
+    finally:
+        _TEXT_CACHE.reset(token)
+        cached.cache_clear()
 
 
 def safe_public_text(value: Any, maximum: int) -> str | None:

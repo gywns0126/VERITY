@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 import hashlib
 import json
+import sys
 import threading
 import time
 from types import MappingProxyType
@@ -184,6 +185,56 @@ def _bundle_revision(source_revisions):
     return digest.hexdigest()
 
 
+def _copy_public_bundle(value):
+    """Copy the JSON-shaped public bundle with deepcopy-equivalent alias isolation."""
+    memo = {}
+
+    def clone(item):
+        item_type = type(item)
+        if item_type is dict:
+            identifier = id(item)
+            if identifier in memo:
+                return memo[identifier]
+            copied = {}
+            memo[identifier] = copied
+            for key, nested in item.items():
+                copied[key] = clone(nested)
+            return copied
+        if item_type is list:
+            identifier = id(item)
+            if identifier in memo:
+                return memo[identifier]
+            copied = []
+            memo[identifier] = copied
+            copied.extend(clone(nested) for nested in item)
+            return copied
+        if item_type in (str, int, float, bool, type(None)):
+            return item
+        return deepcopy(item, memo)
+
+    return clone(value)
+
+
+def _log_fetch_timing(*, cache, status, available, started, lock_wait_ms=0,
+                      fetch_phase_ms=0, download_parse_max_ms=0, hash_ms=0,
+                      overlay_ms=0, copy_ms=0):
+    """Fixed public-stage timings only; logging must not affect the response."""
+    try:
+        if cache not in {"hit", "miss"} or status not in {"complete", "partial", "unavailable"}:
+            return
+        values = (lock_wait_ms, fetch_phase_ms, download_parse_max_ms,
+                  hash_ms, overlay_ms, copy_ms)
+        metrics = " ".join(f"{name}={max(0, int(value))}" for name, value in zip(
+            ("lock_wait_ms", "fetch_phase_ms", "download_parse_max_ms",
+             "hash_ms", "overlay_ms", "copy_ms"), values))
+        print(f"member_map_public_fetch cache={cache} status={status} "
+              f"available={int(available)} {metrics} "
+              f"elapsed_ms={max(0, int((time.monotonic() - started) * 1000))}",
+              file=sys.stderr)
+    except Exception:
+        pass
+
+
 def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
     """Return fixed public documents plus explicit source availability.
 
@@ -193,17 +244,51 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
     """
     global _CACHE_RESULT, _CACHE_EXPIRES_AT
 
+    timing_started = time.monotonic()
+    production = _fetcher is None and _refresh_reader is None
+    copy_bundle = _copy_public_bundle if production else deepcopy
     fetcher = _fetcher or _download_source
     clock = _clock or time.monotonic
     with _CACHE_LOCK:
+        lock_wait_ms = (time.monotonic() - timing_started) * 1000
         now = clock()
         if _CACHE_RESULT is not None and now < _CACHE_EXPIRES_AT:
-            return deepcopy(_CACHE_RESULT)
+            copy_started = time.monotonic()
+            result = copy_bundle(_CACHE_RESULT)
+            if production:
+                _log_fetch_timing(cache="hit", status=result["coverage"]["status"],
+                                  available=result["coverage"]["available"],
+                                  started=timing_started, lock_wait_ms=lock_wait_ms,
+                                  copy_ms=(time.monotonic() - copy_started) * 1000)
+            return result
 
         documents = {}
         source_revisions = {}
+        hash_ms = 0.0
+        download_parse_max_ms = 0.0
+        timing_lock = threading.Lock()
+
+        def timed_fetch(name):
+            nonlocal download_parse_max_ms
+            started = time.monotonic()
+            try:
+                return fetcher(name)
+            finally:
+                elapsed = (time.monotonic() - started) * 1000
+                with timing_lock:
+                    download_parse_max_ms = max(download_parse_max_ms, elapsed)
+
+        def timed_revision(document):
+            nonlocal hash_ms
+            started = time.monotonic()
+            try:
+                return _document_revision(document)
+            finally:
+                hash_ms += (time.monotonic() - started) * 1000
+
+        fetch_started = time.monotonic()
         with ThreadPoolExecutor(max_workers=len(PUBLIC_SOURCE_FILES)) as pool:
-            futures = {name: pool.submit(fetcher, name) for name in PUBLIC_SOURCE_FILES}
+            futures = {name: pool.submit(timed_fetch, name) for name in PUBLIC_SOURCE_FILES}
             for name in PUBLIC_SOURCE_FILES:
                 try:
                     document = futures[name].result()
@@ -211,25 +296,30 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
                     document = None
                 if type(document) is dict:
                     try:
-                        source_revision = _document_revision(document)
+                        source_revision = timed_revision(document)
                     except (TypeError, ValueError, OverflowError, RecursionError):
                         continue
                     documents[name] = document
                     source_revisions[name] = source_revision
+        fetch_phase_ms = (time.monotonic() - fetch_started) * 1000
 
         # Explicit fake-source hooks remain network-free. Production reads only
         # the existing private public-refresh table; failed optional reads never
         # remove the existing Blob source bundle or promote an AI relation.
         if _fetcher is None or _refresh_reader is not None:
+            overlay_started = time.monotonic()
             baseline_documents = documents.copy()
             documents = _refresh_overlay(documents, _refresh_reader)
             # The overlay replaces changed documents and preserves other objects.
             source_revisions = {
                 name: source_revisions[name]
                 if name in source_revisions and document is baseline_documents.get(name)
-                else _document_revision(document)
+                else timed_revision(document)
                 for name, document in documents.items()
             }
+            overlay_ms = (time.monotonic() - overlay_started) * 1000
+        else:
+            overlay_ms = 0.0
 
         result = {
             "documents": documents,
@@ -242,7 +332,17 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
         else:
             _CACHE_RESULT = None
             _CACHE_EXPIRES_AT = 0.0
-        return deepcopy(result)
+        copy_started = time.monotonic()
+        returned = copy_bundle(result)
+        if production:
+            _log_fetch_timing(cache="miss", status=result["coverage"]["status"],
+                              available=result["coverage"]["available"],
+                              started=timing_started, lock_wait_ms=lock_wait_ms,
+                              fetch_phase_ms=fetch_phase_ms,
+                              download_parse_max_ms=download_parse_max_ms,
+                              hash_ms=hash_ms, overlay_ms=overlay_ms,
+                              copy_ms=(time.monotonic() - copy_started) * 1000)
+        return returned
 
 
 def _reset_cache_for_tests():

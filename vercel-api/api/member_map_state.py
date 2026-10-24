@@ -3,6 +3,7 @@ from http.server import BaseHTTPRequestHandler
 import json
 import logging
 import re
+from urllib.parse import parse_qs, urlsplit
 
 import requests
 
@@ -159,6 +160,21 @@ def _read_state(user_id, token):
     return _validated_state(rows[0], user_id)
 
 
+def _client_state(state, origins_enabled):
+    if origins_enabled:
+        return state
+    # Older open tabs validate an exact layout shape. Never make them reload
+    # or drop unsaved notes just because another client saved richer metadata.
+    return {**state, "document": {"layouts": [
+        {key: value for key, value in layout.items() if key != "origins"}
+        for layout in state["document"]["layouts"]
+    ]}}
+
+
+def _origins_enabled(handler):
+    return parse_qs(urlsplit(getattr(handler, "path", "")).query).get("layout_origins") == ["1"]
+
+
 def _save_state(user_id, token, expected_revision, document):
     base_url = str(getattr(sb, "SUPABASE_URL", "")).rstrip("/")
     anon_key = str(getattr(sb, "SUPABASE_ANON_KEY", ""))
@@ -190,7 +206,16 @@ def _save_state(user_id, token, expected_revision, document):
         raise RuntimeError("storage_unavailable")
     try:
         state = _validated_state(result, user_id)
-        if state["revision"] != expected_revision + 1 or state["document"] != document:
+        # A legacy save may retain only origins bound to unchanged deltas.
+        # Every supplied field, including explicitly supplied origins, must
+        # still match exactly; only omitted optional origins may be returned.
+        supplied = {layout["map_key"]: layout for layout in document["layouts"]}
+        comparable = {"layouts": [
+            {key: value for key, value in layout.items()
+             if key != "origins" or "origins" in supplied.get(layout["map_key"], {})}
+            for layout in state["document"]["layouts"]
+        ]}
+        if state["revision"] != expected_revision + 1 or comparable != document:
             raise ValueError("save_response_mismatch")
     except (ValueError, TypeError, RecursionError):
         raise RuntimeError("storage_unavailable") from None
@@ -209,7 +234,7 @@ class handler(BaseHTTPRequestHandler):
             return _json(self, 401, {"error": "authentication_required"})
         try:
             # This read intentionally does not write visit or cursor state.
-            return _json(self, 200, _read_state(user_id, token))
+            return _json(self, 200, _client_state(_read_state(user_id, token), _origins_enabled(self)))
         except Exception:
             _LOGGER.warning("member map state read failed [storage_unavailable]")
             return _json(self, 503, {"error": "storage_unavailable"})
@@ -232,7 +257,7 @@ class handler(BaseHTTPRequestHandler):
             return _json(self, 400, {"error": "invalid_document"})
         try:
             result = _save_state(user_id, token, expected, document)
-            return _json(self, 200, result)
+            return _json(self, 200, _client_state(result, _origins_enabled(self)))
         except RuntimeError as exc:
             if str(exc) == "revision_conflict":
                 return _json(self, 409, {"error": "revision_conflict"})

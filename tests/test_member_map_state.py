@@ -63,9 +63,10 @@ def _document():
     }]}
 
 
-def _invoke(api, method, token=None, payload=None, origin="https://app.example"):
+def _invoke(api, method, token=None, payload=None, origin="https://app.example", path="/api/member_map_state"):
     h = object.__new__(api.handler)
     h.headers = {"Origin": origin}
+    h.path = path
     if token:
         h.headers["Authorization"] = "Bearer " + token
     body = b"" if payload is None else json.dumps(payload).encode()
@@ -436,3 +437,82 @@ def test_deployment_does_not_override_member_cors_or_enable_public_cache():
                 for key in ("cache-control", "cdn-cache-control", "vercel-cdn-cache-control"):
                     if key in headers:
                         assert "no-store" in headers[key]
+
+
+def _with_origins():
+    document = _document()
+    document["layouts"][0]["origins"] = [
+        {"node_id": "node-a", "x": 800, "y": -200, "dx": 0.25, "dy": -0.5}]
+    return document
+
+
+@pytest.mark.parametrize("change", [
+    {"node_id": "missing"}, {"dx": 1}, {"dy": True}, {"x": 1000001},
+    {"y": float("inf")}, {"owner_id": USER_B}, {"node_id": None},
+])
+def test_origins_are_bound_bounded_and_strict(modules, change):
+    _, validation, _ = modules
+    value = _with_origins()
+    validation.validate_document(value)
+    value["layouts"][0]["origins"][0].update(change)
+    with pytest.raises(validation.InvalidDocument):
+        validation.validate_document(value)
+
+
+@pytest.mark.parametrize("origins", [None, {}, [None], []])
+def test_origin_collection_contract(modules, origins):
+    _, validation, _ = modules
+    value = _document()
+    value["layouts"][0]["origins"] = origins
+    if origins == []:
+        assert validation.validate_document(value) == value
+    else:
+        with pytest.raises(validation.InvalidDocument):
+            validation.validate_document(value)
+
+
+def test_duplicate_origins_rejected(modules):
+    _, validation, _ = modules
+    value = _with_origins()
+    value["layouts"][0]["origins"] *= 2
+    with pytest.raises(validation.InvalidDocument):
+        validation.validate_document(value)
+
+
+@pytest.mark.parametrize("query,rich", [("", False), ("?layout_origins=1", True),
+    ("?layout_origins=0", False), ("?layout_origins=1&layout_origins=0", False)])
+def test_get_origin_negotiation_does_not_mutate_storage(modules, query, rich):
+    api, _, sb = modules
+    saved = _with_origins()
+    sb.select.side_effect = None
+    sb.select.return_value = [{"user_id": USER_A, "revision": 4,
+        "document": saved, "public_event_cursor_at": None}]
+    h, body = _invoke(api, "do_GET", "jwt-a", path="/api/member_map_state" + query)
+    assert h.status == 200
+    assert body["document"] == (saved if rich else _document())
+    assert saved == _with_origins()
+
+
+def test_legacy_save_accepts_preserved_origins_but_not_lost_notes(modules, monkeypatch):
+    api, _, _ = modules
+    result = {"user_id": USER_A, "revision": 1, "document": _with_origins(),
+              "public_event_cursor_at": None}
+    monkeypatch.setattr(api.requests, "post", Mock(return_value=_RpcResponse(200, result)))
+    h, body = _invoke(api, "do_POST", "jwt-a", {"expected_revision": 0, "document": _document()})
+    assert h.status == 200 and body["document"] == _document()
+    result["document"]["layouts"][0]["notes"] = []
+    h, _ = _invoke(api, "do_POST", "jwt-a", {"expected_revision": 0, "document": _document()})
+    assert h.status == 503
+
+
+def test_origin_aware_save_requires_exact_metadata_receipt(modules, monkeypatch):
+    api, _, _ = modules
+    result = {"user_id": USER_A, "revision": 1, "document": _with_origins(),
+              "public_event_cursor_at": None}
+    monkeypatch.setattr(api.requests, "post", Mock(return_value=_RpcResponse(200, result)))
+    payload = {"expected_revision": 0, "document": _with_origins()}
+    h, body = _invoke(api, "do_POST", "jwt-a", payload, path="/api/member_map_state?layout_origins=1")
+    assert h.status == 200 and body["document"] == payload["document"]
+    result["document"]["layouts"][0]["origins"] = []
+    h, _ = _invoke(api, "do_POST", "jwt-a", payload, path="/api/member_map_state?layout_origins=1")
+    assert h.status == 503

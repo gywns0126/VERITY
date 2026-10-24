@@ -15,6 +15,8 @@ const { PGlite } = await import(pathToFileURL(modulePath).href);
 const migrationPath = resolve(fileURLToPath(new URL('../', import.meta.url)),
   'supabase/migrations/2026092701_member_map_state.sql');
 const migration = await readFile(migrationPath, 'utf8');
+const originsMigration = await readFile(resolve(fileURLToPath(new URL('../', import.meta.url)),
+  'supabase/migrations/2026102402_member_map_layout_origins.sql'), 'utf8');
 const db = new PGlite();
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -66,6 +68,7 @@ try {
   `);
   await db.query('INSERT INTO auth.users(id) VALUES ($1), ($2)', [A, B]);
   await db.exec(migration);
+  await db.exec(originsMigration);
   const engine = (await db.query('SELECT version() AS version')).rows[0].version;
 
   await check('migration enables row isolation and fixes function search path', async () => {
@@ -217,7 +220,56 @@ print(json.dumps({'bytes': v.document_storage_bytes(d), 'accepted': accepted,
       }
     });
   }
+  const withOrigins = () => {
+    const value = document();
+    value.layouts[0].origins = [{ node_id: 'event-1', x: 800, y: 250, dx: -18.5, dy: 25 }];
+    return value;
+  };
+  for (const [name, mutate] of [
+    ['unbound origin', d => { d.layouts[0].origins[0].node_id = 'other'; }],
+    ['origin delta mismatch', d => { d.layouts[0].origins[0].dx = 0; }],
+    ['origin out of range', d => { d.layouts[0].origins[0].x = 1000001; }],
+    ['origin boolean', d => { d.layouts[0].origins[0].dy = true; }],
+    ['origin extra field', d => { d.layouts[0].origins[0].owner_id = B; }],
+    ['duplicate origins', d => { d.layouts[0].origins.push(d.layouts[0].origins[0]); }],
+    ['null origins', d => { d.layouts[0].origins = null; }],
+  ]) {
+    await check(`RPC rejects ${name}`, async () => {
+      const value = withOrigins(); mutate(value);
+      await rejected(as('authenticated', A, tx => save(tx, 3, value)), '22023');
+    });
+  }
+  await check('origin-aware save preserves legacy raw positions and notes', async () => {
+    const value = withOrigins();
+    const result = await as('authenticated', A, tx => save(tx, 3, value));
+    assert.deepEqual(result.document, value);
+    assert.deepEqual(result.document.layouts[0].positions, document().layouts[0].positions);
+    assert.deepEqual(result.document.layouts[0].notes, document().layouts[0].notes);
+  });
+  await check('old-client note save preserves origin only with identical raw delta', async () => {
+    const value = document(); value.layouts[0].notes[0].text = 'new unsaved note now explicitly saved';
+    const result = await as('authenticated', A, tx => save(tx, 4, value));
+    assert.deepEqual(result.document.layouts[0].origins, withOrigins().layouts[0].origins);
+    assert.deepEqual(result.document.layouts[0].notes, value.layouts[0].notes);
+    const moved = document(); moved.layouts[0].positions[0].x = 21;
+    const next = await as('authenticated', A, tx => save(tx, 5, moved));
+    assert.deepEqual(next.document.layouts[0].origins, []);
+    assert.deepEqual(next.document.layouts[0].positions, moved.layouts[0].positions);
+  });
+  await check('explicit empty origins clears metadata without resetting notes or positions', async () => {
+    await as('authenticated', A, tx => save(tx, 6, withOrigins()));
+    const value = document(); value.layouts[0].origins = [];
+    const result = await as('authenticated', A, tx => save(tx, 7, value));
+    assert.deepEqual(result.document, value);
+    await rejected(as('authenticated', A, tx => save(tx, 7, withOrigins())), 'PT409');
+  });
+  await check('legacy deletion does not resurrect layouts or metadata', async () => {
+    await as('authenticated', A, tx => save(tx, 8, withOrigins()));
+    const result = await as('authenticated', A, tx => save(tx, 9, { layouts: [] }));
+    assert.deepEqual(result.document, { layouts: [] });
+  });
   console.log(JSON.stringify({ engine, migrationSha256: createHash('sha256').update(migration).digest('hex'),
+    originsMigrationSha256: createHash('sha256').update(originsMigration).digest('hex'),
     passed: checks.filter(c => c.passed).length, total: checks.length, checks,
     limitations: ['Auth claims are fixtures, not live login', 'No PostgREST/browser test',
       'Single connection: no concurrent-transaction race test', 'No production database was connected'],

@@ -3,7 +3,8 @@ const assert = require("node:assert/strict")
 const fs = require("node:fs")
 const path = require("node:path")
 const vm = require("node:vm")
-const { createHash } = require("node:crypto")
+const { createHash, webcrypto } = require("node:crypto")
+const { TextEncoder } = require("node:util")
 
 const root = path.resolve(__dirname, "..")
 const review = (...parts) => path.join(root, ...parts)
@@ -15,12 +16,20 @@ const marker = (source, start, candidates) => {
     return offsets.sort((left, right) => left.index - right.index)[0].index
 }
 
+function loadPortfolioMapData(source, context) {
+    const start = source.indexOf("// framer-components/public-probe/PortfolioMapData.tsx")
+    const end = source.indexOf("// framer-components/public-probe/MemberMapState.tsx", start)
+    assert.ok(start >= 0 && end > start, "review snapshot contains the production portfolio data helpers")
+    vm.runInNewContext(`${source.slice(start, end)}\nglobalThis.portfolioDocumentIdentity = portfolioDocumentIdentity`, context)
+}
+
 function memberMapStore() {
     const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
-    const start = source.indexOf('var ENDPOINT = "https://project-yw131.vercel.app/api/member_map_state";')
+    const start = source.indexOf("// framer-components/public-probe/MemberMapState.tsx")
     const end = marker(source, start, ["// framer-components/public-probe/PortfolioPrototypeHost.ts", "// framer-components/public-probe/PortfolioMapWorkspace.tsx"])
     assert.ok(start >= 0 && end > start, "review snapshot contains the member-store segment")
     const context = { AbortController, JSON, Number, Set, clearTimeout, setTimeout }
+    loadPortfolioMapData(source, context)
     vm.runInNewContext(`${source.slice(start, end)}\nglobalThis.makeStore = createMemberMapStore`, context)
     return context.makeStore
 }
@@ -33,7 +42,8 @@ function reviewedRuntime() {
     const reviewedEnd = marker(source, reviewedStart, ["// framer-components/public-probe/PortfolioPrototypeHost.ts", "// framer-components/public-probe/PublicPortfolioMap.tsx"])
     assert.ok(stateStart >= 0 && stateEnd > stateStart, "review snapshot contains member state")
     assert.ok(reviewedStart >= 0 && reviewedEnd > reviewedStart, "review snapshot contains reviewed state")
-    const context = { AbortController, JSON, Number, Set, clearTimeout, setTimeout }
+    const context = { AbortController, JSON, Number, Set, Map, URL, crypto: webcrypto, TextEncoder, clearTimeout, setTimeout }
+    loadPortfolioMapData(source, context)
     vm.runInNewContext(`${source.slice(stateStart, stateEnd)}\n${source.slice(reviewedStart, reviewedEnd)}\n` +
         "globalThis.reviewedRuntime = { createMemberMapStore, mapReadState, reviewedRecord }", context)
     return context.reviewedRuntime
@@ -44,7 +54,8 @@ function workspaceRuntime() {
     const start = source.indexOf("// framer-components/public-probe/MemberMapState.tsx")
     const end = marker(source, start, ["// framer-components/public-probe/PortfolioPrototypeHost.ts", "// framer-components/public-probe/PortfolioMapCanvas.tsx"])
     assert.ok(start >= 0 && end > start, "review snapshot contains the workspace runtime")
-    const context = { AbortController, JSON, Number, Set, Map, clearTimeout, setTimeout }
+    const context = { AbortController, JSON, Number, Set, Map, URL, crypto: webcrypto, TextEncoder, clearTimeout, setTimeout }
+    loadPortfolioMapData(source, context)
     vm.runInNewContext(`${source.slice(start, end)}\nglobalThis.makeWorkspace = createPortfolioMapWorkspace`, context)
     return context.makeWorkspace
 }
@@ -68,7 +79,8 @@ test("HBM evidence matches the mixed-market pair without changing existing saved
     const start = source.indexOf("// framer-components/public-probe/PortfolioReviewedFacts.tsx")
     const end = marker(source, start, ["// framer-components/public-probe/PortfolioPrototypeReviewed.ts", "// framer-components/public-probe/PortfolioPrototypeHost.ts", "// framer-components/public-probe/PortfolioReviewedView.tsx"])
     assert.ok(start >= 0 && end > start)
-    const context = { URL }
+    const context = { URL, crypto: webcrypto, TextEncoder }
+    loadPortfolioMapData(source, context)
     vm.runInNewContext(source.slice(start, end) + "\nglobalThis.facts = h => buildReviewedPortfolioFacts(h, portfolioReviewedRegistry)", context)
     const pair = [{ ticker: "000660", market: "KR" }, { ticker: "TSM", market: "US" }]
     const result = context.facts(pair)
@@ -186,12 +198,16 @@ test("workspace ignores a holdings response after the active owner changes", asy
 
 test("prototype shell retains guarded member state and parent-only host wiring", () => {
     const source = fs.readFileSync(review("review/member-map/Map.snapshot.tsx"), "utf8")
+    const hostStart = source.indexOf("function mountMemberPrototype(")
+    const hostEnd = source.indexOf("function PublicPortfolioPrototype(", hostStart)
+    assert.ok(hostStart >= 0 && hostEnd > hostStart, "review snapshot contains the current member prototype host")
+    const host = source.slice(hostStart, hostEnd)
     assert.match(source, /function PublicPortfolioPrototype\(/)
-    assert.match(source, /function mountMemberPrototype\(/)
-    assert.match(source, /sandbox/, "prototype host sets an iframe sandbox")
-    assert.match(source, /allow-scripts/, "prototype sandbox allows scripts only")
-    assert.match(source, /type: "init", model: prototypeMemberModel\(current\)/)
-    assert.doesNotMatch(source, /type: "init"[^\n]*(token|access_token|Authorization)/i)
+    assert.match(host, /sandbox/, "prototype host sets an iframe sandbox")
+    assert.match(host, /allow-scripts/, "prototype sandbox allows scripts only")
+    assert.match(host, /const model = \(state\) => \{\s*const projected = prototypeMemberModel\(state, options\.explorationNotice, options\.visitBaseline\);/)
+    assert.match(host, /port\.postMessage\(\{\s*type: "init", model: \{\s*\.\.\.model\(current\), introHidden\s*\}\s*\}\);/)
+    assert.doesNotMatch(host, /type: "init"[^\n]*(token|access_token|Authorization)/i)
     const entry = fs.readFileSync(review("review/member-map/entry.tsx"), "utf8")
     assert.ok(entry.indexOf('className="review-boundary"') > entry.indexOf('className="review-auth"'))
 })
@@ -294,12 +310,12 @@ test("review snapshot uses the actual workspace and reviewed-state graph while a
     for (const name of modules) assert.match(source, new RegExp(`// framer-components/public-probe/${name}\\.(?:tsx|ts)`), name)
     assert.match(source, /\/\/ output\/member-map-integration-20260927\/PortfolioMapReview\.entry\.tsx/)
     assert.match(source, /projectReviewedPrototype\(state\)/)
-    assert.match(source, /mergePrototypeDraft\(state, command\.draft\)/)
-    assert.match(source, /workspace = createPortfolioMapWorkspace\(\{ includeWatchlist: true \}\)/)
+    assert.match(source, /const next = mergePrototypeDraft\(state, command\.draft, \(reason\) => \{/)
+    assert.match(source, /workspace = createPortfolioMapWorkspace\(\{ includeWatchlist: true, usePortfolioAnalysis: true \}\)/)
     assert.match(source, /createElement\(PublicPortfolioPrototype(?:,|\))/)
     assert.doesNotMatch(source, /TestWorkspace/)
     assert.equal(digest(fs.readFileSync(review("review/member-map/Auth.snapshot.tsx"))),
-        "3a2d96eeadb1e349a9f42af115d16497d6a154fb6cb0e0b490c90f697eacd2d4")
+        "18443f1f7b7ac22d82bde0e2ad33580871690ca6d541b098fa625e292343ef20")
 })
 
 test("prototype host merges real 000660+TSM reviewed state, saves, and recreates it without losing marks or notes", async () => {

@@ -297,6 +297,26 @@ def test_public_text_unicode_length_and_existing_sensitive_boundaries():
             assert validate(value, 160) is None
 
 
+def test_public_text_cache_is_temporary_and_keeps_sensitive_rejections(endpoint):
+    sources = sys.modules['api.portfolio_core.portfolio_public_sources']
+    class UnhashableText(str):
+        __hash__ = None
+
+    assert sources._TEXT_CACHE.get() is None
+    with sources._temporary_public_text_cache():
+        assert sources._safe_text('검수 회사', 160) == '검수 회사'
+        assert sources._safe_text('검수 회사', 160) == '검수 회사'
+        assert sources._safe_text(UnhashableText('검수 회사'), 160) == '검수 회사'
+        assert sources._safe_text('Bearer synthetic', 160) is None
+        assert sources._TEXT_CACHE.get().cache_info().hits == 1
+        assert sources._TEXT_CACHE.get().cache_info().maxsize == 16_384
+    assert sources._TEXT_CACHE.get() is None
+    with pytest.raises(RuntimeError), sources._temporary_public_text_cache():
+        assert sources._safe_text('검수 회사', 160) == '검수 회사'
+        raise RuntimeError('synthetic failure')
+    assert sources._TEXT_CACHE.get() is None
+
+
 def test_owned_public_catalog_reuses_fresh_projection_without_mutating_sources(endpoint):
     from copy import deepcopy
     sources = sys.modules['api.portfolio_core.portfolio_public_sources']
