@@ -1,10 +1,12 @@
 """Exact deployed reader integration, synthetic public facts only, no network."""
 from copy import deepcopy
 import importlib
+import io
 import json
 from pathlib import Path
 import sys
 import types
+import urllib.error
 
 import pytest
 
@@ -198,6 +200,7 @@ def test_production_cold_and_warm_copy_counts_keep_return_isolation(monkeypatch,
     assert len(lines) == 2
     assert "cache=miss status=complete available=16" in lines[0]
     assert "cache=hit status=complete available=16" in lines[1]
+    assert all("revalidated=0" in line for line in lines)
     assert all("lock_wait_ms=" in line and "copy_ms=" in line and "elapsed_ms=" in line
                for line in lines)
     assert all("검수 회사" not in line and "Bearer" not in line and "http" not in line
@@ -261,3 +264,164 @@ def test_production_failed_news_overlay_separates_live_cache_and_return(monkeypa
     assert live_row["title"] == "전역 상태의 변이"
     assert returned_row["title"] == "반환값의 변이"
     assert warm["documents"]["portfolio.json"]["headlines"][0]["title"] == "공개 검수 기사"
+
+
+def test_fixed_url_304_reuses_only_prior_validated_document_and_hash(monkeypatch, capsys):
+    target = "universe_search.json"
+    etag = '"' + "a" * 32 + '"'
+    calls = []
+    revision_calls = []
+    original_revision = fetch._document_revision
+
+    class Response(io.BytesIO):
+        status = 200
+        def __init__(self, url, body, headers):
+            super().__init__(body)
+            self.url, self.headers = url, headers
+        def geturl(self):
+            return self.url
+
+    class Opener:
+        addheaders = []
+        def open(self, request, timeout):
+            name = request.full_url.rsplit("/", 1)[-1]
+            sent = dict(request.header_items()).get("If-none-match")
+            calls.append((name, sent))
+            if name == target and sent == etag:
+                raise urllib.error.HTTPError(request.full_url, 304, "unchanged",
+                                             {"ETag": etag}, io.BytesIO())
+            body = json.dumps(baseline(name)).encode()
+            return Response(request.full_url, body,
+                            {"Content-Length": str(len(body)),
+                             "ETag": etag if name == target else "invalid\r\netag"})
+
+    monkeypatch.setattr(fetch.urllib.request, "build_opener", lambda *_: Opener())
+    monkeypatch.setattr(fetch, "_REFRESH_STORE", types.SimpleNamespace(read_states=lambda: {}))
+    monkeypatch.setattr(fetch, "_document_revision", lambda document: (
+        revision_calls.append(True) or original_revision(document)))
+
+    first = fetch.fetch_public_sources(_clock=lambda: 0)
+    assert len(revision_calls) == len(fetch.PUBLIC_SOURCE_FILES)
+    assert sorted(calls) == sorted((name, None) for name in fetch.PUBLIC_SOURCE_FILES)
+    first["documents"][target]["stocks"].clear()
+
+    second = fetch.fetch_public_sources(_clock=lambda: 61)
+    assert second["coverage"]["status"] == "complete"
+    assert second["revision"] == first["revision"]
+    assert second["revision"] == fetch._bundle_revision({
+        name: original_revision(document) for name, document in second["documents"].items()})
+    assert second["documents"][target] == baseline(target)
+    assert len(revision_calls) == 2 * len(fetch.PUBLIC_SOURCE_FILES) - 1
+    assert sorted(calls[len(fetch.PUBLIC_SOURCE_FILES):]) == sorted(
+        (name, etag if name == target else None) for name in fetch.PUBLIC_SOURCE_FILES)
+    assert fetch._VALIDATED_SOURCES[target][2] is not second["documents"][target]
+    lines = [line for line in capsys.readouterr().err.splitlines()
+             if line.startswith("member_map_public_fetch ")]
+    assert len(lines) == 2
+    assert "cache=miss" in lines[0] and "revalidated=0" in lines[0]
+    assert "cache=miss" in lines[1] and "revalidated=1" in lines[1]
+    assert all(etag not in line and "http" not in line for line in lines)
+
+
+@pytest.mark.parametrize("mode", ["changed", "wrong-304", "missing-304"])
+def test_revalidation_never_promotes_unvalidated_or_failed_source(monkeypatch, capsys, mode):
+    target = "universe_search.json"
+    url = fetch.PUBLIC_SOURCE_URLS[target]
+    etag = '"' + "a" * 32 + '"'
+    revised_etag = '"' + "b" * 32 + '"'
+    phase = [0]
+
+    class Response(io.BytesIO):
+        status = 200
+        def __init__(self, body, received):
+            super().__init__(body)
+            self.headers = {"ETag": received, "Content-Length": str(len(body))}
+        def geturl(self):
+            return url
+
+    class Opener:
+        addheaders = []
+        def open(self, request, timeout):
+            if request.full_url != url:
+                raise urllib.error.HTTPError(request.full_url, 404, "missing", {}, io.BytesIO())
+            sent = dict(request.header_items()).get("If-none-match")
+            if phase[0] and mode != "changed":
+                received = revised_etag if mode == "wrong-304" else etag
+                if mode == "missing-304":
+                    assert sent is None
+                raise urllib.error.HTTPError(url, 304, "unchanged",
+                                             {"ETag": received}, io.BytesIO())
+            document = baseline(target)
+            if phase[0]:
+                assert sent == etag
+                document["stocks"][0]["name"] = "수정된 공개 이름"
+            body = json.dumps(document).encode()
+            return Response(body, revised_etag if phase[0] else etag)
+
+    monkeypatch.setattr(fetch.urllib.request, "build_opener", lambda *_: Opener())
+    monkeypatch.setattr(fetch, "_REFRESH_STORE", types.SimpleNamespace(read_states=lambda: {}))
+    if mode == "missing-304":
+        phase[0] = 1
+        result = fetch.fetch_public_sources(_clock=lambda: 0)
+        assert target in result["coverage"]["missing"]
+        assert "revalidated=0" in capsys.readouterr().err
+        return
+
+    first = fetch.fetch_public_sources(_clock=lambda: 0)
+    original = first["revision"]
+    phase[0] = 1
+    second = fetch.fetch_public_sources(_clock=lambda: 61)
+    if mode == "changed":
+        assert second["documents"][target]["stocks"][0]["name"] == "수정된 공개 이름"
+        assert second["revision"] != original
+        assert fetch._VALIDATED_SOURCES[target][1] == revised_etag
+    else:
+        assert target in second["coverage"]["missing"]
+        assert second["revision"] != original
+    lines = [line for line in capsys.readouterr().err.splitlines()
+             if line.startswith("member_map_public_fetch ")]
+    assert len(lines) == 2 and all("revalidated=0" in line for line in lines)
+
+
+@pytest.mark.parametrize("failure", ["parse", "hash"])
+def test_invalid_200_cannot_seed_conditional_reuse(monkeypatch, failure):
+    target = "universe_search.json"
+    url = fetch.PUBLIC_SOURCE_URLS[target]
+    etag = '"' + "a" * 32 + '"'
+    sent = []
+
+    class Response(io.BytesIO):
+        status = 200
+        headers = {"ETag": etag}
+        def geturl(self):
+            return url
+
+    class Opener:
+        addheaders = []
+        def open(self, request, timeout):
+            if request.full_url != url:
+                raise urllib.error.HTTPError(request.full_url, 404, "missing", {}, io.BytesIO())
+            sent.append(dict(request.header_items()).get("If-none-match"))
+            if failure == "parse":
+                return Response(b'{"stocks":[],"stocks":[]}')
+            return Response(json.dumps(baseline(target)).encode())
+
+    monkeypatch.setattr(fetch.urllib.request, "build_opener", lambda *_: Opener())
+    monkeypatch.setattr(fetch, "_REFRESH_STORE", types.SimpleNamespace(read_states=lambda: {}))
+    if failure == "hash":
+        monkeypatch.setattr(fetch, "_document_revision", lambda _document: (
+            _ for _ in ()).throw(ValueError("synthetic canonical failure")))
+    for now in (0, 61):
+        result = fetch.fetch_public_sources(_clock=lambda: now)
+        assert target in result["coverage"]["missing"]
+    assert sent == [None, None]
+    assert target not in fetch._VALIDATED_SOURCES
+    with pytest.raises(ValueError, match="public source response rejected"):
+        fetch._read_public_document("https://not-allowlisted.invalid/file.json", 100,
+                                    _with_etag=True)
+
+
+@pytest.mark.parametrize("etag", ["W/\"weak\"", '"é"', '"a\r\nInjected: yes"',
+                                       '"' + "a" * 127 + '"', "bare"])
+def test_unsafe_etag_is_never_accepted(etag):
+    assert fetch._safe_etag(etag) is None
