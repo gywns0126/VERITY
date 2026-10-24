@@ -626,8 +626,71 @@ async function verifyCatchupMigration() {
     console.log('PASS catchup migration: SQL NULL/CHECK, ACL, replay/retry/advance/success, quota/feed');
 }
 
+async function verifyLegacyReplayRoundtrip() {
+    await ownerExec("UPDATE public.member_map_refresh_checkpoint SET state='{}',revision=0,feed_revision=0,lease_owner=null,lease_generation=0,lease_until=null,request_day=null,requests_reserved=0,quota_blocked_day=null WHERE source='DART'");
+    const clock = (await rows("SELECT clock_timestamp()::text stamp, ((clock_timestamp() AT TIME ZONE 'Asia/Seoul')::date-1)::text boundary, ((clock_timestamp() AT TIME ZONE 'Asia/Seoul')::date-2)::text older"))[0];
+    const prior = copy(fixtures.DART);
+    const priorAttempt = new Date(Date.parse(clock.stamp)-4*60000).toISOString();
+    const replayAttempt = new Date(Date.parse(clock.stamp)-60000).toISOString();
+    const oldId = `DART:${clock.older.replaceAll('-','')}000025`;
+    prior.cursor = {source:'DART',through_date:clock.boundary,ids:[oldId],checked_at:priorAttempt};
+    prior.last_attempt_at=priorAttempt;prior.last_success_at=priorAttempt;
+    prior.health={status:'on-time',age_seconds:0};
+    let c=await claim();
+    assert.equal((await save('DART',A,c.generation,c.revision,prior)).status,'saved');
+    c=await claim();
+    const generated=JSON.parse(execFileSync('python3',['-c',`
+import json,sys
+from api.collectors.member_map_listing_delta import collect_dart_delta
+from api.collectors.member_map_live_refresh import apply_result
+prior=json.load(sys.stdin)
+boundary,stamp=sys.argv[1:]
+day=boundary.replace('-','')
+payload={'status':'000','page_no':1,'page_count':100,'total_count':1,'total_page':1,
+ 'list':[{'rcept_no':day+'000999','rcept_dt':day,'stock_code':'005930',
+          'report_nm':'공개 공시 재생','flr_nm':'공시회사'}]}
+result=collect_dart_delta({'005930':'공시회사'},prior['feed'],prior['cursor'],stamp,
+ 'fixture-not-a-real-key',transport=lambda *a,**kw:json.dumps(payload,ensure_ascii=False).encode())
+assert result['status']=='partial' and result['catchup_phase']=='replayed'
+fixed=apply_result('DART',prior,result,stamp)
+legacy_result={**result,'cursor':{**result['cursor'],'ids':[result['records'][0]['id']]},
+ 'next_cursor':{**result['next_cursor'],'ids':[result['records'][0]['id']]}}
+legacy=apply_result('DART',prior,legacy_result,stamp)
+print(json.dumps({'fixed':fixed,'legacy':legacy,'old_id':prior['cursor']['ids'][0]}))
+`,clock.boundary,replayAttempt],{cwd:path.join(__dirname,'..'),input:JSON.stringify(prior),
+        env:{PATH:process.env.PATH,PYTHONDONTWRITEBYTECODE:'1'},maxBuffer:1048576}).toString());
+    assert.equal(generated.old_id,oldId);
+    assert.equal(generated.legacy.cursor.ids.includes(oldId),false);
+    assert.equal(generated.fixed.cursor.ids.includes(oldId),true);
+    assert.equal(generated.fixed.catchup_phase,'replayed');
+    assert.equal(generated.fixed.last_success_at,prior.last_success_at);
+    await regression(generated.legacy,'DART',c);
+    assert.equal((await save('DART',A,c.generation,c.revision,generated.fixed)).status,'saved');
+    const stored=await snapshot('DART');
+    assert.deepEqual(stored.state,generated.fixed);
+    assert.equal(stored.revision,c.revision+1);
+    assert.equal(stored.state.feed.items.length,prior.feed.items.length);
+    for(const original of prior.feed.items) {
+        const group=stored.state.feed.items.find(item=>item.ticker===original.ticker);
+        assert.ok(group);
+        for(const disclosure of original.disclosures) {
+            assert.ok(group.disclosures.some(item=>item.id===disclosure.id));
+        }
+    }
+    console.log('PASS legacy DART replay: Python apply_result old-ID omission rejected, union accepted by unchanged SQL');
+}
+
 (async()=>{
     db=new PGlite(); await bootstrap(db); await db.exec(sql); fixtures=await loadFixtures();
+    if(process.env.MEMBER_MAP_SQL_TARGET==='legacy-replay') {
+        await db.exec(catchupSql);await role('service_role');
+        await verifyLegacyReplayRoundtrip();
+        assert.equal(sha(fs.readFileSync(sqlPath)),sqlHash,'migration changed during test');
+        assert.equal(sha(fs.readFileSync(catchupPath)),catchupHash,'catchup migration changed during test');
+        assert.equal(sha(fs.readFileSync(__filename)),testHash,'test changed during run');
+        console.log(JSON.stringify({migration_sha256:sqlHash,catchup_migration_sha256:catchupHash,test_sha256:testHash}));
+        await db.close();return;
+    }
     for(const item of cases) {
         await role();
         await db.exec("UPDATE public.member_map_refresh_checkpoint SET state='{}',revision=0,feed_revision=0,lease_owner=null,lease_generation=0,lease_until=null,request_day=null,requests_reserved=0,quota_blocked_day=null");
@@ -635,11 +698,12 @@ async function verifyCatchupMigration() {
         await item.run(); passed++; console.log('PASS '+item.name);
     }
     await verifyCatchupMigration();
+    await verifyLegacyReplayRoundtrip();
     assert.equal(sha(fs.readFileSync(sqlPath)),sqlHash,'migration changed during test');
     assert.equal(sha(fs.readFileSync(catchupPath)),catchupHash,'catchup migration changed during test');
     assert.equal(sha(fs.readFileSync(__filename)),testHash,'test changed during run');
     console.log(JSON.stringify({migration_sha256:sqlHash,catchup_migration_sha256:catchupHash,test_sha256:testHash}));
-    console.log(`${passed}/${cases.length} baseline + catchup SQL passed; production two-connection race and REST/Railway acceptance NOT run`);
+    console.log(`${passed}/${cases.length} baseline + catchup + legacy replay SQL passed; production two-connection race and REST/Railway acceptance NOT run`);
     await db.close();
 })().catch(async error=>{
     console.error(`FAIL ${passed+1}/${cases.length} ${cases[passed]?.name || 'setup'}: ${error.code || ''} ${error.message}`);
