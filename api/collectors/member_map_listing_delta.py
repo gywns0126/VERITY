@@ -459,27 +459,40 @@ def collect_dart_delta(universe: Mapping[str, str], previous_feed: Mapping[str, 
                        cursor: dict | None, checked_at: str, api_key: str, *,
                        transport: Transport | None = None, max_pages: int = 3,
                        page_size: int = 100, max_records: int = 500,
-                       max_per_ticker: int = 8, window_days: int = 2) -> dict:
-    """Shared unfiltered DART listing; replay boundary date, exhaust denominator."""
+                       max_per_ticker: int = 8, window_days: int = 2,
+                       catchup_phase: str | None = None) -> dict:
+    """Exhaust one DART date per pass; replay the completed boundary before advancing."""
     result = _result(previous_feed, cursor)
     try:
         now = _stamp(checked_at)
         _limits(max_pages, page_size, max_records, max_per_ticker)
-        if type(window_days) is not int or not 1 <= window_days <= 90 or not isinstance(api_key, str) or not api_key:
+        if (type(window_days) is not int or not 1 <= window_days <= 90 or not isinstance(api_key, str)
+                or not api_key or catchup_phase not in (None, "replayed", "advanced")):
             raise ListingError("invalid_configuration")
-        end = now.astimezone(KST).date()
-        begin = end - timedelta(days=window_days - 1)
+        today = now.astimezone(KST).date()
+        begin = end = today
+        next_phase = None
         old_ids = set()
-        if cursor is not None:
+        if cursor is None:
+            begin = end = today - timedelta(days=window_days - 1)
+            if end < today:
+                next_phase = "replayed"
+        else:
             if cursor.get("source") != "DART" or not isinstance(cursor.get("ids"), list):
                 raise ListingError("invalid_cursor")
             try:
                 boundary_date = date.fromisoformat(cursor["through_date"])
             except (KeyError, TypeError, ValueError):
                 raise ListingError("invalid_cursor") from None
-            if boundary_date > end or (end - boundary_date).days >= 90:
+            if boundary_date > today:
                 raise ListingError("cursor_outside_window")
-            begin = min(begin, boundary_date)
+            if boundary_date < today:
+                if catchup_phase == "replayed":
+                    begin = end = boundary_date + timedelta(days=1)
+                    next_phase = "advanced"
+                else:
+                    begin = end = boundary_date
+                    next_phase = "replayed"
             old_ids = set(cursor["ids"])
         fetch = transport or bounded_transport
         seen, known, totals, last_day = set(), _known(previous_feed), None, []
@@ -527,7 +540,12 @@ def collect_dart_delta(universe: Mapping[str, str], previous_feed: Mapping[str, 
                     raise ListingError("incomplete_unique_records")
                 next_cursor = {"source": "DART", "through_date": end.isoformat(),
                                "ids": last_day, "checked_at": checked_at}
-                return _success(result, previous_feed, next_cursor, checked_at, max_per_ticker)
+                completed = _success(result, previous_feed, next_cursor, checked_at, max_per_ticker)
+                if end < today:
+                    completed.update(status="partial", complete=False, catchup_phase=next_phase)
+                    completed["historical_gap"] = True
+                    completed["coverage"]["historical_gap"] = True
+                return completed
         raise ListingError("page_limit")
     except ListingError as exc:
         return _failure(result, str(exc))

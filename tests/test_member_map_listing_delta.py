@@ -1,5 +1,6 @@
 """Offline listing fixtures and runner contract tests; never call live services."""
 from copy import deepcopy
+from datetime import date, timedelta
 import json
 
 import pytest
@@ -208,7 +209,7 @@ def test_sec_busy_bootstrap_then_incremental_success_without_historical_claim():
 
 def test_dart_date_only_and_kst_window_and_projection():
     transport = FixtureTransport(dart_page([dart_row()]))
-    result = delta.collect_dart_delta(UNIVERSE, {"items": []}, None, CHECKED, "not-a-real-key", transport=transport)
+    result = delta.collect_dart_delta(UNIVERSE, {"items": []}, None, CHECKED, "not-a-real-key", transport=transport, window_days=1)
     assert result["status"] == "success"
     record = result["records"][0]
     assert record["date"] == "2026-10-12" and record["date_precision"] == "date"
@@ -225,24 +226,60 @@ def test_dart_date_only_and_kst_window_and_projection():
 def test_dart_replays_same_day_no_receipt_order_assumption():
     cursor = {"source": "DART", "through_date": "2026-10-12", "ids": ["DART:20261012000002"]}
     transport = FixtureTransport(dart_page([dart_row(2), dart_row(1)]))
-    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, cursor, CHECKED, "key", transport=transport)
+    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, cursor, CHECKED, "key", transport=transport, window_days=1)
     assert result["status"] == "success"
     assert len(result["records"]) == 1 and result["duplicates"] == 1
     assert set(result["cursor"]["ids"]) == {"DART:20261012000001", "DART:20261012000002"}
+
+
+def test_dart_catchup_exhausts_one_chronological_day_without_false_success():
+    cursor = {"source": "DART", "through_date": "2026-10-12", "ids": [], "checked_at": CHECKED}
+    checked = "2026-10-14T15:00:00+00:00"  # Oct 15 in Korea
+    transport = FixtureTransport(dart_page([dart_row(1)]))
+    result = delta.collect_dart_delta(UNIVERSE, {"items": []}, cursor, checked, "key", transport=transport,
+                                      window_days=90)
+    assert result["status"] == "partial" and result["complete"] is False and result["error"] is None
+    assert result["coverage"]["historical_gap"] is True
+    assert result["catchup_phase"] == "replayed"
+    assert result["next_cursor"] == result["cursor"]
+    assert result["cursor"]["through_date"] == "2026-10-12"
+    assert transport.calls[0][1]["params"]["bgn_de"] == "20261012"
+    assert transport.calls[0][1]["params"]["end_de"] == "20261012"
+    row13 = {**dart_row(1), "rcept_no": "20261013000001", "rcept_dt": "20261013"}
+    advance = FixtureTransport(dart_page([row13]))
+    next_result = delta.collect_dart_delta(UNIVERSE, result["feed"], result["cursor"], checked, "key",
+        transport=advance, window_days=90, catchup_phase="replayed")
+    assert next_result["status"] == "partial" and next_result["catchup_phase"] == "advanced"
+    assert next_result["cursor"]["through_date"] == "2026-10-13"
+    assert advance.calls[0][1]["params"]["bgn_de"] == "20261013"
+    assert advance.calls[0][1]["params"]["end_de"] == "20261013"
+
+
+def test_dart_bootstrap_ninety_day_window_starts_at_oldest_day_without_false_success():
+    checked = "2026-10-14T15:00:00+00:00"  # Oct 15 in Korea
+    transport = FixtureTransport(b'{"status":"013"}')
+    result = delta.collect_dart_delta(UNIVERSE, {"items": []}, None, checked, "key",
+        transport=transport, window_days=90)
+    first_day = (date(2026, 10, 15) - timedelta(days=89)).isoformat()
+    assert result["status"] == "partial" and result["complete"] is False
+    assert result["catchup_phase"] == "replayed" and result["cursor"]["through_date"] == first_day
+    assert result["cursor"]["checked_at"] == checked
+    assert transport.calls[0][1]["params"]["bgn_de"] == first_day.replace("-", "")
+    assert transport.calls[0][1]["params"]["end_de"] == first_day.replace("-", "")
 
 
 @pytest.mark.parametrize("unmapped_ticker", ["", "00499K"])
 def test_dart_pages_unmapped_and_unique_denominator(unmapped_ticker):
     transport = FixtureTransport(dart_page([dart_row(1)], page_size=1, total=2),
                                  dart_page([dart_row(2, ticker=unmapped_ticker)], page=2, page_size=1, total=2))
-    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, None, CHECKED, "key", page_size=1, transport=transport)
+    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, None, CHECKED, "key", page_size=1, transport=transport, window_days=1)
     assert result["status"] == "success" and result["requests"] == 2
     assert result["unmapped"] == 1 and result["coverage"]["total_records"] == 2
     assert result["complete"] and result["coverage"]["listing_records"] == 2
     assert set(result["next_cursor"]["ids"]) == {"DART:20261012000001", "DART:20261012000002"}
     duplicate = FixtureTransport(dart_page([dart_row()], page_size=1, total=2),
                                  dart_page([dart_row()], page=2, page_size=1, total=2))
-    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, None, CHECKED, "key", page_size=1, transport=duplicate)
+    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, None, CHECKED, "key", page_size=1, transport=duplicate, window_days=1)
     assert result["error"] == "incomplete_unique_records" and result["duplicates"] == 1
     assert result["feed"] == PREVIOUS and result["next_cursor"] is None
 
@@ -252,7 +289,7 @@ def test_dart_pages_unmapped_and_unique_denominator(unmapped_ticker):
 def test_dart_listing_code_mapping_remains_explicit(ticker, mapped):
     universe = {ticker: "Example"} if mapped else {}
     result = delta.collect_dart_delta(universe, PREVIOUS, None, CHECKED, "key",
-        transport=FixtureTransport(dart_page([dart_row(ticker=ticker)])))
+        transport=FixtureTransport(dart_page([dart_row(ticker=ticker)])), window_days=1)
     assert result["status"] == "success" and result["complete"]
     assert result["unmapped"] == (0 if mapped else 1)
     assert [r["ticker"] for r in result["records"]] == ([ticker] if mapped else [])
@@ -265,11 +302,11 @@ def test_dart_listing_code_mapping_remains_explicit(ticker, mapped):
 @pytest.mark.parametrize("ticker", ["      ", "00499k", "A12345", "00499K ", "12345", "1234567",
                                     "１２３４５６", None, 0, 123456, False, [], {}])
 def test_dart_malformed_stock_code_keeps_prior_cursor_and_feed(ticker):
-    cursor = {"source": "DART", "through_date": "2026-10-11", "ids": []}
+    cursor = {"source": "DART", "through_date": "2026-10-12", "ids": []}
     transport = FixtureTransport(dart_page([dart_row(1)], page_size=1, total=2),
         dart_page([dart_row(2, ticker=ticker)], page=2, page_size=1, total=2))
     result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, cursor, CHECKED, "key",
-        page_size=1, transport=transport)
+        page_size=1, transport=transport, window_days=1)
     assert result["status"] == "partial" and result["error"] == "invalid_stock_code"
     assert not result["complete"] and result["next_cursor"] is None
     assert result["cursor"] == cursor and result["feed"] == PREVIOUS
@@ -283,9 +320,9 @@ def test_dart_malformed_stock_code_keeps_prior_cursor_and_feed(ticker):
     (RuntimeError("key=SECRET"), "collection_failure"),
 ])
 def test_dart_failure_preserves_snapshot(second, error):
-    cursor = {"source": "DART", "through_date": "2026-10-11", "ids": []}
+    cursor = {"source": "DART", "through_date": "2026-10-12", "ids": []}
     transport = FixtureTransport(dart_page([dart_row()], page_size=1, total=2), second)
-    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, cursor, CHECKED, "SECRET", page_size=1, transport=transport)
+    result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, cursor, CHECKED, "SECRET", page_size=1, transport=transport, window_days=1)
     assert result["status"] == "partial" and result["error"] == error
     assert result["feed"] == PREVIOUS and result["cursor"] == cursor and result["next_cursor"] is None
     assert "SECRET" not in json.dumps(result)
@@ -298,11 +335,11 @@ def test_dart_short_page_cap_empty_and_invalid_dates():
     with pytest.raises(delta.ListingError, match="invalid_reported_date"):
         delta.parse_dart_list(json.loads(dart_page([dart_row(stamp="20260230")])))
     result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, None, CHECKED, "key", max_pages=1,
-        page_size=1, transport=FixtureTransport(dart_page([dart_row()], page_size=1, total=2)))
+        page_size=1, transport=FixtureTransport(dart_page([dart_row()], page_size=1, total=2)), window_days=1)
     assert result["error"] == "page_limit" and result["feed"] == PREVIOUS
     assert len(result["records"]) == 1 and result["cursor"] is None and result["next_cursor"] is None
     result = delta.collect_dart_delta(UNIVERSE, PREVIOUS, None, CHECKED, "key",
-        transport=FixtureTransport(b'{"status":"013"}'))
+        transport=FixtureTransport(b'{"status":"013"}'), window_days=1)
     assert result["status"] == "success" and result["feed"] == PREVIOUS
     assert result["cursor"]["through_date"] == "2026-10-12"
 

@@ -114,7 +114,8 @@ def supabase_cycle(store, catalog, api_key, owner, now=None, *, transport=None):
         return (transport or bounded_transport)(endpoint, **kwargs)
     result = collect_dart_delta(universe, previous.get("feed", {"items": []}), previous.get("cursor"),
         now, api_key, transport=guarded_transport, max_pages=10, max_records=1000,
-        window_days=2 if previous.get("cursor") is None else 1)
+        window_days=2 if previous.get("cursor") is None else 1,
+        catchup_phase=previous.get("catchup_phase"))
     if lease_failed:
         return {"status": "lease-lost", "requests": calls}
     if result.get("error") == "dart-quota-exceeded":

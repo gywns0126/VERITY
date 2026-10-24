@@ -33,6 +33,17 @@ def test_partial_retains_cursor_but_keeps_observed_facts():
     assert not state["screen_delivery_verified"]
 
 
+def test_completed_historical_slice_advances_cursor_without_success_clock():
+    prior = {"cursor": {"through_date": "2026-10-11"}, "last_success_at": "2026-10-11T00:00:00+00:00"}
+    next_cursor = {"through_date": "2026-10-12"}
+    partial = {**result("partial"), "error": None, "next_cursor": next_cursor,
+               "cursor": next_cursor, "catchup_phase": "advanced", "coverage": {"historical_gap": True}}
+    state = apply_result("DART", prior, partial, NOW)
+    assert state["cursor"] == next_cursor
+    assert state["catchup_phase"] == "advanced"
+    assert state["last_success_at"] == prior["last_success_at"]
+
+
 def test_empty_success_advances_health_not_document_date():
     state = apply_result("DART", {}, {**result(), "records": []}, NOW)
     assert state["feed"] == {"items": []}
