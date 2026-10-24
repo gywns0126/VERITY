@@ -205,7 +205,33 @@ def _document_revision(document):
     encoder = json.JSONEncoder(
         sort_keys=True, ensure_ascii=True, separators=(",", ":"), allow_nan=False
     )
-    for chunk in encoder.iterencode(document):
+    def chunks(value, depth=0):
+        # Encode individual records in C, not the entire multi-market artifact.
+        # Splitting the first two container levels keeps the canonical bytes
+        # while avoiding a second artifact-sized JSON string in memory.
+        if depth == 2 or type(value) not in (dict, list):
+            yield encoder.encode(value)
+        elif type(value) is dict:
+            if not all(type(key) is str for key in value):
+                yield from encoder.iterencode(value)
+                return
+            yield "{"
+            for index, key in enumerate(sorted(value)):
+                if index:
+                    yield ","
+                yield encoder.encode(key)
+                yield ":"
+                yield from chunks(value[key], depth + 1)
+            yield "}"
+        else:
+            yield "["
+            for index, item in enumerate(value):
+                if index:
+                    yield ","
+                yield from chunks(item, depth + 1)
+            yield "]"
+
+    for chunk in chunks(document):
         digest.update(chunk.encode("utf-8"))
     return digest.hexdigest()
 
