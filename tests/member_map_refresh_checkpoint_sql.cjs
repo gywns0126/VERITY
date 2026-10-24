@@ -9,8 +9,10 @@ const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const sqlPath = path.join(__dirname, '../supabase/migrations/2026101201_member_map_refresh_checkpoint.sql');
 const sql = fs.readFileSync(sqlPath, 'utf8');
+const catchupPath = path.join(__dirname, '../supabase/migrations/2026102401_member_map_dart_catchup.sql');
+const catchupSql = fs.readFileSync(catchupPath, 'utf8');
 const sha = text => createHash('sha256').update(text).digest('hex');
-const sqlHash = sha(sql), testHash = sha(fs.readFileSync(__filename));
+const sqlHash = sha(sql), catchupHash = sha(catchupSql), testHash = sha(fs.readFileSync(__filename));
 const A = '00000000-0000-4000-8000-000000000001';
 const B = '00000000-0000-4000-8000-000000000002';
 const cases = [];
@@ -517,7 +519,7 @@ from api.collectors.member_map_live_refresh import apply_result
 now=sys.argv[1]; stamp=datetime.fromisoformat(now.replace('Z','+00:00')); day=stamp.astimezone(timezone(timedelta(hours=9))).strftime('%Y%m%d')
 payload={'status':'000','page_no':1,'page_count':100,'total_count':1,'total_page':1,
  'list':[{'rcept_no':day+'000001','rcept_dt':day,'stock_code':'005930','report_nm':'공급 계약 체결','flr_nm':'공시회사'}]}
-r=collect_dart_delta({'005930':'공시회사'},{'items':[]},None,now,'fixture-not-a-real-key',transport=lambda *a,**kw:json.dumps(payload).encode())
+r=collect_dart_delta({'005930':'공시회사'},{'items':[]},None,now,'fixture-not-a-real-key',transport=lambda *a,**kw:json.dumps(payload).encode(),window_days=1)
 dart=apply_result('DART',{},r,now)
 later=(stamp+timedelta(seconds=30)).isoformat()
 payload['list'][0]['rcept_no']=day+'000002'
@@ -538,6 +540,92 @@ print(json.dumps({'DART':dart,'SEC':sec,'news':news,'initialized':initialized,'p
 `,now], {cwd:path.join(__dirname,'..'),env:{PATH:process.env.PATH,PYTHONDONTWRITEBYTECODE:'1'},maxBuffer:1048576}).toString());
 }
 
+async function verifyCatchupMigration() {
+    await role();
+    await db.exec(catchupSql);
+    const helper = 'public.member_map_refresh_catchup_valid';
+    for (const sample of [{catchup_phase:'replayed'},
+        {status:'partial',error:null,coverage:{historical_gap:true}},
+        {catchup_phase:'replayed',status:'partial',error:null,coverage:{historical_gap:true}}]) {
+        const value = (await rows(`SELECT ${helper}('DART',$1::jsonb) v`,[JSON.stringify(sample)]))[0].v;
+        assert.equal(value,false,'missing fields must be false, not SQL NULL');
+    }
+    await assert.rejects(() => rows("UPDATE public.member_map_refresh_checkpoint SET state=$1::jsonb WHERE source='DART'",
+        [JSON.stringify({catchup_phase:'replayed'})]), e => e.code === '23514');
+    const functions = await rows(`SELECT p.proname,p.prosecdef,p.proconfig,
+        has_function_privilege('service_role',p.oid,'EXECUTE') service_grant,
+        has_function_privilege('anon',p.oid,'EXECUTE') anon_grant,
+        has_function_privilege('authenticated',p.oid,'EXECUTE') auth_grant
+        FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+        WHERE n.nspname='public' AND p.proname LIKE 'member_map_refresh_%' ORDER BY p.proname`);
+    assert.equal(functions.length,5);
+    assert.equal(functions.filter(f=>f.service_grant).length,3);
+    assert.ok(functions.every(f=>!f.anon_grant && !f.auth_grant && f.proconfig.includes('search_path=""')));
+    assert.equal(functions.find(f=>f.proname==='member_map_refresh_catchup_valid').service_grant,false);
+    await role('service_role');
+    await assert.rejects(() => db.exec(`SELECT ${helper}('DART','{}')`),e=>e.code==='42501');
+    await role();
+    await db.exec("UPDATE public.member_map_refresh_checkpoint SET state='{}',revision=0,feed_revision=0,lease_owner=null,lease_generation=0,lease_until=null,request_day=null,requests_reserved=0,quota_blocked_day=null");
+    await role('service_role');
+    await seed('SEC');await seed('news');
+    assert.deepEqual((await snapshot('SEC')).state,fixtures.SEC);
+    assert.deepEqual((await snapshot('news')).state,fixtures.news);
+    const day = (await rows("SELECT (clock_timestamp() AT TIME ZONE 'Asia/Seoul')::date::text today, ((clock_timestamp() AT TIME ZONE 'Asia/Seoul')::date-1)::text yesterday, ((clock_timestamp() AT TIME ZONE 'Asia/Seoul')::date-2)::text old_day"))[0];
+    const minutesAgo = m => new Date(Date.now()-m*60000).toISOString();
+    const old = copy(fixtures.DART);
+    old.feed={items:[]}; old.cursor.ids=[]; old.cursor.through_date=day.old_day;
+    old.last_attempt_at=minutesAgo(20);old.last_success_at=old.last_attempt_at;
+    old.cursor.checked_at=old.last_attempt_at;old.health={status:'on-time',age_seconds:0};
+    let c=await claim();assert.equal((await save('DART',A,c.generation,c.revision,old)).status,'saved');
+    const slice=(previous,date,stamp,phase)=>{
+        const next=copy(previous);next.last_attempt_at=stamp;next.status='partial';next.error=null;
+        next.catchup_phase=phase;next.requests=1;
+        next.coverage={pages_succeeded:1,listing_records:0,total_pages:0,total_records:0,
+            whole_market_coverage:false,raw_body_checked:false,bounded:true,historical_gap:true};
+        next.cursor={source:'DART',through_date:date,ids:[],checked_at:stamp};
+        const age=(new Date(stamp)-new Date(next.last_success_at))/1000;
+        next.health={status:age<=120?'on-time':'delayed',age_seconds:age};
+        return next;
+    };
+    c=await claim();const replay=slice(old,day.old_day,minutesAgo(16),'replayed');
+    assert.equal((await save('DART',A,c.generation,c.revision,replay)).status,'saved');
+    c=await claim();const retry=copy(replay);retry.last_attempt_at=minutesAgo(12);
+    retry.status='error';retry.error='invalid_json';retry.coverage={pages_succeeded:0,listing_records:0,
+        whole_market_coverage:false,raw_body_checked:false,bounded:true};
+    retry.health={status:'delayed',age_seconds:(new Date(retry.last_attempt_at)-new Date(retry.last_success_at))/1000};
+    assert.equal((await save('DART',A,c.generation,c.revision,retry)).status,'saved');
+    assert.equal((await snapshot('DART')).state.catchup_phase,'replayed');
+    c=await claim();const advanced=slice(retry,day.yesterday,minutesAgo(8),'advanced');
+    assert.equal((await save('DART',A,c.generation,c.revision,advanced)).status,'saved');
+    assert.equal((await snapshot('DART')).state.last_success_at,old.last_success_at);
+    c=await claim();const boundary=slice(advanced,day.yesterday,minutesAgo(4),'replayed');
+    assert.equal((await save('DART',A,c.generation,c.revision,boundary)).status,'saved');
+    c=await claim();const complete=copy(boundary);delete complete.catchup_phase;
+    complete.last_attempt_at=minutesAgo(0.25);complete.last_success_at=complete.last_attempt_at;
+    complete.status='success';complete.coverage.historical_gap=false;
+    complete.cursor.through_date=day.today;complete.cursor.checked_at=complete.last_attempt_at;
+    complete.health={status:'on-time',age_seconds:0};
+    assert.equal((await save('DART',A,c.generation,c.revision,complete)).status,'saved');
+    const stored=await snapshot('DART');
+    assert.equal(stored.state.last_success_at,complete.last_attempt_at);
+    assert.equal(stored.state.catchup_phase,undefined);
+    assert.deepEqual(stored.state.feed,old.feed);
+    assert.equal(stored.requests_reserved,60);
+    const malformed=copy(replay);delete malformed.coverage.total_pages;
+    assert.equal((await ownerExec(`SELECT ${helper}('DART',$1::jsonb) v`,[JSON.stringify(malformed)]))[0].v,false);
+    const isolated=new PGlite();
+    try {
+        await bootstrap(isolated);await isolated.exec(sql);
+        await isolated.exec(`CREATE OR REPLACE FUNCTION public.member_map_refresh_save(
+            p_source text,p_owner uuid,p_generation bigint,p_expected_revision bigint,p_state jsonb)
+            RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$`);
+        await assert.rejects(()=>isolated.exec(catchupSql),/refresh-catchup-function-drift/);
+        await isolated.exec('ROLLBACK');
+        assert.equal((await rows("SELECT to_regprocedure('public.member_map_refresh_catchup_valid(text,jsonb)') v",[],isolated))[0].v,null);
+    } finally {await isolated.close();}
+    console.log('PASS catchup migration: SQL NULL/CHECK, ACL, replay/retry/advance/success, quota/feed');
+}
+
 (async()=>{
     db=new PGlite(); await bootstrap(db); await db.exec(sql); fixtures=await loadFixtures();
     for(const item of cases) {
@@ -546,10 +634,12 @@ print(json.dumps({'DART':dart,'SEC':sec,'news':news,'initialized':initialized,'p
         await role('service_role');
         await item.run(); passed++; console.log('PASS '+item.name);
     }
+    await verifyCatchupMigration();
     assert.equal(sha(fs.readFileSync(sqlPath)),sqlHash,'migration changed during test');
+    assert.equal(sha(fs.readFileSync(catchupPath)),catchupHash,'catchup migration changed during test');
     assert.equal(sha(fs.readFileSync(__filename)),testHash,'test changed during run');
-    console.log(JSON.stringify({migration_sha256:sqlHash,test_sha256:testHash}));
-    console.log(`${passed}/${cases.length} passed; production two-connection race and REST/Railway acceptance NOT run`);
+    console.log(JSON.stringify({migration_sha256:sqlHash,catchup_migration_sha256:catchupHash,test_sha256:testHash}));
+    console.log(`${passed}/${cases.length} baseline + catchup SQL passed; production two-connection race and REST/Railway acceptance NOT run`);
     await db.close();
 })().catch(async error=>{
     console.error(`FAIL ${passed+1}/${cases.length} ${cases[passed]?.name || 'setup'}: ${error.code || ''} ${error.message}`);

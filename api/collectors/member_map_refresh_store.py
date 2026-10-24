@@ -196,9 +196,11 @@ ERROR_CODES = frozenset(("collection-failed", "collection_failure", "per-feed-co
 def validate_state(source, value, *, public_sources=None):
     """공개 피드·cursor·진단의 닫힌 스키마를 검증한 뒤 독립 복사본을 반환한다."""
     _source(source)
-    allowed = {"feed", "cursor", "status", "error", "coverage", "requests", "last_attempt_at",
+    allowed = {"feed", "cursor", "catchup_phase", "status", "error", "coverage", "requests", "last_attempt_at",
                "last_success_at", "health", "screen_delivery_verified", "analysis_delivery_verified"}
     if type(value) is not dict or not set(value) <= allowed:
+        raise RefreshStoreError("refresh-state-rejected")
+    if source != "DART" and "catchup_phase" in value:
         raise RefreshStoreError("refresh-state-rejected")
     _json_bytes(value, STATE_MAX_BYTES)
     if not value:
@@ -273,6 +275,20 @@ def validate_state(source, value, *, public_sources=None):
             raise RefreshStoreError("refresh-state-rejected")
     elif status == "success" and source != "news":
         raise RefreshStoreError("refresh-state-rejected")
+    if source == "DART" and ("catchup_phase" in value or coverage.get("historical_gap") is True):
+        pages = coverage.get("total_pages")
+        completed_slice = (coverage.get("historical_gap") is True and status == "partial"
+            and error is None and cursor is not None and cursor["checked_at"] == value["last_attempt_at"]
+            and _date(cursor["through_date"]) < attempt.astimezone(timezone(timedelta(hours=9))).date()
+            and type(pages) is int and pages <= 10
+            and coverage.get("pages_succeeded") == max(1, pages)
+            and coverage.get("listing_records") == coverage.get("total_records")
+            and requests_count == coverage["pages_succeeded"])
+        retry = (coverage.get("historical_gap") is not True and status in ("partial", "error")
+                 and error is not None and cursor is not None
+                 and _instant(cursor["checked_at"]) <= attempt)
+        if value.get("catchup_phase") not in ("replayed", "advanced") or not (completed_slice or retry):
+            raise RefreshStoreError("refresh-state-rejected")
     helpers = public_sources or _public_helpers()
     def text(v, maximum, *, empty=False):
         if empty and v == "":

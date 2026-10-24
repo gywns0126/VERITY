@@ -39,7 +39,7 @@ def page(*, number=1, count=1, total=1, size=100):
 
 def state():
     result = delta.collect_dart_delta({"123456": "합성 회사"}, {"items": []}, None, NOW, "synthetic-key",
-                                     transport=lambda *args, **kwargs: page())
+                                     transport=lambda *args, **kwargs: page(), window_days=1)
     return apply_result("DART", {}, result, NOW)
 
 
@@ -250,9 +250,9 @@ def test_runtime_reserves_before_provider_and_restart_120_second_cadence():
         assert store.events[-1] == "renew" and store.reserved == 10
         assert endpoint == delta.DART_LIST
         calls.append(endpoint)
-        return page()
-    assert runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, NOW, transport=provider)["status"] == "success"
-    assert store.state["cursor"]["through_date"] == "2026-10-12"
+        return page().replace(b"20261012", b"20261011")
+    assert runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, NOW, transport=provider)["status"] == "partial"
+    assert store.state["cursor"]["through_date"] == "2026-10-11"
     assert runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, "2026-10-12T01:01:59+00:00", transport=provider)["status"] == "not-due"
     assert len(calls) == 1 and store.reserved == 10
 
@@ -288,10 +288,12 @@ def test_runtime_020_preserves_prior_and_delivers_only_block_code():
 def test_ambiguous_save_restart_retains_committed_state_without_second_collection():
     store = MemoryStore(ambiguous_save=True)
     with pytest.raises(storage.RefreshStoreError):
-        runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, NOW, transport=lambda *args, **kwargs: page())
+        runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, NOW,
+            transport=lambda *args, **kwargs: page().replace(b"20261012", b"20261011"))
     assert runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, NOW,
         transport=lambda *args, **kwargs: pytest.fail("불명확 저장 후 중복 수집 금지"))["status"] == "not-due"
-    assert store.reserved == 10 and store.state["last_success_at"] == NOW
+    assert store.reserved == 10 and store.state.get("last_success_at") is None
+    assert store.state["catchup_phase"] == "replayed" and store.state["cursor"]["through_date"] == "2026-10-11"
 
 
 def test_supabase_cli_dry_run_no_credentials_and_sqlite_required_options(monkeypatch, capsys):
@@ -312,7 +314,8 @@ def test_supabase_cli_dry_run_no_credentials_and_sqlite_required_options(monkeyp
 
 def test_runtime_exact_120_second_boundary_and_fresh_reservation():
     store = MemoryStore()
-    runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, NOW, transport=lambda *args, **kwargs: page())
+    runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, NOW,
+        transport=lambda *args, **kwargs: page().replace(b"20261012", b"20261011"))
     outcome = runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, "2026-10-12T01:02:00+00:00",
                                    transport=lambda *args, **kwargs: page())
     assert outcome["status"] == "success" and store.reserved == 20 and store.revision == 2
@@ -334,6 +337,90 @@ def test_runtime_maximum_ten_pages_no_refund_and_partial_retention():
     assert outcome["error"] == "page_limit" and outcome["requests"] == 10
     assert store.state["cursor"] == prior["cursor"] and store.state["last_success_at"] == prior["last_success_at"]
     assert len(store.state["feed"]["items"][0]["disclosures"]) == 8
+
+
+def test_runtime_multiday_backlog_catches_up_with_bounded_chronological_slices():
+    prior = state()  # Last complete boundary: Oct 12.
+    store, ranges = MemoryStore(previous=prior), []
+    rows = [{"rcept_no": f"{day}{i:06d}", "rcept_dt": day, "stock_code": "123456",
+             "report_nm": "합성 공시", "flr_nm": "합성 제출인"}
+            for day in ("20261012", "20261013", "20261014", "20261015") for i in range(1, 601)]
+    def provider(endpoint, **kwargs):
+        params = kwargs["params"]
+        span = (params["bgn_de"], params["end_de"])
+        ranges.append(span)
+        selected = [row for row in rows if span[0] <= row["rcept_dt"] <= span[1]]
+        selected.sort(key=lambda row: row["rcept_no"], reverse=True)
+        number = int(params["page_no"])
+        return json.dumps({"status": "000", "page_no": number, "page_count": 100,
+            "total_count": len(selected), "total_page": (len(selected) + 99) // 100,
+            "list": selected[(number - 1) * 100:number * 100]}).encode()
+    times = tuple(f"2026-10-14T15:{minute:02d}:00+00:00" for minute in (0, 2, 4, 6, 8, 10))
+    expected_days = (12, 13, 13, 14, 14, 15)
+    expected_phases = ("replayed", "advanced", "replayed", "advanced", "replayed", None)
+    for index, now in enumerate(times):
+        outcome = runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, now, transport=provider)
+        assert outcome["requests"] == 6 and store.reserved == 10 * (index + 1)
+        assert store.state["cursor"]["through_date"] == f"2026-10-{expected_days[index]:02d}"
+        assert store.state.get("catchup_phase") == expected_phases[index]
+        if index < 5:
+            assert outcome["status"] == "partial" and outcome["error"] is None
+            assert store.state["last_success_at"] == prior["last_success_at"]
+            assert store.state["coverage"]["historical_gap"] is True
+        else:
+            assert outcome["status"] == "success" and store.state["last_success_at"] == now
+    assert [ranges[i] for i in (0, 6, 12, 18, 24, 30)] == [
+        ("20261012", "20261012"), ("20261013", "20261013"),
+        ("20261013", "20261013"), ("20261014", "20261014"),
+        ("20261014", "20261014"), ("20261015", "20261015")]
+    assert len(ranges) == 36
+
+
+def test_historical_gap_state_rejects_unexhausted_or_current_day_cursor():
+    previous = state()
+    now = "2026-10-14T15:00:00+00:00"
+    cursor = {"source": "DART", "through_date": "2026-10-13", "ids": [], "checked_at": now}
+    valid = apply_result("DART", previous, {"status": "partial", "complete": False,
+        "error": None, "records": [], "cursor": cursor, "next_cursor": cursor, "catchup_phase": "advanced", "requests": 1,
+        "coverage": {"historical_gap": True, "pages_succeeded": 1, "listing_records": 0,
+                     "total_pages": 0, "total_records": 0}}, now)
+    assert storage.validate_state("DART", valid)["cursor"] == cursor
+    for changed in ({"pages_succeeded": 0}, {"total_records": 1}):
+        bad = deepcopy(valid)
+        bad["coverage"].update(changed)
+        with pytest.raises(storage.RefreshStoreError, match="refresh-state-rejected"):
+            storage.validate_state("DART", bad)
+    for key in ("catchup_phase", "coverage", "cursor", "last_attempt_at"):
+        bad = deepcopy(valid)
+        bad.pop(key)
+        with pytest.raises(storage.RefreshStoreError, match="refresh-state-rejected"):
+            storage.validate_state("DART", bad)
+    for source in ("SEC", "news"):
+        with pytest.raises(storage.RefreshStoreError, match="refresh-state-rejected"):
+            storage.validate_state(source, valid)
+
+
+def test_catchup_failed_advance_keeps_phase_and_retries_next_date():
+    prior = state()
+    store, windows = MemoryStore(previous=prior), []
+    def provider(endpoint, **kwargs):
+        windows.append((kwargs["params"]["bgn_de"], kwargs["params"]["end_de"]))
+        return page()
+    first = runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER,
+        "2026-10-14T15:00:00+00:00", transport=provider)
+    assert first["status"] == "partial" and store.state["catchup_phase"] == "replayed"
+    checked_at = store.state["cursor"]["checked_at"]
+    failed = runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER,
+        "2026-10-14T15:02:00+00:00", transport=lambda *args, **kwargs: b"{")
+    assert failed["error"] == "invalid_json" and store.state["catchup_phase"] == "replayed"
+    assert store.state["cursor"]["checked_at"] == checked_at
+    storage.validate_state("DART", store.state)
+    next_day = page().replace(b"20261012", b"20261013")
+    advanced = runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER,
+        "2026-10-14T15:04:00+00:00", transport=lambda *args, **kwargs: next_day)
+    assert advanced["status"] == "partial" and store.state["catchup_phase"] == "advanced"
+    assert store.state["cursor"]["through_date"] == "2026-10-13"
+    assert windows == [("20261012", "20261012")]
 
 
 def test_runtime_provider_timeout_keeps_last_good_without_refund():
@@ -544,14 +631,16 @@ def test_late_read_result_cannot_commit_and_does_not_spawn_repeated_workers(monk
     assert store._read_inflight.wait(1) and store._states == {} and store._state_revisions == {}
 
 
-def test_midnight_bootstrap_reads_yesterday_today_then_only_boundary_day():
+def test_midnight_bootstrap_preserves_two_day_window_before_success():
     store, windows = MemoryStore(), []
     def provider(endpoint, **kwargs):
         windows.append((kwargs["params"]["bgn_de"], kwargs["params"]["end_de"]))
         return page() if len(windows) == 1 else b'{"status":"013"}'
     first = runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, "2026-10-12T15:00:30+00:00", transport=provider)
-    assert first["status"] == "success" and store.state["feed"]["items"][0]["disclosures"][0]["date"] == "2026-10-12"
-    assert store.state["cursor"]["through_date"] == "2026-10-13"
-    runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, "2026-10-12T15:02:30+00:00", transport=provider)
-    assert windows == [("20261012", "20261013"), ("20261013", "20261013")]
+    assert first["status"] == "partial" and store.state["feed"]["items"][0]["disclosures"][0]["date"] == "2026-10-12"
+    assert store.state["cursor"]["through_date"] == "2026-10-12"
+    assert store.state.get("last_success_at") is None and store.state["catchup_phase"] == "replayed"
+    second = runner.supabase_cycle(store, CATALOG, "synthetic-key", OWNER, "2026-10-12T15:02:30+00:00", transport=provider)
+    assert second["status"] == "success" and "catchup_phase" not in store.state
+    assert windows == [("20261012", "20261012"), ("20261013", "20261013")]
     assert store.reserved == 20
