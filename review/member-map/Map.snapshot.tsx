@@ -775,7 +775,7 @@ async function fetchPortfolioMapGraph(tickers, apiBase, signal) {
 }
 
 // framer-components/public-probe/MemberMapState.tsx
-var ENDPOINT = "https://project-yw131.vercel.app/api/member_map_state";
+var ENDPOINT = "https://project-yw131.vercel.app/api/member_map_state?layout_origins=1";
 var ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
 var USER_ID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 var MAP_KEY = /^[a-z0-9][a-z0-9_-]{0,31}$/;
@@ -786,7 +786,7 @@ var fields = (value, names) => record4(value) && Object.keys(value).length === n
 var coordinate = (value) => typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= 1e6;
 var identifier = (value) => typeof value === "string" && ID.test(value);
 var unique2 = (values) => new Set(values).size === values.length;
-function validMapDocument(value) {
+function legacyValidMapDocument(value) {
   if (!fields(value, ["layouts"])) return false;
   const layouts = value.layouts;
   if (!Array.isArray(layouts) || layouts.length > 3 || !unique2(layouts.map((row5) => row5?.map_key))) return false;
@@ -807,6 +807,21 @@ function validMapDocument(value) {
       if (!identifier(key) || !fields(mark, ["read_revision", "important", "disposition"])) return false;
       if (mark.read_revision !== null && (!Number.isSafeInteger(mark.read_revision) || mark.read_revision < 1 || mark.read_revision >= MAX_REVISION)) return false;
       if (typeof mark.important !== "boolean" || !["inbox", "later", "irrelevant"].includes(mark.disposition)) return false;
+    }
+  }
+  return true;
+}
+function validMapDocument(value) {
+  if (!value || !Array.isArray(value.layouts)) return false;
+  const legacy = {...value,layouts:value.layouts.map(l=>{if(!l)return l;const {origins,...rest}=l;return rest;})};
+  if (!legacyValidMapDocument(legacy)) return false;
+  for (const l of value.layouts) {
+    if (!l || !Object.hasOwn(l,'origins')) continue;
+    if (!Array.isArray(l.origins) || l.origins.length>200 || new Set(l.origins.map(o=>o?.node_id)).size!==l.origins.length || !Array.isArray(l.positions)) return false;
+    const positions=new Map(l.positions.map(p=>[p.node_id,p]));
+    for (const o of l.origins) {
+      const p=positions.get(o?.node_id);
+      if (!fields(o,['node_id','x','y','dx','dy']) || !identifier(o.node_id) || ![o.x,o.y,o.dx,o.dy].every(coordinate) || !p || p.x!==o.dx || p.y!==o.dy) return false;
     }
   }
   return true;
@@ -5425,8 +5440,31 @@ function mergePrototypeDraft(state, value, onReject) {
     marks[id] = nextMark;
   }
   const next = { map_key: PROTOTYPE_MAP_KEY, positions: [...positions.values()], notes, marks };
+  if (Object.hasOwn(prior, "origins")) next.origins = prior.origins.filter(origin => {
+    const p = positions.get(origin.node_id); return p && origin.dx === p.x && origin.dy === p.y;
+  });
   const layouts = state.privateState.document.layouts.filter((l) => l.map_key !== PROTOTYPE_MAP_KEY);
   return validMapDocument({ layouts: [...layouts, next] }) ? next : reject("final_schema", next);
+}
+// Only the explicit Save handler supplies measured captures. Ordinary edits
+// retain the old v2 merge behavior and never invent an origin from saved deltas.
+function mergePrototypeOriginSave(state,draft,captures,onReject) {
+  const reject=code=>{onReject?.(prototypeDraftRejection(draft,code));return null;};
+  if(!Array.isArray(captures)||captures.length>200)return reject('origins_limit');
+  const next=mergePrototypeDraft(state,draft,onReject);if(!next)return null;
+  const model=prototypeMemberModel(state),allowed=new Map(model.nodes.map(n=>[n.id,n])),incoming=new Map(draft.positions.map(p=>[p.id,p]));
+  const positions=new Map(next.positions.map(p=>[p.node_id,p]));
+  const prior=state.privateState.document.layouts.find(l=>l.map_key===PROTOTYPE_MAP_KEY);
+  const origins=new Map((prior?.origins||[]).filter(o=>{const p=positions.get(o.node_id);return p&&p.x===o.dx&&p.y===o.dy;}).map(o=>[o.node_id,o])),seen=new Set();
+  for(const capture of captures){
+    const node=allowed.get(capture?.id),current=incoming.get(capture?.id)||node;
+    if(!node||(!positions.has(capture.id)&&!incoming.has(capture.id))||seen.has(capture.id)||!point(capture)||!point(capture.raw)||capture.raw.x!==current.x||capture.raw.y!==current.y||!coordinate(capture.x)||!coordinate(capture.y))return reject('origin_capture');
+    seen.add(capture.id);
+    const position=positions.get(capture.id)||{node_id:capture.id,x:pixel(current.x,1000),y:pixel(current.y,680)};
+    positions.set(capture.id,position);origins.set(capture.id,{node_id:capture.id,x:capture.x,y:capture.y,dx:position.x,dy:position.y});
+  }
+  const result={...next,positions:[...positions.values()],origins:[...origins.values()]};
+  return validMapDocument({layouts:[...state.privateState.document.layouts.filter(l=>l.map_key!==PROTOTYPE_MAP_KEY),result]})?result:reject('final_schema');
 }
 function prototypeMemberModel(state, explorationNotice = "", visitBaseline) {
   if (state.phase !== "ready" || !state.graph) return { nodes: [], edges: [], notes: {}, marks: {}, writable: false };
@@ -5458,6 +5496,10 @@ function prototypeMemberModel(state, explorationNotice = "", visitBaseline) {
     coverageNotice: graph.analysisNotice || "",
     ...visitBaseline !== void 0 ? { visit: { previousAt: visitBaseline?.visitedAt || null, revisions: visitRevisions } } : {},
     layoutBases: Object.fromEntries(layoutBases),
+    savedPositionIds: [...positions.keys()],
+    positionOrigins: Object.fromEntries((layout.origins || []).filter(origin => {
+      const p = positions.get(origin.node_id); return p && p.x === origin.dx && p.y === origin.dy;
+    }).map(origin => [origin.node_id,{x:origin.x/1000,y:origin.y/680}])),
     nodes: [...projected.nodes.filter((n) => !contracts.replacedDocumentIds.has(n.id)).map((n) => {
       const company = n.kind === "stock" ? graph.companies.find((c) => c.id === n.id) : void 0;
       const stockMarket = company?.market || stocks.get(n.code)?.market;
@@ -5729,6 +5771,19 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
         }
         if (rejectedDraft) status();
       } else if (command.type === "save") {
+        if (Object.hasOwn(command, "origins")) {
+          rejectedDraft = null;
+          const next = mergePrototypeOriginSave(state, command.draft, command.origins, reason => { rejectedDraft = reason; });
+          const hidden = command.draft?.hiddenStockIds;
+          const allowed = new Set(state.graph?.companies.map(row => "company:" + row.ticker));
+          const validView = !options.localView || Array.isArray(hidden) && hidden.length <= 30 && new Set(hidden).size === hidden.length && hidden.every(id => typeof id === "string" && allowed.has(id));
+          if (next && !validView) rejectedDraft = prototypeDraftRejection(command.draft, "local_view");
+          if (next && validView) {
+            if (workspace.editLayout(next.map_key, () => next) === false) rejectedDraft = prototypeDraftRejection(next, "workspace_rejected");
+            if (!rejectedDraft) options.localView?.setHiddenStockIds([...hidden]);
+          }
+          if (!next || rejectedDraft) { status(); return; }
+        }
         if (rejectedDraft || state.privateState.document?.layouts.length === 3 && !state.privateState.document.layouts.some((layout) => layout.map_key === PROTOTYPE_MAP_KEY)) status();
         else await workspace.save();
       } else if (command.type === "refresh-data" && options.enableDataRefresh && !exploration) {

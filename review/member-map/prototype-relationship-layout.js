@@ -172,6 +172,56 @@ function applyMemberRelationshipLayout(scope){
     memberRelationshipSlots.set(id,p);memberDisplayOffsets.set(id,offset);focusOffsets.set(id,offset);
   }
 }
+// Origins are accepted by the parent only when bound to the saved raw delta.
+// Legacy records still use the first current-session grouping origin above.
+const memberRelationshipObservedOrigins=new Map();
+const relationshipObserveLayout=applyMemberRelationshipLayout;
+applyMemberRelationshipLayout=function(scope){
+  relationshipObserveLayout(scope);
+  for(const n of [...scope.stocks,...scope.records].filter(n=>memberVisible.has(n.id))){
+    const p=viewPosition(n),base=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||n;
+    memberRelationshipObservedOrigins.set(n.id,{x:p.x-(n.x-base.x),y:p.y-(n.y-base.y)});
+  }
+};
+const memberRelationshipSavedOriginIds=new Set();
+const memberRelationshipSavedPositionIds=new Set(typeof member==='undefined'?[]:member.savedPositionIds||[]);
+function memberRelationshipRestoreOrigins(model,existingIds=new Set()){
+  for(const [id,p] of Object.entries(model?.positionOrigins||{})){
+    if(existingIds.has(id)||!Number.isFinite(p?.x)||!Number.isFinite(p?.y))continue;
+    memberRelationshipLegacyOrigins.set(id,{x:p.x,y:p.y});memberRelationshipSavedOriginIds.add(id);
+  }
+}
+if(typeof member!=='undefined')memberRelationshipRestoreOrigins(member);
+const relationshipMovedIds=memberRelationshipMovedIds;
+memberRelationshipMovedIds=function(scope){
+  const ids=relationshipMovedIds(scope);
+  for(const n of [...scope.stocks,...scope.records])if(memberRelationshipSavedOriginIds.has(n.id))ids.add(n.id);
+  return ids;
+};
+function memberRelationshipCaptureSaveOrigins(){
+  // Only existing positions and explicit movement consume the position budget.
+  // An untouched generated card is not a saved pin, even when visible.
+  return nodes.filter(n=>memberRelationshipSavedPositionIds.has(n.id)||memberPositionEdits.has(n.id)).flatMap(n=>{
+    const base=memberLayoutBases.get(n.id)||initialPositions.get(n.id)||{x:.5,y:.5};
+    const p=memberVisible.has(n.id)?viewPosition(n):null;
+    const origin=p?{x:p.x-(n.x-base.x),y:p.y-(n.y-base.y)}:memberRelationshipObservedOrigins.get(n.id);
+    // Hidden cards use only a prior actual presentation, never a fresh guess.
+    return origin?[{id:n.id,x:origin.x*WORLD_WIDTH,y:origin.y*WORLD_HEIGHT,raw:{x:n.x,y:n.y}}]:[];
+  });
+}
+if(typeof updateMemberGraph==='function'){
+  const relationshipUpdate=updateMemberGraph;
+  updateMemberGraph=function(model,ticker){
+    // Existing nodes may contain unsaved movement. Never replace their origins.
+    memberRelationshipRestoreOrigins(model,new Set(nodes.map(n=>n.id)));
+    for(const id of model.savedPositionIds||[])memberRelationshipSavedPositionIds.add(id);
+    return relationshipUpdate(model,ticker);
+  };
+}
+if(typeof memberSaveButton!=='undefined')memberSaveButton.onclick=()=>{
+  if(memberApplyingGraph||!memberWritable)return;
+  memberPort.postMessage({type:'save',draft:memberDraft(),origins:memberRelationshipCaptureSaveOrigins(),...memberOriginStamp()});
+};
 const memberRelationshipStyle=document.createElement('style');memberRelationshipStyle.textContent=`
 #an-map-design .an-body{grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(180px,1fr) 200px;grid-template-areas:'map detail' 'library detail'}
 #an-map-design .an-map{grid-area:map;min-width:0;min-height:0}

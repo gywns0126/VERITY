@@ -19,6 +19,7 @@ from .portfolio_evidence import project_portfolio_evidence
 from .portfolio_ai_public import project_public_ai_review, validated_contract_sources
 from .portfolio_public_sources import (
     PUBLIC_SOURCE_FILES,
+    _temporary_public_text_cache,
     project_public_sources,
     project_public_business_overviews,
     safe_public_text,
@@ -122,12 +123,14 @@ class _ProjectedPublicIndexCache:
 
     def get(self, public_documents, revision):
         if revision is None:
-            return self._build(public_documents)
+            with _temporary_public_text_cache():
+                return self._build(public_documents)
         if type(revision) is not str or not _PUBLIC_BUNDLE_REVISION.fullmatch(revision):
             raise ValueError("invalid-public-bundle-revision")
         with self._lock:
             if revision != self._revision or self._index is None:
-                self._index = self._build(public_documents, self._business)
+                with _temporary_public_text_cache():
+                    self._index = self._build(public_documents, self._business)
                 self._revision = revision
             return self._index
 

@@ -154,9 +154,9 @@ def test_overlay_hash_reuse_preserves_full_rehash_revision(monkeypatch, mode, ex
     }
 
 
-def test_production_cold_and_warm_copy_counts_keep_return_isolation(monkeypatch):
+def test_production_cold_and_warm_copy_counts_keep_return_isolation(monkeypatch, capsys):
     downloads, reads, bundle_copies = [], [], []
-    original_copy = fetch.deepcopy
+    original_copy = fetch._copy_public_bundle
 
     def download(name):
         downloads.append(name)
@@ -173,7 +173,7 @@ def test_production_cold_and_warm_copy_counts_keep_return_isolation(monkeypatch)
 
     monkeypatch.setattr(fetch, "_download_source", download)
     monkeypatch.setattr(fetch, "_REFRESH_STORE", types.SimpleNamespace(read_states=reader))
-    monkeypatch.setattr(fetch, "deepcopy", counted_copy)
+    monkeypatch.setattr(fetch, "_copy_public_bundle", counted_copy)
     # 다운로드·갱신 주입 인자 없이 고정 읽기 경로를 사용합니다. 시계만 고정합니다.
     cold = fetch.fetch_public_sources(_clock=lambda: 0)
     assert bundle_copies == [True]
@@ -193,6 +193,27 @@ def test_production_cold_and_warm_copy_counts_keep_return_isolation(monkeypatch)
     assert warm["coverage"]["missing"] == []
     warm["documents"]["universe_search.json"]["stocks"].clear()
     assert cached_stocks == baseline("universe_search.json")["stocks"]
+    lines = [line for line in capsys.readouterr().err.splitlines()
+             if line.startswith("member_map_public_fetch ")]
+    assert len(lines) == 2
+    assert "cache=miss status=complete available=16" in lines[0]
+    assert "cache=hit status=complete available=16" in lines[1]
+    assert all("lock_wait_ms=" in line and "copy_ms=" in line and "elapsed_ms=" in line
+               for line in lines)
+    assert all("검수 회사" not in line and "Bearer" not in line and "http" not in line
+               for line in lines)
+
+
+def test_public_bundle_copy_preserves_shared_aliases_and_nested_isolation():
+    shared = {"rows": [{"title": "검수 회사"}]}
+    source = {"documents": {"first": shared, "second": shared},
+              "coverage": {"missing": []}, "revision": "a" * 64}
+    copied = fetch._copy_public_bundle(source)
+    assert copied == source and copied is not source
+    assert copied["documents"]["first"] is copied["documents"]["second"]
+    assert copied["documents"]["first"] is not shared
+    copied["documents"]["first"]["rows"][0]["title"] = "변경"
+    assert source["documents"]["first"]["rows"][0]["title"] == "검수 회사"
 
 
 def test_production_failed_news_overlay_separates_live_cache_and_return(monkeypatch):
@@ -204,6 +225,7 @@ def test_production_failed_news_overlay_separates_live_cache_and_return(monkeypa
                                      "time": STAMP}]})
     live_states = {"news": news}
     original_copy = fetch.deepcopy
+    original_bundle_copy = fetch._copy_public_bundle
     bundle_copies, state_copies = [], []
 
     def failed_reader():
@@ -212,14 +234,17 @@ def test_production_failed_news_overlay_separates_live_cache_and_return(monkeypa
     def counted_copy(value):
         if value is live_states:
             state_copies.append(True)
-        if type(value) is dict and set(value) == {"documents", "coverage", "revision"}:
-            bundle_copies.append(True)
         return original_copy(value)
+
+    def counted_bundle_copy(value):
+        bundle_copies.append(True)
+        return original_bundle_copy(value)
 
     monkeypatch.setattr(fetch, "_LIVE_STATES", live_states)
     monkeypatch.setattr(fetch, "_REFRESH_STORE", types.SimpleNamespace(read_states=failed_reader))
     monkeypatch.setattr(fetch, "_download_source", lambda name: json.loads(json.dumps(baseline(name))))
     monkeypatch.setattr(fetch, "deepcopy", counted_copy)
+    monkeypatch.setattr(fetch, "_copy_public_bundle", counted_bundle_copy)
     cold = fetch.fetch_public_sources(_clock=lambda: 0)
     assert bundle_copies == [True] and state_copies == [True]
     live_row = live_states["news"]["feed"]["headlines"][0]

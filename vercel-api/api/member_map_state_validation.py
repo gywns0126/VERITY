@@ -73,7 +73,7 @@ def validate_document(document):
 
     seen_keys = set()
     for layout in layouts:
-        _object(layout, {"map_key", "positions", "notes", "marks"},
+        _object(layout, {"map_key", "positions", "notes", "marks", "origins"},
                 {"map_key", "positions", "notes", "marks"}, "layout")
         key = layout["map_key"]
         if not isinstance(key, str) or not _MAP_KEY.fullmatch(key) or key in seen_keys:
@@ -93,6 +93,27 @@ def validate_document(document):
             position_ids.add(node_id)
             _coordinate(position["x"], "x")
             _coordinate(position["y"], "y")
+
+        # Origins are optional for legacy clients. Bind each origin to the exact
+        # raw delta it describes so stale metadata cannot mask a later drag.
+        origins = layout.get("origins", [])
+        if not isinstance(origins, list) or len(origins) > MAX_POSITIONS:
+            raise InvalidDocument("origins_limit")
+        by_id = {p["node_id"]: p for p in positions}
+        origin_ids = set()
+        for origin in origins:
+            fields = {"node_id", "x", "y", "dx", "dy"}
+            _object(origin, fields, fields, "origin")
+            node_id = origin["node_id"]
+            _identifier(node_id, "origin_node_id")
+            if node_id in origin_ids or node_id not in by_id:
+                raise InvalidDocument("origin_reference_invalid")
+            origin_ids.add(node_id)
+            for coordinate in ("x", "y", "dx", "dy"):
+                _coordinate(origin[coordinate], "origin_" + coordinate)
+            if (origin["dx"] != by_id[node_id]["x"] or
+                    origin["dy"] != by_id[node_id]["y"]):
+                raise InvalidDocument("origin_delta_mismatch")
 
         notes = layout["notes"]
         if not isinstance(notes, list) or len(notes) > MAX_NOTES:
