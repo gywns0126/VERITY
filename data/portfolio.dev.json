@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-26T04:09:44+09:00",
+  "updated_at": "2026-10-26T05:09:50+09:00",
   "market_summary": {
     "kospi": {
       "value": 5550.3,
@@ -1281,7 +1281,7 @@
       "phantom_pnl_excluded": -1332835.1,
       "partial_exits_folded": true,
       "definition": "청산 episode 기준 (부분청산 부모 합산 · 보유 0 유령매도 배제) · SoT=api/vams/trade_ledger",
-      "updated_at": "2026-10-26T04:16:58+09:00"
+      "updated_at": "2026-10-26T05:16:24+09:00"
     },
     "active_profile": "moderate",
     "adjusted_performance": {
@@ -1340,7 +1340,7 @@
         },
         "note": "VAMS 본체는 수수료·시장충격 슬리피지까지 반영. 본 보정은 증권거래세(종목 타입별 분기)·호가 스프레드·배당세(KR 15.4% / US 15.0% 한미 조세조약)·US 양도세(250만 공제 후 22% 분리과세)·US 환전 비용(0.3%/년)·KR 양도세(대주주 toggle 또는 금투세 재시행 fallback)·ISA 비과세 한도(mode_tag) 차감. 기본 KR 비대주주 0% 가정 (horizon ~2029 [[project_geumtu_tax_horizon]]). 금융소득 종합과세(연 2000만 초과) = 분리과세 유지 + alert 노출 (사용자 신고 영역)."
       },
-      "computed_at": "2026-10-26 04:16"
+      "computed_at": "2026-10-26 05:16"
     },
     "validation_report": {
       "_meta": {
@@ -1533,7 +1533,7 @@
         "ma200_days_known": 146,
         "note": "창 20250523~20261022 · 시장 +68.32% · 20일 모멘텀 약세 34% · 200d MA 위 100% — 🚨 참고용. 200d MA 는 2026-06~08 창을 100% 강세로 오판한 전력이 있다(급등 직후 급락을 후행 지표가 못 잡음)."
       },
-      "computed_at": "2026-10-26 04:16"
+      "computed_at": "2026-10-26 05:16"
     },
     "reset_meta": {
       "reset_at": "2026-05-17T14:12:07.968520+09:00",
@@ -1946,7 +1946,7 @@
           "INGR",
           "MGY"
         ],
-        "at": "2026-10-26T04:16:42+09:00"
+        "at": "2026-10-26T05:16:08+09:00"
       }
     },
     "fx_hedge_reserve_closed": {
@@ -2556,7 +2556,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -3700,7 +3700,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -4839,7 +4839,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -6008,7 +6008,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -7170,7 +7170,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -8337,7 +8337,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -9411,20 +9411,20 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 60.9,
-        "prediction_std": 15.8,
+        "up_probability": 62.0,
+        "prediction_std": 15.9,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.6704,
+        "conformal_q_hat": 0.6803,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 49.5,
+        "model_accuracy": 49.7,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
@@ -9435,17 +9435,17 @@
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 49.3,
+            "wf_accuracy": 49.7,
             "val_accuracy": 40.0,
             "wf_folds": 6,
-            "weight": 0.4933
+            "weight": 0.4967
           },
           "catboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 49.7,
-            "val_accuracy": 47.1,
+            "wf_accuracy": 50.0,
+            "val_accuracy": 44.3,
             "wf_folds": 6,
-            "weight": 0.4967
+            "weight": 0.5
           },
           "mlp": {
             "architecture": "neural_net",
@@ -9464,11 +9464,11 @@
         },
         "confidence_level": "low",
         "top_features": {
-          "volatility_20d": 27.5985,
-          "macd_hist": 26.9031,
-          "ma5_ratio": 24.8806,
-          "volume_price_trend": 22.2753,
-          "ma20_ratio": 22.2588
+          "volatility_20d": 27.4473,
+          "macd_hist": 27.0967,
+          "ma5_ratio": 24.5889,
+          "volume_price_trend": 22.323,
+          "ma20_ratio": 21.9102
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -9489,7 +9489,7 @@
         "reasons": [
           "MACD 상승반전 신호",
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 60.9%"
+          "AI 상승확률 62.0%"
         ]
       },
       "low_52w": 33650.0,
@@ -9521,7 +9521,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -9648,7 +9648,7 @@
           "components": {
             "multi_factor": 59.0,
             "consensus": 53.0,
-            "prediction": 60.9,
+            "prediction": 62.0,
             "backtest": 32.2,
             "timing": 57.0,
             "commodity_margin": 50.0,
@@ -10709,7 +10709,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -11882,7 +11882,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -13052,7 +13052,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -14486,10 +14486,10 @@
           "AI 상승확률 36.2%"
         ]
       },
-      "low_52w": 124.69125366210938,
+      "low_52w": 124.69124603271484,
       "price_1m": 154.47000122070312,
       "price_3m": 160.65931701660156,
-      "price_6m": 147.2676544189453,
+      "price_6m": 147.26763916015625,
       "fscore_deltas": {
         "n_delta_computed": 0,
         "data_source": "no_snapshots"
@@ -14520,7 +14520,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 5,
       "quadrant_info": {
@@ -14883,7 +14883,7 @@
           "components": {
             "news_sentiment": 63,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -15980,7 +15980,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 6,
       "quadrant_info": {
@@ -16342,7 +16342,7 @@
           "components": {
             "news_sentiment": 53,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -17419,7 +17419,7 @@
           "alert": true,
           "note": "부채비율 251% — 높은 레버리지"
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 5,
       "quadrant_info": {
@@ -17781,7 +17781,7 @@
           "components": {
             "news_sentiment": 54,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -18807,7 +18807,7 @@
       "low_52w": 22.77229881286621,
       "price_1m": 35.709999084472656,
       "price_3m": 36.41783905029297,
-      "price_6m": 40.203182220458984,
+      "price_6m": 40.20317840576172,
       "fscore_deltas": {
         "n_delta_computed": 0,
         "data_source": "no_snapshots"
@@ -18838,7 +18838,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 6,
       "quadrant_info": {
@@ -19201,7 +19201,7 @@
           "components": {
             "news_sentiment": 60,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -20188,7 +20188,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 5,
       "quadrant_info": {
@@ -20552,7 +20552,7 @@
           "components": {
             "news_sentiment": 51,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -21405,14 +21405,14 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 58.7,
+        "up_probability": 58.6,
         "prediction_std": 7.1,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.6835,
+        "conformal_q_hat": 0.6834,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
@@ -21422,10 +21422,10 @@
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 44.0,
+            "wf_accuracy": 43.7,
             "val_accuracy": 49.3,
             "wf_folds": 7,
-            "weight": 0.44
+            "weight": 0.4371
           },
           "lightgbm": {
             "architecture": "gbdt",
@@ -21436,10 +21436,10 @@
           },
           "catboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 46.3,
+            "wf_accuracy": 46.6,
             "val_accuracy": 43.8,
             "wf_folds": 7,
-            "weight": 0.4629
+            "weight": 0.4657
           },
           "mlp": {
             "architecture": "neural_net",
@@ -21483,11 +21483,11 @@
         "reasons": [
           "MACD 골든크로스 — 상승전환",
           "MACD 상승반전 신호",
-          "AI 상승확률 58.7%",
+          "AI 상승확률 58.6%",
           "수급 비우호적"
         ]
       },
-      "low_52w": 46.06746292114258,
+      "low_52w": 46.067466735839844,
       "price_1m": 57.81999969482422,
       "price_3m": 60.16633987426758,
       "price_6m": 56.044193267822266,
@@ -21521,7 +21521,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "quadrant_info": {
         "quadrant": "growth_up_inflation_up",
@@ -21637,7 +21637,7 @@
           "components": {
             "multi_factor": 55.0,
             "consensus": 37.0,
-            "prediction": 58.7,
+            "prediction": 58.6,
             "backtest": 50.0,
             "timing": 71.0,
             "commodity_margin": 50.0,
@@ -21885,7 +21885,7 @@
           "components": {
             "news_sentiment": 60,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -22847,7 +22847,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 7,
       "quadrant_info": {
@@ -23210,7 +23210,7 @@
           "components": {
             "news_sentiment": 54,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -24243,7 +24243,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 8,
       "quadrant_info": {
@@ -24606,7 +24606,7 @@
           "components": {
             "news_sentiment": 43,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -25636,7 +25636,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 4,
       "quadrant_info": {
@@ -25998,7 +25998,7 @@
           "components": {
             "news_sentiment": 57,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -27002,7 +27002,7 @@
         "credit": {
           "debt_ratio_pct": 24.3
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 5,
       "quadrant_info": {
@@ -27364,7 +27364,7 @@
           "components": {
             "news_sentiment": 55,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -28390,7 +28390,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 5,
       "quadrant_info": {
@@ -28758,7 +28758,7 @@
           "components": {
             "news_sentiment": 56,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -29810,7 +29810,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 7,
       "quadrant_info": {
@@ -30173,7 +30173,7 @@
           "components": {
             "news_sentiment": 60,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -30946,7 +30946,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "quadrant_info": {
         "quadrant": "growth_up_inflation_up",
@@ -31314,7 +31314,7 @@
           "components": {
             "news_sentiment": 54,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -32247,7 +32247,7 @@
         "credit": {
           "debt_ratio_pct": 46.6
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 7,
       "quadrant_info": {
@@ -32610,7 +32610,7 @@
           "components": {
             "news_sentiment": 57,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -33678,7 +33678,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 4,
       "quadrant_info": {
@@ -34040,7 +34040,7 @@
           "components": {
             "news_sentiment": 64,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -34721,40 +34721,40 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 80.8,
-        "prediction_std": 18.1,
+        "up_probability": 81.1,
+        "prediction_std": 18.3,
         "confidence_interval": [
-          4.1,
+          4.6,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7666,
-        "conformal_width_pct": 95.9,
+        "conformal_q_hat": 0.7647,
+        "conformal_width_pct": 95.4,
         "prediction_set": [
           1
         ],
-        "model_accuracy": 54.9,
+        "model_accuracy": 55.1,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 57.3,
-            "val_accuracy": 35.7,
+            "wf_accuracy": 57.0,
+            "val_accuracy": 32.9,
             "wf_folds": 6,
-            "weight": 0.5733
+            "weight": 0.57
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 54.0,
-            "val_accuracy": 35.7,
+            "wf_accuracy": 55.3,
+            "val_accuracy": 34.3,
             "wf_folds": 6,
-            "weight": 0.54
+            "weight": 0.5533
           },
           "catboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 54.3,
+            "wf_accuracy": 54.7,
             "val_accuracy": 30.0,
             "wf_folds": 6,
-            "weight": 0.5433
+            "weight": 0.5467
           },
           "mlp": {
             "architecture": "neural_net",
@@ -34773,11 +34773,11 @@
         },
         "confidence_level": "medium",
         "top_features": {
-          "volatility_20d": 35.3284,
-          "volume_price_trend": 35.1551,
-          "vol_ratio": 21.5883,
-          "macd_hist": 19.6943,
-          "bb_position": 16.0097
+          "volume_price_trend": 33.4044,
+          "volatility_20d": 33.1571,
+          "return_5d": 21.1989,
+          "vol_ratio": 20.0308,
+          "rsi7": 16.3727
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -34798,7 +34798,7 @@
         "reasons": [
           "RSI 29.36 과매도 — 반등 가능",
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 80.8% — 강한 매수 신호"
+          "AI 상승확률 81.1% — 강한 매수 신호"
         ]
       },
       "low_52w": 120200.0,
@@ -34830,7 +34830,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -34957,7 +34957,7 @@
           "components": {
             "multi_factor": 48.0,
             "consensus": 52.0,
-            "prediction": 80.8,
+            "prediction": 81.1,
             "backtest": 36.1,
             "timing": 69.0,
             "commodity_margin": 50.0,
@@ -35996,7 +35996,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -37125,7 +37125,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -38295,7 +38295,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -39450,7 +39450,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -40466,39 +40466,39 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 72.9,
-        "prediction_std": 26.9,
+        "up_probability": 73.1,
+        "prediction_std": 27.2,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7787,
+        "conformal_q_hat": 0.7736,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 45.5,
+        "model_accuracy": 45.1,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 43.3,
-            "val_accuracy": 41.4,
+            "wf_accuracy": 42.7,
+            "val_accuracy": 40.0,
             "wf_folds": 6,
-            "weight": 0.4333
+            "weight": 0.4267
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 44.7,
-            "val_accuracy": 37.1,
+            "wf_accuracy": 43.3,
+            "val_accuracy": 35.7,
             "wf_folds": 6,
-            "weight": 0.4467
+            "weight": 0.4333
           },
           "catboost": {
             "architecture": "gbdt",
             "wf_accuracy": 45.3,
-            "val_accuracy": 35.7,
+            "val_accuracy": 32.9,
             "wf_folds": 6,
             "weight": 0.4533
           },
@@ -40519,11 +40519,11 @@
         },
         "confidence_level": "low",
         "top_features": {
-          "volatility_20d": 38.2651,
-          "macd_hist": 24.9928,
-          "volume_price_trend": 24.5532,
-          "ma20_ratio": 22.8601,
-          "return_1d": 21.8051
+          "volatility_20d": 44.15,
+          "macd_hist": 25.3843,
+          "return_5d": 23.8303,
+          "return_1d": 23.7891,
+          "volume_price_trend": 22.493
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -40543,7 +40543,7 @@
         "color": "#86EFAC",
         "reasons": [
           "RSI 37.78 저평가 구간",
-          "AI 상승확률 72.9% — 강한 매수 신호"
+          "AI 상승확률 73.1% — 강한 매수 신호"
         ]
       },
       "low_52w": 20428.58203125,
@@ -40576,7 +40576,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -40703,7 +40703,7 @@
           "components": {
             "multi_factor": 51.0,
             "consensus": 52.0,
-            "prediction": 72.9,
+            "prediction": 73.1,
             "backtest": 59.6,
             "timing": 68.0,
             "commodity_margin": 64.5,
@@ -41734,7 +41734,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -42895,7 +42895,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -44054,7 +44054,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -45217,7 +45217,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -46274,20 +46274,20 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 43.6,
-        "prediction_std": 8.1,
+        "up_probability": 42.6,
+        "prediction_std": 9.3,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7475,
+        "conformal_q_hat": 0.7471,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 58.9,
+        "model_accuracy": 59.0,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
@@ -46298,10 +46298,10 @@
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 58.7,
-            "val_accuracy": 62.9,
+            "wf_accuracy": 59.0,
+            "val_accuracy": 64.3,
             "wf_folds": 6,
-            "weight": 0.5867
+            "weight": 0.59
           },
           "catboost": {
             "architecture": "gbdt",
@@ -46328,10 +46328,10 @@
         "confidence_level": "medium",
         "top_features": {
           "volatility_20d": 34.9186,
-          "volume_price_trend": 26.9606,
-          "drawdown_20d": 26.7917,
-          "rsi14": 23.3758,
-          "macd_hist": 23.2897
+          "drawdown_20d": 28.4584,
+          "rsi14": 25.0425,
+          "ma20_ratio": 22.0255,
+          "volume_price_trend": 21.9606
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -46350,7 +46350,7 @@
         "label": "매도 고려",
         "color": "#FCA5A5",
         "reasons": [
-          "AI 상승확률 43.6%",
+          "AI 상승확률 42.6%",
           "수급 비우호적"
         ]
       },
@@ -46384,7 +46384,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -46511,7 +46511,7 @@
           "components": {
             "multi_factor": 47.0,
             "consensus": 36.0,
-            "prediction": 43.6,
+            "prediction": 42.6,
             "backtest": 61.5,
             "timing": 41.0,
             "commodity_margin": 44.2,
@@ -47553,7 +47553,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -48716,7 +48716,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -49760,39 +49760,39 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 36.4,
-        "prediction_std": 16.2,
+        "up_probability": 31.3,
+        "prediction_std": 16.9,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7678,
+        "conformal_q_hat": 0.7629,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 46.3,
+        "model_accuracy": 46.0,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 49.3,
+            "wf_accuracy": 49.0,
             "val_accuracy": 60.0,
             "wf_folds": 6,
-            "weight": 0.4933
+            "weight": 0.49
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 50.0,
-            "val_accuracy": 60.0,
+            "wf_accuracy": 48.7,
+            "val_accuracy": 58.6,
             "wf_folds": 6,
-            "weight": 0.5
+            "weight": 0.4867
           },
           "catboost": {
             "architecture": "gbdt",
             "wf_accuracy": 47.7,
-            "val_accuracy": 61.4,
+            "val_accuracy": 67.1,
             "wf_folds": 6,
             "weight": 0.4767
           },
@@ -49813,11 +49813,11 @@
         },
         "confidence_level": "low",
         "top_features": {
-          "volatility_20d": 33.6368,
-          "ma20_ratio": 25.659,
-          "macd_hist": 22.6641,
-          "volume_price_trend": 22.2219,
-          "rsi14": 21.1917
+          "volatility_20d": 33.0201,
+          "ma20_ratio": 24.5113,
+          "macd_hist": 24.4603,
+          "volume_price_trend": 22.4661,
+          "rsi14": 20.682
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -49831,12 +49831,12 @@
         "test_samples": 70
       },
       "timing": {
-        "timing_score": 45,
-        "action": "HOLD",
-        "label": "관망",
-        "color": "#888",
+        "timing_score": 40,
+        "action": "SELL",
+        "label": "매도 고려",
+        "color": "#FCA5A5",
         "reasons": [
-          "AI 상승확률 36.4%"
+          "AI 상승확률 31.3% — 강한 하락 신호"
         ]
       },
       "low_52w": 94325.8203125,
@@ -49869,7 +49869,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -49996,9 +49996,9 @@
           "components": {
             "multi_factor": 57.0,
             "consensus": 52.0,
-            "prediction": 36.4,
+            "prediction": 31.3,
             "backtest": 58.9,
-            "timing": 45.0,
+            "timing": 40.0,
             "commodity_margin": 57.0,
             "export_trade": 50.0,
             "moat_quality": 53.0,
@@ -50331,7 +50331,7 @@
         },
         "reasoning": "미원에스씨: 브레인 66점 (팩트 68 / 심리 56 / VCI +12) | 팩트 최강 quant_quality(82) / 최약 graham_value(60) | 퀀트: 퀄리티↑82 | 지분: 최대주주 미원홀딩스주식회사 33.94% | 매크로 원유 뉴스 반응: WTI $103.27 +3.82% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
       },
-      "recommendation": "BUY",
+      "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 57점 (관망) — 관찰 필요",
       "confidence": 57,
       "risk_flags": [],
@@ -50341,29 +50341,37 @@
       "detected_risk_keywords": [],
       "analyst_view": "WATCH",
       "display_verdict": {
-        "final": "BUY",
+        "final": "WATCH",
         "base_grade": "BUY",
-        "gates": [],
+        "gates": [
+          "timing_conflict"
+        ],
         "analyst_view": "WATCH",
         "aligned": false,
         "owner": "brain",
-        "validation": "가설 — 자체 산식, 사전등록 검정 미통과 (검증 틀 v2 §7-3 승인 대기)"
+        "validation": "가설 — 자체 산식, 사전등록 검정 미통과 (검증 틀 v2 §7-3 승인 대기)",
+        "trigger_condition": {
+          "type": "ma20_reclaim",
+          "ma20": 129395,
+          "price": 126600,
+          "message": "MA20(129,395) 회복 시 관심 승격"
+        }
       },
       "current_price": 126600.0,
       "rec_price": 126600.0,
       "trade_plan": {
-        "rec": "BUY",
+        "rec": "WATCH",
         "entry_zone": {
           "low": 123752,
           "high": 126600,
-          "trigger": "BUY + BB하단~MA20 + RSI 45≤50 — 진입 가능",
-          "active": true
+          "trigger": "진입 대기",
+          "active": false
         },
-        "position_pct": null,
+        "position_pct": 1.9,
         "position_pct_range": {
-          "min": 5,
-          "max": 15,
-          "note": "단일 종목 한도 — portfolio 보고 수동 결정"
+          "min": 0,
+          "max": 5,
+          "note": "관망 우선 — 진입 시 시범 비중"
         },
         "exit_target": {
           "price": 138780,
@@ -50398,8 +50406,8 @@
           "risk_per_share": 12180.0
         },
         "transition_triggers": {
-          "current_verdict": "BUY",
-          "current_action": "보유 유지 / 신규 진입 검토",
+          "current_verdict": "WATCH",
+          "current_action": "관망 — BUY 강등 시 부분 축소",
           "rules": [
             "BUY → WATCH 강등 시: 50% 축소 권고",
             "→ AVOID 강등 시: 전량 청산 권고",
@@ -51036,7 +51044,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -52081,14 +52089,14 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 49.8,
-        "prediction_std": 11.3,
+        "up_probability": 48.4,
+        "prediction_std": 10.1,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7074,
+        "conformal_q_hat": 0.7025,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
@@ -52106,7 +52114,7 @@
           "lightgbm": {
             "architecture": "gbdt",
             "wf_accuracy": 47.0,
-            "val_accuracy": 41.4,
+            "val_accuracy": 40.0,
             "wf_folds": 6,
             "weight": 0.47
           },
@@ -52134,11 +52142,11 @@
         },
         "confidence_level": "low",
         "top_features": {
-          "volatility_20d": 35.4291,
-          "rsi14": 27.1397,
-          "drawdown_20d": 24.3522,
-          "volume_price_trend": 21.4512,
-          "macd_hist": 21.1183
+          "volatility_20d": 30.7624,
+          "drawdown_20d": 28.6856,
+          "rsi14": 26.1397,
+          "volume_price_trend": 24.1179,
+          "vol_ratio": 22.2056
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -52190,7 +52198,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -52317,7 +52325,7 @@
           "components": {
             "multi_factor": 56.0,
             "consensus": 50.0,
-            "prediction": 49.8,
+            "prediction": 48.4,
             "backtest": 54.1,
             "timing": 58.0,
             "commodity_margin": 46.9,
@@ -53365,7 +53373,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -54527,7 +54535,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -55690,7 +55698,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -56832,7 +56840,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -57495,7 +57503,7 @@
         519469.0,
         528821.0,
         542790.0,
-        569730.0,
+        569729.0,
         545783.0,
         597667.0,
         675494.0,
@@ -57869,15 +57877,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 84.4,
+        "up_probability": 84.3,
         "prediction_std": 17.0,
         "confidence_interval": [
-          12.2,
+          12.3,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7215,
-        "conformal_width_pct": 87.8,
+        "conformal_q_hat": 0.7205,
+        "conformal_width_pct": 87.7,
         "prediction_set": [
           1
         ],
@@ -57899,10 +57907,10 @@
           },
           "catboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 43.7,
+            "wf_accuracy": 44.0,
             "val_accuracy": 35.7,
             "wf_folds": 6,
-            "weight": 0.4367
+            "weight": 0.44
           },
           "mlp": {
             "architecture": "neural_net",
@@ -57921,11 +57929,11 @@
         },
         "confidence_level": "low",
         "top_features": {
-          "macd_hist": 33.0184,
-          "volatility_20d": 31.2438,
-          "return_1d": 18.8004,
-          "rsi7": 17.8792,
-          "vol_ratio": 17.4555
+          "macd_hist": 36.0184,
+          "volatility_20d": 30.2438,
+          "return_1d": 21.1337,
+          "volume_price_trend": 17.6003,
+          "rsi7": 17.2125
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -57946,13 +57954,13 @@
         "reasons": [
           "RSI 33.39 저평가 구간",
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 84.4% — 강한 매수 신호"
+          "AI 상승확률 84.3% — 강한 매수 신호"
         ]
       },
-      "low_52w": 477093.625,
+      "low_52w": 477093.65625,
       "price_1m": 1868000.0,
       "price_3m": 1829603.25,
-      "price_6m": 1127567.0,
+      "price_6m": 1127566.875,
       "fscore_deltas": {
         "delta_roa": 21.5,
         "c5_delta_leverage_negative": true,
@@ -57979,7 +57987,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -58114,7 +58122,7 @@
           "components": {
             "multi_factor": 53.0,
             "consensus": 50.0,
-            "prediction": 84.4,
+            "prediction": 84.3,
             "backtest": 69.3,
             "timing": 62.0,
             "commodity_margin": 75.2,
@@ -59027,41 +59035,41 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 65.4,
-        "prediction_std": 9.6,
+        "up_probability": 64.4,
+        "prediction_std": 10.2,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7961,
+        "conformal_q_hat": 0.7966,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 47.5,
+        "model_accuracy": 47.6,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 41.3,
+            "wf_accuracy": 41.0,
             "val_accuracy": 34.3,
             "wf_folds": 6,
-            "weight": 0.4133
+            "weight": 0.41
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 44.7,
+            "wf_accuracy": 45.0,
             "val_accuracy": 40.0,
             "wf_folds": 6,
-            "weight": 0.4467
+            "weight": 0.45
           },
           "catboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 49.7,
-            "val_accuracy": 40.0,
+            "wf_accuracy": 50.3,
+            "val_accuracy": 41.4,
             "wf_folds": 6,
-            "weight": 0.4967
+            "weight": 0.5033
           },
           "mlp": {
             "architecture": "neural_net",
@@ -59080,11 +59088,11 @@
         },
         "confidence_level": "low",
         "top_features": {
-          "volatility_20d": 42.8047,
-          "macd_hist": 24.4873,
-          "volume_price_trend": 22.8241,
-          "drawdown_20d": 19.6236,
-          "rsi14": 19.2177
+          "volatility_20d": 42.2992,
+          "macd_hist": 24.9413,
+          "volume_price_trend": 22.5482,
+          "drawdown_20d": 20.2032,
+          "rsi14": 19.2875
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -59098,14 +59106,14 @@
         "test_samples": 70
       },
       "timing": {
-        "timing_score": 62,
+        "timing_score": 57,
         "action": "BUY",
         "label": "매수 고려",
         "color": "#86EFAC",
         "reasons": [
           "RSI 33.02 저평가 구간",
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 65.4% — 강한 매수 신호"
+          "AI 상승확률 64.4%"
         ]
       },
       "low_52w": 75229.625,
@@ -59137,7 +59145,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -59264,9 +59272,9 @@
           "components": {
             "multi_factor": 54.0,
             "consensus": 53.0,
-            "prediction": 65.4,
+            "prediction": 64.4,
             "backtest": 68.9,
-            "timing": 62.0,
+            "timing": 57.0,
             "commodity_margin": 76.0,
             "export_trade": 50.0,
             "moat_quality": 53.0,
@@ -60291,7 +60299,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -61338,14 +61346,14 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 37.3,
+        "up_probability": 37.4,
         "prediction_std": 10.2,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7326,
+        "conformal_q_hat": 0.7324,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
@@ -61362,10 +61370,10 @@
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 54.7,
+            "wf_accuracy": 54.3,
             "val_accuracy": 64.3,
             "wf_folds": 6,
-            "weight": 0.5467
+            "weight": 0.5433
           },
           "catboost": {
             "architecture": "gbdt",
@@ -61416,7 +61424,7 @@
         "reasons": [
           "RSI 63.07 고평가 접근",
           "MACD 상승반전 신호",
-          "AI 상승확률 37.3%"
+          "AI 상승확률 37.4%"
         ]
       },
       "low_52w": 159400.0,
@@ -61448,7 +61456,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -61575,7 +61583,7 @@
           "components": {
             "multi_factor": 54.0,
             "consensus": 55.0,
-            "prediction": 37.3,
+            "prediction": 37.4,
             "backtest": 59.0,
             "timing": 48.0,
             "commodity_margin": 50.0,
@@ -62835,7 +62843,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 8,
       "quadrant_info": {
@@ -63198,7 +63206,7 @@
           "components": {
             "news_sentiment": 61,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -63845,20 +63853,20 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 63.0,
-        "prediction_std": 6.1,
+        "up_probability": 63.5,
+        "prediction_std": 6.4,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7991,
+        "conformal_q_hat": 0.7962,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 51.3,
+        "model_accuracy": 51.2,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
@@ -63869,24 +63877,24 @@
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 51.0,
-            "val_accuracy": 42.9,
+            "wf_accuracy": 50.7,
+            "val_accuracy": 45.7,
             "wf_folds": 6,
-            "weight": 0.51
+            "weight": 0.5067
           },
           "catboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 51.0,
+            "wf_accuracy": 50.3,
             "val_accuracy": 48.6,
             "wf_folds": 6,
-            "weight": 0.51
+            "weight": 0.5033
           },
           "mlp": {
             "architecture": "neural_net",
-            "wf_accuracy": 52.7,
+            "wf_accuracy": 53.0,
             "val_accuracy": 42.9,
             "wf_folds": 6,
-            "weight": 0.5267
+            "weight": 0.53
           },
           "logistic": {
             "architecture": "linear",
@@ -63898,11 +63906,11 @@
         },
         "confidence_level": "low",
         "top_features": {
-          "volatility_20d": 46.6571,
-          "macd_hist": 23.83,
-          "drawdown_20d": 22.8803,
-          "ma20_ratio": 22.7672,
-          "rsi7": 18.1986
+          "volatility_20d": 46.0396,
+          "ma20_ratio": 21.8043,
+          "macd_hist": 20.8156,
+          "rsi7": 20.1237,
+          "drawdown_20d": 19.4187
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -63922,7 +63930,7 @@
         "color": "#22C55E",
         "reasons": [
           "MACD 상승반전 신호",
-          "AI 상승확률 63.0%",
+          "AI 상승확률 63.5%",
           "외국인·기관 강한 순매수"
         ]
       },
@@ -63957,7 +63965,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -64084,7 +64092,7 @@
           "components": {
             "multi_factor": 59.0,
             "consensus": 79.0,
-            "prediction": 63.0,
+            "prediction": 63.5,
             "backtest": 51.4,
             "timing": 71.0,
             "commodity_margin": 57.6,
@@ -65001,41 +65009,41 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 69.3,
-        "prediction_std": 19.3,
+        "up_probability": 68.9,
+        "prediction_std": 18.6,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7188,
+        "conformal_q_hat": 0.7141,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 53.3,
+        "model_accuracy": 53.7,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 52.3,
+            "wf_accuracy": 53.3,
             "val_accuracy": 48.6,
             "wf_folds": 6,
-            "weight": 0.5233
+            "weight": 0.5333
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 49.7,
+            "wf_accuracy": 50.3,
             "val_accuracy": 50.0,
             "wf_folds": 6,
-            "weight": 0.4967
+            "weight": 0.5033
           },
           "catboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 53.7,
+            "wf_accuracy": 54.0,
             "val_accuracy": 48.6,
             "wf_folds": 6,
-            "weight": 0.5367
+            "weight": 0.54
           },
           "mlp": {
             "architecture": "neural_net",
@@ -65056,9 +65064,9 @@
         "top_features": {
           "volatility_20d": 30.1868,
           "rsi14": 25.8813,
+          "vol_ratio": 25.7514,
           "bb_position": 23.5899,
-          "vol_ratio": 23.0847,
-          "return_5d": 21.9873
+          "macd_hist": 21.8965
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -65079,7 +65087,7 @@
         "reasons": [
           "RSI 30.02 저평가 구간",
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 69.3% — 강한 매수 신호",
+          "AI 상승확률 68.9% — 강한 매수 신호",
           "수급 비우호적"
         ]
       },
@@ -65112,7 +65120,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -65239,7 +65247,7 @@
           "components": {
             "multi_factor": 46.0,
             "consensus": 31.0,
-            "prediction": 69.3,
+            "prediction": 68.9,
             "backtest": 45.5,
             "timing": 58.0,
             "commodity_margin": 50.0,
@@ -66159,40 +66167,40 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 74.2,
-        "prediction_std": 12.3,
+        "up_probability": 74.0,
+        "prediction_std": 12.0,
         "confidence_interval": [
-          2.7,
+          4.2,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7149,
-        "conformal_width_pct": 97.3,
+        "conformal_q_hat": 0.6979,
+        "conformal_width_pct": 95.8,
         "prediction_set": [
           1
         ],
-        "model_accuracy": 50.7,
+        "model_accuracy": 51.1,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 51.3,
+            "wf_accuracy": 52.0,
             "val_accuracy": 41.4,
             "wf_folds": 6,
-            "weight": 0.5133
+            "weight": 0.52
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 50.3,
-            "val_accuracy": 47.1,
+            "wf_accuracy": 51.0,
+            "val_accuracy": 44.3,
             "wf_folds": 6,
-            "weight": 0.5033
+            "weight": 0.51
           },
           "catboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 49.0,
+            "wf_accuracy": 49.7,
             "val_accuracy": 41.4,
             "wf_folds": 6,
-            "weight": 0.49
+            "weight": 0.4967
           },
           "mlp": {
             "architecture": "neural_net",
@@ -66211,11 +66219,11 @@
         },
         "confidence_level": "low",
         "top_features": {
-          "rsi14": 26.443,
-          "volatility_20d": 25.7223,
-          "return_5d": 20.3582,
-          "drawdown_20d": 19.575,
-          "return_1d": 19.5052
+          "rsi14": 27.7763,
+          "volatility_20d": 23.7223,
+          "return_1d": 20.8384,
+          "return_5d": 19.6924,
+          "macd_hist": 18.9076
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -66236,7 +66244,7 @@
         "reasons": [
           "RSI 30.5 저평가 구간",
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 74.2% — 강한 매수 신호"
+          "AI 상승확률 74.0% — 강한 매수 신호"
         ]
       },
       "low_52w": 34600.0,
@@ -66271,7 +66279,7 @@
         "credit": {
           "ig_spread_pp": 0.69
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "value_guards": {
         "version": "f2f3_v0",
@@ -66398,7 +66406,7 @@
           "components": {
             "multi_factor": 52.0,
             "consensus": 49.0,
-            "prediction": 74.2,
+            "prediction": 74.0,
             "backtest": 46.8,
             "timing": 62.0,
             "commodity_margin": 51.9,
@@ -66865,7 +66873,7 @@
       "volume": 734200,
       "trading_value": 70262937,
       "market_cap": 6035222528,
-      "high_52w": 120.47696668924235,
+      "high_52w": 120.47695883534169,
       "drop_from_high_pct": -20.57,
       "per": 10.41,
       "pbr": 1.33,
@@ -67547,27 +67555,27 @@
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.6908,
+        "conformal_q_hat": 0.6915,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 55.5,
+        "model_accuracy": 55.8,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 53.1,
+            "wf_accuracy": 54.3,
             "val_accuracy": 52.1,
             "wf_folds": 7,
-            "weight": 0.5314
+            "weight": 0.5429
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 49.7,
+            "wf_accuracy": 50.0,
             "val_accuracy": 50.7,
             "wf_folds": 7,
-            "weight": 0.4971
+            "weight": 0.5
           },
           "catboost": {
             "architecture": "gbdt",
@@ -67657,7 +67665,7 @@
         "credit": {
           "debt_ratio_pct": 41.9
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 8,
       "quadrant_info": {
@@ -68020,7 +68028,7 @@
           "components": {
             "news_sentiment": 61,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -68911,20 +68919,20 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 38.1,
-        "prediction_std": 17.0,
+        "up_probability": 39.0,
+        "prediction_std": 16.2,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7094,
+        "conformal_q_hat": 0.7071,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 47.4,
+        "model_accuracy": 47.5,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
@@ -68935,10 +68943,10 @@
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 48.3,
-            "val_accuracy": 64.4,
+            "wf_accuracy": 48.9,
+            "val_accuracy": 67.1,
             "wf_folds": 7,
-            "weight": 0.4829
+            "weight": 0.4886
           },
           "catboost": {
             "architecture": "gbdt",
@@ -68964,11 +68972,11 @@
         },
         "confidence_level": "low",
         "top_features": {
-          "macd_hist": 31.7853,
-          "volatility_20d": 31.2117,
-          "rsi14": 28.6545,
-          "return_5d": 20.7646,
-          "ma5_ratio": 18.2244
+          "macd_hist": 29.7853,
+          "volatility_20d": 29.545,
+          "rsi14": 28.3212,
+          "vol_ratio": 20.1881,
+          "return_5d": 19.4313
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -68989,11 +68997,11 @@
         "reasons": [
           "RSI 60.62 고평가 접근",
           "MACD 상승반전 신호",
-          "AI 상승확률 38.1%",
+          "AI 상승확률 39.0%",
           "수급 우호적"
         ]
       },
-      "low_52w": 20.837369918823242,
+      "low_52w": 20.837371826171875,
       "price_1m": 24.110000610351562,
       "price_3m": 23.2320556640625,
       "price_6m": 28.939306259155273,
@@ -69027,7 +69035,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 6,
       "quadrant_info": {
@@ -69144,7 +69152,7 @@
           "components": {
             "multi_factor": 61.0,
             "consensus": 69.0,
-            "prediction": 38.1,
+            "prediction": 39.0,
             "backtest": 68.1,
             "timing": 52.0,
             "commodity_margin": 56.5,
@@ -69390,7 +69398,7 @@
           "components": {
             "news_sentiment": 61,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -70504,7 +70512,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 5,
       "quadrant_info": {
@@ -70867,7 +70875,7 @@
           "components": {
             "news_sentiment": 52,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -71063,7 +71071,7 @@
       "volume": 1910700,
       "trading_value": 860407312,
       "market_cap": 132751384576,
-      "high_52w": 518.8819687131494,
+      "high_52w": 518.8820305114813,
       "drop_from_high_pct": -13.22,
       "per": 27.41,
       "pbr": 4.21,
@@ -71834,7 +71842,7 @@
       "low_52w": 367.1495666503906,
       "price_1m": 403.29998779296875,
       "price_3m": 423.4093017578125,
-      "price_6m": 411.7572326660156,
+      "price_6m": 411.75726318359375,
       "fscore_deltas": {
         "n_delta_computed": 0,
         "data_source": "no_snapshots"
@@ -71867,7 +71875,7 @@
         "credit": {
           "debt_ratio_pct": 42.0
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 6,
       "quadrant_info": {
@@ -72231,7 +72239,7 @@
           "components": {
             "news_sentiment": 54,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -73169,20 +73177,20 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 46.4,
-        "prediction_std": 18.9,
+        "up_probability": 47.5,
+        "prediction_std": 17.8,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7979,
+        "conformal_q_hat": 0.8014,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 50.7,
+        "model_accuracy": 50.6,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
@@ -73194,16 +73202,16 @@
           "lightgbm": {
             "architecture": "gbdt",
             "wf_accuracy": 48.6,
-            "val_accuracy": 54.8,
+            "val_accuracy": 52.1,
             "wf_folds": 7,
             "weight": 0.4857
           },
           "catboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 48.0,
+            "wf_accuracy": 47.4,
             "val_accuracy": 56.2,
             "wf_folds": 7,
-            "weight": 0.48
+            "weight": 0.4743
           },
           "mlp": {
             "architecture": "neural_net",
@@ -73222,11 +73230,11 @@
         },
         "confidence_level": "low",
         "top_features": {
-          "volatility_20d": 42.553,
-          "rsi14": 29.493,
-          "macd_hist": 28.1801,
-          "vol_ratio": 27.9386,
-          "drawdown_20d": 22.1447
+          "volatility_20d": 41.8864,
+          "vol_ratio": 30.9386,
+          "rsi14": 30.8263,
+          "macd_hist": 27.8468,
+          "drawdown_20d": 25.8114
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -73283,7 +73291,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 7,
       "quadrant_info": {
@@ -73400,7 +73408,7 @@
           "components": {
             "multi_factor": 58.0,
             "consensus": 62.0,
-            "prediction": 46.4,
+            "prediction": 47.5,
             "backtest": 62.0,
             "timing": 60.0,
             "commodity_margin": 69.7,
@@ -73645,7 +73653,7 @@
           "components": {
             "news_sentiment": 67,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -74621,27 +74629,27 @@
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.7847,
+        "conformal_q_hat": 0.7851,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
           1
         ],
-        "model_accuracy": 52.4,
+        "model_accuracy": 52.5,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 50.3,
+            "wf_accuracy": 51.1,
             "val_accuracy": 67.1,
             "wf_folds": 7,
-            "weight": 0.5029
+            "weight": 0.5114
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 51.4,
+            "wf_accuracy": 51.1,
             "val_accuracy": 63.0,
             "wf_folds": 7,
-            "weight": 0.5143
+            "weight": 0.5114
           },
           "catboost": {
             "architecture": "gbdt",
@@ -74730,7 +74738,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "quadrant_info": {
         "quadrant": "growth_up_inflation_up",
@@ -75094,7 +75102,7 @@
           "components": {
             "news_sentiment": 54,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -76059,19 +76067,19 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 78.1,
-        "prediction_std": 12.3,
+        "up_probability": 79.4,
+        "prediction_std": 13.1,
         "confidence_interval": [
-          9.6,
+          10.2,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.6855,
-        "conformal_width_pct": 90.4,
+        "conformal_q_hat": 0.6919,
+        "conformal_width_pct": 89.8,
         "prediction_set": [
           1
         ],
-        "model_accuracy": 53.2,
+        "model_accuracy": 53.5,
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
@@ -76082,10 +76090,10 @@
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 56.6,
-            "val_accuracy": 45.2,
+            "wf_accuracy": 58.0,
+            "val_accuracy": 43.8,
             "wf_folds": 7,
-            "weight": 0.5657
+            "weight": 0.58
           },
           "catboost": {
             "architecture": "gbdt",
@@ -76111,11 +76119,11 @@
         },
         "confidence_level": "medium",
         "top_features": {
-          "volatility_20d": 39.5451,
-          "rsi14": 33.2674,
+          "volatility_20d": 36.2118,
+          "rsi14": 29.934,
           "macd_hist": 26.8953,
-          "return_5d": 24.8342,
-          "volume_price_trend": 21.1039
+          "return_5d": 25.5008,
+          "volume_price_trend": 20.7706
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -76136,14 +76144,14 @@
         "reasons": [
           "RSI 31.3 저평가 구간",
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 78.1% — 강한 매수 신호",
+          "AI 상승확률 79.4% — 강한 매수 신호",
           "수급 우호적"
         ]
       },
-      "low_52w": 259.24578857421875,
+      "low_52w": 259.2458190917969,
       "price_1m": 343.9200134277344,
       "price_3m": 333.4956359863281,
-      "price_6m": 349.9059753417969,
+      "price_6m": 349.90594482421875,
       "fscore_deltas": {
         "n_delta_computed": 0,
         "data_source": "no_snapshots"
@@ -76174,7 +76182,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 5,
       "quadrant_info": {
@@ -76291,7 +76299,7 @@
           "components": {
             "multi_factor": 60.0,
             "consensus": 66.0,
-            "prediction": 78.1,
+            "prediction": 79.4,
             "backtest": 68.2,
             "timing": 66.0,
             "commodity_margin": 50.0,
@@ -76537,7 +76545,7 @@
           "components": {
             "news_sentiment": 55,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -77590,7 +77598,7 @@
         "credit": {
           "debt_ratio_pct": 16.9
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 6,
       "quadrant_info": {
@@ -77953,7 +77961,7 @@
           "components": {
             "news_sentiment": 62,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -78178,7 +78186,7 @@
       "price_bar_as_of": "2026-10-23T00:00:00-04:00",
       "volume": 2275800,
       "trading_value": 2898140179,
-      "market_cap": 1135596929024,
+      "market_cap": 1135107506176,
       "high_52w": 1321.2099609375,
       "drop_from_high_pct": -3.61,
       "per": 42.75,
@@ -78300,7 +78308,7 @@
       "eps_quarterly_growth": 25.3,
       "free_cashflow": 11065900032,
       "operating_cashflow": 28082999296,
-      "shares_outstanding": 891741406,
+      "shares_outstanding": 891357065,
       "held_pct_insiders": 0.16,
       "held_pct_institutions": 85.36,
       "company_type": "헬스케어",
@@ -78912,13 +78920,13 @@
       },
       "prediction": {
         "up_probability": 33.3,
-        "prediction_std": 24.3,
+        "prediction_std": 24.4,
         "confidence_interval": [
           0.0,
           100.0
         ],
         "conformal_coverage": 90,
-        "conformal_q_hat": 0.6897,
+        "conformal_q_hat": 0.6896,
         "conformal_width_pct": 100.0,
         "prediction_set": [
           0,
@@ -78968,7 +78976,7 @@
           "macd_hist": 29.8099,
           "return_1d": 23.2604,
           "ma5_ratio": 22.0778,
-          "return_5d": 18.5402
+          "return_5d": 17.8736
         },
         "method": "ensemble_5m_3arch",
         "architectures": [
@@ -79031,7 +79039,7 @@
           "debt_ratio_pct": 160.2,
           "note": "부채비율 160% — 평균 이상"
         },
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 6,
       "quadrant_info": {
@@ -79394,7 +79402,7 @@
           "components": {
             "news_sentiment": 60,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -80347,7 +80355,7 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 47.2,
+        "up_probability": 47.3,
         "prediction_std": 18.4,
         "confidence_interval": [
           0.0,
@@ -80364,17 +80372,17 @@
         "individual_models": {
           "xgboost": {
             "architecture": "gbdt",
-            "wf_accuracy": 53.1,
+            "wf_accuracy": 53.4,
             "val_accuracy": 47.9,
             "wf_folds": 7,
-            "weight": 0.5314
+            "weight": 0.5343
           },
           "lightgbm": {
             "architecture": "gbdt",
-            "wf_accuracy": 56.0,
+            "wf_accuracy": 55.7,
             "val_accuracy": 50.7,
             "wf_folds": 7,
-            "weight": 0.56
+            "weight": 0.5571
           },
           "catboost": {
             "architecture": "gbdt",
@@ -80428,7 +80436,7 @@
           "수급 우호적"
         ]
       },
-      "low_52w": 211.90394592285156,
+      "low_52w": 211.9039306640625,
       "price_1m": 273.7900085449219,
       "price_3m": 293.0898742675781,
       "price_6m": 266.2843933105469,
@@ -80462,7 +80470,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 7,
       "quadrant_info": {
@@ -80579,7 +80587,7 @@
           "components": {
             "multi_factor": 60.0,
             "consensus": 63.0,
-            "prediction": 47.2,
+            "prediction": 47.3,
             "backtest": 66.9,
             "timing": 57.0,
             "commodity_margin": 75.2,
@@ -80825,7 +80833,7 @@
           "components": {
             "news_sentiment": 60,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -81767,7 +81775,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "quadrant_info": {
         "quadrant": "growth_up_inflation_up",
@@ -82131,7 +82139,7 @@
           "components": {
             "news_sentiment": 59,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -82874,7 +82882,7 @@
           "risk_flag": false
         },
         "credit": {},
-        "updated_at": "2026-10-26T04:15:49+09:00"
+        "updated_at": "2026-10-26T05:15:22+09:00"
       },
       "us_fscore": 6,
       "quadrant_info": {
@@ -83242,7 +83250,7 @@
           "components": {
             "news_sentiment": 50,
             "x_sentiment": 42,
-            "market_mood": 66,
+            "market_mood": 60,
             "consensus_opinion": 50.0,
             "crypto_macro": 51,
             "market_fear_greed": 20.0,
@@ -83468,7 +83476,7 @@
     {
       "level": "INFO",
       "category": "opportunity",
-      "message": "신영증권 RSI 29.36 과매도 + AI 상승확률 80.8%",
+      "message": "신영증권 RSI 29.36 과매도 + AI 상승확률 81.1%",
       "action": "신영증권 반등 매수 타이밍 모니터링"
     },
     {
@@ -83548,40 +83556,40 @@
         1323.66
       ],
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-25",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
     },
     "usd_jpy": {
-      "value": 156.814,
-      "change_pct": -0.83,
+      "value": 156.834,
+      "change_pct": 0.22,
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
-      "source_as_of": "2026-10-23",
+      "source_as_of": "2026-10-25",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
     },
     "eur_usd": {
-      "value": 1.122,
-      "change_pct": -0.02,
+      "value": 1.1218,
+      "change_pct": -0.03,
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-25",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -84630,12 +84638,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -85684,12 +85692,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -86738,12 +86746,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -87792,12 +87800,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -88846,12 +88854,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -89900,12 +89908,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -90954,12 +90962,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -92008,12 +92016,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -93062,12 +93070,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -94116,12 +94124,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -95170,12 +95178,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96224,12 +96232,12 @@
       "observations": 250,
       "data_date": "2026-10-23",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:28+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:28+09:00",
+      "last_successful_at": "2026-10-26T05:02:28+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96263,12 +96271,12 @@
         19.45
       ],
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:21+09:00",
+      "as_of": "2026-10-26T05:02:29+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:21+09:00",
-      "last_successful_at": "2026-10-26T04:02:21+09:00",
+      "fetched_at": "2026-10-26T05:02:29+09:00",
+      "last_successful_at": "2026-10-26T05:02:29+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96280,8 +96288,8 @@
       "source_as_of": "2026-10-22",
       "source_date_status": "ok",
       "source_period_kind": "day",
-      "fetched_at": "2026-10-26T04:02:24+09:00",
-      "last_successful_at": "2026-10-26T04:02:24+09:00",
+      "fetched_at": "2026-10-26T05:02:32+09:00",
+      "last_successful_at": "2026-10-26T05:02:32+09:00",
       "stale": false,
       "reused": false,
       "as_of": "2026-10-22",
@@ -96294,8 +96302,8 @@
       "source_as_of": "2026-10-22",
       "source_date_status": "ok",
       "source_period_kind": "day",
-      "fetched_at": "2026-10-26T04:02:24+09:00",
-      "last_successful_at": "2026-10-26T04:02:24+09:00",
+      "fetched_at": "2026-10-26T05:02:32+09:00",
+      "last_successful_at": "2026-10-26T05:02:32+09:00",
       "stale": false,
       "reused": false,
       "as_of": "2026-10-22",
@@ -96337,12 +96345,12 @@
         7757.17
       ],
       "source": "fred",
-      "as_of": "2026-10-26T04:02:22+09:00",
+      "as_of": "2026-10-26T05:02:29+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-21",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:22+09:00",
-      "last_successful_at": "2026-10-26T04:02:22+09:00",
+      "fetched_at": "2026-10-26T05:02:29+09:00",
+      "last_successful_at": "2026-10-26T05:02:29+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96383,12 +96391,12 @@
         25955.34
       ],
       "source": "fred",
-      "as_of": "2026-10-26T04:02:22+09:00",
+      "as_of": "2026-10-26T05:02:30+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:22+09:00",
-      "last_successful_at": "2026-10-26T04:02:22+09:00",
+      "fetched_at": "2026-10-26T05:02:30+09:00",
+      "last_successful_at": "2026-10-26T05:02:30+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96429,12 +96437,12 @@
         52215.16
       ],
       "source": "fred",
-      "as_of": "2026-10-26T04:02:22+09:00",
+      "as_of": "2026-10-26T05:02:30+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:22+09:00",
-      "last_successful_at": "2026-10-26T04:02:22+09:00",
+      "fetched_at": "2026-10-26T05:02:30+09:00",
+      "last_successful_at": "2026-10-26T05:02:30+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96467,12 +96475,12 @@
       ],
       "data_date": "20261023",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:22+09:00",
+      "as_of": "2026-10-26T05:02:30+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:22+09:00",
-      "last_successful_at": "2026-10-26T04:02:22+09:00",
+      "fetched_at": "2026-10-26T05:02:30+09:00",
+      "last_successful_at": "2026-10-26T05:02:30+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96501,12 +96509,12 @@
       ],
       "data_date": "20261023",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:23+09:00",
+      "as_of": "2026-10-26T05:02:30+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:23+09:00",
-      "last_successful_at": "2026-10-26T04:02:23+09:00",
+      "fetched_at": "2026-10-26T05:02:30+09:00",
+      "last_successful_at": "2026-10-26T05:02:30+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96541,12 +96549,12 @@
       ],
       "data_date": "20261023",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:23+09:00",
+      "as_of": "2026-10-26T05:02:31+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:23+09:00",
-      "last_successful_at": "2026-10-26T04:02:23+09:00",
+      "fetched_at": "2026-10-26T05:02:31+09:00",
+      "last_successful_at": "2026-10-26T05:02:31+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96580,12 +96588,12 @@
       ],
       "data_date": "20261023",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:23+09:00",
+      "as_of": "2026-10-26T05:02:31+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:23+09:00",
-      "last_successful_at": "2026-10-26T04:02:23+09:00",
+      "fetched_at": "2026-10-26T05:02:31+09:00",
+      "last_successful_at": "2026-10-26T05:02:31+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96616,12 +96624,12 @@
       ],
       "data_date": "20261023",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:23+09:00",
+      "as_of": "2026-10-26T05:02:31+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:23+09:00",
-      "last_successful_at": "2026-10-26T04:02:23+09:00",
+      "fetched_at": "2026-10-26T05:02:31+09:00",
+      "last_successful_at": "2026-10-26T05:02:31+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96652,12 +96660,12 @@
       ],
       "data_date": "20261023",
       "source": "yfinance",
-      "as_of": "2026-10-26T04:02:23+09:00",
+      "as_of": "2026-10-26T05:02:31+09:00",
       "as_of_kind": "fetched_at",
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
-      "fetched_at": "2026-10-26T04:02:23+09:00",
-      "last_successful_at": "2026-10-26T04:02:23+09:00",
+      "fetched_at": "2026-10-26T05:02:31+09:00",
+      "last_successful_at": "2026-10-26T05:02:31+09:00",
       "stale": false,
       "reused": false,
       "status": "ok"
@@ -96749,8 +96757,8 @@
         "source_as_of": "2026-10-22",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:24+09:00",
-        "last_successful_at": "2026-10-26T04:02:24+09:00",
+        "fetched_at": "2026-10-26T05:02:32+09:00",
+        "last_successful_at": "2026-10-26T05:02:32+09:00",
         "stale": false,
         "reused": false
       },
@@ -96838,8 +96846,8 @@
         "source_as_of": "2026-10-22",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:24+09:00",
-        "last_successful_at": "2026-10-26T04:02:24+09:00",
+        "fetched_at": "2026-10-26T05:02:32+09:00",
+        "last_successful_at": "2026-10-26T05:02:32+09:00",
         "stale": false,
         "reused": false
       },
@@ -96927,8 +96935,8 @@
         "source_as_of": "2026-10-22",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:24+09:00",
-        "last_successful_at": "2026-10-26T04:02:24+09:00",
+        "fetched_at": "2026-10-26T05:02:32+09:00",
+        "last_successful_at": "2026-10-26T05:02:32+09:00",
         "stale": false,
         "reused": false
       },
@@ -96940,8 +96948,8 @@
         "source_as_of": "2026-09-01",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:24+09:00",
-        "last_successful_at": "2026-10-26T04:02:24+09:00",
+        "fetched_at": "2026-10-26T05:02:32+09:00",
+        "last_successful_at": "2026-10-26T05:02:32+09:00",
         "stale": false,
         "reused": false
       },
@@ -96953,8 +96961,8 @@
         "source_as_of": "2026-08-01",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:24+09:00",
-        "last_successful_at": "2026-10-26T04:02:24+09:00",
+        "fetched_at": "2026-10-26T05:02:32+09:00",
+        "last_successful_at": "2026-10-26T05:02:32+09:00",
         "stale": false,
         "reused": false
       },
@@ -96968,8 +96976,8 @@
         "source_as_of": "2026-10-23",
         "source_date_status": "ok",
         "source_period_kind": "day",
-        "fetched_at": "2026-10-26T04:02:29+09:00",
-        "last_successful_at": "2026-10-26T04:02:29+09:00",
+        "fetched_at": "2026-10-26T05:02:37+09:00",
+        "last_successful_at": "2026-10-26T05:02:37+09:00",
         "stale": false,
         "reused": false
       },
@@ -96983,8 +96991,8 @@
         "source_as_of": "2026-07-01",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:25+09:00",
-        "last_successful_at": "2026-10-26T04:02:25+09:00",
+        "fetched_at": "2026-10-26T05:02:32+09:00",
+        "last_successful_at": "2026-10-26T05:02:32+09:00",
         "stale": false,
         "reused": false
       },
@@ -96998,8 +97006,8 @@
         "source_as_of": "2026-08-01",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:25+09:00",
-        "last_successful_at": "2026-10-26T04:02:25+09:00",
+        "fetched_at": "2026-10-26T05:02:32+09:00",
+        "last_successful_at": "2026-10-26T05:02:32+09:00",
         "stale": false,
         "reused": false
       },
@@ -97013,8 +97021,8 @@
         "source_as_of": "2026-09-01",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:25+09:00",
-        "last_successful_at": "2026-10-26T04:02:25+09:00",
+        "fetched_at": "2026-10-26T05:02:33+09:00",
+        "last_successful_at": "2026-10-26T05:02:33+09:00",
         "stale": false,
         "reused": false
       },
@@ -97027,8 +97035,8 @@
         "source_as_of": "2026-09-01",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:25+09:00",
-        "last_successful_at": "2026-10-26T04:02:25+09:00",
+        "fetched_at": "2026-10-26T05:02:33+09:00",
+        "last_successful_at": "2026-10-26T05:02:33+09:00",
         "stale": false,
         "reused": false
       },
@@ -97117,8 +97125,8 @@
         "source_as_of": "2026-10-22",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:26+09:00",
-        "last_successful_at": "2026-10-26T04:02:26+09:00",
+        "fetched_at": "2026-10-26T05:02:33+09:00",
+        "last_successful_at": "2026-10-26T05:02:33+09:00",
         "stale": false,
         "reused": false
       },
@@ -97207,8 +97215,8 @@
         "source_as_of": "2026-10-23",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:26+09:00",
-        "last_successful_at": "2026-10-26T04:02:26+09:00",
+        "fetched_at": "2026-10-26T05:02:33+09:00",
+        "last_successful_at": "2026-10-26T05:02:33+09:00",
         "stale": false,
         "reused": false
       },
@@ -97221,23 +97229,23 @@
         "source_as_of": "2026-10-21",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:26+09:00",
-        "last_successful_at": "2026-10-26T04:02:26+09:00",
+        "fetched_at": "2026-10-26T05:02:33+09:00",
+        "last_successful_at": "2026-10-26T05:02:33+09:00",
         "stale": false,
         "reused": false
       },
       "cape": {
         "value": 40.36,
         "change_from_prev_close": -0.22,
-        "as_of": "2026-10-26T04:02:26+09:00",
+        "as_of": "2026-10-26T05:02:33+09:00",
         "source": "multpl.com (Shiller PE)",
         "series_id": "MULTPL_SHILLER_PE",
         "source_as_of": "2026-10-23",
         "source_url": "https://www.multpl.com/shiller-pe/table/by-month",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:26+09:00",
-        "last_successful_at": "2026-10-26T04:02:26+09:00",
+        "fetched_at": "2026-10-26T05:02:34+09:00",
+        "last_successful_at": "2026-10-26T05:02:34+09:00",
         "stale": false,
         "reused": false
       },
@@ -97250,8 +97258,8 @@
         "source_as_of": "2026-09-01",
         "source_date_status": "ok",
         "source_period_kind": "day",
-        "fetched_at": "2026-10-26T04:02:24+09:00",
-        "last_successful_at": "2026-10-26T04:02:24+09:00",
+        "fetched_at": "2026-10-26T05:02:32+09:00",
+        "last_successful_at": "2026-10-26T05:02:32+09:00",
         "stale": false,
         "reused": false
       },
@@ -97264,8 +97272,8 @@
         "source_as_of": "2026-08-01",
         "source_date_status": "ok",
         "source_period_kind": "day",
-        "fetched_at": "2026-10-26T04:02:25+09:00",
-        "last_successful_at": "2026-10-26T04:02:25+09:00",
+        "fetched_at": "2026-10-26T05:02:32+09:00",
+        "last_successful_at": "2026-10-26T05:02:32+09:00",
         "stale": false,
         "reused": false
       },
@@ -97278,8 +97286,8 @@
         "source_as_of": "2026-09",
         "source_period_kind": "month",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:27+09:00",
-        "last_successful_at": "2026-10-26T04:02:27+09:00",
+        "fetched_at": "2026-10-26T05:02:34+09:00",
+        "last_successful_at": "2026-10-26T05:02:34+09:00",
         "stale": false,
         "reused": false
       },
@@ -97295,8 +97303,8 @@
         "source_as_of": "2026-09",
         "source_period_kind": "month",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:28+09:00",
-        "last_successful_at": "2026-10-26T04:02:28+09:00",
+        "fetched_at": "2026-10-26T05:02:35+09:00",
+        "last_successful_at": "2026-10-26T05:02:35+09:00",
         "stale": false,
         "reused": false,
         "form": "rolling_z_sign_only",
@@ -97314,8 +97322,8 @@
         "source_as_of": "2026-09",
         "source_period_kind": "month",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:27+09:00",
-        "last_successful_at": "2026-10-26T04:02:27+09:00",
+        "fetched_at": "2026-10-26T05:02:34+09:00",
+        "last_successful_at": "2026-10-26T05:02:34+09:00",
         "stale": false,
         "reused": false
       },
@@ -97331,8 +97339,8 @@
         "source_as_of": "2026-09",
         "source_period_kind": "month",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:28+09:00",
-        "last_successful_at": "2026-10-26T04:02:28+09:00",
+        "fetched_at": "2026-10-26T05:02:35+09:00",
+        "last_successful_at": "2026-10-26T05:02:35+09:00",
         "stale": false,
         "reused": false,
         "form": "rolling_z_sign_only",
@@ -97348,8 +97356,8 @@
         "source_as_of": "2026-10-23",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:29+09:00",
-        "last_successful_at": "2026-10-26T04:02:29+09:00",
+        "fetched_at": "2026-10-26T05:02:37+09:00",
+        "last_successful_at": "2026-10-26T05:02:37+09:00",
         "stale": false,
         "reused": false
       }
@@ -97362,8 +97370,8 @@
       "source_as_of": "2026-10-22",
       "source_date_status": "ok",
       "source_period_kind": "day",
-      "fetched_at": "2026-10-26T04:02:24+09:00",
-      "last_successful_at": "2026-10-26T04:02:24+09:00",
+      "fetched_at": "2026-10-26T05:02:32+09:00",
+      "last_successful_at": "2026-10-26T05:02:32+09:00",
       "stale": false,
       "reused": false
     },
@@ -97385,17 +97393,17 @@
         "stock_gold": 0.429,
         "stock_usd": -0.248,
         "stock_oil": -0.454,
-        "stock_btc": 0.063,
+        "stock_btc": 0.066,
         "bond_yield_gold": -0.086,
         "bond_yield_usd": 0.372,
         "bond_yield_oil": -0.271,
-        "bond_yield_btc": 0.127,
+        "bond_yield_btc": 0.125,
         "gold_usd": -0.26,
         "gold_oil": -0.074,
-        "gold_btc": -0.217,
+        "gold_btc": -0.213,
         "usd_oil": -0.108,
-        "usd_btc": 0.316,
-        "oil_btc": 0.155
+        "usd_btc": 0.315,
+        "oil_btc": 0.149
       },
       "matrix": {
         "stock": {
@@ -97404,7 +97412,7 @@
           "gold": 0.429,
           "usd": -0.248,
           "oil": -0.454,
-          "btc": 0.063
+          "btc": 0.066
         },
         "bond_yield": {
           "bond_yield": 1.0,
@@ -97412,7 +97420,7 @@
           "gold": -0.086,
           "usd": 0.372,
           "oil": -0.271,
-          "btc": 0.127
+          "btc": 0.125
         },
         "gold": {
           "gold": 1.0,
@@ -97420,7 +97428,7 @@
           "bond_yield": -0.086,
           "usd": -0.26,
           "oil": -0.074,
-          "btc": -0.217
+          "btc": -0.213
         },
         "usd": {
           "usd": 1.0,
@@ -97428,7 +97436,7 @@
           "bond_yield": 0.372,
           "gold": -0.26,
           "oil": -0.108,
-          "btc": 0.316
+          "btc": 0.315
         },
         "oil": {
           "oil": 1.0,
@@ -97436,15 +97444,15 @@
           "bond_yield": -0.271,
           "gold": -0.074,
           "usd": -0.108,
-          "btc": 0.155
+          "btc": 0.149
         },
         "btc": {
           "btc": 1.0,
-          "stock": 0.063,
-          "bond_yield": 0.127,
-          "gold": -0.217,
-          "usd": 0.316,
-          "oil": 0.155
+          "stock": 0.066,
+          "bond_yield": 0.125,
+          "gold": -0.213,
+          "usd": 0.315,
+          "oil": 0.149
         }
       },
       "max_abs_pair": {
@@ -97467,8 +97475,8 @@
       "source_as_of": "2026-10-22",
       "source_date_status": "ok",
       "source_period_kind": "day",
-      "fetched_at": "2026-10-26T04:02:26+09:00",
-      "last_successful_at": "2026-10-26T04:02:26+09:00",
+      "fetched_at": "2026-10-26T05:02:33+09:00",
+      "last_successful_at": "2026-10-26T05:02:33+09:00",
       "stale": false,
       "reused": false
     },
@@ -97481,8 +97489,8 @@
       "source_as_of": "2026-10-23",
       "source_date_status": "ok",
       "source_period_kind": "day",
-      "fetched_at": "2026-10-26T04:02:26+09:00",
-      "last_successful_at": "2026-10-26T04:02:26+09:00",
+      "fetched_at": "2026-10-26T05:02:33+09:00",
+      "last_successful_at": "2026-10-26T05:02:33+09:00",
       "stale": false,
       "reused": false
     },
@@ -97496,8 +97504,8 @@
       "source_as_of": "2026-10-21",
       "source_date_status": "ok",
       "source_period_kind": "day",
-      "fetched_at": "2026-10-26T04:02:26+09:00",
-      "last_successful_at": "2026-10-26T04:02:26+09:00",
+      "fetched_at": "2026-10-26T05:02:33+09:00",
+      "last_successful_at": "2026-10-26T05:02:33+09:00",
       "stale": false,
       "reused": false
     },
@@ -97528,13 +97536,13 @@
       }
     ],
     "market_mood_us": {
-      "score": 66,
+      "score": 60,
       "label": "낙관"
     },
     "macro_diagnosis_us": [
       {
         "type": "warning",
-        "text": "USD/JPY 156.814 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
+        "text": "USD/JPY 156.834 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
       },
       {
         "type": "warning",
@@ -97577,7 +97585,7 @@
         "M2_yoy=7.23%>5→eq+4,comm+3"
       ]
     },
-    "collected_at": "2026-10-26T04:02:19+09:00",
+    "collected_at": "2026-10-26T05:02:26+09:00",
     "niche_credit": {
       "corporate_spread_vs_gov_pp": 0.69,
       "base_grade": "AA-",
@@ -97586,20 +97594,20 @@
   },
   "bloomberg_google_headlines": [
     {
-      "title": "‘Total Meltdown’ in Riskiest Debt Unnerves Market: Credit Weekly - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOaGdkV3gxaDZHd2ZxRDVhaFlBdWtLNFJ3Y0c5MXZiWktESnRPNmJlTWczMVdRZ29JaUVHa0R2Mmdabm5NdXhyLWlYam5xaU54Ty1UdHphaVotVkx5RGo1a1hYUkpsS1IxSlhsd3ZJcGxkWEh0Q016YkJHS1J1Sk4xS1pub0tnTjlCbDdrWU5sTi14dXNrZDVOLTdkUnFxQkdvQ2Y5TFROY3JFcGVQbWtjYTlnUQ?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Sat, 24 Oct 2026 15:21:35 GMT",
-      "category": "bloomberg_google",
-      "title_ko": "가장 위험한 부채의 '완전한 붕괴'가 시장을 불안하게 함: 크레딧 위클리 - Bloomberg.com"
-    },
-    {
       "title": "Goldman Cuts Kospi 12-Month Target by 25% as AI Trade Unravels - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxNM1VnbnF1OVc5Y0RrZTdNWE5tdGszNVZTdTZzd1I0ZXVKc2sxalFZY3pYazRGcWxSdUFSVDBwdERyRVFISFlRWTdTdmdkakpIdU9oMW1TamxmWmIycVhVVXdNWVZrZ3FKZm9LNGNPV0I0MXRqQmJncnQ1QUtCSlYyWFAtN0doV1E2VzBiQmMzRnJiUk9BVmFpVGhrcENIUHAtb1NQT2Fhc2hVcjFfRFpXZjh3?oc=5",
       "source": "Bloomberg.com",
       "time": "Sun, 25 Oct 2026 07:44:43 GMT",
       "category": "bloomberg_google",
       "title_ko": "골드만삭스, AI 거래 풀리면서 코스피 12개월 목표치 25% 하향 - Bloomberg.com"
+    },
+    {
+      "title": "‘Total Meltdown’ in Riskiest Debt Unnerves Market: Credit Weekly - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOaGdkV3gxaDZHd2ZxRDVhaFlBdWtLNFJ3Y0c5MXZiWktESnRPNmJlTWczMVdRZ29JaUVHa0R2Mmdabm5NdXhyLWlYam5xaU54Ty1UdHphaVotVkx5RGo1a1hYUkpsS1IxSlhsd3ZJcGxkWEh0Q016YkJHS1J1Sk4xS1pub0tnTjlCbDdrWU5sTi14dXNrZDVOLTdkUnFxQkdvQ2Y5TFROY3JFcGVQbWtjYTlnUQ?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sat, 24 Oct 2026 15:21:35 GMT",
+      "category": "bloomberg_google",
+      "title_ko": "가장 위험한 부채의 '완전한 붕괴'가 시장을 불안하게 함: 크레딧 위클리 - Bloomberg.com"
     },
     {
       "title": "Jane Street and Rivals Are Now Fighting for AI Power as Well as Pace - Bloomberg.com",
@@ -97616,6 +97624,14 @@
       "time": "Fri, 23 Oct 2026 10:38:03 GMT",
       "category": "bloomberg_google",
       "title_ko": "AI IPO, 민간 시장 열기 속에서 주춤할 것으로 예상 - 블룸버그"
+    },
+    {
+      "title": "Watch 9 Days to Midterm Elections, Big Tech Earnings - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMikgFBVV95cUxNWjk3NzhXRng5bjNuTTlPczBnUFBLbksxZnVFOVR5SWc3a1hSMkp3QTZzRlNQNWNWTFNoOWE5UERsYjJyb0JqdmpXNnlwaVdCcHA3aEJOT0wtX05YYlJhdlR6X0Q1SGc4X2NJSnRPcHZoQXJhbHpJMkRaRkJzQVViLUx0MjFPZnhqMEdMSUJZV3Utdw?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sun, 25 Oct 2026 16:39:51 GMT",
+      "category": "bloomberg_google",
+      "title_ko": "중간선거 9일 전, 빅테크 실적 발표 - 블룸버그닷컴"
     },
     {
       "title": "Stocks Fall as Oil Rally Keeps a Lid on Treasuries: Markets Wrap - Bloomberg.com",
@@ -97658,6 +97674,14 @@
       "title_ko": "아폴로의 슬록, AI는 기술 외 분야에서 제로 수익률을 기록했다고 말함 - Bloomberg.com"
     },
     {
+      "title": "A 50% Yield? The AI Trade Is Getting Wild After CoreWeave - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxOeXh0eDlOMEdYR0VYMVlwOC1vUXFGMlJLUlhSaG5iRFlpZjNUQmtISUxWdk04SlBxanh4Sjk2TEhFb3dwRUY5S09VMDRENzlpTGcyX1hRZzdKQ0FwX1dzREhTMHppeXBQYVJZVlM5X2JaSnhZNUlBdTZpSWtJc3dfMERxV0daREJWbXdDb2Jxc2hQNS1YcUtZSHJsY1BoclY0WXg4dWNqQWdpUU9WRGc?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sun, 25 Oct 2026 18:00:02 GMT",
+      "category": "bloomberg_google",
+      "title_ko": "수익률 50%? CoreWeave 이후 AI 거래가 과열되고 있다 - 블룸버그닷컴"
+    },
+    {
       "title": "Lula Rallies His Supporters for One Last Comeback, or a Final Goodbye - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPcTVpZ2x4UVZsRk5RWm1TQUZsVkJaTkRuZ0dkRDJRcW83b3oxU2Vsd0JyU0RxLVI2Z0xiVDBxaUg5VTY5OElOdU15QWJ2SlFzcW1iM2pvRS1RWFJuZDVQUGQyajRyakFWQW1kVm5fU29iVnlfeHY5aHhscUliZEtJQUZMc0dVSTZhNVFrOWFjYXVaZUJsLWJWX0RzSGJwUFE4QnZoRlpCSUZXcnQtbkptVVdR?oc=5",
       "source": "Bloomberg.com",
@@ -97682,14 +97706,6 @@
       "title_ko": "채권 시장 수용을 주시하라: 로빈 위글스워스와의 비즈니스 마스터 - Bloomberg.com"
     },
     {
-      "title": "Brookfield to Open Doha Office to Deepen Its Middle East Reach - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNVUlIaXBHWE5FY2pBM2p6dnJYdTVBY0habnNUUFkweDhCYURJQnJhaFR3ZDl6WU0yQnA1dTRiNGRTbnVWM2ZSYWZSRld0VGF0OEZGNkYwRWQ4MlB1WmtFWl9STEt6MVNodG5ack5pWXpiVG95SjBINW5TQldhcElJVXdUYmkyQnV0dTJKREpXM0NpR3dWNGFmRnFPV1VQREVmRTJBMXA3T3pmcThqM1o4TGhZaw?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Sun, 25 Oct 2026 12:18:44 GMT",
-      "category": "bloomberg_google",
-      "title_ko": "브룩필드, 중동 진출 심화 위해 도하 사무소 개설 - Bloomberg.com"
-    },
-    {
       "title": "AI Spending Isn’t Enough for Investors - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMilwFBVV95cUxNTnE0WUxiMElGVTZkRUZHOVc4QVBNMmlranNwYUd3NHNCOG4tVUVhZ2JoYndxQXJPQWJlOGtFVmdYRDdDNXpBMlpReU5hYmd5VVAtZGRHUjhUdjJ2SjNfc05oOWJFVWpZbjdTeE9fNktXWnVXR3pxYmhwUWlMbDBOUEVTb29kdllTR2k3U19fZEtDRUZRVUU0?oc=5",
       "source": "Bloomberg.com",
@@ -97712,6 +97728,14 @@
       "time": "Thu, 22 Oct 2026 20:57:13 GMT",
       "category": "bloomberg_google",
       "title_ko": "주식, 채권 랠리에 7월 이후 최악의 날 맞을 듯: 마켓 랩 - 블룸버그닷컴"
+    },
+    {
+      "title": "Brookfield to Open Doha Office to Deepen Its Middle East Reach - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNVUlIaXBHWE5FY2pBM2p6dnJYdTVBY0habnNUUFkweDhCYURJQnJhaFR3ZDl6WU0yQnA1dTRiNGRTbnVWM2ZSYWZSRld0VGF0OEZGNkYwRWQ4MlB1WmtFWl9STEt6MVNodG5ack5pWXpiVG95SjBINW5TQldhcElJVXdUYmkyQnV0dTJKREpXM0NpR3dWNGFmRnFPV1VQREVmRTJBMXA3T3pmcThqM1o4TGhZaw?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sun, 25 Oct 2026 12:18:44 GMT",
+      "category": "bloomberg_google",
+      "title_ko": "브룩필드, 중동 진출 심화 위해 도하 사무소 개설 - Bloomberg.com"
     },
     {
       "title": "Watch Markets Look to Big Tech for AI Payoff - Bloomberg.com",
@@ -97768,22 +97792,6 @@
       "time": "Fri, 23 Oct 2026 20:32:42 GMT",
       "category": "bloomberg_google",
       "title_ko": "AI 거래, 투자자들이 국채를 다시 안전자산으로 여기면서 다시 주춤 - Bloomberg.com"
-    },
-    {
-      "title": "Retail Traders Find a Back Door to 24/7 Oil Trading - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxQWTJwZWVGcUdiNkdlYWxTRzNvOUNkWHZYWnVZQ2tQQmV3d25JX1VuY1RVSmJLcXJoQVFOSkZ4dF9iVjFPMUFrSFpNWW9qYlU0MzhCcWxqQ0pxWHBpTjRONTVtYnRwMVhEbTJmazN6SnBMYTBWWW1rQTVScFo4VEJIdWdFWEJQdWZyUjk3dlc3VUo2cVg2XzV0Vm9PLWFpblpnelB0cVIyRi0?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 23 Oct 2026 11:52:52 GMT",
-      "category": "bloomberg_google",
-      "title_ko": "개인 투자자들, 24시간 석유 거래의 뒷문 발견 - Bloomberg.com"
-    },
-    {
-      "title": "Repo Market Set for Volatility in Late Clearing Push, CIBC Says - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPblppT1BWZV9wNk9nSEQ2bDhXR1BSLXpNVXBoVHgtOHNmWTdHMHdGX2JTSXZuN05EejgybE85UHJGbkFOcE9Va21COFJOcnhzbWVNdXlrbTI2SDFBZ3Zpci1LTG1GMGdKRTkxV0RPZk1rdTU0emIwaHVoNnBudEp1Qlc3d1R3TTZtUGc5eFRNM05HOU9scVlERzdUWktkejE2ZWtya19pcXU3N3pNZFZ1aXBLYw?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 23 Oct 2026 17:20:58 GMT",
-      "category": "bloomberg_google",
-      "title_ko": "CIBC, 역외 자금 조달 시장의 후반부 청산 압박으로 변동성 예상 - 블룸버그"
     }
   ],
   "headlines": [
@@ -97798,7 +97806,7 @@
       "urgency": 0.5,
       "composite_score": 0.8500000000000001,
       "near_duplicate": false,
-      "dup_group": "n28",
+      "dup_group": "n31",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "증시 부진에도…올해 ETF 개인 80조, 외인 10조 순매수 - 연합뉴스TV"
@@ -97814,7 +97822,7 @@
       "urgency": 0.5,
       "composite_score": 0.8500000000000001,
       "near_duplicate": false,
-      "dup_group": "n63",
+      "dup_group": "n64",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "\"AI 반도체 고도화 맞춰 MLCC·기판 성장 주목\""
@@ -97862,7 +97870,7 @@
       "urgency": 0.5,
       "composite_score": 0.77,
       "near_duplicate": false,
-      "dup_group": "n41",
+      "dup_group": "n45",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "솔리다임 상장 중단 후 반등한 코스피…FOMC·실적 주목 - 머니투데이 - 머니투데이"
@@ -97894,26 +97902,10 @@
       "urgency": 0.7,
       "composite_score": 0.71,
       "near_duplicate": false,
-      "dup_group": "n39",
+      "dup_group": "n44",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "증시 급락에 울산 주력기업 시총도 급감 - 울산신문"
-    },
-    {
-      "title": "10대 그룹, 이번달 1천100조 원 증발...증시 급락 탓 - YTN",
-      "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE0wb1p4eU8tSTFFUml6bjFoVHVWVkxfWGNPRHBSYWFfTWo2VmlRZWNLWXF2SkhRSDR2dFlBZjNpeHhEdnRtUlMwd0k2VVVnNmZHRVYyTDlOYmo5bFJiYUE?oc=5",
-      "source": "YTN",
-      "time": "Sun, 25 Oct 2026 03:28:00 GMT",
-      "category": "google_kr",
-      "sentiment": "negative",
-      "credibility": 0.5,
-      "urgency": 0.7,
-      "composite_score": 0.71,
-      "near_duplicate": false,
-      "dup_group": "n47",
-      "dup_rank": 1,
-      "dup_count": 1,
-      "dup_topic": "10대 그룹, 이번달 1천100조 원 증발...증시 급락 탓 - YTN"
     },
     {
       "title": "“한국증시 세계서 가장 싸고, 금융위기 떄만큼 싸다”…주가수익률 4배로 인니 절반 - 전자신문",
@@ -97926,7 +97918,7 @@
       "urgency": 0.5,
       "composite_score": 0.69,
       "near_duplicate": false,
-      "dup_group": "n22",
+      "dup_group": "n23",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "“한국증시 세계서 가장 싸고, 금융위기 떄만큼 싸다”…주가수익률 4배로 인니 절반 - 전자신문"
@@ -97942,7 +97934,7 @@
       "urgency": 0.5,
       "composite_score": 0.69,
       "near_duplicate": false,
-      "dup_group": "n32",
+      "dup_group": "n33",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "[마켓 ING]기업 실적·FOMC 몰린 슈퍼위크 속 코스피 반등 모색 - 아시아경제"
@@ -97990,9 +97982,9 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n7",
+      "dup_group": "n6",
       "dup_rank": 1,
-      "dup_count": 2,
+      "dup_count": 1,
       "dup_topic": "골드만삭스, 코스피 목표 1만2000→9000으로 하향 - 글로벌이코노믹"
     },
     {
@@ -98022,10 +98014,26 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n21",
+      "dup_group": "n22",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "골드만, 코스피 목표 1만 2000→9000으로 25% 하향 - 천지일보"
+    },
+    {
+      "title": "“증시 하락에 코인까지 과세땐…” 청년 반발 우려에 유예 기운듯 - 동아일보",
+      "link": "https://news.google.com/rss/articles/CBMidkFVX3lxTE8yY3Z4elZlOVdObFV1RDQ3THFRQzNiQUdIRnU1ODYwRUF2Qm0yT19zdGhUb1UxUzQzZVdtN0RMT2l5MHRQRURNY25oS0pUNGl4SFdUZmN3MHJpV1pialNMUTJVMjc5S0t2XzVYd19nbENETWRLdFHSAWZBVV95cUxNakFJa0g1UGFUYUlHQmNwYmxpd0ttT2FBaHhPb1VSWjNtQm9MVmpXQzdwOU03S3FCVmpkcV9pbWFTaThvZ24xVDhGN1RITnFtZVVjRjlEdWZfV21YUlpxUFlnMzYzdlE?oc=5",
+      "source": "동아일보",
+      "time": "Sun, 25 Oct 2026 19:30:00 GMT",
+      "category": "google_kr",
+      "sentiment": "negative",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999,
+      "near_duplicate": false,
+      "dup_group": "n24",
+      "dup_rank": 1,
+      "dup_count": 1,
+      "dup_topic": "“증시 하락에 코인까지 과세땐…” 청년 반발 우려에 유예 기운듯 - 동아일보"
     },
     {
       "title": "\"AI 거품·고금리 여파…11월 이후 신용 리스크 본격화 우려\" - 뉴시스",
@@ -98038,7 +98046,7 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n33",
+      "dup_group": "n35",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "\"AI 거품·고금리 여파…11월 이후 신용 리스크 본격화 우려\" - 뉴시스"
@@ -98054,7 +98062,7 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n34",
+      "dup_group": "n36",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "골드만삭스, 올해 코스피 목표치 25% 하향했지만⋯\"한국 증시 여전히 매력적\" - 이투데이"
@@ -98070,7 +98078,7 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n36",
+      "dup_group": "n38",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "코스피 9000→5500 추락했지만…개미들, ETF 80조 순매수 - 조선비즈 - Chosunbiz"
@@ -98086,26 +98094,10 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n43",
+      "dup_group": "n48",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "[주간 증시 전망] AI 수익성 우려에 발목…빅테크 실적·美FOMC '분수령' - 뉴스웍스"
-    },
-    {
-      "title": "골드만삭스, 코스피 목표치 1만2000→9000 하향…AI 투자 우려 확산 - 폴리스TV",
-      "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1MdldRNjhiRnNqR190RHB6cFdNbV91S1FoV2NOdFBaQzVhN2RDd0ZaYzZKeFJEZXRiaHRrOElndGtQYUFFYVc5aTdPbmx4ajRPUklhc3Nnc2lOWUJsWmt0YUpqV0k5N0JCRTZCUw?oc=5",
-      "source": "폴리스TV",
-      "time": "Sun, 25 Oct 2026 13:36:40 GMT",
-      "category": "google_kr",
-      "sentiment": "negative",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.6499999999999999,
-      "near_duplicate": false,
-      "dup_group": "n45",
-      "dup_rank": 1,
-      "dup_count": 1,
-      "dup_topic": "골드만삭스, 코스피 목표치 1만2000→9000 하향…AI 투자 우려 확산 - 폴리스TV"
     },
     {
       "title": "[주간증시전망] 반등 가능할까···美슈퍼위크·삼전닉스 주주 환원 등 변수 - 서울파이낸스",
@@ -98118,42 +98110,26 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n46",
+      "dup_group": "n49",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "[주간증시전망] 반등 가능할까···美슈퍼위크·삼전닉스 주주 환원 등 변수 - 서울파이낸스"
     },
     {
-      "title": "골드만삭스, 코스피 목표 '1만2000→9000' 하향 조정 - 뉴스웨이",
-      "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE1PSGF0TTItTTh1c25vbjUtdWk2WGdYU29yWmtLT3VrNUlMYjRoOGtZRUhrYWVBRVliczktZDM1TmNzeVJ4NmFhTmExcWNoRHl4NmF0NHRCOUhWZWw3OWZLNjFuRGhzM2Jxbmc?oc=5",
-      "source": "뉴스웨이",
-      "time": "Sun, 25 Oct 2026 12:35:51 GMT",
-      "category": "google_kr",
-      "sentiment": "negative",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.6499999999999999,
-      "near_duplicate": true,
-      "dup_group": "n7",
-      "dup_rank": 2,
-      "dup_count": 2,
-      "dup_topic": "골드만삭스, 코스피 목표 1만2000→9000으로 하향 - 글로벌이코노믹"
-    },
-    {
-      "title": "골드만삭스, 코스피 목표치 9000으로 25% 하향…여전히 저평가 - 아주경제",
-      "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE11RzM2d0hJN01SN293bXIteXdraUNxeEFNcE1mbHNBRXFRXzJVQUd5SFZaVkJ0WWpzYWZfd01Rc0FQNl8xWmhsOHEzSnlaY1VUbjFSSUtEbE85UdIBWEFVX3lxTE45cHhSSk1ybUpDX195MlI3aTB6aDQ5TGQtbU02bkhBVFJZS1h1Vl9NYnZlNjF2WTJueUFxaWs4eVRVbHFCZHRuZFIzeTFFZ1RxTGZRTXlBbnM?oc=5",
-      "source": "아주경제",
-      "time": "Sun, 25 Oct 2026 11:28:36 GMT",
+      "title": "골드만삭스, 코스피 목표치 1만2000→9000 하향…AI 투자 우려 확산 - 폴리스TV",
+      "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1MdldRNjhiRnNqR190RHB6cFdNbV91S1FoV2NOdFBaQzVhN2RDd0ZaYzZKeFJEZXRiaHRrOElndGtQYUFFYVc5aTdPbmx4ajRPUklhc3Nnc2lOWUJsWmt0YUpqV0k5N0JCRTZCUw?oc=5",
+      "source": "폴리스TV",
+      "time": "Sun, 25 Oct 2026 13:36:40 GMT",
       "category": "google_kr",
       "sentiment": "negative",
       "credibility": 0.5,
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n49",
+      "dup_group": "n50",
       "dup_rank": 1,
       "dup_count": 1,
-      "dup_topic": "골드만삭스, 코스피 목표치 9000으로 25% 하향…여전히 저평가 - 아주경제"
+      "dup_topic": "골드만삭스, 코스피 목표치 1만2000→9000 하향…AI 투자 우려 확산 - 폴리스TV"
     },
     {
       "title": "골드만, 코스피 목표 1만2천→9천…\"그래도 60% 이상 상승 여력\" - 연합뉴스",
@@ -98166,7 +98142,7 @@
       "urgency": 0.5,
       "composite_score": 0.64,
       "near_duplicate": true,
-      "dup_group": "n6",
+      "dup_group": "n7",
       "dup_rank": 3,
       "dup_count": 3,
       "dup_topic": "골드만, 코스피 목표 1만2천→9천‥\"그래도 60% 이상 상승 여력\" - MBC 뉴스"
@@ -98198,7 +98174,7 @@
       "urgency": 0.5,
       "composite_score": 0.64,
       "near_duplicate": false,
-      "dup_group": "n25",
+      "dup_group": "n28",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "삼전닉스 빈자리 채울 종목 없다…한국 증시 발목 잡은 쏠림 - 한국경제"
@@ -98214,26 +98190,10 @@
       "urgency": 0.5,
       "composite_score": 0.64,
       "near_duplicate": false,
-      "dup_group": "n38",
+      "dup_group": "n43",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "＂코스피 1만2000 간다＂더니…4개월 만에 돌변한 골드만삭스, 왜 - 한국경제TV"
-    },
-    {
-      "title": "삼전닉스 197조 던진 외국인…조용히 쓸어담은 '종목' 뭐길래 - 한국경제",
-      "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE0ybzl6RUJuak5QWjhmdVJEeGpKb080RU5OOHlqcW83dDhPc0kxSnJWOFRhZFVlY3BVN3U0TWk2c1NzUnRhcExrV3Q5Y3I3QlB1NGx0WFRqTk1sdw?oc=5",
-      "source": "한국경제",
-      "time": "Sun, 25 Oct 2026 09:04:15 GMT",
-      "category": "google_kr",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64,
-      "near_duplicate": false,
-      "dup_group": "n50",
-      "dup_rank": 1,
-      "dup_count": 1,
-      "dup_topic": "삼전닉스 197조 던진 외국인…조용히 쓸어담은 '종목' 뭐길래 - 한국경제"
     },
     {
       "title": "인도재벌 암바니 IT기업 IPO…기업가치 1천억달러 넘겨",
@@ -98380,6 +98340,22 @@
       "dup_topic": "민간 우주로켓 보험금 첫 고시 추진…한빛-나노 최대 238억원"
     },
     {
+      "title": "“석달 만에 100조 벌었다는데” … 내 주식만 왜 떨어지는지 궁금하다면",
+      "link": "https://www.mk.co.kr/news/stock/12185059",
+      "source": "매일경제",
+      "time": "Mon, 26 Oct 2026 05:00:00 +09:00",
+      "category": "kr_rss",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64,
+      "near_duplicate": false,
+      "dup_group": "n60",
+      "dup_rank": 1,
+      "dup_count": 1,
+      "dup_topic": "“석달 만에 100조 벌었다는데” … 내 주식만 왜 떨어지는지 궁금하다면"
+    },
+    {
       "title": "“코스피 목표 25% 낮췄는데 상승 여력 60%?”…골드만삭스의 반전 전망",
       "link": "https://www.mk.co.kr/news/stock/12185306",
       "source": "매일경제",
@@ -98390,26 +98366,10 @@
       "urgency": 0.5,
       "composite_score": 0.64,
       "near_duplicate": false,
-      "dup_group": "n60",
-      "dup_rank": 1,
-      "dup_count": 1,
-      "dup_topic": "“코스피 목표 25% 낮췄는데 상승 여력 60%?”…골드만삭스의 반전 전망"
-    },
-    {
-      "title": "해외 IPO 막힐라 … 현대차·LG·두산 '난처'",
-      "link": "https://www.mk.co.kr/news/stock/12185149",
-      "source": "매일경제",
-      "time": "Sun, 25 Oct 2026 17:05:17 +09:00",
-      "category": "kr_rss",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64,
-      "near_duplicate": false,
       "dup_group": "n61",
       "dup_rank": 1,
       "dup_count": 1,
-      "dup_topic": "해외 IPO 막힐라 … 현대차·LG·두산 '난처'"
+      "dup_topic": "“코스피 목표 25% 낮췄는데 상승 여력 60%?”…골드만삭스의 반전 전망"
     },
     {
       "title": "低PBR 낙인 찍힐라 … 62개사 개선계획 공시",
@@ -98426,6 +98386,54 @@
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "低PBR 낙인 찍힐라 … 62개사 개선계획 공시"
+    },
+    {
+      "title": "해외 IPO 막힐라 … 현대차·LG·두산 '난처'",
+      "link": "https://www.mk.co.kr/news/stock/12185149",
+      "source": "매일경제",
+      "time": "Sun, 25 Oct 2026 17:05:17 +09:00",
+      "category": "kr_rss",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64,
+      "near_duplicate": false,
+      "dup_group": "n63",
+      "dup_rank": 1,
+      "dup_count": 1,
+      "dup_topic": "해외 IPO 막힐라 … 현대차·LG·두산 '난처'"
+    },
+    {
+      "title": "기관 큰손 외면받는 넥스트레이드 … 1년새 거래량 40% '뚝'",
+      "link": "https://www.mk.co.kr/news/stock/12185145",
+      "source": "매일경제",
+      "time": "Sun, 25 Oct 2026 17:05:05 +09:00",
+      "category": "kr_rss",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64,
+      "near_duplicate": false,
+      "dup_group": "n65",
+      "dup_rank": 1,
+      "dup_count": 1,
+      "dup_topic": "기관 큰손 외면받는 넥스트레이드 … 1년새 거래량 40% '뚝'"
+    },
+    {
+      "title": "\"대체거래소 활성화하려면 … ETF·ETN 거래 허용 검토를\"",
+      "link": "https://www.mk.co.kr/news/stock/12185144",
+      "source": "매일경제",
+      "time": "Sun, 25 Oct 2026 17:05:04 +09:00",
+      "category": "kr_rss",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64,
+      "near_duplicate": false,
+      "dup_group": "n66",
+      "dup_rank": 1,
+      "dup_count": 1,
+      "dup_topic": "\"대체거래소 활성화하려면 … ETF·ETN 거래 허용 검토를\""
     }
   ],
   "sectors": [
@@ -98951,7 +98959,7 @@
       {
         "level": "INFO",
         "category": "opportunity",
-        "message": "신영증권 RSI 29.36 과매도 + AI 상승확률 80.8%",
+        "message": "신영증권 RSI 29.36 과매도 + AI 상승확률 81.1%",
         "action": "신영증권 반등 매수 타이밍 모니터링"
       },
       {
@@ -99010,80 +99018,80 @@
     }
   },
   "system_health": {
-    "status": "ok",
-    "checked_at": "2026-10-26T04:09:35+09:00",
+    "status": "error",
+    "checked_at": "2026-10-26T05:09:40+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 13417,
+    "elapsed_ms": 18515,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 1159,
+        "latency_ms": 822,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 546,
+        "latency_ms": 1235,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 304,
+        "latency_ms": 423,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 164,
+        "latency_ms": 124,
         "detail": "정상",
         "attempts": 1
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 1137,
+        "latency_ms": 537,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
-        "status": "ok",
-        "latency_ms": 1235,
-        "detail": "정상",
+        "status": "error",
+        "latency_ms": 17689,
+        "detail": "타임아웃 (2회 시도)",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1696,
+        "latency_ms": 1327,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 12918,
+        "latency_ms": 12131,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20261022)",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 655,
+        "latency_ms": 707,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 237,
+        "latency_ms": 358,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 138,
+        "latency_ms": 460,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 164,
+        "latency_ms": 102,
         "detail": "정상",
         "attempts": 1
       },
@@ -99098,8 +99106,8 @@
       "status": "ok",
       "conclusion": "success",
       "workflow": "Cockpit Aggregate (5분 cron)",
-      "started_at": "2026-10-25T19:07:05Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/40224484871",
+      "started_at": "2026-10-25T20:07:04Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/40229246114",
       "detail": "Cockpit Aggregate (5분 cron): success"
     },
     "data_recency": {
@@ -99108,43 +99116,43 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-10-26 04:08",
+          "last_updated": "2026-10-26 05:08",
           "age_hours": 0.02,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-10-26 04:08",
+          "last_updated": "2026-10-26 05:08",
           "age_hours": 0.02,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-10-26 04:08",
+          "last_updated": "2026-10-26 05:08",
           "age_hours": 0.02,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-10-26 04:08",
+          "last_updated": "2026-10-26 05:08",
           "age_hours": 0.02,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-10-26 04:08",
+          "last_updated": "2026-10-26 05:08",
           "age_hours": 0.02,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-10-26 04:08",
+          "last_updated": "2026-10-26 05:08",
           "age_hours": 0.02,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-10-26 04:08",
+          "last_updated": "2026-10-26 05:08",
           "age_hours": 0.02,
           "threshold_hours": 1
         }
@@ -99152,16 +99160,17 @@
     },
     "version_sync": {
       "local_version": "v8.2.0",
-      "status": "update_available",
-      "remote_sha": "3a2209b",
-      "remote_message": "data(alpha-nest): 코너 과거 카탈리스트 백필 누적 2026-10-26 04:08",
-      "remote_date": "2026-10-25T19:08:20Z",
-      "local_sha": "aca55a5",
-      "detail": "새로운 커밋이 원격에 존재합니다"
+      "status": "ok",
+      "remote_sha": "6411c98",
+      "remote_message": "🎯 cockpit 2026-10-26T05:06",
+      "remote_date": "2026-10-25T20:06:31Z",
+      "local_sha": "6411c98"
     },
-    "errors": [],
+    "errors": [
+      "관세청 무역 API 오류 — 타임아웃 (2회 시도)"
+    ],
     "warnings": [],
-    "overall_status": "ok"
+    "overall_status": "error"
   },
   "x_sentiment": {
     "score": 42,
@@ -99171,15 +99180,15 @@
     "tweet_count": 20,
     "tweets": [
       "\"Trump tariff trade\" - Google News",
-      "Trump dropping some Canada tariffs but 'replacing' them with other products - CNBC",
       "Canada is feeling the pain from Trump's tariffs — but the trade fight didn't start overnight - Fox News",
+      "Trump to swap some tariffs on Canadian goods amid midterm pressure - CBC",
       "Stanley Druckenmiller says US borrowing costs still ‘a little low’ despite surge in yields - Financial Times",
       "Prediction: A Stock Market Crash Is Coming. Here's What Investors Should Do Based on Warren Buffett's Advice. - The Motley Fool",
       "베선트 美재무 &quot;AI 붐에 시스템적 문제 없어&quot;…버블 우려 일축",
       "'숏의 전설' 마이클버리 … &quot;20년 횡보 약세장 온다&quot; 美증시 경고",
       "美재무장관, AI 거품론 일축…&quot;닷컴버블과 달라&quot;",
       "Michael Burry of ‘The Big Short’ personal finance advice: ‘Buy half the house you can afford’ - Fortune",
-      "Cathie Wood buys $24.5 million of tumbling megacap stock - TheStreet"
+      "Warren Buffett bought this company in 1988 when ‘no one’ wanted it — now it pays Berkshire $848 million a year - Yahoo Finance"
     ],
     "key_figures": [
       {
@@ -99200,12 +99209,12 @@
         "label": "negative"
       },
       {
-        "text": "Trump dropping some Canada tariffs but 'replacing' them with",
+        "text": "Canada is feeling the pain from Trump's tariffs — but the tr",
         "figure": "트럼프",
         "label": "negative"
       },
       {
-        "text": "Canada is feeling the pain from Trump's tariffs — but the tr",
+        "text": "Trump to swap some tariffs on Canadian goods amid midterm pr",
         "figure": "트럼프",
         "label": "negative"
       },
@@ -100888,7 +100897,7 @@
           "signals": []
         },
         "fear_and_greed": 54,
-        "funding_rate_pct": 0.0057,
+        "funding_rate_pct": 0.0072,
         "kimchi_premium_pct": 1.26,
         "btc_nasdaq_corr": -0.182,
         "stablecoin_mcap_b": 254.0
@@ -102997,7 +103006,7 @@
   },
   "krx_openapi": {
     "bas_dd": "20261022",
-    "updated_at": "2026-10-26T04:09:52+09:00",
+    "updated_at": "2026-10-26T05:09:58+09:00",
     "summary": {
       "ok": 12,
       "empty": 0,
@@ -103033,8 +103042,8 @@
     },
     "tier_updated_at": {
       "static": "2026-10-23T16:07:20+09:00",
-      "macro": "2026-10-26T04:09:52+09:00",
-      "active": "2026-10-26T04:09:52+09:00"
+      "macro": "2026-10-26T05:09:58+09:00",
+      "active": "2026-10-26T05:09:58+09:00"
     }
   },
   "crypto_macro": {
@@ -103049,8 +103058,8 @@
     },
     "funding_rate": {
       "ok": true,
-      "rate": 5.73340534475e-05,
-      "rate_pct": 0.0057,
+      "rate": 7.23879439345e-05,
+      "rate_pct": 0.0072,
       "prev_rate_pct": null,
       "signal": "neutral",
       "timestamp": "1792972800000",
@@ -103059,9 +103068,9 @@
     "kimchi_premium": {
       "ok": true,
       "premium_pct": 1.26,
-      "upbit_krw": 108001000.0,
-      "global_usd": 80578.5,
-      "binance_usd": 80578.5,
+      "upbit_krw": 107938000.0,
+      "global_usd": 80532.1,
+      "binance_usd": 80532.1,
       "usdt_krw": 1323.6600341796875,
       "signal": "normal",
       "source": "upbit+bybit/okx"
@@ -103071,11 +103080,11 @@
       "correlation": -0.182,
       "period_days": 30,
       "signal": "decoupled",
-      "btc_last_price": 80578.5
+      "btc_last_price": 80532.1
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 253953877705.46414,
+      "total_mcap_usd": 253955516358.39233,
       "total_mcap_b": 254.0,
       "usdt_mcap_b": 182.4,
       "usdc_mcap_b": 71.5
@@ -108847,18 +108856,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "헬스케어",
         "금융",
-        "커뮤니케이션",
+        "기술",
         "경기소비재",
-        "기술"
+        "헬스케어",
+        "커뮤니케이션"
       ],
       "rotation_out": [
-        "다각화된통신서비스",
         "음료",
+        "담배",
         "운송인프라",
-        "부동산",
-        "담배"
+        "다각화된통신서비스",
+        "부동산"
       ],
       "required_days": 90,
       "actual_span_days": 90,
@@ -108896,18 +108905,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "헬스케어",
         "금융",
-        "커뮤니케이션",
+        "기술",
         "경기소비재",
-        "기술"
+        "헬스케어",
+        "커뮤니케이션"
       ],
       "rotation_out": [
+        "석유와가스",
+        "전기장비",
         "가구",
         "판매업체",
-        "레저용장비와제품",
-        "석유와가스",
-        "전기장비"
+        "레저용장비와제품"
       ],
       "required_days": 180,
       "actual_span_days": 180,
@@ -108945,18 +108954,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "헬스케어",
         "금융",
-        "커뮤니케이션",
+        "기술",
         "경기소비재",
-        "기술"
+        "헬스케어",
+        "커뮤니케이션"
       ],
       "rotation_out": [
-        "조선",
         "에너지장비및서비스",
-        "무역회사와판매업체",
+        "통신장비",
         "건설",
-        "통신장비"
+        "무역회사와판매업체",
+        "조선"
       ],
       "required_days": 365,
       "actual_span_days": 204,
@@ -120223,8 +120232,8 @@
             "source_as_of": "2026-10-23",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:32+09:00",
-            "last_successful_at": "2026-10-26T04:02:32+09:00",
+            "fetched_at": "2026-10-26T05:02:41+09:00",
+            "last_successful_at": "2026-10-26T05:02:41+09:00",
             "stale": false,
             "reused": false,
             "tenor": "1Y",
@@ -120236,8 +120245,8 @@
             "source_as_of": "2026-10-23",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:33+09:00",
-            "last_successful_at": "2026-10-26T04:02:33+09:00",
+            "fetched_at": "2026-10-26T05:02:42+09:00",
+            "last_successful_at": "2026-10-26T05:02:42+09:00",
             "stale": false,
             "reused": false,
             "tenor": "2Y",
@@ -120249,8 +120258,8 @@
             "source_as_of": "2026-10-23",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:34+09:00",
-            "last_successful_at": "2026-10-26T04:02:34+09:00",
+            "fetched_at": "2026-10-26T05:02:43+09:00",
+            "last_successful_at": "2026-10-26T05:02:43+09:00",
             "stale": false,
             "reused": false,
             "tenor": "3Y",
@@ -120262,8 +120271,8 @@
             "source_as_of": "2026-10-23",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:35+09:00",
-            "last_successful_at": "2026-10-26T04:02:35+09:00",
+            "fetched_at": "2026-10-26T05:02:43+09:00",
+            "last_successful_at": "2026-10-26T05:02:43+09:00",
             "stale": false,
             "reused": false,
             "tenor": "5Y",
@@ -120275,8 +120284,8 @@
             "source_as_of": "2026-10-23",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:35+09:00",
-            "last_successful_at": "2026-10-26T04:02:35+09:00",
+            "fetched_at": "2026-10-26T05:02:44+09:00",
+            "last_successful_at": "2026-10-26T05:02:44+09:00",
             "stale": false,
             "reused": false,
             "tenor": "10Y",
@@ -120288,8 +120297,8 @@
             "source_as_of": "2026-10-23",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:36+09:00",
-            "last_successful_at": "2026-10-26T04:02:36+09:00",
+            "fetched_at": "2026-10-26T05:02:45+09:00",
+            "last_successful_at": "2026-10-26T05:02:45+09:00",
             "stale": false,
             "reused": false,
             "tenor": "20Y",
@@ -120301,8 +120310,8 @@
             "source_as_of": "2026-10-23",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:36+09:00",
-            "last_successful_at": "2026-10-26T04:02:36+09:00",
+            "fetched_at": "2026-10-26T05:02:45+09:00",
+            "last_successful_at": "2026-10-26T05:02:45+09:00",
             "stale": false,
             "reused": false,
             "tenor": "30Y",
@@ -120324,8 +120333,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:48+09:00",
+            "last_successful_at": "2026-10-26T05:02:48+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120337,8 +120346,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:48+09:00",
+            "last_successful_at": "2026-10-26T05:02:48+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120350,8 +120359,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:48+09:00",
+            "last_successful_at": "2026-10-26T05:02:48+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120363,8 +120372,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:47+09:00",
+            "last_successful_at": "2026-10-26T05:02:47+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120376,8 +120385,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:48+09:00",
+            "last_successful_at": "2026-10-26T05:02:48+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120389,8 +120398,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:48+09:00",
+            "last_successful_at": "2026-10-26T05:02:48+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120402,8 +120411,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:48+09:00",
+            "last_successful_at": "2026-10-26T05:02:48+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120415,8 +120424,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:48+09:00",
+            "last_successful_at": "2026-10-26T05:02:48+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120428,8 +120437,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:48+09:00",
+            "last_successful_at": "2026-10-26T05:02:48+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120441,8 +120450,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:48+09:00",
+            "last_successful_at": "2026-10-26T05:02:48+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120454,8 +120463,8 @@
             "source_as_of": "2026-10-22",
             "source_period_kind": "day",
             "source_date_status": "ok",
-            "fetched_at": "2026-10-26T04:02:38+09:00",
-            "last_successful_at": "2026-10-26T04:02:38+09:00",
+            "fetched_at": "2026-10-26T05:02:48+09:00",
+            "last_successful_at": "2026-10-26T05:02:48+09:00",
             "stale": false,
             "reused": false,
             "as_of": "2026-10-22",
@@ -120476,7 +120485,7 @@
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-10-26T04:02:32+09:00",
+    "updated_at": "2026-10-26T05:02:41+09:00",
     "credit_spreads": {
       "us_ig_oas": 0.89,
       "us_ig_risk": "LOW",
@@ -120490,8 +120499,8 @@
         "source_as_of": "2026-10-22",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:38+09:00",
-        "last_successful_at": "2026-10-26T04:02:38+09:00",
+        "fetched_at": "2026-10-26T05:02:48+09:00",
+        "last_successful_at": "2026-10-26T05:02:48+09:00",
         "stale": false,
         "reused": false,
         "as_of": "2026-10-22"
@@ -120501,8 +120510,8 @@
         "source_as_of": "2026-10-22",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:39+09:00",
-        "last_successful_at": "2026-10-26T04:02:39+09:00",
+        "fetched_at": "2026-10-26T05:02:48+09:00",
+        "last_successful_at": "2026-10-26T05:02:48+09:00",
         "stale": false,
         "reused": false,
         "as_of": "2026-10-22"
@@ -120512,8 +120521,8 @@
         "source_as_of": "2026-10-22",
         "source_period_kind": "day",
         "source_date_status": "ok",
-        "fetched_at": "2026-10-26T04:02:38+09:00",
-        "last_successful_at": "2026-10-26T04:02:38+09:00",
+        "fetched_at": "2026-10-26T05:02:48+09:00",
+        "last_successful_at": "2026-10-26T05:02:48+09:00",
         "stale": false,
         "reused": false,
         "as_of": "2026-10-22"
@@ -120521,7 +120530,7 @@
     },
     "kr_corp_spreads": {
       "date": "20261023",
-      "collected_at": "2026-10-26T04:02:37+09:00",
+      "collected_at": "2026-10-26T05:02:47+09:00",
       "grades": {
         "AA-": {
           "as_of": "20261023",
@@ -120529,8 +120538,8 @@
           "source_as_of": "2026-10-23",
           "source_period_kind": "day",
           "source_date_status": "ok",
-          "fetched_at": "2026-10-26T04:02:37+09:00",
-          "last_successful_at": "2026-10-26T04:02:37+09:00",
+          "fetched_at": "2026-10-26T05:02:46+09:00",
+          "last_successful_at": "2026-10-26T05:02:46+09:00",
           "stale": false,
           "reused": false,
           "yield": 4.492,
@@ -120542,8 +120551,8 @@
           "source_as_of": "2026-10-23",
           "source_period_kind": "day",
           "source_date_status": "ok",
-          "fetched_at": "2026-10-26T04:02:37+09:00",
-          "last_successful_at": "2026-10-26T04:02:37+09:00",
+          "fetched_at": "2026-10-26T05:02:47+09:00",
+          "last_successful_at": "2026-10-26T05:02:47+09:00",
           "stale": false,
           "reused": false,
           "yield": 10.308,
@@ -120570,7 +120579,7 @@
     "available": true,
     "partial": false,
     "stale": false,
-    "collected_at": "2026-10-26T04:02:19+09:00",
+    "collected_at": "2026-10-26T05:02:26+09:00",
     "bond_regime": {
       "rate_environment": "rate_elevated",
       "curve_shape": "normal",
@@ -120596,7 +120605,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "229200",
@@ -120613,7 +120622,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "102110",
@@ -120630,7 +120639,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "371460",
@@ -120647,7 +120656,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "305720",
@@ -120664,7 +120673,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "091160",
@@ -120681,7 +120690,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "381180",
@@ -120698,7 +120707,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "379800",
@@ -120715,7 +120724,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "379810",
@@ -120732,7 +120741,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "133690",
@@ -120749,7 +120758,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "148070",
@@ -120766,7 +120775,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "152380",
@@ -120783,7 +120792,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "304660",
@@ -120800,7 +120809,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "261240",
@@ -120817,7 +120826,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "132030",
@@ -120834,7 +120843,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "130680",
@@ -120851,7 +120860,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "122630",
@@ -120868,7 +120877,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "252670",
@@ -120885,7 +120894,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "114800",
@@ -120902,7 +120911,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "091170",
@@ -120919,7 +120928,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "139260",
@@ -120936,7 +120945,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "117700",
@@ -120953,7 +120962,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "143860",
@@ -120970,7 +120979,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "266370",
@@ -120987,7 +120996,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "364690",
@@ -121004,7 +121013,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       }
     ],
     "us_top": [
@@ -121021,7 +121030,7 @@
         },
         "aum": 809216114688,
         "dividend_yield": 0.0099,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "QQQ",
@@ -121036,7 +121045,7 @@
         },
         "aum": 498945982464,
         "dividend_yield": 0.0042,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "IWM",
@@ -121051,7 +121060,7 @@
         },
         "aum": 78041726976,
         "dividend_yield": 0.0098,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "VTI",
@@ -121066,7 +121075,7 @@
         },
         "aum": 2322096979968,
         "dividend_yield": 0.0106,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "EFA",
@@ -121081,7 +121090,7 @@
         },
         "aum": 76699582464,
         "dividend_yield": 0.0324,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "EEM",
@@ -121096,7 +121105,7 @@
         },
         "aum": 31071397888,
         "dividend_yield": 0.0167,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "VWO",
@@ -121111,7 +121120,7 @@
         },
         "aum": 164656922624,
         "dividend_yield": 0.0205,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "XLF",
@@ -121126,7 +121135,7 @@
         },
         "aum": 50968727552,
         "dividend_yield": 0.0155,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "XLK",
@@ -121141,7 +121150,7 @@
         },
         "aum": 127297691648,
         "dividend_yield": 0.0043,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "XLE",
@@ -121156,7 +121165,7 @@
         },
         "aum": 39130157056,
         "dividend_yield": 0.0248,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "GLD",
@@ -121170,7 +121179,7 @@
           "1Y": null
         },
         "aum": 141702414336,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "SLV",
@@ -121184,7 +121193,7 @@
           "1Y": null
         },
         "aum": 29961824256,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "USO",
@@ -121198,7 +121207,7 @@
           "1Y": null
         },
         "aum": 1690582144,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "DIA",
@@ -121213,7 +121222,7 @@
         },
         "aum": 43860340736,
         "dividend_yield": 0.0142,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       },
       {
         "ticker": "ARKK",
@@ -121227,7 +121236,7 @@
           "1Y": null
         },
         "aum": 7916893184,
-        "updated_at": "2026-10-26T04:09:54+09:00"
+        "updated_at": "2026-10-26T05:09:59+09:00"
       }
     ],
     "us_bond": [
@@ -121244,7 +121253,7 @@
         },
         "aum": 46233321472,
         "dividend_yield": 0.05,
-        "updated_at": "2026-10-26T04:09:59+09:00"
+        "updated_at": "2026-10-26T05:10:06+09:00"
       },
       {
         "ticker": "IEF",
@@ -121259,7 +121268,7 @@
         },
         "aum": 41556897792,
         "dividend_yield": 0.0414,
-        "updated_at": "2026-10-26T04:09:59+09:00"
+        "updated_at": "2026-10-26T05:10:06+09:00"
       },
       {
         "ticker": "SHY",
@@ -121274,7 +121283,7 @@
         },
         "aum": 26281537536,
         "dividend_yield": 0.0365,
-        "updated_at": "2026-10-26T04:09:59+09:00"
+        "updated_at": "2026-10-26T05:10:06+09:00"
       },
       {
         "ticker": "AGG",
@@ -121289,7 +121298,7 @@
         },
         "aum": 135651655680,
         "dividend_yield": 0.0419,
-        "updated_at": "2026-10-26T04:09:59+09:00"
+        "updated_at": "2026-10-26T05:10:06+09:00"
       },
       {
         "ticker": "BND",
@@ -121304,7 +121313,7 @@
         },
         "aum": 389050990592,
         "dividend_yield": 0.0417,
-        "updated_at": "2026-10-26T04:09:59+09:00"
+        "updated_at": "2026-10-26T05:10:06+09:00"
       },
       {
         "ticker": "LQD",
@@ -121319,7 +121328,7 @@
         },
         "aum": 28273213440,
         "dividend_yield": 0.0491,
-        "updated_at": "2026-10-26T04:09:59+09:00"
+        "updated_at": "2026-10-26T05:10:06+09:00"
       },
       {
         "ticker": "HYG",
@@ -121334,7 +121343,7 @@
         },
         "aum": 16778804224,
         "dividend_yield": 0.0614,
-        "updated_at": "2026-10-26T04:09:59+09:00"
+        "updated_at": "2026-10-26T05:10:06+09:00"
       },
       {
         "ticker": "JNK",
@@ -121349,7 +121358,7 @@
         },
         "aum": 6504680448,
         "dividend_yield": 0.0683,
-        "updated_at": "2026-10-26T04:09:59+09:00"
+        "updated_at": "2026-10-26T05:10:06+09:00"
       },
       {
         "ticker": "TIP",
@@ -121364,7 +121373,7 @@
         },
         "aum": 14229889024,
         "dividend_yield": 0.0471,
-        "updated_at": "2026-10-26T04:09:59+09:00"
+        "updated_at": "2026-10-26T05:10:06+09:00"
       },
       {
         "ticker": "EMB",
@@ -121379,7 +121388,7 @@
         },
         "aum": 12927995904,
         "dividend_yield": 0.0536,
-        "updated_at": "2026-10-26T04:09:59+09:00"
+        "updated_at": "2026-10-26T05:10:06+09:00"
       }
     ],
     "overall_top20": [
@@ -121398,7 +121407,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "229200",
@@ -121415,7 +121424,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "102110",
@@ -121432,7 +121441,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "371460",
@@ -121449,7 +121458,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "305720",
@@ -121466,7 +121475,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "091160",
@@ -121483,7 +121492,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "381180",
@@ -121500,7 +121509,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "379800",
@@ -121517,7 +121526,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "379810",
@@ -121534,7 +121543,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "133690",
@@ -121551,7 +121560,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "148070",
@@ -121568,7 +121577,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "152380",
@@ -121585,7 +121594,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "304660",
@@ -121602,7 +121611,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "261240",
@@ -121619,7 +121628,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "132030",
@@ -121636,7 +121645,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "130680",
@@ -121653,7 +121662,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "122630",
@@ -121670,7 +121679,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "252670",
@@ -121687,7 +121696,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "114800",
@@ -121704,7 +121713,7 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       },
       {
         "ticker": "091170",
@@ -121721,16 +121730,16 @@
           "1Y": null
         },
         "bas_dd": "20261022",
-        "updated_at": "2026-10-26T04:09:52+09:00"
+        "updated_at": "2026-10-26T05:09:58+09:00"
       }
     ],
-    "updated_at": "2026-10-26T04:10:03+09:00"
+    "updated_at": "2026-10-26T05:10:11+09:00"
   },
   "bond_analysis": {
-    "analyzed_at": "2026-10-26T04:09:52.968661+09:00",
+    "analyzed_at": "2026-10-26T05:09:58.540484+09:00",
     "kr_curve_analysis": {
       "market": "KR",
-      "analyzed_at": "2026-10-26T04:09:52.968677+09:00",
+      "analyzed_at": "2026-10-26T05:09:58.540506+09:00",
       "key_spreads": {
         "1y_10y_bp": 42.9,
         "2y_10y_bp": 33.7,
@@ -121744,7 +121753,7 @@
     },
     "us_curve_analysis": {
       "market": "US",
-      "analyzed_at": "2026-10-26T04:09:52.968694+09:00",
+      "analyzed_at": "2026-10-26T05:09:58.540526+09:00",
       "key_spreads": {
         "1y_10y_bp": 55.0,
         "2y_10y_bp": 31.0,
@@ -121758,7 +121767,7 @@
       "interpretation": "정상 우상향 곡선: 건전한 경기 확장 국면."
     },
     "credit_analysis": {
-      "analyzed_at": "2026-10-26T04:09:52.968702+09:00",
+      "analyzed_at": "2026-10-26T05:09:58.540536+09:00",
       "credit_cycle": "neutral",
       "risk_appetite": "MODERATE",
       "hy_oas": 3.4,
@@ -123056,7 +123065,7 @@
       "urgency": 0.5,
       "composite_score": 0.77,
       "near_duplicate": false,
-      "dup_group": "n41",
+      "dup_group": "n45",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "솔리다임 상장 중단 후 반등한 코스피…FOMC·실적 주목 - 머니투데이 - 머니투데이",
@@ -123073,7 +123082,7 @@
       "urgency": 0.5,
       "composite_score": 0.69,
       "near_duplicate": false,
-      "dup_group": "n32",
+      "dup_group": "n33",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "[마켓 ING]기업 실적·FOMC 몰린 슈퍼위크 속 코스피 반등 모색 - 아시아경제",
@@ -123107,7 +123116,7 @@
       "urgency": 0.5,
       "composite_score": 0.6499999999999999,
       "near_duplicate": false,
-      "dup_group": "n43",
+      "dup_group": "n48",
       "dup_rank": 1,
       "dup_count": 1,
       "dup_topic": "[주간 증시 전망] AI 수익성 우려에 발목…빅테크 실적·美FOMC '분수령' - 뉴스웍스",
@@ -123131,24 +123140,24 @@
       "title_ko": "30년간 10조 팔린 '햇반'…이젠 미국인 샐러드볼과도 '찰떡궁합'"
     },
     {
-      "title": "‘Total Meltdown’ in Riskiest Debt Unnerves Market: Credit Weekly - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOaGdkV3gxaDZHd2ZxRDVhaFlBdWtLNFJ3Y0c5MXZiWktESnRPNmJlTWczMVdRZ29JaUVHa0R2Mmdabm5NdXhyLWlYam5xaU54Ty1UdHphaVotVkx5RGo1a1hYUkpsS1IxSlhsd3ZJcGxkWEh0Q016YkJHS1J1Sk4xS1pub0tnTjlCbDdrWU5sTi14dXNrZDVOLTdkUnFxQkdvQ2Y5TFROY3JFcGVQbWtjYTlnUQ?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Sat, 24 Oct 2026 15:21:35 GMT",
-      "category": "bloomberg_google",
-      "title_ko": "가장 위험한 부채의 '완전한 붕괴'가 시장을 불안하게 함: 크레딧 위클리 - Bloomberg.com",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
       "title": "Goldman Cuts Kospi 12-Month Target by 25% as AI Trade Unravels - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxNM1VnbnF1OVc5Y0RrZTdNWE5tdGszNVZTdTZzd1I0ZXVKc2sxalFZY3pYazRGcWxSdUFSVDBwdERyRVFISFlRWTdTdmdkakpIdU9oMW1TamxmWmIycVhVVXdNWVZrZ3FKZm9LNGNPV0I0MXRqQmJncnQ1QUtCSlYyWFAtN0doV1E2VzBiQmMzRnJiUk9BVmFpVGhrcENIUHAtb1NQT2Fhc2hVcjFfRFpXZjh3?oc=5",
       "source": "Bloomberg.com",
       "time": "Sun, 25 Oct 2026 07:44:43 GMT",
       "category": "bloomberg_google",
       "title_ko": "골드만삭스, AI 거래 풀리면서 코스피 12개월 목표치 25% 하향 - Bloomberg.com",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "‘Total Meltdown’ in Riskiest Debt Unnerves Market: Credit Weekly - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOaGdkV3gxaDZHd2ZxRDVhaFlBdWtLNFJ3Y0c5MXZiWktESnRPNmJlTWczMVdRZ29JaUVHa0R2Mmdabm5NdXhyLWlYam5xaU54Ty1UdHphaVotVkx5RGo1a1hYUkpsS1IxSlhsd3ZJcGxkWEh0Q016YkJHS1J1Sk4xS1pub0tnTjlCbDdrWU5sTi14dXNrZDVOLTdkUnFxQkdvQ2Y5TFROY3JFcGVQbWtjYTlnUQ?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sat, 24 Oct 2026 15:21:35 GMT",
+      "category": "bloomberg_google",
+      "title_ko": "가장 위험한 부채의 '완전한 붕괴'가 시장을 불안하게 함: 크레딧 위클리 - Bloomberg.com",
       "sentiment": "neutral",
       "credibility": 1.0,
       "urgency": 0.5,
@@ -123177,6 +123186,18 @@
       "credibility": 1.0,
       "urgency": 0.5,
       "composite_score": 0.64
+    },
+    {
+      "title": "Watch 9 Days to Midterm Elections, Big Tech Earnings - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMikgFBVV95cUxNWjk3NzhXRng5bjNuTTlPczBnUFBLbksxZnVFOVR5SWc3a1hSMkp3QTZzRlNQNWNWTFNoOWE5UERsYjJyb0JqdmpXNnlwaVdCcHA3aEJOT0wtX05YYlJhdlR6X0Q1SGc4X2NJSnRPcHZoQXJhbHpJMkRaRkJzQVViLUx0MjFPZnhqMEdMSUJZV3Utdw?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sun, 25 Oct 2026 16:39:51 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64,
+      "title_ko": "중간선거 9일 전, 빅테크 실적 발표 - 블룸버그닷컴"
     },
     {
       "title": "Oil Rises as Deadly Saudi Attacks Fan Middle East Supply Fears - Bloomberg.com",
@@ -123227,16 +123248,28 @@
       "composite_score": 0.64
     },
     {
-      "title": "Lula Rallies His Supporters for One Last Comeback, or a Final Goodbye - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPcTVpZ2x4UVZsRk5RWm1TQUZsVkJaTkRuZ0dkRDJRcW83b3oxU2Vsd0JyU0RxLVI2Z0xiVDBxaUg5VTY5OElOdU15QWJ2SlFzcW1iM2pvRS1RWFJuZDVQUGQyajRyakFWQW1kVm5fU29iVnlfeHY5aHhscUliZEtJQUZMc0dVSTZhNVFrOWFjYXVaZUJsLWJWX0RzSGJwUFE4QnZoRlpCSUZXcnQtbkptVVdR?oc=5",
+      "title": "A 50% Yield? The AI Trade Is Getting Wild After CoreWeave - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxOeXh0eDlOMEdYR0VYMVlwOC1vUXFGMlJLUlhSaG5iRFlpZjNUQmtISUxWdk04SlBxanh4Sjk2TEhFb3dwRUY5S09VMDRENzlpTGcyX1hRZzdKQ0FwX1dzREhTMHppeXBQYVJZVlM5X2JaSnhZNUlBdTZpSWtJc3dfMERxV0daREJWbXdDb2Jxc2hQNS1YcUtZSHJsY1BoclY0WXg4dWNqQWdpUU9WRGc?oc=5",
       "source": "Bloomberg.com",
-      "time": "Sun, 25 Oct 2026 13:10:46 GMT",
+      "time": "Sun, 25 Oct 2026 18:00:02 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
       "urgency": 0.5,
       "composite_score": 0.64,
-      "title_ko": "룰라, 마지막 복귀 또는 고별을 위해 지지자들 결집 - Bloomberg.com"
+      "title_ko": "수익률 50%? CoreWeave 이후 AI 거래가 과열되고 있다 - 블룸버그닷컴"
+    },
+    {
+      "title": "Lula Rallies His Supporters for One Last Comeback, or a Final Goodbye - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPcTVpZ2x4UVZsRk5RWm1TQUZsVkJaTkRuZ0dkRDJRcW83b3oxU2Vsd0JyU0RxLVI2Z0xiVDBxaUg5VTY5OElOdU15QWJ2SlFzcW1iM2pvRS1RWFJuZDVQUGQyajRyakFWQW1kVm5fU29iVnlfeHY5aHhscUliZEtJQUZMc0dVSTZhNVFrOWFjYXVaZUJsLWJWX0RzSGJwUFE4QnZoRlpCSUZXcnQtbkptVVdR?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sun, 25 Oct 2026 13:10:46 GMT",
+      "category": "bloomberg_google",
+      "title_ko": "룰라, 마지막 복귀 또는 고별을 위해 지지자들 결집 - Bloomberg.com",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
     },
     {
       "title": "AI Spending Fears Threaten to Swamp Big Tech’s Strong Earnings - Bloomberg.com",
@@ -123263,18 +123296,6 @@
       "composite_score": 0.64
     },
     {
-      "title": "Brookfield to Open Doha Office to Deepen Its Middle East Reach - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNVUlIaXBHWE5FY2pBM2p6dnJYdTVBY0habnNUUFkweDhCYURJQnJhaFR3ZDl6WU0yQnA1dTRiNGRTbnVWM2ZSYWZSRld0VGF0OEZGNkYwRWQ4MlB1WmtFWl9STEt6MVNodG5ack5pWXpiVG95SjBINW5TQldhcElJVXdUYmkyQnV0dTJKREpXM0NpR3dWNGFmRnFPV1VQREVmRTJBMXA3T3pmcThqM1o4TGhZaw?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Sun, 25 Oct 2026 12:18:44 GMT",
-      "category": "bloomberg_google",
-      "title_ko": "브룩필드, 중동 진출 심화 위해 도하 사무소 개설 - Bloomberg.com",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
       "title": "AI Spending Isn’t Enough for Investors - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMilwFBVV95cUxNTnE0WUxiMElGVTZkRUZHOVc4QVBNMmlranNwYUd3NHNCOG4tVUVhZ2JoYndxQXJPQWJlOGtFVmdYRDdDNXpBMlpReU5hYmd5VVAtZGRHUjhUdjJ2SjNfc05oOWJFVWpZbjdTeE9fNktXWnVXR3pxYmhwUWlMbDBOUEVTb29kdllTR2k3U19fZEtDRUZRVUU0?oc=5",
       "source": "Bloomberg.com",
@@ -123293,6 +123314,18 @@
       "time": "Sun, 25 Oct 2026 00:00:00 GMT",
       "category": "bloomberg_google",
       "title_ko": "이익 급감, 중국 3조 5천억 달러 주식 폭락을 함정으로 만듦 - Bloomberg.com",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "Brookfield to Open Doha Office to Deepen Its Middle East Reach - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNVUlIaXBHWE5FY2pBM2p6dnJYdTVBY0habnNUUFkweDhCYURJQnJhaFR3ZDl6WU0yQnA1dTRiNGRTbnVWM2ZSYWZSRld0VGF0OEZGNkYwRWQ4MlB1WmtFWl9STEt6MVNodG5ack5pWXpiVG95SjBINW5TQldhcElJVXdUYmkyQnV0dTJKREpXM0NpR3dWNGFmRnFPV1VQREVmRTJBMXA3T3pmcThqM1o4TGhZaw?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sun, 25 Oct 2026 12:18:44 GMT",
+      "category": "bloomberg_google",
+      "title_ko": "브룩필드, 중동 진출 심화 위해 도하 사무소 개설 - Bloomberg.com",
       "sentiment": "neutral",
       "credibility": 1.0,
       "urgency": 0.5,
@@ -123341,30 +123374,6 @@
       "time": "Sun, 25 Oct 2026 09:30:00 GMT",
       "category": "bloomberg_google",
       "title_ko": "이스라엘의 전쟁 중심 선거, 근본적인 경제 분열을 가림 - Bloomberg.com",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "Retail Traders Find a Back Door to 24/7 Oil Trading - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxQWTJwZWVGcUdiNkdlYWxTRzNvOUNkWHZYWnVZQ2tQQmV3d25JX1VuY1RVSmJLcXJoQVFOSkZ4dF9iVjFPMUFrSFpNWW9qYlU0MzhCcWxqQ0pxWHBpTjRONTVtYnRwMVhEbTJmazN6SnBMYTBWWW1rQTVScFo4VEJIdWdFWEJQdWZyUjk3dlc3VUo2cVg2XzV0Vm9PLWFpblpnelB0cVIyRi0?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 23 Oct 2026 11:52:52 GMT",
-      "category": "bloomberg_google",
-      "title_ko": "개인 투자자들, 24시간 석유 거래의 뒷문 발견 - Bloomberg.com",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "Repo Market Set for Volatility in Late Clearing Push, CIBC Says - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPblppT1BWZV9wNk9nSEQ2bDhXR1BSLXpNVXBoVHgtOHNmWTdHMHdGX2JTSXZuN05EejgybE85UHJGbkFOcE9Va21COFJOcnhzbWVNdXlrbTI2SDFBZ3Zpci1LTG1GMGdKRTkxV0RPZk1rdTU0emIwaHVoNnBudEp1Qlc3d1R3TTZtUGc5eFRNM05HOU9scVlERzdUWktkejE2ZWtya19pcXU3N3pNZFZ1aXBLYw?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 23 Oct 2026 17:20:58 GMT",
-      "category": "bloomberg_google",
-      "title_ko": "CIBC, 역외 자금 조달 시장의 후반부 청산 압박으로 변동성 예상 - 블룸버그",
       "sentiment": "neutral",
       "credibility": 1.0,
       "urgency": 0.5,
@@ -123966,7 +123975,7 @@
     }
   },
   "cost_monitor": {
-    "updated_at": "2026-10-26T04:16:49+09:00",
+    "updated_at": "2026-10-26T05:16:15+09:00",
     "month_key": "2026-10",
     "analysis_mode_last": "quick",
     "effective_mode_last": "quick",
@@ -126694,17 +126703,6 @@
       "subject_full": "perf: reuse public map index across dynamic source updates (#609)",
       "lines_added": 125,
       "lines_deleted": 5
-    },
-    {
-      "sha": "96c8aa1",
-      "date": "2026-10-25",
-      "author": "gywns0126",
-      "category": "uncategorized",
-      "kind": "fix",
-      "title": "keep structure source refresh ahead of review backlog (#608)",
-      "subject_full": "fix: keep structure source refresh ahead of review backlog (#608)",
-      "lines_added": 557,
-      "lines_deleted": 32
     }
   ],
   "lynch_kr_distribution": {
@@ -126730,7 +126728,7 @@
   },
   "trade_plan_meta": {
     "version": "v0",
-    "computed_at": "2026-10-25T19:16:12.977550+00:00",
+    "computed_at": "2026-10-25T20:15:44.336666+00:00",
     "status": "active",
     "sample_size": {
       "total": 97,
@@ -127829,10 +127827,10 @@
         "note": "V1 에서 actual historical backtest 로 보정"
       }
     },
-    "as_of": "2026-10-26T04:16:10+09:00"
+    "as_of": "2026-10-26T05:15:41+09:00"
   },
   "atr_migration": {
-    "as_of": "2026-10-26T04:16:10+09:00",
+    "as_of": "2026-10-26T05:15:41+09:00",
     "phase": "phase_0",
     "verdict_date": "2026-05-16",
     "today": {
@@ -128419,7 +128417,7 @@
       }
     ],
     "total_fields": 34,
-    "generated_at": "2026-10-26T04:16:11+09:00"
+    "generated_at": "2026-10-26T05:15:42+09:00"
   },
   "new_listings": {
     "recent_3m_count": 16,
@@ -128487,7 +128485,7 @@
     }
   },
   "trail_integrity": {
-    "ts_kst": "2026-10-26T04:16:58.293649+09:00",
+    "ts_kst": "2026-10-26T05:16:24.879165+09:00",
     "severity": "WARNING",
     "findings": [
       "history 영업일 gap 6건: ['2026-04-07', '2026-04-15', '2026-09-09', '2026-09-10', '2026-09-11']",
@@ -129931,7 +129929,7 @@
   "semi_report_updated": "2026-07-03T13:54:52+09:00",
   "news_refreshed_at": "2026-10-25T22:12:08.790593+09:00",
   "system_action": {
-    "as_of": "2026-10-26T04:16:10+09:00",
+    "as_of": "2026-10-26T05:15:42+09:00",
     "rate_shield": {
       "on": true,
       "us_10y": 4.96,
@@ -129958,7 +129956,7 @@
     },
     "macro_multiplier_median": 0.877,
     "verdict_gate": {
-      "buy_count": 10,
+      "buy_count": 9,
       "aligned": [
         "251270",
         "192400",
@@ -129968,14 +129966,14 @@
         "GOOGL",
         "SHEL"
       ],
-      "gated_count": 16,
+      "gated_count": 17,
       "owner": "brain"
     },
     "validation": "가설 — 자체 산식, 사전등록 검정 미통과 (검증 틀 v2 §7-3 승인 대기)",
     "_note": "표시 전용 · 산식 불변 — 이미 산출된 작용값의 집계 (오퍼레이터)"
   },
   "exec_paper": {
-    "as_of": "2026-10-26T04:16:11+09:00",
+    "as_of": "2026-10-26T05:15:42+09:00",
     "status": "RUNNING",
     "version": "v1-ranked-forward-20260901",
     "formula_version": "brain-current/fact-v1.1-20260823",
@@ -130149,7 +130147,7 @@
     },
     "price_snapshot": {
       "source": "portfolio.recommendations.current_price",
-      "as_of": "2026-10-26T04:09:44+09:00",
+      "as_of": "2026-10-26T05:09:50+09:00",
       "market_clock_state": "preopen_clock",
       "holiday_calendar": "not_connected"
     },
@@ -130201,17 +130199,17 @@
     "producer_sha": "fdf73c2863c5fb714fd4ac5e98a13dd3a1d07848",
     "snapshot_sha256": "0c2af4e07185807fa6242a78503b8d7ad3153f58266c42fd48bfd212fac442be",
     "hash_algorithm": "sha256-exact-file-bytes-before-enrichment",
-    "loaded_at": "2026-10-26T04:11:02+09:00",
-    "snapshot_age_hours": 55.166,
+    "loaded_at": "2026-10-26T05:11:10+09:00",
+    "snapshot_age_hours": 56.168,
     "kr_used_prev": false,
     "kr_source_scan_id": "gh:39949726135:1",
     "scan_candidate_count": 44,
-    "analysis_run_id": "40224484487",
+    "analysis_run_id": "40229245902",
     "analysis_run_attempt": "1",
     "analysis_mode": "quick",
     "status": "completed",
     "analysis_candidate_count": 65,
-    "analysis_completed_at": "2026-10-26T04:17:08+09:00",
+    "analysis_completed_at": "2026-10-26T05:16:35+09:00",
     "resulting_analysis_count": 65
   },
   "_verity_mode": "staging"
