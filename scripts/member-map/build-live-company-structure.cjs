@@ -187,7 +187,15 @@ function usPayload(aliases, source, generatedAt) {
     day(e.periodEnd) && day(e.filedDate) && e.periodEnd <= e.filedDate && e.filedDate <= observedAt.slice(0, 10) && /^[a-f0-9]{64}$/u.test(e.documentSha256 || '') &&
     ['ok', 'success', 'parsed', 'source-checked'].includes(e.status);
   const checked = !!valid && ['success', 'cached-same-accession'].includes(source.attemptStatus);
-  const status = checked ? 'source-checked' : 'refresh-error';
+  // A parser hold is not a transport failure. It never authorizes review rows.
+  const pending = ['needs-review', 'source-gap', 'budget-deferred', 'attempting'];
+  const status = checked ? 'source-checked' : pending.includes(source.attemptStatus) ? source.attemptStatus : 'refresh-error';
+  const review = source.reviewExhibit;
+  const validReview = source.attemptStatus === 'needs-review' && review?.schema === 'sec-company-subsidiaries-v1' &&
+    review.status === 'needs-review' && review.cik === cik &&
+    /^\d{10}-\d{2}-\d{6}$/u.test(review.accession || '') && secUrl(review.url, cik, review.accession) &&
+    day(review.periodEnd) && day(review.filedDate) && review.periodEnd <= review.filedDate &&
+    review.filedDate <= source.attemptedAt.slice(0, 10) && /^[a-f0-9]{64}$/u.test(review.documentSha256 || '');
   const companies = new Map(aliases.map(a => [`US:${a.ticker}`, { id: `US:${a.ticker}`, ticker: a.ticker, market: 'US', name: a.name }]));
   const relations = new Map(), canonicalId = `US:${aliases[0].ticker}`;
   let unsupported = 0;
@@ -207,9 +215,13 @@ function usPayload(aliases, source, generatedAt) {
   }
   const payload = { schema: 'alphanest-company-structure-v1', observedAt: valid ? observedAt : source.attemptedAt,
     companies: [...companies.values()], relations: [...relations.values()], coverage: {
-      status, sourceChecked: checked, attemptStatus: /^(?:success|cached-same-accession|error|source-gap|attempting|HTTP[1-5][0-9]{2})$/u.test(source.attemptStatus) ? source.attemptStatus : 'error', attemptedAt: source.attemptedAt,
+      status, sourceChecked: checked, attemptStatus: /^(?:success|cached-same-accession|error|needs-review|source-gap|budget-deferred|attempting|HTTP[1-5][0-9]{2})$/u.test(source.attemptStatus) ? source.attemptStatus : 'error', attemptedAt: source.attemptedAt,
       lastSuccessAt: observedAt, asOfNotCollectedAt: true, canonicalId, securityIds: aliases.map(a => `US:${a.ticker}`),
       cik, filedDate: valid ? e.filedDate : null, periodEnd: valid ? day(e.periodEnd) : null,
+      ...(validReview ? { pendingReview: { filedDate: review.filedDate, periodEnd: review.periodEnd,
+        documentSha256: review.documentSha256,
+        ...(/^[a-z0-9-]{1,80}$/u.test(review.reviewReason || '') ? { reason: review.reviewReason } : {}) } } : {}),
+      ...(/^[a-z0-9:-]{1,100}$/u.test(source.sourceGap || '') ? { sourceGap: source.sourceGap } : {}),
       documentSha256: valid ? e.documentSha256 : null, rawRowsExamined: valid ? e.rows.length : 0,
       rawVerifiedRows: relations.size, storedRows: 0, unsupportedRows: unsupported,
       displayedRelations: relations.size, limits: { nodes: 3000, relations: 3000, bytes: MAX_BYTES },

@@ -125,6 +125,19 @@ test('failed live reader labels retained data and does not invent a fresh clock'
   assert.equal(calls,2); assert.equal(value.observedAt,old.observedAt); assert.equal(value.coverage.fallback,true);
   assert.match(structureCoverageText(value),/이전 저장 자료/);
 });
+test('coverage status text distinguishes review, source gap, deferred, and attempting states', () => {
+  const messages = {
+    'needs-review': '원문 확보 · 관계 검수 보류 · 확인된 기존 근거만 유지',
+    'source-gap': '관계 원문 미확보 · 관계가 없다는 뜻은 아니에요',
+    'budget-deferred': '조회 예산에 따라 다음 수집 대기',
+    attempting: '관계 원문을 확인하고 있어요',
+  };
+  for (const [sourceStatus, expected] of Object.entries(messages)) {
+    assert.equal(structureCoverageText({ coverage: { sourceStatus } }), expected);
+  }
+  assert.equal(structureCoverageText({ coverage: { sourceStatus: 'refresh-error' } }), '최근 원문 조회 실패 · 이전 근거와 기준일 유지');
+  assert.equal(structureCoverageText({ coverage: { sourceStatus: 'needs-review', fallback: true } }), '최신 조회 연결 실패 · 이전 저장 자료를 표시하고 있어요');
+});
 test('invalid ticker and cancelled reader never trigger a fallback request', async () => {
   let calls=0; const c=new AbortController(); c.abort();
   await assert.rejects(loadCompanyStructure({market:'KR',ticker:'../../etc'},c.signal,async()=>{calls++;}),/ticker/);
