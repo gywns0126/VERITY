@@ -802,7 +802,7 @@ def test_changed_parser_reconsiders_review_once_without_starving_unattempted_or_
     doc["requestBudget"] = {"day": NOW.astimezone(core.KST).date().isoformat(), "requests": 2,
                             "ciks": ["0000000003"]}
     before = copy.deepcopy(doc)
-    assert core._selection(doc, NOW, 2) == ["0000000003", "0000000001"]
+    assert core._selection(doc, NOW, 2) == ["0000000001", "0000000002"]
     assert doc == before
     # Real refresh selection still filters out the already reserved CIK.
     _, summary, calls, _ = run(doc, tmp_path, [json.dumps(submission("0000000001", "T1")).encode(), INDEX, TABLE], limit=1)

@@ -4,6 +4,8 @@ name: ownership-backfill
 # Physical request budgets (durable KST day): KR <=400 issuers /800 GET;
 # US <=800 distinct CIK /2400 HTTP, unchanged 2 GET/sec per collector.
 # Soft collection deadlines: KR 15min, US 30min, then save/build/publish.
+# US changed/unvisited/healthy checks interleave 4:1 with backlog checks.
+# Changed-parser cached reviews run AFTER collection, <=160 parses /120s soft.
 # In-flight transport/parsing/checkpoint can exceed these soft deadlines.
 # New structure path reads tracked mapping: 0 HTTP.
 # Existing legacy mapping freshness behavior is unchanged, not a new self-repair path.
@@ -179,15 +181,15 @@ jobs:
           key: sec-structure-raw-v1-${{ runner.os }}-${{ github.run_id }}
           restore-keys: sec-structure-raw-v1-${{ runner.os }}-
 
-      - name: Recheck every cached unresolved SEC original without source calls
-        id: us-replay
-        continue-on-error: true
-        run: python scripts/member-map/refresh-us-company-structure.py --source-dir data --store data/member_map_company_structure_us_sources.json --replay-cached --raw-cache-dir .cache/company-structure-sec-v1
-
       - name: Refresh bounded SEC exhibits
         id: us
         continue-on-error: true
         run: python scripts/member-map/refresh-us-company-structure.py --source-dir data --store data/member_map_company_structure_us_sources.json --limit 800 --fetch-public --raw-cache-dir .cache/company-structure-sec-v1
+
+      - name: Recheck bounded cached SEC reviews after source refresh
+        id: us-replay
+        continue-on-error: true
+        run: python scripts/member-map/refresh-us-company-structure.py --source-dir data --store data/member_map_company_structure_us_sources.json --replay-cached --limit 160 --max-elapsed-seconds 120 --raw-cache-dir .cache/company-structure-sec-v1
 
       - name: Preserve public SEC originals even after a partial collection
         if: ${{ always() && steps.sec-raw-cache.outcome == 'success' && (steps.us.outcome == 'success' || steps.us.outcome == 'failure') && hashFiles('.cache/company-structure-sec-v1/**/*.gz') != '' }}

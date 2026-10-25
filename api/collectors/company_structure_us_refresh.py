@@ -31,6 +31,7 @@ SCHEMA = "alphanest-company-structure-us-sources-v1"
 MAX_CIKS, MAX_HTTP, MAX_BYTES = 800, 2400, 8 * 1024 * 1024
 MAX_RAW_CACHE_BYTES = 256 * 1024 * 1024
 MAX_ELAPSED_SECONDS = 1800
+MAX_REPLAY_CIKS, MAX_REPLAY_SECONDS = 160, 120
 TTL = timedelta(days=7)
 KST = timezone(timedelta(hours=9))
 BUDGET_STOPS = frozenset({"daily-http-budget", "daily-cik-budget", "daily-cik-already-attempted", "time-budget"})
@@ -318,14 +319,22 @@ def _parse_raw_exhibit(raw, cik, metadata, exhibit_url, helpers, proof=None, ind
     return parsed
 
 
-def reparse_cached_reviews(document, raw_cache_dir, now=None, helpers=None, current_ciks=None):
-    """Offline parser replay only; leave source checks and request ledger untouched."""
+def reparse_cached_reviews(document, raw_cache_dir, now=None, helpers=None, current_ciks=None,
+                           limit=MAX_REPLAY_CIKS, max_elapsed_seconds=MAX_REPLAY_SECONDS,
+                           clock=time.monotonic, checkpoint=None):
+    """Bound offline replay independently of collection; preserve source clocks."""
     if raw_cache_dir is None:
         raise ValueError("sec-raw-cache-required")
+    if type(limit) is not int or not 0 <= limit <= MAX_REPLAY_CIKS:
+        raise ValueError("sec-replay-limit-invalid")
+    if (type(max_elapsed_seconds) not in (int, float) or not math.isfinite(max_elapsed_seconds)
+            or not 0 <= max_elapsed_seconds <= MAX_REPLAY_SECONDS):
+        raise ValueError("sec-replay-time-budget-invalid")
+    started = clock()
     from api.intelligence.company_structure_sec import PARSER_REVISION
     helpers = helpers or load_helpers()
     result = copy.deepcopy(document)
-    lists = {key: [] for key in ("eligible", "cacheHits", "missing", "parsed", "held", "errors")}
+    lists = {key: [] for key in ("eligible", "attempted", "cacheHits", "missing", "parsed", "held", "errors", "deferred")}
     ciks = current_ciks if current_ciks is not None else result.get("currentCiks")
     if not isinstance(ciks, list) or any(cik not in result.get("issuers", {}) for cik in ciks):
         raise ValueError("sec-current-ciks-required")
@@ -336,6 +345,15 @@ def reparse_cached_reviews(document, raw_cache_dir, now=None, helpers=None, curr
                 and review.get("status") == "needs-review" and review.get("parserRevision") != PARSER_REVISION):
             continue
         lists["eligible"].append(cik)
+    stop = None
+    for index, cik in enumerate(lists["eligible"]):
+        if len(lists["cacheHits"]) >= limit or clock() - started >= max_elapsed_seconds:
+            stop = "replay-limit" if len(lists["cacheHits"]) >= limit else "time-budget"
+            lists["deferred"] = lists["eligible"][index:]
+            break
+        issuer = result["issuers"][cik]
+        review = issuer["reviewExhibit"]
+        lists["attempted"].append(cik)
         metadata = issuer.get("filingMetadata")
         try:
             if not isinstance(metadata, dict):
@@ -349,6 +367,10 @@ def reparse_cached_reviews(document, raw_cache_dir, now=None, helpers=None, curr
             except FileNotFoundError:
                 lists["missing"].append(cik)
                 continue
+            if clock() - started >= max_elapsed_seconds:
+                stop = "time-budget"
+                lists["deferred"] = lists["eligible"][index:]
+                break
             lists["cacheHits"].append(cik)
             parsed = _parse_raw_exhibit(raw, cik, metadata, binding["url"], helpers, proof, index_raw)
             if parsed.get("status") == "parsed":
@@ -369,8 +391,13 @@ def reparse_cached_reviews(document, raw_cache_dir, now=None, helpers=None, curr
         except (ValueError, KeyError, TypeError, OSError) as exc:
             reason = str(exc) if isinstance(exc, ValueError) and re.fullmatch(r"sec-[a-z0-9-]+", str(exc)) else "sec-raw-cache-error"
             lists["errors"].append({"cik": cik, "reason": reason})
+            continue
+        if checkpoint is not None:
+            checkpoint(result)  # A durable-write failure must stop, not look like a bad exhibit.
     summary = {"schema": "alphanest-company-structure-us-cache-replay-summary-v1",
                "generatedAt": (now or datetime.now(timezone.utc)).isoformat(),
+               "stopReason": stop, "limit": limit, "maxElapsedSeconds": max_elapsed_seconds,
+               "elapsedSeconds": max(0, clock() - started),
                **{key: len(value) for key, value in lists.items()}, "lists": lists,
                "exitCode": int(bool(lists["errors"]))}
     return result, summary
@@ -440,37 +467,91 @@ def build_document(source_dir, existing=None, now=None):
     return document
 
 
-def _due_issuers(document, now):
+def _new_local_submission(issuer, source_dir, now):
+    """A newer validated local filing can supersede the seven-day check cache."""
+    if source_dir is None:
+        return False
+    try:
+        path = _submission_path(source_dir, issuer["cik"])
+        if path is None:
+            return False
+        observed = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
+    except (OSError, ValueError):
+        return False  # The bounded issuer refresh reports invalid local sources.
+    checked = _time(issuer.get("metadataCheckedAt"))
+    if not timedelta(0) <= now - observed < TTL or (checked and observed <= checked):
+        return False
+    try:
+        submission = read_json(path)
+        tickers = sorted(t for t in issuer["tickerAliases"] if _submission_has_ticker(submission, t))
+        if not tickers:
+            return False
+        metadata = latest_metadata(tickers[0], issuer["cik"], submission)
+        old = issuer.get("filingMetadata") or {}
+        return any(metadata.get(k) != old.get(k) for k in
+                   ("accession", "form", "filed_date", "period_end", "issuer_name"))
+    except ValueError as exc:
+        # A new unsupported annual/amendment must replace the *status*, not
+        # silently leave an older filing looking up-to-date. Identity errors
+        # do not make another issuer's cache a valid change signal.
+        return str(exc).startswith("source-gap:")
+    except (KeyError, TypeError, OSError):
+        return False
+
+
+def _refresh_lane(issuer, local_changed=False):
+    if local_changed:
+        return "fresh"
+    status = issuer.get("attemptStatus", "not-attempted")
+    if status in ("not-attempted", "success", "cached-same-accession"):
+        return "fresh"
+    if status == "budget-deferred" and not issuer.get("reviewExhibit"):
+        return "fresh"
+    return "backlog"
+
+
+def _due_issuers(document, now, source_dir=None, defer_reviews=False, excluded=()):
     from api.intelligence.company_structure_sec import PARSER_REVISION
-    due = []
+    lanes = {"fresh": [], "backlog": []}
+    reserved = set(excluded)
     for cik in document["currentCiks"]:
+        if cik in reserved:
+            continue
         issuer = document["issuers"][cik]
         review = issuer.get("reviewExhibit")
-        revised_review = (issuer.get("attemptStatus") == "needs-review" and isinstance(review, dict)
+        revised_review = (not defer_reviews and issuer.get("attemptStatus") == "needs-review" and isinstance(review, dict)
                           and review.get("status") == "needs-review"
                           and review.get("parserRevision") != PARSER_REVISION)
+        local_changed = _new_local_submission(issuer, source_dir, now)
         checked = _time(issuer.get("checkedAt"))
-        if not revised_review and checked and timedelta(0) <= now - checked < TTL:
+        if not local_changed and not revised_review and checked and timedelta(0) <= now - checked < TTL:
             continue
         # Missing exhibits/source gaps cannot permanently outrank healthy stale
         # issuers. Historical success is an attempt fallback for legacy stores.
         attempted = _time(issuer.get("attemptedAt")) or _time(issuer.get("lastSuccessAt"))
-        # One reconsideration for an actually changed parser, within the same
-        # durable budgets. A same-revision rejection re-enters the ordinary queue.
-        due.append((not revised_review, attempted is not None, attempted or datetime.min.replace(tzinfo=timezone.utc), cik))
-    return [row[3] for row in sorted(due)]
+        lanes[_refresh_lane(issuer, local_changed)].append(
+            (not local_changed, attempted is not None,
+             attempted or datetime.min.replace(tzinfo=timezone.utc), cik))
+    fresh, backlog = ([row[-1] for row in sorted(lanes[key])] for key in ("fresh", "backlog"))
+    # Four ordinary/new-filing checks followed by one backlog check. Interleave
+    # rather than concatenate: both lanes progress even at a soft deadline.
+    # Unused capacity is borrowed when either lane is empty; total caps stay put.
+    due = []
+    for i in range(max((len(fresh) + 3) // 4, len(backlog))):
+        due.extend(fresh[4 * i:4 * i + 4])
+        due.extend(backlog[i:i + 1])
+    return due
 
 
-def _selection(document, now, limit, excluded=()):
+def _selection(document, now, limit, excluded=(), source_dir=None, defer_reviews=False):
     if type(limit) is not int or not 0 <= limit <= MAX_CIKS:
         raise ValueError(f"CIK limit must be 0..{MAX_CIKS}")
-    reserved = set(excluded)
-    return [cik for cik in _due_issuers(document, now) if cik not in reserved][:limit]
+    return _due_issuers(document, now, source_dir, defer_reviews, excluded)[:limit]
 
 
 def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpoint=None,
             now=None, helpers=None, clock=time.monotonic, sleep=time.sleep,
-            max_elapsed_seconds=MAX_ELAPSED_SECONDS, raw_cache_dir=None):
+            max_elapsed_seconds=MAX_ELAPSED_SECONDS, raw_cache_dir=None, defer_reviews=False):
     """Stop new work at a monotonic soft deadline, preserving reservations/results.
 
     An already-started HTTP request is not cancelled by this deadline: its 30s
@@ -492,8 +573,11 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
             or len(budget["ciks"]) > MAX_CIKS
             or any(not isinstance(c, str) or not re.fullmatch(r"[0-9]{10}", c) for c in budget["ciks"])):
         raise ValueError("sec-durable-budget-invalid")
-    selected = _selection(document, now, limit, excluded=budget["ciks"])
-    due = _due_issuers(document, now)
+    selected = _selection(document, now, limit, excluded=budget["ciks"],
+                          source_dir=source_dir, defer_reviews=defer_reviews)
+    due = _due_issuers(document, now, source_dir, defer_reviews)
+    lane_by_cik = {c: _refresh_lane(document["issuers"][c],
+                   _new_local_submission(document["issuers"][c], source_dir, now)) for c in due}
     # Same-day attempts are never retried, including interrupted reservations.
     selected = selected[:MAX_CIKS - len(budget["ciks"])]
     lists = {k: [] for k in ("attempted", "requests", "success", "cached", "sourceGap", "error", "retained", "budgetDeferred", "deferred", "rawCacheHit", "rawCacheSaved", "rawCacheSkipped")}
@@ -556,8 +640,8 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
             try:
                 metadata = issuer.get("filingMetadata")
                 metadata_checked = _time(issuer.get("metadataCheckedAt"))
-                if not (isinstance(metadata, dict) and metadata_checked and timedelta(0) <= now - metadata_checked < TTL
-                        and metadata.get("cik") == cik and metadata.get("issuer_id", "")[3:] in issuer["tickerAliases"]):
+                if (_new_local_submission(issuer, source_dir, now) or not (isinstance(metadata, dict) and metadata_checked and timedelta(0) <= now - metadata_checked < TTL
+                        and metadata.get("cik") == cik and metadata.get("issuer_id", "")[3:] in issuer["tickerAliases"])):
                     path = _submission_path(source_dir, cik)
                     cached_at = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc) if path else None
                     if path and timedelta(0) <= now - cached_at < TTL:
@@ -586,7 +670,7 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
                 reusable = isinstance(old, dict) and old.get("status") == "parsed"
                 if isinstance(old, dict) and old.get("status") == "needs-review":
                     from api.intelligence.company_structure_sec import PARSER_REVISION
-                    reusable = old.get("parserRevision") == PARSER_REVISION
+                    reusable = defer_reviews or old.get("parserRevision") == PARSER_REVISION
                 if (isinstance(old, dict) and old.get("cik") == cik and old.get("accession") == metadata["accession"]
                         and reusable):
                     issuer.update(attemptStatus="cached-same-accession" if old["status"] == "parsed" else "needs-review",
@@ -719,4 +803,9 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
                    elapsedSeconds=max(0, clock() - started), maxElapsedSeconds=max_elapsed_seconds,
                    guardedBudget={"valid": budget["requests"] <= MAX_HTTP and len(budget["ciks"]) <= MAX_CIKS,
                                   "maxCiks": MAX_CIKS, "maxHttp": MAX_HTTP})
+    summary["refreshLanes"] = {lane: {key: sum(lane_by_cik.get(c) == lane for c in values)
+        for key, values in (("eligible", due), ("selected", selected),
+                            ("attempted", lists["attempted"]), ("deferred", lists["deferred"]))}
+        for lane in ("fresh", "backlog")}
+    summary["reviewReplayDeferred"] = defer_reviews
     return document, summary
