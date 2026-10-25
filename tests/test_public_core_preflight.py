@@ -9,16 +9,23 @@ import pytest
 import yaml
 
 from scripts.publish_verify import GUARD, _finite_multiple
+from api.builders.stock_report_list_public_builder import build
 
 ROOT = Path(__file__).resolve().parents[1]
 UPLOADER = ROOT / ".github/actions/publish-data/blob_upload.js"
 
 
 def reports(folder):
+    list_names = {
+        "stock_report_public.json": "stock_report_list_public.json",
+        "us_stock_report_public.json": "us_stock_report_list_public.json",
+        "us_stock_report_us_smallcap.json": "us_smallcap_report_list_public.json",
+    }
     for name, cfg in GUARD.items():
         rows = [{"ticker": f"{i:06}", "facts": {"PER": "-1.5", "PBR": 0}}
                 for i in range(cfg["min_n"])]
-        (folder / name).write_text(json.dumps({"stocks": rows}))
+        (folder / name).write_text(json.dumps({"_meta": {"generated_at": "2026-10-26T00:00:00+09:00"}, "stocks": rows}))
+        build(folder / name, folder / list_names[name])
     # An empty event feed is legitimate and outside the three core universes.
     (folder / "urgent_alerts.json").write_text("[]")
 
@@ -37,7 +44,7 @@ def test_valid_core_reports_and_zero_optional_feed_pass(tmp_path):
     reports(tmp_path)
     result = run(tmp_path)
     assert result.returncode == 0, result.stderr
-    assert "3/3 core reports passed" in result.stdout
+    assert "6/6 core reports and lists passed" in result.stdout
 
 
 @pytest.mark.parametrize("name", list(GUARD))
@@ -87,7 +94,8 @@ def test_same_guard_runs_after_overlays_before_both_public_writes():
     overlay = next(i for i, s in enumerate(steps) if "publish_earnings_calendar.cjs" in s.get("run", ""))
     github = next(i for i, s in enumerate(steps) if s.get("id") == "publish_primary")
     blob = next(i for i, s in enumerate(steps) if s["name"].startswith("Dual-write"))
-    assert overlay < check < github < blob
+    listing = next(i for i, s in enumerate(steps) if s["name"] == "Build Discovery lists from final staged public reports")
+    assert overlay < listing < check < github < blob
     assert not steps[check].get("continue-on-error")
 
 

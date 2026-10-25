@@ -97,6 +97,7 @@ def endpoint(monkeypatch):
     monkeypatch.setitem(sys.modules, "api.portfolio_core.portfolio_price_fetch", price_fetch)
     analysis = _load("api.member_map_analysis", API_DIR / "member_map_analysis.py")
     monkeypatch.setitem(sys.modules, "api.member_map_analysis", analysis)
+    monkeypatch.setattr(analysis, "fetch_publisher_prepared_business", Mock(return_value=(None, None)))
     return analysis, storage
 
 
