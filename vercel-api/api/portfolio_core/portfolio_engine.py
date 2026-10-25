@@ -11,8 +11,8 @@ from copy import deepcopy
 from datetime import date, datetime, timezone
 import hashlib
 import json
-import logging
 import re
+import sys
 import threading
 import unicodedata
 
@@ -62,7 +62,17 @@ _TICKER = {"KR": re.compile(r"[0-9]{6}\Z"),
 _PUBLIC_BUNDLE_REVISION = re.compile(r"[0-9a-f]{64}\Z", re.ASCII)
 _AUTOMATIC_EVIDENCE_FILE = "member_map_auto_evidence.json"
 _AUTOMATIC_EVIDENCE_SCOPE = "published-automatic-evidence-catalog"
-_LOGGER = logging.getLogger(__name__)
+_PREPARED_STATUSES = frozenset({"accepted", "fallback_unbounded", "fallback_rejected",
+                                "fallback_missing", "reuse_cached"})
+
+
+def _log_prepared_status(status):
+    """Emit fixed public-index diagnostics through the endpoint's stderr path."""
+    try:
+        if status in _PREPARED_STATUSES:
+            print(f"portfolio_prepared_business status={status}", file=sys.stderr)
+    except Exception:
+        pass
 
 
 class _ProjectedPublicIndexCache:
@@ -125,25 +135,24 @@ class _ProjectedPublicIndexCache:
         # Called under the existing public-index lock, never with a selection.
         revision = _business_index_revision(documents, by_id)
         if revision is None:
-            _LOGGER.info("portfolio_prepared_business status=fallback_unbounded")
+            _log_prepared_status("fallback_unbounded")
             return _business_material_index(documents, by_id)
         prepared = checked_business_index(
             prepared_business_index, publisher_receipt, revision, documents, by_id
         ) if prepared_business_index is not None else None
         if prepared is not None:
-            _LOGGER.info("portfolio_prepared_business status=accepted")
+            _log_prepared_status("accepted")
             self._business_index = prepared
             self._business_revision = revision
             return prepared
         if self._business_index is None or self._business_revision != revision:
-            _LOGGER.info("portfolio_prepared_business status=%s",
-                         "fallback_rejected" if prepared_business_index is not None
-                         else "fallback_missing")
+            if prepared_business_index is not None:
+                _log_prepared_status("fallback_rejected")
             built = _business_material_index(documents, by_id)
             self._business_index = built
             self._business_revision = revision
         else:
-            _LOGGER.info("portfolio_prepared_business status=reuse_cached")
+            _log_prepared_status("reuse_cached")
         return self._business_index
 
     def get(self, public_documents, revision, *, prepared_business_index=None, publisher_receipt=None):

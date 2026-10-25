@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 import importlib
 import io
 import json
+import logging
 import os
 from pathlib import Path
 import sys
@@ -56,7 +57,7 @@ def _bytes(value):
     return json.dumps(value, sort_keys=True, ensure_ascii=True, allow_nan=False).encode()
 
 
-def test_prepared_public_index_skips_matching_and_preserves_response(engine, documents, monkeypatch, caplog):
+def test_prepared_public_index_skips_matching_and_preserves_response(engine, documents, monkeypatch, capsys):
     positions = [{"ticker": "001111", "market": "KR"},
                  {"ticker": "002222", "market": "KR"}]
     before = _bytes(engine.analyze_portfolio(positions, documents, public_bundle_revision="a" * 64))
@@ -66,22 +67,33 @@ def test_prepared_public_index_skips_matching_and_preserves_response(engine, doc
     receipt = engine.prepared_business_publisher_receipt(artifact)
     engine._reset_projection_cache_for_tests()
     monkeypatch.setattr(engine, "_business_material_index", Mock(side_effect=AssertionError("matcher ran")))
-    with caplog.at_level("INFO", logger=engine.__name__):
+    capsys.readouterr()
+    previous_disable = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    try:
         public_index = engine.prepare_public_index(
             documents, "a" * 64, prepared_business_index=artifact, publisher_receipt=receipt
         )
-    assert [record.message for record in caplog.records if record.name == engine.__name__] == [
-        "portfolio_prepared_business status=accepted"
-    ]
+    finally:
+        logging.disable(previous_disable)
+    assert capsys.readouterr().err == "portfolio_prepared_business status=accepted\n"
     assert public_index["business_materials"] == artifact["index"]
     after = _bytes(engine.analyze_portfolio(positions, documents, public_bundle_revision="a" * 64))
     assert after == before
 
 
+def test_prepared_diagnostic_rejects_dynamic_fields_and_cannot_break_response(engine, monkeypatch, capsys):
+    engine._log_prepared_status("accepted member=private")
+    assert capsys.readouterr().err == ""
+    monkeypatch.setattr(engine, "print", Mock(side_effect=OSError("stderr unavailable")),
+                        raising=False)
+    engine._log_prepared_status("accepted")
+
+
 @pytest.mark.parametrize("mutation", ["missing-receipt", "stale-receipt", "wrong-digest",
                                      "wrong-source", "wrong-version", "wrong-code",
                                      "changed-input", "broken-links", "extra-private-field"])
-def test_invalid_preparation_uses_existing_matcher(engine, documents, monkeypatch, mutation):
+def test_invalid_preparation_uses_existing_matcher(engine, documents, monkeypatch, capsys, mutation):
     artifact = engine.build_prepared_business_index(documents)
     candidate, inputs = deepcopy(artifact), deepcopy(documents)
     receipt = engine.prepared_business_publisher_receipt(candidate)
@@ -113,6 +125,7 @@ def test_invalid_preparation_uses_existing_matcher(engine, documents, monkeypatc
     prepared = engine.prepare_public_index(
         inputs, "b" * 64, prepared_business_index=candidate, publisher_receipt=receipt
     )
+    assert capsys.readouterr().err == "portfolio_prepared_business status=fallback_rejected\n"
     assert build.call_count == 1
     assert prepared["business_materials"]["coverage"]["status"] != "forged"
 
@@ -202,7 +215,7 @@ def test_fixed_public_transport_is_bounded_and_never_reads_member_inputs(engine,
 
 
 def test_failed_fixed_public_reads_are_negative_cached_for_at_most_one_minute(
-        engine, documents, monkeypatch, caplog):
+        engine, documents, monkeypatch, capsys):
     helper = importlib.import_module(engine.__package__ + ".portfolio_prepared_business")
     helper._FETCH_CACHE = None
     calls = []
@@ -217,12 +230,9 @@ def test_failed_fixed_public_reads_are_negative_cached_for_at_most_one_minute(
     assert helper.fetch_publisher_prepared_business() == (None, None)
     assert helper.fetch_publisher_prepared_business() == (None, None)
     assert len(calls) == 2
-    with caplog.at_level("INFO", logger=engine.__name__):
-        engine.prepare_public_index(documents, "e" * 64,
-                                    prepared_business_index=None, publisher_receipt=None)
-    assert [record.message for record in caplog.records if record.name == engine.__name__] == [
-        "portfolio_prepared_business status=fallback_missing"
-    ]
+    engine.prepare_public_index(documents, "e" * 64,
+                                prepared_business_index=None, publisher_receipt=None)
+    assert capsys.readouterr().err == ""
     clock[0] = 160.0
     assert helper.fetch_publisher_prepared_business() == (None, None)
     assert len(calls) == 4
@@ -232,7 +242,7 @@ def test_failed_fixed_public_reads_are_negative_cached_for_at_most_one_minute(
     b'{"invalid":',
     b"[" * 40 + b"0" + b"]" * 40,
     b"[" * 1200 + b"0" + b"]" * 1200,
-])
+], ids=["malformed", "depth-40", "depth-1200"])
 def test_malformed_or_deep_public_json_falls_back(engine, documents, monkeypatch, payload):
     helper = importlib.import_module(engine.__package__ + ".portfolio_prepared_business")
 
