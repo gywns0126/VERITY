@@ -1,10 +1,13 @@
 """Public exhibit layout variants; no source calls or ownership inference."""
 import pytest
 import json
+import gzip
+import hashlib
+import os
 from pathlib import Path
 import yaml
 
-from api.intelligence.company_structure_sec import parse_exhibit, find_exhibit
+from api.intelligence.company_structure_sec import PARSER_REVISION, parse_exhibit, find_exhibit
 from api.collectors.company_structure_us_refresh import latest_metadata
 
 META = {"cik": "0000004904", "accession": "0000004904-26-000018",
@@ -31,6 +34,124 @@ CMI_META = {"cik": "0000026172", "accession": "0000026172-26-000009",
             "filedDate": "2026-02-10", "periodEnd": "2025-12-31",
             "url": "https://www.sec.gov/Archives/edgar/data/26172/000002617226000009/cmi202510-kex21.htm",
             "issuerName": "CUMMINS INC"}
+
+
+def _registrant_pages(title="American Electric Power Company, Inc. Subsidiaries of the Registrant",
+                      gap="", second_name="Second Company GmbH"):
+    header = "<tr><td>Name of Company</td><td>Jurisdiction</td></tr>"
+    first = f"<table>{header}<tr><td>First Company LLC</td><td>Delaware</td></tr></table>"
+    second = f"<table>{header}<tr><td>{second_name}</td><td>Germany</td></tr></table>"
+    return f"<p>{title}</p>{first}{gap}{second}"
+
+
+def _blank_name_exhibit(title="Subsidiaries of American Electric Power Company, Inc.",
+                        name="First Company LLC", after=""):
+    return (f"<p>{title}</p><table><tr><td></td><td>Jurisdiction of Incorporation</td></tr>"
+            f"<tr><td>{name}</td><td>Delaware</td></tr></table>{after}")
+
+
+def test_exact_registrant_title_continues_identical_headers_without_direct_parent_inference():
+    result = parse_exhibit(_registrant_pages(), META)
+    assert result["status"] == "parsed"
+    assert [row["name"] for row in result["rows"]] == ["First Company LLC", "Second Company GmbH"]
+    assert [row["sourceRow"]["tableIndex"] for row in result["rows"]] == [0, 1]
+    assert all(row["ownershipPct"] is None and row["directOwnership"] == "unspecified"
+               for row in result["rows"])
+
+
+@pytest.mark.parametrize("changes,reason", [
+    ({"title": "Subsidiaries of the Registrant"}, "multiple-tables-issuer-scope-unbound"),
+    ({"title": "Other Inc. Subsidiaries of the Registrant"}, "multiple-tables-issuer-scope-unbound"),
+    ({"gap": "<p>Subsidiaries of Other Inc.</p>"}, "continuation-scope-text"),
+    ({"gap": "<p>Joint ventures</p>"}, "continuation-scope-text"),
+    ({"title": "American Electric Power Company, Inc. Subsidiaries of the Registrant As of January 1, 2026"},
+     "exhibit-as-of-differs-from-period-end"),
+    ({"second_name": "Second Company GmbH Other Products"}, "ambiguous-row-binding"),
+    ({"second_name": "Second Company GmbH (7)"}, "ambiguous-row-binding"),
+])
+def test_registrant_page_near_misses_remain_held(changes, reason):
+    result = parse_exhibit(_registrant_pages(**changes), META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == reason
+
+
+@pytest.mark.parametrize("issuer_name", [None, "Other Inc."])
+def test_registrant_page_needs_matching_metadata_issuer(issuer_name):
+    result = parse_exhibit(_registrant_pages(), {**META, "issuerName": issuer_name})
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "multiple-tables-issuer-scope-unbound"
+
+
+def test_single_blank_name_header_requires_exact_issuer_and_keeps_nonexhaustive_scope():
+    result = parse_exhibit(_blank_name_exhibit(), META)
+    assert result["status"] == "parsed"
+    assert len(result["rows"]) == 1
+    assert result["rows"][0]["name"] == "First Company LLC"
+    assert result["scope"] == "reported-subsidiary-list-not-exhaustive"
+    assert result["rows"][0]["directOwnership"] == "unspecified"
+
+
+@pytest.mark.parametrize("html,reason", [
+    (_blank_name_exhibit(title="Subsidiaries of the Registrant"), "issuer-scope-unbound"),
+    (_blank_name_exhibit(title="Subsidiaries of Other Inc."), "issuer-scope-unbound"),
+    (_blank_name_exhibit(title="Former Subsidiaries of American Electric Power Company, Inc."),
+     "issuer-scope-unbound"),
+    (_blank_name_exhibit(title="Other Inc. Subsidiaries of American Electric Power Company, Inc."),
+     "issuer-scope-unbound"),
+    (_blank_name_exhibit(after="<p>Subsidiaries of Other Inc.</p>"), "continuation-scope-text"),
+    (_blank_name_exhibit(title="Subsidiaries of American Electric Power Company, Inc. As of January 1, 2026"),
+     "issuer-scope-unbound"),
+    (_blank_name_exhibit(name="First Company LLC (7)"), "ambiguous-row-binding"),
+    (_blank_name_exhibit(name="First Company LLC (57.5%)"), "ambiguous-row-binding"),
+])
+def test_blank_name_header_near_misses_remain_held(html, reason):
+    result = parse_exhibit(html, META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == reason
+
+
+@pytest.mark.parametrize("issuer_name", [None, "Other Inc."])
+def test_blank_name_header_needs_matching_metadata_issuer(issuer_name):
+    result = parse_exhibit(_blank_name_exhibit(), {**META, "issuerName": issuer_name})
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "issuer-scope-unbound"
+
+
+@pytest.mark.parametrize("ticker,digest,status,reason,row_count", [
+    ("PATK", "7ddabb4bda869511f1066d6022ea8f4d019ff16b696d784c6b79a2fbe65e89d2",
+     "needs-review", "ambiguous-row-binding", 57),
+    ("AAPL", "07440f57317859d67a3aa728a976f4711163ac8d31e2a09b0fda60ea8d56b71d",
+     "parsed", None, 19),
+    ("ADBE", "f01631480cdb7d83a321edff4d1c60add066254a2f8a93e34412123c2f838112",
+     "needs-review", "ambiguous-row-binding", 58),
+    ("IBCP", "80a5da7350153c46956b67d9ae36f59a1e3b0f7092299c09ca34582266bed8da",
+     "needs-review", "issuer-scope-unbound", 0),
+    ("WABC", "76b317d1257e55f762bb88686c5120f0049dcc46372e4d5065e1f8c7a09d0a61",
+     "needs-review", "issuer-scope-unbound", 0),
+])
+def test_saved_originals_keep_source_hash_and_review_boundary(ticker, digest, status, reason, row_count):
+    cache_dir = os.environ.get("SEC_EXHIBIT_CACHE_DIR")
+    if not cache_dir:
+        pytest.skip("set SEC_EXHIBIT_CACHE_DIR for the offline saved-original check")
+    raw = gzip.decompress((Path(cache_dir) / f"{digest}.gz").read_bytes())
+    assert hashlib.sha256(raw).hexdigest() == digest
+    ledger = json.loads((Path(__file__).resolve().parents[1] /
+                         "data/member_map_company_structure_us_sources.json").read_text())
+    cik, issuer = next((cik, item) for cik, item in ledger["issuers"].items()
+                       if ticker in item.get("tickerAliases", []))
+    review, filing = issuer.get("reviewExhibit") or issuer.get("exhibit"), issuer["filingMetadata"]
+    assert review["documentSha256"] == digest
+    result = parse_exhibit(raw, {"cik": cik, "accession": filing["accession"],
+                                 "filedDate": filing["filed_date"], "periodEnd": filing["period_end"],
+                                 "url": review["url"], "issuerName": filing["issuer_name"]})
+    assert result["parserRevision"] == PARSER_REVISION
+    assert (result["status"], result.get("reviewReason"), len(result["rows"])) == (status, reason, row_count)
+    assert result["scope"] == "reported-subsidiary-list-not-exhaustive"
+    if ticker == "PATK":
+        assert not any("Hyperform" in row["name"] for row in result["rows"])
+    if ticker == "AAPL":
+        assert all(row["ownershipPct"] is None and row["directOwnership"] == "unspecified"
+                   for row in result["rows"])
 
 
 def avt_exhibit(*, prefix="<p>Avnet, Inc.</p><p>Foreign and Domestic Subsidiaries</p>",

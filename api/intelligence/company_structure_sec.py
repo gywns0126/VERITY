@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-24-observed-country-column-v10"
+PARSER_REVISION = "2026-10-25-issuer-bound-headers-v11"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -377,6 +377,7 @@ def parse_exhibit(raw_html, metadata):
     candidates = []
     country_table = None
     registrant_header = False
+    blank_name_header = False
     all_tables = soup.find_all("table")
     for table in all_tables:
         trs = table.find_all("tr")
@@ -396,6 +397,13 @@ def parse_exhibit(raw_html, metadata):
                 if any(_norm(cell.get_text(" ", strip=True)).casefold() in {
                         "state incorporated", "country or state of organization"} for cell in cells):
                     registrant_header = True
+                break
+            if (len(all_tables) == 1 and len(cells) == 2 and not _norm(cells[0].get_text(" ", strip=True))
+                    and roles[1] == "jurisdiction"):
+                # A missing Name label is recoverable only for one issuer-bound
+                # two-column exhibit; validate its title and physical rows below.
+                candidates.append((table, trs, hi, ["name", "jurisdiction"]))
+                blank_name_header = True
                 break
     if not candidates:
         result["reviewReason"] = "explicit-name-jurisdiction-header-missing"
@@ -421,6 +429,34 @@ def parse_exhibit(raw_html, metadata):
     registrant_title = bool(root and re.search(
         r"\b" + root_pattern + r" subsidiaries of the registrant(?= |$)", heading)
         and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
+    if blank_name_header:
+        title = r"subsidiaries of " + root_pattern if root else ""
+        if (not root or not (re.fullmatch(title, heading) or
+                             re.search(r"\bexhibit (?:21|211) " + title + r"$", heading))
+                or re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading)):
+            result["reviewReason"] = "issuer-scope-unbound"
+            return result
+        header_cells = candidates[0][1][candidates[0][2]].find_all(["th", "td"], recursive=False)
+        spans = [cell.get("colspan") for cell in header_cells]
+        if any(len(cells := tr.find_all(["th", "td"], recursive=False)) != 2 or
+               [cell.get("colspan") for cell in cells] != spans or
+               any(cell.get("rowspan") for cell in cells)
+               for tr in candidates[0][1][candidates[0][2]:]):
+            result["reviewReason"] = "ambiguous-row-binding"
+            return result
+        # The observed omission note limits completeness. Any other following
+        # text could change the table's issuer or relationship scope.
+        last = list(all_tables[0].descendants)[-1]
+        following = _norm(" ".join(str(node) for node in last.next_elements
+                                   if isinstance(node, NavigableString) and not isinstance(node, Comment)
+                                   and not node.find_parent(["head", "style", "script"])))
+        omission = (r"\* Pursuant to Item 601\(b\)\(21\)\(ii\) of Regulation S-K, the names of "
+                    r"other subsidiaries of " + re.escape(metadata["issuerName"]) +
+                    r" are omitted because, considered in the aggregate, they would not constitute "
+                    r"a significant subsidiary as of the end of the year covered by this report\.")
+        if following and not re.fullmatch(omission, following, re.I):
+            result["reviewReason"] = "continuation-scope-text"
+            return result
     if registrant_header and not registrant_title:
         result["reviewReason"] = "issuer-scope-unbound"
         return result
@@ -487,8 +523,11 @@ def parse_exhibit(raw_html, metadata):
                     and not node.find_parent(["head", "style", "script"])):
                 prefix.append(str(node))
         heading = _issuer_name_key(_norm(" ".join(prefix))) or ""
+        registrant_page_title = bool(not root_first_title and not registrant_header and registrant_title and re.search(
+            r"\b" + root_pattern + r" subsidiaries of the registrant$", heading))
         if (not root or re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading)
-                or not (root_first_title or re.search(r"\bsubsidiaries of " + root_pattern + r"(?= as of |$)", heading))):
+                or not (root_first_title or registrant_page_title or
+                        re.search(r"\bsubsidiaries of " + root_pattern + r"(?= as of |$)", heading))):
             result["reviewReason"] = "multiple-tables-issuer-scope-unbound"
             return result
         if country_table is None:
@@ -605,6 +644,12 @@ def parse_exhibit(raw_html, metadata):
                 continue
             name = _current_legal_name(name)
             if name is None:
+                needs_review = True
+                continue
+            if (len(candidates) > 1 and registrant_page_title and
+                    _LEGAL_TERMINATOR.search(name) and not _complete_legal_name(name)):
+                # A complete legal name followed by free text can be two
+                # entities or a trade name in one physical cell.
                 needs_review = True
                 continue
             if "%" in name or re.search(r"\(\s*[0-9]{1,3}\s*\)$", name):
