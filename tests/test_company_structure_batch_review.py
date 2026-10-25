@@ -822,10 +822,10 @@ def test_cache_replay_failure_is_reported_without_blocking_other_collectors(tmp_
 @pytest.mark.parametrize("cik,accession,issuer,filed,period,index_sha,exhibit_sha,expected_rows", [
     ("0001056903", "0001628280-26-009114", "AMERICAN STATES WATER CO", "2026-02-18", "2025-12-31",
      "94d349a774832fd2c3e7bc18aba1bef5a682a6f927f1b62d2706dac21779d420",
-     "882e5b8b7895ce1b370eac6132cc1545693100b24f2cd6c5752c5b2edafd5553", 0),
+     "882e5b8b7895ce1b370eac6132cc1545693100b24f2cd6c5752c5b2edafd5553", 13),
     ("0001063761", "0001104659-26-019419", "SIMON PROPERTY GROUP INC.", "2026-02-25", "2025-12-31",
      "22fc1955c30aa1e8026ab3ef10f961bb86397eb9697dec4a4bccb2eca578a63a",
-     "b2cd57f2f39531572cac9d5e9c5b188ed7ce6020e325a93dbd45fc824b3466e7", 0),
+     "b2cd57f2f39531572cac9d5e9c5b188ed7ce6020e325a93dbd45fc824b3466e7", 14),
     ("0001126956", "0001193125-25-282583", "SPIRE INC", "2025-11-14", "2025-09-30",
      "3bfd8e256b11e339d2a058ef538464da3cfe3906860d82f905a135dab0ceb2e3",
      "babf8640cc42c95dd2f4b9a0d0f9fc5818f046aded9b1f64fc745248810f68c3", 21),
