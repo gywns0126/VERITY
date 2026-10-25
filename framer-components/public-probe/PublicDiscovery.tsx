@@ -3,6 +3,11 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 /**
  * 종목 발견(Discovery) — VERITY 공개 터미널 (AlphaNest). 토스 "주식 골라보기"식 좌측 탭 + 정렬표/리스트 + 로고·국기.
+ * 되돌리지 말 것: 선택 조건은 조회 순서·0건 결과로 바꾸지 않는다. 실패·미수신과 0건을 구분한다.
+ * 되돌리지 말 것: 우측 상세는 내용 높이(Fit)를 유지하며 sticky로 표시한다. 내부 세로 스크롤과 화면 높이 제한을 복원하지 않는다. 바깥 배경은 페이지 바탕을 드러낸다.
+ * 조건 설명은 기존 판정·정렬과 일치시킨다. 낮은 배수를 저평가·우량 판정으로 바꾸지 않으며, 표시 이유는 수신 자료만 사용한다.
+ * 수급 전환은 같은 종목의 최근 두 관측값만 비교한다. 결손·과거 수신을 신규 편입으로 취급하지 않는다.
+ * 수익률 배지는 당시 구성·동일비중·수정주가의 완전한 비교만 사용한다. 결손/만료/시장 혼합이면 순위를 숨긴다.
  *
  * 🚨 헌법 가드 (RULE 7 / held-2027 / feedback_scope):
  *  - 모든 리스트·표 = 발행된 사실(stock_report_public + insider_trades + stock_flow_5d + disclosure_forensics) 위 결정론적 규칙. 자체 점수 0 (RULE 6 통과).
@@ -13,7 +18,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
  * 🚨 결정 동선 링킹(2026-06-21): URL `?sector=X`·`?screen=Y` 딥링크 수용 → 리포트/결정패널서 "동종업계 더보기" 등으로 필터된 채 진입.
  * 레이아웃 = 페이지 분할 + 넓은 화면(≥980)만 master-detail(표 좌 + 클릭 종목 우측 패널). 그 외 = 행 클릭 시 reportPath?q=ticker.
  * 🚨 모바일(narrow<620): 표는 카드 리스트 강제(8컬럼 가로스크롤 회피) + 표/리스트 토글 숨김. 상단 탭 바 = sticky + 하단 그림자(카드가 밑으로 미끄러지는 토스식 경계).
- * 🚨 sticky: 탭/패널 = wrap(자연흐름) → 뷰포트 기준 top=navTop(네브바 회피). 표헤더 = overflowX:auto 표카드가 스크롤 컨테이너라 top=0.
+ * 🚨 sticky: 탭 = wrap(자연흐름) → 뷰포트 기준 top=navTop(네브바 회피). 우측 상세 = top 16px, Fit 높이, 내부 세로 스크롤 없음. 표헤더 = overflowX:auto 표카드가 스크롤 컨테이너라 top=0.
  *   좌측 탭 = 흰박스 없이 회색 배경에 직접(활성만 흰 알약). 모바일 탭바 = full-bleed(좌우 -pad) + 상하 여백 균형 + 프로스트 글래스(반투명 0.7 + backdrop blur, 스크롤 콘텐츠가 뿌옇게 밑으로 사라짐, PM "탭만" 유지).
  * 🚨 TABLE_MIN ≥ 컬럼 최소폭 합(≈776) — 작으면 선택행 배경이 마지막 컬럼서 끊김.
  */
@@ -26,6 +31,7 @@ interface Props {
     usInsiderUrl?: string
     flowUrl: string
     forensicsUrl: string
+    performanceUrl?: string
     apiBase: string
     reportPath: string
     dark: boolean
@@ -186,8 +192,10 @@ function bfLogoSrc(
 }
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 
+// 🚨 2026-07-24 테마 = 자체 내장 CSS 변수(--an-dsc-*) 구동. JS 다크 감지 전면 제거 + 헤드 CSS 의존 제거.
+//   <style>{AN_PALETTE} 정적 HTML 정합. chevron data-URI = var 불가라 고정 gray(#8b95a1). 되돌리지 말 것.
 const LIGHT = {
-    bg: "#f2f4f6",
+    bg: "#f8f9fb",
     card: "#ffffff",
     ink: "#191f28",
     sub: "#4e5968",
@@ -199,10 +207,13 @@ const LIGHT = {
     vgS: "#e7faf0",
     vt: "#6c5ce7",
     vtS: "#f0edff",
-    glass: "rgba(242,244,246,0.7)",
+    glass: "rgba(248,249,251,0.7)",
+    skBase: "#e9edf1",
+    skHi: "#f3f5f7",
+    shadowStrong: "rgba(0,0,0,0.14)",
 }
 const DARK = {
-    bg: "#0f1318",
+    bg: "#1d242c",
     card: "#171c23",
     ink: "#e3e7ec",
     sub: "#9aa4b1",
@@ -214,8 +225,27 @@ const DARK = {
     vgS: "#0f241c",
     vt: "#a99bff",
     vtS: "#241f3a",
-    glass: "rgba(15,19,24,0.7)",
+    glass: "rgba(29,36,44,0.7)",
+    skBase: "#222a33",
+    skHi: "#2d3742",
+    shadowStrong: "rgba(0,0,0,0.5)",
 }
+
+// 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-dsc-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
+const _ANP = "dsc"
+const AN_PALETTE =
+    "body{" +
+    Object.keys(LIGHT)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k])
+        .join(";") +
+    "}" +
+    'body[data-framer-theme="dark"]{' +
+    Object.keys(DARK)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k])
+        .join(";") +
+    "}"
+const C: Record<string, string> = {}
+for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
 const KR_MK = ["KOSPI", "KOSDAQ", "KONEX"]
@@ -398,9 +428,13 @@ interface Ctx {
 }
 interface Screen {
     id: string
+    group: "전체" | "수급·자본변동" | "가치·수익성" | "재무·자산가치"
     tab: string
     title: string
     rule: string
+    note: string
+    order: string
+    peerKeys?: string[]
     edge?: boolean
     pred: (s: any, ctx: Ctx) => boolean
     chips: string[]
@@ -409,19 +443,25 @@ interface Screen {
 const SCREENS: Screen[] = [
     {
         id: "all",
+        group: "전체",
         tab: "전체",
         title: "전체 종목",
-        rule: "전 종목 — 정렬·필터로 탐색",
+        rule: "현재 수신한 종목 리포트 안에서 정렬·필터로 탐색",
+        note: "거래소 전체 상장종목을 빠짐없이 조회한 목록은 아니에요. 필요한 지표가 없는 종목은 추가 조건에서 제외될 수 있어요.",
+        order: "시가총액 큰 순",
         pred: () => true,
         chips: ["PBR", "PER", "ROE"],
         sortBy: (s) => -(parseCap((s.facts || {})["시가총액"]) ?? -1),
     },
     {
         id: "insider_buy",
+        group: "수급·자본변동",
         tab: "내부자 순매수",
         edge: true,
         title: "내부자(임원·주요주주)가 순매수한 회사",
-        rule: "DART 내부자 순증감 > 0",
+        rule: "국내 DART·미국 SEC Form 4 · 내부자 순증감 > 0",
+        note: "수집된 내부자 순증감 합계예요. 거래 사유·수집 기간을 원문에서 확인해야 하며, 회사 전망을 판정한 결과는 아니에요.",
+        order: "내부자 순증감 주식 수 큰 순",
         pred: (s, ctx) => {
             const e = ctx.insiderMap[s.ticker]
             return !!(e && Number(e.net_change) > 0)
@@ -432,10 +472,13 @@ const SCREENS: Screen[] = [
     },
     {
         id: "insider_dom",
+        group: "수급·자본변동",
         tab: "내부자 매수우세",
         edge: true,
         title: "내부자 매수 건수가 매도보다 많은 회사",
-        rule: "DART 내부자 매수 건수 > 매도 건수",
+        rule: "국내 DART·미국 SEC Form 4 · 매수 건수 > 매도 건수",
+        note: "건수 차이로 거른 목록이에요. 거래 금액·주식 수의 크기나 매수 이유는 별도로 확인해야 해요.",
+        order: "매수·매도 건수 차이 큰 순",
         pred: (s, ctx) => {
             const e = ctx.insiderMap[s.ticker]
             return !!(e && Number(e.buy_n) > Number(e.sell_n))
@@ -448,10 +491,13 @@ const SCREENS: Screen[] = [
     },
     {
         id: "foreign_buy",
+        group: "수급·자본변동",
         tab: "외국인 순매수",
         edge: true,
         title: "외국인이 최근 순매수한 회사",
-        rule: "네이버 수급 · 최근일 외국인 순매매 > 0",
+        rule: "네이버 수급 · 수신 자료의 마지막 거래일 외국인 순매매 > 0",
+        note: "오늘이나 장중 거래를 뜻하지 않아요. 종목별 마지막 거래일과 순매수 규모를 함께 확인해주세요.",
+        order: "외국인 순매매 주식 수 큰 순",
         pred: (s, ctx) => {
             const f = ctx.flowMap[s.ticker]
             return !!(f && f.length && Number(f[f.length - 1].foreign_net) > 0)
@@ -464,19 +510,26 @@ const SCREENS: Screen[] = [
     },
     {
         id: "dilution_hist",
+        group: "수급·자본변동",
         tab: "유증·CB 이력",
         edge: true,
         title: "유상증자·전환사채·BW 발행 이력이 있는 회사",
         rule: "DART 공시 — 자본조달성 발행(유증/CB/BW) 1건 이상 (사실 빈도)",
+        note: "수집된 공시 이력의 건수예요. 발표와 실제 발행·전환은 다를 수 있고, 건수만으로 희석 규모를 판단하지 않아요.",
+        order: "수집된 유증·CB·BW 공시 건수 큰 순",
         pred: (s, ctx) => dilCount(ctx.forensicsMap[s.ticker]) > 0,
         chips: ["PBR", "PER"],
         sortBy: (s, ctx) => -dilCount(ctx.forensicsMap[s.ticker]),
     },
     {
         id: "value_quality_strict",
-        tab: "저평가+우량",
-        title: "업종보다 싸고, 더 잘 버는 회사",
-        rule: "PBR·PER 업종 중앙값 이하 + ROE 업종 중앙값 이상",
+        group: "가치·수익성",
+        tab: "세 지표 비교",
+        title: "업종보다 PBR·PER은 낮고 ROE는 높은 회사",
+        rule: "PBR·PER < 업종 중앙값 + ROE > 업종 중앙값",
+        note: "세 비교 조건을 동시에 적용해요. 낮은 배수와 높은 ROE만으로 저평가·우량 여부가 확정되지는 않아요.",
+        order: "PBR 낮은 순",
+        peerKeys: ["PBR", "PER", "ROE"],
         pred: (s) =>
             pvs(s, "PBR") === "below" &&
             pvs(s, "PER") === "below" &&
@@ -486,50 +539,135 @@ const SCREENS: Screen[] = [
     },
     {
         id: "value_quality",
-        tab: "싸고 잘 버는",
-        title: "업종 대비 저평가인데 자본효율은 높은 회사",
-        rule: "PBR 업종 중앙값 이하 + ROE 업종 중앙값 이상",
+        group: "가치·수익성",
+        tab: "PBR·ROE 비교",
+        title: "업종보다 PBR은 낮고 ROE는 높은 회사",
+        rule: "PBR < 업종 중앙값 + ROE > 업종 중앙값",
+        note: "장부가 대비 가격과 자기자본이익률을 함께 비교해요. 사업 전망·일회성 이익·부채는 별도로 확인해주세요.",
+        order: "PBR 낮은 순",
+        peerKeys: ["PBR", "ROE"],
         pred: (s) => pvs(s, "PBR") === "below" && pvs(s, "ROE") === "above",
         chips: ["PBR", "ROE", "부채비율"],
         sortBy: (s) => num((s.facts || {}).PBR) ?? 99,
     },
     {
         id: "per_cheap",
-        tab: "PER 저평가",
-        title: "이익 대비 업종보다 싸게 거래되는 회사",
-        rule: "PER 업종 중앙값 이하",
+        group: "가치·수익성",
+        tab: "낮은 PER",
+        title: "PER이 업종 중앙값보다 낮은 회사",
+        rule: "PER < 업종 중앙값",
+        note: "이익 대비 가격 배수가 낮다는 조건이에요. 이익의 기준 기간과 일회성 요인을 확인해야 해요.",
+        order: "PER 낮은 순",
+        peerKeys: ["PER"],
         pred: (s) => pvs(s, "PER") === "below",
         chips: ["PER", "ROE", "시가총액"],
         sortBy: (s) => num((s.facts || {}).PER) ?? 999,
     },
     {
         id: "roe_top",
-        tab: "자본효율 상위",
-        title: "업종 평균보다 자본효율이 높은 회사",
-        rule: "ROE 업종 중앙값 이상",
+        group: "가치·수익성",
+        tab: "높은 ROE",
+        title: "ROE가 업종 중앙값보다 높은 회사",
+        rule: "ROE > 업종 중앙값",
+        note: "ROE는 자기자본 대비 이익 비율이에요. 평균이 아닌 중앙값과 비교하며, 높은 값이 수익 지속성을 보장하지는 않아요.",
+        order: "ROE 높은 순",
+        peerKeys: ["ROE"],
         pred: (s) => pvs(s, "ROE") === "above",
         chips: ["ROE", "PBR", "부채비율"],
         sortBy: (s) => -(num((s.facts || {}).ROE) ?? -1),
     },
     {
         id: "low_debt",
-        tab: "가벼운 빚",
-        title: "빚 부담이 업종보다 가벼운 회사",
-        rule: "부채비율 업종 중앙값 이하",
+        group: "재무·자산가치",
+        tab: "낮은 부채비율",
+        title: "부채비율이 업종 중앙값보다 낮은 회사",
+        rule: "부채비율 < 업종 중앙값",
+        note: "부채비율 비교값이 있는 종목만 포함돼요. 미국 D/E를 이 조건에 대신 넣거나, 낮은 부채비율을 재무 안전 판정으로 해석하지 않아요.",
+        order: "부채비율 낮은 순",
+        peerKeys: ["부채비율"],
         pred: (s) => pvs(s, "부채비율") === "below",
         chips: ["부채비율", "ROE", "PBR"],
         sortBy: (s) => num((s.facts || {})["부채비율"]) ?? 999,
     },
     {
         id: "below_book",
-        tab: "장부가 밑",
-        title: "장부가보다 싸게 거래되는 회사",
-        rule: "PBR 1.0 미만 (자산 대비 저평가)",
+        group: "재무·자산가치",
+        tab: "PBR 1 미만",
+        title: "수신한 PBR이 1 미만인 회사",
+        rule: "PBR < 1.0",
+        note: "장부가 대비 가격 비율을 보는 조건이에요. 0·음수 여부와 자본 상태를 먼저 확인해야 하며, 자산가치나 저평가를 확정하지 않아요.",
+        order: "PBR 낮은 순",
         pred: (s) => (num((s.facts || {}).PBR) ?? 9) < 1.0,
         chips: ["PBR", "ROE", "배당수익률"],
         sortBy: (s) => num((s.facts || {}).PBR) ?? 99,
     },
 ]
+
+
+// Explain the existing predicate; never reclassify or fill absent values with zero.
+function discoveryDisplayValue(v: any): string {
+    return typeof v === "number" && Number.isFinite(v) ? String(v) : typeof v === "string" && v.trim() ? v.trim() : "미제공"
+}
+type DiscoveryFlowChange = { kind: "entered" | "continuing" | "older" | "unknown" | "not_buy"; text: string }
+function discoveryFlowDate(value: any): string {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return ""
+    const parsed = new Date(value + "T00:00:00Z")
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value ? value : ""
+}
+function discoveryFlowValue(value: any): number | null {
+    if (typeof value !== "number" && (typeof value !== "string" || !/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(value.trim()))) return null
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+function discoveryFlowChange(rows: any, asOf: string): DiscoveryFlowChange {
+    const unknown: DiscoveryFlowChange = { kind: "unknown", text: "비교 불가 · 최근 두 관측일의 수급값이 필요해요." }
+    if (!Array.isArray(rows) || !rows.length) return unknown
+    const last = rows[rows.length - 1], previous = rows[rows.length - 2]
+    const lastDate = discoveryFlowDate(last?.date), previousDate = discoveryFlowDate(previous?.date)
+    if (!lastDate || !asOf || lastDate > asOf) return unknown
+    if (lastDate < asOf) return { kind: "older", text: `과거 수신 · ${lastDate} 자료 (최신 수신일 ${asOf}과 다름)` }
+    const current = discoveryFlowValue(last?.foreign_net), before = discoveryFlowValue(previous?.foreign_net)
+    // Never skip a missing penultimate value to compare against an older observation.
+    if (!previousDate || previousDate >= lastDate || current === null || before === null) return unknown
+    const values = `${previousDate} ${before.toLocaleString("ko-KR")}주 → ${lastDate} ${current.toLocaleString("ko-KR")}주`
+    if (current <= 0) return { kind: "not_buy", text: `현재 순매수 조건 아님 · ${values}` }
+    return { kind: before <= 0 ? "entered" : "continuing", text: `${before <= 0 ? "순매수 전환" : "순매수 지속"} · ${values}` }
+}
+function discoveryFlowHistory(flowMap: Record<string, any[]>) {
+    let asOf = ""
+    for (const rows of Object.values(flowMap)) {
+        const date = Array.isArray(rows) ? discoveryFlowDate(rows[rows.length - 1]?.date) : ""
+        if (date > asOf) asOf = date
+    }
+    const byTicker: Record<string, DiscoveryFlowChange> = {}
+    for (const [ticker, rows] of Object.entries(flowMap)) byTicker[ticker] = discoveryFlowChange(rows, asOf)
+    return { asOf, byTicker }
+}
+function discoveryFlowCoverage(stocks: any[], byTicker: Record<string, DiscoveryFlowChange>) {
+    const counts = { total: stocks.length, comparable: 0, entered: 0, older: 0, unknown: 0 }
+    for (const stock of stocks) {
+        const kind = byTicker[stock.ticker]?.kind
+        if (kind === "entered" || kind === "continuing") counts.comparable++
+        if (kind === "entered") counts.entered++
+        else if (kind === "older") counts.older++
+        else if (kind !== "continuing") counts.unknown++
+    }
+    return counts
+}
+function discoveryReason(sc: Screen, s: any, ctx: Ctx): string {
+    if (sc.peerKeys) return sc.peerKeys.map((key) => {
+        const row = (s.peer?.rows || []).find((r: any) => r.key === key)
+        const direction = row?.vs === "below" ? "낮음" : row?.vs === "above" ? "높음" : row?.vs === "equal" ? "같음" : "비교 미제공"
+        return key + " " + discoveryDisplayValue(row?.value) + " / 업종 중앙값 " + discoveryDisplayValue(row?.median) + " (" + direction + ")"
+    }).join(" · ")
+    const ins = ctx.insiderMap[s.ticker]
+    if (sc.id === "insider_buy") return "수집된 내부자 순증감 " + discoveryDisplayValue(ins?.net_change) + "주"
+    if (sc.id === "insider_dom") return "수집된 매수 " + discoveryDisplayValue(ins?.buy_n) + "건 / 매도 " + discoveryDisplayValue(ins?.sell_n) + "건"
+    if (sc.id === "foreign_buy") { const rows = ctx.flowMap[s.ticker] || [], row = rows[rows.length - 1]; return "거래일 " + discoveryDisplayValue(row?.date) + " · 외국인 순매매 " + discoveryDisplayValue(row?.foreign_net) + "주" }
+    if (sc.id === "dilution_hist") return ctx.forensicsMap[s.ticker]?.counts ? "수집된 유증·CB·BW 공시 " + dilCount(ctx.forensicsMap[s.ticker]) + "건" : "공시 이력 미제공"
+    if (sc.id === "below_book") return "PBR " + discoveryDisplayValue(s.facts?.PBR) + " · 적용 조건 1 미만"
+    return "현재 수신한 종목 리포트에 포함돼 있어요."
+}
 
 const COLS: {
     key: string
@@ -556,53 +694,168 @@ function metricNum(s: any, key: string): number | null {
     return num(f[key])
 }
 
-function readBodyDark(): boolean {
-    // 첫 페인트 flash 방지 — body 속성 미설정(마운트 직후) 시 토글 저장 선호(localStorage) → OS 순 폴백.
-    // PublicThemeToggle 이 verity_theme 로 저장 + body[data-framer-theme] 설정 = 동일 소스라 첫 페인트부터 정합.
+type DiscoveryKind = "stocks" | "flows" | "performance"
+const EMPTY_DISCOVERY_DOCS: any[] = []
+const EMPTY_DISCOVERY_FLOWS: Record<string, any[]> = {}
+// Public artifacts only. Revalidation never replaces a successful document with a failed response.
+const discoveryPublicDocs = new Map<string, any>()
+const discoveryPublicDetails = new Map<string, any>()
+function discoveryListUrl(url: string | undefined, filename: string): string | undefined {
+    if (!url) return url
+    return url.replace(/(?:stock_report_public|us_stock_report_public|us_stock_report_us_smallcap)\.json(?=\?|#|$)/, filename)
+}
+function validDiscoveryDoc(d: any, kind: DiscoveryKind): boolean {
+    if (kind === "performance") return d?._meta?.schema === "discovery-performance-v1" && Array.isArray(d.windows)
+    if (kind === "stocks") return Array.isArray(d) || !!(d && Array.isArray(d.stocks))
+    const rows = d && (d.flows || d)
+    return !!rows && typeof rows === "object" && !Array.isArray(rows) &&
+        Object.entries(rows).every(([k, v]) => k === "_meta" ||
+            (Array.isArray(v) && v.every(row => row && typeof row === "object" && !Array.isArray(row))))
+}
+async function loadDiscoverySources(urls: string[], kind: DiscoveryKind, signal: AbortSignal) {
+    return Promise.all(urls.map(async (url) => {
+        try {
+            const r = await fetch(url, { signal })
+            if (!r.ok) return null
+            const d = await r.json()
+            return validDiscoveryDoc(d, kind) ? d : null
+        } catch { return null }
+    }))
+}
+function useDiscoverySources(urls: (string | undefined)[], kind: DiscoveryKind, retry: number) {
+    const key = JSON.stringify([...new Set(urls.filter((u): u is string => !!u))])
+    const [state, setState] = useState<{ key: string; docs: any[]; failed: number; settled: boolean } | null>(null)
+    useEffect(() => {
+        let alive = true
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 15000)
+        const selected = JSON.parse(key) as string[]
+        setState(previous => {
+            if (previous?.key === key) return previous
+            return {
+                key, docs: selected.map(url => discoveryPublicDocs.get(kind + ":" + url) || null), failed: 0,
+                settled: selected.some(url => discoveryPublicDocs.has(kind + ":" + url)) || !selected.length,
+            }
+        })
+        loadDiscoverySources(selected, kind, controller.signal).then((fresh) => {
+            clearTimeout(timer)
+            if (!alive) return
+            const docs = fresh.map((doc, index) => {
+                const cacheKey = kind + ":" + selected[index]
+                if (doc) discoveryPublicDocs.set(cacheKey, doc)
+                return doc || discoveryPublicDocs.get(cacheKey) || null
+            })
+            setState({ key, docs, failed: fresh.filter(doc => !doc).length, settled: true })
+        })
+        return () => { alive = false; clearTimeout(timer); controller.abort() }
+    }, [key, kind, retry])
+    const requested = (JSON.parse(key) as string[]).length
+    const current = state?.key === key ? state : null
+    const docs = current?.docs || EMPTY_DISCOVERY_DOCS
+    const loading = !!requested && !current?.settled
+    const received = docs.filter(Boolean).length
+    return { loading, docs, requested, received, failed: current?.failed || 0 }
+}
+function discoveryRows(docs: any[]): any[] {
+    const seen = new Set<string>()
+    return docs.flatMap((d) => Array.isArray(d) ? d : d?.stocks || []).filter((s) => {
+        const ticker = s && typeof s.ticker === "string" ? s.ticker.trim() : ""
+        if (!ticker || seen.has(ticker)) return false
+        seen.add(ticker)
+        return true
+    })
+}
+function discoveryRangeError(metric: string, min: string, max: string): string {
+    if (!metric) return ""
+    const lo = min.trim() === "" ? null : Number(min)
+    const hi = max.trim() === "" ? null : Number(max)
+    if ((lo !== null && !Number.isFinite(lo)) || (hi !== null && !Number.isFinite(hi)))
+        return "지표 범위에는 유한한 숫자를 입력해주세요."
+    return lo !== null && hi !== null && lo > hi ? "최솟값은 최댓값보다 클 수 없어요." : ""
+}
+
+const DISCOVERY_HISTORY_KEY = "__alphaNestDiscoveryV1"
+type DiscoveryHistorySnapshot = {
+    version: 1
+    screen: string
+    performancePeriod: number
+    view: string
+    sortKey: string
+    sortDir: number
+    sector: string
+    market: string
+    rangeMetric: string
+    rangeMin: string
+    rangeMax: string
+    selected: string
+    onlyFlowEntries: boolean
+    scrollY: number
+}
+function discoveryHistoryText(value: unknown, max: number): string {
+    return typeof value === "string" ? value.slice(0, max) : ""
+}
+function readDiscoveryHistorySnapshot(): DiscoveryHistorySnapshot | null {
+    if (typeof window === "undefined") return null
     try {
-        const _lsPref =
-            typeof localStorage !== "undefined"
-                ? localStorage.getItem("verity_theme")
-                : null
-        if (_lsPref === "dark") return true
-        if (_lsPref === "light") return false
-        if (typeof document !== "undefined" && document.body) {
-            const a = document.body.dataset.framerTheme
-            if (a === "dark") return true
-            if (a === "light") return false
+        const raw = window.history.state?.[DISCOVERY_HISTORY_KEY]
+        if (!raw || raw.version !== 1) return null
+        return {
+            version: 1,
+            screen: SCREENS.some((screen) => screen.id === raw.screen) ? raw.screen : "all",
+            performancePeriod: [1, 3, 6].includes(raw.performancePeriod) ? raw.performancePeriod : 3,
+            view: raw.view === "list" ? "list" : "table",
+            sortKey: COLS.some((column) => column.key === raw.sortKey) ? raw.sortKey : "cap",
+            sortDir: raw.sortDir === 1 ? 1 : -1,
+            sector: discoveryHistoryText(raw.sector, 120),
+            market: ["all", "kr", "us"].includes(raw.market) ? raw.market : "all",
+            rangeMetric: RANGE_METRICS.includes(raw.rangeMetric) ? raw.rangeMetric : "",
+            rangeMin: discoveryHistoryText(raw.rangeMin, 40),
+            rangeMax: discoveryHistoryText(raw.rangeMax, 40),
+            selected: discoveryHistoryText(raw.selected, 24),
+            onlyFlowEntries: raw.onlyFlowEntries === true,
+            scrollY: Number.isFinite(raw.scrollY) ? Math.max(0, Math.min(raw.scrollY, 10000000)) : 0,
         }
-        if (typeof localStorage !== "undefined") {
-            const s = localStorage.getItem("verity_theme")
-            if (s === "dark") return true
-            if (s === "light") return false
-        }
-        if (typeof window !== "undefined" && window.matchMedia) {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-        }
-    } catch (e) {}
-    return false
+    } catch {
+        return null
+    }
+}
+
+// Backend summaries are rechecked here; a stale or incomplete document cannot award a badge.
+function discoveryPerformance(doc: any, market: string, period: number, filtered: boolean, now = Date.now()) {
+    const unavailable = (message: string) => ({ message, winners: [] as string[], window: null as any })
+    if (market === "all") return unavailable("국장·미장을 선택하면 같은 시장 안에서 비교해요.")
+    if (filtered) return unavailable("수익률 비교는 추가 필터를 해제한 시장 전체 조건 기준이에요.")
+    const meta = doc?._meta
+    if (!meta || meta.schema !== "discovery-performance-v1" || !Array.isArray(doc.windows)) return unavailable("당시 구성과 가격 자료를 확인한 뒤 수익률을 표시해요.")
+    const expires = Date.parse(meta.valid_until), generated = Date.parse(meta.generated_at)
+    if (!Number.isFinite(expires) || !Number.isFinite(generated) || generated > now || expires <= now || expires - generated > 86400000 || now - generated > 86400000) return unavailable("수익률 자료 갱신이 필요해요. 이전 순위는 표시하지 않아요.")
+    if (meta.weighting !== "equal-weight-buy-and-hold" || meta.basis !== "split-and-dividend-adjusted-close" || meta.currency !== "market-local" || meta.costs !== "excluded") return unavailable("수익률 계산 기준을 확인 중이에요.")
+    const found = doc.windows.filter((v: any) => v?.market === market && v?.period === period)
+    if (found.length !== 1) return unavailable("선택한 기간의 비교 자료가 없어요.")
+    const w = found[0]
+    if (!discoveryFlowDate(w.start) || !discoveryFlowDate(w.end) || ![1, 3, 6].includes(period)) return unavailable("수익률 기준일을 확인 중이에요.")
+    const anchor = new Date(w.end + "T00:00:00Z"), day = anchor.getUTCDate()
+    anchor.setUTCDate(1); anchor.setUTCMonth(anchor.getUTCMonth() - period)
+    anchor.setUTCDate(Math.min(day, new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0)).getUTCDate()))
+    const anchorGap = (anchor.getTime() - Date.parse(w.start)) / 86400000
+    if (anchorGap < 0 || anchorGap > 7 || Date.parse(w.end) > now || now - Date.parse(w.end) > 8 * 86400000) return unavailable("선택한 기간과 수익률 기준일이 일치하지 않아요.")
+    const ids = SCREENS.filter(s => s.id !== "all" && (market === "kr" || !["foreign_buy", "dilution_hist", "low_debt"].includes(s.id))).map(s => s.id)
+    const validRow = (row: any) => row && Number.isInteger(row.total) && row.total >= 0 && row.priced === row.total && row.unknown === 0 && row.missing_count === 0 && Array.isArray(row.source_errors) && !row.source_errors.length && (row.status === "empty" ? row.total === 0 && row.return_pct === null : row.status === "ready" && row.total > 0 && typeof row.return_pct === "number" && Number.isFinite(row.return_pct) && row.return_pct >= -100)
+    if (w.status !== "ready" || !discoveryFlowDate(w.start) || !discoveryFlowDate(w.end) || w.start >= w.end ||
+        !Array.isArray(w.categories) || w.categories.length !== ids.length || w.categories.some((c: any) => !c || typeof c !== "object") || new Set(w.categories.map((c: any) => c.id)).size !== ids.length ||
+        !w.categories.every((c: any) => ids.includes(c.id) && validRow(c)) || !validRow(w.benchmark) || w.benchmark.status !== "ready") return unavailable("구성·가격에 결손 또는 미확인 항목이 있어 순위를 표시하지 않아요.")
+    const ranked = w.categories.filter((c: any) => c.status === "ready")
+    if (ranked.length < 2) return unavailable("비교 가능한 조건이 충분하지 않아요.")
+    const max = Math.max(...ranked.map((c: any) => c.return_pct))
+    const winners = ranked.filter((c: any) => Math.abs(c.return_pct - max) < 1e-8).map((c: any) => c.id)
+    if (!Array.isArray(w.winners) || winners.length !== w.winners.length || !w.winners.every((id: any) => winners.includes(id)) || new Set(w.winners).size !== winners.length) return unavailable("수익률 순위 정합성을 확인 중이에요.")
+    return { message: `${w.start} ~ ${w.end} · ${market === "kr" ? "원화" : "달러"} 기준 · 비교 ${ranked.length}/${ids.length}개 조건`, winners, window: w }
 }
 
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
-// 🎨 페이지 이동 다크 번쩍임 제거(2026-07-20): 첫 마운트만 라이트(SSG/첫방문 매칭·stuck 방지) → 이후 마운트는 실제 테마 즉시.
-let __anHyd = false
-function anReadDark(): boolean {
-    if (typeof document === "undefined") return false
-    if (!__anHyd) {
-        __anHyd = true
-        return false
-    }
-    const h = document.documentElement
-        ? document.documentElement.dataset.anTheme
-        : null
-    if (h === "dark") return true
-    if (h === "light") return false
-    return !!(document.body && document.body.dataset.framerTheme === "dark")
-}
-
 export default function PublicDiscovery(props: Props) {
     const {
         stockUrl,
@@ -612,6 +865,7 @@ export default function PublicDiscovery(props: Props) {
         usInsiderUrl,
         flowUrl,
         forensicsUrl,
+        performanceUrl,
         apiBase,
         reportPath,
         dark,
@@ -620,47 +874,38 @@ export default function PublicDiscovery(props: Props) {
     } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    /* 테마 추종: body[data-framer-theme] 읽기 + 변경 감지 (캔버스는 dark prop 정적) */
-    const [themeDark, setThemeDark] = useState<boolean>(() =>
-        RenderTarget.current() === RenderTarget.canvas ? !!dark : anReadDark()
-    )
-    useEffect(() => {
-        if (onCanvas) return
-        const read = () => {
-            const t =
-                typeof document !== "undefined" && document.body
-                    ? document.body.dataset.framerTheme
-                    : ""
-            setThemeDark(t === "dark")
-        }
-        read()
-        if (
-            typeof MutationObserver === "undefined" ||
-            typeof document === "undefined" ||
-            !document.body
-        )
-            return
-        const obs = new MutationObserver(read)
-        obs.observe(document.body, {
-            attributes: true,
-            attributeFilter: ["data-framer-theme"],
-        })
-        return () => obs.disconnect()
-    }, [onCanvas])
-
-    const isDark = onCanvas ? !!dark : themeDark
-    const C = isDark ? DARK : LIGHT
     const cap = Math.max(10, Math.min(120, perList || 40))
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
-    const navTop = Math.max(0, Number(topOffset) || 60) // 사용자 고정 네브바 높이 — 탭/패널 sticky top 에만(전체 패딩 X, PM "탭만")
+    const navTop = Math.max(0, Number(topOffset) || 60) // 사용자 고정 네브바 높이 — 탭 sticky top 에만(전체 패딩 X, PM "탭만")
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
-    const [list, setList] = useState<any[]>([])
-    const [genAt, setGenAt] = useState<string>("")
-    const [insiderMap, setInsiderMap] = useState<Record<string, any>>({})
-    const [flowMap, setFlowMap] = useState<Record<string, any[]>>({})
-    const [forensicsMap, setForensicsMap] = useState<Record<string, any>>({})
+    const [retry, setRetry] = useState(0)
+    const reports = useDiscoverySources([
+        discoveryListUrl(stockUrl, "stock_report_list_public.json"),
+        discoveryListUrl(usStockUrl, "us_stock_report_list_public.json"),
+        discoveryListUrl(usSmallcapUrl, "us_smallcap_report_list_public.json"),
+    ], "stocks", retry)
+    const insiders = useDiscoverySources([insiderUrl, usInsiderUrl], "stocks", retry)
+    const flows = useDiscoverySources([flowUrl], "flows", retry)
+    const forensics = useDiscoverySources([forensicsUrl], "stocks", retry)
+    const performance = useDiscoverySources([performanceUrl], "performance", retry)
+    const [performancePeriod, setPerformancePeriod] = useState(3)
+    const [performanceNow, setPerformanceNow] = useState(() => Date.now())
+    const performanceExpiry = performance.docs[0]?._meta?.valid_until
+    useEffect(() => {
+        const expires = Date.parse(performanceExpiry)
+        setPerformanceNow(Date.now())
+        if (!Number.isFinite(expires) || expires <= Date.now()) return
+        const timer = setTimeout(() => setPerformanceNow(Date.now()), Math.min(expires - Date.now() + 1, 86400001))
+        return () => clearTimeout(timer)
+    }, [performanceExpiry])
+    const list = useMemo(() => discoveryRows(reports.docs), [reports.docs])
+    const genAt = stockUrl && reports.docs[0]?._meta?.generated_at || ""
+    const insiderMap = useMemo<Record<string, any>>(() => Object.fromEntries(discoveryRows(insiders.docs).map(s => [s.ticker, s])), [insiders.docs])
+    const flowMap: Record<string, any[]> = flows.docs[0]?.flows || flows.docs[0] || EMPTY_DISCOVERY_FLOWS
+    const flowHistory = useMemo(() => discoveryFlowHistory(flowMap), [flowMap])
+    const forensicsMap = useMemo<Record<string, any>>(() => Object.fromEntries(discoveryRows(forensics.docs).map(s => [s.ticker, s])), [forensics.docs])
     const [tab, setTab] = useState(0)
     const [view, setView] = useState<string>("table")
     const [sortKey, setSortKey] = useState<string>("cap")
@@ -671,21 +916,45 @@ export default function PublicDiscovery(props: Props) {
     const [rMin, setRMin] = useState<string>("")
     const [rMax, setRMax] = useState<string>("")
     const [selected, setSelected] = useState<string>("")
+    const [onlyFlowEntries, setOnlyFlowEntries] = useState(false)
+    const [restoreScroll, setRestoreScroll] = useState<number | null>(null)
+    const performanceView = discoveryPerformance(performance.docs[0], mkt, performancePeriod,
+        !!(sector || rMetric && (rMin.trim() || rMax.trim()) || SCREENS[tab]?.id === "foreign_buy" && onlyFlowEntries), Math.max(performanceNow, Date.now()))
 
     useEffect(() => {
         const el = rootRef.current
         if (!el || typeof ResizeObserver === "undefined") return
         const ro = new ResizeObserver((entries) => {
-            for (const e of entries) setW(e.contentRect.width)
+            for (const e of entries) {
+                const box = Array.isArray(e.borderBoxSize) ? e.borderBoxSize[0] : e.borderBoxSize as any
+                const width = box?.inlineSize ?? el.getBoundingClientRect().width
+                if (Number.isFinite(width) && width > 0) setW(width)
+            }
         })
-        ro.observe(el)
+        try { ro.observe(el, { box: "border-box" }) } catch { ro.observe(el) }
         return () => ro.disconnect()
     }, [])
 
-    // URL 딥링크 — ?sector=X(섹터 필터) / ?screen=Y(탭 선택) 자동 적용 (결정 동선 링킹). 1회.
+    // URL 딥링크와 이 히스토리 엔트리의 발견 상태를 1회 복원한다.
     useEffect(() => {
         if (onCanvas || typeof window === "undefined") return
         try {
+            const restored = readDiscoveryHistorySnapshot()
+            if (restored) {
+                setPerformancePeriod(restored.performancePeriod)
+                setTab(Math.max(0, SCREENS.findIndex((screen) => screen.id === restored.screen)))
+                setView(restored.view)
+                setSortKey(restored.sortKey)
+                setSortDir(restored.sortDir)
+                setSector(restored.sector)
+                setMkt(restored.market)
+                setRMetric(restored.rangeMetric)
+                setRMin(restored.rangeMin)
+                setRMax(restored.rangeMax)
+                setSelected(restored.selected)
+                setOnlyFlowEntries(restored.onlyFlowEntries)
+                setRestoreScroll(restored.scrollY)
+            }
             const sp = new URLSearchParams(window.location.search)
             const sec = sp.get("sector")
             if (sec) setSector(sec)
@@ -698,110 +967,6 @@ export default function PublicDiscovery(props: Props) {
             /* ignore */
         }
     }, [onCanvas])
-
-    useEffect(() => {
-        if (!stockUrl) return
-        let alive = true
-        const urls: string[] = [stockUrl, usStockUrl, usSmallcapUrl].filter(
-            (u): u is string => Boolean(u)
-        )
-        Promise.all(
-            urls.map((u) =>
-                fetch(u)
-                    .then((r) => (r.ok ? r.json() : null))
-                    .catch(() => null)
-            )
-        ).then((docs) => {
-            if (!alive) return
-            const arr: any[] = []
-            for (const d of docs) {
-                const a = d && (Array.isArray(d) ? d : d.stocks)
-                if (Array.isArray(a)) arr.push(...(a as any[]))
-            }
-            // ticker dedup (smallcap 트랙 ∩ sp600 중복 — 먼저 등장 우선)
-            const seen = new Set<string>()
-            const deduped = arr.filter((s: any) => {
-                const tk2 = String(s.ticker || "")
-                if (!tk2 || seen.has(tk2)) return false
-                seen.add(tk2)
-                return true
-            })
-            if (deduped.length) setList(deduped)
-            setGenAt(
-                docs[0] && docs[0]._meta && docs[0]._meta.generated_at
-                    ? docs[0]._meta.generated_at
-                    : ""
-            )
-        })
-        return () => {
-            alive = false
-        }
-    }, [stockUrl, usStockUrl, usSmallcapUrl])
-
-    useEffect(() => {
-        if (!insiderUrl) return
-        let alive = true
-        // KR(insider_trades, DART) + US(us_insider_trades, SEC Form4) 병합 — schema 동일, 티커 숫자/비숫자라 충돌 0.
-        const urls: string[] = [insiderUrl, usInsiderUrl].filter(
-            (u): u is string => Boolean(u)
-        )
-        Promise.all(
-            urls.map((u) =>
-                fetch(u)
-                    .then((r) => (r.ok ? r.json() : null))
-                    .catch(() => null)
-            )
-        ).then((docs) => {
-            if (!alive) return
-            const m: Record<string, any> = {}
-            for (const d of docs) {
-                const arr = d && (Array.isArray(d) ? d : d.stocks)
-                if (Array.isArray(arr))
-                    for (const x of arr) {
-                        if (x && x.ticker) m[String(x.ticker)] = x
-                    }
-            }
-            setInsiderMap(m)
-        })
-        return () => {
-            alive = false
-        }
-    }, [insiderUrl, usInsiderUrl])
-
-    useEffect(() => {
-        if (!flowUrl) return
-        let alive = true
-        fetch(flowUrl)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const fm = d && (d.flows || d)
-                if (alive && fm && typeof fm === "object") setFlowMap(fm)
-            })
-            .catch(() => {})
-        return () => {
-            alive = false
-        }
-    }, [flowUrl])
-
-    useEffect(() => {
-        if (!forensicsUrl) return
-        let alive = true
-        fetch(forensicsUrl)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const arr = d && (Array.isArray(d) ? d : d.stocks)
-                if (!alive || !Array.isArray(arr)) return
-                const m: Record<string, any> = {}
-                for (const x of arr) {
-                    if (x && x.ticker) m[String(x.ticker)] = x
-                }
-                setForensicsMap(m)
-            })
-            .catch(() => {})
-        return () => {
-            alive = false
-        }
-    }, [forensicsUrl])
 
     const narrow = w > 0 && w < 620
     const wide = w >= 980 // master-detail 패널 표시 임계
@@ -821,15 +986,8 @@ export default function PublicDiscovery(props: Props) {
         if (!list.length) return SCREENS.map(() => 0)
         return SCREENS.map((sc) => list.filter((s) => sc.pred(s, ctx)).length)
     }, [list, ctx])
-    const visibleTabs = useMemo(
-        () => SCREENS.map((sc, i) => i).filter((i) => counts[i] > 0),
-        [counts]
-    )
-
-    useEffect(() => {
-        if (visibleTabs.length && visibleTabs.indexOf(tab) < 0)
-            setTab(visibleTabs[0])
-    }, [visibleTabs, tab])
+    // A zero count or delayed source never changes the user's selected condition.
+    const visibleTabs = SCREENS.map((_, i) => i)
 
     const sectors = useMemo(() => {
         const set: Record<string, number> = {}
@@ -841,12 +999,36 @@ export default function PublicDiscovery(props: Props) {
     }, [list])
 
     const sc = SCREENS[tab] || SCREENS[0]
+    const sourceFor = (id: string) => id.startsWith("insider_") ? insiders : id === "foreign_buy" ? flows : id === "dilution_hist" ? forensics : reports
+    const activeSource = sourceFor(sc.id)
+    const pendingResult = reports.loading || activeSource.loading
+    const unavailableResult = !pendingResult && (!reports.received || !activeSource.received)
+    const sourceIssues = [
+        ["종목 리포트", reports], ["내부자 자료", insiders],
+        ["외국인 수급", flows], ["공시 이력", forensics],
+    ] as const
+    useEffect(() => {
+        if (onCanvas || pendingResult || w <= 0 || restoreScroll === null) return
+        let secondFrame = 0
+        const firstFrame = requestAnimationFrame(() => {
+            secondFrame = requestAnimationFrame(() => {
+                window.scrollTo(0, restoreScroll)
+                setRestoreScroll(null)
+            })
+        })
+        return () => {
+            cancelAnimationFrame(firstFrame)
+            if (secondFrame) cancelAnimationFrame(secondFrame)
+        }
+    }, [onCanvas, pendingResult, restoreScroll, w])
+    const rangeError = discoveryRangeError(rMetric, rMin, rMax)
     const rMinN = rMin.trim() === "" ? null : Number(rMin)
     const rMaxN = rMax.trim() === "" ? null : Number(rMax)
     const useTable = view === "table" && !narrow // 모바일=카드 강제(8컬럼 가로스크롤 회피)
+    const sortDescription = useTable ? `${COLS.find(c => c.key === sortKey)?.label || sortKey} ${sortDir < 0 ? "내림차순" : "오름차순"}` : sc.order
 
     const sel = useMemo(() => {
-        if (!list.length) return { total: 0, items: [] as any[] }
+        if (!list.length || rangeError || pendingResult || unavailableResult) return { total: 0, items: [] as any[], flowCoverage: null as ReturnType<typeof discoveryFlowCoverage> | null }
         let hits = list.filter((s) => sc.pred(s, ctx))
         if (mkt !== "all")
             hits = hits.filter(
@@ -863,6 +1045,8 @@ export default function PublicDiscovery(props: Props) {
                 return true
             })
         }
+        const flowCoverage = sc.id === "foreign_buy" ? discoveryFlowCoverage(hits, flowHistory.byTicker) : null
+        if (sc.id === "foreign_buy" && onlyFlowEntries) hits = hits.filter(s => flowHistory.byTicker[s.ticker]?.kind === "entered")
         const arr = hits.slice()
         const cmpNull = (va: number | null, vb: number | null) => {
             if (va == null && vb == null) return 0
@@ -892,7 +1076,7 @@ export default function PublicDiscovery(props: Props) {
         } else {
             arr.sort((a, b) => sc.sortBy(a, ctx) - sc.sortBy(b, ctx))
         }
-        return { total: hits.length, items: arr.slice(0, cap) }
+        return { total: hits.length, items: arr.slice(0, cap), flowCoverage }
     }, [
         list,
         sc,
@@ -902,6 +1086,11 @@ export default function PublicDiscovery(props: Props) {
         rMetric,
         rMinN,
         rMaxN,
+        rangeError,
+        pendingResult,
+        unavailableResult,
+        flowHistory,
+        onlyFlowEntries,
         useTable,
         sortKey,
         sortDir,
@@ -916,15 +1105,62 @@ export default function PublicDiscovery(props: Props) {
     }, [wide, sel.items, selected])
 
     const selStock = useMemo(
-        () => list.find((s) => s.ticker === selected) || null,
-        [list, selected]
+        () => sel.items.find((s) => s.ticker === selected) || null,
+        [sel.items, selected]
     )
+    const detailKey = wide && selStock ? base + ":" + String(selStock.ticker).toUpperCase() : ""
+    const [detailRetry, setDetailRetry] = useState(0)
+    const [detailState, setDetailState] = useState<{ key: string; report: any; failed: boolean } | null>(null)
+    const selectedReport = detailKey && detailState?.key === detailKey ? detailState.report : null
+    useEffect(() => {
+        if (onCanvas || !detailKey || !selStock) return
+        const ticker = String(selStock.ticker).toUpperCase()
+        let alive = true
+        const controller = new AbortController()
+        setDetailState({ key: detailKey, report: discoveryPublicDetails.get(detailKey) || null, failed: false })
+        fetch(base + "/api/stock_slice?ticker=" + encodeURIComponent(ticker) + (/^\d{6}$/.test(ticker) ? "&overview=1" : ""), { signal: controller.signal })
+            .then(response => response.ok ? response.json() : null)
+            .then(data => {
+                if (!alive) return
+                const report = data?.status === "ok" && data.report?.ticker?.toUpperCase() === ticker ? data.report : null
+                if (report) discoveryPublicDetails.set(detailKey, report)
+                setDetailState({ key: detailKey, report: report || discoveryPublicDetails.get(detailKey) || null, failed: !report })
+            })
+            .catch(() => {
+                if (alive) setDetailState({ key: detailKey, report: discoveryPublicDetails.get(detailKey) || null, failed: true })
+            })
+        return () => { alive = false; controller.abort() }
+    }, [onCanvas, detailKey, detailRetry])
 
     // 선택 종목 실시간가(/api/stock) = 2026-07-03 컴플라이언스로 제거 — 시세는 리포트(네이버 link-out/TV 위젯)에서
 
     const go = (ticker: string) => {
         if (onCanvas || typeof window === "undefined" || !ticker) return
         const p = (reportPath || DEFAULT_REPORT).replace(/\/+$/, "") || "/"
+        try {
+            const currentHistoryState = window.history.state
+            const historyBase = currentHistoryState && typeof currentHistoryState === "object" ? currentHistoryState : {}
+            const snapshot: DiscoveryHistorySnapshot = {
+                version: 1,
+                screen: sc.id,
+                performancePeriod,
+                view,
+                sortKey,
+                sortDir,
+                sector,
+                market: mkt,
+                rangeMetric: rMetric,
+                rangeMin: rMin,
+                rangeMax: rMax,
+                selected,
+                onlyFlowEntries,
+                scrollY: Math.max(0, window.scrollY || 0),
+            }
+            // 이 발견 페이지의 현재 히스토리 엔트리에만 저장해 새 방문에 이전 조건이 섞이지 않게 한다.
+            window.history.replaceState({ ...historyBase, [DISCOVERY_HISTORY_KEY]: snapshot }, "", window.location.href)
+        } catch {
+            /* 탐색 상태 저장 실패가 리포트 이동을 막지 않게 한다. */
+        }
         window.location.href = p + "?q=" + encodeURIComponent(ticker)
     }
     const onRow = (ticker: string) => {
@@ -945,14 +1181,15 @@ export default function PublicDiscovery(props: Props) {
         setRMetric("")
         setRMin("")
         setRMax("")
+        setOnlyFlowEntries(false)
     }
 
     const wrap: CSSProperties = {
         width: "100%",
         minHeight: "100%",
-        background: C.bg,
+        background: "transparent",
         fontFamily: FONT,
-        padding: pad,
+        padding: `8px ${pad}px ${pad}px`,
         boxSizing: "border-box",
         color: C.ink,
         // 🚨 스태킹 격리 — 내부 sticky(zIndex)가 페이지 fixed 네브바 위로 그려지는 사고 원천 차단 (2026-07-08, /discover nav zIndex 부재 사고. 페이지 nav zIndex 10 + 여기 격리 이중 방어).
@@ -1050,11 +1287,14 @@ export default function PublicDiscovery(props: Props) {
     }
     // 커스텀 chevron (OS 기본 화살표 제거 — appearance none). 색 = 테마 faint.
     // data URI 전체 encodeURIComponent — 공백/따옴표 raw 상태면 Safari·Framer 퍼블리시에서 파싱 실패 → placeholder 텍스처 노출 (다크에서만 도드라짐).
-    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${C.faint}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
+    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='#8b95a1' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
     const selStyle: CSSProperties = {
         border: "none",
         borderRadius: 9,
         padding: "7px 28px 7px 11px",
+        minHeight: "var(--an-dsc-control-height, 36px)",
+        lineHeight: 1.25,
+        boxSizing: "border-box",
         fontSize: 12,
         fontFamily: FONT,
         fontWeight: 700,
@@ -1075,6 +1315,8 @@ export default function PublicDiscovery(props: Props) {
         border: `1px solid ${C.line}`,
         borderRadius: 9,
         padding: "7px 8px",
+        minHeight: "var(--an-dsc-control-height, 36px)",
+        lineHeight: 1.25,
         fontSize: 12,
         fontFamily: FONT,
         fontWeight: 700,
@@ -1085,9 +1327,9 @@ export default function PublicDiscovery(props: Props) {
     }
 
     // 로딩 스켈레톤 — 탭/헤더/툴바/결과 전 영역 일관 적용 (list 적재 전 빈 영역 방지). 토스식 shimmer.
-    const loading = list.length === 0
-    const skBase = isDark ? "#222a33" : "#e9edf1"
-    const skHi = isDark ? "#2d3742" : "#f3f5f7"
+    const loading = reports.loading
+    const skBase = C.skBase
+    const skHi = C.skHi
     const skBlock = (bw: any, bh: number, br = 6): CSSProperties => ({
         width: bw,
         height: bh,
@@ -1101,17 +1343,23 @@ export default function PublicDiscovery(props: Props) {
 
     const tabButton = (i: number) => {
         const active = i === tab
+        const best = performanceView.winners.includes(SCREENS[i].id)
+        const badge = best ? <span style={{ display: narrow ? "inline-block" : "block", marginTop: narrow ? 0 : 3, marginLeft: narrow ? 6 : 0, fontSize: 10.5, fontWeight: 700, color: C.vt }}>{performancePeriod}개월 {performanceView.winners.length > 1 ? "공동 " : ""}1위</span> : null
         if (narrow) {
             return (
                 <button
                     key={SCREENS[i].id}
+                    aria-pressed={active}
                     onClick={() => setTab(i)}
                     style={{
                         flexShrink: 0,
                         border: "none",
                         cursor: "pointer",
                         fontFamily: FONT,
-                        padding: "8px 13px",
+                        padding: "8px 12px",
+                        minHeight: "var(--an-dsc-control-height, 36px)",
+                        lineHeight: 1.25,
+                        boxSizing: "border-box",
                         borderRadius: 999,
                         fontSize: 12.5,
                         fontWeight: 700,
@@ -1123,6 +1371,7 @@ export default function PublicDiscovery(props: Props) {
                     }}
                 >
                     {SCREENS[i].tab}
+                    {badge}
                     <span
                         style={{
                             marginLeft: 6,
@@ -1130,7 +1379,7 @@ export default function PublicDiscovery(props: Props) {
                             color: C.faint,
                         }}
                     >
-                        {counts[i]}
+                        {reports.loading || sourceFor(SCREENS[i].id).loading ? "…" : !reports.received || !sourceFor(SCREENS[i].id).received ? "—" : counts[i]}
                     </span>
                 </button>
             )
@@ -1138,6 +1387,7 @@ export default function PublicDiscovery(props: Props) {
         return (
             <button
                 key={SCREENS[i].id}
+                aria-pressed={active}
                 onClick={() => setTab(i)}
                 style={{
                     width: "100%",
@@ -1148,7 +1398,10 @@ export default function PublicDiscovery(props: Props) {
                     alignItems: "center",
                     justifyContent: "space-between",
                     gap: 8,
-                    padding: "10px 13px",
+                    padding: "7px 12px",
+                    minHeight: "var(--an-dsc-control-height, 36px)",
+                    lineHeight: 1.25,
+                    boxSizing: "border-box",
                     borderRadius: 10,
                     fontSize: 13.5,
                     fontWeight: 700,
@@ -1158,7 +1411,7 @@ export default function PublicDiscovery(props: Props) {
                     boxShadow: active ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
                 }}
             >
-                <span style={{ whiteSpace: "nowrap" }}>{SCREENS[i].tab}</span>
+                <span style={{ whiteSpace: "nowrap" }}>{SCREENS[i].tab}{badge}</span>
                 <span
                     style={{
                         flexShrink: 0,
@@ -1167,7 +1420,7 @@ export default function PublicDiscovery(props: Props) {
                         color: C.faint,
                     }}
                 >
-                    {counts[i]}
+                    {reports.loading || sourceFor(SCREENS[i].id).loading ? "…" : !reports.received || !sourceFor(SCREENS[i].id).received ? "—" : counts[i]}
                 </span>
             </button>
         )
@@ -1190,10 +1443,16 @@ export default function PublicDiscovery(props: Props) {
         ...extra,
     })
 
-    // 우측 상세 패널(데스크탑) — 이미 로드된 사실 + 실시간가 + 전체 리포트 CTA.
+    // 우측 상세 패널(데스크탑) — 선택한 한 종목의 공개 슬라이스만 로드.
     const detailPanel = () => {
-        const s = selStock
-        if (!s) return null
+        if (!selStock) return null
+        if (!selectedReport) return (
+            <div role="status" style={{ flexShrink: 0, width: 340, background: C.card, borderRadius: 16, padding: 16, boxSizing: "border-box", color: C.sub, fontSize: 12.5, fontWeight: 600 }}>
+                {detailState?.key === detailKey && detailState.failed ? "종목 상세 자료를 확인하지 못했어요." : "종목 상세 자료를 불러오는 중이에요."}
+                {detailState?.key === detailKey && detailState.failed && <button onClick={() => setDetailRetry(n => n + 1)} style={{ ...selStyle, marginTop: 8, display: "block" }}>상세 다시 불러오기</button>}
+            </div>
+        )
+        const s = selectedReport
         const facts = s.facts || {}
         const ins = insiderMap[s.ticker]
         const flow = flowMap[s.ticker] || []
@@ -1241,10 +1500,9 @@ export default function PublicDiscovery(props: Props) {
                 style={{
                     flexShrink: 0,
                     width: 340,
+                    height: "fit-content",
                     position: "sticky",
-                    top: navTop,
-                    maxHeight: `calc(100vh - ${navTop + 24}px)`,
-                    overflowY: "auto",
+                    top: 16,
                     background: C.card,
                     borderRadius: 16,
                     padding: 16,
@@ -1467,6 +1725,14 @@ export default function PublicDiscovery(props: Props) {
                                     </span>
                                 </div>
                             ))}
+                        <details className="an-dsc-help" style={{ marginTop: 12, fontSize: 12, fontWeight: 600, color: C.sub, background: C.card, borderRadius: 14 }}>
+                            <summary className="an-dsc-help-summary">
+                                <span className="an-dsc-help-title">지분 요약 · 보는 법</span>
+                            </summary>
+                            <div className="an-dsc-help-body">
+                                <p style={{ margin: 0 }}>이 주주 목록은 받은 자료 중 최대 3개만 보여주는 요약이에요. 표시된 지분을 더해 전체 주주 구성이나 남은 지분을 계산하지 않아요. 총수일가 지배지분은 개별 주주 항목과 별도로 읽어요.</p>
+                            </div>
+                        </details>
                         {own.cross_check &&
                             own.cross_check.status &&
                             kv(
@@ -1591,6 +1857,32 @@ export default function PublicDiscovery(props: Props) {
 
     return (
         <div ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE}</style>
+            <style>{`
+/* Compact disclosure surfaces — AlphaNest Design v1; keep native details and existing type weights. */
+.an-dsc-help{min-width:0;padding:8px;box-sizing:border-box;--help-hover:#f1f3f5;--help-focus:#e9edf2;--help-sub:#6b7684}
+body[data-framer-theme="dark"] .an-dsc-help{--help-hover:#252c35;--help-focus:#303945;--help-sub:#9aa4b1}
+.an-dsc-help>summary{position:relative;list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;box-sizing:border-box;padding:10px 40px 10px 12px!important;border:0;border-radius:12px;background:var(--an-dsc-card);color:var(--an-dsc-ink);font-weight:700;line-height:1.4;text-decoration:none!important;transition:background-color .16s ease}
+.an-dsc-help>summary::marker{content:""}
+.an-dsc-help>summary::-webkit-details-marker{display:none}
+.an-dsc-help>summary::after{content:"";position:absolute;inset-inline-end:16px;top:50%;width:6px;height:6px;background:none;-webkit-mask:none;mask:none;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-50%) rotate(-45deg);pointer-events:none}
+.an-dsc-help[open]>summary::after{transform:translateY(-70%) rotate(45deg)}
+@media(hover:hover){.an-dsc-help>summary:not(:focus-visible):hover{background:var(--help-hover);filter:none}}
+.an-dsc-help>summary:focus-visible{background:var(--help-focus);outline:none!important;box-shadow:none!important}
+.an-dsc-help-title{flex:1;min-width:0}
+.an-dsc-help-body{padding:12px 12px 8px;line-height:1.65;color:var(--help-sub)}
+.an-dsc-help-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:0}
+.an-dsc-help-grid>div{min-width:0}
+.an-dsc-help dt{display:inline;font-weight:700;margin-right:8px}
+.an-dsc-help dd{display:inline;margin:0;overflow-wrap:anywhere}
+.an-dsc-help-note{margin:8px 0 0;overflow-wrap:anywhere}
+.an-dsc-help-note>strong{margin-right:8px}
+.an-dsc-performance-rows{display:grid;gap:8px;margin-top:12px}
+.an-dsc-performance-row{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 16px}
+.an-dsc-performance-row>span{min-width:0;overflow-wrap:anywhere}
+@media(prefers-reduced-motion:reduce){.an-dsc-help>summary{transition:none}}
+@media(max-width:600px),(pointer:coarse){body{--an-dsc-control-height:44px;--an-dsc-segment-height:44px}}
+`}</style>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div
                 style={{
@@ -1609,6 +1901,7 @@ export default function PublicDiscovery(props: Props) {
                             overflowX: "auto",
                             padding: `10px ${pad}px`,
                             width: `calc(100% + ${pad * 2}px)`,
+                            boxSizing: "border-box",
                             marginLeft: -pad,
                             position: "sticky",
                             top: navTop,
@@ -1617,7 +1910,7 @@ export default function PublicDiscovery(props: Props) {
                             WebkitBackdropFilter: "saturate(1.4) blur(14px)",
                             zIndex: 5,
                             scrollbarWidth: "none",
-                            boxShadow: `0 8px 8px -7px ${isDark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.14)"}`,
+                            boxShadow: `0 8px 8px -7px ${C.shadowStrong}`,
                         }}
                     >
                         {loading
@@ -1655,7 +1948,36 @@ export default function PublicDiscovery(props: Props) {
                                       }}
                                   />
                               ))
-                            : visibleTabs.map((i) => tabButton(i))}
+                            : visibleTabs.map((i, position) => {
+                                  const group = SCREENS[i].group
+                                  const previousGroup =
+                                      position > 0
+                                          ? SCREENS[visibleTabs[position - 1]].group
+                                          : null
+                                  return (
+                                      <div key={SCREENS[i].id} style={{ display: "contents" }}>
+                                          {group !== "전체" &&
+                                              (position === 0 || group !== previousGroup) && (
+                                              <div
+                                                  data-discovery-group={group}
+                                                  style={{
+                                                      padding:
+                                                          position === 0
+                                                              ? "2px 12px 5px"
+                                                              : "12px 12px 5px",
+                                                      color: C.faint,
+                                                      fontSize: 11,
+                                                      fontWeight: 700,
+                                                      lineHeight: 1.4,
+                                                  }}
+                                              >
+                                                  {group}
+                                              </div>
+                                          )}
+                                          {tabButton(i)}
+                                      </div>
+                                  )
+                              })}
                     </div>
                 )}
 
@@ -1676,8 +1998,8 @@ export default function PublicDiscovery(props: Props) {
                         </div>
                     ) : (
                         <div style={{ padding: "0 2px 10px" }}>
-                            <div
-                                style={{
+                            <h1
+                                style={{ margin: 0,
                                     fontSize: 15.5,
                                     fontWeight: 700,
                                     color: C.ink,
@@ -1686,7 +2008,7 @@ export default function PublicDiscovery(props: Props) {
                             >
                                 {sc.title}
                                 {sector ? ` · ${sector}` : ""}
-                            </div>
+                            </h1>
                             <div
                                 style={{
                                     fontSize: 11.5,
@@ -1695,15 +2017,70 @@ export default function PublicDiscovery(props: Props) {
                                     marginTop: 3,
                                 }}
                             >
-                                {sc.rule} · 결과 {sel.total}종목
+                                {sc.rule} · {rangeError ? "입력 확인 필요" : pendingResult ? "자료 확인 중" : unavailableResult ? "결과 확인 불가" : `확인된 자료에서 ${sel.total}종목`}
                                 {sel.total > sel.items.length
-                                    ? ` (상위 ${sel.items.length})`
+                                    ? ` (${sel.items.length}개 표시)`
                                     : ""}
-                                {genAt ? ` · ${fmtAge(genAt)} 갱신` : ""}
+                                {genAt ? ` · 국내 리포트 ${fmtAge(genAt)} 생성` : ""}
                             </div>
+                            <details key={sc.id} className="an-dsc-help" style={{ marginTop: 12, fontSize: 12, fontWeight: 600, color: C.sub, background: C.card, borderRadius: 14 }}>
+                                <summary className="an-dsc-help-summary">
+                                    <span className="an-dsc-help-title">조건·자료 범위</span>
+                                </summary>
+                                <div className="an-dsc-help-body">
+                                    <dl className="an-dsc-help-grid">
+                                        <div><dt style={{ color: C.ink }}>조건의 의미</dt><dd>{sc.note}</dd></div>
+                                        <div><dt style={{ color: C.ink }}>탐색 범위</dt><dd>현재 받은 리포트 <strong style={{ fontWeight: 800, color: C.ink }}>{list.length}종목</strong>{" · "}시장·업종·지표 필터 적용 전 기준이에요.</dd></div>
+                                        {sc.peerKeys && <div><dt style={{ color: C.ink }}>업종 비교 기준</dt><dd>업종 중앙값은 비교 집단을 크기순으로 놓았을 때 가운데 값이에요. 표시값은 반올림될 수 있고, 종목별 원자료는 전체 리포트에서 확인할 수 있어요.</dd></div>}
+                                    </dl>
+                                    <p className="an-dsc-help-note"><strong style={{ fontWeight: 700, color: C.ink }}>자료를 읽을 때</strong>{" "}종목·자료별 기준 기간은 다를 수 있어요. 필요한 자료가 없으면 결과에서 빠질 수 있으며, 미표시가 반대 조건을 뜻하지 않아요.</p>
+                                </div>
+                            </details>
+                            <div style={{ marginTop: 10, fontSize: 11.5, color: C.sub, fontWeight: 600, lineHeight: 1.6 }}><strong style={{ fontWeight: 700 }}>정렬 기준</strong> · {sortDescription}<span style={{ display: "block", marginTop: 2 }}>투자 추천 순위가 아니에요.</span></div>
+                            <div style={{ marginTop: 10, fontSize: 11.5, color: C.sub, fontWeight: 600, lineHeight: 1.6 }}>
+                                <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, flexWrap: "wrap" }}>
+                                    조건별 과거 수익률
+                                    <select aria-label="수익률 비교 기간" value={performancePeriod} onChange={event => setPerformancePeriod(Number(event.target.value))} style={selStyle}>
+                                        {[1, 3, 6].map(months => <option key={months} value={months}>최근 {months}개월</option>)}
+                                    </select>
+                                </label>
+                                <div role="status">{performance.loading && performanceUrl ? "수익률 자료 확인 중이에요." : performanceView.message}</div>
+                                {!!performanceUrl && !performance.loading && performance.failed > 0 && <button onClick={() => setRetry(n => n + 1)} style={{ ...selStyle, marginTop: 4, backgroundImage: "none", color: C.vt }}>수익률 자료 다시 확인</button>}
+                                {performanceView.window && <details className="an-dsc-help" style={{ marginTop: 10, background: C.card, borderRadius: 14 }}>
+                                    <summary style={{ color: C.ink }}>계산 기준·자료 범위</summary>
+                                    <div className="an-dsc-help-body">
+                                        <p style={{ margin: 0 }}>시작 당시 종목을 같은 비중으로 유지한 가상 수익률이에요. 분할·배당 조정 가격, 시장별 통화 기준이며 비용·세금·환율 효과는 제외해요.</p>
+                                        <div className="an-dsc-performance-rows">
+                                            <div className="an-dsc-performance-row" style={{ fontWeight: 700, color: C.ink }}><span>전체 비교군 {performanceView.window.benchmark.priced}/{performanceView.window.benchmark.total}종목</span><span>수익률 {performanceView.window.benchmark.return_pct.toFixed(2)}%</span></div>
+                                            {performanceView.window.categories.map((row: any) => <div className="an-dsc-performance-row" key={row.id}><span>{SCREENS.find(s => s.id === row.id)?.tab} · 가격 확인 {row.priced}/{row.total}종목</span><span style={{ fontWeight: 700 }}>{row.return_pct === null ? "구성 종목 없음" : `${row.return_pct.toFixed(2)}%`}</span></div>)}
+                                        </div>
+                                        <p className="an-dsc-help-note">관측 가설 · T={Math.round((Date.parse(performanceView.window.end) - Date.parse(performanceView.window.start)) / 86400000)}일 · 독립 관측 N=미산정. 과거 성과이며 예측력 검증 결과가 아니에요. 조건 간 종목은 중복될 수 있어요.</p>
+                                    </div>
+                                </details>}
+                            </div>
+                            {sc.id === "foreign_buy" && sel.flowCoverage && (
+                                <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: C.card, color: C.sub, fontSize: 11.5, fontWeight: 600, lineHeight: 1.65 }}>
+                                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: C.ink }}>
+                                        <input type="checkbox" checked={onlyFlowEntries} onChange={event => setOnlyFlowEntries(event.target.checked)} style={{ accentColor: C.vt, flexShrink: 0 }} />
+                                        최신 수신일 순매수 전환만 보기
+                                    </label>
+                                    <div>수신 최신 거래일 {flowHistory.asOf || "미제공"} · 순매수 {sel.flowCoverage.total}종목 중 비교 가능 {sel.flowCoverage.comparable}종목 · 전환 {sel.flowCoverage.entered}종목</div>
+                                    <div>과거 수신 {sel.flowCoverage.older}종목 · 비교 불가 {sel.flowCoverage.unknown}종목 · 현재 시장·업종·지표 필터 기준, 표시 개수 제한 전</div>
+                                    <div>같은 종목의 이전 관측값이 0 이하이고 마지막 값이 양수일 때만 전환으로 표시해요. 오늘·연속 거래일·매수 추천을 뜻하지 않아요.</div>
+                                </div>
+                            )}
                         </div>
                     )}
 
+                    {sourceIssues.some(([, source]) => !source.loading && (source.failed > 0 || !source.requested)) && (
+                        <div role="status" style={{ fontSize: 12, fontWeight: 600, color: C.sub, background: C.card, borderRadius: 12, padding: 12, marginBottom: 10, lineHeight: 1.6 }}>
+                            {sourceIssues.filter(([, source]) => !source.loading && (source.failed > 0 || !source.requested)).map(([label, source]) =>
+                                <div key={label}>{label}: {source.requested ? `${source.requested}개 소스 중 ${source.requested - source.failed}개 확인 · 일부 자료를 불러오지 못했어요.` : "연결된 소스가 없어요."}</div>
+                            )}
+                            <div>미수신 자료는 조건 미충족으로 판단하지 않아요.</div>
+                            <button onClick={() => setRetry(n => n + 1)} style={{ ...selStyle, marginTop: 6, backgroundImage: "none", color: C.vt }}>자료 다시 불러오기</button>
+                        </div>
+                    )}
                     {/* 도구막대 */}
                     {loading ? (
                         <div
@@ -1752,6 +2129,9 @@ export default function PublicDiscovery(props: Props) {
                                                 cursor: "pointer",
                                                 fontFamily: FONT,
                                                 padding: "6px 12px",
+                                                minHeight: "var(--an-dsc-segment-height, 32px)",
+                                                lineHeight: 1.25,
+                                                boxSizing: "border-box",
                                                 borderRadius: 8,
                                                 fontSize: 12,
                                                 fontWeight: 700,
@@ -1791,7 +2171,10 @@ export default function PublicDiscovery(props: Props) {
                                         style={{
                                             border: "none",
                                             cursor: "pointer",
-                                            padding: "5px 10px",
+                                            padding: "6px 10px",
+                                            minHeight: "var(--an-dsc-segment-height, 32px)",
+                                            lineHeight: 1.25,
+                                            boxSizing: "border-box",
                                             borderRadius: 7,
                                             fontSize: 12,
                                             fontWeight: 800,
@@ -1809,6 +2192,7 @@ export default function PublicDiscovery(props: Props) {
                                 ))}
                             </div>
                             <select
+                                aria-label="업종 필터"
                                 value={sector}
                                 onChange={(e) => setSector(e.target.value)}
                                 style={{
@@ -1825,6 +2209,7 @@ export default function PublicDiscovery(props: Props) {
                                 ))}
                             </select>
                             <select
+                                aria-label="지표 범위"
                                 value={rMetric}
                                 onChange={(e) => setRMetric(e.target.value)}
                                 style={selStyle}
@@ -1839,6 +2224,8 @@ export default function PublicDiscovery(props: Props) {
                             {rMetric && (
                                 <>
                                     <input
+                                        aria-label="지표 최솟값"
+                                        aria-invalid={!!rangeError}
                                         value={rMin}
                                         onChange={(e) =>
                                             setRMin(e.target.value)
@@ -1857,6 +2244,8 @@ export default function PublicDiscovery(props: Props) {
                                         ~
                                     </span>
                                     <input
+                                        aria-label="지표 최댓값"
+                                        aria-invalid={!!rangeError}
                                         value={rMax}
                                         onChange={(e) =>
                                             setRMax(e.target.value)
@@ -1867,7 +2256,7 @@ export default function PublicDiscovery(props: Props) {
                                     />
                                 </>
                             )}
-                            {(sector || rMetric) && (
+                            {(sector || rMetric || mkt !== "all" || (sc.id === "foreign_buy" && onlyFlowEntries)) && (
                                 <button
                                     onClick={resetFilters}
                                     style={{
@@ -1875,6 +2264,9 @@ export default function PublicDiscovery(props: Props) {
                                         cursor: "pointer",
                                         fontFamily: FONT,
                                         padding: "7px 11px",
+                                        minHeight: "var(--an-dsc-control-height, 36px)",
+                                        lineHeight: 1.25,
+                                        boxSizing: "border-box",
                                         borderRadius: 9,
                                         fontSize: 12,
                                         fontWeight: 700,
@@ -1897,7 +2289,7 @@ export default function PublicDiscovery(props: Props) {
                         }}
                     >
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            {loading ? (
+                            {pendingResult ? (
                                 <div
                                     style={{
                                         background: C.card,
@@ -1943,6 +2335,10 @@ export default function PublicDiscovery(props: Props) {
                                         </div>
                                     ))}
                                 </div>
+                            ) : !sel.items.length ? (
+                                <div role="status" style={{ background: C.card, borderRadius: 16, padding: 24, color: C.sub, fontSize: 13, fontWeight: 600, lineHeight: 1.7 }}>
+                                    {rangeError || (unavailableResult ? "자료를 확인하지 못해 이 조건의 결과를 보여드릴 수 없어요. 위의 다시 불러오기를 이용해주세요." : !list.length ? "현재 수신된 종목 자료가 비어 있어요." : "현재 확인된 자료에서 선택한 조건에 맞는 종목이 없어요. 조건을 바꾸거나 필터를 초기화해 주세요.")}
+                                </div>
                             ) : useTable ? (
                                 <div
                                     style={{
@@ -1958,7 +2354,7 @@ export default function PublicDiscovery(props: Props) {
                                                 display: "flex",
                                                 alignItems: "center",
                                                 gap: 14,
-                                                padding: "11px 16px",
+                                                padding: "0px 16px",
                                                 borderBottom: `1px solid ${C.line}`,
                                                 position: "sticky",
                                                 top: 0,
@@ -2005,7 +2401,10 @@ export default function PublicDiscovery(props: Props) {
                                                             fontFamily: FONT,
                                                             background:
                                                                 "transparent",
-                                                            padding: 0,
+                                                            padding: "6px 0",
+                                                            minHeight: "var(--an-dsc-control-height, 36px)",
+                                                            lineHeight: 1.25,
+                                                            boxSizing: "border-box",
                                                             fontSize: 11.5,
                                                             fontWeight: 700,
                                                             color: activeSort
@@ -2030,6 +2429,7 @@ export default function PublicDiscovery(props: Props) {
                                                     onClick={() =>
                                                         onRow(s.ticker)
                                                     }
+                                                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRow(s.ticker) } }}
                                                     style={{
                                                         display: "flex",
                                                         alignItems: "center",
@@ -2135,6 +2535,9 @@ export default function PublicDiscovery(props: Props) {
                                                                                 s.market
                                                                             }
                                                                         </div>
+                                                                        {sc.id === "foreign_buy" && <div style={{ marginTop: 3, fontSize: 10.5, fontWeight: 600, color: C.sub, lineHeight: 1.5, overflowWrap: "anywhere" }}>
+                                                                            {flowHistory.byTicker[s.ticker]?.text || "비교 불가 · 수급 자료 미제공"}
+                                                                        </div>}
                                                                     </div>
                                                                 </div>
                                                             )
@@ -2225,7 +2628,7 @@ export default function PublicDiscovery(props: Props) {
                                                     borderTop: `1px solid ${C.line}`,
                                                 }}
                                             >
-                                                결과 {sel.total}종목 중 상위{" "}
+                                                결과 {sel.total}종목 중{" "}
                                                 {sel.items.length} 표시 ·
                                                 필터·정렬로 좁히기
                                             </div>
@@ -2251,6 +2654,7 @@ export default function PublicDiscovery(props: Props) {
                                                 role="button"
                                                 tabIndex={0}
                                                 onClick={() => onRow(s.ticker)}
+                                                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRow(s.ticker) } }}
                                                 style={{
                                                     display: "flex",
                                                     alignItems: "center",
@@ -2341,6 +2745,12 @@ export default function PublicDiscovery(props: Props) {
                                                             marginTop: 6,
                                                         }}
                                                     >
+                                                        {sc.id !== "all" && <div style={{ width: "100%", fontSize: 11.5, fontWeight: 600, color: C.sub, lineHeight: 1.5, overflowWrap: "anywhere" }}>
+                                                            표시 이유: {discoveryReason(sc, s, ctx)}
+                                                        </div>}
+                                                        {sc.id === "foreign_buy" && <div style={{ width: "100%", fontSize: 11.5, fontWeight: 600, color: C.sub, lineHeight: 1.5, overflowWrap: "anywhere" }}>
+                                                            {flowHistory.byTicker[s.ticker]?.text || "비교 불가 · 수급 자료 미제공"}
+                                                        </div>}
                                                         {sc.chips.map((k) =>
                                                             chipFor(s, k)
                                                         )}
@@ -2371,7 +2781,7 @@ export default function PublicDiscovery(props: Props) {
                                                 borderTop: `1px solid ${C.line}`,
                                             }}
                                         >
-                                            결과 {sel.total}종목 중 상위{" "}
+                                            결과 {sel.total}종목 중{" "}
                                             {sel.items.length} 표시 · 필터로
                                             좁히기
                                         </div>
@@ -2503,6 +2913,12 @@ addPropertyControls(PublicDiscovery, {
         type: ControlType.String,
         title: "Forensics URL",
         defaultValue: DEFAULT_FORENSICS,
+    },
+    performanceUrl: {
+        type: ControlType.String,
+        title: "수익률 검증 자료",
+        defaultValue: "",
+        description: "검증·공개 권한 확인을 마친 discovery-performance-v1 집계 URL만 연결합니다. 비어 있으면 순위가 표시되지 않습니다.",
     },
     apiBase: {
         type: ControlType.String,

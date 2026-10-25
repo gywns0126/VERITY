@@ -18,7 +18,8 @@
 // Preflight runs before either public write and before the SDK install. It is
 // strictly local: no token, manifest fetch, Blob SDK, or public mutation.
 const VERIFY_CORE_ONLY = process.argv[2] === "--verify-core";
-const { put, del } = VERIFY_CORE_ONLY ? {} : require("@vercel/blob");
+const VERIFY_BUSINESS_ONLY = process.argv[2] === "--verify-business";
+const { put, del } = VERIFY_CORE_ONLY || VERIFY_BUSINESS_ONLY ? {} : require("@vercel/blob");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -120,7 +121,7 @@ const MAX_AGE_RULES = [
     // → 10분 캐시면 하루 수십 번 원본 재전송. 갱신 주기에 맞춰 6h/2h 로 올린다.
     // 지연 트레이드오프: 공시·재무 이력류라 수 시간 지연 수용 범위(준실시간 아님).
     [/^(event_study|us_major_holdings|dart_quarterly_public|us_quarterly_public|13f_quarter_cache)\.json$/, 21600],
-    [/^(us_insider_trades|us_stock_report_public|us_disclosure_feed|us_disclosure_forensics)\.json$/, 7200],
+    [/^(us_insider_trades|us_stock_report_public|us_stock_report_list_public|us_disclosure_feed|us_disclosure_forensics)\.json$/, 7200],
     // 2026-08-18 3차 정렬 — 요금 $95.80 조사 중 **기본군(600s)에 남은 대형 저빈도 파일** 발견.
     // 특히 KR 리포트(11.6MB)가 600s 인데 US 리포트(12.1MB)는 이미 7200s 였다 — 비대칭.
     // 실측(최근 14일 커밋 ÷ 14, 파일 실크기):
@@ -131,8 +132,8 @@ const MAX_AGE_RULES = [
     // 지연 트레이드오프: 전부 일 단위 갱신 데이터라 2~6h 지연 수용 범위.
     // 🚨 public_disclosure_feed 는 일 9.2회라 기본군에 남긴다 — 준실시간 축이다.
     [/^etf_hist\//, 21600],
-    [/^(us_stock_report_us_smallcap|us_smallcap_corner_filters|logo_map|us_earnings_pattern|etf_flow)\.json$/, 21600],
-    [/^(stock_report_public|disclosure_forensics|insider_trades|us_etf|ai_synthesis|us_short_interest|stock_flow_5d|kr_index_daily)\.json$/, 7200],
+    [/^(us_stock_report_us_smallcap|us_smallcap_report_list_public|us_smallcap_corner_filters|logo_map|us_earnings_pattern|etf_flow)\.json$/, 21600],
+    [/^(stock_report_public|stock_report_list_public|disclosure_forensics|insider_trades|us_etf|ai_synthesis|us_short_interest|stock_flow_5d|kr_index_daily)\.json$/, 7200],
     // 2026-08-25 — 개요를 메인 리포트에서 분리 발행. 갱신 주기가 같으므로(일 1.4회)
     //   같은 7200s. 분리 자체가 목적이다 — 목록·검색 화면이 2.50MB 를 안 받게 한다.
     [/^kr_business_overview_public\.json$/, 7200],
@@ -152,6 +153,126 @@ const CORE_GUARD = {
     "us_stock_report_public.json":      { subfields: ["PER", "PBR"], floorPct: 5, minN: 100 },
     "us_stock_report_us_smallcap.json": { subfields: ["PER", "PBR"], floorPct: 5, minN: 50 },
 };
+const LIST_SOURCES = {
+    "stock_report_list_public.json": "stock_report_public.json",
+    "us_stock_report_list_public.json": "us_stock_report_public.json",
+    "us_smallcap_report_list_public.json": "us_stock_report_us_smallcap.json",
+};
+const BUSINESS_ARTIFACT = "portfolio_public_business_index.json";
+const BUSINESS_RECEIPT = "portfolio_public_business_release.json";
+// These are the matcher identity/excerpt inputs staged by publish-data. The
+// separately published member-map evidence and AI candidate files are not
+// business-index dependencies and must not be pulled into this public stage.
+const BUSINESS_SOURCE_FILES = [
+    "universe_search.json", "stock_report_public.json", "us_stock_report_public.json",
+    "public_disclosure_feed.json", "us_disclosure_feed.json", "kr_business_overview_public.json",
+];
+const LIST_FIELDS = {
+    row: ["ticker", "name", "market", "business", "facts", "peer", "overview", "ownership"],
+    facts: ["시가총액", "PER", "PBR", "ROE", "부채비율", "D/E", "영업이익률", "순이익률", "Altman-Z"],
+    peer: ["sector", "rows"], peerRow: ["key", "value", "median", "vs"],
+    overview: ["sector"], ownership: ["group", "family_pct", "shareholders", "cross_check", "sub_count"],
+    shareholder: ["type", "name", "pct"], crossCheck: ["status"],
+};
+
+function allowedObject(value, fields) {
+    return value === null || (value && typeof value === "object" && !Array.isArray(value)
+        && Object.keys(value).every((key) => fields.includes(key)));
+}
+function scalarFields(value, fields) {
+    return allowedObject(value, fields) && (value === null || Object.values(value).every(
+        (item) => item === null || item === undefined || ["string", "number", "boolean"].includes(typeof item)));
+}
+
+function guardList(dir, blobPath) {
+    const sourceName = LIST_SOURCES[blobPath];
+    if (!sourceName) return { ok: true };
+    const sourceGuard = guardCore(path.join(dir, sourceName), sourceName);
+    if (!sourceGuard.ok) return { ok: false, reason: `원본 ${sourceName} HOLD: ${sourceGuard.reason}` };
+    let sourceBytes, source, list;
+    try {
+        sourceBytes = fs.readFileSync(path.join(dir, sourceName));
+        source = JSON.parse(sourceBytes);
+        list = JSON.parse(fs.readFileSync(path.join(dir, blobPath), "utf-8"));
+    } catch (e) { return { ok: false, reason: `목록/원본 읽기 실패 (${e.message})` }; }
+    const meta = list && list._meta;
+    if (!list || !Array.isArray(list.stocks) || !meta ||
+        Object.keys(list).some((key) => !["_meta", "stocks"].includes(key)) ||
+        Object.keys(meta).some((key) => !["schema", "generated_at", "source_file", "source_sha256", "count"].includes(key)) ||
+        meta.schema !== "alphanest-discovery-list-v1" || meta.source_file !== sourceName ||
+        meta.source_sha256 !== sha256(sourceBytes) ||
+        !source._meta || typeof source._meta.generated_at !== "string" || !source._meta.generated_at ||
+        meta.generated_at !== source._meta.generated_at ||
+        meta.count !== source.stocks.length || list.stocks.length !== source.stocks.length) {
+        return { ok: false, reason: "목록 계약 또는 원본 SHA/기준시각 불일치" };
+    }
+    for (let i = 0; i < list.stocks.length; i++) {
+        const row = list.stocks[i];
+        if (!allowedObject(row, LIST_FIELDS.row) || !row || row.ticker !== source.stocks[i].ticker ||
+            !["name", "market", "business"].every((key) => row[key] === undefined || row[key] === null ||
+                ["string", "number", "boolean"].includes(typeof row[key])) ||
+            !scalarFields(row.facts === undefined ? null : row.facts, LIST_FIELDS.facts) ||
+            !scalarFields(row.overview === undefined ? null : row.overview, LIST_FIELDS.overview) ||
+            !allowedObject(row.peer === undefined ? null : row.peer, LIST_FIELDS.peer) ||
+            !allowedObject(row.ownership === undefined ? null : row.ownership, LIST_FIELDS.ownership) ||
+            (row.peer && !scalarFields({sector: row.peer.sector}, ["sector"])) ||
+            (row.ownership && !scalarFields({group: row.ownership.group, family_pct: row.ownership.family_pct,
+                sub_count: row.ownership.sub_count}, ["group", "family_pct", "sub_count"])) ||
+            (row.peer && row.peer.rows != null && (!Array.isArray(row.peer.rows) ||
+                row.peer.rows.some((item) => !item || !scalarFields(item, LIST_FIELDS.peerRow)))) ||
+            (row.ownership && row.ownership.shareholders != null &&
+                (!Array.isArray(row.ownership.shareholders) || row.ownership.shareholders.length > 3 ||
+                    row.ownership.shareholders.some((item) => !item || !scalarFields(item, LIST_FIELDS.shareholder)))) ||
+            (row.ownership && !scalarFields(row.ownership.cross_check === undefined ? null : row.ownership.cross_check, LIST_FIELDS.crossCheck))) {
+            return { ok: false, reason: `목록 행 ${i} allowlist/원본 순서 불일치` };
+        }
+    }
+    return { ok: true };
+}
+
+function guardBusinessPair(dir) {
+    const artifactPath = path.join(dir, BUSINESS_ARTIFACT);
+    const receiptPath = path.join(dir, BUSINESS_RECEIPT);
+    if (!fs.existsSync(artifactPath) && !fs.existsSync(receiptPath)) return { ok: true, absent: true };
+    if (!fs.existsSync(artifactPath) || !fs.existsSync(receiptPath)) {
+        return { ok: false, reason: "사업 준비 인덱스/발행 영수증 한쪽 누락" };
+    }
+    for (const name of BUSINESS_SOURCE_FILES) {
+        if (!fs.existsSync(path.join(dir, name))) {
+            return { ok: false, reason: `사업 준비 원본 누락 ${name}` };
+        }
+        const sourceGuard = guardCore(path.join(dir, name), name);
+        if (!sourceGuard.ok) return { ok: false, reason: `사업 준비 원본 HOLD ${name}: ${sourceGuard.reason}` };
+    }
+    let artifactBytes, artifact, receipt;
+    try {
+        artifactBytes = fs.readFileSync(artifactPath);
+        if (artifactBytes.length > 8 * 1024 * 1024 || fs.statSync(receiptPath).size > 4096) {
+            return { ok: false, reason: "사업 준비 산출물 크기 초과" };
+        }
+        artifact = JSON.parse(artifactBytes);
+        receipt = JSON.parse(fs.readFileSync(receiptPath, "utf-8"));
+    } catch (e) { return { ok: false, reason: `사업 준비 산출물 읽기 실패 (${e.message})` }; }
+    const digest = /^[a-f0-9]{64}$/;
+    const today = new Date().toISOString().slice(0, 10);
+    if (!artifact || typeof artifact !== "object" || Array.isArray(artifact) ||
+        !receipt || typeof receipt !== "object" || Array.isArray(receipt) ||
+        Object.keys(artifact).sort().join() !== ["schema", "matcher_version", "implementation_sha256",
+            "source_revision", "utc_day", "index"].sort().join() ||
+        Object.keys(receipt).sort().join() !== ["schema", "artifact_sha256", "source_revision",
+            "implementation_sha256", "utc_day"].sort().join() ||
+        artifact.schema !== "portfolio-public-business-index-v1" ||
+        receipt.schema !== "portfolio-public-business-release-v1" ||
+        !digest.test(artifact.source_revision) || !digest.test(artifact.implementation_sha256) ||
+        artifact.utc_day !== today || receipt.utc_day !== today ||
+        receipt.source_revision !== artifact.source_revision ||
+        receipt.implementation_sha256 !== artifact.implementation_sha256 ||
+        receipt.artifact_sha256 !== sha256(artifactBytes) ||
+        !artifact.index || typeof artifact.index !== "object" || Array.isArray(artifact.index)) {
+        return { ok: false, reason: "사업 준비 artifact/receipt 계약 불일치" };
+    }
+    return { ok: true };
+}
 
 function finiteMultiple(v) {
     // Public report ratios are numeric strings. Zero and negative values are
@@ -195,16 +316,39 @@ function verifyCoreDirectory(dir) {
         console.error("usage: node blob_upload.js --verify-core <_public_dist>");
         return 1;
     }
-    let failures = 0;
+    let coreFailures = 0;
     for (const name of Object.keys(CORE_GUARD)) {
         const result = guardCore(path.join(dir, name), name);
         if (!result.ok) {
-            failures++;
+            coreFailures++;
             console.error(`::error::public preflight ${name}: ${result.reason}`);
         }
     }
-    console.log(`public preflight: ${Object.keys(CORE_GUARD).length - failures}/${Object.keys(CORE_GUARD).length} core reports passed`);
-    return failures ? 1 : 0;
+    for (const name of Object.keys(LIST_SOURCES)) {
+        const result = guardList(dir, name);
+        if (!result.ok) {
+            coreFailures++;
+            console.error(`::error::public preflight ${name}: ${result.reason}`);
+        }
+    }
+    const businessPair = guardBusinessPair(dir);
+    if (!businessPair.ok) {
+        console.error(`::warning::public preflight ${BUSINESS_RECEIPT}: ${businessPair.reason}`);
+    }
+    const coreTotal = Object.keys(CORE_GUARD).length + Object.keys(LIST_SOURCES).length;
+    console.log(`public preflight: ${coreTotal - coreFailures}/${coreTotal} core reports and lists passed`);
+    console.log(`public preflight: optional business pair ${businessPair.absent ? "absent" : businessPair.ok ? "passed" : "held"}`);
+    return coreFailures ? 1 : 0;
+}
+
+function verifyBusinessDirectory(dir) {
+    if (!dir) {
+        console.error("usage: node blob_upload.js --verify-business <_public_dist>");
+        return 1;
+    }
+    const result = guardBusinessPair(dir);
+    if (!result.ok) console.error(`::warning::optional business pair HOLD: ${result.reason}`);
+    return result.ok ? 0 : 1;
 }
 
 async function uploadFile(filePath, blobPath) {
@@ -284,7 +428,9 @@ async function main() {
 
     const queue = [];
     for (const [fp, blobPath] of entries) {
-        const gr = guardCore(fp, blobPath);
+        const gr = LIST_SOURCES[blobPath] ? guardList(dir, blobPath)
+            : (blobPath === BUSINESS_ARTIFACT || blobPath === BUSINESS_RECEIPT)
+                ? guardBusinessPair(dir) : guardCore(fp, blobPath);
         if (!gr.ok) {
             // 핵심 데이터 붕괴 = 결함본 업로드 차단. Blob 의 직전 GOOD 본이 계속 서빙됨.
             console.error(`  ⛔ HOLD ${blobPath} — ${gr.reason} · 직전 GOOD 유지(발행 안 함)`);
@@ -323,12 +469,15 @@ async function main() {
     //   기존 순차 코드에는 재시도가 없어 일시 실패가 곧 영구 누락이었다 — 이 점도 함께 개선.
     const CONCURRENCY = Math.max(1, parseInt(process.env.BLOB_UPLOAD_CONCURRENCY || "8", 10) || 8);
     let cursor = 0;
+    let activeQueue = queue.filter(([, blobPath]) =>
+        !LIST_SOURCES[blobPath] && blobPath !== BUSINESS_ARTIFACT && blobPath !== BUSINESS_RECEIPT);
+    const failedPaths = new Set();
 
     async function worker() {
         while (true) {
             const i = cursor++;
-            if (i >= queue.length) return;
-            const [fp, blobPath] = queue[i];
+            if (i >= activeQueue.length) return;
+            const [fp, blobPath] = activeQueue[i];
             for (let attempt = 0; attempt < 2; attempt++) {
                 try {
                     const url = await uploadFile(fp, blobPath);
@@ -342,6 +491,7 @@ async function main() {
                     }
                     console.error(`  ✗ ${blobPath} — ${e.message}`);
                     fail++;
+                    failedPaths.add(blobPath);
                     // 🚨 실패분 해시는 남기지 않는다 — 남기면 다음 run 이 "변경 없음" 으로
                     //   건너뛰어 Blob 에 영영 안 올라간다(조용한 영구 누락).
                     delete newHashes[blobPath];
@@ -351,9 +501,54 @@ async function main() {
     }
 
     const t0 = Date.now();
-    await Promise.all(
-        Array.from({ length: Math.min(CONCURRENCY, queue.length || 1) }, () => worker())
-    );
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, activeQueue.length || 1) }, () => worker()));
+    // A list must never advance beyond its corresponding full report on Blob.
+    for (const [listName, sourceName] of Object.entries(LIST_SOURCES)) {
+        if (failedPaths.has(sourceName) || held.some((item) => item.file === sourceName)) {
+            // Also remove an already manifest-skipped list: a failed source
+            // must not certify the list hash for the next attempt.
+            delete newHashes[listName];
+        }
+    }
+    activeQueue = queue.filter(([, blobPath]) => Boolean(LIST_SOURCES[blobPath]));
+    cursor = 0;
+    activeQueue = activeQueue.filter(([, blobPath]) => {
+        const sourceName = LIST_SOURCES[blobPath];
+        if (!failedPaths.has(sourceName) && !held.some((item) => item.file === sourceName)) return true;
+        const reason = `원본 ${sourceName} 업로드 실패/HOLD`;
+        held.push({ file: blobPath, reason });
+        delete newHashes[blobPath];
+        console.error(`  ⛔ HOLD ${blobPath} — ${reason}`);
+        return false;
+    });
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, activeQueue.length || 1) }, () => worker()));
+    // The receipt is a commit marker, not an ordinary parallel object: the
+    // six business sources and artifact must have reached Blob first.
+    function holdBusiness(name, reason) {
+        delete newHashes[name];
+        if (entries.some(([, blobPath]) => blobPath === name) &&
+            !held.some((item) => item.file === name)) {
+            held.push({ file: name, reason });
+            console.error(`  ⛔ HOLD ${name} — ${reason}`);
+        }
+    }
+    const failedBusinessSource = BUSINESS_SOURCE_FILES.find((name) =>
+        failedPaths.has(name) || held.some((item) => item.file === name));
+    if (failedBusinessSource) {
+        holdBusiness(BUSINESS_ARTIFACT, `사업 준비 원본 ${failedBusinessSource} 업로드 실패/HOLD`);
+        holdBusiness(BUSINESS_RECEIPT, `사업 준비 원본 ${failedBusinessSource} 업로드 실패/HOLD`);
+    } else {
+        activeQueue = queue.filter(([, blobPath]) => blobPath === BUSINESS_ARTIFACT);
+        cursor = 0;
+        await Promise.all(Array.from({ length: Math.min(CONCURRENCY, activeQueue.length || 1) }, () => worker()));
+        if (failedPaths.has(BUSINESS_ARTIFACT) || held.some((item) => item.file === BUSINESS_ARTIFACT)) {
+            holdBusiness(BUSINESS_RECEIPT, "사업 준비 인덱스 업로드 실패/HOLD");
+        } else {
+            activeQueue = queue.filter(([, blobPath]) => blobPath === BUSINESS_RECEIPT);
+            cursor = 0;
+            await Promise.all(Array.from({ length: Math.min(CONCURRENCY, activeQueue.length || 1) }, () => worker()));
+        }
+    }
     console.log(
         `  (업로드 ${queue.length}건 · 동시성 ${CONCURRENCY} · ${((Date.now() - t0) / 1000).toFixed(1)}s)`
     );
@@ -413,6 +608,8 @@ async function main() {
 
 if (VERIFY_CORE_ONLY) {
     process.exitCode = verifyCoreDirectory(process.argv[3]);
+} else if (VERIFY_BUSINESS_ONLY) {
+    process.exitCode = verifyBusinessDirectory(process.argv[3]);
 } else main().catch((e) => {
     console.error("::warning::blob_upload fatal —", e.message);
     // fatal 도 exit 0 — cron 정합 우선

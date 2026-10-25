@@ -7,6 +7,7 @@ No member storage is read or written by this endpoint.
 from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler
+from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
 import re
@@ -19,6 +20,7 @@ from api.portfolio_core.portfolio_public_fetch import (
     PUBLIC_SOURCE_FILES,
     fetch_public_sources,
 )
+from api.portfolio_core.portfolio_prepared_business import fetch_publisher_prepared_business
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -129,6 +131,45 @@ def _valid_fetch_result(bundle):
     return (documents, index_revision) if coverage.get("status") == expected_status else None
 
 
+def _prepare_index(documents, revision):
+    # Common public data only. Neither identity nor the selected window enters
+    # the shared preparation cache. The final response remains request-local.
+    from api.portfolio_core.portfolio_engine import prepare_public_index
+    artifact, receipt = fetch_publisher_prepared_business()
+    prepare_public_index(documents, revision, prepared_business_index=artifact,
+                         publisher_receipt=receipt)
+
+
+def _load_prices(positions):
+    started, stage_status = _stage_clock(), "error"
+    try:
+        from api.portfolio_core.portfolio_price_fetch import fetch_public_prices
+        documents = fetch_public_prices(positions)
+        if type(documents) is not dict:
+            raise ValueError("invalid public price result")
+        stage_status = "ok"
+        return documents
+    except Exception:
+        _LOGGER.warning("member map analysis price refresh failed [price_source_unavailable]")
+        return {}
+    finally:
+        _log_stage_timing("prices", started, stage_status)
+
+
+def _load_changes(positions):
+    started, stage_status = _stage_clock(), "error"
+    try:
+        from api.portfolio_core.portfolio_change_facts import fetch_public_changes
+        projection = fetch_public_changes(positions)
+        stage_status = "ok"
+        return projection
+    except Exception:
+        _LOGGER.warning("member map change refresh failed [change_source_unavailable]")
+        return None
+    finally:
+        _log_stage_timing("changes", started, stage_status)
+
+
 def analyze_request(request):
     """Analyze one request without writing to the HTTP response.
 
@@ -176,33 +217,14 @@ def analyze_request(request):
     ]
     started, stage_status = _stage_clock(), "error"
     try:
-        from api.portfolio_core.portfolio_price_fetch import fetch_public_prices
-
-        price_documents = fetch_public_prices(price_positions)
-        if type(price_documents) is not dict:
-            raise ValueError("invalid public price result")
-        stage_status = "ok"
-    except Exception:
-        _LOGGER.warning("member map analysis price refresh failed [price_source_unavailable]")
-        price_documents = {}
-    finally:
-        _log_stage_timing("prices", started, stage_status)
-
-    # Identifiers only, after authentication and request validation. Optional
-    # change-center failure cannot remove the existing filing/price result.
-    started, stage_status = _stage_clock(), "error"
-    try:
-        from api.portfolio_core.portfolio_change_facts import fetch_public_changes
-        change_projection = fetch_public_changes(price_positions)
-        stage_status = "ok"
-    except Exception:
-        _LOGGER.warning("member map change refresh failed [change_source_unavailable]")
-        change_projection = None
-    finally:
-        _log_stage_timing("changes", started, stage_status)
-
-    started, stage_status = _stage_clock(), "error"
-    try:
+        # Start only after origin/auth/input/source validation. Independent
+        # public I/O overlaps public index preparation; optional failures retain
+        # their previous degradation contract. No worker outlives the request.
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            prices = pool.submit(_load_prices, price_positions)
+            changes = pool.submit(_load_changes, [dict(row) for row in price_positions])
+            _prepare_index(documents, public_bundle_revision)
+            price_documents, change_projection = prices.result(), changes.result()
         result = analyze_portfolio(
             payload["positions"],
             documents,

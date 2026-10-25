@@ -5,6 +5,8 @@ import importlib.util
 import io
 import json
 import logging
+import re
+import threading
 from pathlib import Path
 import subprocess
 import sys
@@ -107,6 +109,7 @@ def modules(monkeypatch, tmp_path):
 
     endpoint = _load("api.member_map_analysis", API_DIR / "member_map_analysis.py")
     monkeypatch.setitem(sys.modules, "api.member_map_analysis", endpoint)
+    monkeypatch.setattr(endpoint, "fetch_publisher_prepared_business", Mock(return_value=(None, None)))
     return endpoint, sb
 
 
@@ -541,8 +544,6 @@ def test_stage_timing_is_fixed_metadata_only(modules, monkeypatch, capsys, caplo
         projection.return_value = {}
     monkeypatch.setattr(endpoint, "fetch_public_sources", source)
     monkeypatch.setattr(endpoint, "analyze_portfolio", projection)
-    ticks = iter(range(8))
-    monkeypatch.setattr(endpoint, "time", types.SimpleNamespace(monotonic=lambda: next(ticks)))
     status, headers, _ = endpoint.analyze_request(_request(
         "jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]}))
     captured = capsys.readouterr()
@@ -551,9 +552,11 @@ def test_stage_timing_is_fixed_metadata_only(modules, monkeypatch, capsys, caplo
     error_stage = {"empty_sources": "public_sources", "bad_prices": "prices",
                    "bad_projection": "projection"}.get(mode, mode)
     assert captured.out == ""
-    assert captured.err.splitlines() == [
-        f"member_map_stage stage={stage} status={'error' if stage == error_stage else 'ok'} elapsed_ms=1000"
-        for stage in stages]
+    lines = captured.err.splitlines()
+    assert len(lines) == len(stages)
+    assert sorted(re.sub(r" elapsed_ms=[0-9]+$", "", line) for line in lines) == sorted(
+        f"member_map_stage stage={stage} status={'error' if stage == error_stage else 'ok'}"
+        for stage in stages)
     assert status == (503 if mode in ("public_sources", "empty_sources", "projection", "bad_projection") else 200)
     assert headers == endpoint._headers(ALLOWED_ORIGIN)
     for value in (secret, USER_A, USER_B, "jwt-a", "005930", "AAPL", "Traceback", "Bearer"):
@@ -617,3 +620,71 @@ def test_timing_helper_rejects_non_fixed_labels(modules, capsys):
     endpoint._log_stage_timing("prices", 0, "private-quote")
     endpoint._log_stage_timing("prices", None, "ok")
     assert capsys.readouterr().err == ""
+
+
+def test_public_index_preparation_overlaps_independent_reads(modules, monkeypatch):
+    endpoint, storage = modules
+    source = _bundle()
+    monkeypatch.setattr(endpoint, "fetch_public_sources", Mock(return_value=source))
+    barrier = threading.Barrier(3, timeout=3)
+    prepared = []
+    positions = [{"ticker": "005930", "market": "KR"}]
+
+    def prepare(documents, revision):
+        assert documents is source["documents"] and revision == source["revision"]
+        barrier.wait()
+        prepared.append(True)
+
+    def prices(selected):
+        assert selected == positions
+        barrier.wait()
+        return {}
+
+    def changes(selected):
+        assert selected == positions
+        barrier.wait()
+        return None
+
+    def analyze(*args, **kwargs):
+        assert prepared == [True]
+        return {"schema": "alphaconsole-portfolio-v1"}
+
+    monkeypatch.setattr(endpoint, "_prepare_index", prepare)
+    monkeypatch.setattr(endpoint, "analyze_portfolio", analyze)
+    monkeypatch.setattr(sys.modules["api.portfolio_core.portfolio_price_fetch"], "fetch_public_prices", prices)
+    monkeypatch.setattr(sys.modules["api.portfolio_core.portfolio_change_facts"], "fetch_public_changes", changes)
+    assert endpoint.analyze_request(_request("jwt-a", {"positions": positions}))[0] == 200
+    storage.select.assert_not_called()
+
+
+def test_index_preparation_failure_keeps_private_failure_boundary(modules, monkeypatch, caplog):
+    endpoint, _ = modules
+    monkeypatch.setattr(endpoint, "fetch_public_sources", Mock(return_value=_bundle()))
+    monkeypatch.setattr(endpoint, "_prepare_index", Mock(side_effect=ValueError("private-index-canary")))
+    projection = Mock()
+    monkeypatch.setattr(endpoint, "analyze_portfolio", projection)
+    result = endpoint.analyze_request(_request("jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]}))
+    assert result == (503, endpoint._headers(ALLOWED_ORIGIN), {"error": "analysis_unavailable"})
+    assert "private-index-canary" not in caplog.text
+    projection.assert_not_called()
+
+
+def test_preparation_passes_only_public_artifact_and_receipt(modules, monkeypatch):
+    endpoint, _ = modules
+    artifact, receipt = {"index": {}}, {"schema": "synthetic-publisher-receipt"}
+    fetch = Mock(return_value=(artifact, receipt))
+    prepare = Mock()
+    monkeypatch.setattr(endpoint, "fetch_publisher_prepared_business", fetch)
+    monkeypatch.setattr(sys.modules["api.portfolio_core.portfolio_engine"], "prepare_public_index", prepare)
+    source = _bundle()
+    endpoint._prepare_index(source["documents"], source["revision"])
+    fetch.assert_called_once_with()
+    prepare.assert_called_once_with(source["documents"], source["revision"],
+                                    prepared_business_index=artifact, publisher_receipt=receipt)
+
+
+def test_invalid_input_does_not_fetch_prepared_public_artifact(modules, monkeypatch):
+    endpoint, _ = modules
+    endpoint.fetch_publisher_prepared_business.side_effect = AssertionError("prepared read must not run")
+    assert endpoint.analyze_request(_request("jwt-a", {"positions": [], "member_id": USER_A}))[0] == 400
+    endpoint.fetch_publisher_prepared_business.assert_not_called()

@@ -72,6 +72,9 @@ runs:
         # 🚫 consensus_data.json 도 발행 제외 (2026-07-21 전수감사, PM "긴급도순 ㄱㄱ" 승인) —
         #   KR 브로커 목표가/투자의견(예: target_price 911524·"매수")로 us_analyst_consensus 와 동일
         #   법적 class(재배포 blocker·법률큐). 소비처 0 확인(framer+vercel-api grep 전무). 7/10 결정 정합 확장.
+        # Discovery 목록 3개는 아래 단계에서 최종 staged report로 생성한다.
+        # data/ 추적 원본이 아니므로 이 초기 복사 목록/manifest C1 대상에 넣지 않는다.
+        # 선택적 business index/receipt도 staged builder가 따로 생성·검증한다.
         for f in portfolio.json recommendations.json \
                  macro_snapshot.json \
                  crypto_macro.json \
@@ -338,12 +341,62 @@ runs:
         # publish; a failed overlay stops both public targets before either write.
         node "${{ github.workspace }}/scripts/publish_earnings_calendar.cjs" --staged-public
 
+    - name: Build Discovery lists from final staged public reports
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -m api.builders.stock_report_list_public_builder --source _public_dist/stock_report_public.json --output _public_dist/stock_report_list_public.json
+        python3 -m api.builders.stock_report_list_public_builder --source _public_dist/us_stock_report_public.json --output _public_dist/us_stock_report_list_public.json
+        python3 -m api.builders.stock_report_list_public_builder --source _public_dist/us_stock_report_us_smallcap.json --output _public_dist/us_smallcap_report_list_public.json
+
+    - name: Build optional public business index and publisher receipt
+      shell: bash
+      run: |
+        # Both outputs are created only from this run's staged public bundle.
+        # Candidate failure must not interrupt existing public reports/lists.
+        set -euo pipefail
+        artifact=_public_dist/portfolio_public_business_index.json
+        receipt=_public_dist/portfolio_public_business_release.json
+        rm -f "$artifact" "$receipt"
+        if python3 scripts/member-map/build-prepared-business-index.py \
+            --source-dir _public_dist --output "$artifact" --receipt-output "$receipt" \
+            && test -s "$artifact" && test -s "$receipt"; then
+          echo "public business candidate staged"
+        else
+          rm -f "$artifact" "$receipt"
+          echo "::warning::public business candidate unavailable; runtime validates the existing pair or falls back"
+        fi
+
     - name: Validate core public reports before either public write
       shell: bash
       run: |
         # Same guard as Blob, but before force_orphan can publish a broken report
         # or remove a missing one. Local-only; no SDK install or token required.
         node "${{ github.action_path }}/blob_upload.js" --verify-core "${{ github.workspace }}/_public_dist"
+
+    - name: Hold invalid optional business candidate before either public write
+      shell: bash
+      run: |
+        # Read-only validation first; only the optional pair is removed on HOLD.
+        # Core reports and Discovery lists remain eligible for both publishers.
+        set -euo pipefail
+        if ! node "${{ github.action_path }}/blob_upload.js" --verify-business "${{ github.workspace }}/_public_dist"; then
+          rm -f _public_dist/portfolio_public_business_index.json
+          rm -f _public_dist/portfolio_public_business_release.json
+          echo "::warning::invalid optional business candidate held; core reports/lists continue"
+        fi
+
+    - name: Reserve business receipt for final Blob publication
+      id: reserve_business_receipt
+      shell: bash
+      run: |
+        set -euo pipefail
+        receipt=_public_dist/portfolio_public_business_release.json
+        if [ -f "$receipt" ]; then
+          receipt_dir=$(mktemp -d)
+          mv "$receipt" "$receipt_dir/portfolio_public_business_release.json"
+          echo "path=$receipt_dir/portfolio_public_business_release.json" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Deploy to VERITY-data main branch (옵션 B, P0)
       id: publish_primary
@@ -403,6 +456,12 @@ runs:
       env:
         BLOB_READ_WRITE_TOKEN: ${{ inputs.blob_token }}
       run: |
+        # The receipt is intentionally absent from the earlier Git snapshot.
+        # Only Blob may issue it, after the six source PUTs and artifact PUT.
+        if [ -n "${{ steps.reserve_business_receipt.outputs.path }}" ]; then
+          mv "${{ steps.reserve_business_receipt.outputs.path }}" \
+            "${{ github.workspace }}/_public_dist/portfolio_public_business_release.json"
+        fi
         if [ -z "$BLOB_READ_WRITE_TOKEN" ]; then
           echo "blob_token not set — dual-write skip"
           exit 0

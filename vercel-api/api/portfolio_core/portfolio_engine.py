@@ -12,6 +12,7 @@ from datetime import date, datetime, timezone
 import hashlib
 import json
 import re
+import sys
 import threading
 import unicodedata
 
@@ -39,6 +40,15 @@ from .portfolio_annual_customer_tables import (
     attach_annual_customer_table_relationships,
     index_annual_customer_table_captures,
 )
+from .portfolio_prepared_business import (
+    BUSINESS_SOURCE_FILES as _BUSINESS_SOURCE_FILES,
+    SCHEMA as _PREPARED_BUSINESS_SCHEMA,
+    MATCHER_VERSION as _PREPARED_MATCHER_VERSION,
+    artifact_sha256 as prepared_business_index_sha256,
+    checked_business_index,
+    implementation_sha256 as _prepared_implementation_sha256,
+    publisher_receipt_for as prepared_business_publisher_receipt,
+)
 
 
 MAX_SYMBOLS = 30  # Analysis window, not a limit on a member's stored holdings.
@@ -52,6 +62,17 @@ _TICKER = {"KR": re.compile(r"[0-9]{6}\Z"),
 _PUBLIC_BUNDLE_REVISION = re.compile(r"[0-9a-f]{64}\Z", re.ASCII)
 _AUTOMATIC_EVIDENCE_FILE = "member_map_auto_evidence.json"
 _AUTOMATIC_EVIDENCE_SCOPE = "published-automatic-evidence-catalog"
+_PREPARED_STATUSES = frozenset({"accepted", "fallback_unbounded", "fallback_rejected",
+                                "fallback_missing", "reuse_cached"})
+
+
+def _log_prepared_status(status):
+    """Emit fixed public-index diagnostics through the endpoint's stderr path."""
+    try:
+        if status in _PREPARED_STATUSES:
+            print(f"portfolio_prepared_business status={status}", file=sys.stderr)
+    except Exception:
+        pass
 
 
 class _ProjectedPublicIndexCache:
@@ -110,18 +131,31 @@ class _ProjectedPublicIndexCache:
             "sec_relationships": sec_relationships,
         }
 
-    def _business(self, documents, by_id):
+    def _business(self, documents, by_id, prepared_business_index=None, publisher_receipt=None):
         # Called under the existing public-index lock, never with a selection.
         revision = _business_index_revision(documents, by_id)
         if revision is None:
+            _log_prepared_status("fallback_unbounded")
             return _business_material_index(documents, by_id)
+        prepared = checked_business_index(
+            prepared_business_index, publisher_receipt, revision, documents, by_id
+        ) if prepared_business_index is not None else None
+        if prepared is not None:
+            _log_prepared_status("accepted")
+            self._business_index = prepared
+            self._business_revision = revision
+            return prepared
         if self._business_index is None or self._business_revision != revision:
+            if prepared_business_index is not None:
+                _log_prepared_status("fallback_rejected")
             built = _business_material_index(documents, by_id)
             self._business_index = built
             self._business_revision = revision
+        else:
+            _log_prepared_status("reuse_cached")
         return self._business_index
 
-    def get(self, public_documents, revision):
+    def get(self, public_documents, revision, *, prepared_business_index=None, publisher_receipt=None):
         if revision is None:
             with _temporary_public_text_cache():
                 return self._build(public_documents)
@@ -130,7 +164,12 @@ class _ProjectedPublicIndexCache:
         with self._lock:
             if revision != self._revision or self._index is None:
                 with _temporary_public_text_cache():
-                    self._index = self._build(public_documents, self._business)
+                    self._index = self._build(
+                        public_documents,
+                        lambda documents, by_id: self._business(
+                            documents, by_id, prepared_business_index, publisher_receipt
+                        ),
+                    )
                 self._revision = revision
             return self._index
 
@@ -145,7 +184,41 @@ class _ProjectedPublicIndexCache:
 _PROJECTED_PUBLIC_INDEX = _ProjectedPublicIndexCache()
 
 
-def _business_index_revision(documents, by_id):
+def prepare_public_index(public_documents, revision, *, prepared_business_index=None,
+                         publisher_receipt=None):
+    """Prepare only public facts after caller validation; no member data enters.
+
+    The same cache is consumed by analyze_portfolio. The existing trusted
+    publisher emits the receipt after its artifact. If either is unavailable,
+    the existing source computation runs.
+    """
+    return _PROJECTED_PUBLIC_INDEX.get(
+        public_documents, revision, prepared_business_index=prepared_business_index,
+        publisher_receipt=publisher_receipt,
+    )
+
+
+def build_prepared_business_index(public_documents):
+    """Offline public-only builder; existing source review remains authoritative."""
+    business_documents = {name: public_documents[name] for name in _BUSINESS_SOURCE_FILES
+                          if name in public_documents}
+    with _temporary_public_text_cache():
+        projected = project_public_sources(business_documents)
+        catalog = add_public_company_names(business_documents, projected["companies"], _owned_catalog=True)
+        by_id = {row["id"]: row for row in catalog}
+        utc_day = datetime.now(timezone.utc).date().isoformat()
+        source_revision = _business_index_revision(business_documents, by_id, utc_day=utc_day)
+        if source_revision is None:
+            raise ValueError("unbounded-business-index-input")
+        return {"schema": _PREPARED_BUSINESS_SCHEMA,
+                "matcher_version": _PREPARED_MATCHER_VERSION,
+                "implementation_sha256": _prepared_implementation_sha256(),
+                "utc_day": utc_day,
+                "source_revision": source_revision,
+                "index": _business_material_index(business_documents, by_id)}
+
+
+def _business_index_revision(documents, by_id, *, utc_day=None):
     """Fingerprint only business-matcher inputs; failures keep the old path.
 
     Financial values, macro/news/AI output and caller selections are not inputs
@@ -172,7 +245,8 @@ def _business_index_revision(documents, by_id):
                       for row in by_id.values()]
         names = [[row.get(k) for k in ("market", "ticker", "name", "name_ko")]
                  for row in declarations]
-        return _revision([datetime.now(timezone.utc).date().isoformat(), overview, identities, names])
+        return _revision([utc_day or datetime.now(timezone.utc).date().isoformat(),
+                          overview, identities, names])
     except (AttributeError, KeyError, TypeError, ValueError, OverflowError, RecursionError):
         return None
 

@@ -3,12 +3,16 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 
 /**
  * AlphaNest 뉴스 탭 (공개) — 팩트형.
+ * 되돌리지 말 것: 승인된 시장 언급 종목·테마 요약은 탭 아래, 기사·정렬 위에 두고 상세 통계는 모달로 확인한다.
+ * 되돌리지 말 것: 명시적 URL q 검색은 개인 보유 목록과 분리하며, 이전 검색 응답은 무효화한다.
+ * 되돌리지 말 것: 시장 번역은 제목·URL이 모두 같은 미국 기사의 기존 번역만 재사용한다. 번역이 없으면 원문을 유지한다.
  *
- * 우리 종목 연동형: recommendations.json 의 종목별 sentiment.top_headline_links 를
- * "내 종목 뉴스" 로, portfolio.json 의 headlines / us_headlines 를 "시장 / 미국" 으로 노출.
+ * 회원 개인 뉴스는 현재 보유 수량 > 0인 종목만 표시한다. recommendations.json은 기사 lookup일 뿐이다.
+ * 비회원은 이 기기 관심종목, portfolio.json의 headlines / us_headlines는 별도 "시장 / 미국" 뉴스다.
  *
  * RULE 6 (LLM narrative STOP): 제목 + 출처 + 시각 + 원문 링크만. 해설/요약 0.
- * RULE 7: 호재/악재 칩 = 시장·미국 탭만(portfolio.headlines.sentiment = 키워드 자동분류, "검증 전" 라벨 명시).
+ * RULE 7: 제목의 긍정/부정 표현은 키워드 자동분류(검증 전)이며 투자 효과·가격 방향이 아니다.
+ * 되돌리지 말 것: 빈 개인 목록은 공개 시장 탭으로 안내하되 보유 조회 실패·명시 검색·직접 선택은 덮지 않는다.
  *   점수·등급·방향성 영향 추론은 미노출. 섹터 = 종목 멤버십 사실(영향·수혜 아님).
  *   출처 신뢰도(credibility≥0.8 자체 분류)도 "가설/N=" 표기(2026-07-04 사이트 감사 P1).
  *
@@ -19,8 +23,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 const BLOB = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com"
 // 종목 검색 = 표준 검색창(PublicStockSearch)과 동기 — 동일 유니버스·로고·국기.
 const UNIVERSE_URL = BLOB + "/universe_search.json"
-// '오늘 화제 종목' 자동집계 제외 — 이름 자체가 흔한 일반어라 헤드라인 오탐(예: '지원 대상', '태양광 발전').
-// substring 충돌(왼쪽경계·최장우선으로 해결)과 별개인 '의미 충돌'. 등록 2글자명 중 명백 일반어만 — 편집 자유(2026-07-11).
+// 화제 종목 자동집계 제외 — 이름 자체가 흔한 일반어라 헤드라인 오탐(예: '지원 대상', '태양광 발전').
+// 양쪽 단어경계 검사와 별개인 의미 충돌. 등록 2글자명 중 명백 일반어는 연결 근거로 삼지 않는다.
 const HOT_NAME_BLOCKLIST = new Set([
     "대상",
     "태양",
@@ -160,6 +164,16 @@ function bfLogoSrc(
 }
 const FLAG_BASE = "https://hatscripts.github.io/circle-flags/flags/"
 
+// 명시적 공개 종목 코드만 전달한다. 계정·보유 수량·메모는 URL에 넣지 않는다.
+function newsTicker(value: string): string {
+    const code = String(value || "").trim().toUpperCase()
+    return /^[A-Z0-9][A-Z0-9._-]{0,31}$/.test(code) ? code : ""
+}
+function newsReportHref(path: string | undefined, code: string): string {
+    const base = path && /^\/(?!\/)[A-Za-z0-9/_-]*$/.test(path) ? path : "/stock"
+    return base + "?q=" + encodeURIComponent(newsTicker(code))
+}
+
 interface Props {
     dark: boolean
     recUrl: string
@@ -178,13 +192,15 @@ interface Props {
 const LIGHT = {
     bg: "#ffffff",
     card: "#ffffff",
-    sub: "#f2f4f6",
+    sub: "#f8f9fb",
     text: "#191f28",
-    subtext: "#6b7280",
-    faint: "#8b95a1",
+    subtext: "#6b7684",
+    faint: "#6b7684",
     border: "#e5e8eb",
     accent: "#6c5ce7",
-    chipBg: "#f2f4f6",
+    chipBg: "#f8f9fb",
+    hover: "#f1f3f5",
+    focus: "#e9edf2",
     up: "#f04452",
     down: "#3182f6",
     upBg: "#fdecee",
@@ -194,14 +210,16 @@ const LIGHT = {
 }
 const DARK = {
     bg: "#171c23",
-    card: "#1e242c",
-    sub: "#222933",
-    text: "#f2f4f6",
+    card: "#171c23",
+    sub: "#1d242c",
+    text: "#e3e7ec",
     subtext: "#9aa4b1",
-    faint: "#6b7682",
+    faint: "#9aa4b1",
     border: "#2b3138",
     accent: "#a99bff",
-    chipBg: "#222933",
+    chipBg: "#1d242c",
+    hover: "#252c35",
+    focus: "#303945",
     up: "#f04452",
     down: "#5b9bff",
     upBg: "#2a1a1d",
@@ -213,8 +231,16 @@ const DARK = {
 // 🎨 팔레트 자체 내장 — LIGHT/DARK 를 CSS 변수(--an-nws-*)로 발행. 정적 HTML 정합. 되돌리지 말 것.
 const _ANP = "nws"
 const AN_PALETTE =
-    "body{" + Object.keys(LIGHT).map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k]).join(";") + "}" +
-    'body[data-framer-theme="dark"]{' + Object.keys(DARK).map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k]).join(";") + "}"
+    "body{" +
+    Object.keys(LIGHT)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k])
+        .join(";") +
+    "}" +
+    'body[data-framer-theme="dark"]{' +
+    Object.keys(DARK)
+        .map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k])
+        .join(";") +
+    "}"
 const C: Record<string, string> = {}
 for (const _k of Object.keys(LIGHT)) C[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
@@ -240,6 +266,52 @@ function sectorLabel(s: string): string {
 
 type Tab = "stock" | "market" | "us"
 
+// Derived default only: no new subscription, membership substitution or automatic history entry.
+function defaultNewsTab(personalBusy: boolean, personalProblem: string, personalCount: number,
+    explicitSearch: boolean, loading: boolean, marketProblem: string, marketCount: number, usCount: number): Tab {
+    if (personalBusy || personalProblem || personalCount > 0 || explicitSearch) return "stock"
+    // Do not conceal a failed market request by switching to another source.
+    return !loading && !marketProblem && !marketCount && usCount > 0 ? "us" : "market"
+}
+function publicNewsFeeds(payload: any) {
+    const rows = (value: any): boolean => Array.isArray(value) &&
+        value.every((item: any) => item && typeof item === "object" && typeof item.title === "string")
+    const usable = payload && typeof payload === "object" && !Array.isArray(payload) && !payload.error
+    const marketOk = !!usable && rows(payload.headlines) &&
+        (payload.bloomberg_google_headlines == null || rows(payload.bloomberg_google_headlines))
+    const usOk = !!usable && rows(payload.us_headlines)
+    // The market copy omits translations supplied on the same article in the US feed.
+    // Exact title AND URL only; conflicting translations must not be guessed.
+    const articleKey = (item: any): string => {
+        const url = item.link || item.url
+        return typeof url === "string" && url.trim()
+            ? JSON.stringify([item.title, url.trim()])
+            : ""
+    }
+    const translations = new Map<string, Set<string>>()
+    for (const item of usOk ? payload.us_headlines : []) {
+        const key = articleKey(item)
+        const ko = typeof item.title_ko === "string" ? item.title_ko.trim() : ""
+        if (!key || !ko || ko === item.title || !/[가-힣]/.test(ko)) continue
+        const values = translations.get(key) || new Set<string>()
+        values.add(ko)
+        translations.set(key, values)
+    }
+    const market = marketOk
+        ? payload.headlines.concat(payload.bloomberg_google_headlines || []).map((item: any) => {
+            if (item.title_ko || /[가-힣]/.test(item.title)) return item
+            const values = translations.get(articleKey(item))
+            return values?.size === 1 ? { ...item, title_ko: [...values][0] } : item
+        })
+        : []
+    return {
+        marketOk, usOk,
+        headlines: marketOk ? payload.headlines : [],
+        market,
+        us: usOk ? payload.us_headlines : [],
+    }
+}
+
 interface NewsItem {
     title: string
     titleKo?: string
@@ -261,13 +333,111 @@ interface StockGroup {
     industry: string
     items: NewsItem[]
 }
-// 오늘 핫한 종목 — recommendations[].sentiment.headline_count(종목별 뉴스량) 순. 사실(뉴스 건수), 추천·등급 아님.
+interface PersonalStock {
+    ticker: string
+    name: string
+    market: string
+    watched?: boolean
+    held?: boolean
+}
+// 되돌리지 말 것: 회원 뉴스의 종목 집합은 현재 보유 수량 > 0인 행만 사용한다.
+// 관심종목·매도 완료(0주)·공개 추천 목록은 회원 보유 목록의 대체값이 아니다.
+function currentHoldingStocks(payload: unknown): PersonalStock[] {
+    const rows = Array.isArray(payload)
+        ? payload
+        : payload && typeof payload === "object" && "holdings" in payload
+          ? payload.holdings
+          : null
+    if (!Array.isArray(rows)) throw new Error("Invalid holdings response")
+    const stocks = new Map<string, PersonalStock>()
+    for (const row of rows) {
+        if (!row || typeof row !== "object") continue
+        if (typeof row.shares !== "number" && typeof row.shares !== "string") continue
+        const shares = Number(row.shares)
+        if (!Number.isFinite(shares) || shares <= 0) continue
+        const ticker = String(row.ticker || "").trim().toUpperCase()
+        if (!ticker) continue
+        stocks.set(ticker, {
+            ticker,
+            name: String(row.name || ticker),
+            market: String(row.market || ""),
+            watched: false,
+            held: true,
+        })
+    }
+    return Array.from(stocks.values())
+}
+
+// 오늘 핫한 종목 — 수집된 시장 제목에서 종목별 언급 기사 수 집계. 보유 목록·추천·등급 아님.
 interface HotStock {
     ticker: string
     name: string
     market: string
     count: number
     score: number
+}
+
+// 되돌리지 말 것: 회사명 일부·매체 접미사는 연결 근거가 아니며, 기사마다 각 종목을 한 번만 센다.
+function countHeadlineStocks(items: NewsItem[], universe: any[]): HotStock[] {
+    const issuers = new Map<string, any>()
+    const owners = new Map<string, Set<string>>()
+    const addAlias = (value: unknown, ticker: string) => {
+        if (typeof value !== "string") return
+        const alias = value.trim().toLowerCase()
+        if (alias.length < 2 || HOT_NAME_BLOCKLIST.has(alias) || /^[a-z.\-]{1,4}$/.test(alias) || /^\d+$/.test(alias)) return
+        if (!owners.has(alias)) owners.set(alias, new Set())
+        owners.get(alias)!.add(ticker)
+    }
+    for (const row of universe) {
+        if (!row || typeof row !== "object") continue
+        const ticker = String(row.ticker || "").trim()
+        if (!/^\d{6}$/.test(ticker)) continue
+        issuers.set(ticker, row)
+        addAlias(row.name_ko, ticker)
+        addAlias(row.name, ticker)
+    }
+    // 해당 상장사가 유니버스에 있을 때만 공식명과 통칭을 연결한다. 그룹명으로 잘라내지 않는다.
+    if (issuers.has("000660")) {
+        addAlias("SK하이닉스", "000660")
+        addAlias("하이닉스", "000660")
+    }
+    if (issuers.has("035420")) addAlias("네이버", "035420")
+    const aliases = [...owners]
+        .filter(([, codes]) => codes.size === 1)
+        .map(([alias, codes]) => ({ alias, ticker: [...codes][0] }))
+    // Reuse boundary expressions: compiling a Unicode regex for every issuer is costly.
+    const startsWord = /^[\p{L}\p{N}_]/u
+    const endsWord = /[\p{L}\p{N}_]$/u
+    const particle = /^(?:으로부터|으로는|에서는|에게는|에게|에서|에는|에도|에선|에겐|와는|과는|와의|과의|까지|부터|보다|처럼|마저|조차|이라며|이라는|이란|라고|이며|으로|로는|은|는|이|가|을|를|와|과|의|도|만|에|로)(?![\p{L}\p{N}_])/u
+    const publisherSuffix = /\s+[-–—|]\s*(?:네이버\s*프리미엄\s*콘텐츠|naver\s*premium\s*contents?)\s*$/i
+    const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const tally = new Map<string, HotStock>()
+    for (const item of items) {
+        let title = typeof item?.title === "string" ? item.title : ""
+        const source = typeof item?.source === "string" ? item.source.trim() : ""
+        if (source) title = title.replace(new RegExp(`\\s+[-–—|]\\s*${escape(source)}\\s*$`, "i"), "")
+        title = title.replace(publisherSuffix, "").toLowerCase()
+        if (!/[가-힣]/.test(title)) continue // 기존 범위 유지: 한국어 시장 제목·국내 상장 종목
+        const found = new Set<string>()
+        for (const { alias, ticker } of aliases) {
+            if (found.has(ticker)) continue
+            for (let pos = title.indexOf(alias); pos >= 0; pos = title.indexOf(alias, pos + 1)) {
+                const after = title.slice(pos + alias.length)
+                if (!endsWord.test(title.slice(Math.max(0, pos - 2), pos)) && (!startsWord.test(after) || particle.test(after))) {
+                    found.add(ticker)
+                    break
+                }
+            }
+        }
+        for (const ticker of found) {
+            if (!tally.has(ticker)) {
+                const row = issuers.get(ticker)
+                tally.set(ticker, { ticker, name: row.name_ko || row.name || ticker, market: "KR", count: 0, score: 0 })
+            }
+            tally.get(ticker)!.count++
+        }
+    }
+    return [...tally.values()].sort((a, b) => b.count - a.count).slice(0, 8)
 }
 
 /* 오늘의 뉴스 한눈 — 전부 기존 사실 집계(RULE7, LLM 해석 0). 출처신뢰도·신선도·무드·테마빈도. */
@@ -391,18 +561,28 @@ const NEWS_SORTS: { k: string; label: string }[] = [
     { k: "hot", label: "핫" },
     { k: "outlet", label: "언론사" },
 ]
+// Share only simultaneous public ticker requests. Settled results are never retained here.
+const stockNewsInFlight = new Map<string, Promise<any[] | null>>()
+function loadStockNews(url: string): Promise<any[] | null> {
+    const pending = stockNewsInFlight.get(url)
+    if (pending) return pending
+    const request: Promise<any[] | null> = fetch(url, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => (d && Array.isArray(d.items) ? d.items : null))
+        .catch(() => null)
+        .finally(() => {
+            if (stockNewsInFlight.get(url) === request) stockNewsInFlight.delete(url)
+        })
+    stockNewsInFlight.set(url, request)
+    return request
+}
 
 function asArray(x: any): any[] {
     return Array.isArray(x) ? x : []
 }
 
 /* 종목 로고 — 표준 검색창(PublicStockSearch)과 동일: 토스 CDN(404 시 이니셜) + circle-flags 원형 국기. */
-function Logo(props: {
-    ticker: any
-    name: any
-    C: any
-    size?: number
-}) {
+function Logo(props: { ticker: any; name: any; C: any; size?: number }) {
     const { ticker, name, C } = props
     const size = props.size || 22
     const [err, setErr] = useState(false)
@@ -494,18 +674,25 @@ function Logo(props: {
 export default function PublicNewsTab(props: Props) {
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
 
-    const [tab, setTab] = useState<Tab>("stock")
+    const [chosenTab, setTab] = useState<Tab | null>(null)
     const [showKo, setShowKo] = useState<boolean>(false)
     const [mktSort, setMktSort] = useState<string>("recent") // 시장·미국 정렬: recent/hot/outlet
-    const [recGroups, setRecGroups] = useState<StockGroup[]>([]) // recommendations(뉴스 있는 것) — 관심종목 없을 때 폴백
+    const [recGroups, setRecGroups] = useState<StockGroup[]>([]) // 공개 뉴스 집계용; 개인 목록의 폴백으로 사용하지 않는다.
     const [recMap, setRecMap] = useState<Record<string, StockGroup>>({}) // 전 rec: ticker → 메타+뉴스(뉴스 소스 lookup)
     const [naverNews, setNaverNews] = useState<Record<string, NewsItem[]>>({}) // KR 종목 라이브 뉴스(네이버 enrich)
-    const [watch, setWatch] = useState<
-        { ticker: string; name: string; market: string }[]
-    >([]) // 둥지/관심종목(로그인 watchgroups + localStorage)
+    const [watch, setWatch] = useState<PersonalStock[]>([]) // 로그인=현재 보유만, 비로그인=이 기기 관심종목
+    const [memberMode, setMemberMode] = useState<boolean>(false)
+    const newsAudienceToken = useRef("")
+    const [newsAudienceVersion, setNewsAudienceVersion] = useState(0)
+    const [personalLoading, setPersonalLoading] = useState<boolean>(false)
+    const [personalError, setPersonalError] = useState<string>("")
     const [market, setMarket] = useState<NewsItem[]>([])
     const [us, setUs] = useState<NewsItem[]>([])
     const [insights, setInsights] = useState<Insights | null>(null)
+    const [insightsOpen, setInsightsOpen] = useState(false)
+    const insightsDialog = useRef<HTMLDialogElement>(null)
+    const insightsTrigger = useRef<HTMLButtonElement>(null)
+    const insightsClose = useRef<HTMLButtonElement>(null)
     const [loading, setLoading] = useState<boolean>(true)
     // 반응형 — 컨테이너 폭 감지(좁은 화면 패딩 축소). 다른 public 컴포넌트 동일 패턴.
     const rootRef = useRef<HTMLDivElement>(null)
@@ -521,43 +708,67 @@ export default function PublicNewsTab(props: Props) {
         return () => ro.disconnect()
     }, [])
     const [failed, setFailed] = useState<boolean>(false)
+    const [marketError, setMarketError] = useState<string>("")
+    const [usError, setUsError] = useState<string>("")
     const [q, setQ] = useState<string>("") // 종목 뉴스 검색어(이름/코드)
     const [uni, setUni] = useState<any[]>([]) // 종목 유니버스(표준 universe_search.json — 검색창 전역 동기)
     const [focused, setFocused] = useState<boolean>(false)
     const [searchGroup, setSearchGroup] = useState<StockGroup | null>(null) // 검색된 종목 뉴스(온디맨드)
     const [searching, setSearching] = useState<boolean>(false)
     const [searchMsg, setSearchMsg] = useState<string>("")
+    const [selectedTicker, setSelectedTicker] = useState<string>("")
+    const searchRequest = useRef<{ generation: number; controller: AbortController | null }>({
+        generation: 0, controller: null,
+    })
+    const searchLocation = useRef<string | null>(null)
+    const searchActions = useRef<{
+        pick: (code: string, name: string, sync?: boolean) => Promise<void>
+        clear: (sync?: boolean) => void
+    } | null>(null)
 
-    /* 둥지/관심종목 읽기 — localStorage(verity_watchlist, 무로그인 별표) + 로그인(/api/watchgroups) 병합.
-       별표 토글/로그인 변경 이벤트 추종해 자동 갱신. 비어 있으면 아래 stocks 가 추천으로 폴백. */
+    const tab = chosenTab ?? defaultNewsTab(
+        personalLoading, personalError, watch.length,
+        !!(selectedTicker || q.trim() || searchGroup || searchMsg),
+        loading, marketError, market.length, us.length
+    )
+    const activeFeedError = tab === "us" ? usError : marketError
+
+    // Native modal owns inertness and focus trapping; restore scroll and trigger on close/unmount.
+    useEffect(() => {
+        if (!insightsOpen) return
+        const dialog = insightsDialog.current
+        if (!dialog) return
+        const body = dialog.ownerDocument.body
+        const overflow = body.style.getPropertyValue("overflow")
+        const priority = body.style.getPropertyPriority("overflow")
+        const trigger = insightsTrigger.current
+        if (!dialog.open) dialog.showModal()
+        body.style.setProperty("overflow", "hidden")
+        insightsClose.current?.focus({ preventScroll: true })
+        return () => {
+            if (dialog.open) dialog.close()
+            body.style.setProperty("overflow", overflow, priority)
+            if (trigger?.isConnected) trigger.focus({ preventScroll: true })
+        }
+    }, [insightsOpen])
+
+    /* 내 종목 source contract — 로그인: 서버의 현재 보유(shares > 0)만 사용.
+       비로그인: 이 기기의 임시 관심종목만 사용. 회원 조회 실패·빈 보유 목록도 관심종목으로 대체하지 않는다. */
     useEffect(() => {
         if (onCanvas) return
         const api = (
             props.apiBase || "https://project-yw131.vercel.app"
         ).replace(/\/+$/, "")
         let alive = true
+        let generation = 0
+        let controller: AbortController | null = null
         const load = () => {
-            const m = new Map<
-                string,
-                { ticker: string; name: string; market: string }
-            >()
-            try {
-                const r =
-                    typeof localStorage !== "undefined"
-                        ? localStorage.getItem("verity_watchlist")
-                        : null
-                const a = r ? JSON.parse(r) : []
-                if (Array.isArray(a))
-                    for (const w of a) {
-                        const tk = String((w && w.ticker) || "").trim()
-                        if (tk && !m.has(tk.toUpperCase()))
-                            m.set(tk.toUpperCase(), {
-                                ticker: tk,
-                                name: (w && w.name) || tk,
-                                market: (w && w.market) || "",
-                            })
-                    }
-            } catch (e) {}
+            if (!alive) return
+            const requestId = ++generation
+            controller?.abort()
+            controller = null
+            setPersonalError("")
+            setPersonalLoading(false)
             let token = ""
             try {
                 const s = JSON.parse(
@@ -567,45 +778,72 @@ export default function PublicNewsTab(props: Props) {
                 )
                 token = (s && s.access_token) || ""
             } catch (e) {}
-            const finish = () => {
-                if (alive) setWatch(Array.from(m.values()))
+            if (newsAudienceToken.current !== token) {
+                newsAudienceToken.current = token
+                setWatch([])
+                setNaverNews({})
+                setNewsAudienceVersion((version) => version + 1)
             }
             if (token) {
-                fetch(`${api}/api/watchgroups`, {
-                    headers: { Authorization: `Bearer ${token}` },
+                setMemberMode(true)
+                setPersonalLoading(true)
+                controller = new AbortController()
+                const H = { Authorization: `Bearer ${token}` }
+                fetch(`${api}/api/holdings`, {
+                    headers: H,
                     cache: "no-store",
+                    signal: controller.signal,
                 })
-                    .then((r) => (r.ok ? r.json() : null))
-                    .then((groups) => {
-                        if (Array.isArray(groups))
-                            for (const g of groups)
-                                for (const it of g.items || []) {
-                                    const tk = String(
-                                        (it && it.ticker) || ""
-                                    ).trim()
-                                    if (tk && !m.has(tk.toUpperCase()))
-                                        m.set(tk.toUpperCase(), {
-                                            ticker: tk,
-                                            name: (it && it.name) || tk,
-                                            market: (it && it.market) || "",
-                                        })
-                                }
+                    .then((r) => {
+                        if (!r.ok) throw new Error("Holdings request failed")
+                        return r.json()
                     })
-                    .catch(() => {})
-                    .finally(finish)
-            } else finish()
+                    .then((holdings) => {
+                        if (!alive || requestId !== generation) return
+                        setWatch(currentHoldingStocks(holdings))
+                    })
+                    .catch(() => {
+                        if (!alive || requestId !== generation) return
+                        setWatch([])
+                        setPersonalError("보유종목을 불러오지 못했어요. 로그인 상태를 확인한 뒤 새로고침해 주세요.")
+                    })
+                    .finally(() => {
+                        if (alive && requestId === generation) setPersonalLoading(false)
+                    })
+                return
+            }
+            if (alive) setMemberMode(false)
+            const m = new Map<string, PersonalStock>()
+            try {
+                const r = typeof localStorage !== "undefined" ? localStorage.getItem("verity_watchlist") : null
+                const a = r ? JSON.parse(r) : []
+                if (Array.isArray(a)) for (const it of a) {
+                    const tk = String((it && it.ticker) || "").trim()
+                    if (!tk) continue
+                    m.set(tk.toUpperCase(), { ticker: tk, name: (it && it.name) || tk, market: (it && it.market) || "", watched: true, held: false })
+                }
+            } catch (e) {}
+            if (alive) setWatch(Array.from(m.values()))
         }
         load()
         window.addEventListener("verity-watchlist-changed", load) // PublicWatchlist(localStorage) 별표
         window.addEventListener("verity_watch_change", load) // AlphaNestWatchlist(로그인) 별표
-        window.addEventListener("verity-auth-change", load) // 로그인/로그아웃
+        window.addEventListener("verity_holdings_change", load) // 둥지 보유 변경
+        window.addEventListener("verity_auth_change", load) // 로그인/로그아웃
         window.addEventListener("storage", load)
+        window.addEventListener("focus", load) // 다른 화면에서 보유를 수정한 뒤 복귀
+        window.addEventListener("pageshow", load) // 뒤로 가기/BFCache 복원
         return () => {
             alive = false
+            generation++
+            controller?.abort()
             window.removeEventListener("verity-watchlist-changed", load)
             window.removeEventListener("verity_watch_change", load)
-            window.removeEventListener("verity-auth-change", load)
+            window.removeEventListener("verity_holdings_change", load)
+            window.removeEventListener("verity_auth_change", load)
             window.removeEventListener("storage", load)
+            window.removeEventListener("focus", load)
+            window.removeEventListener("pageshow", load)
         }
     }, [onCanvas, props.apiBase])
 
@@ -617,6 +855,13 @@ export default function PublicNewsTab(props: Props) {
         const recUrl = props.recUrl || BLOB + "/recommendations.json"
         const pfUrl = props.portfolioUrl || BLOB + "/portfolio.json"
         const maxPer = props.maxPerStock || 3
+        setLoading(true)
+        setMarket([])
+        setUs([])
+        setInsights(null)
+        setFailed(false)
+        setMarketError("")
+        setUsError("")
 
         Promise.all([
             fetch(recUrl)
@@ -629,8 +874,9 @@ export default function PublicNewsTab(props: Props) {
             if (!alive) return
             const recRaw = res[0]
             const pf = res[1]
+            const feeds = publicNewsFeeds(pf)
 
-            // recommendations → recMap(전체, 뉴스 소스 lookup) + recGroups(뉴스 있는 것, 관심종목 없을 때 폴백)
+            // recommendations → 뉴스 소스 lookup. 개인 목록의 종목 집합은 변경하지 않는다.
             const recs = Array.isArray(recRaw)
                 ? recRaw
                 : (recRaw && recRaw.recommendations) || []
@@ -677,11 +923,7 @@ export default function PublicNewsTab(props: Props) {
             }
 
             // 시장 뉴스 (KR 헤드라인 + 글로벌/블룸버그 RSS 합본 — 볼륨↑, 제목 dedup)
-            const mkRaw = pf
-                ? asArray(pf.headlines).concat(
-                      asArray(pf.bloomberg_google_headlines)
-                  )
-                : []
+            const mkRaw = feeds.market
             const mk: NewsItem[] = []
             const seenMk = new Set<string>()
             for (
@@ -715,7 +957,7 @@ export default function PublicNewsTab(props: Props) {
             }
 
             // 미국 뉴스
-            const usRaw = pf ? asArray(pf.us_headlines) : []
+            const usRaw = feeds.us
             const usArr: NewsItem[] = []
             for (
                 let i = 0;
@@ -741,7 +983,7 @@ export default function PublicNewsTab(props: Props) {
             }
 
             // 오늘의 뉴스 한눈 — KR headlines(category/near_duplicate/sentiment) + 추천 종목 뉴스량 집계
-            const rawHl = pf ? asArray(pf.headlines) : []
+            const rawHl = feeds.headlines
             if (rawHl.length) {
                 let credHi = 0,
                     credLo = 0,
@@ -802,56 +1044,48 @@ export default function PublicNewsTab(props: Props) {
             setMarket(windowNews(mk, FLASH_WINDOW_DAYS, FLASH_FLOOR))
             setUs(windowNews(usArr, FLASH_WINDOW_DAYS, FLASH_FLOOR))
             setLoading(false)
-            setFailed(!recRaw && !pf)
+            setMarketError(feeds.marketOk ? "" : "시장 뉴스를 불러오지 못했어요. 새로고침해 주세요.")
+            setUsError(feeds.usOk ? "" : "미국 뉴스를 불러오지 못했어요. 새로고침해 주세요.")
+            setFailed(!feeds.marketOk && !feeds.usOk)
         })
 
         return () => {
             alive = false
         }
-    }, [
-        props.recUrl,
-        props.portfolioUrl,
-        props.maxPerStock,
-        props.maxMarket,
-    ])
+    }, [props.recUrl, props.portfolioUrl, props.maxPerStock, props.maxMarket])
 
-    /* 표시할 내 종목 = 관심종목(watch) 있으면 그 종목, 없으면 추천(recGroups). 뉴스 = KR 라이브(naverNews) 우선, 없으면 recMap. */
+    /* 표시할 내 종목 = 회원은 현재 보유, 비회원은 기기 관심. 추천종목은 개인 목록에 섞지 않는다. */
     const stocks = useMemo<StockGroup[]>(() => {
         const withLive = (g: StockGroup): StockGroup => {
             const live =
                 naverNews[g.ticker] || naverNews[String(g.ticker).toUpperCase()]
             return live && live.length ? { ...g, items: live } : g
         }
-        if (watch.length) {
-            return watch.map((w) => {
-                const rm =
-                    recMap[w.ticker] || recMap[String(w.ticker).toUpperCase()]
-                const g: StockGroup = {
-                    ticker: w.ticker,
-                    name: w.name || (rm ? rm.name : w.ticker),
-                    market: w.market || (rm ? rm.market : ""),
-                    sector: rm ? rm.sector : "",
-                    industry: rm ? rm.industry : "",
-                    items: rm ? rm.items : [],
-                }
-                return withLive(g)
-            })
-        }
-        return recGroups.map(withLive)
-    }, [watch, recMap, recGroups, naverNews])
+        return watch.map((w) => {
+            const rm =
+                recMap[w.ticker] || recMap[String(w.ticker).toUpperCase()]
+            const g: StockGroup = {
+                ticker: w.ticker,
+                name: w.name || (rm ? rm.name : w.ticker),
+                market: w.market || (rm ? rm.market : ""),
+                sector: rm ? rm.sector : "",
+                industry: rm ? rm.industry : "",
+                items: rm ? rm.items : [],
+            }
+            return withLive(g)
+        })
+    }, [watch, recMap, naverNews])
 
-    /* KR 종목(관심 or 추천) 라이브 뉴스 enrich — 목록 바뀔 때(관심종목 변경 포함) 재수집. 최대 15. */
+    /* KR 관심·보유종목 라이브 뉴스 enrich — 목록 변경 시 재수집. 최대 15. */
     const krKey = useMemo(() => {
-        const src = watch.length
-            ? watch.map((w) => w.ticker)
-            : recGroups.map((g) => g.ticker)
+        const src = watch.map((w) => w.ticker)
         const out: string[] = []
         for (const tk of src) {
             const t = String(tk || "")
             if (/^\d{6}$/.test(t) && out.indexOf(t) < 0) out.push(t)
         }
         return out.slice(0, 15).join(",")
-    }, [watch, recGroups])
+    }, [watch])
 
     useEffect(() => {
         if (onCanvas || !krKey) return
@@ -860,50 +1094,37 @@ export default function PublicNewsTab(props: Props) {
         ).replace(/\/+$/, "")
         const krs = krKey.split(",").filter(Boolean)
         let alive = true
-        Promise.all(
-            krs.map((tk) =>
-                fetch(`${api}/api/stock_news?code=${encodeURIComponent(tk)}`, {
-                    cache: "no-store",
-                })
-                    .then((r) => (r.ok ? r.json() : null))
-                    .then((d) => ({
-                        tk,
-                        items: d && Array.isArray(d.items) ? d.items : null,
-                    }))
-                    .catch(() => ({ tk, items: null }))
-            )
-        ).then((results) => {
-            if (!alive) return
-            setNaverNews((prev) => {
-                const next = { ...prev }
-                for (const r of results)
-                    if (r.items && r.items.length) {
-                        next[r.tk] = r.items.slice(0, 4).map((n: any) => ({
-                            title: n.title,
-                            url: n.url,
-                            source: n.source,
-                            time: n.rel_time || "",
-                            sentiment: "",
-                            category: n.category,
-                            outlets: n.outlets,
-                            credible: n.credible,
-                        }))
-                    }
-                return next
+        const audience = newsAudienceToken.current
+        for (const tk of krs) {
+            loadStockNews(`${api}/api/stock_news?code=${encodeURIComponent(tk)}`).then((items) => {
+                if (!alive || newsAudienceToken.current !== audience || !items?.length) return
+                setNaverNews((prev) => ({
+                    ...prev,
+                    [tk]: items.slice(0, 4).map((n: any) => ({
+                        title: n.title,
+                        url: n.url,
+                        source: n.source,
+                        time: n.rel_time || "",
+                        sentiment: "",
+                        category: n.category,
+                        outlets: n.outlets,
+                        credible: n.credible,
+                    })),
+                }))
             })
-        })
+        }
         return () => {
             alive = false
         }
-    }, [krKey, props.apiBase, onCanvas])
+    }, [krKey, props.apiBase, onCanvas, newsAudienceVersion])
 
     const tabs: { key: Tab; label: string; count: number }[] = useMemo(
         () => [
-            { key: "stock", label: "내 종목", count: stocks.length },
+            { key: "stock", label: memberMode ? "보유종목" : "이 기기의 관심", count: stocks.length },
             { key: "market", label: "시장", count: market.length },
             { key: "us", label: "미국", count: us.length },
         ],
-        [stocks.length, market.length, us.length]
+        [memberMode, stocks.length, market.length, us.length]
     )
 
     /* 유니버스 로드(마운트) — 표준 검색창 autocomplete + '오늘 화제 종목' 언급 tally 공용(universe_search.json).
@@ -919,71 +1140,11 @@ export default function PublicNewsTab(props: Props) {
             .catch(() => {})
     }, [uni.length])
 
-    /* 오늘 화제 종목 = KR 헤드라인 제목에 언급된 종목명 tally (객관·언급 수). recommendations 편향 폐기.
-       US 티커는 흔한 단어 충돌(IT/ALL/NOW…)로 노이즈 → KR 종목명(한글, 충돌 적음)만 집계. */
-    const krNames = useMemo(() => {
-        const arr: { name: string; ticker: string }[] = []
-        const have = new Set<string>()
-        for (const x of uni) {
-            const tk = String(x.ticker || "")
-            const nm = String(x.name || "")
-            if (
-                /^\d{6}$/.test(tk) &&
-                nm.length >= 2 &&
-                !HOT_NAME_BLOCKLIST.has(nm)
-            ) {
-                arr.push({ name: nm, ticker: tk })
-                have.add(tk)
-            }
-        }
-        // 통칭 별칭 — 뉴스 제목 관행상 그룹 접두 생략 표기(최소만, 하드코딩 사유 주석).
-        // '하이닉스'(SK 생략)가 별칭 없으면 경계매칭 후 어느 종목에도 안 잡혀 SK하이닉스 언급이 유실됨.
-        if (have.has("000660")) arr.push({ name: "하이닉스", ticker: "000660" })
-        arr.sort((a, b) => b.name.length - a.name.length) // 최장 우선(삼성전자 > 삼성, 부분일치 회피)
-        return arr
-    }, [uni])
-    const hotStocks = useMemo<HotStock[]>(() => {
-        if (!krNames.length || !market.length) return []
-        // 한글 단어경계 매칭 — 앞 글자가 한글/영숫자면 다른 단어의 꼬리(하[이닉스]→이닉스 오매칭, 2026-07-10 fix).
-        // 뒤는 조사(가/는/도)가 바로 붙는 한국어 특성상 검사 안 함. lookbehind 대신 그룹(구형 Safari 호환).
-        const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-        const nameHit = (title: string, name: string): boolean => {
-            try {
-                return new RegExp("(^|[^가-힣A-Za-z0-9])" + esc(name)).test(
-                    title
-                )
-            } catch (e) {
-                return title.indexOf(name) >= 0
-            }
-        }
-        const tally: Record<string, HotStock> = {}
-        for (const it of market) {
-            const t = it.title || ""
-            if (!/[가-힣]/.test(t)) continue // 한글 제목만(글로벌 RSS 제외)
-            for (const s of krNames) {
-                if (nameHit(t, s.name)) {
-                    if (!tally[s.ticker]) {
-                        // 별칭 매칭이어도 표시명은 공식명(uni) 우선
-                        const off = uni.find(
-                            (x: any) => String(x.ticker) === s.ticker
-                        )
-                        tally[s.ticker] = {
-                            ticker: s.ticker,
-                            name: (off && off.name) || s.name,
-                            market: "KR",
-                            count: 0,
-                            score: 0,
-                        }
-                    }
-                    tally[s.ticker].count++
-                    break // 헤드라인당 1종목(최장 일치)
-                }
-            }
-        }
-        return Object.values(tally)
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 8)
-    }, [krNames, market, uni])
+    /* 시장 전체의 종목별 언급 기사 수. 개인 보유 목록과 별도로 집계한다. */
+    const hotStocks = useMemo<HotStock[]>(
+        () => countHeadlineStocks(market, uni),
+        [market, uni]
+    )
     // 라이브 연관검색어 — 코드·이름 부분일치 상위 8 (표준과 동일 매칭).
     const matches = useMemo(() => {
         const s = q.trim().toLowerCase()
@@ -1014,79 +1175,153 @@ export default function PublicNewsTab(props: Props) {
             .sort((a: any, b: any) => rk(a) - rk(b))
             .slice(0, 8)
     }, [q, uni])
-    const pickNews = async (tk: string, nm: string) => {
-        const code = String(tk || "").trim()
+    /* Explicit search lifecycle — does not mutate holdings or device interests. */
+    const cancelSearch = () => {
+        const current = searchRequest.current
+        current.generation += 1
+        current.controller?.abort()
+        current.controller = null
+        return current.generation
+    }
+    const syncSearchUrl = (code: string) => {
+        if (onCanvas || typeof window === "undefined") return
+        const current = new URL(window.location.href)
+        const values = current.searchParams.getAll("q")
+        searchLocation.current = JSON.stringify(code ? [code] : [])
+        if (values.length === (code ? 1 : 0) && (values[0] || "") === code) return
+        // Retain Framer's history state; carry only the selected public code.
+        window.history.pushState(window.history.state, "", current.pathname + (code ? "?q=" + encodeURIComponent(code) : ""))
+    }
+    const clearSearch = (sync = true) => {
+        cancelSearch()
+        setQ("")
+        setFocused(false)
+        React.startTransition(() => {
+            setSelectedTicker("")
+            setSearchGroup(null)
+            setSearchMsg("")
+            setSearching(false)
+        })
+        if (sync) syncSearchUrl("")
+    }
+    const pickNews = async (tk: string, nm: string, sync = true) => {
+        const code = newsTicker(tk)
+        const generation = cancelSearch()
+        const isCurrent = () => searchRequest.current.generation === generation
         setFocused(false)
         setQ(nm || code)
-        if (!/^\d{6}$/.test(code)) {
+        React.startTransition(() => {
+            setTab("stock")
+            setSelectedTicker(code)
             setSearchGroup(null)
-            setSearchMsg(
-                "종목 뉴스는 현재 국내 종목만 지원해요 (미국 종목은 리포트에서)"
-            )
+            setSearchMsg("")
+            setSearching(false)
+        })
+        if (sync) syncSearchUrl(code)
+        if (!code || !/^\d{6}$/.test(code)) {
+            React.startTransition(() => setSearchMsg(code
+                ? "이 화면에서는 이 종목·자산의 개별 뉴스 검색을 아직 지원하지 않아요. 국내 6자리 종목 코드만 지원하며, 선택한 자산은 리포트에서 확인해 주세요."
+                : "종목 코드를 확인해 주세요."))
             return
         }
-        setSearching(true)
-        setSearchMsg("")
+        const controller = new AbortController()
+        searchRequest.current.controller = controller
+        React.startTransition(() => setSearching(true))
         try {
-            const api = (
-                props.apiBase || "https://project-yw131.vercel.app"
-            ).replace(/\/+$/, "")
+            const api = (props.apiBase || "https://project-yw131.vercel.app").replace(/\/+$/, "")
             const res = await fetch(
                 `${api}/api/stock_news?code=${encodeURIComponent(code)}${nm ? "&name=" + encodeURIComponent(nm) : ""}`,
-                { cache: "no-store" }
+                { cache: "no-store", signal: controller.signal }
             )
-            const d = res.ok ? await res.json() : null
-            const items: NewsItem[] = (
-                d && Array.isArray(d.items) ? d.items.slice(0, 6) : []
-            ).map((n: any) => ({
-                title: n.title,
-                url: n.url,
-                source: n.source,
-                time: n.rel_time || "",
-                sentiment: "",
-                category: n.category,
-                outlets: n.outlets,
-                credible: n.credible,
+            if (!res.ok) throw new Error("News request failed")
+            const d = await res.json()
+            if (!d || d.error || !Array.isArray(d.items) || (d.code != null && String(d.code) !== code)) throw new Error("Invalid news response")
+            if (!isCurrent()) return
+            const items: NewsItem[] = d.items.slice(0, 6).map((n: any) => ({
+                title: n.title, url: n.url, source: n.source, time: n.rel_time || "",
+                sentiment: "", category: n.category, outlets: n.outlets, credible: n.credible,
             }))
             const rm = recMap[code]
-            setSearchGroup({
-                ticker: code,
-                name: nm || (rm ? rm.name : code),
-                market: rm ? rm.market : "KR",
-                sector: rm ? rm.sector : "",
-                industry: rm ? rm.industry : "",
-                items,
+            React.startTransition(() => {
+                setSearchGroup({
+                    ticker: code, name: nm || (rm ? rm.name : code),
+                    market: rm ? rm.market : "KR", sector: rm ? rm.sector : "",
+                    industry: rm ? rm.industry : "", items,
+                })
+                if (!items.length) setSearchMsg("최근 뉴스가 없어요")
             })
-            if (!items.length) setSearchMsg("최근 뉴스가 없어요")
         } catch {
-            setSearchMsg("검색 중 오류가 났어요")
+            if (!isCurrent()) return
+            React.startTransition(() => setSearchMsg("뉴스를 불러오지 못했어요. 종목을 다시 검색해 주세요."))
         } finally {
-            setSearching(false)
+            if (isCurrent()) {
+                searchRequest.current.controller = null
+                React.startTransition(() => setSearching(false))
+            }
         }
+    }
+    const editSearch = (value: string) => {
+        // 되돌리지 말 것: 입력은 미확정 초안이다. 빈 방문 이력은 명시적 지우기에서만 추가한다.
+        clearSearch(false)
+        setQ(value)
+        setFocused(true)
     }
     const goSearch = () => {
         const s = q.trim()
-        if (!s || searching) return
-        if (matches.length) {
-            pickNews(String(matches[0].ticker), String(matches[0].name || ""))
-            return
+        if (!s) { clearSearch(); return }
+        const exact = matches.find((m) => String(m.ticker).toUpperCase() === s.toUpperCase())
+        if (exact) {
+            void pickNews(String(exact.ticker), String(exact.name || ""))
+        } else if (/^\d{6}$/.test(s) || /^CMD_[A-Z0-9_]+$/i.test(s)) {
+            void pickNews(s, "")
+        } else if (matches.length) {
+            void pickNews(String(matches[0].ticker), String(matches[0].name || ""))
+        } else if (newsTicker(s)) {
+            void pickNews(s, "")
+        } else {
+            clearSearch()
+            setQ(s)
+            React.startTransition(() => setSearchMsg("‘" + s + "’ 종목을 못 찾았어요 (국내 종목명·6자리 코드)"))
         }
-        if (/^\d{6}$/.test(s)) {
-            pickNews(s, "")
-            return
-        }
-        setSearchGroup(null)
-        setSearchMsg("‘" + s + "’ 종목을 못 찾았어요 (국내 종목명·6자리 코드)")
     }
+
+    /* URL search subscription: latest handlers without resubscribing on data/input changes. */
+    useEffect(() => {
+        searchActions.current = { pick: pickNews, clear: clearSearch }
+    })
+    useEffect(() => {
+        if (onCanvas || typeof window === "undefined") return
+        searchLocation.current = null
+        const applyLocation = () => {
+            const values = new URL(window.location.href).searchParams.getAll("q")
+            const signature = JSON.stringify(values)
+            if (searchLocation.current === signature) return
+            searchLocation.current = signature
+            const actions = searchActions.current
+            if (!actions) return
+            if (!values.length) { actions.clear(false); return }
+            const code = values.length === 1 ? newsTicker(values[0]) : ""
+            void actions.pick(code, "", false)
+        }
+        applyLocation()
+        const events = ["popstate", "pageshow", "verity-ticker-change"]
+        events.forEach((event) => window.addEventListener(event, applyLocation))
+        return () => {
+            events.forEach((event) => window.removeEventListener(event, applyLocation))
+            cancelSearch()
+        }
+    }, [onCanvas, props.apiBase])
+    /* End explicit search lifecycle. */
 
     // 🚨 2026-07-19 재테마 — root 흰 카드 감싸기 제거(BrokerGuide 동일). 표준 회색페이지: root 투명·자연 흐름 + 개별 흰 카드.
     //   프레임 높이 = 컴포넌트 자연 흐름(@framerSupportedLayoutHeight auto). props.height 미사용(컨트롤 하위호환 존치).
     const wrap: React.CSSProperties = {
         width: "100%",
-        maxWidth: 1180,
+        maxWidth: 1000,
         marginLeft: "auto",
         marginRight: "auto",
         background: "transparent",
+        padding: "8px clamp(14px, 2vw, 20px) 20px",
         display: "flex",
         flexDirection: "column",
         fontFamily:
@@ -1096,100 +1331,99 @@ export default function PublicNewsTab(props: Props) {
     }
 
     return (
-        <div ref={rootRef} style={wrap}>
+        <div ref={rootRef} className="an-news" style={wrap}>
             <style>{AN_PALETTE}</style>
+            <style>{`
+.an-news :is(.news-insights-trigger,.news-insights-close){min-height:44px;padding:8px 12px;border:0;border-radius:10px;background:var(--an-nws-card);color:var(--an-nws-text);font:inherit;font-size:13px;font-weight:700;line-height:1.6;cursor:pointer;box-sizing:border-box;text-decoration:none}
+.an-news .news-header{display:flex;flex-direction:column;gap:13px;padding:0 0 12px}
+.an-news .news-heading{display:flex;align-items:baseline;gap:8px;min-width:0}
+.an-news .news-market-tabs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+.an-news .news-market-tab{min-height:36px;line-height:1.25;box-sizing:border-box}
+.an-news .news-insights-trigger{white-space:nowrap;min-height:36px;line-height:1.25}
+.an-news .news-header-compact{gap:12px}
+.an-news .news-header-compact .news-market-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.an-news .news-header-compact .news-market-tab{min-width:0;min-height:36px;padding:7px 8px!important;display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12px!important}
+.an-news .news-tools{display:flex;align-items:center;flex-wrap:nowrap;gap:6px;padding:0 6px 12px;overflow-x:auto}
+.an-news .news-sort-control{display:flex;align-items:center;gap:6px;min-width:0;flex:0 0 auto;white-space:nowrap}
+.an-news .news-sort-control button{min-height:32px;line-height:1.25;padding:4px 8px!important;box-sizing:border-box;white-space:nowrap}
+.an-news .news-secondary-tools{display:flex;align-items:stretch;justify-content:flex-start;gap:6px;margin-left:0;flex:0 0 auto}
+.an-news .news-translation-toggle{margin-left:0!important;align-self:stretch!important;flex-shrink:0}
+.an-news .news-translation-toggle button{min-height:32px;line-height:1.25;padding:4px 8px!important;box-sizing:border-box;white-space:nowrap}
+.an-news .news-tools .news-insights-trigger{min-height:32px;line-height:1.25;padding:4px 8px;font-size:12px;margin-left:0}
+.an-news .news-tools-compact .news-sort-control{gap:4px}
+.an-news .news-tools-compact :is(.news-sort-control button,.news-translation-toggle button,.news-insights-trigger){font-size:12px!important;padding:4px 6px!important}
+.an-news .news-tools-tight{gap:4px}
+.an-news .news-tools-tight .news-secondary-tools{gap:4px}
+.an-news .news-tools-tight :is(.news-sort-control button,.news-translation-toggle button,.news-insights-trigger){font-size:11px!important;padding:4px 4px!important}
+@media(max-width:600px),(pointer:coarse){.an-news .news-market-tab,.an-news .news-header-compact .news-market-tab{min-height:44px}}
+.an-news .news-sort-note{display:block;padding:0 6px 10px}
+.an-news :is(.news-market-tab[aria-pressed="false"],.news-translation-toggle button[aria-pressed="false"]):focus-visible{outline:none;box-shadow:none;background:var(--an-nws-focus)!important}
+@media(hover:hover){.an-news :is(.news-market-tab[aria-pressed="false"],.news-translation-toggle button[aria-pressed="false"]):not(:focus-visible):hover{background:var(--an-nws-hover)!important}}
+.an-news .news-mentioned-stock{min-height:44px}
+.an-news :is(.news-insights-trigger,.news-insights-close,.news-mentioned-stock):focus-visible{outline:none;box-shadow:none;background:var(--an-nws-focus)!important}
+.an-news .news-theme-summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px;padding:12px 16px;border-radius:16px;background:var(--an-nws-sub);color:var(--an-nws-text);font-size:13px;font-weight:600;line-height:1.6}
+.an-news .news-theme-label{flex-basis:100%;color:var(--an-nws-subtext);font-size:12px;font-weight:700}
+.an-news .news-theme-item{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:var(--an-nws-card);font-weight:700}
+.an-news .news-theme-count{color:var(--an-nws-subtext);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.an-news .news-insights-dialog{display:none;position:fixed;inset:0;margin:auto;width:min(800px,calc(100% - 40px));max-width:800px;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);padding:0;border:0;border-radius:24px;background:var(--an-nws-card);color:var(--an-nws-text);font:inherit;box-sizing:border-box;overflow:hidden}
+.an-news .news-insights-dialog[open]{display:flex;flex-direction:column}
+.an-news .news-insights-dialog::backdrop{background:rgba(0,0,0,.45)}
+.an-news .news-insights-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;padding:20px 24px 16px}
+.an-news .news-insights-head h2{margin:0;min-width:0;font-size:20px;font-weight:800;line-height:1.3}
+.an-news .news-insights-close{flex-shrink:0;background:var(--an-nws-sub)}
+.an-news .news-insights-content{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 24px 24px;overflow-wrap:anywhere}
+.an-news .news-insights-limits{padding:12px 16px;border-radius:16px;background:var(--an-nws-sub);color:var(--an-nws-subtext);font-size:13px;font-weight:600;line-height:1.65}
+.an-news .news-insights-limits p{margin:0}
+.an-news .news-insights-limits p+p{margin-top:10px}
+.an-news .news-insights-limits strong{color:var(--an-nws-text);font-weight:700}
+.an-news .news-article-link{border-radius:10px;box-sizing:border-box;transition:background-color 160ms ease}
+.an-news .news-flat-card>.news-article-link{height:100%;border-radius:inherit}
+.an-news .news-flat-card>.news-article-link>.news-article-body{height:100%;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;border-radius:inherit}
+.an-news .news-article-link:focus-visible{outline:none;box-shadow:none;background:var(--an-nws-focus)!important}
+@media(hover:hover){.an-news .news-article-link:not(:focus-visible):hover{background:var(--an-nws-hover)!important}}
+@media(prefers-reduced-motion:reduce){.an-news .news-article-link{transition:none}}
+@media(max-width:560px){.an-news .news-insights-dialog{inset:auto 0 0;margin:0;width:100%;max-width:100%;max-height:86vh;max-height:86dvh;border-radius:24px 24px 0 0}.an-news .news-insights-head{padding:20px 20px 16px}.an-news .news-insights-content{padding:0 20px calc(20px + env(safe-area-inset-bottom,0px))}}
+@media(hover:hover){.an-news :is(.news-insights-trigger,.news-insights-close,.news-mentioned-stock){transition:background-color 160ms ease}.an-news :is(.news-insights-trigger,.news-insights-close,.news-mentioned-stock):not(:focus-visible):hover{background:var(--an-nws-hover)!important}}
+@media(prefers-reduced-motion:reduce){.an-news :is(.news-insights-trigger,.news-insights-close,.news-mentioned-stock){transition:none}}
+`}</style>
             <style>{`@keyframes vsrShimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             {/* 헤더 */}
-            <div
-                style={{
-                    padding: narrow
-                        ? "16px 13px 10px 13px"
-                        : "20px 22px 12px 22px",
-                }}
-            >
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span
+            <div className={narrow ? "news-header news-header-compact" : "news-header"}>
+                <div className="news-heading">
+                    <h1
                         style={{
-                            fontSize: 18,
+                            margin: 0,
+                            fontSize: 20,
                             fontWeight: 800,
                             color: C.text,
                             letterSpacing: "-0.4px",
+                            lineHeight: 1.3,
                         }}
                     >
                         뉴스
-                    </span>
+                    </h1>
                     <span
                         style={{
                             fontSize: 12,
                             fontWeight: 600,
                             color: C.faint,
+                            lineHeight: 1.5,
                         }}
                     >
                         팩트 헤드라인
                     </span>
-                    {(us.some((it) => it.title && !/[가-힣]/.test(it.title)) ||
-                        stocks.some((g) =>
-                            g.items.some(
-                                (it) => it.title && !/[가-힣]/.test(it.title)
-                            )
-                        )) && (
-                        <div
-                            style={{
-                                marginLeft: "auto",
-                                display: "inline-flex",
-                                background: C.card,
-                                borderRadius: 10,
-                                padding: 3,
-                                gap: 2,
-                            }}
-                        >
-                            {[
-                                { k: false, l: "원문" },
-                                { k: true, l: "한글" },
-                            ].map((o) => {
-                                const active = showKo === o.k
-                                return (
-                                    <button
-                                        key={String(o.k)}
-                                        type="button"
-                                        onClick={() => setShowKo(o.k)}
-                                        style={{
-                                            border: "none",
-                                            cursor: "pointer",
-                                            background: active
-                                                ? C.sub
-                                                : "transparent",
-                                            color: active ? C.text : C.subtext,
-                                            fontWeight: active ? 700 : 600,
-                                            fontSize: 12.5,
-                                            padding: "6px 13px",
-                                            borderRadius: 8,
-                                            boxShadow: "none",
-                                            transition: "all 140ms ease",
-                                        }}
-                                    >
-                                        {o.l}
-                                    </button>
-                                )
-                            })}
-                        </div>
-                    )}
                 </div>
-                {/* 세그먼트 */}
-                <div
-                    style={{
-                        marginTop: 13,
-                        display: "inline-flex",
-                        gap: 6,
-                    }}
-                >
+                    <div className="news-market-tabs">
                     {tabs.map((t) => {
                         const active = tab === t.key
                         return (
                             <button
                                 key={t.key}
                                 type="button"
+                                className="news-market-tab"
                                 onClick={() => setTab(t.key)}
+                                aria-pressed={active}
+                                aria-label={t.label + " " + t.count}
                                 style={{
                                     border: "none",
                                     cursor: "pointer",
@@ -1204,7 +1438,7 @@ export default function PublicNewsTab(props: Props) {
                                     transition: "all 140ms ease",
                                 }}
                             >
-                                {t.label}
+                                {narrow && t.key === "stock" ? (memberMode ? "보유종목" : "기기 관심") : t.label}
                                 <span
                                     style={{
                                         marginLeft: 6,
@@ -1219,140 +1453,148 @@ export default function PublicNewsTab(props: Props) {
                             </button>
                         )
                     })}
-                </div>
+                    </div>
+
             </div>
 
-            {/* 본문 */}
-            <div
-                style={{
-                    padding: narrow
-                        ? "4px 10px 16px 10px"
-                        : "4px 14px 18px 14px",
-                }}
-            >
-                {/* 오늘 화제 종목 — KR 헤드라인에 언급된 종목(언급 수). 객관·추천 아님. 로고+국기. 가로 스크롤. */}
-                {!loading && !failed && hotStocks.length ? (
-                    <div style={{ marginBottom: 20 }}>
-                        <div
-                            style={{
-                                fontSize: 12.5,
-                                fontWeight: 800,
-                                color: C.text,
-                                padding: "2px 2px 8px",
-                                letterSpacing: "-0.01em",
-                            }}
-                        >
-                            오늘 화제 종목{" "}
-                            <span style={{ color: C.faint, fontWeight: 600 }}>
-                                · 오늘 뉴스 헤드라인 언급 수 · 추천 아님
-                            </span>
-                        </div>
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: 8,
-                                overflowX: "auto",
-                                paddingBottom: 4,
-                            }}
-                        >
-                            {hotStocks.map((s, i) => (
-                                <a
-                                    key={s.ticker}
-                                    href={
-                                        (props.reportPath || "/stock") +
-                                        "?q=" +
-                                        encodeURIComponent(s.ticker)
-                                    }
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                        flexShrink: 0,
-                                        minWidth: 150,
-                                        textDecoration: "none",
-                                        background: C.card,
-                                        borderRadius: 12,
-                                        padding: "10px 12px",
-                                        boxSizing: "border-box",
-                                        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 9,
-                                    }}
-                                >
-                                    <Logo
-                                        ticker={s.ticker}
-                                        name={s.name}
-                                        C={C}
-                                        size={26}
-                                    />
-                                    <div style={{ minWidth: 0 }}>
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: 5,
-                                            }}
-                                        >
-                                            <span
-                                                style={{
-                                                    fontSize: 11,
-                                                    fontWeight: 800,
-                                                    color: C.accent,
-                                                }}
-                                            >
-                                                {i + 1}
-                                            </span>
-                                            <span
-                                                style={{
-                                                    fontSize: 13,
-                                                    fontWeight: 800,
-                                                    color: C.text,
-                                                    whiteSpace: "nowrap",
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                    maxWidth: 88,
-                                                }}
-                                            >
-                                                {s.name}
-                                            </span>
-                                        </div>
-                                        <div
-                                            style={{
-                                                fontSize: 11,
-                                                fontWeight: 700,
-                                                color: C.faint,
-                                                marginTop: 2,
-                                            }}
-                                        >
-                                            언급{" "}
-                                            <span style={{ color: C.accent }}>
-                                                {s.count}회
-                                            </span>
-                                        </div>
-                                    </div>
-                                </a>
-                            ))}
-                        </div>
+            {/* 오늘 화제 종목 — KR 헤드라인에 언급된 종목(언급 수). 객관·추천 아님. 로고+국기. 가로 스크롤. */}
+            {!loading && !failed && hotStocks.length ? (
+                <div style={{ marginBottom: 20 }}>
+                    <div
+                        style={{
+                            fontSize: 12.5,
+                            fontWeight: 800,
+                            color: C.text,
+                            padding: "2px 2px 8px",
+                            letterSpacing: "-0.01em",
+                        }}
+                    >
+                        시장 전체 화제 종목{" "}
+                        <span style={{ color: C.faint, fontWeight: 600 }}>
+                            · 수집 뉴스의 종목별 언급 기사 수 · 보유종목과 별개 · 추천 아님
+                        </span>
                     </div>
-                ) : null}
-                {!loading && !failed && insights ? (
-                    <NewsInsights
-                        ins={insights}
-                        C={C}
-                        reportPath={props.reportPath}
-                    />
-                ) : null}
-                {/* 정렬 세그먼트 — 시장·미국 탭만(직교). 최신/핫/언론사그룹. 조회수 없음(데이터 부재). */}
-                {!loading && !failed && (tab === "market" || tab === "us") ? (
                     <div
                         style={{
                             display: "flex",
-                            alignItems: "center",
                             gap: 8,
-                            padding: "0 6px 10px",
-                            flexWrap: "wrap",
+                            overflowX: "auto",
+                            paddingBottom: 4,
                         }}
                     >
+                        {hotStocks.map((s, i) => (
+                            <a
+                                className="news-mentioned-stock"
+                                key={s.ticker}
+                                href={
+                                    (props.reportPath || "/stock") +
+                                    "?q=" +
+                                    encodeURIComponent(s.ticker)
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    flexShrink: 0,
+                                    minWidth: 150,
+                                    textDecoration: "none",
+                                    background: C.card,
+                                    borderRadius: 12,
+                                    padding: "10px 12px",
+                                    boxSizing: "border-box",
+                                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 9,
+                                }}
+                            >
+                                <Logo
+                                    ticker={s.ticker}
+                                    name={s.name}
+                                    C={C}
+                                    size={26}
+                                />
+                                <div style={{ minWidth: 0 }}>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 5,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                fontSize: 11,
+                                                fontWeight: 800,
+                                                color: C.accent,
+                                            }}
+                                        >
+                                            {i + 1}
+                                        </span>
+                                        <span
+                                            style={{
+                                                fontSize: 13,
+                                                fontWeight: 800,
+                                                color: C.text,
+                                                whiteSpace: "nowrap",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                maxWidth: 88,
+                                            }}
+                                        >
+                                            {s.name}
+                                        </span>
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            color: C.faint,
+                                            marginTop: 2,
+                                        }}
+                                    >
+                                        언급{" "}
+                                        <span style={{ color: C.accent }}>
+                                            {s.count}회
+                                        </span>
+                                    </div>
+                                </div>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
+            {!loading && !failed && insights && insights.themes.length ? (
+                <div className="news-theme-summary" aria-label="시장 뉴스 키워드 집계">
+                    <span className="news-theme-label">시장 뉴스 테마 · 제목 키워드 언급 기사 수 · 매수 신호 아님</span>
+                    {insights.themes.slice(0, 3).map((theme) => (
+                        <span key={theme.name} className="news-theme-item">
+                            <span>{theme.name}</span>
+                            <span className="news-theme-count">{theme.n}건</span>
+                        </span>
+                    ))}
+                </div>
+            ) : null}
+            {/* 본문 */}
+            <div
+                style={{
+                    padding: "4px 0 0",
+                }}
+            >
+                {chosenTab === null && tab !== "stock" && !loading ? (
+                    <div role="status" style={{ padding: "0 6px 12px", fontSize: 12, fontWeight: 600, color: C.faint, lineHeight: 1.5 }}>
+                        {memberMode
+                            ? "현재 보유종목이 없어요. 둥지에 보유종목을 기록하면 여기에 표시돼요."
+                            : "등록한 관심종목이 없어요. 시장·미국 뉴스는 개인 목록과 별도로 볼 수 있어요."}
+                    </div>
+                ) : null}
+                <div
+                    className={narrow ? (w < 340 ? "news-tools news-tools-compact news-tools-tight" : "news-tools news-tools-compact") : "news-tools"}
+                    role="group"
+                    aria-label="뉴스 보기 옵션"
+                >
+                {/* 정렬 세그먼트 — 시장·미국 탭만(직교). 최신/핫/언론사그룹. 조회수 없음(데이터 부재). */}
+                {!loading && !activeFeedError && !failed && (tab === "market" || tab === "us") ? (
+                    <div className="news-sort-control">
                         <span
                             style={{
                                 fontSize: 11,
@@ -1387,7 +1629,7 @@ export default function PublicNewsTab(props: Props) {
                                             color: on ? C.text : C.subtext,
                                             fontWeight: on ? 700 : 600,
                                             fontSize: 12,
-                                            padding: "5px 12px",
+                                            padding: "4px 8px",
                                             borderRadius: 7,
                                             boxShadow: "none",
                                         }}
@@ -1397,8 +1639,75 @@ export default function PublicNewsTab(props: Props) {
                                 )
                             })}
                         </div>
-                        {mktSort === "hot" ? (
-                            <span
+
+                    </div>
+                ) : null}
+                    <div className="news-secondary-tools">
+                    {(market.some((it) => it.title && !/[가-힣]/.test(it.title)) ||
+                        us.some((it) => it.title && !/[가-힣]/.test(it.title)) ||
+                        stocks.some((g) =>
+                            g.items.some(
+                                (it) => it.title && !/[가-힣]/.test(it.title)
+                            )
+                        )) && (
+                        <div
+                            className="news-translation-toggle"
+                            style={{
+                                marginLeft: "auto",
+                                alignSelf: "flex-start",
+                                display: "inline-flex",
+                                background: C.card,
+                                borderRadius: 10,
+                                padding: 3,
+                                gap: 2,
+                            }}
+                        >
+                            {[
+                                { k: false, l: "원문" },
+                                { k: true, l: "한글" },
+                            ].map((o) => {
+                                const active = showKo === o.k
+                                return (
+                                    <button
+                                        key={String(o.k)}
+                                        type="button"
+                                        onClick={() => setShowKo(o.k)}
+                                        aria-pressed={active}
+                                        style={{
+                                            border: "none",
+                                            cursor: "pointer",
+                                            background: active
+                                                ? C.sub
+                                                : "transparent",
+                                            color: active ? C.text : C.subtext,
+                                            fontWeight: active ? 700 : 600,
+                                            fontSize: 12.5,
+                                            padding: "4px 8px",
+                                            borderRadius: 8,
+                                            boxShadow: "none",
+                                            transition: "all 140ms ease",
+                                        }}
+                                    >
+                                        {o.l}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    )}
+                    <button
+                        ref={insightsTrigger}
+                        type="button"
+                        className="news-insights-trigger"
+                        aria-haspopup="dialog"
+                        onClick={() => setInsightsOpen(true)}
+                    >
+                        통계·수집 기준
+                    </button>
+                    </div>
+
+                </div>
+                        {!loading && !activeFeedError && !failed && (tab === "market" || tab === "us") && mktSort === "hot" ? (
+                            <span className="news-sort-note"
                                 style={{
                                     fontSize: 10.5,
                                     color: C.faint,
@@ -1409,11 +1718,9 @@ export default function PublicNewsTab(props: Props) {
                                 아님
                             </span>
                         ) : null}
-                    </div>
-                ) : null}
-                {loading ? (
+                {loading && tab !== "stock" ? (
                     <NewsSkeleton C={C} />
-                ) : failed ? (
+                ) : (activeFeedError || failed) && tab !== "stock" ? (
                     <div
                         style={{
                             padding: 40,
@@ -1422,7 +1729,7 @@ export default function PublicNewsTab(props: Props) {
                             fontSize: 14,
                         }}
                     >
-                        뉴스를 불러오지 못했어요.
+                        {activeFeedError || "뉴스를 불러오지 못했어요."}
                     </div>
                 ) : tab === "stock" ? (
                     <>
@@ -1469,7 +1776,8 @@ export default function PublicNewsTab(props: Props) {
                                 </span>
                                 <input
                                     value={q}
-                                    onChange={(e) => setQ(e.target.value)}
+                                    onChange={(e) => editSearch(e.target.value)}
+                                    aria-label="종목 뉴스 검색"
                                     onFocus={() => setFocused(true)}
                                     onBlur={() =>
                                         setTimeout(() => setFocused(false), 160)
@@ -1493,6 +1801,14 @@ export default function PublicNewsTab(props: Props) {
                                         minWidth: 0,
                                     }}
                                 />
+                                {q || searching || selectedTicker ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => clearSearch()}
+                                        aria-label="종목 뉴스 검색 지우기"
+                                        style={{ border: "none", background: "transparent", color: C.faint, font: "inherit", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
+                                    >지우기</button>
+                                ) : null}
                                 {searching ? (
                                     <span
                                         style={{
@@ -1579,8 +1895,15 @@ export default function PublicNewsTab(props: Props) {
                                 </div>
                             ) : null}
                         </div>
+                        {selectedTicker ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "0 6px 10px", fontSize: 12, fontWeight: 600, color: C.faint }}>
+                                <span>선택 종목 · {selectedTicker} · 개인 목록과 별도 검색</span>
+                                <a href={newsReportHref(props.reportPath, selectedTicker)} style={{ color: C.accent, fontWeight: 700 }}>이 종목·자산 리포트 보기</a>
+                            </div>
+                        ) : null}
                         {searchMsg ? (
                             <div
+                                role="status"
                                 style={{
                                     fontSize: 12,
                                     color: C.faint,
@@ -1611,11 +1934,8 @@ export default function PublicNewsTab(props: Props) {
                                         검색 결과 · {searchGroup.name}
                                     </span>
                                     <button
-                                        onClick={() => {
-                                            setSearchGroup(null)
-                                            setQ("")
-                                            setSearchMsg("")
-                                        }}
+                                        type="button"
+                                        onClick={() => clearSearch()}
                                         style={{
                                             border: "none",
                                             background: "transparent",
@@ -1647,17 +1967,27 @@ export default function PublicNewsTab(props: Props) {
                                 padding: "0 6px 10px",
                             }}
                         >
-                            {watch.length
-                                ? `내 관심종목 ${watch.length}개 연동 · 별표 추가하면 자동 반영`
-                                : "관심종목을 별표하면 여기 연동돼요 · 지금은 추천 종목 뉴스"}
+                            {personalLoading
+                                ? "현재 보유종목을 확인하고 있어요."
+                                : personalError
+                                  ? personalError
+                                  : watch.length
+                                    ? memberMode
+                                        ? `보유종목 ${watch.length}개 연동 · 보유 수량 0 초과 기준`
+                                        : `이 기기의 관심종목 ${watch.length}개 연동`
+                                    : memberMode
+                                      ? "현재 보유종목이 없어요. 둥지에 보유종목을 기록하면 여기에 표시돼요."
+                                      : "관심종목을 별표하면 이 기기에 저장되어 여기에 표시돼요."}
                         </div>
-                        <StockNews
-                            groups={stocks}
-                            C={C}
-                            cardH={props.stockCardHeight || 232}
-                            showKo={showKo}
-                            reportPath={props.reportPath}
-                        />
+                        {!personalLoading && !personalError && watch.length > 0 ? (
+                            <StockNews
+                                groups={stocks}
+                                C={C}
+                                cardH={props.stockCardHeight || 232}
+                                showKo={showKo}
+                                reportPath={props.reportPath}
+                            />
+                        ) : null}
                     </>
                 ) : tab === "market" ? (
                     <FlatNews
@@ -1680,6 +2010,45 @@ export default function PublicNewsTab(props: Props) {
                         sortMode={mktSort}
                     />
                 )}
+                <dialog
+                    ref={insightsDialog}
+                    className="news-insights-dialog"
+                    aria-labelledby="news-insights-title"
+                    onCancel={(event) => {
+                        event.preventDefault()
+                        setInsightsOpen(false)
+                    }}
+                    onClose={(event) => {
+                        if (!event.currentTarget.open) setInsightsOpen(false)
+                    }}
+                >
+                    <div className="news-insights-head">
+                        <h2 id="news-insights-title">통계·수집 기준</h2>
+                        <button
+                            ref={insightsClose}
+                            type="button"
+                            className="news-insights-close"
+                            aria-label="통계·수집 기준 닫기"
+                            onClick={() => setInsightsOpen(false)}
+                        >닫기</button>
+                    </div>
+                    <div className="news-insights-content">
+                        {insightsOpen && !loading && !failed && insights ? (
+                            <NewsInsights
+                                ins={insights}
+                                C={C}
+                                reportPath={props.reportPath}
+                            />
+                        ) : (
+                            <p style={{ fontSize: 13, fontWeight: 600, color: C.subtext }}>표시할 통계가 아직 없어요.</p>
+                        )}
+                        <div className="news-insights-limits">
+                            <p><strong>수집 범위</strong> · 시장 헤드라인 수집 묶음 기준이며, 선택한 종목·미국 탭의 통계가 아니에요. 출처·신선도·제목 표현은 수집한 국내 헤드라인, 테마는 화면에 표시할 시장 제목 기준으로 집계해 서로 건수가 다를 수 있어요. 전체 보도를 포함하지 않으며, 종목 언급은 한국어 시장 제목의 국내 종목만 세고 보유종목과 별개예요.</p>
+                            <p><strong>시간 기준</strong> · 통계는 현재 수집 묶음 기준으로, 오늘 기사만 뜻하지 않아요. 시장·미국은 최근 {FLASH_WINDOW_DAYS}일을 우선하되 {FLASH_FLOOR}건 미만이면 오래된 기사도 포함해요. 종목 뉴스도 최근 30일을 우선하되 부족하면 이전 기사가 포함될 수 있어요. 발행 시각이 없거나 수집이 늦을 수 있으니 기사별 출처·시각·원문을 확인해 주세요.</p>
+                            <p><strong>분류 한계</strong> · 출처 신뢰도와 제목 표현은 자동 분류(검증 전)예요. ‘신선도’는 비슷한 제목의 반복 여부로, 최신성이나 사실 확인을 뜻하지 않아요. 한 기사에 여러 테마가 잡힐 수 있고, 키워드·종목 언급 수는 매수 신호나 가격 방향이 아니에요.</p>
+                        </div>
+                    </div>
+                </dialog>
             </div>
         </div>
     )
@@ -1688,8 +2057,8 @@ export default function PublicNewsTab(props: Props) {
 /* 로딩 스켈레톤 — 뉴스 카드 그리드 형태(제목 2줄 + 메타 1줄). shimmer. */
 function NewsSkeleton(props: { C: any }) {
     const { C } = props
-        const base = C.skBase
-        const hi = C.skHi
+    const base = C.skBase
+    const hi = C.skHi
     const bar = (
         w: string | number,
         h: number,
@@ -1900,12 +2269,7 @@ function Donut(props: {
 }
 
 /* 도넛 범례 한 줄 — 색점 + 라벨 + 건수. */
-function LegendRow(props: {
-    color: string
-    label: string
-    n: number
-    C: any
-}) {
+function LegendRow(props: { color: string; label: string; n: number; C: any }) {
     return (
         <div
             style={{
@@ -1960,11 +2324,7 @@ const THEME_COLORS = [
 ]
 
 /* 오늘의 뉴스 한눈 — 출처 신뢰도 / 신선도(MinHash) / 키워드 무드 / 뉴스 많은 종목. 전부 사실 집계(RULE7). */
-function NewsInsights(props: {
-    ins: Insights
-    C: any
-    reportPath?: string
-}) {
+function NewsInsights(props: { ins: Insights; C: any; reportPath?: string }) {
     const { ins, C } = props
     const tile: React.CSSProperties = {
         flex: "1 1 190px",
@@ -2024,7 +2384,7 @@ function NewsInsights(props: {
                 <div style={tile}>
                     <div style={lbl}>
                         출처 신뢰도 · 총 {ins.total}건{" "}
-                        <span style={{ color: C.faint, fontWeight: 500 }}>
+                        <span style={{ color: C.faint, fontWeight: 600 }}>
                             · 자체 분류(가설, N={ins.total})
                         </span>
                     </div>
@@ -2099,11 +2459,11 @@ function NewsInsights(props: {
                         </div>
                     </div>
                 </div>
-                {/* 키워드 무드 */}
+                {/* 제목의 긍정/부정 표현 집계 — 종목의 투자 효과가 아님 */}
                 <div style={tile}>
                     <div style={lbl}>
-                        키워드 무드{" "}
-                        <span style={{ color: C.faint, fontWeight: 500 }}>
+                        제목 표현 분류{" "}
+                        <span style={{ color: C.faint, fontWeight: 600 }}>
                             · 검증 전
                         </span>
                     </div>
@@ -2116,17 +2476,17 @@ function NewsInsights(props: {
                                 ins.pos + ins.neu + ins.neg
                             )}
                             centerSuffix="%"
-                            centerSub="호재"
+                            centerSub="긍정"
                             segs={[
-                                { label: "호재", n: ins.pos, color: C.up },
+                                { label: "제목 긍정 표현", n: ins.pos, color: C.up },
                                 { label: "중립", n: ins.neu, color: C.border },
-                                { label: "악재", n: ins.neg, color: C.down },
+                                { label: "제목 부정 표현", n: ins.neg, color: C.down },
                             ]}
                         />
                         <div style={leg}>
                             <LegendRow
                                 color={C.up}
-                                label="호재"
+                                label="긍정 표현"
                                 n={ins.pos}
                                 C={C}
                             />
@@ -2138,7 +2498,7 @@ function NewsInsights(props: {
                             />
                             <LegendRow
                                 color={C.down}
-                                label="악재"
+                                label="부정 표현"
                                 n={ins.neg}
                                 C={C}
                             />
@@ -2151,7 +2511,7 @@ function NewsInsights(props: {
                     <div style={{ ...tile, flexBasis: 300, minWidth: 236 }}>
                         <div style={lbl}>
                             오늘의 뉴스 테마{" "}
-                            <span style={{ color: C.faint, fontWeight: 500 }}>
+                            <span style={{ color: C.faint, fontWeight: 600 }}>
                                 · 키워드 빈도(도넛 = 언급 수)
                             </span>
                         </div>
@@ -2216,7 +2576,7 @@ function MarketBadge(props: { market: string; C: any }) {
     )
 }
 
-/* 호재/악재 = 위/아래 화살표(텍스트 X). pos/neg 일 때만. 제목 끝(우측). KR 색: 호재 빨강↑ / 악재 파랑↓. */
+/* 제목 표현 분류 — 카드 끝에는 기존 위·아래 화살표만 쓴다. */
 function SentChip(props: { s: string; C: any }) {
     const s = props.s
     if (s !== "positive" && s !== "negative") return null
@@ -2237,8 +2597,8 @@ function SentChip(props: { s: string; C: any }) {
                 borderRadius: 6,
                 background: bg,
             }}
-            title={pos ? "호재(키워드 분류)" : "악재(키워드 분류)"}
-            aria-label={pos ? "호재" : "악재"}
+            title={(pos ? "제목 긍정 표현" : "제목 부정 표현") + " · 키워드 자동분류(검증 전), 투자 효과·가격 방향 아님"}
+            aria-label={pos ? "제목 긍정 표현" : "제목 부정 표현"}
         >
             <svg
                 width={11}
@@ -2268,11 +2628,7 @@ function SentChip(props: { s: string; C: any }) {
 }
 
 /* 섹터 배지 — 종목의 섹터(멤버십 사실, 영향·수혜 아님). */
-function SectorBadge(props: {
-    sector: string
-    industry: string
-    C: any
-}) {
+function SectorBadge(props: { sector: string; industry: string; C: any }) {
     const label = sectorLabel(props.sector)
     if (!label) return null
     return (
@@ -2304,18 +2660,11 @@ function NewsRow(props: {
     const shownTitle = ko ? (item.titleKo as string) : item.title
     const body = (
         <div
+            className="news-article-body"
             style={{
                 padding: "11px 8px",
                 borderRadius: 10,
                 cursor: item.url ? "pointer" : "default",
-                transition: "background 120ms ease",
-            }}
-            onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLDivElement).style.background = C.sub
-            }}
-            onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLDivElement).style.background =
-                    "transparent"
             }}
         >
             <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
@@ -2421,6 +2770,7 @@ function NewsRow(props: {
     if (!item.url) return body
     return (
         <a
+            className="news-article-link"
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
@@ -2465,7 +2815,7 @@ function FlatNews(props: {
                 lineHeight: 1.5,
             }}
         >
-            ↑ 호재 / ↓ 악재 = 키워드 자동분류(검증 전 · 중립 다수)
+            제목 긍정·부정 표현 = 키워드 자동분류(검증 전) · 투자 효과나 가격 방향을 뜻하지 않아요.
         </div>
     )
     const moreBtn = (total: number, unit: string) =>
@@ -2599,6 +2949,7 @@ function FlatNews(props: {
                 {sorted.slice(0, shown).map((it, i) => (
                     <div
                         key={i}
+                        className="news-flat-card"
                         style={{
                             height: cardH,
                             overflow: "hidden",
@@ -2643,7 +2994,7 @@ function StockNews(props: {
                     fontSize: 14,
                 }}
             >
-                보유·추천 종목에 걸린 뉴스가 아직 없어요.
+                표시할 종목 뉴스가 없어요.
             </div>
         )
     }
