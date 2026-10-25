@@ -94,7 +94,8 @@ def _origin_result(request, *, method_allowed=True):
 
 
 def _valid_fetch_result(bundle):
-    if type(bundle) is not dict or set(bundle) != {"documents", "coverage", "revision"}:
+    required = {"documents", "coverage", "revision"}
+    if type(bundle) is not dict or set(bundle) not in (required, required | {"index_revision"}):
         return None
     documents = bundle.get("documents")
     coverage = bundle.get("coverage")
@@ -102,6 +103,9 @@ def _valid_fetch_result(bundle):
     if type(documents) is not dict or type(coverage) is not dict:
         return None
     if type(revision) is not str or not _PUBLIC_BUNDLE_REVISION.fullmatch(revision):
+        return None
+    index_revision = bundle.get("index_revision", revision)
+    if type(index_revision) is not str or not _PUBLIC_BUNDLE_REVISION.fullmatch(index_revision):
         return None
     if not set(documents).issubset(PUBLIC_SOURCE_FILES):
         return None
@@ -122,7 +126,7 @@ def _valid_fetch_result(bundle):
         "complete" if len(documents) == len(PUBLIC_SOURCE_FILES)
         else "partial" if documents else "unavailable"
     )
-    return (documents, revision) if coverage.get("status") == expected_status else None
+    return (documents, index_revision) if coverage.get("status") == expected_status else None
 
 
 def analyze_request(request):
