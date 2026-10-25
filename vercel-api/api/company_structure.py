@@ -32,7 +32,8 @@ _SHA256 = re.compile(r"[0-9a-f]{64}\Z", re.ASCII)
 _SEC_EVIDENCE = re.compile(r"/Archives/edgar/data/[0-9]+/[0-9]{18}/[A-Za-z0-9_.-]+\.(?:htm|html|txt)\Z", re.I | re.ASCII)
 _DART_RECEIPT = re.compile(r"[0-9]{14}\Z", re.ASCII)
 _SOURCE_STATUSES = {"source-checked", "partial", "not-attempted",
-                    "refresh-error", "legacy-only", "curated-only"}
+                    "refresh-error", "legacy-only", "curated-only",
+                    "needs-review", "source-gap", "budget-deferred", "attempting"}
 _MANIFEST_CACHE = None  # (monotonic expiry, validated manifest)
 _PAYLOAD_CACHE = OrderedDict()  # sha256 -> validated payload
 _CACHE_LOCK = threading.RLock()

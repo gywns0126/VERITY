@@ -148,6 +148,7 @@ test('SEC 20-F-style list URL and retained HTTP403 status pass public validation
   writeArtifacts(result, output);
   const validated = loadArtifacts(output), p = [...validated.payloads.values()][0].payload;
   assert.equal(p.coverage.sourceChecked, false); assert.equal(p.coverage.attemptStatus, 'HTTP403'); assert.equal(p.coverage.status, 'refresh-error');
+  assert.equal(p.relations.length, 1); // A failed refresh retains the verified prior relationship.
   assert.equal(p.relations[0].evidence[0].title.includes('EX-21'), false);
   assert.equal(p.relations[0].observedAt, '2026-10-03T00:00:00Z'); assert.equal(p.relations[0].ownershipPct, null);
   const r = mock(); await publish(output, r.options); assert.equal(r.writes.at(-1), INDEX);
@@ -644,7 +645,8 @@ test('only the original SHA-bound BALL parser-recheck quarantine can count towar
   const { dir } = fixture(t), cik = ballRecheck.cik;
   const s = { tickerAliases: ['BALL'], attemptStatus: 'needs-review', attemptedAt: at, lastSuccessAt: '2026-10-03T10:00:00Z',
     sourceGap: 'source-gap:parser-recheck-needs-review', reviewExhibit: { ...ballRecheck, schema: 'sec-company-subsidiaries-v1',
-      status: 'needs-review', filedDate: '2026-02-01', periodEnd: '2025-12-31', rows: [{ name: 'PRIVATE' }], html: 'PRIVATE' } };
+      status: 'needs-review', filedDate: '2026-02-01', periodEnd: '2025-12-31', reviewReason: 'parser-table-ambiguous',
+      rows: [{ name: 'PRIVATE' }], html: 'PRIVATE' } };
   assert.equal(explicitBaselineQuarantine(cik, s), true);
   for (const mutate of [s => delete s.sourceGap, s => s.sourceGap = 'source-gap:other', s => s.attemptStatus = 'success',
     s => s.reviewExhibit.documentSha256 = 'a'.repeat(64), s => s.reviewExhibit.url += '?x=1', s => s.reviewExhibit.status = 'parsed',
@@ -664,7 +666,9 @@ test('only the original SHA-bound BALL parser-recheck quarantine can count towar
   assert.equal((await main(['--output-dir', output])).validated, true);
   const payload = [...loadArtifacts(output).payloads.values()][0].payload;
   assert.equal(payload.relations.length, 0); assert.equal(payload.coverage.sourceChecked, false);
-  assert.equal(payload.coverage.status, 'refresh-error');
+  assert.equal(payload.coverage.status, 'needs-review');
+  assert.deepEqual(payload.coverage.pendingReview, { filedDate: '2026-02-01', periodEnd: '2025-12-31',
+    documentSha256: ballRecheck.documentSha256, reason: 'parser-table-ambiguous' });
 });
 
 test('committed US snapshots preserve the 22-document baseline as parsed or explicitly SHA-bound parser quarantine, never fake parsed', async t => {
@@ -707,20 +711,32 @@ test('committed US snapshots preserve the 22-document baseline as parsed or expl
       assert.equal(payload.relations.length, 0);
     }
   }
-  let retainedCollectorErrors = 0;
+  let retainedCollectorErrors = 0, retainedNeedsReview = 0;
   for (const [cik, s] of Object.entries(original.issuers).filter(([, s]) => !s.exhibit && s.attemptedAt && s.attemptStatus !== 'success' && s.attemptStatus !== 'not-attempted')) {
     assert.equal(safe.issuers[cik].attemptStatus, s.attemptStatus);
-    if (s.attemptStatus === 'error' || /^HTTP[1-5][0-9]{2}$/u.test(s.attemptStatus)) retainedCollectorErrors++;
+    const isHttpError = s.attemptStatus === 'error' || /^HTTP[1-5][0-9]{2}$/u.test(s.attemptStatus);
+    if (isHttpError) retainedCollectorErrors++;
+    if (s.attemptStatus === 'needs-review') retainedNeedsReview++;
     for (const ticker of s.tickerAliases) {
       const entry = result.manifest.issuers['US:' + ticker];
       if (entry) {
-        assert.equal(entry.status, 'refresh-error');
+        const expectedStatus = ['needs-review', 'source-gap', 'budget-deferred', 'attempting'].includes(s.attemptStatus) ? s.attemptStatus : 'refresh-error';
+        assert.equal(entry.status, expectedStatus);
         const payload = JSON.parse(result.payloads.get(entry.sha256));
         assert.equal(payload.coverage.sourceChecked, false);
-        assert.notEqual(payload.coverage.attemptStatus, 'success');
+        assert.equal(payload.coverage.attemptStatus, s.attemptStatus);
+        if (s.attemptStatus === 'needs-review' && s.reviewExhibit) {
+          assert.deepEqual(payload.coverage.pendingReview, {
+            filedDate: s.reviewExhibit.filedDate, periodEnd: s.reviewExhibit.periodEnd,
+            documentSha256: s.reviewExhibit.documentSha256,
+            ...(s.reviewExhibit.reviewReason ? { reason: s.reviewExhibit.reviewReason } : {}),
+          });
+        }
       }
     }
   }
+  assert.ok(retainedNeedsReview > 0, 'Committed parser holds must remain needs-review, not transport errors');
+  assert.ok(retainedCollectorErrors > 0, 'Committed HTTP/collector errors must remain refresh-error');
   const output = path.join(path.dirname(dir), 'committed-us'); writeArtifacts(result, output);
   assert.equal((await main(['--output-dir', output])).validated, true);
   t.diagnostic(JSON.stringify({ parsedCiks: parsed.length, quarantinedCiks: quarantined.length, checkedCiks: result.manifest.coverage.US.checkedCiks,

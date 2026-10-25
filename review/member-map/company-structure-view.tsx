@@ -109,6 +109,10 @@ export function structureCoverageText(catalogue: Catalogue | null): string {
     if (coverage.fallback) return "최신 조회 연결 실패 · 이전 저장 자료를 표시하고 있어요"
     const state = coverage.sourceStatus || coverage.status
     if (state === "refresh-error") return "최근 원문 조회 실패 · 이전 근거와 기준일 유지"
+    if (state === "needs-review") return "원문 확보 · 관계 검수 보류 · 확인된 기존 근거만 유지"
+    if (state === "source-gap") return "관계 원문 미확보 · 관계가 없다는 뜻은 아니에요"
+    if (state === "budget-deferred") return "조회 예산에 따라 다음 수집 대기"
+    if (state === "attempting") return "관계 원문을 확인하고 있어요"
     if (state === "source-checked") {
         const endpoints = coverage.endpoints && typeof coverage.endpoints === "object" ? Object.values(coverage.endpoints) : []
         const stamps = [coverage.lastSuccessAt, ...endpoints.map(e => e && typeof e === "object" ? (e as Record<string, unknown>).lastSuccessAt : null)].filter((s): s is string => typeof s === "string" && Number.isFinite(Date.parse(s)))

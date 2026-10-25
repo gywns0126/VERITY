@@ -12,7 +12,7 @@ const BASE = 'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/';
 const INDEX = 'member_map_company_structure_index.json';
 const SHA = /^[a-f0-9]{64}$/u;
 const ID = /^(?:KR:[A-Z0-9]{6}|US:[A-Z][A-Z0-9.-]{0,11}|FOREIGN:[a-z0-9-]{1,80})$/u;
-const STATUS = new Set(['not-attempted', 'legacy-only', 'curated-only', 'partial', 'source-checked', 'refresh-error']);
+const STATUS = new Set(['not-attempted', 'legacy-only', 'curated-only', 'partial', 'source-checked', 'refresh-error', 'needs-review', 'source-gap', 'budget-deferred', 'attempting']);
 const corporateLabel = s => !/펀드|투자조합|개인|\b(?:fund|trust|individual)\b/iu.test(s) &&
   /(?:\(주\)|㈜|주식회사|유한회사|합자회사|유한공사|股份有限公司|\b(?:Inc|Corp|Corporation|Company|Co|Ltd|Limited|LLC|LLP|PLC|GmbH|SARL|Pte|BV|SA|Sdn\s*Bhd)\b|\b(?:L\.P\.|B\.V\.|S\.A\.|S\.R\.L\.|W\.L\.L\.)|^Solidigm$)/iu.test(s);
 const digest = b => createHash('sha256').update(b).digest('hex');
@@ -46,10 +46,20 @@ function coverage(c, manifest = false) {
   }
   keys(c, ['status', 'sourceChecked', 'attemptStatus', 'endpoints', 'asOfNotCollectedAt', 'asOfMeaning', 'rawRowsExamined', 'rawMatchedRows',
     'rawVerifiedRows', 'storedRows', 'unsupportedRows', 'curatedRelations', 'displayedRelations', 'limits', 'note', 'canonicalId', 'securityIds',
-    'cik', 'filedDate', 'periodEnd', 'documentSha256', 'attemptedAt', 'lastSuccessAt']);
+    'cik', 'filedDate', 'periodEnd', 'documentSha256', 'attemptedAt', 'lastSuccessAt', 'pendingReview', 'sourceGap']);
   if (!STATUS.has(c.status) || typeof c.sourceChecked !== 'boolean' || c.asOfNotCollectedAt !== true ||
-    !/^(?:success|error|partial|not-attempted|cached-same-accession|source-gap|attempting|HTTP[1-5][0-9]{2})$/u.test(c.attemptStatus)) fail();
+    !/^(?:success|error|partial|not-attempted|cached-same-accession|needs-review|source-gap|budget-deferred|attempting|HTTP[1-5][0-9]{2})$/u.test(c.attemptStatus)) fail();
   if (c.sourceChecked !== (c.status === 'source-checked') || c.sourceChecked && !['success', 'cached-same-accession'].includes(c.attemptStatus)) fail();
+  if (['needs-review', 'source-gap', 'budget-deferred', 'attempting'].includes(c.status) && c.status !== c.attemptStatus) fail();
+  if ('sourceGap' in c && !/^[a-z0-9:-]{1,100}$/u.test(c.sourceGap)) fail();
+  if ('pendingReview' in c) {
+    const r = c.pendingReview;
+    keys(r, ['filedDate', 'periodEnd', 'documentSha256', 'reason']);
+    if (c.status !== 'needs-review' || !c.cik || !r.filedDate || !r.periodEnd || !SHA.test(r.documentSha256 || '')) fail();
+    day(r.filedDate); day(r.periodEnd); time(c.attemptedAt);
+    if (r.periodEnd > r.filedDate || r.filedDate > c.attemptedAt.slice(0, 10) ||
+        'reason' in r && !/^[a-z0-9-]{1,80}$/u.test(r.reason)) fail();
+  }
   for (const k of ['rawRowsExamined', 'rawMatchedRows', 'rawVerifiedRows', 'storedRows', 'unsupportedRows', 'curatedRelations', 'displayedRelations']) if (k in c) integer(c[k]);
   for (const k of ['note', 'asOfMeaning']) if (k in c) text(c[k], 1000);
   counters(c.limits, ['nodes', 'relations', 'bytes']);
