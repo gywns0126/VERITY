@@ -28,6 +28,44 @@ def strict_json(raw: str | bytes) -> Any:
                       parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite_json")))
 
 
+def protocol_event(raw: str, counters: dict[str, int]) -> dict:
+    """Read control fields strictly; opaque CLI search metadata is not evidence.
+
+    The CLI can repeat fields inside its search payload. We consume only event
+    type and item type, and never derive source facts from this event payload.
+    Ambiguous control fields still fail closed; result/source JSON stays strict.
+    """
+    class Pairs(list):
+        pass
+
+    def convert(value, path=()):
+        if isinstance(value, Pairs):
+            result = {}
+            for key, child in value:
+                child = convert(child, path + (key,))
+                if key in result:
+                    controlling = (path == () and key in {"type", "item"}) or (path == ("item",) and key == "type")
+                    same = json.dumps(result[key], sort_keys=True) == json.dumps(child, sort_keys=True)
+                    if controlling and not same:
+                        raise ValueError("ambiguous_protocol_control")
+                    name = "identical" if same else "unused_metadata"
+                    counters[name] = counters.get(name, 0) + 1
+                result[key] = child
+            return result
+        if isinstance(value, list):
+            return [convert(child, path + ("[]",)) for child in value]
+        return value
+
+    value = convert(json.loads(raw, object_pairs_hook=Pairs,
+        parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite_json"))))
+    if not isinstance(value, dict) or not isinstance(value.get("type"), str):
+        raise ValueError("codex_protocol_shape")
+    item = value.get("item")
+    if item is not None and (not isinstance(item, dict) or not isinstance(item.get("type"), str)):
+        raise ValueError("codex_protocol_shape")
+    return value
+
+
 def atomic_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     if path.is_symlink():
@@ -85,6 +123,10 @@ def read_json_with_codex(prompt: str, *, cli: Path, model: str, runtime: Path,
     if receipt_path.exists():
         previous = strict_json(receipt_path.read_bytes())
         if previous.get("status") == "done":
+            allowed = {"agent_message", "reasoning", "todo_list"} | ({"web_search"} if search else set())
+            if (set(previous.get("item_types", [])) - allowed
+                    or previous.get("completed_events", 0) < 1):
+                raise ValueError("saved_receipt_requires_review")
             body = (directory / "result.json").read_bytes()
             if hashlib.sha256(body).hexdigest() != previous.get("result_sha256"):
                 raise ValueError("saved_result_changed")
@@ -111,7 +153,11 @@ def read_json_with_codex(prompt: str, *, cli: Path, model: str, runtime: Path,
                 ("authentication", "authentication"), ("usage_limit", "usage limit"),
                 ("model_unavailable", "not supported"), ("sandbox", "sandbox")) if marker in diagnostic]
             raise ValueError("codex_nonzero")
-        events = [strict_json(line) for line in result.stdout.splitlines() if line.strip()]
+        duplicates: dict[str, int] = {}
+        events = [protocol_event(line, duplicates)
+                  for line in result.stdout.splitlines() if line.strip()]
+        receipt["protocol_identical_duplicate_keys"] = duplicates.get("identical", 0)
+        receipt["protocol_unused_metadata_duplicate_keys"] = duplicates.get("unused_metadata", 0)
         if (not any(event.get("type") == "turn.completed" for event in events)
                 or any(event.get("type") in ("turn.failed", "error") for event in events)):
             raise ValueError("codex_protocol_incomplete")
@@ -119,8 +165,8 @@ def read_json_with_codex(prompt: str, *, cli: Path, model: str, runtime: Path,
         if "error" in item_types:
             receipt["diagnostics"] = ["reader_item_error"]
             raise ValueError("codex_reader_item_error")
-        forbidden = item_types & {"command_execution", "mcp_tool_call", "file_change", "collab_agent_tool_call"}
-        if forbidden or (not search and "web_search" in item_types):
+        allowed = {"agent_message", "reasoning", "todo_list"} | ({"web_search"} if search else set())
+        if item_types - allowed:
             raise ValueError("unexpected_reader_tool")
         body = (directory / "result.json").read_bytes()
         if len(body) > 1_048_576:
@@ -143,5 +189,7 @@ def read_json_with_codex(prompt: str, *, cli: Path, model: str, runtime: Path,
         return value, receipt
     except Exception as exc:
         receipt.update(status="uncertain", error_type=type(exc).__name__)
+        if isinstance(exc, ValueError) and str(exc).replace("_", "").isalpha() and len(str(exc)) <= 80:
+            receipt["reason"] = str(exc)
         atomic_json(receipt_path, receipt)
         raise

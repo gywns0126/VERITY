@@ -159,3 +159,138 @@ def test_cli_item_error_cannot_be_mistaken_for_completed_result(tmp_path):
                                 identity="failed-tool", search=True, executor=executor)
     receipt = cli.strict_json(next(tmp_path.rglob("receipt.json")).read_bytes())
     assert receipt["status"] == "uncertain" and receipt["diagnostics"] == ["reader_item_error"]
+
+
+def filing_refresh_executor(rows=None, mapping=None):
+    rows = rows if rows is not None else [{"ticker": "005930", "name": "Public KR", "currency": "KRW", "account_route": "must-not-reach-reader"},
+                                          {"ticker": "AAPL", "name": "Public US", "currency": "USD"}]
+    mapping = mapping if mapping is not None else {"005930": "00126380", "0009K0": "01234567"}
+    bodies = {"recommendations.json": json.dumps(rows).encode(), "mapping.json": json.dumps(mapping).encode()}
+    calls = []
+    def executor(command, **options):
+        calls.append(command)
+        assert options == {"capture_output": True, "timeout": 30}
+        relative = command[2].split("/contents/", 1)[1]
+        assert relative in ("data/recommendations.json?ref=main", "data/mapping.json?ref=main")
+        return SimpleNamespace(returncode=0, stdout=bodies[relative.split("?", 1)[0].split("/")[-1]], stderr=b"")
+    return executor, calls, bodies
+
+
+def test_filing_source_refresh_validates_both_before_atomic_replace(tmp_path):
+    executor, calls, bodies = filing_refresh_executor()
+    (tmp_path / "data").mkdir(exist_ok=True)
+    for filename in bodies:
+        (tmp_path / "data" / filename).write_bytes(b"old source")
+    rows, receipt = worker.refresh_filing_sources(root=tmp_path, executor=executor)
+    assert len(calls) == 2 and receipt["validated"] == "2/2"
+    assert receipt["candidates"] == 2 and receipt["mapping_entries"] == 2
+    assert rows == [{"ticker": "005930", "name": "Public KR", "currency": "KRW", "corp_code": "00126380"},
+                    {"ticker": "AAPL", "name": "Public US", "currency": "USD"}]
+    for filename, body in bodies.items():
+        assert cli.strict_json((tmp_path / "data" / filename).read_bytes()) == cli.strict_json(body)
+    assert "account_route" not in str(rows) and "must-not-reach-reader" not in str(receipt)
+
+
+@pytest.mark.parametrize("problem", ["request", "json", "mapping", "candidate", "size"])
+def test_filing_refresh_failure_preserves_both_previous_files(tmp_path, problem):
+    executor, calls, bodies = filing_refresh_executor()
+    (tmp_path / "data").mkdir(exist_ok=True)
+    for filename in bodies:
+        (tmp_path / "data" / filename).write_bytes(b"previous")
+    if problem == "json":
+        bodies["mapping.json"] = b'{"a":1,"a":2}'
+    elif problem == "mapping":
+        bodies["mapping.json"] = b'{"005930":"invalid"}'
+    elif problem == "candidate":
+        bodies["recommendations.json"] = b'[{"ticker":"bad","name":"Name","currency":"KRW"}]'
+    elif problem == "size":
+        bodies["mapping.json"] = b" " * 1_048_577
+    def request(command, **options):
+        if problem == "request" and "mapping.json" in command[2]:
+            return SimpleNamespace(returncode=1, stdout=b"", stderr=b"private auth diagnostic")
+        return executor(command, **options)
+    with pytest.raises(ValueError):
+        worker.refresh_filing_sources(root=tmp_path, executor=request)
+    assert len(calls) <= 2
+    assert all((tmp_path / "data" / name).read_bytes() == b"previous" for name in bodies)
+
+
+def test_refreshed_identities_drive_bounded_filing_rotation(tmp_path, monkeypatch):
+    monkeypatch.setattr(worker, "refresh_filing_sources", lambda **_: ([
+        {"ticker": "NEW", "name": "New public source", "currency": "USD"}], {"validated": "2/2"}))
+    seen = []
+    def source(row):
+        seen.append(row["ticker"])
+        raise ValueError("source_pending")
+    monkeypatch.setattr(worker, "filing_input", source)
+    result = worker.run_filings(SimpleNamespace(ticker=None, runtime=tmp_path, max_filings=3))
+    assert seen == ["NEW"] and result["processed"] == result["total_candidates"] == 1
+    assert result["source_refresh"]["validated"] == "2/2"
+
+
+def test_failed_input_refresh_stops_filings_but_all_phase_continues_macro(tmp_path, monkeypatch):
+    def failed(**_):
+        raise ValueError("filing_source_refresh_unavailable")
+    monkeypatch.setattr(worker, "refresh_filing_sources", failed)
+    monkeypatch.setattr(worker, "filing_input", lambda _: pytest.fail("stale input used"))
+    calls = []
+    monkeypatch.setattr(worker, "run_macro", lambda _: calls.append("macro") or {"google_calls": 0})
+    monkeypatch.setattr(worker.socket, "gethostname", lambda: "test-macmini")
+    monkeypatch.setattr(worker.sys, "platform", "darwin")
+    monkeypatch.setattr(worker.sys, "argv", ["worker", "--runtime", str(tmp_path), "--cli", "/cli"])
+    assert worker.main() == 1 and calls == ["macro"]
+    result = cli.strict_json((tmp_path / "latest.json").read_bytes())
+    assert result["status"] == "partial" and result["filings"]["processed"] == 0
+    assert result["filings"]["total_candidates"] is None
+    assert result["filings"]["results"][0]["reason"] == "filing_source_refresh_unavailable"
+    assert not (tmp_path / "filing-rotation.json").exists()
+
+
+@pytest.mark.parametrize("domestic", [False, True])
+def test_refreshed_filing_uses_same_exact_cache_as_existing_consumer(tmp_path, monkeypatch, domestic):
+    from api.utils import filing_extraction_cache as cache
+    if domestic:
+        from api.analyzers.facilities_parser import build_business_facilities_prompt as build, validate_business_facilities_data as validate, parse_business_facilities as consume
+        extractor, ticker, currency = "dart-facilities-v1", "005930", "KRW"
+        source = {"source_id": "source:dart:20260318001234", "as_of": "2026-03-18", "url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318001234"}
+    else:
+        from api.analyzers.properties_parser import build_10k_properties_prompt as build, validate_10k_properties_data as validate, parse_10k_properties as consume
+        extractor, ticker, currency = "sec-properties-v1", "AAPL", "USD"
+        source = {"source_id": "source:sec:0000320193-25-000079", "as_of": "2025-10-31", "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl.htm"}
+    raw = "Public filing words. " * 40
+    cache_root = tmp_path / "data/filing_extraction_cache"
+    original_read, original_write, original_path = cache.cache_read, cache.cache_write, cache.filing_cache_path
+    monkeypatch.setattr(cache, "cache_read", lambda **kw: original_read(cache_root=cache_root, **kw))
+    monkeypatch.setattr(cache, "cache_write", lambda **kw: original_write(cache_root=cache_root, **kw))
+    def cache_path(*a, **kw):
+        kw["cache_root"] = cache_root
+        return original_path(*a, **kw)
+    monkeypatch.setattr(cache, "filing_cache_path", cache_path)
+    monkeypatch.setattr(worker, "ROOT", tmp_path)
+    monkeypatch.setattr(worker, "refresh_filing_sources", lambda **_: ([
+        {"ticker": ticker, "name": "Public name", "currency": currency}], {"validated": "2/2"}))
+    monkeypatch.setattr(worker, "filing_input", lambda _: (extractor, raw, source, build, validate))
+    calls = []
+    def model(prompt, **_):
+        calls.append(prompt)
+        return {"summary_ko": "Public source result"}, {"completed_at": "2026-10-26T00:00:00+00:00", "reused": False}
+    monkeypatch.setattr(worker, "read_json_with_codex", model)
+    args = SimpleNamespace(ticker=None, runtime=tmp_path, max_filings=1, cli=Path("/cli"), model="gpt-6.1-sol", publish=False)
+    first, second = worker.run_filings(args), worker.run_filings(args)
+    assert first["results"][0]["status"] == "ready" and second["results"][0]["status"] == "cache_hit"
+    assert len(calls) == 1
+    actual = consume("Public name", ticker, raw, source_id=source["source_id"], as_of=source["as_of"], source_url=source["url"], cache_root=cache_root)
+    assert actual["summary_ko"] == "Public source result" and "error" not in actual
+
+
+def test_krw_letter_prefixed_identity_never_enters_sec_collector(monkeypatch):
+    from api.collectors import DartScout as dart
+    calls = []
+    def public_source(corp):
+        calls.append(corp)
+        return {"raw_text": "Public DART words", "rcept_no": "20260318001234", "rcept_dt": "20260318"}
+    monkeypatch.setattr(dart, "fetch_business_facilities_raw", public_source)
+    extractor, _, source, _, _ = worker.filing_input(
+        {"ticker": "ABCDEF", "name": "Public KR", "currency": "KRW", "corp_code": "00126380"})
+    assert calls == ["00126380"] and extractor == "dart-facilities-v1"
+    assert source["source_id"] == "source:dart:20260318001234"

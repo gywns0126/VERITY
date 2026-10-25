@@ -132,15 +132,16 @@ def test_readback_diagnostic_drops_unknown_headers_and_body(capsys, cache_state)
 
 
 @pytest.mark.parametrize("matching", [True, False])
-def test_explicit_dart_readback_is_fresh_and_still_exact(tmp_path, monkeypatch, matching):
+@pytest.mark.parametrize("name", ["dart_fundamentals_kr", "macro_synthesis"])
+def test_explicit_facts_readback_is_fresh_and_still_exact(tmp_path, monkeypatch, matching, name):
     monkeypatch.chdir(tmp_path)
     data = tmp_path / "data"; data.mkdir(exist_ok=True)
     body = b'{"fundamentals":{"001":{"_source_evidence":{"value":0}}}}'
-    (data / "dart_fundamentals_kr.json").write_bytes(body)
+    (data / f"{name}.json").write_bytes(body)
     monkeypatch.setenv("SUPABASE_URL", "https://private.example.test")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "SECRET")
     monkeypatch.setattr(uploader, "BUCKET", "verity-reports")
-    monkeypatch.setattr(uploader.sys, "argv", ["upload", "--only", "dart_fundamentals_kr"])
+    monkeypatch.setattr(uploader.sys, "argv", ["upload", "--only", name])
     posts, gets = [], []
     monkeypatch.setattr(uploader.requests, "post", lambda url, **kw: posts.append((url, kw)) or SimpleNamespace(status_code=200))
 
@@ -155,3 +156,14 @@ def test_explicit_dart_readback_is_fresh_and_still_exact(tmp_path, monkeypatch, 
     assert uploader.main() == (0 if matching else 1)
     assert len(posts) == 1 and len(gets) == 2
     assert posts[0][1]["data"] == body and nonce(gets[1])
+
+
+def test_default_upload_cannot_replace_the_mini_macro_object(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    data = tmp_path / "data"; data.mkdir(exist_ok=True)
+    (data / "macro_synthesis.json").write_text('{"legacy":"preserved-cache"}')
+    monkeypatch.setenv("SUPABASE_URL", "https://private.example.test")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "SECRET")
+    monkeypatch.setattr(uploader.sys, "argv", ["upload"])
+    monkeypatch.setattr(uploader.requests, "post", lambda *a, **k: pytest.fail("unexpected macro replacement"))
+    assert uploader.main() == 0

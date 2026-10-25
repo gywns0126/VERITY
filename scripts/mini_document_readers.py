@@ -85,6 +85,11 @@ def verify_macro_facts(result, *, now=None, reader=read_official_text):
             if date > now or (now.date() - date.date()).days > 3:
                 raise ValueError("macro_source_date_outside_window")
             quote = re.sub(r"\s+", " ", fact["source_quote"]).strip()
+            # Korean release pages append a live view counter to the dated
+            # title. It is not a macro fact and changes between two GETs.
+            # Remove only that terminal UI field, then require exact primary
+            # text/date/numeric support for the complete remaining quote.
+            quote = re.sub(r"\s+조회수\s*:\s*[0-9,]+$", "", quote)
             if not 24 <= len(quote) <= 400 or not 1 <= len(fact["text"]) <= 600:
                 raise ValueError("macro_fact_length")
             source = reader(fact["source_url"])
@@ -94,14 +99,15 @@ def verify_macro_facts(result, *, now=None, reader=read_official_text):
             # a model date or the collector's current date is not provenance.
             y, m, day = date.year, date.month, date.day
             date_forms = [date.strftime("%Y-%m-%d"), date.strftime("%B %d, %Y"),
-                          f"{date.strftime('%B')} {day}, {y}", f"{date.strftime('%b')} {day}, {y}"]
+                          f"{date.strftime('%B')} {day}, {y}", f"{date.strftime('%b')} {day}, {y}",
+                          f"{day} {date.strftime('%B')} {y}", date.strftime("%d %B %Y")]
             date_pattern = rf"{y}\s*(?:[./]|년)\s*0?{m}\s*(?:[./]|월)\s*0?{day}\s*(?:일|\b)"
             if not any(value in quote for value in date_forms) and not re.search(date_pattern, quote):
                 raise ValueError("macro_date_not_in_same_primary_quote")
             # All numeric claims must occur in the independently fetched quote.
             if any(number not in quote for number in re.findall(r"\d+(?:[.,]\d+)*", fact["text"])):
                 raise ValueError("unsupported_macro_number")
-            checked.append(dict(fact, verification="primary_quote_exact_match"))
+            checked.append(dict(fact, source_quote=quote, verification="primary_quote_exact_match"))
         accepted[region] = checked
     return accepted
 
@@ -201,9 +207,66 @@ def publish_cache(path, *, root, executor=subprocess.run):
             "sha256": hashlib.sha256(body).hexdigest()}
 
 
+def refresh_filing_sources(*, root=ROOT, executor=subprocess.run):
+    """Refresh identity inputs together; a failed refresh never uses old inputs."""
+    inputs = {}
+    files = []
+    for relative, limit in (("data/recommendations.json", 8_388_608), ("data/mapping.json", 1_048_576)):
+        result = executor(["gh", "api", "repos/gywns0126/VERITY/contents/" + relative + "?ref=main",
+                           "-H", "Accept: application/vnd.github.raw+json"],
+                          capture_output=True, timeout=30)
+        if result.returncode:
+            raise ValueError("filing_source_refresh_unavailable")
+        body = result.stdout
+        if not isinstance(body, bytes) or not 1 <= len(body) <= limit:
+            raise ValueError("filing_source_refresh_size")
+        inputs[relative] = strict_json(body)
+        files.append({"path": relative, "bytes": len(body), "received_sha256": hashlib.sha256(body).hexdigest()})
+    document = inputs["data/recommendations.json"]
+    rows = document if isinstance(document, list) else document.get("recommendations") if isinstance(document, dict) else None
+    mapping = inputs["data/mapping.json"]
+    if (not isinstance(rows, list) or not 1 <= len(rows) <= 10_000
+            or not isinstance(mapping, dict) or not 1 <= len(mapping) <= 20_000):
+        raise ValueError("filing_source_refresh_shape")
+    if any(not re.fullmatch(r"[0-9A-Z]{6}", key) or not isinstance(value, str)
+           or not re.fullmatch(r"\d{8}", value) for key, value in mapping.items()):
+        raise ValueError("filing_source_mapping_invalid")
+    identities = []
+    seen = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("filing_source_candidate_invalid")
+        ticker, name, currency = row.get("ticker"), row.get("name"), row.get("currency")
+        if (not isinstance(ticker, str) or not isinstance(name, str) or not name.strip()
+                or len(name) > 256 or any(ord(c) < 32 for c in name)):
+            raise ValueError("filing_source_candidate_invalid")
+        domestic = currency == "KRW" and re.fullmatch(r"[0-9A-Z]{6}(?:\.(?:KS|KQ))?", ticker)
+        foreign = currency == "USD" and re.fullmatch(r"[A-Z][A-Z.\-]{0,9}", ticker)
+        if not (domestic or foreign) or ticker in seen:
+            raise ValueError("filing_source_candidate_invalid")
+        identity = {"ticker": ticker, "name": name, "currency": currency}
+        if domestic:
+            corp = mapping.get(ticker.split(".")[0])
+            if not corp or row.get("corp_code") not in (None, "", corp):
+                raise ValueError("filing_source_mapping_mismatch")
+            identity["corp_code"] = corp
+        identities.append(identity)
+        seen.add(ticker)
+    # Validate both remote documents and every identity before replacing either
+    # local file. Only identity fields, never recommendation/account fields,
+    # enter the filing processor. These are retrieval receipts, not filing dates.
+    if any((root / relative).is_symlink() for relative in inputs):
+        raise ValueError("filing_source_path_invalid")
+    for relative, value in inputs.items():
+        atomic_json(root / relative, value)
+    return identities, {"status": "refreshed", "ref": "main", "retrieved_at": stamp(),
+                        "files": files, "validated": "2/2", "candidates": len(identities),
+                        "mapping_entries": len(mapping)}
+
+
 def filing_input(row):
     ticker = str(row.get("ticker") or "")
-    if row.get("currency") == "USD" or re.fullmatch(r"[A-Z][A-Z.\-]{0,9}", ticker):
+    if row.get("currency") == "USD" or (not row.get("currency") and re.fullmatch(r"[A-Z][A-Z.\-]{0,9}", ticker)):
         from api.collectors.sec_edgar import fetch_10k_properties_section
         from api.analyzers.properties_parser import build_10k_properties_prompt, validate_10k_properties_data
         raw = fetch_10k_properties_section(ticker, os.environ.get("SEC_EDGAR_USER_AGENT", ""))
@@ -238,8 +301,14 @@ def run_filings(args):
         domestic = re.fullmatch(r"\d{6}(?:\.(?:KS|KQ))?", args.ticker)
         rows = [{"ticker": args.ticker, "name": args.ticker, "currency": "KRW" if domestic else "USD"}]
     else:
-        document = strict_json((ROOT / "data/recommendations.json").read_bytes())
-        rows = document if isinstance(document, list) else document.get("recommendations", [])
+        try:
+            rows, refreshed = refresh_filing_sources(root=ROOT)
+        except Exception as exc:
+            failure = {"status": "pending", "error_type": type(exc).__name__, "google_calls": 0}
+            if isinstance(exc, ValueError) and re.fullmatch(r"[a-z_]{1,80}", str(exc)):
+                failure["reason"] = str(exc)
+            return {"processed": 0, "total_candidates": None,
+                    "source_refresh": {"status": "pending"}, "results": [failure]}
     state_path = args.runtime / "filing-rotation.json"
     state = strict_json(state_path.read_bytes()) if state_path.exists() else {"cursor": 0}
     count = min(args.max_filings, len(rows))
@@ -277,7 +346,10 @@ def run_filings(args):
     if not args.ticker:
         state["cursor"] = (state["cursor"] + count) % max(1, len(rows))
         atomic_json(state_path, state)
-    return {"processed": count, "total_candidates": len(rows), "results": results}
+    result = {"processed": count, "total_candidates": len(rows), "results": results}
+    if not args.ticker:
+        result["source_refresh"] = refreshed
+    return result
 
 
 def run_macro(args):
@@ -290,13 +362,14 @@ def run_macro(args):
         "source_quote (24to400 consecutive characters copied exactly from the source, including every numeric "
         "claim used in text AND its full source_date including year/month/day in that SAME consecutive quote). "
         "Choose a release whose visible date and first factual paragraph fit in400characters. "
+        "Use plain-text prose, not an interest-rate table, iframe landing page or Markdown table. "
+        "The quote must contain source words only: no Markdown headings, links, pipes or separators. "
         "No PDF or third-party URLs. Do not invent or infer dates from the current date. "
         "Do not access local files, credentials or accounts. No file edits, commands, APIs or messages.")
-    # v1's empty result came from the disabled internal bridge and was never
-    # delivered. Keep that receipt; the owner-approved bridge fix gets one
-    # separate v2 attempt per day, with the same no-automatic-retry boundary.
+    # Preserve the failed pre-bridge and protocol-v2 receipts. The reviewed
+    # protocol fix has a separate version, still only one attempt per day.
     value, receipt = read_json_with_codex(prompt, cli=args.cli, model=args.model, runtime=args.runtime,
-                                        identity="macro-facts-v1:bridge-v2:" + today, search=True)
+                                        identity="macro-facts-v1:protocol-v4:" + today, search=True)
     verified = verify_macro_facts(value)
     document = macro_bundle(verified, model=args.model, generated_at=receipt["completed_at"])
     document["verified_at"] = stamp()
