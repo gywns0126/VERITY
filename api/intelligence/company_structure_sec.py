@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-25-issuer-bound-statement-lists-v12"
+PARSER_REVISION = "2026-10-25-issuer-bound-row-omission-v15"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -216,6 +216,11 @@ _ALIAS_START = re.compile(r"^(?:f/k/a|fka|formerly(?:\s+known\s+as)?)\s+(.+)$", 
 _PERCENT_OWNED = re.compile(r"\s*\(\s*(?:100(?:\.0{1,3})?|[0-9]{1,2}(?:\.[0-9]{1,3})?)\s*%\s+owned\s*\)\s*$", re.I)
 _COUNT_WORDS = {word: count for count, word in enumerate(
     ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"), 1)}
+_FLAT_TABLE_JURISDICTIONS = _OBSERVED_COUNTRY_COLUMN_VALUES | frozenset({
+    "Alberta", "California", "Chile", "Colombia", "Colorado", "Cyprus", "Delaware",
+    "District of Columbia", "England", "England and Wales", "Florida", "Greece", "Korea",
+    "Louisiana", "Mississippi", "New York", "Taiwan", "Vermont", "Vietnam", "Virginia",
+})
 
 
 def _issuer_name_key(value):
@@ -429,6 +434,142 @@ def _statement_list(soup, metadata, result):
     return result
 
 
+def _flat_issuer_table(soup, table, metadata, result):
+    """Review one fully bound table, including spacer cells and late headers."""
+    if table.find("table") or table.find_parent("table"):
+        return None
+    root = _issuer_name_key(metadata.get("issuerName"))
+    if not root:
+        return None
+    prefix = []
+    for node in (soup.body or soup).descendants:
+        if node is table:
+            break
+        if (isinstance(node, NavigableString) and not isinstance(node, Comment)
+                and not node.find_parent(["head", "style", "script"])):
+            prefix.append(str(node))
+    heading = _issuer_name_key(_norm(" ".join(prefix)))
+    title = {"subsidiaries of " + root, "significant subsidiaries of " + root}
+    exhibit = {"exhibit 21", "exhibit 211"}
+    title_in_prefix = any(heading == marker + " " + name for marker in exhibit for name in title)
+    if not title_in_prefix and heading not in exhibit:
+        return None
+    last = list(table.descendants)[-1]
+    following = _norm(" ".join(str(node) for node in last.next_elements
+                               if isinstance(node, NavigableString) and not isinstance(node, Comment)
+                               and not node.find_parent(["head", "style", "script"])))
+    if following:
+        result["reviewReason"] = "continuation-scope-text"
+        return result
+
+    def cells_with_starts(tr):
+        cells, start, positions = tr.find_all(["th", "td"], recursive=False), 0, []
+        for cell in cells:
+            span = cell.get("colspan", "1")
+            if cell.get("rowspan") or not re.fullmatch(r"[1-9][0-9]?", str(span)):
+                return None
+            value = _norm(cell.get_text(" ", strip=True).replace("\u200b", "").replace("\ufeff", ""))
+            positions.append((start, value, cell))
+            start += int(span)
+        return start, positions
+
+    trs = table.find_all("tr")
+    if len(trs) < 3:
+        return None
+    header_i = None
+    title_in_table = False
+    expected_width = None
+    anchors = None
+    for index, tr in enumerate(trs[:6]):
+        parsed = cells_with_starts(tr)
+        if parsed is None:
+            return None
+        width, positions = parsed
+        if expected_width is None:
+            expected_width = width
+        if width != expected_width:
+            return None
+        filled = [(start, value) for start, value, _ in positions if value]
+        if not filled:
+            continue
+        if (not title_in_prefix and not title_in_table and len(filled) == 1
+                and _issuer_name_key(filled[0][1]) in title):
+            title_in_table = True
+            continue
+        if (len(filled) == 2 and filled[0][1].casefold() in {
+                "name", "subsidiary", "name of subsidiary", "name of corporation"}
+                and filled[1][1].casefold() in {
+                    "jurisdiction", "jurisdiction of formation", "state of incorporation", "incorporated"}):
+            header_i = index
+            anchors = (filled[0][0], filled[1][0])
+            break
+        return None
+    if header_i is None or (not title_in_prefix and not title_in_table):
+        return None
+    rows = []
+    for row_index, tr in enumerate(trs[header_i + 1:], header_i + 1):
+        parsed = cells_with_starts(tr)
+        if parsed is None or parsed[0] != expected_width:
+            result["reviewReason"] = "ambiguous-row-binding"
+            return result
+        filled = [(start, value, cell) for start, value, cell in parsed[1] if value]
+        if not filled:
+            continue
+        if (len(filled) != 2 or tuple(start for start, _, _ in filled) != anchors
+                or any(cell.find(["br", "sup", "table", "script", "style"])
+                       or len(cell.find_all(["p", "div"])) > 1 for _, _, cell in filled)):
+            result["reviewReason"] = "ambiguous-row-binding"
+            return result
+        name, jurisdiction = filled[0][1], filled[1][1]
+        if (len(name) > 300 or jurisdiction not in _FLAT_TABLE_JURISDICTIONS
+                or re.search(r"\b(?:dba|fka|aka|formerly|owned|ownership|parent|trade name)\b|d/b/a|f/k/a|%|\*", name, re.I)
+                or len(_LEGAL_TERMINATOR.findall(name)) > 1
+                or (_LEGAL_TERMINATOR.search(name) and not (
+                    _complete_legal_name(name)
+                    or re.fullmatch(r".+\sS\.A\.S\.", name, re.I)
+                    or re.fullmatch(r".+\sS\.A\. de C\.V\.", name, re.I)))
+                or re.search(r"\(\s*[0-9]{1,3}\s*\)$", name)
+                or any(row["name"] == name for row in rows)):
+            result["reviewReason"] = "ambiguous-row-binding"
+            return result
+        if _issuer_name_key(name) == root:
+            continue
+        rows.append({"name": name, "jurisdiction": jurisdiction, "ownershipPct": None,
+                     "directOwnership": "unspecified", "sourceRow": {"index": row_index,
+                     "text": _norm(tr.get_text(" ", strip=True))}})
+        if len(rows) > _MAX_ROWS:
+            result["reviewReason"] = "row-limit"
+            return result
+    if not rows:
+        result["reviewReason"] = "no-eligible-subsidiary-rows"
+        return result
+    result["rows"] = rows
+    result["status"] = "parsed"
+    return result
+
+
+def _check_exhibit_as_of(soup, period, result):
+    """Reject an explicit exhibit date that differs from the filing period."""
+    visible_root = soup.body or soup
+    visible_text = _norm(" ".join(
+        str(node) for node in visible_root.descendants
+        if isinstance(node, NavigableString) and not isinstance(node, Comment)
+        and not node.find_parent(["head", "style", "script"])))
+    for match in re.finditer(r"\bas of\s+([A-Za-z]+\s+\d{1,2},\s*\d{4}|\d{4}-\d{2}-\d{2})\b", visible_text, re.I):
+        stated = match.group(1)
+        try:
+            stated_day = (date.fromisoformat(stated).isoformat() if re.match(r"\d", stated)
+                          else datetime.strptime(re.sub(r",\s*", ", ", stated), "%B %d, %Y").date().isoformat())
+        except ValueError:
+            result["reviewReason"] = "invalid-exhibit-as-of-date"
+            return False
+        if stated_day != period:
+            result["reviewReason"] = "exhibit-as-of-differs-from-period-end"
+            result["statedAsOf"] = stated_day
+            return False
+    return True
+
+
 def parse_exhibit(raw_html, metadata):
     """Parse explicit subsidiary/name and jurisdiction columns without ownership inference."""
     cik, accession, filed, period, url = _metadata(metadata)
@@ -488,6 +629,13 @@ def parse_exhibit(raw_html, metadata):
             statement = _statement_list(soup, metadata, result)
             if statement is not None:
                 return statement
+        elif len(all_tables) == 1:
+            flat_table = _flat_issuer_table(soup, all_tables[0], metadata, result)
+            if flat_table is not None:
+                if flat_table["status"] == "parsed" and not _check_exhibit_as_of(soup, period, flat_table):
+                    flat_table["status"] = "needs-review"
+                    flat_table["rows"] = []
+                return flat_table
         result["reviewReason"] = "explicit-name-jurisdiction-header-missing"
         return result
     # Downstream currently dates relationships with periodEnd. An explicit
@@ -510,6 +658,9 @@ def parse_exhibit(raw_html, metadata):
         and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
     registrant_title = bool(root and re.search(
         r"\b" + root_pattern + r" subsidiaries of the registrant(?= |$)", heading)
+        and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
+    issuer_title = bool(root and re.search(
+        r"\bsubsidiaries of " + root_pattern + r"(?= as of |$)", heading)
         and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
     if blank_name_header:
         title = r"subsidiaries of " + root_pattern if root else ""
@@ -572,23 +723,8 @@ def parse_exhibit(raw_html, metadata):
             candidates.append((table, trs, -1, ["name", "jurisdiction"]))
     # A dated footnote after the tables also constrains the exhibit's as-of
     # time. Check the entire visible body, not just the first table's title.
-    visible_root = soup.body or soup
-    visible_text = _norm(" ".join(
-        str(node) for node in visible_root.descendants
-        if isinstance(node, NavigableString) and not isinstance(node, Comment)
-        and not node.find_parent(["head", "style", "script"])))
-    for match in re.finditer(r"\bas of\s+([A-Za-z]+\s+\d{1,2},\s*\d{4}|\d{4}-\d{2}-\d{2})\b", visible_text, re.I):
-        stated = match.group(1)
-        try:
-            stated_day = (date.fromisoformat(stated).isoformat() if re.match(r"\d", stated)
-                          else datetime.strptime(re.sub(r",\s*", ", ", stated), "%B %d, %Y").date().isoformat())
-        except ValueError:
-            result["reviewReason"] = "invalid-exhibit-as-of-date"
-            return result
-        if stated_day != period:
-            result["reviewReason"] = "exhibit-as-of-differs-from-period-end"
-            result["statedAsOf"] = stated_day
-            return result
+    if not _check_exhibit_as_of(soup, period, result):
+        return result
     if any(table.find_parent("table") is not None for table, *_ in candidates):
         result["reviewReason"] = "nested-table-scope"
         return result
@@ -694,7 +830,21 @@ def parse_exhibit(raw_html, metadata):
         if not cells:
             continue
         text = _norm(tr.get_text(" ", strip=True))
-        if not text or _OMIT.search(text):
+        if not text:
+            continue
+        if _OMIT.search(text):
+            # In an issuer-bound list, a populated name/jurisdiction pair may
+            # itself contain "Trust", "Foreign", or "Branch". Do not publish
+            # the rest of the table after silently discarding that entity.
+            if (root_first_title or registrant_title or issuer_title) and country_table is None and \
+                    max(name_i, jurisdiction_i) < len(cells):
+                omitted_name = _norm(cells[name_i].get_text(" ", strip=True))
+                omitted_jurisdiction = _norm(cells[jurisdiction_i].get_text(" ", strip=True))
+                label = r"(?:domestic|foreign)(?: subsidiaries)?|(?:sub)?total|footnote|see note|branch"
+                if (omitted_name and omitted_jurisdiction and
+                        not re.fullmatch(label, omitted_name, re.I)):
+                    result["reviewReason"] = "partial-table-row-omission"
+                    return result  # rows are local until the entire table passes.
             continue
         if country_table is not None and ("%" in text or re.search(
                 r"\b(?:subsidiar(?:y|ies)|ownership|owned)\b", text, re.I)):
