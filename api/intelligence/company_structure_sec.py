@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-25-bound-flat-pages-v18"
+PARSER_REVISION = "2026-10-25-bound-continuations-v19"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -1280,11 +1280,15 @@ def parse_exhibit(raw_html, metadata):
                     "reviewReason": "cofiler-parent-title-unbound"}
     if result.get("reviewReason") not in {
             "explicit-name-jurisdiction-header-missing", "multiple-tables-issuer-scope-unbound",
-            "ambiguous-row-binding", "partial-table-row-omission"}:
+            "ambiguous-row-binding", "partial-table-row-omission", "unreviewed-exhibit-table"}:
         return result
     reviewed = _bound_flat_pages(soup, metadata, dict(result))
     if reviewed is not None:
         if reviewed["status"] == "parsed":
             reviewed.pop("reviewReason", None)
+        return reviewed
+    from api.intelligence.company_structure_sec_sections import parse_unheaded_continuation
+    reviewed = parse_unheaded_continuation(soup, metadata, dict(result))
+    if reviewed is not None:
         return reviewed
     return result

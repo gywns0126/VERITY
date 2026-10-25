@@ -461,3 +461,138 @@ def parse_cofiler_sections(soup, metadata, result):
         for section in parsed_sections
     ]
     return updated
+
+
+def parse_unheaded_continuation(soup, metadata, result):
+    """Bind unheaded physical table pages to one exact issuer/header pair.
+
+    Return ``None`` outside this narrow layout. Once its issuer-title/two-page
+    shape is recognized, every visible event and physical row must be covered;
+    any ambiguity holds the whole exhibit with zero rows.
+    """
+    from api.intelligence import company_structure_sec as columns
+
+    events = _visible_events(soup)
+    tables = [value for kind, value in events if kind == "table"]
+    if len(tables) < 2 or len(tables) != len(soup.find_all("table")):
+        return None
+    visible = [(kind, value) for kind, value in events]
+    if len(visible) < 4 or visible[0][0] != "text" or visible[1][0] != "text":
+        return None
+    if not _EXHIBIT_TITLE.fullmatch(visible[0][1]):
+        return None
+    title = _section_title(visible[1][1])
+    if title is None:
+        return None
+    if title.get("invalid") or not isinstance(metadata, dict):
+        return _review(result, "unheaded-continuation-title-invalid")
+    if (soup.body or soup).find(["img", "svg", "iframe", "object", "input", "select", "textarea"]):
+        return _review(result, "unheaded-continuation-unbound-media")
+    root = columns._issuer_name_key(metadata.get("issuerName"))
+    parent = columns._issuer_name_key(title["parent"])
+    if not root or not parent or root != parent:
+        return _review(result, "unheaded-continuation-issuer-mismatch")
+    period = result.get("periodEnd")
+    if not period or title["statedDate"] and title["statedDate"] != period:
+        return _review(result, "unheaded-continuation-date-mismatch")
+    date_result = dict(result)
+    if not columns._check_exhibit_as_of(soup, period, date_result):
+        return _review(date_result, date_result["reviewReason"])
+    if any(kind != "table" for kind, _ in visible[2:]):
+        return _review(result, "unheaded-continuation-unbound-text")
+    if any(table.find("table") or table.find_parent("table") for table in tables):
+        return _review(result, "unheaded-continuation-nested-table")
+
+    name_headers = {"name", "name of company", "company", "company name", "subsidiary",
+                    "subsidiaries", "name of subsidiary", "name of subsidiary or organization",
+                    "name of subsidiaries", "name of corporation", "subsidiary name",
+                    "entity name", "legal name"}
+    header_text = None
+    signature = None
+    width = None
+    rows = []
+    names = set()
+
+    for table_index, table in enumerate(tables):
+        trs = table.find_all("tr")
+        if not trs:
+            return _review(result, "unheaded-continuation-empty-table")
+        if any(cell.find_parent("tr") not in trs for cell in table.find_all(["td", "th"])):
+            return _review(result, "unheaded-continuation-orphan-cell")
+        # Captions, stray table text, and cells outside physical rows are not
+        # silently discarded by BeautifulSoup's row enumeration.
+        if any(_text(node) for node in table.find_all(string=True)
+               if not isinstance(node, Comment) and
+               not node.find_parent(["td", "th"])):
+            return _review(result, "unheaded-continuation-unbound-table-text")
+        nonblank_seen = False
+        for row_index, tr in enumerate(trs):
+            cells = tr.find_all(["th", "td"], recursive=False)
+            if not cells or any(_text(node) for node in tr.find_all(string=True, recursive=False)):
+                return _review(result, "unheaded-continuation-unbound-row")
+            physical = []
+            position = 0
+            for cell in cells:
+                span = str(cell.get("colspan", "1"))
+                if (cell.get("rowspan") or not re.fullmatch(r"[1-9][0-9]?", span)
+                        or cell.find(["table", "sup", "script", "style", "pre"])
+                        or (cell.find("br") and (table_index != 0 or nonblank_seen))
+                        or len(cell.find_all(["p", "div"])) > 1):
+                    return _review(result, "unheaded-continuation-cell-shape")
+                value = _text(cell.get_text(" ", strip=True))
+                physical.append((position, int(span), value))
+                position += int(span)
+            filled = [item for item in physical if item[2]]
+            if not filled:
+                continue
+            if len(filled) != 2:
+                return _review(result, "unheaded-continuation-partial-row")
+            coordinates = tuple(item[:2] for item in filled)
+            values = tuple(item[2] for item in filled)
+            if table_index == 0 and not nonblank_seen:
+                if (values[0].casefold() not in name_headers or
+                        columns._header_role(values[1]) != "jurisdiction" or
+                        len(values[1]) > 120 or re.search(r"[%0-9]", values[1]) or
+                        re.search(r"\b(?:parent|owner|ownership|percent|dba|trade)\b", values[1], re.I)):
+                    return _review(result, "unheaded-continuation-header-invalid")
+                header_text, signature, width = values, coordinates, position
+                nonblank_seen = True
+                continue
+            if table_index > 0 and not nonblank_seen and values == header_text:
+                if coordinates != signature or position != width:
+                    return _review(result, "unheaded-continuation-header-shape")
+                nonblank_seen = True
+                continue
+            nonblank_seen = True
+            if values == header_text or columns._header_role(values[0]) is not None:
+                return _review(result, "unheaded-continuation-header-change")
+            if position != width or coordinates != signature:
+                return _review(result, "unheaded-continuation-column-change")
+            name, jurisdiction = values
+            if (len(name) > 300 or len(jurisdiction) > 160 or
+                    not re.search(r"\w", name) or
+                    re.search(r"%|[;*\u2020\u2021]|\([0-9]{1,3}\)", name + " " + jurisdiction) or
+                    columns._OMIT.search(name) or
+                    re.search(r"\b(?:subsidiar(?:y|ies)|ownership|owned|parent|formerly|dba|fka|footnote|total|vie)\b|d/b/a|f/k/a", name, re.I) or
+                    re.fullmatch(r"[A-Z]{3}", jurisdiction) or
+                    jurisdiction.casefold() in {"jurisdiction", "country"} or
+                    (columns._LEGAL_TERMINATOR.search(name) and
+                     not columns._complete_legal_name(name)) or
+                    len(columns._LEGAL_TERMINATOR.findall(name)) > 1 or
+                    columns._issuer_name_key(name) == root or name.casefold() in names):
+                return _review(result, "unheaded-continuation-unsafe-row")
+            names.add(name.casefold())
+            rows.append({"name": name, "jurisdiction": jurisdiction,
+                         "ownershipPct": None, "directOwnership": "unspecified",
+                         "sourceRow": {"index": row_index, "tableIndex": table_index,
+                                       "text": _text(tr.get_text(" ", strip=True))}})
+            if len(rows) > 1000:
+                return _review(result, "row-limit")
+        if not nonblank_seen:
+            return _review(result, "unheaded-continuation-empty-table")
+    if not rows or not any(row["sourceRow"]["tableIndex"] > 0 for row in rows):
+        return _review(result, "unheaded-continuation-empty-page")
+    updated = dict(result)
+    updated.update(status="parsed", rows=rows)
+    updated.pop("reviewReason", None)
+    return updated
