@@ -94,7 +94,7 @@ def test_deployed_chat_refuses_before_context_and_paid_fallback():
     assert reply.call_args.args[1]["status"] == "disabled_by_policy"
 
 
-def test_deployment_bundle_needs_no_repository_root_or_google_sdk():
+def test_deployment_bundle_needs_no_repository_root_or_google_sdk(tmp_path):
     script = r'''import importlib.util, pathlib, sys
 root = pathlib.Path(sys.argv[1])
 sys.path.insert(0, str(root))
@@ -118,7 +118,7 @@ else:
     raise AssertionError("Google constructor enabled")
 '''
     subprocess.run([sys.executable, "-I", "-c", script, str(ROOT / "vercel-api")],
-                   cwd="/private/tmp", env={"PATH": os.environ.get("PATH", ""), "GEMINI_API_KEY": "dummy-never-sent"},
+                   cwd=tmp_path, env={"PATH": os.environ.get("PATH", ""), "GEMINI_API_KEY": "dummy-never-sent"},
                    check=True, capture_output=True, text=True)
 
 

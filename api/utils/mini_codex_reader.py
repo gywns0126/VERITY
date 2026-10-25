@@ -56,9 +56,10 @@ def cli_environment(source: dict[str, str] | None = None) -> dict[str, str]:
 
 def command(cli: Path, directory: Path, *, model: str, search: bool) -> list[str]:
     arguments = [str(cli)]
-    # Verified against this Mini's `features list`. Read-only alone still allows
-    # HOME reads, so document readers have no shell, MCP, apps, browser or agent.
-    for feature in ("shell_tool", "unified_exec", "shell_snapshot", "code_mode", "code_mode_host",
+    # The managed CLI requires its internal host even with code_mode disabled.
+    # Owner approved this bridge on 2026-10-26; shell/MCP/apps stay disabled.
+    arguments += ["--enable", "code_mode_host"]
+    for feature in ("shell_tool", "unified_exec", "shell_snapshot", "code_mode",
                     "apps", "plugins", "multi_agent", "multi_agent_v2", "browser_use", "browser_use_external",
                     "computer_use", "image_generation", "view_image", "hooks", "memories",
                     "skill_mcp_dependency_install", "skill_search", "workspace_dependencies"):

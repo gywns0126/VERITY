@@ -16,6 +16,10 @@ def test_cli_drops_provider_keys_and_keeps_saved_login_home():
     assert "mcp_servers={}" in cmd and "--search" not in cmd
     assert "read-only" in cmd and "--output-schema" in cmd
     assert all(name in cmd for name in ("shell_tool", "unified_exec", "apps", "hooks", "multi_agent"))
+    disabled = [cmd[i + 1] for i, value in enumerate(cmd) if value == "--disable"]
+    enabled = [cmd[i + 1] for i, value in enumerate(cmd) if value == "--enable"]
+    assert enabled == ["code_mode_host"] and "code_mode_host" not in disabled
+    assert all(name in disabled for name in ("shell_tool", "apps", "multi_agent", "plugins"))
     assert 'web_search="disabled"' in cmd
 
 

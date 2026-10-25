@@ -292,8 +292,11 @@ def run_macro(args):
         "Choose a release whose visible date and first factual paragraph fit in400characters. "
         "No PDF or third-party URLs. Do not invent or infer dates from the current date. "
         "Do not access local files, credentials or accounts. No file edits, commands, APIs or messages.")
+    # v1's empty result came from the disabled internal bridge and was never
+    # delivered. Keep that receipt; the owner-approved bridge fix gets one
+    # separate v2 attempt per day, with the same no-automatic-retry boundary.
     value, receipt = read_json_with_codex(prompt, cli=args.cli, model=args.model, runtime=args.runtime,
-                                        identity="macro-facts-v1:" + today, search=True)
+                                        identity="macro-facts-v1:bridge-v2:" + today, search=True)
     verified = verify_macro_facts(value)
     document = macro_bundle(verified, model=args.model, generated_at=receipt["completed_at"])
     document["verified_at"] = stamp()
