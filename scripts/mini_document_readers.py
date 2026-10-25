@@ -107,7 +107,9 @@ def verify_macro_facts(result, *, now=None, reader=read_official_text):
             # All numeric claims must occur in the independently fetched quote.
             if any(number not in quote for number in re.findall(r"\d+(?:[.,]\d+)*", fact["text"])):
                 raise ValueError("unsupported_macro_number")
-            checked.append(dict(fact, source_quote=quote, verification="primary_quote_exact_match"))
+            # Exact source text does not prove the meaning of a model's
+            # paraphrase. Discard that paraphrase from the delivery entirely.
+            checked.append(dict(fact, text=quote, source_quote=quote, verification="primary_quote_exact_match"))
         accepted[region] = checked
     return accepted
 
@@ -123,7 +125,7 @@ def macro_bundle(verified, *, model, generated_at):
     return {"contract": "macro-facts-v1", "producer": "mac-mini-codex",
             "generated_at": generated_at, "source_verification": "2/2", "sources": sources,
             "google_calls": 0, "_cache": "miss",
-            "disclosure": {"note": "Primary-source facts only; no forecast, recommendation or score input.",
+            "disclosure": {"note": "Verified source quotations only; model paraphrases discarded. No forecast, recommendation or score input.",
                            "legacy_chain_retired": True}}
 
 
@@ -358,7 +360,8 @@ def run_macro(args):
         "Use primary releases from Bank of Korea, FSC, Korean government/statistics office, Fed, BLS, BEA, ECB, BOJ. "
         "Search and open the exact primary release. No forecast, stock opinion, portfolio or causal speculation. "
         "Return JSON with exactly two arrays: global and kr, each exactly1 fact. Each fact has exactly text "
-        "(concise Korean factual statement), source_url (direct official HTML), source_date (YYYY-MM-DD), "
+        "(the exact source_quote, in the source language; do not paraphrase or translate), "
+        "source_url (direct official HTML), source_date (YYYY-MM-DD), "
         "source_quote (24to400 consecutive characters copied exactly from the source, including every numeric "
         "claim used in text AND its full source_date including year/month/day in that SAME consecutive quote). "
         "Choose a release whose visible date and first factual paragraph fit in400characters. "

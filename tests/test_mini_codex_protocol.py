@@ -85,3 +85,15 @@ def test_dynamic_trailing_view_counter_is_not_treated_as_a_macro_fact():
     value["kr"][0]["text"] = "조회수는 12158건이었다."
     with pytest.raises(ValueError, match="unsupported_macro_number"):
         worker.verify_macro_facts(value, **args)
+
+
+def test_contradictory_model_paraphrase_never_becomes_verified_content():
+    quote = "October 23, 2026. The Committee decided to maintain the target range unchanged."
+    value = {region: [{"text": "연준은 금리 인하를 결정했다.", "source_date": "2026-10-23",
+                      "source_url": "https://www.federalreserve.gov/official-release", "source_quote": quote}]
+             for region in ("global", "kr")}
+    verified = worker.verify_macro_facts(value, now=datetime(2026, 10, 26, tzinfo=timezone.utc),
+                                        reader=lambda _: quote)
+    output = worker.macro_bundle(verified, model="gpt-6.1-sol", generated_at="2026-10-26T00:00:00+00:00")
+    assert verified["global"][0]["text"] == quote
+    assert "인하" not in json.dumps(output, ensure_ascii=False)
