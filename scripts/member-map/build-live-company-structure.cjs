@@ -42,6 +42,25 @@ function usBankLabel(name) {
     /^(?:.+\sBank|[A-Z][A-Za-z]{2,}Bank)$/u.test(name);
 }
 
+// One predicate for reviewed SEC subsidiary rows at sanitation, projection and
+// publication. Legal-form punctuation is not a reason to lose an entity. These
+// names are admitted only inside an accession-bound subsidiary list, never as a
+// KR shareholder heuristic or as proof of direct control or an ownership rate.
+function usSubsidiaryLabel(name) {
+  if (typeof name !== 'string' || /\b(?:fund|individual)\b|펀드|개인|투자조합/iu.test(name)) return false;
+  if (/\btrust\b/iu.test(name)) {
+    // A reported business/property trust is an entity, not a personal holder.
+    // Keep unspecified, family and personal trusts out of this public surface.
+    return !/\b(?:family|personal|revocable|irrevocable|estate)\b/iu.test(name) &&
+      /^.+\s(?:business|property|realty|statutory)\s+trust$/iu.test(name);
+  }
+  const legalName = name.replace(/\./gu, '');
+  const legalForm = /(?:\b(?:inc|incorporated|corp|corporation|company|co|ltd|limited|llc|llp|lp|plc|gmbh|sarl|srl|pte|bv|sa|wll|sdn\s*bhd)\b|\b(?:L\.P\.|B\.V\.|S\.A\.|S\.R\.L\.|W\.L\.L\.)|\(주\)|㈜|주식회사|유한회사|합자회사|유한공사|股份有限公司|有限公司|^Solidigm$)/iu;
+  const reportedInternationalForm = /\b(?:S\.?L\.?|s\.?r\.?o\.?|SAS|Ltda|S\.?p\.?A\.?)$/iu;
+  return legalForm.test(name) || legalForm.test(legalName) || reportedInternationalForm.test(name) ||
+    usCooperatieLabel(name) || usBankLabel(name);
+}
+
 function exclusion(row) {
   const type = String(row?.type || row?.kind || row?.asset_type || '').toUpperCase();
   const market = String(row?.market || '').toUpperCase();
@@ -222,8 +241,7 @@ function usPayload(aliases, source, generatedAt) {
   if (valid) for (const row of e.rows) {
     const name = clean(row?.name);
     // SEC reported lists can include direct AND indirect entities, never a direct-control tree.
-    if (!name || row.ownershipPct !== null || row.directOwnership !== 'unspecified' || aggregate(name) || /\b(?:fund|trust|individual)\b|펀드|개인|투자조합/iu.test(name) ||
-      !(/(?:\b(?:inc|incorporated|corp|corporation|company|co|ltd|limited|llc|llp|plc|gmbh|sarl|pte|bv|sa)\b|주식회사|유한회사|有限公司)/iu.test(name) || usCooperatieLabel(name) || usBankLabel(name)) ||
+    if (!name || row.ownershipPct !== null || row.directOwnership !== 'unspecified' || aggregate(name) || !usSubsidiaryLabel(name) ||
       aliases.some(a => norm(a.name).toLowerCase() === norm(name).toLowerCase())) { unsupported++; continue; }
     if (row.jurisdiction != null && (typeof row.jurisdiction !== 'string' || row.jurisdiction.length > 160)) { unsupported++; continue; }
     const peer = `FOREIGN:${hash(Buffer.from(`${cik}|${norm(row.name).toLowerCase()}|${norm(row.jurisdiction).toLowerCase()}`)).slice(0, 20)}`;
@@ -430,5 +448,5 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { buildArtifacts, writeArtifacts, main, verifiedRow, secUrl, usCooperatieLabel, usBankLabel, mappedCik, MAX_BYTES, MAX_ISSUERS };
+module.exports = { buildArtifacts, writeArtifacts, main, verifiedRow, secUrl, usCooperatieLabel, usBankLabel, usSubsidiaryLabel, mappedCik, MAX_BYTES, MAX_ISSUERS };
 if (require.main === module) { try { main(); } catch (e) { process.stderr.write(e.message + '\n'); process.exitCode = 1; } }

@@ -42,7 +42,7 @@ def _pairs(result):
 def test_two_pages_repeat_exact_header_and_keep_blank_column_and_unknown_parentage():
     result = parse_exhibit(_exhibit(), META)
     assert result["status"] == "parsed", result.get("reviewReason")
-    assert result["parserRevision"] == "2026-10-25-bound-flat-pages-v18"
+    assert result["parserRevision"] == "2026-10-25-bound-continuations-v19"
     assert result["periodEnd"] == "2025-12-31"
     assert result["scope"] == "reported-subsidiary-list-not-exhaustive"
     assert _pairs(result) == [
@@ -85,11 +85,22 @@ def test_existing_first_row_header_path_still_returns_its_parsed_result():
     assert _pairs(result) == [("Prior Services LLC", "Delaware")]
 
 
+def test_unheaded_second_page_requires_the_same_complete_physical_column_binding():
+    result = parse_exhibit(_exhibit(second_header=""), META)
+    assert result["status"] == "parsed", result.get("reviewReason")
+    assert _pairs(result) == [("North Star Holdings, Inc.", "Delaware"),
+                              ("East River Services LLC", "New York")]
+    assert [r["sourceRow"]["tableIndex"] for r in result["rows"]] == [0, 1]
+    assert all(r["ownershipPct"] is None and r["directOwnership"] == "unspecified"
+               for r in result["rows"])
+    missing_first_header = _exhibit(second_header="").replace(HEADER, "", 1)
+    assert parse_exhibit(missing_first_header, META)["status"] == "needs-review"
+
+
 @pytest.mark.parametrize("mutation", [
     {"title": "<p>Exhibit 21</p><h1>Subsidiaries of Other Corp. as of December 31, 2025</h1>"},
     {"title": "<p>Exhibit 21</p><h1>Subsidiaries of Sample Corp. as of December 30, 2025</h1>"},
     {"between": "<p>Subsidiaries of Other Corp.</p>"},
-    {"second_header": ""},
     {"second_header": "<tr><th>Name</th><th></th><th>State of Incorporation</th></tr>"},
     {"second_header": "<tr><th>Name</th><th></th><th>Ownership %</th>"
                       "<th>Jurisdiction of Organization</th></tr>"},
