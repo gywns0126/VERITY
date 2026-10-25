@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+from datetime import date, datetime, timezone
 import hashlib
 import json
 import re
@@ -43,6 +44,7 @@ _OPTIONAL_AI_SOURCE = "member_map_ai_candidates.json"
 _CACHE_LOCK = threading.Lock()
 _CACHE_RESULT = None
 _CACHE_EXPIRES_AT = 0.0
+_CACHE_SOURCE_REVISIONS = {}
 _LIVE_STATES = {}
 _REFRESH_STORE = None
 _VALIDATED_SOURCES = {}
@@ -246,6 +248,23 @@ def _bundle_revision(source_revisions):
     return digest.hexdigest()
 
 
+def _index_revision(source_revisions):
+    """Reuse only the public index; dynamic projections still use fresh inputs.
+
+    These four artifacts are read after _ProjectedPublicIndexCache.get, not by
+    its builders. Their presence still changes index coverage. All other file
+    hashes, including live disclosure overlays, retain normal invalidation.
+    Keep the full bundle revision separately; this is not a freshness clock.
+    """
+    dynamic = {"macro_snapshot.json", "commodity_exposure.json", "portfolio.json",
+               "member_map_ai_candidates.json"}
+    dependencies = {name: "present" if name in dynamic else revision
+                    for name, revision in source_revisions.items()}
+    days = date.today().isoformat() + "/" + datetime.now(timezone.utc).date().isoformat()
+    return hashlib.sha256(("public-index-v1/" + days + "/" +
+                           _bundle_revision(dependencies)).encode("ascii")).hexdigest()
+
+
 def _copy_public_bundle(value):
     """Copy the JSON-shaped public bundle with deepcopy-equivalent alias isolation."""
     memo = {}
@@ -305,7 +324,7 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
     returned: the current refresh result (including partial or unavailable) wins.
     The underscored hooks exist only for deterministic local contract tests.
     """
-    global _CACHE_RESULT, _CACHE_EXPIRES_AT
+    global _CACHE_RESULT, _CACHE_EXPIRES_AT, _CACHE_SOURCE_REVISIONS
 
     timing_started = time.monotonic()
     production = _fetcher is None and _refresh_reader is None
@@ -318,6 +337,8 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
         if _CACHE_RESULT is not None and now < _CACHE_EXPIRES_AT:
             copy_started = time.monotonic()
             result = copy_bundle(_CACHE_RESULT)
+            # Re-evaluate date-dependent validation even across a warm midnight.
+            result["index_revision"] = _index_revision(_CACHE_SOURCE_REVISIONS)
             if production:
                 _log_fetch_timing(cache="hit", status=result["coverage"]["status"],
                                   available=result["coverage"]["available"],
@@ -402,11 +423,14 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
             "documents": documents,
             "coverage": _coverage(documents),
             "revision": _bundle_revision(source_revisions),
+            "index_revision": _index_revision(source_revisions),
         }
         if documents:
+            _CACHE_SOURCE_REVISIONS = dict(source_revisions)
             _CACHE_RESULT = result if _fetcher is None and _refresh_reader is None else deepcopy(result)
             _CACHE_EXPIRES_AT = clock() + CACHE_TTL_SECONDS
         else:
+            _CACHE_SOURCE_REVISIONS = {}
             _CACHE_RESULT = None
             _CACHE_EXPIRES_AT = 0.0
         copy_started = time.monotonic()
@@ -425,10 +449,11 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
 
 def _reset_cache_for_tests():
     """Clear process-local public data; not used by the deployed handler."""
-    global _CACHE_RESULT, _CACHE_EXPIRES_AT, _LIVE_STATES, _REFRESH_STORE
+    global _CACHE_RESULT, _CACHE_EXPIRES_AT, _CACHE_SOURCE_REVISIONS, _LIVE_STATES, _REFRESH_STORE
     with _CACHE_LOCK:
         _CACHE_RESULT = None
         _CACHE_EXPIRES_AT = 0.0
+        _CACHE_SOURCE_REVISIONS = {}
         _LIVE_STATES = {}
         _REFRESH_STORE = None
         _VALIDATED_SOURCES.clear()

@@ -18,6 +18,81 @@ fetch = importlib.import_module(PACKAGE + ".portfolio_public_fetch")
 STAMP = "2026-10-12T12:00:00+00:00"
 
 
+@pytest.mark.parametrize("name", fetch.PUBLIC_SOURCE_FILES)
+def test_index_revision_tracks_every_dependency_and_source_presence(name):
+    before = {key: "a" * 64 for key in fetch.PUBLIC_SOURCE_FILES}
+    changed = {**before, name: "b" * 64}
+    dynamic = {"macro_snapshot.json", "commodity_exposure.json", "portfolio.json",
+               "member_map_ai_candidates.json"}
+    assert fetch._bundle_revision(before) != fetch._bundle_revision(changed)
+    assert (fetch._index_revision(before) == fetch._index_revision(changed)) == (name in dynamic)
+    missing = {key: value for key, value in before.items() if key != name}
+    assert fetch._index_revision(before) != fetch._index_revision(missing)
+
+
+def test_index_revision_changes_at_day_boundary(monkeypatch):
+    from datetime import date
+    before = fetch._index_revision({})
+
+    class Tomorrow(date):
+        @classmethod
+        def today(cls):
+            return date(2100, 1, 1)
+
+    monkeypatch.setattr(fetch, "date", Tomorrow)
+    assert fetch._index_revision({}) != before
+
+
+def test_warm_midnight_rekeys_index_without_redownload(monkeypatch):
+    from datetime import date
+    first = fetch.fetch_public_sources(_fetcher=baseline, _clock=lambda: 0)
+
+    class Tomorrow(date):
+        @classmethod
+        def today(cls):
+            return date(2100, 1, 1)
+
+    monkeypatch.setattr(fetch, "date", Tomorrow)
+    def unexpected(_name):
+        pytest.fail("warm source cache should not download again")
+    second = fetch.fetch_public_sources(_fetcher=unexpected, _clock=lambda: 1)
+    assert first["index_revision"] != second["index_revision"]
+    assert first["revision"] == second["revision"]
+    assert first["documents"] == second["documents"]
+
+
+def test_dynamic_macro_is_fresh_without_rebuilding_public_index(monkeypatch):
+    engine = importlib.import_module(PACKAGE + ".portfolio_engine")
+    engine._reset_projection_cache_for_tests()
+    documents = {
+        "universe_search.json": {"stocks": [{"ticker": "000001", "market": "KR", "name": "검수 회사"}]},
+        "macro_snapshot.json": {"macro": {"usd_krw": {
+            "status": "ok", "value": 1300, "change_pct": 1, "data_date": "2026-10-12", "source": "공개 지표",
+        }}},
+    }
+    calls = []
+    original = engine.project_public_sources
+
+    def counted(value):
+        calls.append(True)
+        return original(value)
+
+    monkeypatch.setattr(engine, "project_public_sources", counted)
+    def analyze():
+        revisions = {name: fetch._document_revision(value) for name, value in documents.items()}
+        return engine.analyze_portfolio([{"ticker": "000001", "market": "KR"}], documents,
+                                         public_bundle_revision=fetch._index_revision(revisions))
+    first = analyze()
+    documents["macro_snapshot.json"]["macro"]["usd_krw"]["value"] = 1400
+    second = analyze()
+    assert calls == [True]
+    assert first["revision"] != second["revision"]
+    assert second["market_context"]["items"][0]["value"] == 1400
+    second["companies"][0]["name"] = "private edit"
+    assert analyze()["companies"][0]["name"] == "검수 회사"
+    engine._reset_projection_cache_for_tests()
+
+
 def state():
     receipt = "20261012000001"
     row = {"id": "DART:" + receipt, "title": "검수용 공개 공시", "label": "DART",
@@ -169,7 +244,7 @@ def test_production_cold_and_warm_copy_counts_keep_return_isolation(monkeypatch,
         return {"DART": state()}
 
     def counted_copy(value):
-        if type(value) is dict and set(value) == {"documents", "coverage", "revision"}:
+        if type(value) is dict and set(value) == {"documents", "coverage", "revision", "index_revision"}:
             bundle_copies.append(True)
         return original_copy(value)
 
