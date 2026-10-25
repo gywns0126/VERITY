@@ -18,6 +18,11 @@ html[data-an-theme=dark] .acs-view,body[data-framer-theme=dark] .acs-view{--acs-
 @media(pointer:coarse){.acs-view button,.acs-view select{min-height:44px}.acs-card .acs-branch:after{content:'';position:absolute;inset:-10px}}
 @media(prefers-reduced-motion:reduce){.acs-view button,.acs-view select{transition:none}}
 .acs-space{background-image:linear-gradient(var(--acs-focus) 1px,transparent 1px),linear-gradient(90deg,var(--acs-focus) 1px,transparent 1px)}
+.acs-lines .acs-flow{fill:none;stroke:var(--acs-line);stroke-width:2;stroke-linecap:round;stroke-dasharray:3 20;opacity:.38;animation:acs-edge-flow 8s linear infinite}
+@keyframes acs-edge-flow{to{stroke-dashoffset:-23}}
+[data-motion=paused] .acs-flow{animation-play-state:paused;visibility:hidden}
+.acs-lines[data-flow-paused=true] .acs-flow{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.acs-flow{display:none!important;animation:none!important}}
 `
 
 export function makeStructureLayout(catalogue: Catalogue, focus: Company): Layout {
@@ -57,6 +62,7 @@ const safeEvidence = (value: unknown): value is Evidence => {
     try { const u = new URL(e.url); return u.protocol === "https:" && !u.username && !u.password } catch { return false }
 }
 const officialRelation = (r: Relation) => r.evidence.length > 0 && (r.status === "source-dated" || r.status === "official-undated")
+export const isFlowEligibleRelation = (r?: Relation) => !!r && officialRelation(r)
 const relationDate = (r: Relation) => r.asOf ? `자료 기준 ${r.asOf}` : r.status === "official-undated" ? "공식 안내 · 원문 기준일 미표시" : "원문 기준일이 확인되지 않은 저장 자료입니다."
 
 function RelationshipProof({ relation: r }: { relation: Relation }) {
@@ -149,10 +155,15 @@ export function resolveFocus(catalogue: Catalogue, stock: Stock): Company {
     return catalogue.companies.find(c => c.ticker === stock.ticker && c.market === stock.market) || { ...stock, id: stock.market + ":" + stock.ticker }
 }
 
+export function resetInitialFocusAfterInitialLoad(initial: boolean, initialFocus: { current: string | null }) {
+    if (initial) initialFocus.current = null
+}
+
 export default function CompanyStructureView({ snapshot, onClose }: { snapshot: Snapshot; onClose: () => void }) {
     const [catalogue, setCatalogue] = React.useState<Catalogue | null>(null), [error, setError] = React.useState(false)
     const [focusIndex, setFocusIndex] = React.useState(0), [collapsed, setCollapsed] = React.useState<Set<string>>(new Set())
     const [includeStored, setIncludeStored] = React.useState(false)
+    const [flowPaused, setFlowPaused] = React.useState(false)
     const [pendingCatalogue, setPendingCatalogue] = React.useState<Catalogue | null>(null), [checking, setChecking] = React.useState(false), [checkFailed, setCheckFailed] = React.useState(false)
     const [selected, setSelected] = React.useState<string | null>(null), [camera, setCamera] = React.useState({ x: 0, y: 0, zoom: 1 })
     const [logos, setLogos] = React.useState<Record<string, string>>({})
@@ -181,7 +192,7 @@ export default function CompanyStructureView({ snapshot, onClose }: { snapshot: 
                 const value = await loadCompanyStructure(current, request.signal)
                 if (c.signal.aborted) return
                 setCheckFailed(false); setError(false)
-                if (initial || !catalogueRef.current) { catalogueRef.current = value; setCatalogue(value) }
+                if (initial || !catalogueRef.current) { resetInitialFocusAfterInitialLoad(initial, initialFocus); catalogueRef.current = value; setCatalogue(value) }
                 else if (value.coverage?.fallback && !catalogueRef.current?.coverage?.fallback) setCheckFailed(true)
                 else if (JSON.stringify(value) !== JSON.stringify(catalogueRef.current)) setPendingCatalogue(value)
                 else setPendingCatalogue(null)
@@ -251,7 +262,7 @@ export default function CompanyStructureView({ snapshot, onClose }: { snapshot: 
     return <section className="acs-view" ref={host} role="dialog" aria-modal="true" aria-label="기업 구조 전용 보기" onKeyDown={keyDown} onClick={e => e.stopPropagation()}>
         <style>{CSS}</style>
         <header className="acs-head"><strong className="acs-brand"><i>α</i> ALPHANEST</strong><nav className="acs-tabs" aria-label="지도 보기"><button type="button" className="acs-close" onClick={onClose}>핵심 지도</button><button type="button" aria-current="page">기업 구조</button></nav><label>중심 종목<select aria-label="기업 구조 중심 종목" value={focusIndex} onChange={e => setFocusIndex(Number(e.target.value))}>{snapshot.stocks.map((s, i) => <option key={s.id} value={i}>{s.name}</option>)}</select></label></header>
-        <div className="acs-toolbar"><span title={`${focus?.name || "기업 구조"}의 주주·출자 연결`}>{focus?.name || "기업 구조"}의 주주·출자 연결</span><button type="button" aria-pressed={includeStored} onClick={() => setIncludeStored(v => !v)}>{includeStored ? "저장 자료 포함" : "저장 자료 함께 보기"}</button><button type="button" aria-label="기업 구조 축소" onClick={() => zoomTo(camera.zoom / 1.2)}>−</button><output aria-label="기업 구조 배율">{Math.round(camera.zoom * 100)}%</output><button type="button" aria-label="기업 구조 확대" onClick={() => zoomTo(camera.zoom * 1.2)}>+</button><button type="button" onClick={fit}>한눈에</button><button type="button" onClick={() => setCollapsed(new Set(layout ? [...layout.byId].filter(([id, n]) => n.depth > 0 && id !== focus?.id).map(([id]) => id) : []))}>가지 접기</button></div>
+        <div className="acs-toolbar"><span title={`${focus?.name || "기업 구조"}의 주주·출자 연결`}>{focus?.name || "기업 구조"}의 주주·출자 연결</span>{visible.some(n => n.parent && isFlowEligibleRelation(n.relation)) && <button type="button" aria-pressed={flowPaused} aria-label={flowPaused ? "선 움직임 켜기" : "선 움직임 멈추기"} onClick={() => setFlowPaused(v => !v)}>{flowPaused ? "선 움직임 켜기" : "선 움직임 멈추기"}</button>}<button type="button" aria-pressed={includeStored} onClick={() => setIncludeStored(v => !v)}>{includeStored ? "저장 자료 포함" : "저장 자료 함께 보기"}</button><button type="button" aria-label="기업 구조 축소" onClick={() => zoomTo(camera.zoom / 1.2)}>−</button><output aria-label="기업 구조 배율">{Math.round(camera.zoom * 100)}%</output><button type="button" aria-label="기업 구조 확대" onClick={() => zoomTo(camera.zoom * 1.2)}>+</button><button type="button" onClick={fit}>한눈에</button><button type="button" onClick={() => setCollapsed(new Set(layout ? [...layout.byId].filter(([id, n]) => n.depth > 0 && id !== focus?.id).map(([id]) => id) : []))}>가지 접기</button></div>
         <div className="acs-main">
             <div className="acs-space" ref={space} tabIndex={0} role="group" aria-label="기업 구조 작업판 · 빈 공간 드래그로 이동, 휠로 확대축소" style={{ backgroundSize: `${40 * camera.zoom}px ${40 * camera.zoom}px`, backgroundPosition: `${camera.x}px ${camera.y}px` }}
                 onPointerDown={e => { if ((e.target as HTMLElement).closest("button,a,select")) return; drag.current = { x: e.clientX, y: e.clientY, startX: camera.x, startY: camera.y, pointer: e.pointerId }; e.currentTarget.setPointerCapture(e.pointerId) }}
@@ -259,7 +270,7 @@ export default function CompanyStructureView({ snapshot, onClose }: { snapshot: 
                 onPointerUp={e => { drag.current = null; if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId) }} onPointerCancel={() => { drag.current = null }}
                 onKeyDown={e => { if (e.target !== e.currentTarget) return; const d = ({ ArrowLeft: [40, 0], ArrowRight: [-40, 0], ArrowUp: [0, 40], ArrowDown: [0, -40] } as Record<string, number[]>)[e.key]; if (d) { e.preventDefault(); setCamera(c => ({ ...c, x: c.x + d[0], y: c.y + d[1] })) } if (["+", "=", "-"].includes(e.key)) { e.preventDefault(); zoomTo(camera.zoom * (e.key === "-" ? 1 / 1.2 : 1.2)) } }}>
                 {!catalogue || error ? <div className="acs-empty" role="status"><strong>{error ? "기업 구조를 불러오지 못했어요" : "기업 구조를 불러오고 있어요"}</strong>{error ? "핵심 지도로 돌아가거나 잠시 후 다시 열어 주세요." : "공개 자료의 회사와 관계를 확인합니다."}</div> : <div className="acs-world" style={{ transform: `translate(${camera.x}px,${camera.y}px) scale(${camera.zoom})` }}>
-                    <svg className="acs-lines" aria-hidden="true" width="1" height="1">{visible.filter(n => n.parent).map(n => { const p = layout!.byId.get(n.parent!)!; const x1 = p.x + 112, y1 = p.y + 86, x2 = n.x + 112, y2 = n.y, middle = (y1 + y2) / 2; return <path key={n.company.id} d={`M${x1} ${y1} V${middle} H${x2} V${y2}`} data-undated={n.relation?.status === "undated-snapshot"} /> })}</svg>
+                    <svg className="acs-lines" data-flow-paused={flowPaused} aria-hidden="true" width="1" height="1">{visible.filter(n => n.parent).map(n => { const p = layout!.byId.get(n.parent!)!; const x1 = p.x + 112, y1 = p.y + 86, x2 = n.x + 112, y2 = n.y, middle = (y1 + y2) / 2, d = `M${x1} ${y1} V${middle} H${x2} V${y2}`, undated = n.relation?.status === "undated-snapshot", flow = isFlowEligibleRelation(n.relation); return <React.Fragment key={n.company.id}><path d={d} data-undated={undated} />{flow && <path className="acs-flow" d={d} aria-hidden="true" />}</React.Fragment> })}</svg>
                     {visible.map(n => {
                         const stock = snapshot.stocks.find(s => s.ticker === n.company.ticker && s.market === n.company.market)
                         const logo = brokenLogos.has(n.company.id) ? undefined : n.company.id === "FOREIGN:solidigm-inc" ? "/member-map-review/solidigm-logo.png" : imageData(stock?.logo) || logos[n.company.id]

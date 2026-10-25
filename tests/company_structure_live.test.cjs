@@ -244,6 +244,66 @@ test('US CIK deduped denominator does not merge security-root graphs or infer di
   }
   assert.equal(r.manifest.issuers['US:GAP'].sha256, undefined);
 });
+
+test('agent-filed co-registrant evidence requires exact filing-limited index proof through publication', () => {
+  const cik = '0001126956', accession = '0001193125-25-282583';
+  const url = 'https://www.sec.gov/Archives/edgar/data/3146/000119312525282583/sr-ex21.htm';
+  const proof = { requestedCik: cik, archiveCik: '3146', accession, issuerName: 'SPIRE INC',
+    exhibitUrl: url, indexSha256: 'a'.repeat(64) };
+  assert.equal(secUrl(url, cik, accession), null);
+  assert.equal(secUrl(url, cik, accession, proof, 'SPIRE INC'), url);
+  assert.equal(secUrl(url, cik, accession, proof, 'SPIRE ALABAMA INC'), null);
+  for (const patch of [{ requestedCik: '0000003146' }, { archiveCik: '57183' }, { indexSha256: 'bad' },
+    { accession: '0001193125-25-282584' }, { exhibitUrl: url.replace('sr-ex21', 'other') }, { extra: 'unbound' }]) {
+    assert.equal(secUrl(url, cik, accession, { ...proof, ...patch }, 'SPIRE INC'), null);
+  }
+  const m = { issuer_id: 'US:SR', issuer_name: 'SPIRE INC', cik, accession,
+    filed_date: '2025-11-14', period_end: '2025-09-30', form: '10-K', primary_document: 'sr-20250930.htm',
+    url: `https://www.sec.gov/Archives/edgar/data/1126956/${accession.replaceAll('-', '')}/sr-20250930.htm` };
+  const raw = { schema: 'alphanest-company-structure-us-sources-v1', generatedAt: at, issuers: {
+    [cik]: { tickerAliases: ['SR'], attemptStatus: 'success', attemptedAt: at, lastSuccessAt: at,
+      metadataCheckedAt: at, filingMetadata: m,
+      exhibit: { schema: 'sec-company-subsidiaries-v1', cik, accession, url, status: 'parsed',
+        filedDate: m.filed_date, periodEnd: m.period_end, documentSha256: 'b'.repeat(64), cofilerProof: proof,
+        rows: [{ name: 'Spire Alabama Inc.', jurisdiction: 'Alabama', ownershipPct: null, directOwnership: 'unspecified' }] } } } };
+  const sanitized = sanitizeUsSources(raw);
+  assert.deepEqual(sanitized.issuers[cik].exhibit.cofilerProof, proof);
+  const built = buildArtifacts({ universe: { stocks: [{ ticker: 'SR', name: 'Spire Inc.', market: 'US' }] },
+    cikMap: { SR: cik }, usSources: sanitized, generatedAt: at, strictSources: true });
+  const bytes = built.payloads.get(built.manifest.issuers['US:SR'].sha256);
+  const value = JSON.parse(bytes);
+  assert.equal(value.relations.length, 1);
+  assert.equal(value.relations[0].evidence[0].url, url);
+  assert.equal(value.relations[0].asOf, '2025-09-30');
+  const { exhibitUrl: omittedUrl, ...publicProof } = proof;
+  assert.deepEqual(value.coverage.cofilerProof, { ...publicProof, exhibitFileName: 'sr-ex21.htm' });
+  assert.equal(JSON.stringify(value.coverage).includes('https://'), false);
+  const { validatePayload } = require('../scripts/member-map/publish-company-structure.cjs');
+  validatePayload(value);
+  const apiValidation = spawnSync('python3', ['-c', `import sys, hashlib, importlib.util
+spec=importlib.util.spec_from_file_location('structure_api',sys.argv[1])
+api=importlib.util.module_from_spec(spec);spec.loader.exec_module(api)
+raw=sys.stdin.buffer.read()
+doc=api._validate_payload(raw,hashlib.sha256(raw).hexdigest(),len(raw),'US:SR')
+assert len(doc['relations']) == 1
+`, path.resolve(__dirname, '../vercel-api/api/company_structure.py')], { input: bytes, encoding: 'utf8' });
+  assert.equal(apiValidation.status, 0, apiValidation.stderr);
+  const wrong = structuredClone(value); wrong.coverage.cofilerProof.archiveCik = '57183';
+  assert.throws(() => validatePayload(wrong));
+  const wrongFile = structuredClone(value); wrongFile.relations[0].evidence[0].url = url.replace('sr-ex21', 'other');
+  assert.throws(() => validatePayload(wrongFile));
+  const missing = structuredClone(raw); delete missing.issuers[cik].filingMetadata;
+  assert.throws(() => sanitizeUsSources(missing));
+  const held = structuredClone(raw); held.issuers[cik].attemptStatus = 'needs-review';
+  held.issuers[cik].reviewExhibit = { ...held.issuers[cik].exhibit, status: 'needs-review', rows: [], reviewReason: 'issuer-scope-unbound' };
+  delete held.issuers[cik].exhibit;
+  const safeHeld = sanitizeUsSources(held);
+  assert.deepEqual(safeHeld.issuers[cik].reviewExhibit.cofilerProof, proof);
+  const heldBuilt = buildArtifacts({ universe: { stocks: [{ ticker: 'SR', name: 'Spire Inc.', market: 'US' }] },
+    cikMap: { SR: cik }, usSources: safeHeld, generatedAt: at });
+  assert.equal(payload(heldBuilt, 'US:SR').relations.length, 0);
+  assert.equal(payload(heldBuilt, 'US:SR').coverage.status, 'needs-review');
+});
 test('US failed retained sources stay old; wrong CIK/unsafe URL never produce proof or unchecked placeholders', () => {
   const args = usFixture(); args.usSources.issuers['0000001234'].attemptStatus = 'HTTP429';
   const p = payload(buildArtifacts(args), 'US:ACME');

@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-25-issuer-bound-row-omission-v15"
+PARSER_REVISION = "2026-10-25-bound-leading-title-table-v17"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -49,13 +49,13 @@ def _identity(cik: str, accession: str) -> tuple[str, str, str]:
     return cik, accession, directory
 
 
-def _archive_url(href: str, directory: str) -> str:
+def _archive_url(href: str, directory: str, allowed_archive_ciks=()) -> str:
     """Resolve only a safe file in this filing's SEC archive directory.
 
     SEC sometimes links a co-registrant's archive CIK for an exhibit while
     retaining the requested issuer's accession directory. Accept that
     alternate archive CIK only when this accession's leading CIK is the
-    requested issuer; all other filings must use the exact requested CIK path.
+    requested issuer or when the caller supplies a rechecked index-filer CIK.
     """
     if not isinstance(href, str) or not href or re.search(r"%(?:2f|5c|2e)", href, re.I):
         raise ValueError("invalid-sec-document-url")
@@ -86,7 +86,7 @@ def _archive_url(href: str, directory: str) -> str:
         filename = parts_path[5]
         if not _SAFE_FILE.fullmatch(filename):
             raise ValueError("invalid-sec-document-url")
-        if expected[3].zfill(10) != expected[4][:10]:
+        if expected[3].zfill(10) != expected[4][:10] and parts_path[3] not in allowed_archive_ciks:
             # A valid same-filing co-filer path is not a transport failure.
             # Its subsidiary list may belong to a different registrant (EMP),
             # so retain the strict issuer gate rather than accepting all CIKs.
@@ -96,7 +96,8 @@ def _archive_url(href: str, directory: str) -> str:
     return f"https://{_SEC_HOST}{path.rsplit('/', 1)[0]}/{filename}"
 
 
-def find_exhibit(index_html, *, cik, accession, form="10-K"):
+def find_exhibit(index_html, *, cik, accession, form="10-K", issuer_name=None,
+                 return_proof=False):
     """Return the exact SEC archive URL for a uniquely listed subsidiary exhibit.
 
     10-K defaults to exact EX-21/EX-21.1 Types. For 20-F, exact EX-8/EX-8.1
@@ -106,6 +107,7 @@ def find_exhibit(index_html, *, cik, accession, form="10-K"):
     if form not in {"10-K", "20-F"}:
         raise ValueError("unsupported-sec-form")
     _, _, directory = _identity(cik, accession)
+    index_raw = index_html if isinstance(index_html, bytes) else None
     if isinstance(index_html, bytes):
         if len(index_html) > _MAX_INDEX:
             raise ValueError("sec-index-too-large")
@@ -116,6 +118,17 @@ def find_exhibit(index_html, *, cik, accession, form="10-K"):
     if not isinstance(index_html, str) or len(index_html.encode("utf-8")) > _MAX_INDEX:
         raise ValueError("invalid-sec-index")
     soup = BeautifulSoup(index_html, "html.parser")
+    filers = {}
+    for node in soup.select(".companyInfo"):
+        heading = node.find(["span", "a"])
+        heading = heading.get_text(" ", strip=True) if heading else node.get_text(" ", strip=True)
+        match = re.match(r"^(.+?)\s*\(Filer\)\s*CIK\s*:\s*([0-9]{10})\b", heading, re.I)
+        if match:
+            filers.setdefault(match.group(2), []).append(_norm(match.group(1)).casefold())
+    issuer_key = _norm(issuer_name).casefold() if isinstance(issuer_name, str) else None
+    issuer_bound = bool(issuer_key and filers.get(cik) == [issuer_key])
+    allowed = {str(int(value)) for value, names in filers.items()
+               if issuer_bound and value != cik and len(names) == 1}
     matches = []
     index_has_vie = False
     for table in soup.find_all("table"):
@@ -153,12 +166,39 @@ def find_exhibit(index_html, *, cik, accession, form="10-K"):
             link = cells[document_index].find("a", href=True)
             if link is None:
                 raise ValueError("sec-exhibit-link-missing")
-            matches.append(_archive_url(link["href"], directory))
+            href = link["href"]
+            if href.lower().endswith(".pdf"):
+                # Validate its exact archive directory through the same gate;
+                # only the paired HTML rendition can become the selected source.
+                safe_html = _archive_url(href[:-4] + ".htm", directory, allowed)
+                matches.append(safe_html[:-4] + ".pdf")
+            else:
+                matches.append(_archive_url(href, directory, allowed))
+    # A same-stem PDF rendition is not another source list. Never select PDF
+    # or collapse distinct HTML exhibits.
+    html_matches = [url for url in matches if not url.lower().endswith(".pdf")]
+    if len(matches) != len(html_matches):
+        pdfs = [url for url in matches if url.lower().endswith(".pdf")]
+        if (len(html_matches) != 1 or len(pdfs) != 1
+                or any(pdf[:-4] != html_matches[0].rsplit(".", 1)[0]
+                                           for pdf in pdfs)):
+            raise ValueError("sec-exhibit-ambiguous")
+        matches = html_matches
     if len(matches) > 1:
         raise ValueError("sec-exhibit-ambiguous")
     if matches and index_has_vie:
         raise ValueError("sec-vie-needs-review")
-    return matches[0] if matches else None
+    url = matches[0] if matches else None
+    proof = None
+    if url and issuer_bound:
+        archive_cik = url.split("/Archives/edgar/data/", 1)[1].split("/", 1)[0]
+        if archive_cik != str(int(cik)) and accession[:10] != cik:
+            proof = {"requestedCik": cik, "archiveCik": archive_cik,
+                     "accession": accession, "issuerName": issuer_name,
+                     "exhibitUrl": url,
+                     "indexSha256": hashlib.sha256(index_raw if index_raw is not None
+                                                    else index_html.encode("utf-8")).hexdigest()}
+    return (url, proof) if return_proof else url
 
 
 def _date(value):
@@ -179,10 +219,21 @@ def _metadata(metadata):
     period = _date(metadata.get("periodEnd"))
     if period > filed:
         raise ValueError("invalid-sec-metadata")
-    url = _archive_url(metadata.get("url"), directory)
+    proof = metadata.get("cofilerProof")
+    index_raw = metadata.get("cofilerIndexRaw")
+    allowed = ()
+    if proof is not None or index_raw is not None:
+        if not isinstance(index_raw, bytes) or not isinstance(proof, dict):
+            raise ValueError("sec-cofiler-proof-invalid")
+        found_url, found_proof = find_exhibit(index_raw, cik=cik, accession=accession,
+            form=metadata.get("form", "10-K"), issuer_name=metadata.get("issuerName"), return_proof=True)
+        if found_url != metadata.get("url") or found_proof != proof:
+            raise ValueError("sec-cofiler-proof-invalid")
+        allowed = (proof["archiveCik"],)
+    url = _archive_url(metadata.get("url"), directory, allowed)
     if url != metadata.get("url"):
         raise ValueError("invalid-sec-metadata")
-    return cik, accession, filed, period, url
+    return cik, accession, filed, period, url, proof
 
 
 def _norm(value):
@@ -570,9 +621,107 @@ def _check_exhibit_as_of(soup, period, result):
     return True
 
 
+def _leading_title_table(soup, table, metadata, result):
+    """Bind a late two-column header to an issuer and date stated in that table."""
+    if table.find("table") or table.find_parent("table"):
+        return None
+    trs = table.find_all("tr")
+    root = _issuer_name_key(metadata.get("issuerName"))
+    if not root or len(trs) < 7:
+        return None
+    header_i = None
+    for index, tr in enumerate(trs[3:9], 3):
+        cells = tr.find_all(["th", "td"], recursive=False)
+        roles = [_header_role(_norm(cell.get_text(" ", strip=True))) for cell in cells]
+        if roles.count("name") == roles.count("jurisdiction") == 1 and len(cells) in (2, 3):
+            header_i = index
+            break
+    if header_i is None:
+        return None
+
+    def hold(reason):
+        result["reviewReason"] = reason
+        return result
+
+    # A SEC document wrapper is not an issuer title. Any other outside-table
+    # text may alter the scope, so it cannot be inherited by this layout.
+    prefix = []
+    for node in soup.descendants:
+        if node is table:
+            break
+        if isinstance(node, NavigableString) and not isinstance(node, Comment) and not node.find_parent(
+                ["head", "style", "script"]):
+            prefix.append(str(node))
+    before = _norm(" ".join(prefix))
+    wrapper = re.fullmatch(
+        r"EX-(21(?:\.1)?) [0-9]{1,3} [A-Za-z0-9_.-]+\.html? EX-\1", before, re.I)
+    if before and not wrapper:
+        return hold("continuation-scope-text")
+    last = list(table.descendants)[-1]
+    following = _norm(" ".join(str(node) for node in last.next_elements
+                               if isinstance(node, NavigableString) and not isinstance(node, Comment)
+                               and not node.find_parent(["head", "style", "script"])))
+    if following:
+        return hold("continuation-scope-text")
+
+    leading = []
+    for tr in trs[:header_i]:
+        cells = tr.find_all(["th", "td"], recursive=False)
+        if not cells or any(cell.get("rowspan") or cell.find(["table", "br", "sup"])
+                            for cell in cells):
+            return hold("ambiguous-row-binding")
+        filled = [_norm(cell.get_text(" ", strip=True)) for cell in cells]
+        filled = [value for value in filled if value]
+        if len(filled) > 1:
+            return hold("ambiguous-row-binding")
+        if filled:
+            leading.append(filled[0])
+    if len(leading) != 4 or not re.fullmatch(r"exhibit 21(?:\.1)?", leading[0], re.I):
+        return hold("issuer-scope-unbound")
+    if wrapper and leading[0].split()[-1].casefold() != wrapper[1].casefold():
+        return hold("issuer-scope-unbound")
+    if _issuer_name_key(leading[1]) != root:
+        return hold("issuer-scope-unbound")
+    if leading[2].casefold() not in {"schedule of certain subsidiaries", "list of subsidiaries"}:
+        return hold("issuer-scope-unbound")
+    stated = re.fullmatch(r"(?:at|as of) ([A-Za-z]+ [0-9]{1,2}, [0-9]{4})", leading[3], re.I)
+    if not stated:
+        return hold("invalid-exhibit-as-of-date")
+    try:
+        stated_day = datetime.strptime(stated[1], "%B %d, %Y").date().isoformat()
+    except ValueError:
+        return hold("invalid-exhibit-as-of-date")
+    if stated_day != result["periodEnd"]:
+        result["statedAsOf"] = stated_day
+        return hold("exhibit-as-of-differs-from-period-end")
+
+    header = trs[header_i].find_all(["th", "td"], recursive=False)
+    header_values = [_norm(cell.get_text(" ", strip=True)) for cell in header]
+    roles = [_header_role(value) for value in header_values]
+    if (roles.count("name") != 1 or roles.count("jurisdiction") != 1
+            or roles.index("name") >= roles.index("jurisdiction")
+            or any(value and role is None for value, role in zip(header_values, roles))
+            or any(cell.get("rowspan") or cell.get("colspan") != header[0].get("colspan")
+                   for cell in header)):
+        return hold("ambiguous-row-binding")
+    if len(trs) - header_i - 1 > _MAX_ROWS:
+        return hold("row-limit")
+    for tr in trs[header_i + 1:]:
+        cells = tr.find_all(["th", "td"], recursive=False)
+        if (len(cells) != len(header) or any(cell.get("rowspan") or
+                cell.get("colspan") != header[i].get("colspan") for i, cell in enumerate(cells))):
+            return hold("ambiguous-row-binding")
+        values = [_norm(cell.get_text(" ", strip=True)) for cell in cells]
+        if (not values[roles.index("name")] or not values[roles.index("jurisdiction")]
+                or any(values[i] for i, role in enumerate(roles) if role is None)
+                or "%" in " ".join(values)):
+            return hold("ambiguous-row-binding")
+    return header_i, roles
+
+
 def parse_exhibit(raw_html, metadata):
     """Parse explicit subsidiary/name and jurisdiction columns without ownership inference."""
-    cik, accession, filed, period, url = _metadata(metadata)
+    cik, accession, filed, period, url, proof = _metadata(metadata)
     if isinstance(raw_html, str):
         raw = raw_html.encode("utf-8")
     elif isinstance(raw_html, bytes):
@@ -590,6 +739,8 @@ def parse_exhibit(raw_html, metadata):
               "accession": accession, "filedDate": filed, "periodEnd": period,
               "url": url, "documentSha256": hashlib.sha256(raw).hexdigest(),
               "scope": "reported-subsidiary-list-not-exhaustive", "rows": [], "status": "needs-review"}
+    if proof is not None:
+        result["cofilerProof"] = proof
     if _VIE_MARKER.search(html):
         result["reviewReason"] = "vie-scope-needs-review"
         return result
@@ -597,6 +748,7 @@ def parse_exhibit(raw_html, metadata):
     country_table = None
     registrant_header = False
     blank_name_header = False
+    embedded_title = False
     all_tables = soup.find_all("table")
     for table in all_tables:
         trs = table.find_all("tr")
@@ -636,8 +788,16 @@ def parse_exhibit(raw_html, metadata):
                     flat_table["status"] = "needs-review"
                     flat_table["rows"] = []
                 return flat_table
-        result["reviewReason"] = "explicit-name-jurisdiction-header-missing"
-        return result
+            leading = _leading_title_table(soup, all_tables[0], metadata, result)
+            if isinstance(leading, dict):
+                return leading
+            if leading is not None:
+                trs = all_tables[0].find_all("tr")
+                candidates.append((all_tables[0], trs, leading[0], leading[1]))
+                embedded_title = True
+        if not candidates:
+            result["reviewReason"] = "explicit-name-jurisdiction-header-missing"
+            return result
     # Downstream currently dates relationships with periodEnd. An explicit
     # different exhibit date must not silently inherit the financial year end.
     prefix = []
@@ -656,6 +816,7 @@ def parse_exhibit(raw_html, metadata):
     root_first_title = bool(root and re.search(
         r"(?:^|\b)" + root_pattern + r" subsidiaries(?= as of |$)", heading)
         and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
+    root_first_title = root_first_title or embedded_title
     registrant_title = bool(root and re.search(
         r"\b" + root_pattern + r" subsidiaries of the registrant(?= |$)", heading)
         and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))

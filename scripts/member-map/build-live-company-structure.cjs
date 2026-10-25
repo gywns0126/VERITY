@@ -159,18 +159,31 @@ function reusableCurations(legacy) {
     ['source-dated', 'official-undated'].includes(r.status) && (r.asOf === null || day(r.asOf)) && r.evidence?.length && r.evidence.every(e => primaryEvidenceUrl(e.url))).map(r => ({ ...r, evidence: r.evidence.map(e => ({ title: clean(e.title), url: e.url, ...(day(e.asOf) ? { asOf: e.asOf } : {}) })) }));
 }
 
-function secUrl(value, cik, accession = null) {
+function validCofilerProof(proof, value, cik, accession, issuerName) {
+  const fields = ['requestedCik', 'archiveCik', 'accession', 'issuerName', 'exhibitUrl', 'indexSha256'];
+  const identity = name => typeof name === 'string' ? name.trim().replace(/\s+/gu, ' ').toLowerCase() : '';
+  if (!proof || typeof proof !== 'object' || Array.isArray(proof) || Object.keys(proof).length !== fields.length ||
+      Object.keys(proof).some(k => !fields.includes(k)) || proof.requestedCik !== String(cik).padStart(10, '0') ||
+      proof.accession !== accession || proof.exhibitUrl !== value || !/^[a-f0-9]{64}$/u.test(proof.indexSha256 || '') ||
+      !/^[1-9][0-9]{0,9}$/u.test(proof.archiveCik || '') || proof.archiveCik === String(Number(cik)) ||
+      typeof proof.issuerName !== 'string' || proof.issuerName.length > 180 || !identity(issuerName) ||
+      identity(proof.issuerName) !== identity(issuerName)) return false;
+  return true;
+}
+
+function secUrl(value, cik, accession = null, proof = null, issuerName = null) {
   if (typeof value !== 'string' || value.length > 2048 || !/^\d{1,10}$/u.test(String(cik || '')) || Number(cik) <= 0) return null;
   const issuerArchiveCik = String(Number(cik));
   const accessionPattern = /^\d{10}-\d{2}-\d{6}$/u;
   if (accession !== null && !accessionPattern.test(accession)) return null;
   const accessionDirectory = accession === null ? '[0-9]{18}' : accession.replace(/-/gu, '');
+  if (proof !== null && !validCofilerProof(proof, value, cik, accession, issuerName)) return null;
   const coFilerAllowed = accession !== null && accession.slice(0, 10) === issuerArchiveCik.padStart(10, '0');
   const archivePath = accession === null
     ? `${issuerArchiveCik}/[0-9]{18}`
     : coFilerAllowed
       ? `(?:${issuerArchiveCik}|[1-9][0-9]{0,9})/${accessionDirectory}`
-      : `${issuerArchiveCik}/${accessionDirectory}`;
+      : `${proof ? proof.archiveCik : issuerArchiveCik}/${accessionDirectory}`;
   try {
     const u = new URL(value);
     return u.href === value && u.protocol === 'https:' && u.hostname === 'www.sec.gov' && !u.port && !u.username && !u.password && !u.search && !u.hash &&
@@ -183,7 +196,7 @@ function usPayload(aliases, source, generatedAt) {
   const e = source.exhibit, cik = aliases[0].cik;
   const observedAt = stamp(source.lastSuccessAt);
   const valid = e?.schema === 'sec-company-subsidiaries-v1' && e.cik === cik && Array.isArray(e.rows) && observedAt &&
-    /^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') && secUrl(e.url, cik, e.accession) &&
+    /^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') && secUrl(e.url, cik, e.accession, e.cofilerProof ?? null, source.filingMetadata?.issuer_name) &&
     day(e.periodEnd) && day(e.filedDate) && e.periodEnd <= e.filedDate && e.filedDate <= observedAt.slice(0, 10) && /^[a-f0-9]{64}$/u.test(e.documentSha256 || '') &&
     ['ok', 'success', 'parsed', 'source-checked'].includes(e.status);
   const checked = !!valid && ['success', 'cached-same-accession'].includes(source.attemptStatus);
@@ -193,7 +206,7 @@ function usPayload(aliases, source, generatedAt) {
   const review = source.reviewExhibit;
   const validReview = source.attemptStatus === 'needs-review' && review?.schema === 'sec-company-subsidiaries-v1' &&
     review.status === 'needs-review' && review.cik === cik &&
-    /^\d{10}-\d{2}-\d{6}$/u.test(review.accession || '') && secUrl(review.url, cik, review.accession) &&
+    /^\d{10}-\d{2}-\d{6}$/u.test(review.accession || '') && secUrl(review.url, cik, review.accession, review.cofilerProof ?? null, source.filingMetadata?.issuer_name) &&
     day(review.periodEnd) && day(review.filedDate) && review.periodEnd <= review.filedDate &&
     review.filedDate <= source.attemptedAt.slice(0, 10) && /^[a-f0-9]{64}$/u.test(review.documentSha256 || '');
   const companies = new Map(aliases.map(a => [`US:${a.ticker}`, { id: `US:${a.ticker}`, ticker: a.ticker, market: 'US', name: a.name }]));
@@ -218,6 +231,7 @@ function usPayload(aliases, source, generatedAt) {
       status, sourceChecked: checked, attemptStatus: /^(?:success|cached-same-accession|error|needs-review|source-gap|budget-deferred|attempting|HTTP[1-5][0-9]{2})$/u.test(source.attemptStatus) ? source.attemptStatus : 'error', attemptedAt: source.attemptedAt,
       lastSuccessAt: observedAt, asOfNotCollectedAt: true, canonicalId, securityIds: aliases.map(a => `US:${a.ticker}`),
       cik, filedDate: valid ? e.filedDate : null, periodEnd: valid ? day(e.periodEnd) : null,
+      ...(valid && e.cofilerProof ? { cofilerProof: { ...Object.fromEntries(Object.entries(e.cofilerProof).filter(([key]) => key !== 'exhibitUrl')), exhibitFileName: e.url.split('/').pop() } } : {}),
       ...(validReview ? { pendingReview: { filedDate: review.filedDate, periodEnd: review.periodEnd,
         documentSha256: review.documentSha256,
         ...(/^[a-z0-9-]{1,80}$/u.test(review.reviewReason || '') ? { reason: review.reviewReason } : {}) } } : {}),

@@ -1,3 +1,8 @@
+import gzip
+import hashlib
+import os
+from pathlib import Path
+
 import pytest
 
 from api.intelligence.company_structure_sec import find_exhibit, parse_exhibit
@@ -595,3 +600,94 @@ def test_root_first_title_keeps_scope_change_quarantine(gap):
 def test_short_formerly_annotation_does_not_rescue_ambiguous_names(name):
     result = parse_exhibit(_exhibit([(name, "Delaware")]), META)
     assert result["status"] == "needs-review" and result["rows"] == []
+
+
+def _leading_title_exhibit(*, issuer="Example Corp.", stated="December 31, 2025",
+                           title="List of Subsidiaries", jurisdiction="State of Organization",
+                           preamble="", row="<tr><td>Example Services LLC</td><td>DE</td></tr>",
+                           after=""):
+    return ("<table><tr><td></td><td></td></tr><tr><td>EXHIBIT 21</td><td></td></tr>"
+            f"<tr><td colspan='2'>{issuer}</td></tr>"
+            f"<tr><td colspan='2'>{title}</td></tr>"
+            f"<tr><td colspan='2'>as of {stated}</td></tr>{preamble}"
+            f"<tr><th>Subsidiary</th><th>{jurisdiction}</th></tr>{row}</table>{after}")
+
+
+_LEADING_META = {**META, "issuerName": "Example Corp", "periodEnd": "2025-12-31",
+                 "filedDate": "2026-02-19"}
+
+
+def test_bound_leading_title_and_late_header_use_existing_row_contract():
+    result = parse_exhibit(_leading_title_exhibit(), _LEADING_META)
+    assert result["status"] == "parsed"
+    assert result["parserRevision"] == "2026-10-25-bound-leading-title-table-v17"
+    assert result["scope"] == "reported-subsidiary-list-not-exhaustive"
+    assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == [
+        ("Example Services LLC", "DE")]
+    assert result["rows"][0]["ownershipPct"] is None
+    assert result["rows"][0]["directOwnership"] == "unspecified"
+
+
+@pytest.mark.parametrize("change", [
+    {"issuer": "Other Corp."},
+    {"stated": "December 30, 2025"},
+    {"preamble": "<tr><td>Other Business LLC</td><td>DE</td></tr>"},
+    {"jurisdiction": "State"},
+    {"row": "<tr><td>Example Services LLC d/b/a Other</td><td>DE</td></tr>"},
+    {"row": "<tr><td>Example Services Trust</td><td>DE</td></tr>"},
+    {"row": "<tr><td>Example Services LLC</td><td>100% DE</td></tr>"},
+    {"row": "<tr><td colspan='2'>Other Parent Subsidiaries</td></tr>"
+            "<tr><td>Example Services LLC</td><td>DE</td></tr>"},
+    {"after": "<p>Other parent's subsidiaries follow.</p>"},
+])
+def test_bound_leading_title_rejects_scope_and_row_mutations(change):
+    result = parse_exhibit(_leading_title_exhibit(**change), _LEADING_META)
+    assert result["status"] == "needs-review" and result["rows"] == []
+    if "stated" in change:
+        assert result["reviewReason"] == "exhibit-as-of-differs-from-period-end"
+
+
+@pytest.mark.parametrize("issuer,sha,meta,expected", [
+    ("SRE", "5fb4071b9a8bd9b2a936accb22e273cb7daa69050d27d7133e851eacabde3017",
+     {"cik": "0001032208", "accession": "0001032208-26-000010", "filedDate": "2026-02-26",
+      "periodEnd": "2025-12-31", "issuerName": "SEMPRA", "url":
+      "https://www.sec.gov/Archives/edgar/data/86521/000103220826000010/sempra-123125xex211.htm"},
+     [("San Diego Gas & Electric Company", "California"),
+      ("Sempra Infrastructure Partners, LP", "Delaware"),
+      ("Sempra Texas Intermediate Holding Company LLC", "Delaware"),
+      ("Southern California Gas Company", "California")]),
+    ("PRDO", "b2b6a723cc7b3fa06a26a2485362b0f27054a71c3a2c36ddf5036d431ab513c6",
+     {"cik": "0001046568", "accession": "0001193125-26-059331", "filedDate": "2026-02-19",
+      "periodEnd": "2025-12-31", "issuerName": "PERDOCEO EDUCATION Corp", "url":
+      "https://www.sec.gov/Archives/edgar/data/1046568/000119312526059331/prdo-ex21.htm"},
+     [("AIU Online, LLC", "DE"), ("American InterContinental University System, Inc.", "GA"),
+      ("Career Education Student Finance LLC", "DE"), ("CEC Educational Services, LLC", "IL"),
+      ("CEC Employee Group, LLC", "DE"), ("CEC Real Estate Holding, Inc.", "DE"),
+      ("Colorado Tech, Inc.", "DE"), ("Colorado Technical University, Inc.", "CO"),
+      ("MAC BriarCol, Inc.", "NY"), ("MAC KGC-Mel, Corp.", "NY"),
+      ("MAC LCBCS, LLC", "DE"), ("MAC LCBNA, LLC", "DE"),
+      ("MAC SB, Limited", "NY"), ("Marlin Acquisition Corp.", "FL"),
+      ("Trident University International, LLC", "DE"),
+      ("University of St. Augustine Acquisition Corp.", "DE"),
+      ("University of St. Augustine for Health Sciences, LLC", "CA"),
+      ("University of St. Augustine Intermediate Corp.", "DE"),
+      ("University of St. Augustine Parent Corp.", "DE"),
+      ("Words of Wisdom, LLC", "IL")]),
+])
+def test_bound_leading_title_saved_originals(issuer, sha, meta, expected):
+    cache = os.environ.get("SEC_EXHIBIT_CACHE_DIR")
+    if not cache:
+        pytest.skip("saved SEC original cache is not mounted")
+    path = Path(cache) / f"{sha}.gz"
+    if not path.is_file():
+        pytest.skip("saved SEC original is unavailable")
+    raw = gzip.decompress(path.read_bytes())
+    assert hashlib.sha256(raw).hexdigest() == sha
+    result = parse_exhibit(raw, meta)
+    assert result["status"] == "parsed", (issuer, result.get("reviewReason"))
+    assert result["documentSha256"] == sha
+    assert result["periodEnd"] == "2025-12-31"
+    assert result["scope"] == "reported-subsidiary-list-not-exhaustive"
+    assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == expected
+    assert all(r["ownershipPct"] is None and r["directOwnership"] == "unspecified"
+               for r in result["rows"])

@@ -46,12 +46,21 @@ function coverage(c, manifest = false) {
   }
   keys(c, ['status', 'sourceChecked', 'attemptStatus', 'endpoints', 'asOfNotCollectedAt', 'asOfMeaning', 'rawRowsExamined', 'rawMatchedRows',
     'rawVerifiedRows', 'storedRows', 'unsupportedRows', 'curatedRelations', 'displayedRelations', 'limits', 'note', 'canonicalId', 'securityIds',
-    'cik', 'filedDate', 'periodEnd', 'documentSha256', 'attemptedAt', 'lastSuccessAt', 'pendingReview', 'sourceGap']);
+    'cik', 'filedDate', 'periodEnd', 'documentSha256', 'attemptedAt', 'lastSuccessAt', 'pendingReview', 'sourceGap', 'cofilerProof']);
   if (!STATUS.has(c.status) || typeof c.sourceChecked !== 'boolean' || c.asOfNotCollectedAt !== true ||
     !/^(?:success|error|partial|not-attempted|cached-same-accession|needs-review|source-gap|budget-deferred|attempting|HTTP[1-5][0-9]{2})$/u.test(c.attemptStatus)) fail();
   if (c.sourceChecked !== (c.status === 'source-checked') || c.sourceChecked && !['success', 'cached-same-accession'].includes(c.attemptStatus)) fail();
   if (['needs-review', 'source-gap', 'budget-deferred', 'attempting'].includes(c.status) && c.status !== c.attemptStatus) fail();
   if ('sourceGap' in c && !/^[a-z0-9:-]{1,100}$/u.test(c.sourceGap)) fail();
+  if ('cofilerProof' in c) {
+    const proof = c.cofilerProof;
+    keys(proof, ['requestedCik', 'archiveCik', 'accession', 'issuerName', 'indexSha256', 'exhibitFileName']);
+    if (Object.keys(proof).length !== 6 || proof.requestedCik !== c.cik ||
+      !/^[0-9]{10}$/u.test(c.cik || '') || !/^[1-9][0-9]{0,9}$/u.test(proof.archiveCik || '') ||
+      proof.archiveCik === String(Number(c.cik)) || !/^[0-9]{10}-[0-9]{2}-[0-9]{6}$/u.test(proof.accession || '') ||
+      !SHA.test(proof.indexSha256 || '') || !/^[A-Za-z0-9_.-]+\.(?:htm|html|txt)$/iu.test(proof.exhibitFileName || '')) fail();
+    text(proof.issuerName, 180);
+  }
   if ('pendingReview' in c) {
     const r = c.pendingReview;
     keys(r, ['filedDate', 'periodEnd', 'documentSha256', 'reason']);
@@ -102,7 +111,10 @@ function validatePayload(p) {
     for (const e of r.evidence) {
       keys(e, ['title', 'url', 'asOf']); text(e.title, 180);
       const accession = typeof e.url === 'string' && e.url.match(/\/(\d{10})(\d{2})(\d{6})\/[^/]+$/u);
-      if (!(p.coverage.cik ? accession && secUrl(e.url, p.coverage.cik, `${accession[1]}-${accession[2]}-${accession[3]}`) : primaryEvidenceUrl(e.url))) fail();
+      const publicProof = p.coverage.cofilerProof;
+      const proof = publicProof ? Object.fromEntries(Object.entries(publicProof).filter(([key]) => key !== 'exhibitFileName')) : null;
+      if (proof) proof.exhibitUrl = `https://www.sec.gov/Archives/edgar/data/${proof.archiveCik}/${proof.accession.replace(/-/gu, '')}/${publicProof.exhibitFileName}`;
+      if (!(p.coverage.cik ? accession && secUrl(e.url, p.coverage.cik, `${accession[1]}-${accession[2]}-${accession[3]}`, proof, proof?.issuerName) : primaryEvidenceUrl(e.url))) fail();
       const u = new URL(e.url);
       if (u.port || u.hash || [...u.searchParams.keys()].some(k => u.hostname !== 'dart.fss.or.kr' || k !== 'rcpNo')) fail();
       if ('asOf' in e) day(e.asOf);
@@ -305,13 +317,14 @@ function sanitizeUsSources(doc) {
       const e = source.reviewExhibit;
       try {
         if (e.schema !== 'sec-company-subsidiaries-v1' || e.cik !== cik || e.status !== 'needs-review' ||
-          !/^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') || !SHA.test(e.documentSha256 || '') || !secUrl(e.url, cik, e.accession) ||
+          !/^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '') || !SHA.test(e.documentSha256 || '') || !secUrl(e.url, cik, e.accession, e.cofilerProof ?? null, item.filingMetadata?.issuer_name) ||
           typeof e.filedDate !== 'string' || typeof e.periodEnd !== 'string' || !item.attemptedAt) fail();
         day(e.filedDate); day(e.periodEnd); day(item.attemptedAt.slice(0, 10));
         if (e.periodEnd > e.filedDate || e.filedDate > item.attemptedAt.slice(0, 10)) fail();
         // Cache the unresolved original, not its rows, HTML or a success claim.
         item.reviewExhibit = { schema: e.schema, cik, accession: e.accession, filedDate: e.filedDate,
           periodEnd: e.periodEnd, url: e.url, documentSha256: e.documentSha256, status: 'needs-review' };
+        if (e.cofilerProof) item.reviewExhibit.cofilerProof = { ...e.cofilerProof };
         if (typeof e.parserRevision === 'string' && /^[a-z0-9-]{1,80}$/u.test(e.parserRevision)) item.reviewExhibit.parserRevision = e.parserRevision;
         // Fixed machine reasons only: no source paragraphs, HTML or local paths.
         if (typeof e.reviewReason === 'string' && /^[a-z0-9-]{1,80}$/u.test(e.reviewReason)) item.reviewExhibit.reviewReason = e.reviewReason;
@@ -324,7 +337,7 @@ function sanitizeUsSources(doc) {
     }
     if (source.exhibit) {
       const e = source.exhibit;
-      if (e.schema !== 'sec-company-subsidiaries-v1' || e.cik !== cik || !secUrl(e.url, cik, e.accession) || !SHA.test(e.documentSha256 || '') || !Array.isArray(e.rows)) fail();
+      if (e.schema !== 'sec-company-subsidiaries-v1' || e.cik !== cik || !secUrl(e.url, cik, e.accession, e.cofilerProof ?? null, item.filingMetadata?.issuer_name) || !SHA.test(e.documentSha256 || '') || !Array.isArray(e.rows)) fail();
       day(e.filedDate); day(e.periodEnd); text(e.status, 40);
       const rows = [];
       for (const r of e.rows) {
@@ -340,6 +353,7 @@ function sanitizeUsSources(doc) {
         periodEnd: e.periodEnd, documentSha256: e.documentSha256, status: e.status, rows,
         sourceRowCount: Number.isSafeInteger(e.sourceRowCount) ? Math.max(e.sourceRowCount, e.rows.length) : e.rows.length,
         corporateRowCount: rows.length };
+      if (e.cofilerProof) item.exhibit.cofilerProof = { ...e.cofilerProof };
       if (typeof e.parserRevision === 'string' && /^[a-z0-9-]{1,80}$/u.test(e.parserRevision)) item.exhibit.parserRevision = e.parserRevision;
       if (!/^\d{10}-\d{2}-\d{6}$/u.test(e.accession || '')) fail();
     }
