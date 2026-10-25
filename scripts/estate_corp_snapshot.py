@@ -464,7 +464,7 @@ def snapshot_company(ticker: str, bsns_year: int) -> dict:
                         "corp_code,bsns_year,reprt_code"):
         result["holdings_saved"] = 1
 
-    # ─── Facilities (LLM 파싱) ───
+    # ─── Facilities (digest-bound local extraction cache) ───
     if not HAS_FAC_PARSER:
         result["ok"] = bool(result["holdings_saved"])
         return result
@@ -490,8 +490,22 @@ def snapshot_company(ticker: str, bsns_year: int) -> dict:
     if _ppe:
         raw_text = raw_text + "\n\n=== 유형자산 주석 ===\n" + _ppe
 
+    _rcept = str(raw.get("rcept_no") or "")
+    _rcept_date = str(raw.get("rcept_dt") or "")
+    _source_as_of = (
+        f"{_rcept_date[:4]}-{_rcept_date[4:6]}-{_rcept_date[6:8]}"
+        if len(_rcept_date) == 8 and _rcept_date.isdigit()
+        else _rcept_date
+    )
     try:
-        parsed = parse_business_facilities(company_name, bare_ticker, raw_text)
+        parsed = parse_business_facilities(
+            company_name,
+            bare_ticker,
+            raw_text,
+            source_id=f"source:dart:{_rcept}",
+            as_of=_source_as_of,
+            source_url=f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={_rcept}",
+        )
     except Exception as e:
         log.warning("facilities parse %s 예외: %s", ticker, e)
         result["ok"] = bool(result["holdings_saved"])
@@ -502,8 +516,8 @@ def snapshot_company(ticker: str, bsns_year: int) -> dict:
         result["ok"] = bool(result["holdings_saved"])
         return result
 
-    # 유형자산 주석 LLM 토지·건물 장부가 → holding_row 보강 (API 미노출 시만).
-    # fnlttSinglAcntAll 본문은 유형자산 총계만 → land_krw 대부분 결측 → 주석 LLM 로 채움.
+    # 검증 캐시의 유형자산 주석 토지·건물 장부가 → holding_row 보강 (API 미노출 시만).
+    # fnlttSinglAcntAll 본문은 유형자산 총계만 → land_krw 대부분 결측 → 주석 추출값으로 채움.
     try:
         _ta = parsed.get("tangible_assets") or {}
         _lb = _ta.get("land_book_value_krw")

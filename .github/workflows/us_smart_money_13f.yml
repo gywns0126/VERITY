@@ -54,7 +54,6 @@ jobs:
         #   프로필 16건 고정 + 캐시라 호출은 사실상 최초 1회.
         # SEC_EDGAR_USER_AGENT = EDGAR 요청 UA (SEC 정책상 식별자 요구).
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SEC_EDGAR_USER_AGENT: ${{ secrets.SEC_EDGAR_USER_AGENT }}
         run: python -m api.builders.us_investor_portfolios_public_builder
 

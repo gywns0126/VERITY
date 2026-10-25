@@ -10,7 +10,7 @@ import os
 import re
 import time
 from typing import List, Optional
-from google import genai
+from api.utils.google_provider_policy import genai
 from api.mocks import mockable
 from api.config import (
     GEMINI_API_KEY,

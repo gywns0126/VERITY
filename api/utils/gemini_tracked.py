@@ -105,6 +105,8 @@ def tracked_generate(
     Side effect:
         data/metadata/llm_cost.jsonl 1줄 append (success / fail 모두).
     """
+    from api.utils.google_provider_policy import require_google_provider
+    require_google_provider()
     try:
         if config is not None:
             resp = client.models.generate_content(

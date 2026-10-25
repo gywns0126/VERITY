@@ -207,7 +207,6 @@ jobs:
           #   finnhub 키가 0건인지 확인 의무 (RULE 8 N=2). 검증 = tests/test_staging_real_keys.py
           VERITY_MODE: staging
           VERITY_STAGING_REAL_KEYS: "finnhub.analyst_consensus,finnhub.earnings_surprises,finnhub.insider_sentiment,finnhub.institutional_ownership,finnhub.basic_financials,finnhub.company_news,finnhub.peer_companies,polygon.short_interest,polygon.pre_after_market,polygon.options_flow,newsapi.us_stock_news,newsapi.market_news"
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_ALLOWED_CHAT_IDS: ${{ secrets.TELEGRAM_ALLOWED_CHAT_IDS }}

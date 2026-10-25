@@ -644,28 +644,9 @@ def _payload(doc):
 
 
 def google_transport(payload, api_key):
-    """Fixed Google endpoint, no SDK retry/fallback, tools, search or URL fetch."""
-    class NoRedirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, req, fp, code, msg, headers, newurl):
-            return None
-    request = urllib.request.Request(
-        "https://generativelanguage.googleapis.com/v1beta/models/" + GOOGLE_MODEL + ":generateContent",
-        data=json.dumps(payload, ensure_ascii=False).encode(), method="POST",
-        headers={"Content-Type": "application/json", "x-goog-api-key": api_key})
-    with urllib.request.build_opener(NoRedirect).open(request, timeout=25) as response:
-        raw = response.read(65537)
-    if len(raw) > 65536:
-        raise ValueError("response-too-large")
-    body = json.loads(raw)
-    choices = body.get("candidates", [])
-    if len(choices) != 1 or choices[0].get("finishReason") != "STOP":
-        raise ValueError("response-incomplete")
-    text = "".join(p.get("text", "") for p in choices[0].get("content", {}).get("parts", [])
-                   if not p.get("thought"))
-    usage = body.get("usageMetadata", {})
-    return json.loads(text), {"input_tokens": usage.get("promptTokenCount", 0),
-                              "output_tokens": usage.get("candidatesTokenCount", 0),
-                              "thinking_tokens": usage.get("thoughtsTokenCount", 0)}
+    """Historical comparison transport, disabled before any request or spend."""
+    from api.utils.google_provider_policy import require_google_provider
+    require_google_provider()
 
 
 def _openai_payload(doc, *, with_context=False, with_claims=False):

@@ -377,7 +377,6 @@ jobs:
           # cost 감축 (개발 manual 호출 시 LLM 자동 mock).
           UNIVERSE_EXPECTED_SCAN_ID: ${{ github.event_name == 'workflow_run' && format('gh:{0}:{1}', github.event.workflow_run.id, github.event.workflow_run.run_attempt) || inputs.expected_scan_id || '' }}
           VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_ALLOWED_CHAT_IDS: ${{ secrets.TELEGRAM_ALLOWED_CHAT_IDS }}

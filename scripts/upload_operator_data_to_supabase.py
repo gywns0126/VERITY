@@ -25,8 +25,9 @@ BUCKET = os.environ.get("OPERATOR_BUCKET", "verity-reports")
 APPROVED_PRIVATE_DESTS = frozenset({
     "_operator/analyst_reports.json", "_operator/dart_kr_backfill_result.json",
     "_operator/dart_fundamentals_kr.json",
+    "_operator/macro_synthesis.json",
 })
-EXPLICIT_ONLY_DESTS = frozenset({"_operator/dart_fundamentals_kr.json"})
+EXPLICIT_ONLY_DESTS = frozenset({"_operator/dart_fundamentals_kr.json", "_operator/macro_synthesis.json"})
 PORTFOLIO_DEST = "_operator/portfolio_full.json"
 STORAGE_ERROR_CODES = frozenset({
     "EntityTooLarge", "InvalidMimeType", "InvalidRequest", "InvalidKey", "InvalidBucketName",
@@ -325,7 +326,7 @@ def main() -> int:
         print("ERROR: portfolio delivery requires an explicit completed-analysis or paper-merge contract", file=sys.stderr)
         return 2
     uploads = [u for u in UPLOADS
-               if (u[1] not in EXPLICIT_ONLY_DESTS or only == "dart_fundamentals_kr")
+               if (u[1] not in EXPLICIT_ONLY_DESTS or only == Path(u[1]).stem)
                and (u[1] != PORTFOLIO_DEST or require_analysis or merge_paper)
                and (only is None or only in u[0] or only in u[1])]
     prepared_portfolio = None

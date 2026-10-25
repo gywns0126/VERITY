@@ -71,6 +71,8 @@ def _stub_mapping(stock: ScannedStock) -> Dict[str, Any]:
 
 
 def _map_one_stock(client: Any, stock: ScannedStock) -> Optional[Dict[str, Any]]:
+    from api.utils.google_provider_policy import require_google_provider
+    require_google_provider()
     name_lit = json.dumps(stock.name, ensure_ascii=False)
     prompt = f"""한국 상장 기업 {name_lit} (티커 {stock.ticker})의 **주력 수출 제품** 1가지(한국어 짧은 명칭)와
 그에 맞는 **HS Code 6자리**, 가능하면 **HS 10자리**를 제시하라. JSON만 출력.

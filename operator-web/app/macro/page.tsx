@@ -25,8 +25,26 @@ const MACRO_LABELS: Record<string, string> = {
 
 type GmCite = { title?: string; uri?: string }
 type CitationRef = { n?: number; url?: string }
-type SynSource = { content?: string; model?: string; citations?: string[]; citation_refs?: CitationRef[]; gm_citations?: GmCite[] }
-type MacroSyn = { generated_at?: string; contract?: string; sources?: { perplexity?: SynSource; gemini?: SynSource } }
+type MacroFact = { text?: string; source_url?: string; source_date?: string; verification?: string }
+type SynSource = {
+    content?: string
+    model?: string
+    provider?: string
+    citations?: string[]
+    citation_refs?: CitationRef[]
+    gm_citations?: GmCite[]
+    facts?: MacroFact[]
+    source_as_of?: string
+    error?: string | null
+}
+type MacroSyn = {
+    generated_at?: string
+    verified_at?: string
+    contract?: string
+    producer?: string
+    source_verification?: string
+    sources?: { codex_global?: SynSource; codex_kr?: SynSource; perplexity?: SynSource; gemini?: SynSource }
+}
 type Holding13F = { ticker?: string; weight_pct?: number; change_type?: string }
 type Investor = {
     institution?: string
@@ -55,6 +73,29 @@ function citationView(content: string | undefined, citations: string[] | undefin
         links: (citations || []).slice(0, 6).map((url, i) => ({ key: `legacy-${i}`, label: `검증 URL ${i + 1}`, url })),
         note: citations?.length ? "본문 인용번호와 URL 배열의 정확한 매핑이 아직 발행되지 않았습니다." : "",
     }
+}
+
+function macroCitationView(source: SynSource | undefined) {
+    const factLinks = (source?.facts || [])
+        .filter((fact): fact is MacroFact & { source_url: string } => Boolean(fact.source_url))
+        .filter((fact, i, all) => all.findIndex((other) => other.source_url === fact.source_url) === i)
+        .slice(0, 6)
+        .map((fact, i) => ({ key: `fact-${i}`, label: `공식 원문${fact.source_date ? ` · ${fact.source_date}` : ""}`, url: fact.source_url }))
+    if (factLinks.length) return { links: factLinks, note: "" }
+    const groundedLinks = (source?.gm_citations || [])
+        .filter((item): item is GmCite & { uri: string } => Boolean(item.uri))
+        .slice(0, 6)
+        .map((item, i) => ({ key: `grounded-${i}`, label: `근거 · ${item.title || i + 1}`, url: item.uri }))
+    if (groundedLinks.length) return { links: groundedLinks, note: "보존 캐시의 기존 검색 근거입니다." }
+    return citationView(source?.content, source?.citations, source?.citation_refs)
+}
+
+function sourceMeta(source: SynSource | undefined, syn: MacroSyn | null, legacyLabel: string, legacy: boolean) {
+    const parts = [legacy ? `보존 캐시 · ${legacyLabel}` : source?.provider === "codex-cli" ? "Mini Codex" : "미적재"]
+    if (source?.source_as_of) parts.push(`원천일 ${source.source_as_of}`)
+    if (syn?.generated_at) parts.push(`생성 ${syn.generated_at}`)
+    if (!legacy && syn?.source_verification) parts.push(`원문 대조 ${syn.source_verification}`)
+    return parts.join(" · ")
 }
 
 function plain(t?: string): string {
@@ -125,9 +166,14 @@ export default function MacroPage() {
     const mh = pf?.market_horizon
     const events = (pf?.global_events || []).filter((e) => e && e.name)
     const macro = pf?.macro || {}
-    const gm = syn?.sources?.gemini
-    const px = syn?.sources?.perplexity
-    const pxCitationView = citationView(px?.content, px?.citations, px?.citation_refs)
+    const codexKr = syn?.sources?.codex_kr
+    const codexGlobal = syn?.sources?.codex_global
+    const kr = codexKr || syn?.sources?.gemini
+    const global = codexGlobal || syn?.sources?.perplexity
+    const krLegacy = !codexKr && Boolean(syn?.sources?.gemini)
+    const globalLegacy = !codexGlobal && Boolean(syn?.sources?.perplexity)
+    const krCitationView = macroCitationView(kr)
+    const globalCitationView = macroCitationView(global)
 
     // 알파네스트 섹션 문법 — 컬러 닷 아이브로 + 타이틀 + 메타 (좌측 바 아님, 닷만)
     const secTitle = (t: string, n?: string, dot?: string) => (
@@ -143,46 +189,45 @@ export default function MacroPage() {
             <TopBar active="macro" />
             <div style={{ maxWidth: 1560, margin: "0 auto", padding: "14px 18px 30px", display: "flex", flexDirection: "column", gap: 12 }}>
 
-                {/* 국내외 신선 사실 — 시나리오·전망·추천 없음 */}
+                {/* 국내외 거시 사실 — 원천 기준일과 생성 시각을 구분 */}
                 <div className="af-hero2">{/* 모바일 ≤640px = 1열 (globals.css) */}
                     <PanelBoundary name="국내사실">
                         <div style={{ ...cardStyle(c, MAIN_PAD) }}>
-                            {secTitle("국내 거시 사실", `Google 검색 근거 · 72h${syn?.generated_at ? ` · 생성 ${String(syn.generated_at).slice(5, 16).replace("T", " ")}` : ""}`)}
-                            {gm?.content ? (
+                            {secTitle("국내 거시 사실", sourceMeta(kr, syn, "Google", krLegacy))}
+                            {kr?.content ? (
                                 <>
-                                    <div style={{ fontSize: 13, color: c.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{plain(gm.content)}</div>
-                                    {gm.gm_citations?.length ? (
+                                    <div style={{ fontSize: 13, color: c.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{plain(kr.content)}</div>
+                                    {krCitationView.links.length ? (
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                                            {gm.gm_citations.slice(0, 6).map((g, i) => (
-                                                <a key={i} href={g.uri || "#"} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.green, textDecoration: "none" }}>
-                                                    근거 · {g.title || i + 1}
-                                                </a>
+                                            {krCitationView.links.map((item) => (
+                                                <a key={item.key} href={item.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.green, textDecoration: "none" }}>{item.label}</a>
                                             ))}
                                         </div>
                                     ) : null}
+                                    {krCitationView.note ? <div style={{ marginTop: 6, fontSize: 10, color: c.amber }}>{krCitationView.note}</div> : null}
                                 </>
                             ) : (
-                                <div style={{ fontSize: 12.5, color: c.sub }}>미적재 — 평일 장전 사실 수집 후 자동 표시.</div>
+                                <div style={{ fontSize: 12.5, color: c.sub }}>미적재 — Mini 검증 캐시 대기 중.</div>
                             )}
                         </div>
                     </PanelBoundary>
                     <PanelBoundary name="글로벌사실">
                         <div style={{ ...cardStyle(c, MAIN_PAD) }}>
-                            {secTitle("글로벌 거시 사실", "Perplexity · 72h")}
-                            {px?.content ? (
+                            {secTitle("글로벌 거시 사실", sourceMeta(global, syn, "Perplexity", globalLegacy))}
+                            {global?.content ? (
                                 <>
-                                    <div style={{ fontSize: 12, color: c.sub, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{plain(px.content)}</div>
-                                    {pxCitationView.links.length ? (
+                                    <div style={{ fontSize: 12, color: c.sub, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{plain(global.content)}</div>
+                                    {globalCitationView.links.length ? (
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                                            {pxCitationView.links.map((x) => (
-                                                <a key={x.key} href={x.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.vt, textDecoration: "none" }}>{x.label}</a>
+                                            {globalCitationView.links.map((item) => (
+                                                <a key={item.key} href={item.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: c.vt, textDecoration: "none" }}>{item.label}</a>
                                             ))}
                                         </div>
                                     ) : null}
-                                    {pxCitationView.note ? <div style={{ marginTop: 6, fontSize: 10, color: c.amber }}>{pxCitationView.note}</div> : null}
+                                    {globalCitationView.note ? <div style={{ marginTop: 6, fontSize: 10, color: c.amber }}>{globalCitationView.note}</div> : null}
                                 </>
                             ) : (
-                                <div style={{ fontSize: 12.5, color: c.sub }}>미적재.</div>
+                                <div style={{ fontSize: 12.5, color: c.sub }}>미적재 — Mini 검증 캐시 대기 중.</div>
                             )}
                         </div>
                     </PanelBoundary>

@@ -7,7 +7,7 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
-from google import genai
+from api.utils.google_provider_policy import genai
 from api.mocks import mockable
 from api.config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_MODEL_CHAT, DATA_DIR
 
