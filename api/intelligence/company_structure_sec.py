@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-25-cofiler-index-bound-v16"
+PARSER_REVISION = "2026-10-25-bound-leading-title-table-v17"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -621,6 +621,104 @@ def _check_exhibit_as_of(soup, period, result):
     return True
 
 
+def _leading_title_table(soup, table, metadata, result):
+    """Bind a late two-column header to an issuer and date stated in that table."""
+    if table.find("table") or table.find_parent("table"):
+        return None
+    trs = table.find_all("tr")
+    root = _issuer_name_key(metadata.get("issuerName"))
+    if not root or len(trs) < 7:
+        return None
+    header_i = None
+    for index, tr in enumerate(trs[3:9], 3):
+        cells = tr.find_all(["th", "td"], recursive=False)
+        roles = [_header_role(_norm(cell.get_text(" ", strip=True))) for cell in cells]
+        if roles.count("name") == roles.count("jurisdiction") == 1 and len(cells) in (2, 3):
+            header_i = index
+            break
+    if header_i is None:
+        return None
+
+    def hold(reason):
+        result["reviewReason"] = reason
+        return result
+
+    # A SEC document wrapper is not an issuer title. Any other outside-table
+    # text may alter the scope, so it cannot be inherited by this layout.
+    prefix = []
+    for node in soup.descendants:
+        if node is table:
+            break
+        if isinstance(node, NavigableString) and not isinstance(node, Comment) and not node.find_parent(
+                ["head", "style", "script"]):
+            prefix.append(str(node))
+    before = _norm(" ".join(prefix))
+    wrapper = re.fullmatch(
+        r"EX-(21(?:\.1)?) [0-9]{1,3} [A-Za-z0-9_.-]+\.html? EX-\1", before, re.I)
+    if before and not wrapper:
+        return hold("continuation-scope-text")
+    last = list(table.descendants)[-1]
+    following = _norm(" ".join(str(node) for node in last.next_elements
+                               if isinstance(node, NavigableString) and not isinstance(node, Comment)
+                               and not node.find_parent(["head", "style", "script"])))
+    if following:
+        return hold("continuation-scope-text")
+
+    leading = []
+    for tr in trs[:header_i]:
+        cells = tr.find_all(["th", "td"], recursive=False)
+        if not cells or any(cell.get("rowspan") or cell.find(["table", "br", "sup"])
+                            for cell in cells):
+            return hold("ambiguous-row-binding")
+        filled = [_norm(cell.get_text(" ", strip=True)) for cell in cells]
+        filled = [value for value in filled if value]
+        if len(filled) > 1:
+            return hold("ambiguous-row-binding")
+        if filled:
+            leading.append(filled[0])
+    if len(leading) != 4 or not re.fullmatch(r"exhibit 21(?:\.1)?", leading[0], re.I):
+        return hold("issuer-scope-unbound")
+    if wrapper and leading[0].split()[-1].casefold() != wrapper[1].casefold():
+        return hold("issuer-scope-unbound")
+    if _issuer_name_key(leading[1]) != root:
+        return hold("issuer-scope-unbound")
+    if leading[2].casefold() not in {"schedule of certain subsidiaries", "list of subsidiaries"}:
+        return hold("issuer-scope-unbound")
+    stated = re.fullmatch(r"(?:at|as of) ([A-Za-z]+ [0-9]{1,2}, [0-9]{4})", leading[3], re.I)
+    if not stated:
+        return hold("invalid-exhibit-as-of-date")
+    try:
+        stated_day = datetime.strptime(stated[1], "%B %d, %Y").date().isoformat()
+    except ValueError:
+        return hold("invalid-exhibit-as-of-date")
+    if stated_day != result["periodEnd"]:
+        result["statedAsOf"] = stated_day
+        return hold("exhibit-as-of-differs-from-period-end")
+
+    header = trs[header_i].find_all(["th", "td"], recursive=False)
+    header_values = [_norm(cell.get_text(" ", strip=True)) for cell in header]
+    roles = [_header_role(value) for value in header_values]
+    if (roles.count("name") != 1 or roles.count("jurisdiction") != 1
+            or roles.index("name") >= roles.index("jurisdiction")
+            or any(value and role is None for value, role in zip(header_values, roles))
+            or any(cell.get("rowspan") or cell.get("colspan") != header[0].get("colspan")
+                   for cell in header)):
+        return hold("ambiguous-row-binding")
+    if len(trs) - header_i - 1 > _MAX_ROWS:
+        return hold("row-limit")
+    for tr in trs[header_i + 1:]:
+        cells = tr.find_all(["th", "td"], recursive=False)
+        if (len(cells) != len(header) or any(cell.get("rowspan") or
+                cell.get("colspan") != header[i].get("colspan") for i, cell in enumerate(cells))):
+            return hold("ambiguous-row-binding")
+        values = [_norm(cell.get_text(" ", strip=True)) for cell in cells]
+        if (not values[roles.index("name")] or not values[roles.index("jurisdiction")]
+                or any(values[i] for i, role in enumerate(roles) if role is None)
+                or "%" in " ".join(values)):
+            return hold("ambiguous-row-binding")
+    return header_i, roles
+
+
 def parse_exhibit(raw_html, metadata):
     """Parse explicit subsidiary/name and jurisdiction columns without ownership inference."""
     cik, accession, filed, period, url, proof = _metadata(metadata)
@@ -650,6 +748,7 @@ def parse_exhibit(raw_html, metadata):
     country_table = None
     registrant_header = False
     blank_name_header = False
+    embedded_title = False
     all_tables = soup.find_all("table")
     for table in all_tables:
         trs = table.find_all("tr")
@@ -689,8 +788,16 @@ def parse_exhibit(raw_html, metadata):
                     flat_table["status"] = "needs-review"
                     flat_table["rows"] = []
                 return flat_table
-        result["reviewReason"] = "explicit-name-jurisdiction-header-missing"
-        return result
+            leading = _leading_title_table(soup, all_tables[0], metadata, result)
+            if isinstance(leading, dict):
+                return leading
+            if leading is not None:
+                trs = all_tables[0].find_all("tr")
+                candidates.append((all_tables[0], trs, leading[0], leading[1]))
+                embedded_title = True
+        if not candidates:
+            result["reviewReason"] = "explicit-name-jurisdiction-header-missing"
+            return result
     # Downstream currently dates relationships with periodEnd. An explicit
     # different exhibit date must not silently inherit the financial year end.
     prefix = []
@@ -709,6 +816,7 @@ def parse_exhibit(raw_html, metadata):
     root_first_title = bool(root and re.search(
         r"(?:^|\b)" + root_pattern + r" subsidiaries(?= as of |$)", heading)
         and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
+    root_first_title = root_first_title or embedded_title
     registrant_title = bool(root and re.search(
         r"\b" + root_pattern + r" subsidiaries of the registrant(?= |$)", heading)
         and not re.search(r"\b(?:former|previous|non|not|disposed|sold)\b", heading))
