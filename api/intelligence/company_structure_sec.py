@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-25-issuer-bound-headers-v11"
+PARSER_REVISION = "2026-10-25-issuer-bound-statement-lists-v12"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -214,6 +214,8 @@ _FOOTNOTE = re.compile(r"(?:[0-9]{1,3}|\([0-9]{1,3}\)|[¹²³⁰⁴⁵⁶⁷⁸�
 _ALIAS_HINT = re.compile(r"\(\s*(?:f/k/a|fka|formerly(?:\s+known\s+as)?)\b", re.I)
 _ALIAS_START = re.compile(r"^(?:f/k/a|fka|formerly(?:\s+known\s+as)?)\s+(.+)$", re.I)
 _PERCENT_OWNED = re.compile(r"\s*\(\s*(?:100(?:\.0{1,3})?|[0-9]{1,2}(?:\.[0-9]{1,3})?)\s*%\s+owned\s*\)\s*$", re.I)
+_COUNT_WORDS = {word: count for count, word in enumerate(
+    ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"), 1)}
 
 
 def _issuer_name_key(value):
@@ -351,6 +353,82 @@ def _jurisdiction_qualified_legal_name(name, jurisdiction, issuer_name):
     return bool(match and _issuer_name_key(match[1]) == _issuer_name_key(issuer))
 
 
+def _statement_list(soup, metadata, result):
+    """Accept only a complete issuer-bound, flat, table-free exhibit list."""
+    body = soup.body
+    if body is None or body.find(["table", "ol", "ul", "pre"]):
+        return None
+    blocks = [node for node in body.find_all(["p", "div"])
+              if not node.find(["p", "div"]) and _norm(node.get_text(" ", strip=True))]
+    texts = [_norm(node.get_text(" ", strip=True)) for node in blocks]
+    if not texts or _norm(" ".join(body.stripped_strings)) != _norm(" ".join(texts)):
+        return None  # Unbound text outside physical statement blocks.
+    if any(node.find(["br", "sup", "table"]) for node in blocks):
+        return None
+    root = _issuer_name_key(metadata.get("issuerName"))
+    if not root:
+        return None
+    if re.fullmatch(r"exhibit 21(?:\.1)?", texts[0], re.I):
+        texts, blocks = texts[1:], blocks[1:]
+    if not texts or _issuer_name_key(texts[0]) not in {
+            "subsidiaries of " + root, "list of subsidiaries of " + root}:
+        return None
+    texts, blocks = texts[1:], blocks[1:]
+    stated_count = None
+    if texts and texts[0].casefold().startswith("as of "):
+        statement = re.fullmatch(
+            r"As of ([A-Za-z]+ \d{1,2}, \d{4}), (.+) had ([a-z]+) sole subsidiaries:",
+            texts[0], re.I)
+        if not statement or _issuer_name_key(statement[2]) != root:
+            result["reviewReason"] = "continuation-scope-text"
+            return result
+        try:
+            stated_day = datetime.strptime(statement[1], "%B %d, %Y").date().isoformat()
+        except ValueError:
+            result["reviewReason"] = "invalid-exhibit-as-of-date"
+            return result
+        if stated_day != result["periodEnd"]:
+            result["reviewReason"] = "exhibit-as-of-differs-from-period-end"
+            result["statedAsOf"] = stated_day
+            return result
+        stated_count = _COUNT_WORDS.get(statement[3].casefold())
+        if stated_count is None:
+            result["reviewReason"] = "ambiguous-row-binding"
+            return result
+        texts, blocks = texts[1:], blocks[1:]
+    if not texts or len(texts) > _MAX_ROWS:
+        result["reviewReason"] = "no-eligible-subsidiary-rows" if not texts else "row-limit"
+        return result
+    rows = []
+    numbered = None
+    for index, (text, block) in enumerate(zip(texts, blocks), 1):
+        match = re.fullmatch(
+            r"(?:(\d{1,3})\. )?(.+), (?:a|an) ([A-Za-z][A-Za-z ]{0,158}?) "
+            r"(?:corporation|limited liability company)(?:;(?: and)?|\.)?", text, re.I)
+        if not match or match[1] is not None and int(match[1]) != index:
+            result["reviewReason"] = "ambiguous-row-binding"
+            return result
+        if numbered is None:
+            numbered = match[1] is not None
+        if (numbered != (match[1] is not None) or
+                not _complete_legal_name(match[2]) or
+                len(_LEGAL_TERMINATOR.findall(match[2])) != 1 or
+                _issuer_name_key(match[2]) == root or
+                re.search(r"\band\b|/", match[2], re.I) or
+                _ALIAS_HINT.search(text) or
+                re.search(r"\b(?:owned|ownership|parent|subsidiar|formerly|fka|dba|aka|doing business as)\b|d/b/a|%|\*", text, re.I)):
+            result["reviewReason"] = "ambiguous-row-binding"
+            return result
+        rows.append({"name": match[2], "jurisdiction": match[3], "ownershipPct": None,
+                     "directOwnership": "unspecified", "sourceRow": {"index": index, "text": text}})
+    if stated_count is not None and len(rows) != stated_count:
+        result["reviewReason"] = "ambiguous-row-binding"
+        return result
+    result["rows"] = rows
+    result["status"] = "parsed"
+    return result
+
+
 def parse_exhibit(raw_html, metadata):
     """Parse explicit subsidiary/name and jurisdiction columns without ownership inference."""
     cik, accession, filed, period, url = _metadata(metadata)
@@ -406,6 +484,10 @@ def parse_exhibit(raw_html, metadata):
                 blank_name_header = True
                 break
     if not candidates:
+        if not all_tables:
+            statement = _statement_list(soup, metadata, result)
+            if statement is not None:
+                return statement
         result["reviewReason"] = "explicit-name-jurisdiction-header-missing"
         return result
     # Downstream currently dates relationships with periodEnd. An explicit

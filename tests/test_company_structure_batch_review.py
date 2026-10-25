@@ -36,6 +36,96 @@ CMI_META = {"cik": "0000026172", "accession": "0000026172-26-000009",
             "issuerName": "CUMMINS INC"}
 
 
+def _statement_exhibit(*, title="List of Subsidiaries of American Electric Power Company, Inc.",
+                       preamble="", rows=None, after=""):
+    if rows is None:
+        rows = ["First Company LLC, a Delaware limited liability company",
+                "Second Company, Inc., an Ohio corporation"]
+    return ("<body><p>Exhibit 21.1</p><p>" + title + "</p>" + preamble +
+            "".join(f"<p>{row}</p>" for row in rows) + after + "</body>")
+
+
+def test_issuer_bound_flat_statement_list_has_only_source_rows():
+    result = parse_exhibit(_statement_exhibit(), META)
+    assert result["status"] == "parsed"
+    assert [row["name"] for row in result["rows"]] == ["First Company LLC", "Second Company, Inc."]
+    assert [row["jurisdiction"] for row in result["rows"]] == ["Delaware", "Ohio"]
+    assert result["scope"] == "reported-subsidiary-list-not-exhaustive"
+    assert all(row["ownershipPct"] is None and row["directOwnership"] == "unspecified"
+               for row in result["rows"])
+
+
+def test_numbered_statement_list_requires_matching_as_of_and_count():
+    preamble = ("<p>As of December 31, 2025, American Electric Power Company, Inc. "
+                "had two sole subsidiaries:</p>")
+    rows = ["1. First Company LLC, a Delaware limited liability company;",
+            "2. Second Company, Inc., an Ohio corporation."]
+    result = parse_exhibit(_statement_exhibit(title="Subsidiaries of American Electric Power Company, Inc.",
+                                               preamble=preamble, rows=rows), META)
+    assert result["status"] == "parsed"
+    assert len(result["rows"]) == 2
+
+
+@pytest.mark.parametrize("change", [
+    {"title": "List of Subsidiaries of Other Inc."},
+    {"title": "Former Subsidiaries of American Electric Power Company, Inc."},
+    {"preamble": "<p>As of January 1, 2026, American Electric Power Company, Inc. had two sole subsidiaries:</p>"},
+    {"preamble": "<p>As of December 31, 2025, Other Inc. had two sole subsidiaries:</p>"},
+    {"preamble": "<p>As of December 31, 2025, American Electric Power Company, Inc. had three sole subsidiaries:</p>"},
+    {"rows": ["First Company LLC, a Delaware limited liability company",
+              "Second Company, Inc., an Ohio corporation (formerly Other Inc.)"]},
+    {"rows": ["First Company LLC Second Company Inc., a Delaware limited liability company"]},
+    {"rows": ["First Company and Second Company Inc., a Delaware corporation"]},
+    {"rows": ["First Company DBA Second Company LLC, a Delaware limited liability company"]},
+    {"rows": ["First Company LLC, a Delaware limited liability company (owned 75% by Other Inc.)"]},
+    {"rows": ["First Company LLC, a Delaware limited liability company",
+              "2. Second Company, Inc., an Ohio corporation"]},
+    {"rows": ["First Company LLC, a limited liability company"]},
+    {"after": "<p>First Company LLC is owned by Second Company, Inc.</p>"},
+    {"after": "<p>Additional subsidiaries are listed below.</p>"},
+    {"after": "<p>Formerly Other Inc.</p>"},
+    {"after": "Unbound extra sentence."},
+    {"after": "<table><tr><td>Other Subsidiary LLC</td><td>Ohio</td></tr></table>"},
+])
+def test_flat_statement_near_misses_remain_held(change):
+    result = parse_exhibit(_statement_exhibit(**change), META)
+    assert result["status"] == "needs-review"
+    assert result["rows"] == []
+
+
+@pytest.mark.parametrize("issuer_name", [None, "Other Inc."])
+def test_flat_statement_requires_exact_metadata_issuer(issuer_name):
+    result = parse_exhibit(_statement_exhibit(), {**META, "issuerName": issuer_name})
+    assert result["status"] == "needs-review"
+
+
+@pytest.mark.parametrize("ticker,cik,accession,filed,period,issuer,digest,filename,status,rows", [
+    ("AXGN", "0000805928", "0000805928-26-000031", "2026-02-24", "2025-12-31", "Axogen, Inc.",
+     "4cc8d718981828fc89e3e5829a8cabbb06bdd804f76bac9c9df5119c28352750", "ex211subsidiariesofaxogen1.htm", "parsed", 4),
+    ("FWDI", "0000038264", "0001683168-25-009068", "2025-12-11", "2025-09-30", "Forward Industries, Inc.",
+     "9c9c89e7a67506e0fdc4b1754f320727b39b0e1e893891e7057c4f73564a1af2", "forward_ex2101.htm", "parsed", 4),
+    ("CASY", "0000726958", "0000726958-26-000046", "2026-06-22", "2026-04-30", "CASEYS GENERAL STORES INC",
+     "93fca8f42949c331eae1261c0fc78f653a7da281bb5b07d076abbdc467437a4e", "casy-ex211_2026430xq4.htm", "needs-review", 0),
+    ("TOL", "0000794170", "0000794170-25-000112", "2025-12-19", "2025-10-31", "Toll Brothers, Inc.",
+     "a0f8ad6bba577fa3b964a9b26d15c9c25e429f8d9822ef847b7f117cf8a17d01", "tol-20251031x10kxex21.htm", "needs-review", 0),
+])
+def test_saved_flat_statement_originals(ticker, cik, accession, filed, period, issuer, digest, filename, status, rows):
+    cache_dir = os.environ.get("SEC_EXHIBIT_CACHE_DIR")
+    if not cache_dir:
+        pytest.skip("set SEC_EXHIBIT_CACHE_DIR for offline original checks")
+    raw = gzip.decompress((Path(cache_dir) / f"{digest}.gz").read_bytes())
+    assert hashlib.sha256(raw).hexdigest() == digest
+    url = (f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/"
+           f"{accession.replace('-', '')}/{filename}")
+    result = parse_exhibit(raw, {"cik": cik, "accession": accession, "filedDate": filed,
+                                 "periodEnd": period, "url": url, "issuerName": issuer})
+    assert result["parserRevision"] == PARSER_REVISION
+    assert (result["status"], len(result["rows"])) == (status, rows)
+    assert result["scope"] == "reported-subsidiary-list-not-exhaustive"
+    assert all(row["ownershipPct"] is None and row["directOwnership"] == "unspecified"
+               for row in result["rows"])
+
+
 def _registrant_pages(title="American Electric Power Company, Inc. Subsidiaries of the Registrant",
                       gap="", second_name="Second Company GmbH"):
     header = "<tr><td>Name of Company</td><td>Jurisdiction</td></tr>"
