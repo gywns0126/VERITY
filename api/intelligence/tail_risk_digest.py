@@ -12,7 +12,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from google import genai
+from api.utils.google_provider_policy import genai
 
 from api.config import (
     CLAUDE_TAIL_RISK_VERIFY,

@@ -3282,7 +3282,7 @@ def main():
         from api.collectors.DartScout import scout, fetch_business_facilities_raw
         from api.collectors.dart_corp_code import get_corp_code
 
-        # 사업보고서 rcept_no 캐싱 (연 1회 공시) — Gemini 중복 호출 방지
+        # 사업보고서 rcept_no 캐싱 (연 1회 공시) — 동일 원문의 검증 캐시 재사용
         _fac_cache: dict = {}
         try:
             import json as _json
@@ -3344,22 +3344,41 @@ def main():
                     name=f"DART-Facil({stock.get('name')})", timeout=60, default={},
                 )
                 if raw and not raw.get("error") and raw.get("char_count", 0) > 300:
-                    # tangible_assets 키 있는 신 스키마 파싱만 재사용 — 구 캐시(토지 필드 부재)는 1회 재파싱(자가치유).
-                    if prev_fac.get("rcept_no") == raw.get("rcept_no") and prev_fac.get("data") and "tangible_assets" in prev_fac["data"]:
+                    from api.analyzers.facilities_parser import parse_business_facilities
+                    from api.utils.filing_extraction_cache import filing_source_sha256
+                    # 유형자산 주석(토지·건물 장부금액) additive 피드 — 본문 재무제표엔 유형자산 총계만.
+                    _fac_rt = raw.get("raw_text") or ""
+                    _fac_ppe = raw.get("ppe_note_text") or ""
+                    if _fac_ppe:
+                        _fac_rt = _fac_rt + "\n\n=== 유형자산 주석 ===\n" + _fac_ppe
+                    _fac_rcept = str(raw.get("rcept_no") or "")
+                    _fac_date_raw = str(raw.get("rcept_dt") or "")
+                    _fac_as_of = (
+                        f"{_fac_date_raw[:4]}-{_fac_date_raw[4:6]}-{_fac_date_raw[6:8]}"
+                        if len(_fac_date_raw) == 8 and _fac_date_raw.isdigit()
+                        else _fac_date_raw
+                    )
+                    _fac_source_id = f"source:dart:{_fac_rcept}"
+                    _fac_source_url = f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={_fac_rcept}"
+                    _fac_source_hash = filing_source_sha256("dart-facilities-v1", _fac_rt)
+                    # 새 계약으로 생성된 exact source cache만 직접 재사용한다. 구 결과는
+                    # cache miss 시 보존하되, Mini 결과가 도착하면 같은 공시에서도 교체한다.
+                    if (
+                        prev_fac.get("rcept_no") == raw.get("rcept_no")
+                        and prev_fac.get("data")
+                        and prev_fac.get("extraction_status") == "ready"
+                        and prev_fac.get("source_sha256") == _fac_source_hash
+                    ):
                         stock["facilities_dart"] = prev_fac
                         fac_ok += 1
                     else:
-                        from api.analyzers.facilities_parser import parse_business_facilities
-                        # 유형자산 주석(토지·건물 장부금액) additive 피드 — 본문 재무제표엔 유형자산 총계만.
-                        _fac_rt = raw.get("raw_text") or ""
-                        _fac_ppe = raw.get("ppe_note_text") or ""
-                        if _fac_ppe:
-                            _fac_rt = _fac_rt + "\n\n=== 유형자산 주석 ===\n" + _fac_ppe
                         parsed = safe_collect(
                             parse_business_facilities,
                             stock.get("name", ticker_yf), stock.get("ticker"), _fac_rt,
-                            name=f"DART-FacilParse({stock.get('name')})",
-                            timeout=90, default={},
+                            source_id=_fac_source_id, as_of=_fac_as_of,
+                            source_url=_fac_source_url,
+                            name=f"DART-FacilCache({stock.get('name')})",
+                            timeout=10, default={},
                         )
                         if parsed and not parsed.get("error"):
                             stock["facilities_dart"] = {
@@ -3367,9 +3386,31 @@ def main():
                                 "rcept_dt": raw.get("rcept_dt"),
                                 "report_nm": raw.get("report_nm"),
                                 "bsns_year": raw.get("bsns_year"),
+                                "source_id": _fac_source_id,
+                                "source_sha256": _fac_source_hash,
+                                "source_as_of": _fac_as_of,
+                                "source_url": _fac_source_url,
+                                "extraction_status": "ready",
                                 "data": parsed,
                             }
                             fac_ok += 1
+                        elif parsed and parsed.get("status") == "pending":
+                            _fac_pending = dict(prev_fac) if prev_fac.get("data") else {
+                                "rcept_no": raw.get("rcept_no"),
+                                "rcept_dt": raw.get("rcept_dt"),
+                                "report_nm": raw.get("report_nm"),
+                                "bsns_year": raw.get("bsns_year"),
+                            }
+                            _fac_pending.update({
+                                "extraction_status": "pending",
+                                "pending_source_id": _fac_source_id,
+                                "pending_source_hash": parsed.get("source_sha256"),
+                                "pending_as_of": _fac_as_of,
+                                "pending_reason": parsed.get("reason"),
+                            })
+                            stock["facilities_dart"] = _fac_pending
+                            if prev_fac.get("data"):
+                                fac_ok += 1
                 elif prev_fac.get("data"):
                     stock["facilities_dart"] = prev_fac
                     fac_ok += 1
@@ -3415,7 +3456,7 @@ def main():
         from api.config import FINNHUB_API_KEY, SEC_EDGAR_USER_AGENT
 
         # 10-K Item 2 파싱은 accession 기반 캐싱(연 1회 공시)
-        # full 모드라도 이전 portfolio에서 매핑 로드해 Gemini 중복 호출 방지
+        # full 모드라도 이전 portfolio에서 매핑 로드해 동일 원문의 검증 캐시 재사용
         _props_cache: dict = {}
         try:
             import json as _json
@@ -3477,22 +3518,53 @@ def main():
                     name=f"10K-Item2({ticker})", timeout=60, default={},
                 )
                 if raw and not raw.get("error") and raw.get("char_count", 0) > 200:
-                    if prev_props.get("accession") == raw.get("accession") and prev_props.get("data"):
+                    from api.analyzers.properties_parser import parse_10k_properties
+                    from api.utils.filing_extraction_cache import filing_source_sha256
+                    _props_accession = str(raw.get("accession") or "")
+                    _props_as_of = str(raw.get("filed_date") or "")
+                    _props_source_id = f"source:sec:{_props_accession}"
+                    _props_source_url = str(raw.get("url") or "")
+                    _props_source_hash = filing_source_sha256("sec-properties-v1", raw["raw_text"])
+                    if (
+                        prev_props.get("accession") == raw.get("accession")
+                        and prev_props.get("data")
+                        and prev_props.get("extraction_status") == "ready"
+                        and prev_props.get("source_sha256") == _props_source_hash
+                    ):
                         stock["properties_10k"] = prev_props
                     else:
-                        from api.analyzers.properties_parser import parse_10k_properties
                         parsed = safe_collect(
                             parse_10k_properties, name, ticker, raw["raw_text"],
-                            name=f"10K-Parse({ticker})", timeout=90, default={},
+                            source_id=_props_source_id, as_of=_props_as_of,
+                            source_url=_props_source_url,
+                            name=f"10K-Cache({ticker})", timeout=10, default={},
                         )
                         if parsed and not parsed.get("error"):
                             stock["properties_10k"] = {
                                 "accession": raw.get("accession"),
                                 "filed_date": raw.get("filed_date"),
-                                "source_url": raw.get("url"),
+                                "source_url": _props_source_url,
+                                "source_id": _props_source_id,
+                                "source_sha256": _props_source_hash,
+                                "source_as_of": _props_as_of,
+                                "extraction_status": "ready",
                                 "data": parsed,
                             }
-                            print(f"      10-K Properties 파싱 완료 ({raw.get('filed_date')})")
+                            print(f"      10-K Properties 검증 캐시 적용 ({raw.get('filed_date')})")
+                        elif parsed and parsed.get("status") == "pending":
+                            _props_pending = dict(prev_props) if prev_props.get("data") else {
+                                "accession": raw.get("accession"),
+                                "filed_date": raw.get("filed_date"),
+                                "source_url": _props_source_url,
+                            }
+                            _props_pending.update({
+                                "extraction_status": "pending",
+                                "pending_source_id": _props_source_id,
+                                "pending_source_hash": parsed.get("source_sha256"),
+                                "pending_as_of": _props_as_of,
+                                "pending_reason": parsed.get("reason"),
+                            })
+                            stock["properties_10k"] = _props_pending
                 elif prev_props.get("data"):
                     stock["properties_10k"] = prev_props
             except Exception as e:
@@ -5150,7 +5222,7 @@ def main():
     for item in briefing.get("action_items", []):
         print(f"  → {item}")
 
-    print(f"\n[8.5] 꼬리위험 요약 (Gemini)")
+    print(f"\n[8.5] 꼬리위험 요약 (Google 생성 비활성 정책)")
     try:
         maybe_send_tail_risk_digest(portfolio)
     except Exception as e:
@@ -5163,13 +5235,11 @@ def main():
         perplexity_call_count = _pplx_stats()["calls"]
     except Exception:
         pass
-    # 2026-05-11 fix: 실 Gemini stock 호출 수 = min(candidates, GEMINI_BATCH_MAX_STOCKS).
-    # 이전엔 len(candidates) 그대로 적재 = 3x over-estimate (60 vs 실 20).
-    from api.config import GEMINI_BATCH_MAX_STOCKS as _GEMINI_MAX
-    _gemini_actual_calls = min(len(candidates), _GEMINI_MAX) if effective_mode == "full" else 0
+    # Google 생성은 사용자 정책으로 비활성이다. 후보 수 추정이 아니라 실제 외부 호출 0건을 기록한다.
+    _gemini_actual_calls = 0
     run_stats = {
         "gemini_stock_calls": _gemini_actual_calls,
-        "gemini_report_calls": 2 if effective_mode == "full" else 0,
+        "gemini_report_calls": 0,
         "gemini_pro_calls": gemini_pro_calls,
         "claude_deep_calls": claude_deep_calls,
         "claude_light_calls": claude_light_calls,

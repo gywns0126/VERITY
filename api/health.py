@@ -179,18 +179,9 @@ def _check_telegram() -> tuple:
 
 
 def _check_gemini() -> tuple:
-    if not GEMINI_API_KEY:
-        return False, "키 미설정"
-    r = requests.get(
-        "https://generativelanguage.googleapis.com/v1beta/models",
-        params={"key": GEMINI_API_KEY},
-        timeout=_TIMEOUT_FAST,
-    )
-    if r.status_code == 200:
-        return True, "정상"
-    if r.status_code == 429:
-        return False, "쿼터 초과(429)"
-    return False, f"HTTP {r.status_code}"
+    """Compatibility probe: policy state only, never a Google request."""
+    from api.utils.google_provider_policy import DISABLED_DETAIL
+    return True, DISABLED_DETAIL
 
 
 def _check_kipris() -> tuple:
@@ -577,7 +568,6 @@ def check_api_health(
         ("dart", "DART", _check_dart),
         ("fred", "FRED", _check_fred),
         ("telegram", "Telegram", _check_telegram),
-        ("gemini", "Gemini", _check_gemini),
         ("kipris", "KIPRIS", _check_kipris),
         ("public_data", "공공데이터", _check_public_data),
         ("reports_signed_url", "리포트 signed URL", _check_reports_signed_url),
@@ -602,7 +592,11 @@ def check_api_health(
     if PERPLEXITY_API_KEY:
         specs.append(("perplexity", "Perplexity", _check_perplexity))
 
-    return _probe_all(specs, probe_timeout=probe_timeout, deadline_ts=deadline_ts)
+    checks = _probe_all(specs, probe_timeout=probe_timeout, deadline_ts=deadline_ts)
+    from api.utils.google_provider_policy import DISABLED_DETAIL, DISABLED_STATUS
+    checks["gemini"] = {"status": DISABLED_STATUS, "detail": DISABLED_DETAIL,
+                        "latency_ms": 0, "attempts": 0}
+    return checks
 
 
 # ── 2. GitHub Worker ──────────────────────────────────────────

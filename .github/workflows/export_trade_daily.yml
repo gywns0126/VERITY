@@ -47,7 +47,6 @@ jobs:
           #   "데이터를 못 구한다" 로 오독하고 폐기할 뻔했다. macro_synthesis.yml 이 같은
           #   함정에 "default dev = mock — 실호출 위해 명시" 주석을 남긴 것과 동일 사례.
           VERITY_MODE: prod
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}

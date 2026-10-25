@@ -153,6 +153,9 @@ def classify(query: str, recent_turns: Optional[List[str]] = None) -> Dict[str, 
 
     result = {"cache_key": _cache_key(query)}
 
+    return {**_FALLBACK, **result, "needs_perplexity": False,
+            "needs_gemini_grounding": False, "_source": "disabled_by_policy"}
+
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
         logger.warning("GEMINI_API_KEY 미설정 → classifier fallback")
@@ -164,7 +167,10 @@ def classify(query: str, recent_turns: Optional[List[str]] = None) -> Dict[str, 
     prompt = "\n\n".join(prompt_parts)
 
     try:
-        from google import genai
+        try:
+            from api.utils.google_provider_policy import genai
+        except ImportError:
+            from google_provider_policy import genai
         client = genai.Client(api_key=api_key)
         resp = client.models.generate_content(
             model=_CLASSIFIER_MODEL,

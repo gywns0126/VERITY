@@ -71,6 +71,9 @@ def search(query: str, max_tokens: int = 500, tickers: Optional[List[str]] = Non
     if not query:
         return {"ok": False, "error": "빈 쿼리", "latency_ms": 0}
 
+    return {"ok": False, "status": "disabled_by_policy",
+            "error": "Gemini API 사용 중단 (사용자 정책)", "latency_ms": 0}
+
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
         return {"ok": False, "error": "GEMINI_API_KEY 미설정", "latency_ms": 0}
@@ -80,7 +83,10 @@ def search(query: str, max_tokens: int = 500, tickers: Optional[List[str]] = Non
         user_query = f"{query}\n(관련 티커: {', '.join(tickers[:5])})"
 
     try:
-        from google import genai
+        try:
+            from api.utils.google_provider_policy import genai
+        except ImportError:
+            from google_provider_policy import genai
         from google.genai import types as gtypes
     except ImportError as e:
         return {"ok": False, "error": f"google-genai SDK 미설치: {e}", "latency_ms": 0}

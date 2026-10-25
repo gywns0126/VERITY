@@ -51,7 +51,7 @@ def _gemini_translate(titles: List[str]) -> Dict[str, str]:
     if not titles:
         return {}
     try:
-        from google import genai
+        from api.utils.google_provider_policy import genai
         from api.config import GEMINI_API_KEY, GEMINI_MODEL_CHAT
 
         if not GEMINI_API_KEY:

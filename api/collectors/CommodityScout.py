@@ -212,7 +212,7 @@ def build_sector_commodity_map_gemini(sectors: List[str]) -> Dict[str, List[str]
     if not GEMINI_API_KEY or not sectors:
         return {}
     try:
-        from google import genai
+        from api.utils.google_provider_policy import genai
 
         client = genai.Client(api_key=GEMINI_API_KEY)
         uniq = sorted(set(sectors))

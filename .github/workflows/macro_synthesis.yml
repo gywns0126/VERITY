@@ -1,24 +1,21 @@
 name: Macro Facts + US Demand Chain (daily pre-market)
 
-# 출처가 있는 국내외 거시 사실 + 미국 수요 체인 관측. 평일 장전 1회.
-# 2026-09-05 PM 결정: 구형 3모델 시나리오·최종판단은 종료. 전망·추천·채점 재주입 0.
-# 🚨 오퍼레이터 전용: macro_synthesis.json 은 사실 번들이나 기존과 같이 private bucket 업로드만,
-#   gitignore 로 공개 repo 커밋 차단. authed /api/admin?type=macro_synthesis 서빙.
-#
-# 2026-08-07 추가: 미국 수요 체인 관측(LLM 0, 가격·Finnhub only). 국장 개장 전 슬롯을 공유한다.
-#
-# 7축 audit: env=PERPLEXITY+GEMINI+SUPABASE(업로드)+FINNHUB(수요체인 EPS 보강, 없으면 가격만) ·
-#   push trigger 없음(커밋 대상 = data/ 장부뿐 → vercel-api·operator-web 밖 = RULE 2 가드가 자동 skip) ·
-#   concurrency 전용 group · cron 일1(silent skip 저위험) · KIS 무관(RULE 1) ·
-#   pip requirements(yfinance 기존 등재) · N=2=manual+다음 scheduled.
+# Public-source macro facts are read on Mac mini; Google/Perplexity generation is retired here.
+# Only public facts, source URLs, quotes, dates, and producer receipts may enter mini_macro_facts.
+# Never send private context, account data, credentials, or document bodies in the event payload.
+# GitHub validates that public-source bundle and uses its existing Supabase secrets for private delivery.
+# The existing weekday 07:50 KST job retains non-LLM US demand-chain observation only.
+# A demand-chain success is not a macro-generation or private-delivery receipt.
 
 on:
   schedule:
     - cron: '50 22 * * 0-4'   # UTC 22:50 = KST 07:50 평일(월~금) 장전, 전일 US 종가·오버나이트 반영
+  repository_dispatch:
+    types: [mini_macro_facts]
   workflow_dispatch:
     inputs:
       force:
-        description: '캐시 무시 강제 재생성'
+        description: 'Compatibility input only; macro fact collection runs on Mac mini'
         required: false
         default: 'false'
         type: string
@@ -35,6 +32,7 @@ concurrency:
 
 jobs:
   synth:
+    if: github.event_name != 'repository_dispatch' || github.event.action != 'mini_macro_facts'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -51,19 +49,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Build macro facts
-        env:
-          VERITY_MODE: prod   # 🚨 default dev = mock — 실호출 위해 명시
-          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
-          PERPLEXITY_MODEL: ${{ vars.PERPLEXITY_MODEL || 'sonar-pro' }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          if [ "${{ github.event.inputs.force }}" = "true" ]; then
-            python -m api.builders.macro_synthesis_builder --force
-          else
-            python -m api.builders.macro_synthesis_builder
-          fi
-
       - name: Observe US demand chain (관측-only, LLM 무관)
         # 국장 개장 전, 전일 미국 종가로 수요 체인(AI 반도체/소프트웨어/데이터센터/
         # 2차전지/바이오) 을 관측한다. PM 사고 2026-08-05 — 코스피를 끌어올린 팔란티어·
@@ -72,36 +57,58 @@ jobs:
         # AI 반도체 +6.19%(6/6) · AI 소프트웨어 +6.24% · PLTR z=8.46 포착 확인.
         # 이 워크플로에 얹은 이유 = 이미 KST 07:50(미장 마감 후·국장 개장 전)에 도는
         # 유일한 슬롯. 신규 cron 신설 회피 = RULE 8 부담 + GH 분 절약.
-        # LLM 호출 0 — 실패해도 위 거시 산출물에 영향 없도록 continue-on-error.
+        # LLM 호출 0. Mac mini 거시 사실 생성·전달과 별개 관측이며 기존 오류 처리를 유지한다.
         continue-on-error: true
         env:
           VERITY_MODE: prod
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}   # EPS 서프라이즈 보강용, 없으면 가격 관측만
         run: python -m api.collectors.us_demand_chain
 
-      - name: Upload private macro facts bundle
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python scripts/upload_operator_data_to_supabase.py --only macro_synthesis
-
-      - name: Commit ledgers (RULE 4 — 사실 번들은 gitignore 로 봉인 유지)
+      - name: Commit US demand-chain observations (RULE 4)
         if: always()
         run: |
-          # 🚨 이 워크플로의 사실 번들은 .gitignore 로 커밋이 원천 차단되어 있다.
-          #   여기서 커밋하는 것은 **장부뿐**:
-          #     · llm_cost.jsonl        사실 수집 호출의 비용 관측
-          #     · us_demand_chain.*     미국 수요 체인 관측 원장 + 최신 스냅샷(2026-08-07).
-          #       스냅샷을 커밋해야 뒤에 도는 daily_analysis_full(KST 16:07)의 체크아웃이
-          #       읽어 리포트 프롬프트에 주입할 수 있다. 미add 시 rebase 거부 사고도 예방.
+          # Only existing non-LLM observation outputs are staged.
+          # The private macro fact bundle is received and uploaded by the separate delivery job.
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/metadata/llm_cost.jsonl data/observations/us_demand_chain.jsonl data/us_demand_chain.json 2>/dev/null || true
+          git add data/observations/us_demand_chain.jsonl 2>/dev/null || true
+          git add data/us_demand_chain.json 2>/dev/null || true
           git diff --staged --quiet && exit 0
-          git commit -m "💰 장부 — 거시 사실 · 미국 수요 체인 관측"
+          git commit -m "data: observe US demand chain"
           for i in 1 2 3 4 5 6; do
             git rebase --abort 2>/dev/null || true
             if git pull --rebase --autostash -X theirs origin main && git push origin main; then exit 0; fi
             sleep $(( i * 7 + RANDOM % 15 ))
           done
           echo "::warning::장부 push 실패 — 다음 run 에서 누적 재시도"
+
+  deliver_mini_macro:
+    # The owner-authenticated Mini sends public source facts only; no raw event body is logged.
+    # This job never invokes a model or exports Supabase credentials to the Mini.
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'mini_macro_facts' && github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install existing dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate public-source Mini facts and preserve source timestamps
+        run: python -m scripts.mini_document_readers --receive-dispatch "$GITHUB_EVENT_PATH"
+
+      - name: Upload validated macro facts to private Storage
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/upload_operator_data_to_supabase.py --only macro_synthesis

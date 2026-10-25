@@ -1,31 +1,31 @@
-"""
-10-K Item 2 'Properties' 섹션 → 구조화 JSON 파서.
+"""10-K Item 2 ``Properties`` structured extraction cache consumer.
 
-입력: SEC EDGAR에서 추출한 Properties 섹션 원문 텍스트
-출력: 보유/임차 부동산 리스트 + 본사 + 총계 요약
-
-Gemini Flash 기본. 연 1회 공시라 accession 캐싱으로 중복 호출 방지.
+The parser never calls an external model.  A local, separately authorised
+Codex CLI worker can reuse :func:`build_10k_properties_prompt`, validate the
+result, and persist it through ``api.utils.filing_extraction_cache.cache_write``.
 """
 from __future__ import annotations
 
-import json
-import logging
-import re
-from typing import Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, Mapping
 
-from google import genai
+from api.utils.filing_extraction_cache import (
+    FilingExtractionCacheError,
+    cache_read,
+    filing_source_sha256,
+    prepare_filing_text,
+    validate_filing_source,
+)
 
-from api.mocks import mockable
-from api.config import GEMINI_API_KEY, GEMINI_MODEL_DEFAULT
 
-logger = logging.getLogger(__name__)
-
+EXTRACTOR = "sec-properties-v1"
 
 try:
     from api.utils.external_guard import wrap_untrusted
 except Exception:  # 패키지 부재 안전 fallback (격리 비활성)
     def wrap_untrusted(text, source="external"):  # type: ignore
         return str(text or "")
+
 
 _PROMPT_TEMPLATE = """너는 SEC 10-K 공시를 파싱하는 전문가다.
 아래는 {company} ({ticker})의 10-K 'Item 2. Properties' 섹션 원문이다.
@@ -70,72 +70,83 @@ _PROMPT_TEMPLATE = """너는 SEC 10-K 공시를 파싱하는 전문가다.
 === 끝 ==="""
 
 
-def _strip_codefence(s: str) -> str:
-    s = s.strip()
-    if s.startswith("```"):
-        s = re.sub(r"^```(?:json)?\s*", "", s)
-        s = re.sub(r"\s*```$", "", s)
-    return s.strip()
+def build_10k_properties_prompt(
+    company: str,
+    ticker: str,
+    raw_text: str,
+    *,
+    source_id: str,
+    as_of: str,
+    source_url: str,
+) -> str:
+    """Build the exact public-filing prompt used by the local worker."""
+    validate_filing_source(EXTRACTOR, source_id, as_of, source_url)
+    prepared = prepare_filing_text(EXTRACTOR, raw_text)
+    return _PROMPT_TEMPLATE.format(
+        company=company or ticker,
+        ticker=ticker,
+        raw_text=wrap_untrusted(prepared, "sec_properties"),
+    )
 
 
-@mockable("gemini.properties_parse")
+def validate_10k_properties_data(value: Mapping[str, Any]) -> Dict[str, Any]:
+    """Preserve the established schema defaults without inventing facts."""
+    if not isinstance(value, Mapping):
+        raise FilingExtractionCacheError("invalid_properties_data")
+    data = dict(value)
+    if "error" in data:
+        raise FilingExtractionCacheError("invalid_properties_data")
+    for key in ("owned_properties", "leased_properties"):
+        if not isinstance(data.get(key), list):
+            data[key] = []
+    if data.get("headquarters") is not None and not isinstance(data.get("headquarters"), dict):
+        raise FilingExtractionCacheError("invalid_properties_headquarters")
+    if data.get("facility_count") is not None and not isinstance(data.get("facility_count"), dict):
+        raise FilingExtractionCacheError("invalid_properties_facility_count")
+    return data
+
+
+def _pending(source_id: str, as_of: str, raw_sha256: str, reason: str) -> Dict[str, Any]:
+    return {
+        "error": "extraction_pending",
+        "status": "pending",
+        "reason": reason,
+        "source_id": source_id,
+        "source_sha256": raw_sha256,
+        "as_of": as_of,
+    }
+
+
 def parse_10k_properties(
     company: str,
     ticker: str,
     raw_text: str,
-    model: Optional[str] = None,
-) -> Dict:
-    """10-K Item 2 원문 텍스트 → 구조화 JSON."""
-    if not GEMINI_API_KEY:
-        return {"error": "no_api_key"}
-    if not raw_text or len(raw_text) < 200:
-        return {"error": "text_too_short"}
-
-    client = genai.Client(api_key=GEMINI_API_KEY)
-    use_model = model or GEMINI_MODEL_DEFAULT
-
-    prompt = _PROMPT_TEMPLATE.format(
-        company=company or ticker,
-        ticker=ticker,
-        raw_text=wrap_untrusted(raw_text[:40000], "sec_properties"),
-    )
-
+    *,
+    source_id: str,
+    as_of: str,
+    source_url: str,
+    cache_root: Path | str | None = None,
+) -> Dict[str, Any]:
+    """Read one exact digest-bound cache entry; never invoke a model."""
+    prepared = prepare_filing_text(EXTRACTOR, raw_text)
+    raw_sha256 = filing_source_sha256(EXTRACTOR, prepared)
+    if len(prepared) < 200:
+        return _pending(source_id, as_of, raw_sha256, "text_too_short")
     try:
-        resp = client.models.generate_content(
-            model=use_model,
-            contents=prompt,
-            config={
-                "temperature": 0.1,
-                "response_mime_type": "application/json",
-            },
+        validate_filing_source(EXTRACTOR, source_id, as_of, source_url)
+        kwargs = {}
+        if cache_root is not None:
+            kwargs["cache_root"] = cache_root
+        envelope = cache_read(
+            extractor=EXTRACTOR,
+            source_id=source_id,
+            as_of=as_of,
+            raw_sha256=raw_sha256,
+            url=source_url,
+            **kwargs,
         )
-        text = _strip_codefence((resp.text or "").strip())
-    except Exception as e:
-        logger.warning("Gemini properties parse failed for %s: %s", ticker, e)
-        return {"error": f"gemini:{e}"}
-
-    try:
-        data = json.loads(text)
-    except Exception as e:
-        logger.warning("properties JSON decode failed for %s: %s | text head: %s", ticker, e, text[:200])
-        return {"error": f"json_decode:{e}", "raw_response": text[:500]}
-
-    try:
-        from api.tracing import get_tracer
-        usage = getattr(resp, "usage_metadata", None)
-        pt = getattr(usage, "prompt_token_count", 0) if usage else 0
-        ct = getattr(usage, "candidates_token_count", 0) if usage else 0
-        get_tracer().log_ai(
-            provider="gemini", model=use_model,
-            prompt_tokens=pt, completion_tokens=ct,
-            prompt_preview=prompt[:300], response_preview=text[:300],
-            ticker=ticker, call_type="10k_properties_parse",
-        )
-    except Exception:
-        pass
-
-    for key in ("owned_properties", "leased_properties"):
-        if not isinstance(data.get(key), list):
-            data[key] = []
-
-    return data
+        if envelope is None:
+            return _pending(source_id, as_of, raw_sha256, "cache_absent")
+        return validate_10k_properties_data(envelope["data"])
+    except FilingExtractionCacheError as exc:
+        return _pending(source_id, as_of, raw_sha256, str(exc))

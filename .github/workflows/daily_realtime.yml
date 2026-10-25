@@ -234,7 +234,6 @@ jobs:
           #   평시 호출 0, 재난·전쟁 헤드라인이 뜬 날에만 소수. 이 파이프라인의 LLM 호출은
           #   이것 하나뿐임을 최근 실행 5회 MOCK CENSUS 로 확인(gemini.tail_risk 단일 키).
           VERITY_MODE: prod
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_ALLOWED_CHAT_IDS: ${{ secrets.TELEGRAM_ALLOWED_CHAT_IDS }}

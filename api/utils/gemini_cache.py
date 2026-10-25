@@ -44,6 +44,8 @@ def get_or_create_cache(
 
     호출자는 None 일 때 평소처럼 system_instruction 직접 전달 경로로 폴백해야 한다.
     """
+    from api.utils.google_provider_policy import require_google_provider
+    require_google_provider()
     if not system_instruction or not system_instruction.strip():
         return None
 
@@ -111,6 +113,8 @@ def generate_with_cache(
     """
     import sys
     require_active_report_call(call_type)
+    from api.utils.google_provider_policy import require_google_provider
+    require_google_provider()
     from api.config import GEMINI_MODEL_CHAT
 
     models = [model]

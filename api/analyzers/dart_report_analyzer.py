@@ -122,6 +122,8 @@ def _is_transient_gemini_error(exc: Exception) -> bool:
 
 def _call_gemini_once(client, model: str, prompt: str) -> Dict[str, Any]:
     """단일 Gemini 호출 + JSON parse. 실패 시 예외 raise."""
+    from api.utils.google_provider_policy import require_google_provider
+    require_google_provider()
     response = client.models.generate_content(model=model, contents=prompt)
     raw = (response.text or "").strip()
     raw = re.sub(r"^```(?:json)?\s*", "", raw)
@@ -143,7 +145,7 @@ def _analyze_with_gemini(raw_text: str, company_name: str) -> Optional[Dict[str,
         logger.warning("[Gemini] GEMINI_API_KEY 미설정")
         return None
     try:
-        from google import genai
+        from api.utils.google_provider_policy import genai
         client = genai.Client(api_key=GEMINI_API_KEY)
     except Exception as e:
         logger.warning("[Gemini] client init 실패: %s", str(e)[:120])
@@ -312,8 +314,10 @@ def analyze_all_business_reports(
 
         by_ticker[ticker] = ticker_cache
 
-    cache["by_ticker"] = by_ticker
-    _save_cache(cache)
+    # A policy-disabled/cache-only pass is not a new model observation.
+    if new_count:
+        cache["by_ticker"] = by_ticker
+        _save_cache(cache)
 
     return {
         "results": out,

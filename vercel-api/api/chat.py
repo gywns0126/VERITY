@@ -15,7 +15,10 @@ import time
 import traceback
 from collections import defaultdict
 
-from google import genai
+try:
+    from api.utils.google_provider_policy import genai
+except ImportError:
+    from google_provider_policy import genai
 
 _logger = logging.getLogger(__name__)
 
@@ -368,6 +371,9 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        self._json_response(410, {"ok": False, "status": "disabled_by_policy",
+                                  "error": "AI 채팅은 사용 중단 상태입니다."})
+        return
         ip = self.client_address[0] if self.client_address else "unknown"
         if not _global_budget_ok():
             self._json_response(429, {"ok": False, "error": "서비스 혼잡 - 잠시 후 재시도"})

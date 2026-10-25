@@ -46,14 +46,43 @@ def test_operator_bundle_has_no_server_model_call(monkeypatch):
 
 
 def test_macro_bundle_has_no_final_judgment_source(monkeypatch, tmp_path):
-    monkeypatch.setattr(macro_synthesis, "CACHE_PATH", str(tmp_path / "cache.json"))
-    monkeypatch.setattr(macro_synthesis, "_load_portfolio", lambda: {})
-    monkeypatch.setattr(macro_synthesis, "_perplexity_fresh", lambda: {"content": "global", "citations": []})
-    monkeypatch.setattr(macro_synthesis, "_gemini_facts", lambda grounding, fresh: {"content": "domestic"})
+    out_path = tmp_path / "macro_synthesis.json"
+    cache_path = tmp_path / "macro_synthesis_cache.json"
+    monkeypatch.setattr(macro_synthesis, "OUT_PATH", str(out_path))
+    monkeypatch.setattr(macro_synthesis, "CACHE_PATH", str(cache_path))
+    source = {
+        "provider": "codex-cli",
+        "model": "gpt-6.1-sol",
+        "content": "- 2026-10-25 verified fact",
+        "citations": ["https://www.bok.or.kr/official"],
+        "facts": [],
+        "source_as_of": "2026-10-25",
+        "error": None,
+    }
+    document = {
+        "contract": "macro-facts-v1",
+        "producer": "mac-mini-codex",
+        "generated_at": "2026-10-25T22:50:00+00:00",
+        "source_verification": "2/2",
+        "sources": {"codex_global": source, "codex_kr": source},
+        "google_calls": 0,
+        "disclosure": {"legacy_chain_retired": True},
+    }
+    cache_path.write_text(__import__("json").dumps(document), encoding="utf-8")
     out = macro_synthesis.synthesize_macro(force=True)
     assert out["contract"] == "macro-facts-v1"
-    assert set(out["sources"]) == {"perplexity", "gemini"}
+    assert set(out["sources"]) == {"codex_global", "codex_kr"}
+    assert out["consumer_mode"] == "cache_only" and out["_cache"] == "hit"
     assert out["disclosure"]["legacy_chain_retired"] is True
+
+
+def test_macro_operator_surface_prefers_mini_sources_and_labels_legacy_cache():
+    surface = _read("operator-web/app/macro/page.tsx")
+    assert "codex_global" in surface and "codex_kr" in surface
+    assert "source_as_of" in surface and "generated_at" in surface
+    assert "보존 캐시" in surface
+    assert "Google 검색 근거 · 72h" not in surface
+    assert '"Perplexity · 72h"' not in surface
 
 
 def test_hybrid_synthesizer_is_fail_closed():

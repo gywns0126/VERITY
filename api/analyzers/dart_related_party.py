@@ -89,6 +89,8 @@ def _extract_json(text: str) -> dict:
 
 
 def _call_once(client, model: str, prompt: str) -> Dict[str, Any]:
+    from api.utils.google_provider_policy import require_google_provider
+    require_google_provider()
     response = client.models.generate_content(
         model=model, contents=prompt,
         config={"response_mime_type": "application/json"},
@@ -102,7 +104,7 @@ def _analyze(raw_text: str, company_name: str) -> Optional[Dict[str, Any]]:
         logger.warning("[related_party] GEMINI_API_KEY 미설정")
         return None
     try:
-        from google import genai
+        from api.utils.google_provider_policy import genai
         client = genai.Client(api_key=GEMINI_API_KEY)
     except Exception as e:
         logger.warning("[related_party] genai client 실패: %s", e)
