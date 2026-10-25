@@ -287,6 +287,13 @@ def test_failure_on_changed_filing_retains_last_good_exhibit_and_success_clock(t
     assert retained["lastSuccessAt"] == old_success
     assert summary["error"] == 1
     assert summary["retained"] == 1
+    # Observing metadata is not successfully checking the new exhibit. The
+    # older successful filing's TTL must not suppress the next day's retry.
+    assert not core._new_local_submission(retained, tmp_path, now + timedelta(days=1))
+    assert core._selection(result, now, 1, source_dir=tmp_path,
+                           defer_reviews=True, excluded=result["requestBudget"]["ciks"]) == []
+    assert core._selection(result, now + timedelta(days=1), 1,
+                           source_dir=tmp_path, defer_reviews=True) == ["0000000001"]
 
 
 def test_offline_replay_limit_checkpoints_and_continues_without_changing_request_budget(tmp_path):

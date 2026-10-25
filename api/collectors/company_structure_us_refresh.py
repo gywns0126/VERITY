@@ -524,11 +524,14 @@ def _due_issuers(document, now, source_dir=None, defer_reviews=False, excluded=(
                           and review.get("parserRevision") != PARSER_REVISION)
         local_changed = _new_local_submission(issuer, source_dir, now)
         checked = _time(issuer.get("checkedAt"))
-        if not local_changed and not revised_review and checked and timedelta(0) <= now - checked < TTL:
+        attempted = _time(issuer.get("attemptedAt")) or _time(issuer.get("lastSuccessAt"))
+        # A later failed/interrupted attempt is not covered by an older filing's
+        # successful check. Same-day reservations still prevent duplicate work.
+        check_covers_attempt = checked and (not attempted or checked >= attempted)
+        if not local_changed and not revised_review and check_covers_attempt and timedelta(0) <= now - checked < TTL:
             continue
         # Missing exhibits/source gaps cannot permanently outrank healthy stale
         # issuers. Historical success is an attempt fallback for legacy stores.
-        attempted = _time(issuer.get("attemptedAt")) or _time(issuer.get("lastSuccessAt"))
         lanes[_refresh_lane(issuer, local_changed)].append(
             (not local_changed, attempted is not None,
              attempted or datetime.min.replace(tzinfo=timezone.utc), cik))
