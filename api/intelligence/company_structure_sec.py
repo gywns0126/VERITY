@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-25-bound-leading-title-table-v17"
+PARSER_REVISION = "2026-10-25-bound-flat-pages-v18"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -719,7 +719,7 @@ def _leading_title_table(soup, table, metadata, result):
     return header_i, roles
 
 
-def parse_exhibit(raw_html, metadata):
+def _parse_exhibit_columns(raw_html, metadata):
     """Parse explicit subsidiary/name and jurisdiction columns without ownership inference."""
     cik, accession, filed, period, url, proof = _metadata(metadata)
     if isinstance(raw_html, str):
@@ -1093,4 +1093,198 @@ def parse_exhibit(raw_html, metadata):
     result["status"] = "parsed" if rows and not needs_review else "needs-review"
     if result["status"] == "needs-review":
         result["reviewReason"] = "ambiguous-row-binding" if needs_review else "no-eligible-subsidiary-rows"
+    return result
+
+
+def _flat_page_text(nodes):
+    return _norm(" ".join(str(node) for node in nodes
+                          if isinstance(node, NavigableString) and not isinstance(node, Comment)
+                          and not node.find_parent(["head", "style", "script"]))).replace("\u200b", "").strip()
+
+
+def _omission_note(text):
+    """Closed completeness limitations, never permission to omit physical rows."""
+    day = r"[A-Za-z]+ [0-9]{1,2}, [0-9]{4}"
+    return bool(re.fullmatch(
+        r"(?:Pursuant to Item 601\(b\)\(21\) of Regulation S-K, we have omitted some "
+        r"subsidiaries that, considered in the aggregate as a single subsidiary, would not "
+        r"constitute a significant subsidiary as of " + day + r" under Rule 1-02\(w\) of Regulation S-X\."
+        r"|The names of certain subsidiaries which, if considered in the aggregate as a single "
+        r"subsidiary, would not constitute a [\u201c\"]?significant subsidiary[\u201d\"]? as defined in "
+        r"Regulation S-X, have been omitted\."
+        r"|Subsidiaries not included on this list, considered in the aggregate as a single "
+        r"subsidiary, would not constitute a significant subsidiary as of " + day + r"\.)",
+        text, re.I))
+
+
+def _bound_flat_pages(soup, metadata, result):
+    """Read all physical columns/pages under one explicit issuer title.
+
+    Empty spacing columns and a header split across two physical rows do not
+    change a name/jurisdiction pair. Extra data columns, scope text and partial
+    rows do. Keep original table/row evidence instead of rewriting the HTML.
+    """
+    tables = soup.find_all("table")
+    root = _issuer_name_key(metadata.get("issuerName"))
+    if not root or not tables or any(table.find_parent("table") or table.find("table") for table in tables):
+        return None
+    prefix = []
+    for node in (soup.body or soup).descendants:
+        if node is tables[0]:
+            break
+        prefix.append(node)
+    heading = _flat_page_text(prefix)
+    note = re.search(r"Pursuant to Item 601\(b\)\(21\).*", heading, re.I)
+    if note:
+        if not _omission_note(note[0]):
+            return None
+        heading = heading[:note.start()].strip()
+    title = _issuer_name_key(heading) or ""
+    title = re.sub(r"^exhibit (?:21|210|211) ", "", title)
+    issuer = _issuer_title_pattern(root)
+    title_pattern = (r"(?:(?:list of |significant |consolidated )?subsidiaries of " + issuer +
+                     r"|" + issuer + r" (?:list of |direct and indirect )?subsidiaries(?: of the registrant)?)")
+    if not re.fullmatch(title_pattern + r"(?: as of [a-z]+ [0-9]{1,2} [0-9]{4})?", title):
+        return None
+    if not _check_exhibit_as_of(soup, result["periodEnd"], result):
+        return result
+    names, rows, first_signature = set(), [], None
+    name_headers = {"name", "name of company", "company", "company name", "subsidiary", "subsidiaries",
+                    "name of subsidiary", "name of subsidiaries", "name of corporation",
+                    "subsidiary name", "entity name", "legal name"}
+
+    def physical(tr):
+        values, width = [], 0
+        for cell in tr.find_all(["th", "td"], recursive=False):
+            span = str(cell.get("colspan", "1"))
+            if (cell.get("rowspan") or not re.fullmatch(r"[1-9][0-9]?", span)
+                    or cell.find(["table", "sup", "script", "style", "pre"])):
+                return None
+            blocks = _cell_blocks(cell, name_cell=False)
+            if len(blocks) > 1:
+                return None
+            value = _norm(cell.get_text(" ", strip=True)).replace("\u200b", "").strip()
+            values.append((width, int(span), value))
+            width += int(span)
+        return width, values
+
+    def header(values):
+        filled = [(start, span, value) for start, span, value in values if value]
+        if len(filled) != 2:
+            return None
+        left, right = filled
+        if (left[2].casefold() not in name_headers or _header_role(right[2]) != "jurisdiction"
+                or len(right[2]) > 120 or re.search(r"[%0-9]", right[2])):
+            return None
+        return left[:2], right[:2]
+
+    for table_i, table in enumerate(tables):
+        trs = table.find_all("tr")
+        parsed = [physical(tr) for tr in trs]
+        if not parsed or any(value is None for value in parsed):
+            return None
+        nonempty = [i for i, (_, cells) in enumerate(parsed) if any(v for _, _, v in cells)]
+        if not nonempty:
+            return None
+        hi = nonempty[0]
+        header_values = parsed[hi][1]
+        signature = header(header_values)
+        end_header = hi
+        if signature is None and hi + 1 < len(parsed) and parsed[hi][0] == parsed[hi + 1][0]:
+            a, b = parsed[hi][1], parsed[hi + 1][1]
+            if [(x, w) for x, w, _ in a] == [(x, w) for x, w, _ in b]:
+                combined = [(x, w, _norm(v + " " + b[j][2])) for j, (x, w, v) in enumerate(a)]
+                signature = header(combined)
+                header_values = combined
+                end_header = hi + 1
+        if signature is None:
+            return None  # Unheaded continuations need a separate page-binding proof.
+        header_signature = (signature, tuple(value.casefold() for _, _, value in header_values if value))
+        if first_signature is None:
+            first_signature = header_signature
+        if header_signature != first_signature:
+            return None
+        width = parsed[hi][0]
+        for ri in range(end_header + 1, len(trs)):
+            actual_width, cells = parsed[ri]
+            filled = [(start, span, value) for start, span, value in cells if value]
+            if not filled:
+                continue
+            if actual_width != width or len(filled) != 2 or tuple(c[:2] for c in filled) != signature:
+                return None
+            name, jurisdiction = filled[0][2], filled[1][2]
+            if (not re.search(r"\w", name) or len(name) > 300 or len(jurisdiction) > 160
+                    or re.search(r"%|[;*\u2020\u2021]|\([0-9]{1,3}\)", name + " " + jurisdiction)
+                    or _OMIT.search(name) or re.fullmatch(r"[A-Z]{3}", jurisdiction)
+                    or re.search(r"\b(?:subsidiar(?:y|ies)|ownership|owned|parent|formerly|dba|fka|footnote|total)\b|d/b/a|f/k/a", name, re.I)
+                    or _header_role(name) is not None or jurisdiction.casefold() in {"jurisdiction", "country"}
+                    or (_LEGAL_TERMINATOR.search(name) and not _complete_legal_name(name))
+                    or len(_LEGAL_TERMINATOR.findall(name)) > 1 or name in names):
+                return None
+            if _issuer_name_key(name) == root:
+                continue
+            names.add(name)
+            rows.append({"name": name, "jurisdiction": jurisdiction, "ownershipPct": None,
+                         "directOwnership": "unspecified", "sourceRow": {"index": ri,
+                         "tableIndex": table_i, "text": _norm(trs[ri].get_text(" ", strip=True))}})
+            if len(rows) > _MAX_ROWS:
+                return None
+        last = list(table.descendants)[-1]
+        gap_nodes = []
+        for node in last.next_elements:
+            if table_i + 1 < len(tables) and node is tables[table_i + 1]:
+                break
+            gap_nodes.append(node)
+        gap = _flat_page_text(gap_nodes)
+        if gap and not (table_i == len(tables) - 1 and _omission_note(gap)):
+            return None
+    if not rows:
+        return None
+    return {**result, "rows": rows, "status": "parsed"}
+
+
+def parse_exhibit(raw_html, metadata):
+    result = _parse_exhibit_columns(raw_html, metadata)
+    if result["status"] == "parsed" and not result.get("cofilerProof"):
+        return result
+    raw = raw_html.encode("utf-8") if isinstance(raw_html, str) else raw_html
+    try:
+        html = raw.decode("utf-8", "strict")
+    except UnicodeDecodeError:
+        html = raw.decode("latin-1")
+    soup = BeautifulSoup(html, "html.parser")
+    if result.get("cofilerProof"):
+        from api.intelligence.company_structure_sec_sections import parse_cofiler_sections, parse_bound_name_list
+        # Existing column formats may already parse, but membership in a joint
+        # filing alone does not establish which registrant owns that list.
+        prefix = []
+        for node in (soup.body or soup).descendants:
+            if getattr(node, "name", None) == "table":
+                break
+            prefix.append(node)
+        heading = _issuer_name_key(_flat_page_text(prefix)) or ""
+        root = _issuer_name_key(metadata.get("issuerName"))
+        marker = r"(?:exhibit (?:21|211) )?"
+        title = _issuer_title_pattern(root) if root else r"(?!)"
+        bound_title = re.fullmatch(marker + r"(?:" + title + r" subsidiaries(?: of the registrant)?|"
+                                  r"(?:list of )?subsidiaries of " + title +
+                                  r")(?: as of [a-z]+ [0-9]{1,2} [0-9]{4})?", heading)
+        if result["status"] == "parsed" and bound_title:
+            return result
+        for parser in (parse_cofiler_sections, parse_bound_name_list):
+            reviewed = parser(soup, metadata, dict(result))
+            if reviewed is not None:
+                return reviewed
+        if not bound_title:
+            return {**result, "status": "needs-review", "rows": [],
+                    "reviewReason": "cofiler-parent-title-unbound"}
+    if result.get("reviewReason") not in {
+            "explicit-name-jurisdiction-header-missing", "multiple-tables-issuer-scope-unbound",
+            "ambiguous-row-binding", "partial-table-row-omission"}:
+        return result
+    reviewed = _bound_flat_pages(soup, metadata, dict(result))
+    if reviewed is not None:
+        if reviewed["status"] == "parsed":
+            reviewed.pop("reviewReason", None)
+        return reviewed
     return result

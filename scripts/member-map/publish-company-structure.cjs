@@ -7,7 +7,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { primaryEvidenceUrl } = require('../../review/member-map/company-structure-data.cjs');
-const { secUrl, usCooperatieLabel, MAX_BYTES, MAX_ISSUERS } = require('./build-live-company-structure.cjs');
+const { secUrl, usCooperatieLabel, usBankLabel, MAX_BYTES, MAX_ISSUERS } = require('./build-live-company-structure.cjs');
 const BASE = 'https://rte5guenhonw9fzn.public.blob.vercel-storage.com/';
 const INDEX = 'member_map_company_structure_index.json';
 const SHA = /^[a-f0-9]{64}$/u;
@@ -97,7 +97,7 @@ function validatePayload(p) {
     if (!ID.test(c.id) || ids.has(c.id)) fail(); ids.add(c.id);
     if (c.id.startsWith('KR:') || c.id.startsWith('US:')) {
       if (c.ticker !== c.id.slice(3) || c.market !== c.id.slice(0, 2)) fail();
-    } else if ('ticker' in c || 'market' in c || !(corporateLabel(c.name) || p.coverage.cik && usCooperatieLabel(c.name))) fail();
+    } else if ('ticker' in c || 'market' in c || !(corporateLabel(c.name) || p.coverage.cik && (usCooperatieLabel(c.name) || usBankLabel(c.name)))) fail();
     if ('country' in c && !/^[A-Z]{2}$/u.test(c.country)) fail();
   }
   const edges = new Set();
@@ -343,7 +343,7 @@ function sanitizeUsSources(doc) {
       for (const r of e.rows) {
         text(r.name, 180);
         if (r.ownershipPct !== null || r.directOwnership !== 'unspecified') fail();
-        if (!corporateLabel(r.name) && !usCooperatieLabel(r.name)) continue;
+        if (!corporateLabel(r.name) && !usCooperatieLabel(r.name) && !usBankLabel(r.name)) continue;
         const jurisdiction = r.jurisdiction ?? '';
         if (typeof jurisdiction !== 'string') fail();
         if (jurisdiction) text(jurisdiction, 160);

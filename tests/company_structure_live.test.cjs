@@ -7,7 +7,7 @@ const os = require('node:os');
 const { createHash } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 const { buildArtifacts, writeArtifacts, main, secUrl, MAX_BYTES } = require('../scripts/member-map/build-live-company-structure.cjs');
-const { loadArtifacts, sanitizeUsSources } = require('../scripts/member-map/publish-company-structure.cjs');
+const { loadArtifacts, sanitizeUsSources, validatePayload } = require('../scripts/member-map/publish-company-structure.cjs');
 const { makeCatalog } = require('../review/member-map/company-structure-data.cjs');
 
 const at = '2026-10-21T10:00:00Z', oldAt = '2026-10-03T10:00:00Z';
@@ -185,6 +185,22 @@ function usFixture() {
         url: 'https://www.sec.gov/Archives/edgar/data/1234/000000123426000001/ex21.htm', documentSha256: 'a'.repeat(64),
         rows: [{ name: 'Subsidiary Ltd.', jurisdiction: 'Delaware', ownershipPct: null, directOwnership: 'unspecified', sourceRow: { text: 'Subsidiary Ltd. Delaware' } }] } } } } };
 }
+test('reviewed SEC bank subsidiaries survive sanitation and projection without country or ownership inference', () => {
+  const fixture = usFixture(), issuer = fixture.usSources.issuers['0000001234'];
+  issuer.exhibit.rows = ['Atlantic Union Bank', 'SmartBank', 'Individual Fund Bank'].map(name => ({
+    name, jurisdiction: 'Virginia', ownershipPct: null, directOwnership: 'unspecified',
+  }));
+  fixture.usSources = sanitizeUsSources({ ...fixture.usSources, generatedAt: at });
+  assert.deepEqual(fixture.usSources.issuers['0000001234'].exhibit.rows.map(r => r.name), ['Atlantic Union Bank', 'SmartBank']);
+  const built = buildArtifacts(fixture), p = payload(built, 'US:ACME');
+  assert.equal(p.relations.length, 2);
+  assert.ok(p.companies.some(c => c.name === 'Atlantic Union Bank'));
+  assert.ok(p.companies.some(c => c.name === 'SmartBank'));
+  assert.ok(p.companies.every(c => c.country === undefined));
+  assert.ok(p.relations.every(r => r.ownershipPct === null && r.label === '공시상 자회사·직간접 미구분'));
+  assert.doesNotThrow(() => validatePayload(p));
+});
+
 test('SEC parser, publisher sanitizer, builder and publisher retain accession-bound co-filer evidence offline', () => {
   const cik = '0000006201', accession = '0000006201-26-000014';
   const url = 'https://www.sec.gov/Archives/edgar/data/4515/000000620126000014/ex211q42510k.htm';

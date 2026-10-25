@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from api.intelligence.company_structure_sec import find_exhibit, parse_exhibit
+from api.intelligence.company_structure_sec import PARSER_REVISION, find_exhibit, parse_exhibit
 
 
 CIK = "0001136869"
@@ -620,7 +620,7 @@ _LEADING_META = {**META, "issuerName": "Example Corp", "periodEnd": "2025-12-31"
 def test_bound_leading_title_and_late_header_use_existing_row_contract():
     result = parse_exhibit(_leading_title_exhibit(), _LEADING_META)
     assert result["status"] == "parsed"
-    assert result["parserRevision"] == "2026-10-25-bound-leading-title-table-v17"
+    assert result["parserRevision"] == PARSER_REVISION
     assert result["scope"] == "reported-subsidiary-list-not-exhaustive"
     assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == [
         ("Example Services LLC", "DE")]

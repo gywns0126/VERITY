@@ -35,6 +35,13 @@ function usCooperatieLabel(name) {
     /^.+\sCooperatie\s+U\.A\.$/iu.test(name);
 }
 
+// Used only after an accession-bound SEC subsidiary list passed review.
+// A bank's reported legal name need not end in Inc./Corp.; do not infer a country.
+function usBankLabel(name) {
+  return typeof name === 'string' && !/\b(?:fund|trust|individual)\b|펀드|개인|투자조합/iu.test(name) &&
+    /^(?:.+\sBank|[A-Z][A-Za-z]{2,}Bank)$/u.test(name);
+}
+
 function exclusion(row) {
   const type = String(row?.type || row?.kind || row?.asset_type || '').toUpperCase();
   const market = String(row?.market || '').toUpperCase();
@@ -216,7 +223,7 @@ function usPayload(aliases, source, generatedAt) {
     const name = clean(row?.name);
     // SEC reported lists can include direct AND indirect entities, never a direct-control tree.
     if (!name || row.ownershipPct !== null || row.directOwnership !== 'unspecified' || aggregate(name) || /\b(?:fund|trust|individual)\b|펀드|개인|투자조합/iu.test(name) ||
-      !(/(?:\b(?:inc|incorporated|corp|corporation|company|co|ltd|limited|llc|llp|plc|gmbh|sarl|pte|bv|sa)\b|주식회사|유한회사|有限公司)/iu.test(name) || usCooperatieLabel(name)) ||
+      !(/(?:\b(?:inc|incorporated|corp|corporation|company|co|ltd|limited|llc|llp|plc|gmbh|sarl|pte|bv|sa)\b|주식회사|유한회사|有限公司)/iu.test(name) || usCooperatieLabel(name) || usBankLabel(name)) ||
       aliases.some(a => norm(a.name).toLowerCase() === norm(name).toLowerCase())) { unsupported++; continue; }
     if (row.jurisdiction != null && (typeof row.jurisdiction !== 'string' || row.jurisdiction.length > 160)) { unsupported++; continue; }
     const peer = `FOREIGN:${hash(Buffer.from(`${cik}|${norm(row.name).toLowerCase()}|${norm(row.jurisdiction).toLowerCase()}`)).slice(0, 20)}`;
@@ -423,5 +430,5 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { buildArtifacts, writeArtifacts, main, verifiedRow, secUrl, usCooperatieLabel, mappedCik, MAX_BYTES, MAX_ISSUERS };
+module.exports = { buildArtifacts, writeArtifacts, main, verifiedRow, secUrl, usCooperatieLabel, usBankLabel, mappedCik, MAX_BYTES, MAX_ISSUERS };
 if (require.main === module) { try { main(); } catch (e) { process.stderr.write(e.message + '\n'); process.exitCode = 1; } }
