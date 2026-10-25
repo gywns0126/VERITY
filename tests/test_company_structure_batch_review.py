@@ -800,7 +800,7 @@ def test_cache_replay_failure_is_reported_without_blocking_other_collectors(tmp_
     by_id = {s['id']: s for s in steps if 'id' in s}
     assert by_id['us-replay']['continue-on-error'] is True
     assert by_id['sec-raw-cache']['continue-on-error'] is True
-    assert steps.index(by_id['sec-raw-cache']) < steps.index(by_id['us-replay']) < steps.index(by_id['us'])
+    assert steps.index(by_id['sec-raw-cache']) < steps.index(by_id['us']) < steps.index(by_id['us-replay'])
     report = next(s for s in steps if s.get('name') == 'Report collection failures after durable checkpoint')
     assert "steps.us-replay.outcome == 'failure'" in report['if']
     assert "steps.sec-raw-cache.outcome == 'failure'" in report['if']

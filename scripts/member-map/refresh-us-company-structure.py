@@ -3,6 +3,8 @@
 
 The store is separate from KR sources; saving is not operational publication.
 Only --source-dir's fixed universe/map/submission-cache paths select sources.
+Collection reuses unresolved same-accession results; run --replay-cached after
+collection to apply a changed parser under its separate 160-parse/120s budget.
 The 1800s soft deadline stops new work; an in-flight bounded HTTP request may
 extend it by up to its 30s transport timeout, plus parsing/checkpoint time.
 The socket timeout is not a hard total-response deadline.
@@ -26,8 +28,8 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-dir", type=Path, required=True)
     parser.add_argument("--store", type=Path, required=True)
-    parser.add_argument("--limit", type=int, default=core.MAX_CIKS)
-    parser.add_argument("--max-elapsed-seconds", type=float, default=core.MAX_ELAPSED_SECONDS)
+    parser.add_argument("--limit", type=int)
+    parser.add_argument("--max-elapsed-seconds", type=float)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--fetch-public", action="store_true")
     mode.add_argument("--replay-cached", action="store_true")
@@ -35,6 +37,10 @@ def parse_args(argv=None):
     args = parser.parse_args(argv)
     if args.replay_cached and args.raw_cache_dir is None:
         parser.error("--replay-cached requires --raw-cache-dir")
+    if args.limit is None:
+        args.limit = core.MAX_REPLAY_CIKS if args.replay_cached else core.MAX_CIKS
+    if args.max_elapsed_seconds is None:
+        args.max_elapsed_seconds = core.MAX_REPLAY_SECONDS if args.replay_cached else core.MAX_ELAPSED_SECONDS
     return args
 
 
@@ -47,7 +53,8 @@ def run(args):
             current_ciks = (document["currentCiks"] if "currentCiks" in document else
                             core.build_document(args.source_dir, document)["currentCiks"])
             replayed, summary = core.reparse_cached_reviews(document, args.raw_cache_dir,
-                current_ciks=current_ciks)
+                current_ciks=current_ciks, limit=args.limit, max_elapsed_seconds=args.max_elapsed_seconds,
+                checkpoint=lambda value: core.atomic_json(args.store, value))
             if replayed != document:
                 core.atomic_json(args.store, replayed)
             print(json.dumps(summary, ensure_ascii=False))
@@ -55,7 +62,8 @@ def run(args):
         document = core.build_document(args.source_dir, core.read_json(args.store, maximum=None) if args.store.exists() else None)
         document, summary = core.refresh(document, source_dir=args.source_dir, limit=args.limit,
             fetch_public=args.fetch_public, checkpoint=lambda value: core.atomic_json(args.store, value),
-            max_elapsed_seconds=args.max_elapsed_seconds, raw_cache_dir=args.raw_cache_dir)
+            max_elapsed_seconds=args.max_elapsed_seconds, raw_cache_dir=args.raw_cache_dir,
+            defer_reviews=True)
         if args.fetch_public:
             document["summary"] = summary
             core.atomic_json(args.store, document)
