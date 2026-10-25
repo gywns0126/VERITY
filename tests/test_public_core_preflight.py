@@ -107,6 +107,19 @@ def test_minimum_universe_matches_delivery_verifier():
         assert f'floorPct: {int(cfg["floor"])}' in line
 
 
+def test_optional_business_builder_installs_its_existing_parser_for_minimal_callers():
+    action = yaml.safe_load((ROOT / ".github/actions/publish-data/action.yml").read_text())
+    step = next(s for s in action["runs"]["steps"]
+                if s["name"] == "Build optional public business index and publisher receipt")
+    script = step["run"]
+    # The actual cockpit failure occurred before source reads, while importing
+    # the engine's existing annual-table parser in a requests-only environment.
+    assert "if python3 -m pip install" in script
+    assert "'beautifulsoup4==4.14.3'" in script
+    assert script.index("pip install") < script.index("&& python3 scripts/member-map/")
+    assert 'else\n  rm -f "$artifact" "$receipt"' in script
+
+
 @pytest.mark.parametrize("value,expected", [(0, True), (-1.5, True), ("1e2", True),
     (" -2.0 ", True), ("NaN", False), ("Infinity", False), (True, False),
     ({}, False), ([], False), ("not a number", False), ("1,000", False),
