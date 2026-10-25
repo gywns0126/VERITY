@@ -78,6 +78,13 @@ function fixture(){
  return{context,scope,edges,stock,record,candidate,native,root,host,space,nodes,svg,inspector,live,button,controls,alreadyInert,observer,hostParts,
   visualContext,visualCalls,reference,engine,engineCalls,engineState,graph,gridFine,gridCoarse,layoutCalls:()=>layoutCalls,assertNative:()=>assert.deepEqual(nativeValues(),before)};
 }
+test('CSS contract allows long or unbroken network card and detail text to wrap',()=>{
+ assert.match(source,/#an-map-design \.an-network-space\[data-stage=cards\] \.an-network-node>span:last-child\{flex:1;min-width:0\}/);
+ assert.match(source,/#an-map-design \.an-network-space\[data-stage=cards\] \.an-network-label\{[^}]*overflow:hidden;overflow-wrap:anywhere/);
+ assert.match(source,/#an-map-design \.an-network-inspector p\{[^}]*overflow-wrap:anywhere/);
+ assert.match(source,/#an-map-design \.an-network-inspector button\{[^}]*overflow-wrap:anywhere/);
+ assert.match(source,/@media\(max-width:700px\)[^\n]*\.an-network-inspector\{max-height:150px/);
+});
 test('stage thresholds are dots / names / cards at the exact boundaries',()=>{
  const {context:c}=fixture();
  for(const [zoom,expected]of[[.02,'dots'],[.279999,'dots'],[.28,'names'],[.799999,'names'],[.8,'cards'],[4,'cards']])assert.equal(c.memberNetworkStage(zoom),expected);

@@ -10,6 +10,8 @@ const dependencyRoot = path.resolve(process.env.MEMBER_MAP_TEST_DEPENDENCY_ROOT 
 const projectRequire = createRequire(path.join(dependencyRoot, 'package.json'));
 const esbuild = projectRequire('esbuild');
 const source = fs.readFileSync(path.join(root, 'review/member-map/company-structure-view.tsx'), 'utf8');
+const style = source.match(/const CSS = `([\s\S]*?)`/)[1];
+const styleRule = selector => style.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\{([^}]*)\\}`))[1];
 const code = esbuild.transformSync(source, {
   loader: 'tsx', format: 'cjs', target: 'es2022',
 }).code;
@@ -96,6 +98,23 @@ test('layout caps each branch at six and spaces sibling cards without overlap', 
   assert.equal(layout.byId.size, 7);
   const xs = root.children.map(id => layout.byId.get(id).x).sort((a, b) => a - b);
   assert.ok(xs.every((x, i) => i === 0 || x - xs[i - 1] >= 224), `overlapping child x positions: ${xs}`);
+});
+
+test('CSS contract allows long or unbroken card and detail text to wrap or clip', () => {
+  assert.match(source, /className="acs-name" title=\{n\.company\.name\}>\{n\.company\.name\}/);
+  assert.ok(source.includes('title={`${focus?.name || "기업 구조"}의 주주·출자 연결`}'));
+  assert.match(styleRule('.acs-toolbar>span'), /display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden/);
+  assert.match(styleRule('.acs-card'), /width:224px/);
+  assert.match(styleRule('.acs-card-main'), /min-width:0/);
+  assert.match(styleRule('.acs-name'), /overflow:hidden;text-overflow:ellipsis;white-space:nowrap/);
+  assert.match(styleRule('.acs-inspector'), /width:286px;max-width:40%;min-width:0/);
+  assert.match(styleRule('.acs-inspector'), /overflow:auto/);
+  for (const selector of ['.acs-inspector h2', '.acs-inspector p', '.acs-inspector summary', '.acs-inspector a']) {
+    assert.match(styleRule(selector), /overflow-wrap:anywhere/);
+  }
+  assert.match(style, /\.acs-space\{[^}]*overflow:hidden/);
+  const mobile = style.slice(style.indexOf('@media(max-width:700px)'));
+  assert.match(mobile, /\.acs-inspector\{position:absolute;bottom:0;left:0;right:0;width:auto;max-width:none/);
 });
 
 test('validation and layout leave the source catalogue unchanged', () => {

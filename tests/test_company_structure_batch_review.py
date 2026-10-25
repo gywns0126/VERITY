@@ -126,6 +126,100 @@ def test_saved_flat_statement_originals(ticker, cik, accession, filed, period, i
                for row in result["rows"])
 
 
+def _flat_table_exhibit(*, title="Subsidiaries of American Electric Power Company, Inc.",
+                        heading="Name", jurisdiction="Jurisdiction", row="First Company LLC",
+                        place="Delaware", after="", row_spans=('3', '3', '3')):
+    values = [f"<td colspan='{row_spans[0]}'>{row}</td>",
+              f"<td colspan='{row_spans[1]}'></td>",
+              f"<td colspan='{row_spans[2]}'>{place}</td>"]
+    return (f"<body><p>Exhibit 21.1</p><p>{title}</p><table>"
+            "<tr><td></td><td></td><td></td><td></td><td></td><td></td>"
+            "<td></td><td></td><td></td></tr>"
+            "<tr><td colspan='3'></td><td colspan='3'></td><td colspan='3'></td></tr>"
+            "<tr><td colspan='3'></td><td colspan='3'></td><td colspan='3'></td></tr>"
+            f"<tr><td colspan='3'>{heading}</td><td colspan='3'></td>"
+            f"<td colspan='3'>{jurisdiction}</td></tr>"
+            f"<tr>{''.join(values)}</tr></table>{after}</body>")
+
+
+def test_exact_issuer_flat_table_accepts_late_header_without_parent_inference():
+    result = parse_exhibit(_flat_table_exhibit(), META)
+    assert result["status"] == "parsed"
+    assert [(r["name"], r["jurisdiction"]) for r in result["rows"]] == [
+        ("First Company LLC", "Delaware")]
+    assert result["rows"][0]["ownershipPct"] is None
+    assert result["rows"][0]["directOwnership"] == "unspecified"
+    assert result["scope"] == "reported-subsidiary-list-not-exhaustive"
+
+
+def test_flat_table_date_mismatch_in_name_cannot_bypass_common_as_of_guard():
+    result = parse_exhibit(_flat_table_exhibit(
+        row="Glumac as of January 1, 2024", place="California"), META)
+    assert result["status"] == "needs-review"
+    assert result["reviewReason"] == "exhibit-as-of-differs-from-period-end"
+    assert result["statedAsOf"] == "2024-01-01"
+    assert result["rows"] == []
+
+
+@pytest.mark.parametrize("change", [
+    {"title": "Subsidiaries of Other Inc."},
+    {"title": "Former Subsidiaries of American Electric Power Company, Inc."},
+    {"title": "Subsidiaries of American Electric Power Company, Inc. as of January 1, 2026"},
+    {"heading": "Trade Name"},
+    {"jurisdiction": "Amount"},
+    {"place": "USD"},
+    {"place": "Delaware 75%"},
+    {"row": "First Company LLC (75%)"},
+    {"row": "First Company LLC (2)"},
+    {"row": "First Company LLC Second Company Inc."},
+    {"row": "First Company LLC Other Products"},
+    {"row": "First Company LLC d/b/a Other Company"},
+    {"row": "First Company LLC formerly Other Company"},
+    {"after": "<p>Second Company LLC is owned by First Company LLC.</p>"},
+    {"after": "<table><tr><td>Second Company LLC</td><td>Ohio</td></tr></table>"},
+    {"row_spans": ('3', '4', '2')},
+])
+def test_flat_table_near_misses_remain_held_without_partial_rows(change):
+    result = parse_exhibit(_flat_table_exhibit(**change), META)
+    assert result["status"] == "needs-review"
+    assert result["rows"] == []
+
+
+@pytest.mark.parametrize("issuer_name", [None, "Other Inc."])
+def test_flat_table_needs_matching_metadata_issuer(issuer_name):
+    result = parse_exhibit(_flat_table_exhibit(), {**META, "issuerName": issuer_name})
+    assert result["status"] == "needs-review"
+
+
+@pytest.mark.parametrize("omitted_name", ["Example Properties Trust", "Foreign Systems Ltd",
+                                               "Branch Technologies, Inc.", "Total Solutions LLC"])
+def test_issuer_bound_table_does_not_silently_omit_populated_entity_rows(omitted_name):
+    html = ("<p>Subsidiaries of American Electric Power Company, Inc.</p>"
+            "<table><tr><th>Name</th><th>Jurisdiction</th></tr>"
+            f"<tr><td>{omitted_name}</td><td>Delaware</td></tr>"
+            "<tr><td>Other Company LLC</td><td>Ohio</td></tr></table>")
+    result = parse_exhibit(html, META)
+    assert (result["status"], result["reviewReason"], result["rows"]) == (
+        "needs-review", "partial-table-row-omission", [])
+
+
+def test_saved_svc_trust_rows_hold_entire_exhibit_without_partial_output():
+    cache_dir = os.environ.get("SEC_EXHIBIT_CACHE_DIR")
+    if not cache_dir:
+        pytest.skip("set SEC_EXHIBIT_CACHE_DIR for the offline saved-original check")
+    digest = "85b5dd8d8ab3ed8b565df0d9b9b588a26433545f76b46a1663c860932b466311"
+    raw = gzip.decompress((Path(cache_dir) / f"{digest}.gz").read_bytes())
+    assert hashlib.sha256(raw).hexdigest() == digest
+    result = parse_exhibit(raw, {
+        "cik": "0000945394", "accession": "0000945394-26-000012",
+        "filedDate": "2026-02-25", "periodEnd": "2025-12-31",
+        "url": "https://www.sec.gov/Archives/edgar/data/945394/000094539426000012/svc_123125xex211subsidiary.htm",
+        "issuerName": "Service Properties Trust",
+    })
+    assert (result["status"], result["reviewReason"], result["rows"]) == (
+        "needs-review", "partial-table-row-omission", [])
+
+
 def _registrant_pages(title="American Electric Power Company, Inc. Subsidiaries of the Registrant",
                       gap="", second_name="Second Company GmbH"):
     header = "<tr><td>Name of Company</td><td>Jurisdiction</td></tr>"
@@ -231,6 +325,16 @@ def test_blank_name_header_needs_matching_metadata_issuer(issuer_name):
      "needs-review", "issuer-scope-unbound", 0),
     ("WABC", "76b317d1257e55f762bb88686c5120f0049dcc46372e4d5065e1f8c7a09d0a61",
      "needs-review", "issuer-scope-unbound", 0),
+    ("AORT", "b91b2dda6eec55fbb3bea369f2aabad291e996c5065cb97d880bbcca9c41007d",
+     "parsed", None, 38),
+    ("TTEK", "11c9be71d0d8acb874f96667ae1b608dd52c93e589526adfa5b46580d20297ab",
+     "parsed", None, 24),
+    ("UNP", "6eeb75646bacabf9d94dc58f64d11b7884f698aa14b4f77582d5f896375b3146",
+     "parsed", None, 1),
+    ("POWL", "06f1c7892f06925ceba0505361a5887798ed8ce59f2d7a00acc88671770f2eeb",
+     "parsed", None, 15),
+    ("HWC", "52aae9fd8dea41ff4db612869b511f4462ae0a7137062a9874fd53ff9d3bc2d1",
+     "parsed", None, 6),
 ])
 def test_saved_originals_keep_source_hash_and_review_boundary(ticker, digest, status, reason, row_count):
     cache_dir = os.environ.get("SEC_EXHIBIT_CACHE_DIR")
