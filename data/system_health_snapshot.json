@@ -1,73 +1,73 @@
 {
   "system_health": {
-    "status": "ok",
-    "checked_at": "2026-10-26T06:09:51+09:00",
+    "status": "error",
+    "checked_at": "2026-10-26T07:10:03+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 12805,
+    "elapsed_ms": 16277,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 706,
+        "latency_ms": 810,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 384,
+        "latency_ms": 578,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 514,
+        "latency_ms": 399,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 543,
+        "latency_ms": 617,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 614,
+        "latency_ms": 1051,
         "detail": "정상",
         "attempts": 1
       },
       "reports_signed_url": {
-        "status": "ok",
-        "latency_ms": 1547,
-        "detail": "signed URL + fetch 정상",
+        "status": "error",
+        "latency_ms": 5777,
+        "detail": "sign HTTP 544 body={\"statusCode\":\"544\",\"error\":\"DatabaseTimeout\",\"message\":\"The connection to the database timed out\",\"code\":\"DatabaseTimeout\"}",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 11970,
+        "latency_ms": 15568,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20261022)",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 530,
+        "latency_ms": 667,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 166,
+        "latency_ms": 304,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 230,
+        "latency_ms": 177,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 100,
+        "latency_ms": 135,
         "detail": "정상",
         "attempts": 1
       },
@@ -87,10 +87,10 @@
     "github_worker": {
       "status": "ok",
       "conclusion": "success",
-      "workflow": "Cockpit Aggregate (5분 cron)",
-      "started_at": "2026-10-25T21:07:04Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/40233960342",
-      "detail": "Cockpit Aggregate (5분 cron): success"
+      "workflow": "nps-employment",
+      "started_at": "2026-10-25T22:07:48Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/40238731212",
+      "detail": "nps-employment: success"
     },
     "data_recency": {
       "status": "ok",
@@ -98,43 +98,43 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-10-26 06:08",
+          "last_updated": "2026-10-26 07:08",
           "age_hours": 0.03,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-10-26 06:08",
+          "last_updated": "2026-10-26 07:08",
           "age_hours": 0.03,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-10-26 06:08",
+          "last_updated": "2026-10-26 07:08",
           "age_hours": 0.03,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-10-26 06:08",
+          "last_updated": "2026-10-26 07:08",
           "age_hours": 0.03,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-10-26 06:08",
+          "last_updated": "2026-10-26 07:08",
           "age_hours": 0.03,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-10-26 06:08",
+          "last_updated": "2026-10-26 07:08",
           "age_hours": 0.03,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-10-26 06:08",
+          "last_updated": "2026-10-26 07:08",
           "age_hours": 0.03,
           "threshold_hours": 1
         }
@@ -143,16 +143,18 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "35829ee",
-      "remote_message": "🎯 cockpit 2026-10-26T06:06",
-      "remote_date": "2026-10-25T21:06:36Z",
-      "local_sha": "35829ee"
+      "remote_sha": "6f818b8",
+      "remote_message": "🎯 cockpit 2026-10-26T07:06",
+      "remote_date": "2026-10-25T22:06:28Z",
+      "local_sha": "6f818b8"
     },
-    "errors": [],
+    "errors": [
+      "reports_signed_url API 오류 — sign HTTP 544 body={\"statusCode\":\"544\",\"error\":\"DatabaseTimeout\",\"message\":\"The connection to the database timed out\",\"code\":\"DatabaseTimeout\"}"
+    ],
     "warnings": [],
-    "overall_status": "ok"
+    "overall_status": "error"
   },
-  "updated_at": "2026-10-26T06:09:59+09:00",
+  "updated_at": "2026-10-26T07:10:14+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
