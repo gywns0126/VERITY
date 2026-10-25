@@ -91,6 +91,19 @@ def test_single_blank_name_header_requires_exact_issuer_and_keeps_nonexhaustive_
     assert result["rows"][0]["directOwnership"] == "unspecified"
 
 
+def test_blank_header_omission_note_never_accepts_another_issuer_or_extra_scope():
+    note = ("* Pursuant to Item 601(b)(21)(ii) of Regulation S-K, the names of other subsidiaries of "
+            + META["issuerName"] + " are omitted because, considered in the aggregate, they would not constitute "
+            "a significant subsidiary as of the end of the year covered by this report.")
+    parsed = parse_exhibit(_blank_name_exhibit(after=f"<p>{note}</p>"), META)
+    assert parsed["status"] == "parsed"
+    assert parsed["scope"] == "reported-subsidiary-list-not-exhaustive"
+    for invalid in (note.replace(META["issuerName"], "Other Inc."), note + " Ownership was sold after year end."):
+        held = parse_exhibit(_blank_name_exhibit(after=f"<p>{invalid}</p>"), META)
+        assert held["status"] == "needs-review"
+        assert held["reviewReason"] == "continuation-scope-text"
+
+
 @pytest.mark.parametrize("html,reason", [
     (_blank_name_exhibit(title="Subsidiaries of the Registrant"), "issuer-scope-unbound"),
     (_blank_name_exhibit(title="Subsidiaries of Other Inc."), "issuer-scope-unbound"),
