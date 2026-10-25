@@ -72,6 +72,9 @@ runs:
         # 🚫 consensus_data.json 도 발행 제외 (2026-07-21 전수감사, PM "긴급도순 ㄱㄱ" 승인) —
         #   KR 브로커 목표가/투자의견(예: target_price 911524·"매수")로 us_analyst_consensus 와 동일
         #   법적 class(재배포 blocker·법률큐). 소비처 0 확인(framer+vercel-api grep 전무). 7/10 결정 정합 확장.
+        # Discovery 목록 3개는 아래 단계에서 최종 staged report로 생성한다.
+        # data/ 추적 원본이 아니므로 이 초기 복사 목록/manifest C1 대상에 넣지 않는다.
+        # 선택적 business index/receipt도 staged builder가 따로 생성·검증한다.
         for f in portfolio.json recommendations.json \
                  macro_snapshot.json \
                  crypto_macro.json \
@@ -99,9 +102,7 @@ runs:
                  urgent_alerts.json \
                  validation_summary.json \
                  stock_report_public.json \
-                 stock_report_list_public.json \
                  us_stock_report_public.json \
-                 us_stock_report_list_public.json \
                  cross_gics_kr.json \
                  cross_gics_us.json \
                  us_quarterly_public.json \
@@ -138,7 +139,6 @@ runs:
                  smallcap_corner_filters.json \
                  us_smallcap_corner_filters.json \
                  us_stock_report_us_smallcap.json \
-                 us_smallcap_report_list_public.json \
                  broker_guide.json \
                  etf_flow.json \
                  us_etf.json \
