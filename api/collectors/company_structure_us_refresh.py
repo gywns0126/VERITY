@@ -96,7 +96,7 @@ def get_public(url, maximum=MAX_BYTES):
     return raw
 
 
-def _valid_exhibit_url(url, cik, accession):
+def _valid_exhibit_url(url, cik, accession, proof=None):
     """Validate an exact filing-bound SEC document URL, including co-filers."""
     if (not isinstance(cik, str) or not re.fullmatch(r"[0-9]{10}", cik)
             or not isinstance(accession, str) or not re.fullmatch(r"[0-9]{10}-[0-9]{2}-[0-9]{6}", accession)
@@ -116,7 +116,16 @@ def _valid_exhibit_url(url, cik, accession):
         if not match or match.group(2) != accession.replace("-", ""):
             return False
         archive_cik = match.group(1)
-        return archive_cik == str(int(cik)) or accession[:10] == cik
+        if archive_cik == str(int(cik)) or accession[:10] == cik:
+            return proof is None
+        return (isinstance(proof, dict) and set(proof) == {"requestedCik", "archiveCik",
+                "accession", "issuerName", "exhibitUrl", "indexSha256"}
+                and proof.get("requestedCik") == cik
+                and proof.get("archiveCik") == archive_cik
+                and proof.get("accession") == accession and proof.get("exhibitUrl") == url
+                and isinstance(proof.get("issuerName"), str)
+                and isinstance(proof.get("indexSha256"), str)
+                and re.fullmatch(r"[0-9a-f]{64}", proof.get("indexSha256", "")) is not None)
     except (ValueError, UnicodeError):
         return False
 
@@ -279,23 +288,32 @@ def _review_cache_binding(issuer, cik, metadata, review):
     expected = {"cik": cik, "accession": metadata["accession"], "filedDate": metadata["filed_date"],
                 "periodEnd": metadata["period_end"], "url": review.get("url"),
                 "documentSha256": review.get("documentSha256")}
+    proof = review.get("cofilerProof")
+    if proof is not None:
+        expected["cofilerProof"] = proof
     if ((binding is not None and binding != expected)
             or review.get("cik") != cik or review.get("accession") != metadata["accession"]
             or review.get("filedDate") != metadata["filed_date"]
             or review.get("periodEnd") != metadata["period_end"]
-            or not _valid_exhibit_url(review.get("url"), cik, metadata["accession"])):
+            or not _valid_exhibit_url(review.get("url"), cik, metadata["accession"], proof)
+            or (proof is not None and (not isinstance(proof, dict)
+                or proof.get("issuerName") != metadata["issuer_name"]))):
         raise ValueError("sec-raw-cache-binding")
     return expected
 
 
-def _parse_raw_exhibit(raw, cik, metadata, exhibit_url, helpers):
-    parsed = helpers.parse_exhibit(raw, {"cik": cik, "accession": metadata["accession"],
+def _parse_raw_exhibit(raw, cik, metadata, exhibit_url, helpers, proof=None, index_raw=None):
+    parse_metadata = {"cik": cik, "accession": metadata["accession"],
         "filedDate": metadata["filed_date"], "periodEnd": metadata["period_end"], "url": exhibit_url,
-        "issuerName": metadata["issuer_name"]})
+        "issuerName": metadata["issuer_name"], "form": metadata["form"]}
+    if proof is not None:
+        parse_metadata.update(cofilerProof=proof, cofilerIndexRaw=index_raw)
+    parsed = helpers.parse_exhibit(raw, parse_metadata)
     if not isinstance(parsed, dict) or any(parsed.get(key) != value for key, value in {
             "cik": cik, "accession": metadata["accession"], "filedDate": metadata["filed_date"],
             "periodEnd": metadata["period_end"], "url": exhibit_url,
-            "documentSha256": hashlib.sha256(raw).hexdigest()}.items()):
+            "documentSha256": hashlib.sha256(raw).hexdigest(), "cofilerProof": proof}.items()
+            if key != "cofilerProof" or proof is not None):
         raise ValueError("sec-raw-cache-parse-mismatch")
     return parsed
 
@@ -324,12 +342,15 @@ def reparse_cached_reviews(document, raw_cache_dir, now=None, helpers=None, curr
                 raise ValueError("sec-raw-cache-binding")
             binding = _review_cache_binding(issuer, cik, metadata, review)
             try:
+                proof = binding.get("cofilerProof")
+                index_raw = (_read_raw_exhibit(raw_cache_dir, proof["indexSha256"])
+                             if proof is not None else None)
                 raw = _read_raw_exhibit(raw_cache_dir, binding["documentSha256"])
             except FileNotFoundError:
                 lists["missing"].append(cik)
                 continue
             lists["cacheHits"].append(cik)
-            parsed = _parse_raw_exhibit(raw, cik, metadata, binding["url"], helpers)
+            parsed = _parse_raw_exhibit(raw, cik, metadata, binding["url"], helpers, proof, index_raw)
             if parsed.get("status") == "parsed":
                 observed = _time(issuer.get("attemptedAt"))
                 filed = _time(metadata["filed_date"] + "T00:00:00Z")
@@ -580,6 +601,8 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
                                and old.get("parserRevision") != PARSER_REVISION)
                     same_filing_review = (revised and old.get("cik") == cik and old.get("accession") == accession)
                     raw = None
+                    proof = None
+                    index_raw = None
                     if raw_cache_dir is not None and same_filing_review:
                         binding = _review_cache_binding(issuer, cik, metadata, old)
                         if time_exhausted():
@@ -590,7 +613,17 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
                             pass  # Cache eviction: bounded normal GET remains available.
                         if raw is not None:
                             exhibit_url = binding["url"]
-                            lists["rawCacheHit"].append(cik)
+                            proof = binding.get("cofilerProof")
+                            if proof is not None:
+                                try:
+                                    index_raw = _read_raw_exhibit(raw_cache_dir, proof["indexSha256"])
+                                except FileNotFoundError:
+                                    # The public store retains the proof, not the
+                                    # cache binding. Refetch the bounded filing
+                                    # index and exhibit when its proof is evicted.
+                                    raw, proof = None, None
+                            if raw is not None:
+                                lists["rawCacheHit"].append(cik)
                     if raw is None:
                         if MAX_HTTP - budget["requests"] < 2:
                             summary["stopReason"] = "daily-http-budget"
@@ -598,10 +631,23 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
                         directory = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accession.replace('-', '')}/"
                         index_url = directory + accession + "-index.html"
                         index = get(index_url, cik, {index_url})
-                        exhibit_url = helpers.find_exhibit(index, cik=cik, accession=accession, form=metadata["form"])
+                        try:
+                            exhibit_url = helpers.find_exhibit(index, cik=cik, accession=accession,
+                                                               form=metadata["form"])
+                        except ValueError as exc:
+                            if str(exc) != "sec-cofiler-issuer-needs-review":
+                                raise
+                            exhibit_url, proof = helpers.find_exhibit(index, cik=cik, accession=accession,
+                                form=metadata["form"], issuer_name=metadata["issuer_name"], return_proof=True)
+                            if proof is None or raw_cache_dir is None:
+                                raise ValueError("sec-cofiler-issuer-needs-review")
+                            index_digest, _, index_skipped = _save_raw_exhibit(raw_cache_dir, index)
+                            if index_skipped or index_digest != proof["indexSha256"]:
+                                raise ValueError("sec-cofiler-issuer-needs-review")
+                            index_raw = index
                         if exhibit_url is None:
                             raise ValueError("source-gap:ex21-missing")
-                        if not _valid_exhibit_url(exhibit_url, cik, accession):
+                        if not _valid_exhibit_url(exhibit_url, cik, accession, proof):
                             raise ValueError("sec-exhibit-url-invalid")
                         raw = get(exhibit_url, cik, {exhibit_url})
                         if raw_cache_dir is not None:
@@ -609,14 +655,18 @@ def refresh(document, *, source_dir, limit=MAX_CIKS, fetch_public=False, checkpo
                             if skipped:
                                 issuer.pop("rawExhibitCache", None)
                                 lists["rawCacheSkipped"].append(cik)
+                                if proof is not None:
+                                    raise ValueError("sec-cofiler-issuer-needs-review")
                             else:
                                 issuer["rawExhibitCache"] = {"cik": cik, "accession": accession,
                                     "filedDate": metadata["filed_date"], "periodEnd": metadata["period_end"],
                                     "url": exhibit_url, "documentSha256": digest}
+                                if proof is not None:
+                                    issuer["rawExhibitCache"]["cofilerProof"] = proof
                                 checkpoint(document)  # Durable source binding precedes parsing.
                                 if saved:
                                     lists["rawCacheSaved"].append(cik)
-                    parsed = (_parse_raw_exhibit(raw, cik, metadata, exhibit_url, helpers) if raw_cache_dir is not None
+                    parsed = (_parse_raw_exhibit(raw, cik, metadata, exhibit_url, helpers, proof, index_raw) if raw_cache_dir is not None
                               else helpers.parse_exhibit(raw, {"cik": cik, "accession": accession,
                                   "filedDate": metadata["filed_date"], "periodEnd": metadata["period_end"],
                                   "url": exhibit_url, "issuerName": metadata["issuer_name"]}))

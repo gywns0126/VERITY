@@ -12,7 +12,7 @@ import re
 
 from bs4 import BeautifulSoup, Comment, NavigableString
 
-PARSER_REVISION = "2026-10-25-issuer-bound-row-omission-v15"
+PARSER_REVISION = "2026-10-25-cofiler-index-bound-v16"
 _CIK = re.compile(r"[0-9]{10}\Z", re.ASCII)
 _ACCESSION = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z", re.ASCII)
 _SAFE_FILE = re.compile(r"[A-Za-z0-9_.-]+\.(?:html?|htm|txt)\Z", re.ASCII | re.I)
@@ -49,13 +49,13 @@ def _identity(cik: str, accession: str) -> tuple[str, str, str]:
     return cik, accession, directory
 
 
-def _archive_url(href: str, directory: str) -> str:
+def _archive_url(href: str, directory: str, allowed_archive_ciks=()) -> str:
     """Resolve only a safe file in this filing's SEC archive directory.
 
     SEC sometimes links a co-registrant's archive CIK for an exhibit while
     retaining the requested issuer's accession directory. Accept that
     alternate archive CIK only when this accession's leading CIK is the
-    requested issuer; all other filings must use the exact requested CIK path.
+    requested issuer or when the caller supplies a rechecked index-filer CIK.
     """
     if not isinstance(href, str) or not href or re.search(r"%(?:2f|5c|2e)", href, re.I):
         raise ValueError("invalid-sec-document-url")
@@ -86,7 +86,7 @@ def _archive_url(href: str, directory: str) -> str:
         filename = parts_path[5]
         if not _SAFE_FILE.fullmatch(filename):
             raise ValueError("invalid-sec-document-url")
-        if expected[3].zfill(10) != expected[4][:10]:
+        if expected[3].zfill(10) != expected[4][:10] and parts_path[3] not in allowed_archive_ciks:
             # A valid same-filing co-filer path is not a transport failure.
             # Its subsidiary list may belong to a different registrant (EMP),
             # so retain the strict issuer gate rather than accepting all CIKs.
@@ -96,7 +96,8 @@ def _archive_url(href: str, directory: str) -> str:
     return f"https://{_SEC_HOST}{path.rsplit('/', 1)[0]}/{filename}"
 
 
-def find_exhibit(index_html, *, cik, accession, form="10-K"):
+def find_exhibit(index_html, *, cik, accession, form="10-K", issuer_name=None,
+                 return_proof=False):
     """Return the exact SEC archive URL for a uniquely listed subsidiary exhibit.
 
     10-K defaults to exact EX-21/EX-21.1 Types. For 20-F, exact EX-8/EX-8.1
@@ -106,6 +107,7 @@ def find_exhibit(index_html, *, cik, accession, form="10-K"):
     if form not in {"10-K", "20-F"}:
         raise ValueError("unsupported-sec-form")
     _, _, directory = _identity(cik, accession)
+    index_raw = index_html if isinstance(index_html, bytes) else None
     if isinstance(index_html, bytes):
         if len(index_html) > _MAX_INDEX:
             raise ValueError("sec-index-too-large")
@@ -116,6 +118,17 @@ def find_exhibit(index_html, *, cik, accession, form="10-K"):
     if not isinstance(index_html, str) or len(index_html.encode("utf-8")) > _MAX_INDEX:
         raise ValueError("invalid-sec-index")
     soup = BeautifulSoup(index_html, "html.parser")
+    filers = {}
+    for node in soup.select(".companyInfo"):
+        heading = node.find(["span", "a"])
+        heading = heading.get_text(" ", strip=True) if heading else node.get_text(" ", strip=True)
+        match = re.match(r"^(.+?)\s*\(Filer\)\s*CIK\s*:\s*([0-9]{10})\b", heading, re.I)
+        if match:
+            filers.setdefault(match.group(2), []).append(_norm(match.group(1)).casefold())
+    issuer_key = _norm(issuer_name).casefold() if isinstance(issuer_name, str) else None
+    issuer_bound = bool(issuer_key and filers.get(cik) == [issuer_key])
+    allowed = {str(int(value)) for value, names in filers.items()
+               if issuer_bound and value != cik and len(names) == 1}
     matches = []
     index_has_vie = False
     for table in soup.find_all("table"):
@@ -153,12 +166,39 @@ def find_exhibit(index_html, *, cik, accession, form="10-K"):
             link = cells[document_index].find("a", href=True)
             if link is None:
                 raise ValueError("sec-exhibit-link-missing")
-            matches.append(_archive_url(link["href"], directory))
+            href = link["href"]
+            if href.lower().endswith(".pdf"):
+                # Validate its exact archive directory through the same gate;
+                # only the paired HTML rendition can become the selected source.
+                safe_html = _archive_url(href[:-4] + ".htm", directory, allowed)
+                matches.append(safe_html[:-4] + ".pdf")
+            else:
+                matches.append(_archive_url(href, directory, allowed))
+    # A same-stem PDF rendition is not another source list. Never select PDF
+    # or collapse distinct HTML exhibits.
+    html_matches = [url for url in matches if not url.lower().endswith(".pdf")]
+    if len(matches) != len(html_matches):
+        pdfs = [url for url in matches if url.lower().endswith(".pdf")]
+        if (len(html_matches) != 1 or len(pdfs) != 1
+                or any(pdf[:-4] != html_matches[0].rsplit(".", 1)[0]
+                                           for pdf in pdfs)):
+            raise ValueError("sec-exhibit-ambiguous")
+        matches = html_matches
     if len(matches) > 1:
         raise ValueError("sec-exhibit-ambiguous")
     if matches and index_has_vie:
         raise ValueError("sec-vie-needs-review")
-    return matches[0] if matches else None
+    url = matches[0] if matches else None
+    proof = None
+    if url and issuer_bound:
+        archive_cik = url.split("/Archives/edgar/data/", 1)[1].split("/", 1)[0]
+        if archive_cik != str(int(cik)) and accession[:10] != cik:
+            proof = {"requestedCik": cik, "archiveCik": archive_cik,
+                     "accession": accession, "issuerName": issuer_name,
+                     "exhibitUrl": url,
+                     "indexSha256": hashlib.sha256(index_raw if index_raw is not None
+                                                    else index_html.encode("utf-8")).hexdigest()}
+    return (url, proof) if return_proof else url
 
 
 def _date(value):
@@ -179,10 +219,21 @@ def _metadata(metadata):
     period = _date(metadata.get("periodEnd"))
     if period > filed:
         raise ValueError("invalid-sec-metadata")
-    url = _archive_url(metadata.get("url"), directory)
+    proof = metadata.get("cofilerProof")
+    index_raw = metadata.get("cofilerIndexRaw")
+    allowed = ()
+    if proof is not None or index_raw is not None:
+        if not isinstance(index_raw, bytes) or not isinstance(proof, dict):
+            raise ValueError("sec-cofiler-proof-invalid")
+        found_url, found_proof = find_exhibit(index_raw, cik=cik, accession=accession,
+            form=metadata.get("form", "10-K"), issuer_name=metadata.get("issuerName"), return_proof=True)
+        if found_url != metadata.get("url") or found_proof != proof:
+            raise ValueError("sec-cofiler-proof-invalid")
+        allowed = (proof["archiveCik"],)
+    url = _archive_url(metadata.get("url"), directory, allowed)
     if url != metadata.get("url"):
         raise ValueError("invalid-sec-metadata")
-    return cik, accession, filed, period, url
+    return cik, accession, filed, period, url, proof
 
 
 def _norm(value):
@@ -572,7 +623,7 @@ def _check_exhibit_as_of(soup, period, result):
 
 def parse_exhibit(raw_html, metadata):
     """Parse explicit subsidiary/name and jurisdiction columns without ownership inference."""
-    cik, accession, filed, period, url = _metadata(metadata)
+    cik, accession, filed, period, url, proof = _metadata(metadata)
     if isinstance(raw_html, str):
         raw = raw_html.encode("utf-8")
     elif isinstance(raw_html, bytes):
@@ -590,6 +641,8 @@ def parse_exhibit(raw_html, metadata):
               "accession": accession, "filedDate": filed, "periodEnd": period,
               "url": url, "documentSha256": hashlib.sha256(raw).hexdigest(),
               "scope": "reported-subsidiary-list-not-exhaustive", "rows": [], "status": "needs-review"}
+    if proof is not None:
+        result["cofilerProof"] = proof
     if _VIE_MARKER.search(html):
         result["reviewReason"] = "vie-scope-needs-review"
         return result

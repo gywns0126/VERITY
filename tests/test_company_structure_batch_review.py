@@ -4,11 +4,13 @@ import json
 import gzip
 import hashlib
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 import yaml
 
 from api.intelligence.company_structure_sec import PARSER_REVISION, parse_exhibit, find_exhibit
 from api.collectors.company_structure_us_refresh import latest_metadata
+from api.collectors import company_structure_us_refresh as refresh_core
 
 META = {"cik": "0000004904", "accession": "0000004904-26-000018",
         "filedDate": "2026-02-12", "periodEnd": "2025-12-31",
@@ -815,3 +817,80 @@ def test_cache_replay_failure_is_reported_without_blocking_other_collectors(tmp_
         assert exc.value.code == 1
     else:
         exec(code, {})
+
+
+@pytest.mark.parametrize("cik,accession,issuer,filed,period,index_sha,exhibit_sha,expected_rows", [
+    ("0001056903", "0001628280-26-009114", "AMERICAN STATES WATER CO", "2026-02-18", "2025-12-31",
+     "94d349a774832fd2c3e7bc18aba1bef5a682a6f927f1b62d2706dac21779d420",
+     "882e5b8b7895ce1b370eac6132cc1545693100b24f2cd6c5752c5b2edafd5553", 0),
+    ("0001063761", "0001104659-26-019419", "SIMON PROPERTY GROUP INC.", "2026-02-25", "2025-12-31",
+     "22fc1955c30aa1e8026ab3ef10f961bb86397eb9697dec4a4bccb2eca578a63a",
+     "b2cd57f2f39531572cac9d5e9c5b188ed7ce6020e325a93dbd45fc824b3466e7", 0),
+    ("0001126956", "0001193125-25-282583", "SPIRE INC", "2025-11-14", "2025-09-30",
+     "3bfd8e256b11e339d2a058ef538464da3cfe3906860d82f905a135dab0ceb2e3",
+     "babf8640cc42c95dd2f4b9a0d0f9fc5818f046aded9b1f64fc745248810f68c3", 21),
+])
+def test_cofiler_index_proof_replays_exact_saved_originals(
+        cik, accession, issuer, filed, period, index_sha, exhibit_sha, expected_rows, tmp_path):
+    cache_dir = os.environ.get("SEC_EXHIBIT_CACHE_DIR")
+    if not cache_dir:
+        pytest.skip("set SEC_EXHIBIT_CACHE_DIR for offline co-filer originals")
+    index = gzip.decompress((Path(cache_dir) / (index_sha + ".gz")).read_bytes())
+    raw = gzip.decompress((Path(cache_dir) / (exhibit_sha + ".gz")).read_bytes())
+    assert hashlib.sha256(index).hexdigest() == index_sha
+    assert hashlib.sha256(raw).hexdigest() == exhibit_sha
+    url, proof = find_exhibit(index, cik=cik, accession=accession, issuer_name=issuer, return_proof=True)
+    assert proof == {"requestedCik": cik, "archiveCik": url.split("/data/")[1].split("/")[0],
+                     "accession": accession, "issuerName": issuer, "exhibitUrl": url,
+                     "indexSha256": index_sha}
+    assert not refresh_core._valid_exhibit_url(url, cik, accession)
+    assert refresh_core._valid_exhibit_url(url, cik, accession, proof)
+    metadata = {"cik": cik, "accession": accession, "filedDate": filed, "periodEnd": period,
+                "issuerName": issuer, "form": "10-K", "url": url,
+                "cofilerProof": proof, "cofilerIndexRaw": index}
+    parsed = parse_exhibit(raw, metadata)
+    assert len(parsed["rows"]) == expected_rows
+    assert parsed["status"] == ("parsed" if expected_rows else "needs-review")
+    assert parsed["cofilerProof"] == proof
+    if expected_rows:
+        assert all(row["directOwnership"] == "unspecified" and row["ownershipPct"] is None
+                   for row in parsed["rows"])
+        assert all("Doing Business" not in row["name"] for row in parsed["rows"])
+    for altered in ({**metadata, "cofilerProof": {**proof, "issuerName": "Other Inc."}},
+                    {**metadata, "issuerName": "Other Inc."},
+                    {**metadata, "cofilerIndexRaw": index + b" "},
+                    {key: value for key, value in metadata.items() if key != "cofilerProof"}):
+        with pytest.raises(ValueError, match="sec-cofiler"):
+            parse_exhibit(raw, altered)
+    now = datetime(2026, 10, 25, 12, tzinfo=timezone.utc)
+    source_metadata = {"issuer_id": "US:T", "issuer_name": issuer, "cik": cik,
+                       "accession": accession, "filed_date": filed, "period_end": period,
+                       "form": "10-K"}
+    document = {"schema": refresh_core.SCHEMA, "universe": {"US": ["T"]},
+                "currentCiks": [cik], "unmapped": {}, "issuers": {cik: {
+                    "cik": cik, "tickerAliases": ["T"], "attemptStatus": "not-attempted",
+                    "attemptedAt": None, "filingMetadata": source_metadata,
+                    "metadataCheckedAt": now.isoformat(), "sourceGap": None}}}
+    index_url = (f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/"
+                 f"{accession.replace('-', '')}/{accession}-index.html")
+    available = {index_url: index, url: raw}
+    requested = []
+    helpers = refresh_core.load_helpers()
+    def offline_get(target, maximum):
+        requested.append(target)
+        return available[target]
+    helpers.get_public = offline_get
+    cache = tmp_path.resolve() / "raw"
+    collected, summary = refresh_core.refresh(document, source_dir=tmp_path, limit=1,
+        fetch_public=True, checkpoint=lambda value: None, now=now, helpers=helpers,
+        sleep=lambda delay: None, raw_cache_dir=cache)
+    saved = collected["issuers"][cik]
+    assert requested == [index_url, url]
+    assert (summary["success"], summary["sourceGap"]) == ((1, 0) if expected_rows else (0, 1))
+    assert saved["rawExhibitCache"]["cofilerProof"] == proof
+    assert refresh_core._read_raw_exhibit(cache, index_sha) == index
+    if not expected_rows:
+        saved["reviewExhibit"]["parserRevision"] = "previous-revision"
+        replayed, replay = refresh_core.reparse_cached_reviews(collected, cache, now=now)
+        assert replay["cacheHits"] == replay["held"] == 1 and replay["errors"] == 0
+        assert replayed["issuers"][cik]["reviewExhibit"]["rows"] == []

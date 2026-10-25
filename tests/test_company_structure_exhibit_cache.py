@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("us_raw_cache", ROOT / "api/collectors/company_structure_us_refresh.py")
 core = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(core)
-from api.intelligence.company_structure_sec import PARSER_REVISION
+from api.intelligence.company_structure_sec import PARSER_REVISION, find_exhibit
 
 CIK = "0000000001"
 ACCESSION = "0000000001-26-000001"
@@ -353,3 +353,77 @@ def test_incompressible_maximum_raw_roundtrips_cache_size_bound(tmp_path):
     size = (tmp_path / "raw" / (digest + ".gz")).stat().st_size
     assert core.MAX_BYTES + 1024 < size <= core.MAX_BYTES + 65536
     assert core._read_raw_exhibit(tmp_path / "raw", digest) == raw
+
+
+def test_cofiler_public_review_rehydrates_proof_and_missing_index_is_cache_gap(tmp_path):
+    """CI fixture: public sanitizer omits rawExhibitCache but retains six-field proof."""
+    issuer_name = "Public Company Inc"
+    accession = "0000000003-26-000001"  # Neither the requested nor archive CIK.
+    compact = accession.replace("-", "")
+    url = f"https://www.sec.gov/Archives/edgar/data/2/{compact}/ex21.htm"
+    index = (f'<div class="companyInfo"><span>{issuer_name} (Filer) CIK : {CIK}</span></div>'
+             '<div class="companyInfo"><span>Other Registrant Inc (Filer) CIK : 0000000002</span></div>'
+             '<table class="tableFile"><tr><th>Document</th><th>Type</th></tr>'
+             f'<tr><td><a href="{url}">ex21.htm</a></td><td>EX-21</td></tr></table>').encode()
+    exhibit = (f'<p>Subsidiaries of {issuer_name}</p><table><tr><th>Name</th>'
+               '<th>Jurisdiction</th></tr><tr><td>Child Inc.</td>'
+               '<td>Delaware</td></tr></table>').encode()
+    selected, proof = find_exhibit(index, cik=CIK, accession=accession,
+                                  issuer_name=issuer_name, return_proof=True)
+    assert selected == url and proof["archiveCik"] == "2"
+    assert set(proof) == {"requestedCik", "archiveCik", "accession", "issuerName",
+                          "exhibitUrl", "indexSha256"}
+    assert not core._valid_exhibit_url(url, CIK, accession)
+    assert core._valid_exhibit_url(url, CIK, accession, proof)
+    import pytest
+    with pytest.raises(ValueError, match="sec-cofiler"):
+        find_exhibit(index.replace(issuer_name.encode(), b"Different Inc"), cik=CIK,
+                     accession=accession, issuer_name=issuer_name, return_proof=True)
+    with pytest.raises(ValueError, match="sec-cofiler"):
+        find_exhibit(index.replace(b"CIK : 0000000002", b"CIK : 0000000004"), cik=CIK,
+                     accession=accession, issuer_name=issuer_name, return_proof=True)
+
+    doc = source()
+    row = doc["issuers"][CIK]
+    filing = row["filingMetadata"]
+    filing["accession"] = accession
+    filing["url"] = f"https://www.sec.gov/Archives/edgar/data/1/{compact}/annual.htm"
+    row["attemptStatus"] = "needs-review"
+    row["attemptedAt"] = NOW.isoformat()
+    row["sourceGap"] = "source-gap:ex21-needs-review"
+    row["reviewExhibit"] = {"schema": "sec-company-subsidiaries-v1", "cik": CIK,
+        "accession": accession, "filedDate": filing["filed_date"],
+        "periodEnd": filing["period_end"], "url": url,
+        "documentSha256": hashlib.sha256(exhibit).hexdigest(),
+        "cofilerProof": proof, "parserRevision": "prior-revision",
+        "status": "needs-review", "rows": []}
+    assert "rawExhibitCache" not in row
+    cache = tmp_path / "raw"
+    core._save_raw_exhibit(cache, index)
+    core._save_raw_exhibit(cache, exhibit)
+    replayed, summary = core.reparse_cached_reviews(doc, cache, now=NOW)
+    assert summary["parsed"] == summary["cacheHits"] == 1
+    assert summary["errors"] == 0 and len(replayed["issuers"][CIK]["exhibit"]["rows"]) == 1
+    assert replayed["issuers"][CIK]["exhibit"]["cofilerProof"] == proof
+
+    (cache / (proof["indexSha256"] + ".gz")).unlink()
+    before = copy.deepcopy(doc)
+    replayed, summary = core.reparse_cached_reviews(doc, cache, now=NOW)
+    assert replayed == before
+    assert summary["eligible"] == summary["missing"] == 1
+    assert summary["errors"] == summary["cacheHits"] == summary["parsed"] == 0
+
+    index_url = f"https://www.sec.gov/Archives/edgar/data/1/{compact}/{accession}-index.html"
+    calls = []
+    helpers = core.load_helpers()
+    def offline_get(target, maximum):
+        calls.append(target)
+        return {index_url: index, url: exhibit}[target]
+    helpers.get_public = offline_get
+    refreshed, summary = core.refresh(doc, source_dir=tmp_path, fetch_public=True,
+        raw_cache_dir=cache, helpers=helpers, now=NOW + timedelta(days=1),
+        sleep=lambda delay: None, checkpoint=lambda value: None)
+    assert calls == [index_url, url]
+    assert summary["success"] == 1 and summary["rawCacheHit"] == 0
+    assert refreshed["issuers"][CIK]["exhibit"]["cofilerProof"] == proof
+    assert len(refreshed["issuers"][CIK]["exhibit"]["rows"]) == 1

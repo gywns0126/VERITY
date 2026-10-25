@@ -26,7 +26,7 @@ vm.runInNewContext(code, {
     throw new Error(`unexpected module: ${name}`);
   },
 }, { timeout: 1000 });
-const { makeStructureLayout, validateStructure, loadCompanyStructure, structureCoverageText, resolveFocus } = box.exports;
+const { makeStructureLayout, validateStructure, loadCompanyStructure, structureCoverageText, resolveFocus, isFlowEligibleRelation, resetInitialFocusAfterInitialLoad } = box.exports;
 
 const company = id => ({ id, name: `Company ${id}` });
 const relation = (id, from, to, extra = {}) => ({
@@ -117,6 +117,26 @@ test('CSS contract allows long or unbroken card and detail text to wrap or clip'
   assert.match(mobile, /\.acs-inspector\{position:absolute;bottom:0;left:0;right:0;width:auto;max-width:none/);
 });
 
+test('relationship flow is a subtle stable overlay that preserves trust strokes and pauses for motion preferences', () => {
+  const verified = relation('verified', 'KR:one', 'KR:two', { status: 'source-dated', evidence: [{ title: 'official', url: 'https://example.com/source' }] });
+  const officialUndated = { ...verified, status: 'official-undated' };
+  const unverified = { ...verified, status: 'undated-snapshot' };
+  assert.equal(isFlowEligibleRelation(verified), true);
+  assert.equal(isFlowEligibleRelation(officialUndated), true);
+  assert.equal(isFlowEligibleRelation(unverified), false);
+  assert.equal(isFlowEligibleRelation(undefined), false);
+  assert.match(source, /<React\.Fragment key=\{n\.company\.id\}><path d=\{d\} data-undated=\{undated\} \/>\{flow && <path className="acs-flow" d=\{d\} aria-hidden="true" \/>\}<\/React\.Fragment>/);
+  assert.match(source, /aria-pressed=\{flowPaused\} aria-label=\{flowPaused \? "선 움직임 켜기" : "선 움직임 멈추기"\} onClick=\{\(\) => setFlowPaused\(v => !v\)\}/);
+  assert.match(source, /<svg className="acs-lines" data-flow-paused=\{flowPaused\}/);
+  assert.match(styleRule('.acs-lines path'), /stroke:var\(--acs-line\);stroke-width:1\.5/);
+  assert.match(styleRule('.acs-lines path[data-undated=true]'), /stroke-dasharray:4 4/);
+  assert.match(styleRule('.acs-lines .acs-flow'), /stroke:var\(--acs-line\);stroke-width:2;stroke-linecap:round;stroke-dasharray:3 20;opacity:\.38;animation:acs-edge-flow 8s linear infinite/);
+  assert.match(style, /@keyframes acs-edge-flow\{to\{stroke-dashoffset:-23\}\}/);
+  assert.match(style, /\[data-motion=paused\] \.acs-flow\{animation-play-state:paused;visibility:hidden\}/);
+  assert.match(style, /\.acs-lines\[data-flow-paused=true\] \.acs-flow\{animation-play-state:paused\}/);
+  assert.match(style, /@media\(prefers-reduced-motion:reduce\)\{\.acs-flow\{display:none!important;animation:none!important\}\}/);
+});
+
 test('validation and layout leave the source catalogue unchanged', () => {
   const catalogue = {
     schema: 'alphanest-company-structure-v1',
@@ -166,4 +186,14 @@ test('invalid ticker and cancelled reader never trigger a fallback request', asy
 test('two US securities mapped to one filing retain the canonical company connections', () => {
   const catalogue={schema:'alphanest-company-structure-v1',companies:[{id:'US:ABC',name:'ABC Corporation',market:'US',ticker:'ABC'},{id:'US:ABC.A',name:'ABC Class A',market:'US',ticker:'ABC.A'}],relations:[],coverage:{canonicalId:'US:ABC',securityIds:['US:ABC','US:ABC.A']}};
   assert.equal(resolveFocus(catalogue,{id:'US:ABC.A',name:'ABC Class A',market:'US',ticker:'ABC.A'}).id,'US:ABC');
+});
+
+test('only a successful initial catalogue load releases the focus-fit guard', () => {
+  const initialFocus = { current: 'KR:CPK:false' };
+  resetInitialFocusAfterInitialLoad(true, initialFocus);
+  assert.equal(initialFocus.current, null);
+
+  initialFocus.current = 'KR:AORT:false';
+  resetInitialFocusAfterInitialLoad(false, initialFocus);
+  assert.equal(initialFocus.current, 'KR:AORT:false');
 });
