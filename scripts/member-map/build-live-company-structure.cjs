@@ -231,7 +231,7 @@ function usPayload(aliases, source, generatedAt) {
       status, sourceChecked: checked, attemptStatus: /^(?:success|cached-same-accession|error|needs-review|source-gap|budget-deferred|attempting|HTTP[1-5][0-9]{2})$/u.test(source.attemptStatus) ? source.attemptStatus : 'error', attemptedAt: source.attemptedAt,
       lastSuccessAt: observedAt, asOfNotCollectedAt: true, canonicalId, securityIds: aliases.map(a => `US:${a.ticker}`),
       cik, filedDate: valid ? e.filedDate : null, periodEnd: valid ? day(e.periodEnd) : null,
-      ...(valid && e.cofilerProof ? { cofilerProof: { ...e.cofilerProof } } : {}),
+      ...(valid && e.cofilerProof ? { cofilerProof: { ...Object.fromEntries(Object.entries(e.cofilerProof).filter(([key]) => key !== 'exhibitUrl')), exhibitFileName: e.url.split('/').pop() } } : {}),
       ...(validReview ? { pendingReview: { filedDate: review.filedDate, periodEnd: review.periodEnd,
         documentSha256: review.documentSha256,
         ...(/^[a-z0-9-]{1,80}$/u.test(review.reviewReason || '') ? { reason: review.reviewReason } : {}) } } : {}),

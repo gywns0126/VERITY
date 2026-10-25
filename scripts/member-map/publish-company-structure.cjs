@@ -54,7 +54,11 @@ function coverage(c, manifest = false) {
   if ('sourceGap' in c && !/^[a-z0-9:-]{1,100}$/u.test(c.sourceGap)) fail();
   if ('cofilerProof' in c) {
     const proof = c.cofilerProof;
-    if (!proof || !c.cik || !secUrl(proof.exhibitUrl, c.cik, proof.accession, proof, proof.issuerName)) fail();
+    keys(proof, ['requestedCik', 'archiveCik', 'accession', 'issuerName', 'indexSha256', 'exhibitFileName']);
+    if (Object.keys(proof).length !== 6 || proof.requestedCik !== c.cik ||
+      !/^[0-9]{10}$/u.test(c.cik || '') || !/^[1-9][0-9]{0,9}$/u.test(proof.archiveCik || '') ||
+      proof.archiveCik === String(Number(c.cik)) || !/^[0-9]{10}-[0-9]{2}-[0-9]{6}$/u.test(proof.accession || '') ||
+      !SHA.test(proof.indexSha256 || '') || !/^[A-Za-z0-9_.-]+\.(?:htm|html|txt)$/iu.test(proof.exhibitFileName || '')) fail();
     text(proof.issuerName, 180);
   }
   if ('pendingReview' in c) {
@@ -107,7 +111,10 @@ function validatePayload(p) {
     for (const e of r.evidence) {
       keys(e, ['title', 'url', 'asOf']); text(e.title, 180);
       const accession = typeof e.url === 'string' && e.url.match(/\/(\d{10})(\d{2})(\d{6})\/[^/]+$/u);
-      if (!(p.coverage.cik ? accession && secUrl(e.url, p.coverage.cik, `${accession[1]}-${accession[2]}-${accession[3]}`, p.coverage.cofilerProof ?? null, p.coverage.cofilerProof?.issuerName) : primaryEvidenceUrl(e.url))) fail();
+      const publicProof = p.coverage.cofilerProof;
+      const proof = publicProof ? Object.fromEntries(Object.entries(publicProof).filter(([key]) => key !== 'exhibitFileName')) : null;
+      if (proof) proof.exhibitUrl = `https://www.sec.gov/Archives/edgar/data/${proof.archiveCik}/${proof.accession.replace(/-/gu, '')}/${publicProof.exhibitFileName}`;
+      if (!(p.coverage.cik ? accession && secUrl(e.url, p.coverage.cik, `${accession[1]}-${accession[2]}-${accession[3]}`, proof, proof?.issuerName) : primaryEvidenceUrl(e.url))) fail();
       const u = new URL(e.url);
       if (u.port || u.hash || [...u.searchParams.keys()].some(k => u.hostname !== 'dart.fss.or.kr' || k !== 'rcpNo')) fail();
       if ('asOf' in e) day(e.asOf);

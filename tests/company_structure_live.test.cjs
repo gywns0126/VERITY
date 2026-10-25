@@ -275,11 +275,23 @@ test('agent-filed co-registrant evidence requires exact filing-limited index pro
   assert.equal(value.relations.length, 1);
   assert.equal(value.relations[0].evidence[0].url, url);
   assert.equal(value.relations[0].asOf, '2025-09-30');
-  assert.deepEqual(value.coverage.cofilerProof, proof);
+  const { exhibitUrl: omittedUrl, ...publicProof } = proof;
+  assert.deepEqual(value.coverage.cofilerProof, { ...publicProof, exhibitFileName: 'sr-ex21.htm' });
+  assert.equal(JSON.stringify(value.coverage).includes('https://'), false);
   const { validatePayload } = require('../scripts/member-map/publish-company-structure.cjs');
   validatePayload(value);
+  const apiValidation = spawnSync('python3', ['-c', `import sys, hashlib, importlib.util
+spec=importlib.util.spec_from_file_location('structure_api',sys.argv[1])
+api=importlib.util.module_from_spec(spec);spec.loader.exec_module(api)
+raw=sys.stdin.buffer.read()
+doc=api._validate_payload(raw,hashlib.sha256(raw).hexdigest(),len(raw),'US:SR')
+assert len(doc['relations']) == 1
+`, path.resolve(__dirname, '../vercel-api/api/company_structure.py')], { input: bytes, encoding: 'utf8' });
+  assert.equal(apiValidation.status, 0, apiValidation.stderr);
   const wrong = structuredClone(value); wrong.coverage.cofilerProof.archiveCik = '57183';
   assert.throws(() => validatePayload(wrong));
+  const wrongFile = structuredClone(value); wrongFile.relations[0].evidence[0].url = url.replace('sr-ex21', 'other');
+  assert.throws(() => validatePayload(wrongFile));
   const missing = structuredClone(raw); delete missing.issuers[cik].filingMetadata;
   assert.throws(() => sanitizeUsSources(missing));
   const held = structuredClone(raw); held.issuers[cik].attemptStatus = 'needs-review';
