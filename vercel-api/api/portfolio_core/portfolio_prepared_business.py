@@ -348,7 +348,11 @@ def checked_business_index(artifact, publisher_receipt, source_revision, documen
         for identifier, material in materials.items():
             for participant in material["participants"]:
                 expected_links.setdefault(participant["id"], []).append(identifier)
-        if by_company != expected_links:
+        # Canonical JSON sorts material object keys, but preserves link arrays.
+        # Link membership is semantic; array order is not. Sorting retains the
+        # duplicate/missing/extra-link rejection while surviving serialization.
+        if ({key: sorted(values) for key, values in by_company.items()}
+                != {key: sorted(values) for key, values in expected_links.items()}):
             return None
         coverage = index["coverage"]
         if (coverage.get("indexed_materials") != len(materials)
