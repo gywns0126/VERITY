@@ -88,12 +88,17 @@ class _ProjectedPublicIndexCache:
         self._index = None
         self._business_revision = None
         self._business_index = None
+        self._base_revision = None
+        self._base_template = None
+        self._news_revision = None
+        self._news_index = None
 
     @staticmethod
-    def _build(public_documents, _reuse_business=None, _base_companies=None):
+    def _build(public_documents, _reuse_business=None, _base_companies=None, _reuse_news=None):
         projected = project_public_sources(public_documents,
             **({"_base_companies": _base_companies} if _base_companies is not None else {}))
-        # The pure source projector creates fresh nested facts/documents.
+        # Projection owns the company/list containers; validated base values
+        # stay read-only and selected response values are copied below.
         catalog, archive = retain_captured_documents(public_documents.get(_AUTOMATIC_EVIDENCE_FILE),
             add_public_company_names(public_documents, projected["companies"], _owned_catalog=True),
             _owned_catalog=True)
@@ -127,7 +132,8 @@ class _ProjectedPublicIndexCache:
             "capture_archive": archive,
             # Localized search/report names are mention hints only. Never add
             # them to the legal-name catalog used for contract-party matching.
-            "news_names": index_public_news_names(public_news_name_catalog(public_documents, list(by_id.values()))),
+            "news_names": (_reuse_news(public_documents, by_id) if _reuse_news is not None
+                else index_public_news_names(public_news_name_catalog(public_documents, list(by_id.values())))),
             "business_materials": (_reuse_business(public_documents, by_id)
                 if _reuse_business is not None else _business_material_index(public_documents, by_id)),
             "contract_events": index_contract_events(public_documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values())),
@@ -142,6 +148,11 @@ class _ProjectedPublicIndexCache:
         if revision is None:
             _log_prepared_status("fallback_unbounded")
             return _business_material_index(documents, by_id)
+        if self._business_index is not None and self._business_revision == revision:
+            # This index was already built/receipt-checked for these exact
+            # matcher inputs and UTC day. A new filing need not recheck it.
+            _log_prepared_status("reuse_cached")
+            return self._business_index
         prepared = checked_business_index(
             prepared_business_index, publisher_receipt, revision, documents, by_id
         ) if prepared_business_index is not None else None
@@ -168,6 +179,34 @@ class _ProjectedPublicIndexCache:
             _log_prepared_status("reuse_cached")
         return self._business_index
 
+    def _base(self, artifact, receipt, revision):
+        if revision is None:
+            return None, None
+        try:
+            key = (revision, datetime.now(timezone.utc).date().isoformat(),
+                   _prepared_implementation_sha256())
+        except OSError:
+            return None, "fallback"
+        if self._base_template is not None and self._base_revision == key:
+            return self._base_template, "reuse_cached"
+        base = checked_base_projection(artifact, receipt, revision)
+        if base is not None:
+            self._base_template, self._base_revision = base, key
+        return base, "accepted" if base is not None else "fallback"
+
+    def _news(self, documents, by_id, base_revision):
+        # News aliases use base-source names and this exact identity catalog,
+        # never filings, financial values, caller selections or member state.
+        revision = (_revision([base_revision, datetime.now(timezone.utc).date().isoformat(),
+                               _business_identity_catalog(by_id)])
+                    if base_revision is not None else None)
+        if revision is None or self._news_index is None or self._news_revision != revision:
+            index = index_public_news_names(public_news_name_catalog(documents, list(by_id.values())))
+            if revision is not None:
+                self._news_index, self._news_revision = index, revision
+            return index
+        return self._news_index
+
     def get(self, public_documents, revision, *, prepared_business_index=None,
             publisher_receipt=None, prepared_business_fetcher=None, base_source_revision=None):
         if revision is None:
@@ -181,17 +220,26 @@ class _ProjectedPublicIndexCache:
                 if prepared_business_fetcher is not None:
                     prepared_business_index, publisher_receipt = prepared_business_fetcher()
                 with _temporary_public_text_cache():
-                    base = checked_base_projection(
+                    base, base_status = self._base(
                         prepared_business_index, publisher_receipt, base_source_revision)
-                    if base_source_revision is not None:
-                        print("portfolio_prepared_projection status=" +
-                              ("accepted" if base is not None else "fallback"), file=sys.stderr)
+                    if base_status is not None:
+                        try:
+                            print("portfolio_prepared_projection status=" + base_status, file=sys.stderr)
+                        except Exception:
+                            pass
+                    # Templates retain only validated public data. Builders own
+                    # all mutable containers; nested facts/headers are read-only
+                    # here and selected responses keep their existing deepcopy.
+                    owned_base = ([{**row, "facts": list(row["facts"]),
+                                    "documents": list(row["documents"])} for row in base]
+                                  if base is not None else None)
                     self._index = self._build(
                         public_documents,
                         lambda documents, by_id: self._business(
                             documents, by_id, prepared_business_index, publisher_receipt
                         ),
-                        _base_companies=base,
+                        _base_companies=owned_base,
+                        _reuse_news=lambda documents, by_id: self._news(documents, by_id, base_source_revision),
                     )
                 self._revision = revision
             return self._index
@@ -202,6 +250,10 @@ class _ProjectedPublicIndexCache:
             self._index = None
             self._business_revision = None
             self._business_index = None
+            self._base_revision = None
+            self._base_template = None
+            self._news_revision = None
+            self._news_index = None
 
 
 _PROJECTED_PUBLIC_INDEX = _ProjectedPublicIndexCache()
