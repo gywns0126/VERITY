@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import threading
 import time
+import unicodedata
 import urllib.error
 import urllib.request
 
@@ -44,7 +45,7 @@ _FETCH_LOCK = threading.Lock()
 _FETCH_CACHE = None
 _FETCH_EXPIRES_AT = 0.0
 # Bump on any change to business matching, role/context indexing, or envelope.
-MATCHER_VERSION = "business-matchers-2026-10-26-v1"
+MATCHER_VERSION = "business-matchers-2026-10-27-v2"
 _DIGEST = re.compile(r"[0-9a-f]{64}\Z", re.ASCII)
 _MATERIAL_KEYS = {"stable_id", "kind", "verified_event", "participants", "source", "evidence"}
 _SOURCE_KEYS = {"id", "kind", "receipt_no", "as_of", "report_name", "url",
@@ -185,6 +186,67 @@ def publisher_receipt_for(artifact):
             "utc_day": artifact["utc_day"]}
 
 
+def identity_catalog(by_id):
+    """Closed public matcher inputs, in the publisher's original catalog order."""
+    return [{key: row.get(key) for key in ("id", "market", "name", "source_names")}
+            for row in by_id.values()]
+
+
+def compatible_catalog_revision(artifact, documents, by_id, revision_for):
+    """Prove that added identities cannot affect any existing business excerpt.
+
+    All prior identities, names, aliases, excerpts, declarations and UTC day
+    remain bound. Any possible new issuer/name hit takes the full matcher path.
+    The returned revision still requires normal code/receipt/index validation.
+    """
+    try:
+        catalog = artifact.get("catalog")
+        if type(catalog) is not list or not 1 <= len(catalog) <= 50000:
+            return None
+        original = {}
+        for row in catalog:
+            if (type(row) is not dict or set(row) != {"id", "market", "name", "source_names"}
+                    or type(row["id"]) is not str or row["id"] in original
+                    or row != {key: by_id.get(row["id"], {}).get(key) for key in row}):
+                return None
+            original[row["id"]] = row
+        added = set(by_id) - original.keys()
+        if not added or len(added) > 100:
+            return None
+        business = project_public_business_overviews(documents)
+        if any(row["issuer_id"] in added for row in business["rows"]):
+            return None
+        # A conservative substring gate also catches legal-name normalization,
+        # alias ambiguity and product-name collisions. False positives rebuild.
+        def normalized(value):
+            text = unicodedata.normalize("NFKC", value).casefold()
+            text = re.sub(r"\(주[0-9]+\)|\(주석[0-9]+\)", "", text)
+            return re.sub(r"\s+", "", text)
+        texts = [normalized(row["text"]) for row in business["rows"]]
+        aliases = []
+        for identifier in added:
+            row = by_id[identifier]
+            aliases.extend([row.get("name"), *(row.get("source_names") or [])])
+        declarations = documents.get("universe_search.json", {}).get("stocks", [])
+        declarations = declarations.values() if type(declarations) is dict else declarations
+        for row in declarations:
+            market = "KR" if row.get("market") == "KONEX" else row.get("market")
+            if f"{market}:{row.get('ticker')}" in added:
+                aliases.extend([row.get("name"), row.get("name_ko")])
+        for alias in aliases:
+            if alias is None:
+                continue
+            if type(alias) is not str:
+                return None
+            key = normalized(alias)
+            key = re.sub(r"^(?:주식회사|\(주\))|(?:주식회사|\(주\))$", "", key)
+            if not key or any(key in text for text in texts):
+                return None
+        return revision_for(documents, original)
+    except (AttributeError, KeyError, TypeError, ValueError, UnicodeError, RecursionError):
+        return None
+
+
 def checked_business_index(artifact, publisher_receipt, source_revision, documents, by_id):
     """Return a vetted common index, or None to use the existing computation.
 
@@ -195,7 +257,7 @@ def checked_business_index(artifact, publisher_receipt, source_revision, documen
     if (type(source_revision) is not str or not _DIGEST.fullmatch(source_revision)
             or type(artifact) is not dict
             or set(artifact) != {"schema", "matcher_version", "implementation_sha256",
-                                 "source_revision", "utc_day", "index"}
+                                 "source_revision", "utc_day", "catalog", "index"}
             or artifact["schema"] != SCHEMA
             or artifact["matcher_version"] != MATCHER_VERSION
             or artifact["source_revision"] != source_revision

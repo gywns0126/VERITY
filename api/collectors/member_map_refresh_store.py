@@ -1,10 +1,12 @@
 """공개 수집 상태 전용 저장소. 고정 프로젝트/RPC만 사용하며 재시도하지 않는다."""
 from copy import deepcopy
+from contextlib import nullcontext
 from datetime import date, datetime, timedelta, timezone
 import json
 import math
 import os
 import re
+import sys
 import threading
 import time
 from uuid import UUID
@@ -48,6 +50,15 @@ def safe_error_code(error):
         if type(code) is str and code in SAFE_ERROR_CODES:
             return code
     return "refresh-unexpected-error"
+
+
+def _log_read_stage(stage, started):
+    try:
+        if stage in {"head", "body", "validate"}:
+            print(f"member_map_checkpoint stage={stage} elapsed_ms={max(0, int((time.monotonic() - started) * 1000))}",
+                  file=sys.stderr)
+    except Exception:
+        pass
 
 
 def _json_bytes(value, limit):
@@ -97,14 +108,15 @@ def _read_json_response(response, limit, deadline):
         raise RefreshStoreError("refresh-response-rejected") from None
 
 
-def _request_json(method, url, *, headers, body=None, limit=RESPONSE_MAX_BYTES, deadline=None, timeout_seconds=None):
+def _request_json(method, url, *, headers, body=None, limit=RESPONSE_MAX_BYTES, deadline=None,
+                  timeout_seconds=None, _session=None):
     timeout_seconds = RPC_TIMEOUT_SECONDS if timeout_seconds is None else timeout_seconds
     remaining = timeout_seconds if deadline is None else min(timeout_seconds, deadline - time.monotonic())
     if remaining <= 0:
         raise RefreshStoreError("refresh-read-timeout")
     deadline = deadline if deadline is not None else time.monotonic() + remaining
     try:
-        with requests.Session() as session:
+        with (requests.Session() if _session is None else nullcontext(_session)) as session:
             session.trust_env = False
             with session.request(method, url, headers=headers, data=body,
                                  timeout=remaining, allow_redirects=False, stream=True) as response:
@@ -459,28 +471,48 @@ class RefreshStore:
         return returned
 
     def _read_states_changed(self, snapshot, deadline):
+        # Head and changed body share one bounded connection, not two TLS setups.
+        with requests.Session() as session:
+            session.trust_env = False
+            return self._read_states_in_session(snapshot, deadline, session)
+
+    def _read_states_in_session(self, snapshot, deadline, session):
         states, revisions, feeds, uncertain = (part.copy() for part in snapshot)
         url = PROJECT_URL + "/rest/v1/" + TABLE
-        heads = _request_json("GET", url + "?select=source,revision,feed_revision&source=in.(DART,SEC,news)&limit=3",
-                              headers=self._headers(), limit=ENVELOPE_MAX_BYTES, deadline=deadline,
-                              timeout_seconds=self._timeout_seconds)
-        if type(heads) is not list or len(heads) != 3:
-            raise RefreshStoreError("refresh-response-rejected")
+        cold = not states and not revisions and not feeds and not uncertain
         observed = {}
-        for head in heads:
-            if type(head) is not dict or set(head) != {"source", "revision", "feed_revision"}:
+        if not cold:
+            started = time.monotonic()
+            try:
+                heads = _request_json("GET", url + "?select=source,revision,feed_revision&source=in.(DART,SEC,news)&limit=3",
+                                      headers=self._headers(), limit=ENVELOPE_MAX_BYTES, deadline=deadline,
+                                      timeout_seconds=self._timeout_seconds, _session=session)
+            finally:
+                _log_read_stage("head", started)
+            if type(heads) is not list or len(heads) != 3:
                 raise RefreshStoreError("refresh-response-rejected")
-            source = _source(head["source"])
-            revision, feed_revision = _integer(head["revision"]), _integer(head["feed_revision"])
-            if source in observed or feed_revision > revision or revision < revisions.get(source, 0) or feed_revision < feeds.get(source, 0):
-                raise RefreshStoreError("refresh-response-rejected")
-            observed[source] = (revision, feed_revision)
-        changed = sorted(source for source in SOURCES if source not in states or source in uncertain or observed[source][1] != feeds[source])
+            for head in heads:
+                if type(head) is not dict or set(head) != {"source", "revision", "feed_revision"}:
+                    raise RefreshStoreError("refresh-response-rejected")
+                source = _source(head["source"])
+                revision, feed_revision = _integer(head["revision"]), _integer(head["feed_revision"])
+                if source in observed or feed_revision > revision or revision < revisions.get(source, 0) or feed_revision < feeds.get(source, 0):
+                    raise RefreshStoreError("refresh-response-rejected")
+                observed[source] = (revision, feed_revision)
+        # A cold reader needs every body anyway. One database SELECT returns a
+        # consistent state/revision pair without an otherwise redundant head.
+        changed = sorted(SOURCES) if cold else sorted(source for source in SOURCES
+            if source not in states or source in uncertain or observed[source][1] != feeds[source])
         if changed:
             selector = ",".join(changed)
-            rows = _request_json("GET", url + "?select=source,state,revision,feed_revision&source=in.(" + selector + ")&limit=3",
-                headers=self._headers(), limit=len(changed) * STATE_MAX_BYTES + ENVELOPE_MAX_BYTES, deadline=deadline,
-                timeout_seconds=self._timeout_seconds)
+            started = time.monotonic()
+            try:
+                rows = _request_json("GET", url + "?select=source,state,revision,feed_revision&source=in.(" + selector + ")&limit=3",
+                    headers=self._headers(), limit=len(changed) * STATE_MAX_BYTES + ENVELOPE_MAX_BYTES, deadline=deadline,
+                    timeout_seconds=self._timeout_seconds, _session=session)
+            finally:
+                _log_read_stage("body", started)
+            started = time.monotonic()
             if type(rows) is not list or len(rows) != len(changed):
                 raise RefreshStoreError("refresh-response-rejected")
             seen = set()
@@ -489,11 +521,13 @@ class RefreshStore:
                     raise RefreshStoreError("refresh-response-rejected")
                 source = _source(row["source"])
                 versions = (_integer(row["revision"]), _integer(row["feed_revision"]))
-                if source not in changed or source in seen or versions != observed[source]:
+                if (source not in changed or source in seen or versions[1] > versions[0]
+                        or (not cold and versions != observed[source])):
                     raise RefreshStoreError("refresh-response-rejected")
                 seen.add(source)
                 states[source] = validate_state(source, row["state"])
                 revisions[source], feeds[source] = versions
+            _log_read_stage("validate", started)
         # head-only에서는 revisions·성공 시각을 올리지 않는다. 기존 공개 메타데이터를 유지한다.
         returned = deepcopy(states)
         if time.monotonic() >= deadline:

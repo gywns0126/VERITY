@@ -88,7 +88,12 @@ def _refresh_overlay(documents, reader=None):
         merged = overlay_states(documents, validated)
         _LIVE_STATES = deepcopy(validated)
         return merged
-    except Exception:
+    except Exception as error:
+        try:
+            from .member_map_refresh_store import safe_error_code
+            print(f"member_map_checkpoint status={safe_error_code(error)}", file=sys.stderr)
+        except Exception:
+            pass
         try:
             from .member_map_live_refresh import overlay_states
             return overlay_states(documents, deepcopy(_LIVE_STATES))
@@ -323,7 +328,8 @@ def _log_fetch_timing(*, cache, status, available, started, lock_wait_ms=0,
         pass
 
 
-def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
+def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None,
+                         _borrow_snapshot=False):
     """Return fixed public documents plus explicit source availability.
 
     A valid warm entry avoids a refresh.  Once expired, the old entry is never
@@ -334,7 +340,8 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
 
     timing_started = time.monotonic()
     production = _fetcher is None and _refresh_reader is None
-    copy_bundle = _copy_public_bundle if production else deepcopy
+    copy_bundle = (lambda value: {**value}) if production and _borrow_snapshot else (
+        _copy_public_bundle if production else deepcopy)
     fetcher = _fetcher or _download_source
     clock = _clock or time.monotonic
     with _CACHE_LOCK:
@@ -456,6 +463,16 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
                               hash_ms=hash_ms, overlay_ms=overlay_ms,
                               copy_ms=(time.monotonic() - copy_started) * 1000)
         return returned
+
+
+def borrow_public_sources_for_analysis():
+    """Internal read-only snapshot for the pure analysis consumer only.
+
+    Refresh replaces snapshots rather than mutating them. The engine copies
+    selected response values; it must never mutate or expose these documents.
+    Ordinary consumers retain the isolated-copy contract above.
+    """
+    return fetch_public_sources(_borrow_snapshot=True)
 
 
 def _reset_cache_for_tests():
