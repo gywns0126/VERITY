@@ -109,6 +109,29 @@ def test_prepared_fetch_is_once_per_revision_under_concurrent_requests(engine, d
     assert indexes[0]["business_materials"] == artifact["index"]
 
 
+def test_published_json_key_order_does_not_change_links_or_accept_duplicates(engine, documents):
+    second = deepcopy(documents["kr_business_overview_public.json"]["rows"]["001111"])
+    second.update(name="합성제조사", filed_at="20260317",
+                  url="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260317000002")
+    documents["kr_business_overview_public.json"]["rows"]["004444"] = second
+    documents["kr_business_overview_public.json"]["_meta"]["count"] = 2
+    documents["universe_search.json"]["stocks"].append({
+        "ticker": "004444", "market": "KR", "name": "합성제조사"})
+    artifact = engine.build_prepared_business_index(documents)
+    published = json.loads(json.dumps(artifact, sort_keys=True, ensure_ascii=True, separators=(",", ":")))
+    assert list(artifact["index"]["materials"]) != list(published["index"]["materials"])
+    prepared = engine.prepare_public_index(documents, "a" * 64)
+    by_id = prepared["by_id"]
+    revision = engine._business_index_revision(documents, by_id)
+    checked = engine.checked_business_index(published, engine.prepared_business_publisher_receipt(published),
+                                            revision, documents, by_id)
+    assert checked == artifact["index"]
+    published["index"]["by_company"]["KR:002222"].append(
+        published["index"]["by_company"]["KR:002222"][0])
+    assert engine.checked_business_index(published, engine.prepared_business_publisher_receipt(published),
+                                         revision, documents, by_id) is None
+
+
 @pytest.mark.parametrize("name,localized,accepted", [
     ("무관한신규회사", None, True),
     ("주식회사 합성고객", None, False),
@@ -119,7 +142,8 @@ def test_added_catalog_identity_reuses_only_when_business_result_is_unchanged(
         engine, documents, monkeypatch, name, localized, accepted):
     documents["universe_search.json"]["stocks"].append({
         "ticker": "003333", "market": "KR", "name": name, "name_ko": localized})
-    artifact = engine.build_prepared_business_index(documents)
+    artifact = json.loads(json.dumps(engine.build_prepared_business_index(documents),
+                                   sort_keys=True, ensure_ascii=True, separators=(",", ":")))
     # A live filing makes a previously unresolved universe declaration usable.
     original_catalog = {row["id"]: row for row in artifact["catalog"] if row["id"] != "KR:003333"}
     artifact["catalog"] = list(original_catalog.values())
@@ -290,7 +314,8 @@ def test_saved_16_public_artifacts_preserve_response_bytes(engine):
                                                public_bundle_revision="d" * 64))
     assert _bytes(documents) == source_bytes
     full_index = engine._PROJECTED_PUBLIC_INDEX.get(documents, "d" * 64)
-    artifact = engine.build_prepared_business_index(documents)
+    artifact = json.loads(json.dumps(engine.build_prepared_business_index(documents),
+                                   sort_keys=True, ensure_ascii=True, separators=(",", ":")))
     from prepared_business_test.portfolio_prepared_business import BUSINESS_SOURCE_FILES
     assert len(BUSINESS_SOURCE_FILES) == 6
     assert artifact["source_revision"] == engine._business_index_revision(
