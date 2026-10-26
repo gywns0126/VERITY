@@ -97,7 +97,8 @@ def _origin_result(request, *, method_allowed=True):
 
 def _valid_fetch_result(bundle):
     required = {"documents", "coverage", "revision"}
-    if type(bundle) is not dict or set(bundle) not in (required, required | {"index_revision"}):
+    if (type(bundle) is not dict or not required.issubset(bundle)
+            or not set(bundle).issubset(required | {"index_revision", "base_revision"})):
         return None
     documents = bundle.get("documents")
     coverage = bundle.get("coverage")
@@ -108,6 +109,10 @@ def _valid_fetch_result(bundle):
         return None
     index_revision = bundle.get("index_revision", revision)
     if type(index_revision) is not str or not _PUBLIC_BUNDLE_REVISION.fullmatch(index_revision):
+        return None
+    base_revision = bundle.get("base_revision")
+    if base_revision is not None and (type(base_revision) is not str
+            or not _PUBLIC_BUNDLE_REVISION.fullmatch(base_revision)):
         return None
     if not set(documents).issubset(PUBLIC_SOURCE_FILES):
         return None
@@ -131,12 +136,13 @@ def _valid_fetch_result(bundle):
     return (documents, index_revision) if coverage.get("status") == expected_status else None
 
 
-def _prepare_index(documents, revision):
+def _prepare_index(documents, revision, *, base_source_revision=None):
     # Common public data only. Neither identity nor the selected window enters
     # the shared preparation cache. The final response remains request-local.
     from api.portfolio_core.portfolio_engine import prepare_public_index
     prepare_public_index(documents, revision,
-                         prepared_business_fetcher=fetch_publisher_prepared_business)
+                         prepared_business_fetcher=fetch_publisher_prepared_business,
+                         base_source_revision=base_source_revision)
 
 
 def _load_prices(positions):
@@ -197,7 +203,8 @@ def analyze_request(request):
 
     started, stage_status = _stage_clock(), "error"
     try:
-        validated_sources = _valid_fetch_result(fetch_public_sources())
+        source_bundle = fetch_public_sources()
+        validated_sources = _valid_fetch_result(source_bundle)
         if validated_sources is not None and validated_sources[0]:
             stage_status = "ok"
     except Exception:
@@ -222,7 +229,9 @@ def analyze_request(request):
         with ThreadPoolExecutor(max_workers=2) as pool:
             prices = pool.submit(_load_prices, price_positions)
             changes = pool.submit(_load_changes, [dict(row) for row in price_positions])
-            _prepare_index(documents, public_bundle_revision)
+            _prepare_index(documents, public_bundle_revision,
+                           **({"base_source_revision": source_bundle["base_revision"]}
+                              if source_bundle.get("base_revision") is not None else {}))
             price_documents, change_projection = prices.result(), changes.result()
         result = analyze_portfolio(
             payload["positions"],

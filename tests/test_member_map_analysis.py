@@ -245,6 +245,20 @@ def test_index_revision_is_internal_validated_and_forwarded(modules, monkeypatch
     assert endpoint._valid_fetch_result({**source, "unexpected": True}) is None
 
 
+def test_base_revision_is_internal_validated_and_forwarded(modules, monkeypatch):
+    endpoint, _ = modules
+    source = {**_bundle(), "base_revision": "c" * 64}
+    monkeypatch.setattr(endpoint, "fetch_public_sources", Mock(return_value=source))
+    prepare = Mock()
+    monkeypatch.setattr(endpoint, "_prepare_index", prepare)
+    monkeypatch.setattr(endpoint, "analyze_portfolio", Mock(return_value={"schema": "alphaconsole-portfolio-v1"}))
+    assert endpoint.analyze_request(_request("jwt-a", {
+        "positions": [{"ticker": "005930", "market": "KR"}]}))[0] == 200
+    prepare.assert_called_once_with(source["documents"], source["revision"], base_source_revision="c" * 64)
+    for invalid in ("", "private-selection", "A" * 64, 1, []):
+        assert endpoint._valid_fetch_result({**source, "base_revision": invalid}) is None
+
+
 def test_optional_changes_use_identifiers_only_after_authentication(modules, monkeypatch):
     endpoint, storage = modules
     monkeypatch.setattr(endpoint, "fetch_public_sources", Mock(return_value=_bundle()))

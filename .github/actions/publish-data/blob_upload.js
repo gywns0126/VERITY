@@ -255,9 +255,17 @@ function guardBusinessPair(dir) {
     } catch (e) { return { ok: false, reason: `사업 준비 산출물 읽기 실패 (${e.message})` }; }
     const digest = /^[a-f0-9]{64}$/;
     const today = new Date().toISOString().slice(0, 10);
-    const catalogBound = artifact && artifact.matcher_version === "business-matchers-2026-10-27-v2";
+    const catalogBound = artifact && ["business-matchers-2026-10-27-v2", "business-matchers-2026-10-27-v3"].includes(artifact.matcher_version);
     const artifactKeys = ["schema", "matcher_version", "implementation_sha256", "source_revision", "utc_day", "index"];
     if (catalogBound) artifactKeys.push("catalog");
+    if (artifact && artifact.matcher_version === "business-matchers-2026-10-27-v3") artifactKeys.push("base_projection");
+    const base = artifact && artifact.base_projection;
+    if (artifact && artifact.matcher_version === "business-matchers-2026-10-27-v3" && base !== null &&
+        (!base || Object.keys(base).sort().join() !== ["source_revision", "encoding", "data"].sort().join() ||
+         !digest.test(base.source_revision) || base.encoding !== "gzip-base64-v1" ||
+         typeof base.data !== "string" || base.data.length > 8 * 1024 * 1024)) {
+        return { ok: false, reason: "공개 기초 자료 준비 계약 불일치" };
+    }
     if (!artifact || typeof artifact !== "object" || Array.isArray(artifact) ||
         !receipt || typeof receipt !== "object" || Array.isArray(receipt) ||
         Object.keys(artifact).sort().join() !== artifactKeys.sort().join() ||

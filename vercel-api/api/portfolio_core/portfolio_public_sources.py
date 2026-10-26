@@ -25,6 +25,7 @@ from contextvars import ContextVar
 from datetime import date, datetime, timezone
 from functools import lru_cache
 import json
+import hashlib
 import math
 import os
 from pathlib import Path
@@ -86,6 +87,20 @@ PUBLIC_SOURCE_MAX_BYTES = {
 }
 
 PUBLIC_COMPANY_FIELDS = ("id", "ticker", "market", "name", "sector", "facts", "documents")
+BASE_PROJECTION_FILES = PUBLIC_SOURCE_FILES[:3]
+
+
+def base_projection_revision(source_revisions):
+    """Bind only the three unchanged base sources, never a caller selection."""
+    digest = hashlib.sha256()
+    for name in BASE_PROJECTION_FILES:
+        revision = source_revisions.get(name)
+        if type(revision) is not str or not re.fullmatch(r"[0-9a-f]{64}", revision):
+            return None
+        digest.update((name + "\0" + revision + "\0").encode("ascii"))
+    return digest.hexdigest()
+
+
 PUBLIC_FACT_FIELDS = ("metric", "value", "unit", "as_of", "source")
 # SEC 8-K documents may additionally carry a validated item_codes list.
 PUBLIC_DOCUMENT_FIELDS = ("id", "title", "url", "as_of", "kind", "source")
@@ -347,7 +362,7 @@ def _safe_text_uncached(value: Any, maximum: int) -> str | None:
 @contextmanager
 def _temporary_public_text_cache():
     """Share validation only while building one public index, never across requests."""
-    cached = lru_cache(maxsize=16_384)(_safe_text_uncached)
+    cached = lru_cache(maxsize=65_536)(_safe_text_uncached)
     token = _TEXT_CACHE.set(cached)
     try:
         yield
@@ -1047,7 +1062,7 @@ def _dart_source_collection(document: Mapping[str, Any]) -> dict[str, Any] | Non
         return unknown
 
 
-def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
+def project_public_sources(documents: Mapping[str, Any], *, _base_companies=None) -> dict[str, Any]:
     """Project allowlisted public documents into a fixed company/fact schema."""
 
     if not isinstance(documents, Mapping):
@@ -1058,9 +1073,14 @@ def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
     if any(not isinstance(documents[key], Mapping) for key in keys):
         raise PublicSourceError("public source set rejected")
 
-    companies: dict[str, dict[str, Any]] = {}
+    # Only the engine's receipt/code/source-checked decoder supplies this owned
+    # list. Subsequent live feeds/flows keep their original order and guards.
+    companies: dict[str, dict[str, Any]] = (
+        {row["id"]: row for row in _base_companies} if _base_companies is not None else {})
     fact_keys: dict[str, set[tuple[Any, ...]]] = {}
-    document_keys: dict[str, set[str]] = {}
+    document_keys: dict[str, set[str]] = {
+        identifier: {row["id"] for row in company["documents"]}
+        for identifier, company in companies.items()}
 
     container_fields = {
         "universe_search.json": "stocks",
@@ -1114,7 +1134,7 @@ def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
         return company_id, company
 
     universe = documents.get("universe_search.json")
-    if isinstance(universe, Mapping):
+    if _base_companies is None and isinstance(universe, Mapping):
         for hint, row in _validated_rows(universe, "stocks"):
             register(row, ticker_hint=hint)
 
@@ -1141,6 +1161,8 @@ def project_public_sources(documents: Mapping[str, Any]) -> dict[str, Any]:
         ("stock_report_public.json", "KR", "DART"),
         ("us_stock_report_public.json", "US", "SEC"),
     ):
+        if _base_companies is not None:
+            continue
         document = documents.get(filename)
         if not isinstance(document, Mapping):
             continue

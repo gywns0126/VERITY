@@ -256,7 +256,7 @@ class DiscoveryListTest(unittest.TestCase):
                     (directory / name).write_text("{}")
             day = datetime.now(timezone.utc).date().isoformat()
             artifact = {"schema": "portfolio-public-business-index-v1",
-                        "matcher_version": "business-matchers-2026-10-27-v2",
+                        "matcher_version": "business-matchers-2026-10-27-v3", "base_projection": None,
                         "implementation_sha256": "a" * 64, "source_revision": "b" * 64,
                         "utc_day": day, "index": {}, "catalog": [{
                             "id": "KR:001111", "market": "KR", "name": "합성회사", "source_names": ["합성회사"]}]}
