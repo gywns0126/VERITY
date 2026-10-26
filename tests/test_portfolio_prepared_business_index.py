@@ -1,6 +1,7 @@
 """Public-only prepared business index and private-response parity."""
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import importlib
@@ -10,6 +11,8 @@ import logging
 import os
 from pathlib import Path
 import sys
+import threading
+import time
 import types
 from unittest.mock import Mock
 
@@ -80,6 +83,71 @@ def test_prepared_public_index_skips_matching_and_preserves_response(engine, doc
     assert public_index["business_materials"] == artifact["index"]
     after = _bytes(engine.analyze_portfolio(positions, documents, public_bundle_revision="a" * 64))
     assert after == before
+
+
+def test_prepared_fetch_is_once_per_revision_under_concurrent_requests(engine, documents):
+    artifact = engine.build_prepared_business_index(documents)
+    receipt = engine.prepared_business_publisher_receipt(artifact)
+    calls = []
+    start = threading.Barrier(4, timeout=5)
+
+    def fetch():
+        calls.append(True)
+        time.sleep(0.02)
+        return artifact, receipt
+
+    def prepare(_):
+        start.wait()
+        return engine.prepare_public_index(
+            documents, "a" * 64, prepared_business_fetcher=fetch
+        )
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        indexes = list(pool.map(prepare, range(4)))
+    assert len(calls) == 1
+    assert all(index is indexes[0] for index in indexes)
+    assert indexes[0]["business_materials"] == artifact["index"]
+
+
+@pytest.mark.parametrize("change", ["presence", "local_day", "utc_day"])
+def test_prepared_fetch_restarts_for_public_revision_boundary(engine, documents, monkeypatch, change):
+    fetch_module = importlib.import_module(engine.__package__ + ".portfolio_public_fetch")
+    source_revisions = {name: "a" * 64 for name in documents}
+    before = fetch_module._index_revision(source_revisions)
+    artifact = engine.build_prepared_business_index(documents)
+    receipt = engine.prepared_business_publisher_receipt(artifact)
+    fetch = Mock(return_value=(artifact, receipt))
+    engine.prepare_public_index(documents, before, prepared_business_fetcher=fetch)
+
+    if change == "presence":
+        after = fetch_module._index_revision({**source_revisions, "portfolio.json": "a" * 64})
+        changed_documents = {**documents, "portfolio.json": {}}
+    elif change == "local_day":
+        original_date = fetch_module.date
+
+        class Tomorrow(original_date):
+            @classmethod
+            def today(cls):
+                return original_date(2100, 1, 1)
+
+        monkeypatch.setattr(fetch_module, "date", Tomorrow)
+        after = fetch_module._index_revision(source_revisions)
+        changed_documents = documents
+    else:
+        original_datetime = fetch_module.datetime
+
+        class Tomorrow(original_datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return original_datetime(2100, 1, 1, tzinfo=tz)
+
+        monkeypatch.setattr(fetch_module, "datetime", Tomorrow)
+        after = fetch_module._index_revision(source_revisions)
+        changed_documents = documents
+
+    assert after != before
+    engine.prepare_public_index(changed_documents, after, prepared_business_fetcher=fetch)
+    assert fetch.call_count == 2
 
 
 def test_prepared_diagnostic_rejects_dynamic_fields_and_cannot_break_response(engine, monkeypatch, capsys):

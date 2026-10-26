@@ -155,7 +155,8 @@ class _ProjectedPublicIndexCache:
             _log_prepared_status("reuse_cached")
         return self._business_index
 
-    def get(self, public_documents, revision, *, prepared_business_index=None, publisher_receipt=None):
+    def get(self, public_documents, revision, *, prepared_business_index=None,
+            publisher_receipt=None, prepared_business_fetcher=None):
         if revision is None:
             with _temporary_public_text_cache():
                 return self._build(public_documents)
@@ -163,6 +164,9 @@ class _ProjectedPublicIndexCache:
             raise ValueError("invalid-public-bundle-revision")
         with self._lock:
             if revision != self._revision or self._index is None:
+                # A cold revision reads the public pair once across concurrent requests.
+                if prepared_business_fetcher is not None:
+                    prepared_business_index, publisher_receipt = prepared_business_fetcher()
                 with _temporary_public_text_cache():
                     self._index = self._build(
                         public_documents,
@@ -185,7 +189,7 @@ _PROJECTED_PUBLIC_INDEX = _ProjectedPublicIndexCache()
 
 
 def prepare_public_index(public_documents, revision, *, prepared_business_index=None,
-                         publisher_receipt=None):
+                         publisher_receipt=None, prepared_business_fetcher=None):
     """Prepare only public facts after caller validation; no member data enters.
 
     The same cache is consumed by analyze_portfolio. The existing trusted
@@ -194,7 +198,7 @@ def prepare_public_index(public_documents, revision, *, prepared_business_index=
     """
     return _PROJECTED_PUBLIC_INDEX.get(
         public_documents, revision, prepared_business_index=prepared_business_index,
-        publisher_receipt=publisher_receipt,
+        publisher_receipt=publisher_receipt, prepared_business_fetcher=prepared_business_fetcher,
     )
 
 

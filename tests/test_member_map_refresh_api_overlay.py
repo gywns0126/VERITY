@@ -155,6 +155,29 @@ def test_checkpoint_facts_reach_existing_projection_without_private_state():
     assert set(bundle["coverage"]) == {"expected", "available", "missing", "status"}
 
 
+def test_checkpoint_read_overlaps_downloads_and_is_not_repeated_when_warm():
+    import threading
+    started, downloading = threading.Event(), threading.Event()
+    reads = []
+
+    def reader():
+        reads.append(True)
+        started.set()
+        assert downloading.wait(2), "checkpoint blocked independent downloads"
+        return {"DART": state()}
+
+    def download(name):
+        assert started.wait(2), "checkpoint read was deferred until after downloads"
+        downloading.set()
+        return baseline(name)
+
+    first = fetch.fetch_public_sources(_fetcher=download, _clock=lambda: 0, _refresh_reader=reader)
+    second = fetch.fetch_public_sources(_fetcher=download, _clock=lambda: 1, _refresh_reader=reader)
+    assert reads == [True]
+    assert first == second
+    assert len(first["documents"]["public_disclosure_feed.json"]["items"]) == 2
+
+
 def test_optional_read_failure_retains_last_good_fact_without_new_clock():
     before = fetch.fetch_public_sources(_fetcher=baseline, _clock=lambda: 0,
                                        _refresh_reader=lambda: {"DART": state()})
@@ -292,6 +315,30 @@ def test_public_bundle_copy_preserves_shared_aliases_and_nested_isolation():
     assert copied["documents"]["first"] is not shared
     copied["documents"]["first"]["rows"][0]["title"] = "변경"
     assert source["documents"]["first"]["rows"][0]["title"] == "검수 회사"
+
+
+def test_public_bundle_copy_atomic_fast_path_preserves_types_and_fallback():
+    class MutableString(str):
+        pass
+
+    label = MutableString("public")
+    label.items = [1]
+    source = {"values": ["text", 42, 0.5, True, None, label], "alias": label}
+    copied = fetch._copy_public_bundle(source)
+    assert copied == deepcopy(source)
+    assert [type(item) for item in copied["values"]] == [type(item) for item in source["values"]]
+    assert copied["alias"] is copied["values"][-1] and copied["alias"] is not label
+    copied["alias"].items.append(2)
+    assert label.items == [1]
+
+
+def test_public_bundle_copy_preserves_container_cycles_without_sharing_source():
+    source = {"values": []}
+    source["values"].append(source)
+    copied = fetch._copy_public_bundle(source)
+    assert copied is not source
+    assert copied["values"] is not source["values"]
+    assert copied["values"][0] is copied
 
 
 def test_production_failed_news_overlay_separates_live_cache_and_return(monkeypatch):
