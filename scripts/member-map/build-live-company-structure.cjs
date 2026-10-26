@@ -157,7 +157,9 @@ function endpointsFor(id, live, seed) {
   return { issuer, endpoints };
 }
 
-function verifiedRow(row, endpoint, corp) {
+// Matching the captured row and accepting its economic value are separate gates.
+// A source-matched but impossible percentage is held, never repaired or published.
+function boundRow(row, endpoint, corp) {
   const p = row?.provenance, raw = row?.sourceRow?.fields || row?.sourceRow;
   if (!p || !raw || typeof raw !== 'object' || p.corp_code !== corp || raw.corp_code !== corp ||
       !/^\d{14}$/u.test(p.rcept_no || '') || p.rcept_no !== raw.rcept_no ||
@@ -172,10 +174,15 @@ function verifiedRow(row, endpoint, corp) {
   const original = holder ? raw.nm : raw.inv_prm;
   const pct = number(holder ? row.stock_rate : row.ownership_pct);
   const rawPct = number(holder ? raw.trmend_posesn_stock_qota_rt : raw.trmend_blce_qota_rt);
-  if (!norm(name) || norm(name) !== norm(original) || pct === null || rawPct === null || pct !== rawPct || pct < 0 || pct > 100) return null;
+  if (!norm(name) || norm(name) !== norm(original) || pct === null || rawPct === null || pct !== rawPct) return null;
   if (!holder && raw.trmend_blce_qy !== undefined && number(row.end_balance_qty) !== number(raw.trmend_blce_qy)) return null;
   return { name: clean(name), ownership_pct: pct, asOf: settlementDay(p.stlm_dt),
     links: { original: `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${p.rcept_no}` } };
+}
+
+function verifiedRow(row, endpoint, corp) {
+  const bound = boundRow(row, endpoint, corp);
+  return bound && bound.ownership_pct >= 0 && bound.ownership_pct <= 100 ? bound : null;
 }
 
 function reusableCurations(legacy) {
@@ -322,7 +329,7 @@ function buildArtifacts({ listed = {}, universe = {}, cikMap = {}, reviewedAlias
       stamp(ownership._meta?.generated_at) || stamp(issuer?.collectedAt || issuer?.collected_at) || '1970-01-01T00:00:00Z';
     const sourceObservedAt = Object.values(endpoints).map(e => e.rowObservedAt).filter(stamp).sort((a, b) => Date.parse(b) - Date.parse(a))[0];
     const rows = { hyslrSttus: [], otrCprInvstmntSttus: [] };
-    let rawVerified = 0, stored = 0, unsupported = 0;
+    let rawVerified = 0, stored = 0, unsupported = 0, sourceValueReview = 0;
     for (const endpoint of ENDPOINTS) {
       const e = endpoints[endpoint];
       if (!e) continue;
@@ -332,12 +339,17 @@ function buildArtifacts({ listed = {}, universe = {}, cikMap = {}, reviewedAlias
         const original = row?.sourceRow?.fields || row?.sourceRow;
         const rawEnded = !holder && original?.trmend_blce_qy !== undefined && number(original.trmend_blce_qy) === 0;
         if (!norm(name) || aggregate(name) || amount === 0 || rawEnded) { unsupported++; continue; }
-        let proof = verifiedRow(row, endpoint, issuer.corp_code);
+        let proof = boundRow(row, endpoint, issuer.corp_code);
         if (proof && e.rowObservedAt && proof.asOf > e.rowObservedAt.slice(0, 10)) {
           if (strictSources) throw Error('DART source date ordering failed');
           proof = null;
         }
         if (strictSources && live[id]?.endpoints?.[endpoint] && e.attemptStatus === '000' && Date.parse(e.rowObservedAt) === Date.parse(e.attemptedAt) && !proof) throw Error('DART source row binding failed');
+        // Quarantine only AFTER all identity/value/date bindings pass. A mismatched
+        // transformed value, receipt, company or quantity still fails publication.
+        if (proof && (proof.ownership_pct < 0 || proof.ownership_pct > 100)) {
+          unsupported++; sourceValueReview++; continue;
+        }
         // No signed/raw/private source fields are copied into the public model.
         const identity = identities.get(norm(name));
         const normalized = proof && e.rowObservedAt ? { ...proof, observedAt: e.rowObservedAt, ...(identity ? { symbol: identity.ticker, market: identity.market } : {}) } : { name: clean(name), ownership_pct: null };
@@ -374,11 +386,11 @@ function buildArtifacts({ listed = {}, universe = {}, cikMap = {}, reviewedAlias
       relations.set(`${r.from}|${r.to}`, r); curatedCount++; curatedIds.add(r.id);
     }
     const endpointStates = Object.fromEntries(ENDPOINTS.map(k => { const e = endpoints[k]; return [k, e ? { status: String(e.status || 'unknown'), attemptStatus: e.attemptStatus, attemptedAt: e.attemptedAt, lastSuccessAt: e.rowObservedAt } : { attemptStatus: 'not-attempted' }]; }));
-    const checked = ENDPOINTS.every(k => endpoints[k] && success(endpoints[k].attemptStatus) && !endpoints[k].retainedPreviousPeriod && !!endpoints[k].attemptedAt);
+    const checked = !sourceValueReview && ENDPOINTS.every(k => endpoints[k] && success(endpoints[k].attemptStatus) && !endpoints[k].retainedPreviousPeriod && !!endpoints[k].attemptedAt);
     const failed = ENDPOINTS.some(k => endpoints[k] && !success(endpoints[k].attemptStatus));
     const attempted = ENDPOINTS.some(k => !!endpoints[k]);
     const legacyPresent = !!old || oldHolders.length > 0;
-    meta.status = failed ? 'refresh-error' : checked ? 'source-checked' : attempted ? 'partial' : legacyPresent ? 'legacy-only' : curatedCount ? 'curated-only' : 'not-attempted';
+    meta.status = failed ? 'refresh-error' : sourceValueReview ? 'needs-review' : checked ? 'source-checked' : attempted ? 'partial' : legacyPresent ? 'legacy-only' : curatedCount ? 'curated-only' : 'not-attempted';
     marketCoverage[checked ? 'checked' : 'pending']++;
     if (failed) marketCoverage.failed++;
     if (meta.status === 'legacy-only') marketCoverage.legacyOnly++;
@@ -397,11 +409,12 @@ function buildArtifacts({ listed = {}, universe = {}, cikMap = {}, reviewedAlias
       (a.evidence.length ? 0 : 1) - (b.evidence.length ? 0 : 1) || a.id.localeCompare(b.id));
     const used = new Set([id, ...sorted.flatMap(r => [r.from, r.to])]);
     const payload = { schema: 'alphanest-company-structure-v1', observedAt: sourceObservedAt || observedAt, companies: [...companies.values()].filter(c => used.has(c.id)).sort((a, b) => a.id.localeCompare(b.id)), relations: sorted,
-      coverage: { status: meta.status, sourceChecked: checked, attemptStatus: failed ? 'error' : checked ? 'success' : attempted ? 'partial' : 'not-attempted', endpoints: endpointStates,
+      coverage: { status: meta.status, sourceChecked: checked, attemptStatus: failed ? 'error' : sourceValueReview ? 'needs-review' : checked ? 'success' : attempted ? 'partial' : 'not-attempted', endpoints: endpointStates,
         asOfNotCollectedAt: true, asOfMeaning: 'stlm_dt is the settlement date, not the filing receipt date', rawRowsExamined, rawMatchedRows: rawVerified,
         rawVerifiedRows: admittedVerified, storedRows: admittedStored, unsupportedRows: rejected,
         curatedRelations: curatedCount, displayedRelations: sorted.length, limits: { nodes: 3000, relations: 3000, bytes: MAX_BYTES },
-        note: 'Unsupported rows include personal/fund/aggregate/zero/unresolved/duplicate entries. Stored names do not prove current ownership or subsidiary status. FOREIGN IDs do not imply country. Collection time is not an as-of date. Quantity is checked only when the original quantity is preserved; parsed zero alone is not evidence of an ended investment.' } };
+        note: 'Unsupported rows include personal/fund/aggregate/zero/unresolved/duplicate entries. Stored names do not prove current ownership or subsidiary status. FOREIGN IDs do not imply country. Collection time is not an as-of date. Quantity is checked only when the original quantity is preserved; parsed zero alone is not evidence of an ended investment.' +
+          (sourceValueReview ? ` Held ${sourceValueReview} source-matched row(s): ownership percentage outside 0..100. Original values remain in the source store; no corrected value or relationship is inferred.` : '') } };
     if (payload.companies.length > 3000 || sorted.length > 3000) throw Error('Payload node/relation limit exceeded');
     const bytes = jsonBytes(payload);
     if (bytes.length > MAX_BYTES) throw Error(`Payload byte limit exceeded: ${id}`);

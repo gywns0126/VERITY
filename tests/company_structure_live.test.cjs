@@ -385,6 +385,37 @@ test('publication build rejects a newly successful row with broken binding; vali
   assert.throws(() => buildArtifacts({ ...c, strictSources: true }), /binding/u);
 });
 
+test('source-matched impossible DART rates are held without blocking valid rows or changing source bytes', () => {
+  for (const investment of [false, true]) for (const rate of [6440308, -1, 100.01]) {
+    const bad = rawRow('Held Corp.', investment), good = rawRow('Good Corp.', investment);
+    bad[investment ? 'ownership_pct' : 'stock_rate'] = rate;
+    bad.sourceRow.fields[investment ? 'trmend_blce_qota_rt' : 'trmend_posesn_stock_qota_rt'] = String(rate);
+    const args = { ...base(), strictSources: true, sources: investment ? source([], [bad, good]) : source([bad, good], []) };
+    const before = JSON.stringify(args), built = buildArtifacts(args), p = payload(built);
+    assert.equal(JSON.stringify(args), before);
+    assert.equal(p.relations.length, 1);
+    assert.ok(p.companies.some(c => c.name === 'Good Corp.'));
+    assert.ok(!p.companies.some(c => c.name === 'Held Corp.'));
+    assert.equal(p.coverage.status, 'needs-review'); assert.equal(p.coverage.attemptStatus, 'needs-review');
+    assert.equal(p.coverage.sourceChecked, false);
+    assert.equal(p.coverage.rawRowsExamined, 2); assert.equal(p.coverage.rawVerifiedRows, 1);
+    assert.equal(p.coverage.unsupportedRows, 1); assert.match(p.coverage.note, /Held 1 source-matched row/);
+    assert.equal(built.manifest.coverage.KR.failed, 0); assert.equal(built.manifest.coverage.KR.checked, 0);
+    assert.equal(built.manifest.coverage.KR.pending, 1);
+    assert.doesNotThrow(() => validatePayload(p));
+    // Impossible source values cannot conceal broken identity, period or value binding.
+    for (const mutate of [r => r.provenance.corp_code = '99999999', r => r.provenance.rcept_no = '20260814000002',
+      r => r.provenance.bsns_year = 'bad', r => r.sourceRow.fields.stlm_dt = '2026-03-31',
+      r => r.sourceRow.fields[investment ? 'inv_prm' : 'nm'] = 'Other Corp.',
+      r => r[investment ? 'ownership_pct' : 'stock_rate'] = 25,
+      r => { r.provenance.stlm_dt = r.sourceRow.fields.stlm_dt = '2026-12-31'; },
+      ...(investment ? [r => r.end_balance_qty = 99] : [])]) {
+      const broken = structuredClone(args), row = broken.sources.issuers['KR:0001A0'].endpoints[investment ? 'otrCprInvstmntSttus' : 'hyslrSttus'].rows[0];
+      mutate(row); assert.throws(() => buildArtifacts(broken), /binding|date ordering/);
+    }
+  }
+});
+
 test('cross-period 013 retains older successful corporate rows without claiming latest-period coverage; real replacement 013 stays empty', () => {
   const a = base();
   for (const e of Object.values(a.sources.issuers['KR:0001A0'].endpoints)) { e.attemptStatus = '013'; e.attemptedAt = at; }
