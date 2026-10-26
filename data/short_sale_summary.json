@@ -1,7 +1,7 @@
 {
- "as_of": "2026-10-24T13:54:38+09:00",
+ "as_of": "2026-10-26T17:20:05+09:00",
  "version": "short_sale_trail_v0",
- "n_observations": 8990,
+ "n_observations": 9069,
  "window_start": null,
  "thresholds_observed": {
   "kr_auto_avoid": 15.0,
@@ -70,8 +70,8 @@
    }
   },
   "missing": {
-   "n_observations": 1891,
-   "n_tickers": 253,
+   "n_observations": 1927,
+   "n_tickers": 264,
    "fwd_20d": {
     "n_tickers": 157,
     "n_observations": 1472,
@@ -112,7 +112,7 @@
    }
   },
   "downgrade": {
-   "n_observations": 44,
+   "n_observations": 45,
    "n_tickers": 24,
    "fwd_20d": {
     "n_tickers": 0,
@@ -132,8 +132,8 @@
    }
   },
   "clean": {
-   "n_observations": 3099,
-   "n_tickers": 496,
+   "n_observations": 3123,
+   "n_tickers": 501,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -152,7 +152,7 @@
    }
   },
   "missing": {
-   "n_observations": 2289,
+   "n_observations": 2307,
    "n_tickers": 350,
    "fwd_20d": {
     "n_tickers": 0,
@@ -175,8 +175,8 @@
  "labels": [
   "예비 결과 — auto_avoid 종목 N=43 < 100",
   "🚨 auto_avoid 종목이 clean 보다 높다 (+0.38% vs -0.48%, 종목 N=43) — 규칙이 수익을 깎고 있을 가능성. 임계 조정이 아니라 지표 교체(등록 §4-나) 검토",
-  "US 지표 결측 2289건 — clean 과 분리 집계됨(무혐의 통과 아님)",
-  "KR 지표 결측 1891건 — 수집 이전 기간 포함. clean 과 분리 집계"
+  "US 지표 결측 2307건 — clean 과 분리 집계됨(무혐의 통과 아님)",
+  "KR 지표 결측 1927건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
  "note": "공매도 규칙 사후 수익률 관측 — 임계·강도 재판단의 판정 근거. 점수·집행 입력 0. KR=거래량 비중(흐름) / US=숏인터레스트(포지션) 로 측정 대상이 다르므로 시장 간 수치를 비교하지 말 것. 수익률은 KR 전용(US 일봉 레이크 미도달)."
