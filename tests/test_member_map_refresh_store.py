@@ -138,10 +138,9 @@ def test_read_exact_three_rows_aggregate_bound_and_deep_copy(monkeypatch):
     monkeypatch.setattr(storage, "_request_json", read)
     states = storage.RefreshStore("synthetic-role").read_states()
     method, url, options = observed[0]
-    assert method == "GET" and url.endswith("?select=source,revision,feed_revision&source=in.(DART,SEC,news)&limit=3")
-    assert options["limit"] == storage.ENVELOPE_MAX_BYTES
-    assert observed[1][2]["limit"] == 12 * 1024 * 1024 + storage.ENVELOPE_MAX_BYTES
-    assert observed[0][2]["deadline"] == observed[1][2]["deadline"]
+    assert method == "GET" and url.endswith("?select=source,state,revision,feed_revision&source=in.(DART,SEC,news)&limit=3")
+    assert len(observed) == 1
+    assert options["limit"] == 12 * 1024 * 1024 + storage.ENVELOPE_MAX_BYTES
     states["DART"]["feed"]["items"][0]["name"] = "다른 합성 회사"
     assert original["feed"]["items"][0]["name"] == "합성 회사"
 
@@ -513,6 +512,7 @@ def test_cross_worker_same_feed_metadata_does_not_advance_cached_state_revision(
     ledger, calls, _ = cached_rest(monkeypatch)
     store = storage.RefreshStore("synthetic-role")
     original = store.read_states()["DART"]
+    assert len(calls) == 1 and "select=source,state," in calls[0][1]
     later = "2026-10-12T01:02:00+00:00"
     refreshed = apply_result("DART", original, {"status": "success", "complete": True, "records": [],
         "cursor": {**original["cursor"], "checked_at": later}, "requests": 1, "error": None, "coverage": {}}, later)
@@ -558,6 +558,8 @@ def test_changed_feed_reads_only_changed_source_and_keeps_other_sources(monkeypa
     changed = apply_result("DART", before["DART"], result, "2026-10-12T01:02:00+00:00")
     ledger["DART"].update(state=changed, revision=2, feed_revision=2)
     assert store.read_states()["DART"] == changed
+    assert calls[-2][2]["_session"] is calls[-1][2]["_session"]
+    assert calls[-2][2]["deadline"] == calls[-1][2]["deadline"]
     assert "source=in.(DART)&limit=3" in calls[-1][1]
     assert calls[-1][2]["limit"] == storage.STATE_MAX_BYTES + storage.ENVELOPE_MAX_BYTES
     assert store._states["SEC"] == before["SEC"] and store._states["news"] == before["news"]
@@ -604,13 +606,13 @@ def test_reader_deadline_covers_head_body_and_validation(monkeypatch):
     clock, deadlines = [0.0], []
     def timed(method, url, **kwargs):
         deadlines.append(kwargs["deadline"])
-        clock[0] += 2
+        clock[0] += 4
         return request(method, url, **kwargs)
     monkeypatch.setattr(storage.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(storage, "_request_json", timed)
     with pytest.raises(storage.RefreshStoreError, match="refresh-read-timeout"):
         store.read_states()
-    assert deadlines == [3, 3] and store._states == {}
+    assert deadlines == [3] and store._states == {}
 
 
 def test_late_read_result_cannot_commit_and_does_not_spawn_repeated_workers(monkeypatch):

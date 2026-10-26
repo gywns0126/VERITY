@@ -18,7 +18,7 @@ from api.member_map_state import _identity, _read_json
 from api.portfolio_core.portfolio_engine import analyze_portfolio, validate_positions
 from api.portfolio_core.portfolio_public_fetch import (
     PUBLIC_SOURCE_FILES,
-    fetch_public_sources,
+    borrow_public_sources_for_analysis as fetch_public_sources,
 )
 from api.portfolio_core.portfolio_prepared_business import fetch_publisher_prepared_business
 

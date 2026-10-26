@@ -109,6 +109,61 @@ def test_prepared_fetch_is_once_per_revision_under_concurrent_requests(engine, d
     assert indexes[0]["business_materials"] == artifact["index"]
 
 
+@pytest.mark.parametrize("name,localized,accepted", [
+    ("무관한신규회사", None, True),
+    ("주식회사 합성고객", None, False),
+    ("unrelated", "합성고객", False),
+    ("다른업체", None, False),
+])
+def test_added_catalog_identity_reuses_only_when_business_result_is_unchanged(
+        engine, documents, monkeypatch, name, localized, accepted):
+    documents["universe_search.json"]["stocks"].append({
+        "ticker": "003333", "market": "KR", "name": name, "name_ko": localized})
+    artifact = engine.build_prepared_business_index(documents)
+    # A live filing makes a previously unresolved universe declaration usable.
+    original_catalog = {row["id"]: row for row in artifact["catalog"] if row["id"] != "KR:003333"}
+    artifact["catalog"] = list(original_catalog.values())
+    artifact["source_revision"] = engine._business_index_revision(documents, original_catalog)
+    artifact["index"] = engine._business_material_index(documents, original_catalog)
+    current_catalog = {**original_catalog, "KR:003333": {
+        "id": "KR:003333", "market": "KR", "name": name, "source_names": [name]}}
+    receipt = engine.prepared_business_publisher_receipt(artifact)
+    helper = importlib.import_module(engine.__package__ + ".portfolio_prepared_business")
+    compatible = helper.compatible_catalog_revision(
+        artifact, documents, current_catalog, engine._business_index_revision)
+    assert (compatible is not None) is accepted
+    baseline = engine._business_material_index(documents, current_catalog)
+    cache = engine._ProjectedPublicIndexCache()
+    built = Mock(wraps=engine._business_material_index)
+    monkeypatch.setattr(engine, "_business_material_index", built)
+    result = cache._business(documents, current_catalog, artifact, receipt)
+    assert result == baseline
+    assert built.call_count == (0 if accepted else 1)
+
+
+@pytest.mark.parametrize("mutation", ["issuer", "rename", "removed", "changed-excerpt", "forged-receipt"])
+def test_catalog_reuse_retains_identity_source_and_publisher_guards(engine, documents, mutation):
+    artifact = engine.build_prepared_business_index(documents)
+    receipt = engine.prepared_business_publisher_receipt(artifact)
+    current = {row["id"]: deepcopy(row) for row in artifact["catalog"]}
+    current["KR:003333"] = {"id": "KR:003333", "market": "KR", "name": "무관한신규회사", "source_names": ["무관한신규회사"]}
+    if mutation == "issuer":
+        source = documents["kr_business_overview_public.json"]["rows"].pop("001111")
+        documents["kr_business_overview_public.json"]["rows"]["003333"] = source
+    elif mutation == "rename":
+        current["KR:001111"]["name"] = "다른발행사"
+    elif mutation == "removed":
+        current.pop("KR:002222")
+    elif mutation == "changed-excerpt":
+        documents["kr_business_overview_public.json"]["rows"]["001111"]["text"] += " 변경."
+    else:
+        receipt["artifact_sha256"] = "0" * 64
+    cache = engine._ProjectedPublicIndexCache()
+    result = cache._business(documents, current, artifact, receipt)
+    assert result == engine._business_material_index(documents, current)
+    assert result is not artifact["index"]
+
+
 @pytest.mark.parametrize("change", ["presence", "local_day", "utc_day"])
 def test_prepared_fetch_restarts_for_public_revision_boundary(engine, documents, monkeypatch, change):
     fetch_module = importlib.import_module(engine.__package__ + ".portfolio_public_fetch")
@@ -228,10 +283,12 @@ def test_saved_16_public_artifacts_preserve_response_bytes(engine):
     assert len(names) == len(PUBLIC_SOURCE_FILES) == 16
     documents = {name: json.loads((source_dir / name).read_text(encoding="utf-8"))
                  for name in names}
+    source_bytes = _bytes(documents)
     positions = [{"ticker": "000660", "market": "KR"},
                  {"ticker": "TSM", "market": "US"}]
     baseline = _bytes(engine.analyze_portfolio(positions, documents,
                                                public_bundle_revision="d" * 64))
+    assert _bytes(documents) == source_bytes
     full_index = engine._PROJECTED_PUBLIC_INDEX.get(documents, "d" * 64)
     artifact = engine.build_prepared_business_index(documents)
     from prepared_business_test.portfolio_prepared_business import BUSINESS_SOURCE_FILES
@@ -252,9 +309,22 @@ def test_saved_16_public_artifacts_preserve_response_bytes(engine):
                                     publisher_receipt=engine.prepared_business_publisher_receipt(artifact))
     finally:
         engine._business_material_index = original
-    prepared = _bytes(engine.analyze_portfolio(positions, documents,
-                                               public_bundle_revision="d" * 64))
+    result = engine.analyze_portfolio(positions, documents, public_bundle_revision="d" * 64)
+    prepared = _bytes(result)
     assert prepared == baseline
+    def change_response(value):
+        if type(value) is dict:
+            for child in list(value.values()):
+                change_response(child)
+            value.clear()
+        elif type(value) is list:
+            for child in value:
+                change_response(child)
+            value.clear()
+    change_response(result)
+    assert _bytes(documents) == source_bytes
+    assert _bytes(engine.analyze_portfolio(positions, documents,
+        public_bundle_revision="d" * 64)) == baseline
 
 
 def test_fixed_public_transport_is_bounded_and_never_reads_member_inputs(engine, documents):

@@ -48,6 +48,8 @@ from .portfolio_prepared_business import (
     checked_business_index,
     implementation_sha256 as _prepared_implementation_sha256,
     publisher_receipt_for as prepared_business_publisher_receipt,
+    identity_catalog as _business_identity_catalog,
+    compatible_catalog_revision as _compatible_business_revision,
 )
 
 
@@ -140,6 +142,14 @@ class _ProjectedPublicIndexCache:
         prepared = checked_business_index(
             prepared_business_index, publisher_receipt, revision, documents, by_id
         ) if prepared_business_index is not None else None
+        if prepared is None and prepared_business_index is not None:
+            compatible = _compatible_business_revision(
+                prepared_business_index, documents, by_id, _business_index_revision
+            )
+            if compatible is not None:
+                prepared = checked_business_index(
+                    prepared_business_index, publisher_receipt, compatible, documents, by_id
+                )
         if prepared is not None:
             _log_prepared_status("accepted")
             self._business_index = prepared
@@ -219,6 +229,7 @@ def build_prepared_business_index(public_documents):
                 "implementation_sha256": _prepared_implementation_sha256(),
                 "utc_day": utc_day,
                 "source_revision": source_revision,
+                "catalog": _business_identity_catalog(by_id),
                 "index": _business_material_index(business_documents, by_id)}
 
 

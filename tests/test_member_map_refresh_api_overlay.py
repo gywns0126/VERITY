@@ -155,6 +155,36 @@ def test_checkpoint_facts_reach_existing_projection_without_private_state():
     assert set(bundle["coverage"]) == {"expected", "available", "missing", "status"}
 
 
+def test_analysis_borrows_public_snapshot_without_mutating_or_exposing_it(monkeypatch):
+    engine = importlib.import_module(PACKAGE + ".portfolio_engine")
+    engine._reset_projection_cache_for_tests()
+    documents = {"universe_search.json": {"stocks": [
+        {"ticker": "000001", "name": "검수 회사", "market": "KR"}]}}
+    fetch._CACHE_RESULT = {"documents": documents, "coverage": fetch._coverage(documents),
+                           "revision": "a" * 64, "index_revision": "b" * 64}
+    fetch._CACHE_EXPIRES_AT = float("inf")
+    before = deepcopy(fetch._CACHE_RESULT)
+    borrowed = fetch.borrow_public_sources_for_analysis()
+    assert borrowed is not fetch._CACHE_RESULT
+    assert borrowed["documents"] is documents
+    selected = [{"ticker": "000001", "market": "KR"}]
+    result = engine.analyze_portfolio(selected, borrowed["documents"],
+                                      public_bundle_revision=borrowed["index_revision"])
+    assert fetch._CACHE_RESULT == before
+    result["companies"][0]["name"] = "private edit"
+    result["coverage"]["sources"].clear()
+    assert fetch._CACHE_RESULT == before
+    assert engine.analyze_portfolio(selected, documents,
+        public_bundle_revision=borrowed["index_revision"])["companies"][0]["name"] == "검수 회사"
+    isolated = fetch.fetch_public_sources()
+    isolated["documents"]["universe_search.json"]["stocks"].clear()
+    assert fetch._CACHE_RESULT == before
+    # Replacing the cache on refresh cannot change a request's older snapshot.
+    fetch._CACHE_RESULT = {**before, "documents": {}}
+    assert borrowed["documents"] == documents
+    engine._reset_projection_cache_for_tests()
+
+
 def test_checkpoint_read_overlaps_downloads_and_is_not_repeated_when_warm():
     import threading
     started, downloading = threading.Event(), threading.Event()

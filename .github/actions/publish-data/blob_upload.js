@@ -255,10 +255,12 @@ function guardBusinessPair(dir) {
     } catch (e) { return { ok: false, reason: `사업 준비 산출물 읽기 실패 (${e.message})` }; }
     const digest = /^[a-f0-9]{64}$/;
     const today = new Date().toISOString().slice(0, 10);
+    const catalogBound = artifact && artifact.matcher_version === "business-matchers-2026-10-27-v2";
+    const artifactKeys = ["schema", "matcher_version", "implementation_sha256", "source_revision", "utc_day", "index"];
+    if (catalogBound) artifactKeys.push("catalog");
     if (!artifact || typeof artifact !== "object" || Array.isArray(artifact) ||
         !receipt || typeof receipt !== "object" || Array.isArray(receipt) ||
-        Object.keys(artifact).sort().join() !== ["schema", "matcher_version", "implementation_sha256",
-            "source_revision", "utc_day", "index"].sort().join() ||
+        Object.keys(artifact).sort().join() !== artifactKeys.sort().join() ||
         Object.keys(receipt).sort().join() !== ["schema", "artifact_sha256", "source_revision",
             "implementation_sha256", "utc_day"].sort().join() ||
         artifact.schema !== "portfolio-public-business-index-v1" ||
@@ -270,6 +272,17 @@ function guardBusinessPair(dir) {
         receipt.artifact_sha256 !== sha256(artifactBytes) ||
         !artifact.index || typeof artifact.index !== "object" || Array.isArray(artifact.index)) {
         return { ok: false, reason: "사업 준비 artifact/receipt 계약 불일치" };
+    }
+    if (catalogBound && (!Array.isArray(artifact.catalog) || !artifact.catalog.length || artifact.catalog.length > 50000 ||
+        artifact.catalog.some((row) => !row || Object.keys(row).sort().join() !==
+            ["id", "market", "name", "source_names"].sort().join() ||
+            typeof row.id !== "string" || !/^(KR:[0-9]{6}|US:[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,2})?)$/.test(row.id) ||
+            !["KR", "US"].includes(row.market) || !row.id.startsWith(row.market + ":") ||
+            typeof row.name !== "string" || !row.name || row.name.length > 160 ||
+            (row.source_names !== null && (!Array.isArray(row.source_names) || row.source_names.length > 4 ||
+                row.source_names.some((name) => typeof name !== "string" || !name || name.length > 160)))) ||
+        new Set(artifact.catalog.map((row) => row.id)).size !== artifact.catalog.length)) {
+        return { ok: false, reason: "사업 준비 catalog 계약 불일치" };
     }
     return { ok: true };
 }
