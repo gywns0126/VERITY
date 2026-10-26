@@ -669,18 +669,18 @@ def test_index_preparation_failure_keeps_private_failure_boundary(modules, monke
     projection.assert_not_called()
 
 
-def test_preparation_passes_only_public_artifact_and_receipt(modules, monkeypatch):
+def test_preparation_fetches_only_on_public_projection_miss(modules, monkeypatch):
     endpoint, _ = modules
-    artifact, receipt = {"index": {}}, {"schema": "synthetic-publisher-receipt"}
-    fetch = Mock(return_value=(artifact, receipt))
-    prepare = Mock()
+    fetch = Mock(return_value=(None, None))
     monkeypatch.setattr(endpoint, "fetch_publisher_prepared_business", fetch)
-    monkeypatch.setattr(sys.modules["api.portfolio_core.portfolio_engine"], "prepare_public_index", prepare)
     source = _bundle()
     endpoint._prepare_index(source["documents"], source["revision"])
+    fetch.side_effect = AssertionError("prepared public network read on cache hit")
+    endpoint._prepare_index(source["documents"], source["revision"])
     fetch.assert_called_once_with()
-    prepare.assert_called_once_with(source["documents"], source["revision"],
-                                    prepared_business_index=artifact, publisher_receipt=receipt)
+    fetch.side_effect = None
+    endpoint._prepare_index(source["documents"], "b" * 64)
+    assert fetch.call_count == 2
 
 
 def test_invalid_input_does_not_fetch_prepared_public_artifact(modules, monkeypatch):

@@ -135,9 +135,8 @@ def _prepare_index(documents, revision):
     # Common public data only. Neither identity nor the selected window enters
     # the shared preparation cache. The final response remains request-local.
     from api.portfolio_core.portfolio_engine import prepare_public_index
-    artifact, receipt = fetch_publisher_prepared_business()
-    prepare_public_index(documents, revision, prepared_business_index=artifact,
-                         publisher_receipt=receipt)
+    prepare_public_index(documents, revision,
+                         prepared_business_fetcher=fetch_publisher_prepared_business)
 
 
 def _load_prices(positions):

@@ -61,6 +61,15 @@ def _safe_etag(value):
     return value if type(value) is str and _STRONG_ETAG.fullmatch(value) else None
 
 
+def _read_refresh_states():
+    """Read public checkpoint facts independently of the Blob downloads."""
+    global _REFRESH_STORE
+    from .member_map_refresh_store import RefreshStore
+    if _REFRESH_STORE is None:
+        _REFRESH_STORE = RefreshStore.from_environment()
+    return _REFRESH_STORE.read_states()
+
+
 def _refresh_overlay(documents, reader=None):
     """Optional public-fact checkpoints only; never pass a caller's identity.
 
@@ -68,15 +77,11 @@ def _refresh_overlay(documents, reader=None):
     fixed service-role adapter never reads member, price or AI tables. Only
     existing public feed fields enter the documents returned to the engine.
     """
-    global _LIVE_STATES, _REFRESH_STORE
+    global _LIVE_STATES
     try:
-        from .member_map_refresh_store import RefreshStore, validate_state
+        from .member_map_refresh_store import validate_state
         from .member_map_live_refresh import overlay_states
-        if reader is None:
-            if _REFRESH_STORE is None:
-                _REFRESH_STORE = RefreshStore.from_environment()
-            reader = _REFRESH_STORE.read_states
-        states = reader()
+        states = (reader or _read_refresh_states)()
         if type(states) is not dict or not set(states) <= {"DART", "SEC", "news"}:
             raise ValueError("refresh states rejected")
         validated = {source: validate_state(source, state) for source, state in states.items()}
@@ -268,6 +273,7 @@ def _index_revision(source_revisions):
 def _copy_public_bundle(value):
     """Copy the JSON-shaped public bundle with deepcopy-equivalent alias isolation."""
     memo = {}
+    atomic = {str, int, float, bool, type(None)}
 
     def clone(item):
         item_type = type(item)
@@ -278,7 +284,7 @@ def _copy_public_bundle(value):
             copied = {}
             memo[identifier] = copied
             for key, nested in item.items():
-                copied[key] = clone(nested)
+                copied[key] = nested if type(nested) in atomic else clone(nested)
             return copied
         if item_type is list:
             identifier = id(item)
@@ -286,9 +292,9 @@ def _copy_public_bundle(value):
                 return memo[identifier]
             copied = []
             memo[identifier] = copied
-            copied.extend(clone(nested) for nested in item)
+            copied.extend(nested if type(nested) in atomic else clone(nested) for nested in item)
             return copied
-        if item_type in (str, int, float, bool, type(None)):
+        if item_type in atomic:
             return item
         return deepcopy(item, memo)
 
@@ -372,7 +378,12 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
                 hash_ms += (time.monotonic() - started) * 1000
 
         fetch_started = time.monotonic()
-        with ThreadPoolExecutor(max_workers=len(PUBLIC_SOURCE_FILES)) as pool:
+        read_overlay = _fetcher is None or _refresh_reader is not None
+        with ThreadPoolExecutor(max_workers=len(PUBLIC_SOURCE_FILES) + int(read_overlay)) as pool:
+            # The checkpoint adapter has its own bounded deadline. Overlap its
+            # read with independent public downloads, but merge and validate only
+            # after both finish. A failed future still uses the last-good overlay.
+            refresh_future = pool.submit(_refresh_reader or _read_refresh_states) if read_overlay else None
             futures = {name: pool.submit(timed_fetch, name) for name in PUBLIC_SOURCE_FILES}
             for name in PUBLIC_SOURCE_FILES:
                 try:
@@ -404,10 +415,10 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None):
         # Explicit fake-source hooks remain network-free. Production reads only
         # the existing private public-refresh table; failed optional reads never
         # remove the existing Blob source bundle or promote an AI relation.
-        if _fetcher is None or _refresh_reader is not None:
+        if read_overlay:
             overlay_started = time.monotonic()
             baseline_documents = documents.copy()
-            documents = _refresh_overlay(documents, _refresh_reader)
+            documents = _refresh_overlay(documents, refresh_future.result)
             # The overlay replaces changed documents and preserves other objects.
             source_revisions = {
                 name: source_revisions[name]
