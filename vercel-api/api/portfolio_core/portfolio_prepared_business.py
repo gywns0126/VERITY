@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+import base64
+import gzip
 import hashlib
 import json
 from datetime import datetime, timezone
@@ -17,8 +19,11 @@ import time
 import unicodedata
 import urllib.error
 import urllib.request
+import zlib
 
-from .portfolio_public_sources import project_public_business_overviews, safe_public_text
+from .portfolio_public_sources import (project_public_business_overviews, safe_public_text,
+    BASE_PROJECTION_FILES, PUBLIC_COMPANY_FIELDS, PUBLIC_FACT_FIELDS, PUBLIC_DOCUMENT_FIELDS,
+    base_projection_revision, project_public_sources)
 
 
 SCHEMA = "portfolio-public-business-index-v1"
@@ -45,7 +50,16 @@ _FETCH_LOCK = threading.Lock()
 _FETCH_CACHE = None
 _FETCH_EXPIRES_AT = 0.0
 # Bump on any change to business matching, role/context indexing, or envelope.
-MATCHER_VERSION = "business-matchers-2026-10-27-v2"
+MATCHER_VERSION = "business-matchers-2026-10-27-v3"
+_BASE_MAX_BYTES = 64 * 1024 * 1024
+_BASE_COMPANY_KEYS = frozenset(PUBLIC_COMPANY_FIELDS)
+_BASE_FACT_KEYS = frozenset(PUBLIC_FACT_FIELDS)
+_BASE_FACT_WITH_PROVENANCE = _BASE_FACT_KEYS | {"provenance"}
+_BASE_DOCUMENT_KEYS = frozenset(PUBLIC_DOCUMENT_FIELDS)
+_BASE_DOCUMENT_WITH_CODES = _BASE_DOCUMENT_KEYS | {"item_codes"}
+_BASE_PROVENANCE_KEYS = frozenset({"kind", "rcept_no", "period_start", "period_end",
+    "filed", "fs_div", "account_name", "source_url", "cik", "accession", "form",
+    "tag", "currency_verified"})
 _DIGEST = re.compile(r"[0-9a-f]{64}\Z", re.ASCII)
 _MATERIAL_KEYS = {"stable_id", "kind", "verified_event", "participants", "source", "evidence"}
 _SOURCE_KEYS = {"id", "kind", "receipt_no", "as_of", "report_name", "url",
@@ -186,6 +200,119 @@ def publisher_receipt_for(artifact):
             "utc_day": artifact["utc_day"]}
 
 
+def pack_base_projection(documents):
+    """Offline only: sanitize the same public rows before packing them."""
+    if not all(name in documents for name in BASE_PROJECTION_FILES):
+        return None
+    selected = {name: documents[name] for name in BASE_PROJECTION_FILES}
+    revisions = {name: artifact_sha256(value) for name, value in selected.items()}
+    companies = project_public_sources(selected)["companies"]
+    raw = json.dumps(companies, sort_keys=True, ensure_ascii=True,
+                     separators=(",", ":"), allow_nan=False).encode("utf-8")
+    if len(raw) > _BASE_MAX_BYTES:
+        return None  # Optimization miss, never truncate source facts.
+    return {"source_revision": base_projection_revision(revisions),
+            "encoding": "gzip-base64-v1",
+            "data": base64.b64encode(gzip.compress(raw, mtime=0)).decode("ascii")}
+
+
+def _checked_receipt(artifact, receipt):
+    """The fixed publisher receipt is the trust boundary, not embedded claims."""
+    try:
+        code = implementation_sha256()
+        day = datetime.now(timezone.utc).date().isoformat()
+        return (type(artifact) is dict and set(artifact) == {
+                    "schema", "matcher_version", "implementation_sha256", "source_revision",
+                    "utc_day", "catalog", "index", "base_projection"}
+                and artifact["schema"] == SCHEMA and artifact["matcher_version"] == MATCHER_VERSION
+                and artifact["implementation_sha256"] == code and artifact["utc_day"] == day
+                and type(receipt) is dict and set(receipt) == {
+                    "schema", "artifact_sha256", "source_revision", "implementation_sha256", "utc_day"}
+                and receipt["schema"] == RECEIPT_SCHEMA
+                and receipt["implementation_sha256"] == code and receipt["utc_day"] == day
+                and receipt["source_revision"] == artifact["source_revision"]
+                and artifact_sha256(artifact) == receipt["artifact_sha256"])
+    except (KeyError, TypeError, ValueError, RecursionError, OSError):
+        return False
+
+
+def checked_base_projection(artifact, receipt, source_revision):
+    """Decode an owned base only after exact source/code/day/receipt binding.
+
+    This does not promote relations or freshness. Missing, mixed-publication,
+    stale or malformed data uses the unchanged full source projector instead.
+    """
+    try:
+        packed = artifact.get("base_projection") if type(artifact) is dict else None
+        if (type(source_revision) is not str or not _DIGEST.fullmatch(source_revision)
+                or type(packed) is not dict
+                or set(packed) != {"source_revision", "encoding", "data"}
+                or packed["source_revision"] != source_revision
+                or packed["encoding"] != "gzip-base64-v1"
+                or type(packed["data"]) is not str or len(packed["data"]) > ARTIFACT_MAX_BYTES
+                or not _checked_receipt(artifact, receipt)):
+            return None
+        compressed = base64.b64decode(packed["data"], validate=True)
+        decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        raw = decoder.decompress(compressed, _BASE_MAX_BYTES + 1)
+        if (len(raw) > _BASE_MAX_BYTES or not decoder.eof
+                or decoder.unconsumed_tail or decoder.unused_data):
+            return None
+        companies = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_object,
+                               parse_constant=_reject_constant)
+        if type(companies) is not list or len(companies) > 50000:
+            return None
+        seen, facts, documents = set(), 0, 0
+        for row in companies:
+            if (type(row) is not dict or row.keys() != _BASE_COMPANY_KEYS
+                    or row["market"] not in {"KR", "US"} or type(row["ticker"]) is not str
+                    or row["id"] != row["market"] + ":" + row["ticker"]
+                    or not re.fullmatch(r"KR:[0-9]{6}|US:[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,2})?", row["id"])
+                    or row["id"] in seen or type(row["name"]) is not str
+                    or safe_public_text(row["name"], 160) != row["name"]
+                    or row["sector"] is not None and safe_public_text(row["sector"], 120) != row["sector"]
+                    or type(row["facts"]) is not list or type(row["documents"]) is not list):
+                return None
+            seen.add(row["id"])
+            facts += len(row["facts"])
+            documents += len(row["documents"])
+            if facts > 1000000 or documents > 500000:
+                return None
+            for fact in row["facts"]:
+                if (type(fact) is not dict or fact.keys() not in (
+                        _BASE_FACT_KEYS, _BASE_FACT_WITH_PROVENANCE)
+                        or type(fact["value"]) not in (int, float)
+                        or any(type(fact[key]) is not str for key in ("metric", "unit", "as_of", "source"))
+                        or fact["source"] not in {"DART", "SEC", "KRX"}):
+                    return None
+                # The publisher already ran source/provenance validation. This
+                # closed, scalar-only shape bounds depth without traversing the
+                # same million JSON leaves a second time on every cold request.
+                proof = fact.get("provenance")
+                if "provenance" in fact and (type(proof) is not dict
+                        or not proof.keys() <= _BASE_PROVENANCE_KEYS
+                        or any(type(value) not in (str, bool) or
+                               type(value) is str and len(value) > 600 for value in proof.values())):
+                    return None
+            ids = set()
+            for document in row["documents"]:
+                if (type(document) is not dict or document.keys() not in (
+                        _BASE_DOCUMENT_KEYS, _BASE_DOCUMENT_WITH_CODES)
+                        or any(type(document[key]) is not str for key in PUBLIC_DOCUMENT_FIELDS)
+                        or safe_public_text(document["title"], 300) != document["title"]
+                        or document["id"] in ids):
+                    return None
+                codes = document.get("item_codes")
+                if "item_codes" in document and (type(codes) is not list or len(codes) > 32
+                        or any(type(code) is not str or not re.fullmatch(r"[1-9]\.[0-9]{2}", code) for code in codes)):
+                    return None
+                ids.add(document["id"])
+        return companies
+    except (AttributeError, KeyError, TypeError, ValueError, UnicodeError,
+            RecursionError, OverflowError, zlib.error):
+        return None
+
+
 def identity_catalog(by_id):
     """Closed public matcher inputs, in the publisher's original catalog order."""
     return [{key: row.get(key) for key in ("id", "market", "name", "source_names")}
@@ -257,7 +384,7 @@ def checked_business_index(artifact, publisher_receipt, source_revision, documen
     if (type(source_revision) is not str or not _DIGEST.fullmatch(source_revision)
             or type(artifact) is not dict
             or set(artifact) != {"schema", "matcher_version", "implementation_sha256",
-                                 "source_revision", "utc_day", "catalog", "index"}
+                                 "source_revision", "utc_day", "catalog", "index", "base_projection"}
             or artifact["schema"] != SCHEMA
             or artifact["matcher_version"] != MATCHER_VERSION
             or artifact["source_revision"] != source_revision

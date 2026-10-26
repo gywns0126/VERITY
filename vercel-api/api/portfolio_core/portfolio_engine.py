@@ -50,6 +50,8 @@ from .portfolio_prepared_business import (
     publisher_receipt_for as prepared_business_publisher_receipt,
     identity_catalog as _business_identity_catalog,
     compatible_catalog_revision as _compatible_business_revision,
+    pack_base_projection,
+    checked_base_projection,
 )
 
 
@@ -88,8 +90,9 @@ class _ProjectedPublicIndexCache:
         self._business_index = None
 
     @staticmethod
-    def _build(public_documents, _reuse_business=None):
-        projected = project_public_sources(public_documents)
+    def _build(public_documents, _reuse_business=None, _base_companies=None):
+        projected = project_public_sources(public_documents,
+            **({"_base_companies": _base_companies} if _base_companies is not None else {}))
         # The pure source projector creates fresh nested facts/documents.
         catalog, archive = retain_captured_documents(public_documents.get(_AUTOMATIC_EVIDENCE_FILE),
             add_public_company_names(public_documents, projected["companies"], _owned_catalog=True),
@@ -166,7 +169,7 @@ class _ProjectedPublicIndexCache:
         return self._business_index
 
     def get(self, public_documents, revision, *, prepared_business_index=None,
-            publisher_receipt=None, prepared_business_fetcher=None):
+            publisher_receipt=None, prepared_business_fetcher=None, base_source_revision=None):
         if revision is None:
             with _temporary_public_text_cache():
                 return self._build(public_documents)
@@ -178,11 +181,17 @@ class _ProjectedPublicIndexCache:
                 if prepared_business_fetcher is not None:
                     prepared_business_index, publisher_receipt = prepared_business_fetcher()
                 with _temporary_public_text_cache():
+                    base = checked_base_projection(
+                        prepared_business_index, publisher_receipt, base_source_revision)
+                    if base_source_revision is not None:
+                        print("portfolio_prepared_projection status=" +
+                              ("accepted" if base is not None else "fallback"), file=sys.stderr)
                     self._index = self._build(
                         public_documents,
                         lambda documents, by_id: self._business(
                             documents, by_id, prepared_business_index, publisher_receipt
                         ),
+                        _base_companies=base,
                     )
                 self._revision = revision
             return self._index
@@ -199,7 +208,8 @@ _PROJECTED_PUBLIC_INDEX = _ProjectedPublicIndexCache()
 
 
 def prepare_public_index(public_documents, revision, *, prepared_business_index=None,
-                         publisher_receipt=None, prepared_business_fetcher=None):
+                         publisher_receipt=None, prepared_business_fetcher=None,
+                         base_source_revision=None):
     """Prepare only public facts after caller validation; no member data enters.
 
     The same cache is consumed by analyze_portfolio. The existing trusted
@@ -209,6 +219,7 @@ def prepare_public_index(public_documents, revision, *, prepared_business_index=
     return _PROJECTED_PUBLIC_INDEX.get(
         public_documents, revision, prepared_business_index=prepared_business_index,
         publisher_receipt=publisher_receipt, prepared_business_fetcher=prepared_business_fetcher,
+        base_source_revision=base_source_revision,
     )
 
 
@@ -230,6 +241,7 @@ def build_prepared_business_index(public_documents):
                 "utc_day": utc_day,
                 "source_revision": source_revision,
                 "catalog": _business_identity_catalog(by_id),
+                "base_projection": pack_base_projection(business_documents),
                 "index": _business_material_index(business_documents, by_id)}
 
 

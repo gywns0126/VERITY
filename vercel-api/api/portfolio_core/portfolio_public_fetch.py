@@ -20,7 +20,8 @@ from types import MappingProxyType
 import urllib.error
 import urllib.request
 
-from .portfolio_public_sources import PUBLIC_SOURCE_FILES, PUBLIC_SOURCE_MAX_BYTES
+from .portfolio_public_sources import (PUBLIC_SOURCE_FILES, PUBLIC_SOURCE_MAX_BYTES,
+                                       base_projection_revision)
 
 
 __all__ = (
@@ -352,6 +353,8 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None,
             result = copy_bundle(_CACHE_RESULT)
             # Re-evaluate date-dependent validation even across a warm midnight.
             result["index_revision"] = _index_revision(_CACHE_SOURCE_REVISIONS)
+            if production and _borrow_snapshot:
+                result["base_revision"] = base_projection_revision(_CACHE_SOURCE_REVISIONS)
             if production:
                 _log_fetch_timing(cache="hit", status=result["coverage"]["status"],
                                   available=result["coverage"]["available"],
@@ -453,6 +456,8 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None,
             _CACHE_EXPIRES_AT = 0.0
         copy_started = time.monotonic()
         returned = copy_bundle(result)
+        if production and _borrow_snapshot:
+            returned["base_revision"] = base_projection_revision(source_revisions)
         if production:
             _log_fetch_timing(cache="miss", status=result["coverage"]["status"],
                               available=result["coverage"]["available"],

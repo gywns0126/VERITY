@@ -310,7 +310,7 @@ def test_public_text_cache_is_temporary_and_keeps_sensitive_rejections(endpoint)
         assert sources._safe_text(UnhashableText('검수 회사'), 160) == '검수 회사'
         assert sources._safe_text('Bearer synthetic', 160) is None
         assert sources._TEXT_CACHE.get().cache_info().hits == 1
-        assert sources._TEXT_CACHE.get().cache_info().maxsize == 16_384
+        assert sources._TEXT_CACHE.get().cache_info().maxsize == 65_536
     assert sources._TEXT_CACHE.get() is None
     with pytest.raises(RuntimeError), sources._temporary_public_text_cache():
         assert sources._safe_text('검수 회사', 160) == '검수 회사'
