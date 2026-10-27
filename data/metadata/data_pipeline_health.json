@@ -1,9 +1,9 @@
 {
-  "collected_at": "2026-10-27T15:32:53+09:00",
-  "overall_status": "ok",
+  "collected_at": "2026-10-27T16:02:51+09:00",
+  "overall_status": "warn",
   "summary": {
-    "fresh": 15,
-    "stale": 0,
+    "fresh": 14,
+    "stale": 1,
     "missing": 0,
     "total": 15
   },
@@ -16,16 +16,16 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-10-26T22:31:49.120033+09:00",
-      "age_hours": 17.02,
+      "last_update_kst": "2026-10-27T15:58:32.623588+09:00",
+      "age_hours": 0.07,
       "status": "fresh",
-      "line_count": 785,
+      "line_count": 789,
       "last_entry": {
-        "ts": "2026-10-26T22:31:49.120033+09:00",
+        "ts": "2026-10-27T15:58:32.623588+09:00",
         "step": "f_sector_diversified",
         "mode": "SHADOW",
-        "input_n": 16,
-        "passed_n": 15
+        "input_n": 100,
+        "passed_n": 25
       }
     },
     {
@@ -36,12 +36,12 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-10-26T22:31:50.799297+09:00",
-      "age_hours": 17.02,
+      "last_update_kst": "2026-10-27T15:58:34.827311+09:00",
+      "age_hours": 0.07,
       "status": "fresh",
-      "line_count": 61459,
+      "line_count": 64155,
       "last_entry": {
-        "ts": "2026-10-26T22:31:50.799297+09:00"
+        "ts": "2026-10-27T15:58:34.827311+09:00"
       }
     },
     {
@@ -53,7 +53,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-26T01:57:43+09:00",
-      "age_hours": 37.59,
+      "age_hours": 38.09,
       "status": "fresh",
       "diagnostics": {
         "ok": true,
@@ -76,14 +76,18 @@
       "max_fresh_hours": 6.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-10-27T15:32:23+09:00",
+      "last_update_kst": "2026-10-27T16:02:26+09:00",
       "age_hours": 0.01,
-      "status": "fresh",
+      "status": "stale",
       "diagnostics": {
-        "elapsed_s": 28.82,
+        "elapsed_s": 23.14,
         "used_prev_snapshot": []
       },
-      "clock_status": "fresh"
+      "clock_status": "fresh",
+      "source_status": "partial",
+      "source_issues": [
+        "bonds"
+      ]
     },
     {
       "key": "universe_candidates",
@@ -93,15 +97,15 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-10-26T22:31:20+09:00",
-      "age_hours": 17.03,
+      "last_update_kst": "2026-10-27T15:33:01+09:00",
+      "age_hours": 0.5,
       "status": "fresh",
       "diagnostics": {
         "ok": true,
-        "candidates_count": 18,
-        "kr_count": 10,
-        "us_count": 8,
-        "elapsed_s": 30.65,
+        "candidates_count": 45,
+        "kr_count": 30,
+        "us_count": 15,
+        "elapsed_s": 1533.61,
         "used_prev_snapshot": false
       }
     },
@@ -113,17 +117,17 @@
       "max_fresh_hours": 26.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-10-27T07:15:37.808453+09:00",
-      "age_hours": 8.29,
+      "last_update_kst": "2026-10-27T15:58:34.912726+09:00",
+      "age_hours": 0.07,
       "status": "fresh",
-      "line_count": 1666,
+      "line_count": 1667,
       "last_entry": {
-        "run_id": "2026-10-27T07:15:37.808453+09:00",
-        "mode": "quick",
-        "ramp_up_stage": 0,
-        "execution_time_seconds": 0.0,
+        "run_id": "2026-10-27T15:58:34.912726+09:00",
+        "mode": "universe_scan",
+        "ramp_up_stage": 5000,
+        "execution_time_seconds": 1533.6,
         "fail_triggers": [],
-        "yfinance_failure_rate": 0.0
+        "yfinance_failure_rate": 0.0021
       }
     },
     {
@@ -135,7 +139,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-26T23:28:27.346968+09:00",
-      "age_hours": 16.07,
+      "age_hours": 16.57,
       "status": "fresh"
     },
     {
@@ -147,7 +151,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-26T19:07:00.776796+09:00",
-      "age_hours": 20.43,
+      "age_hours": 20.93,
       "status": "fresh"
     },
     {
@@ -159,7 +163,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-26T23:23:03.962022+09:00",
-      "age_hours": 16.16,
+      "age_hours": 16.66,
       "status": "fresh"
     },
     {
@@ -171,7 +175,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-26T19:34:15.533056+09:00",
-      "age_hours": 19.98,
+      "age_hours": 20.48,
       "status": "fresh"
     },
     {
@@ -183,7 +187,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-26T23:34:30.511535+09:00",
-      "age_hours": 15.97,
+      "age_hours": 16.47,
       "status": "fresh"
     },
     {
@@ -195,7 +199,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-26T23:23:21.852252+09:00",
-      "age_hours": 16.16,
+      "age_hours": 16.66,
       "status": "fresh"
     },
     {
@@ -206,8 +210,8 @@
       "max_fresh_hours": 72.0,
       "exists": true,
       "ts_source": "content",
-      "last_update_kst": "2026-10-27T15:02:44.791741+09:00",
-      "age_hours": 0.5,
+      "last_update_kst": "2026-10-27T15:33:16.987471+09:00",
+      "age_hours": 0.49,
       "status": "fresh"
     },
     {
@@ -219,7 +223,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-01T16:14:45.419861+09:00",
-      "age_hours": 623.3,
+      "age_hours": 623.8,
       "status": "fresh"
     },
     {
@@ -231,7 +235,7 @@
       "exists": true,
       "ts_source": "content",
       "last_update_kst": "2026-10-24T09:56:25.342429+09:00",
-      "age_hours": 77.61,
+      "age_hours": 78.11,
       "status": "fresh"
     }
   ],
