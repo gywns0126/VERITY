@@ -3,11 +3,11 @@
     "hit_rate_7d": null,
     "hit_rate_14d": null,
     "hit_rate_30d": null,
-    "sample_7d": 0,
-    "sample_14d": 0,
+    "sample_7d": 14,
+    "sample_14d": 3,
     "sample_30d": 0,
-    "hits_7d": 0,
-    "hits_14d": 0,
+    "hits_7d": 4,
+    "hits_14d": 1,
     "hits_30d": 0,
     "hit_rate_7d_ci95": null,
     "hit_rate_14d_ci95": null,
@@ -24,7 +24,7 @@
   },
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-10-27 23:04:51.512743+09:00",
+    "applied_at": "2026-10-28 07:22:03.489893+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -34,7 +34,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-10-27 23:04:51.512747+09:00"
+      "fixed_at": "2026-10-28 07:22:03.489897+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -45,30 +45,630 @@
   },
   "evaluation_coverage": {
     "7d": {
-      "evaluation_status": "no_recommendations",
-      "cohort_size": 0,
-      "evaluated_count": 0,
-      "unresolved_count": 0,
-      "coverage_pct": null,
-      "unresolved": [],
-      "evaluation_date": "2026-10-27",
-      "snapshot_date": "2026-10-20",
-      "price_gap_count": 0,
-      "price_gaps": [],
-      "entry_snapshot_date": "2026-10-21"
+      "evaluation_status": "partial",
+      "cohort_size": 28,
+      "evaluated_count": 14,
+      "unresolved_count": 14,
+      "coverage_pct": 50.0,
+      "unresolved": [
+        {
+          "ticker": "014830",
+          "name": "유니드",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "214450",
+          "name": "파마리서치",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "LEA",
+          "name": "LEA",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "LULU",
+          "name": "LULU",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "ITRI",
+          "name": "ITRI",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "MAS",
+          "name": "MAS",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "MATX",
+          "name": "MATX",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "MDLZ",
+          "name": "MDLZ",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "458870",
+          "name": "씨어스",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "080580",
+          "name": "오킨스전자",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "PARR",
+          "name": "PARR",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "257720",
+          "name": "실리콘투",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "GOOG",
+          "name": "Alphabet Inc.",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "LKQ",
+          "name": "LKQ",
+          "reason": "missing_entry_price"
+        }
+      ],
+      "evaluation_date": "2026-10-28",
+      "snapshot_date": "2026-10-21",
+      "price_gap_count": 23,
+      "price_gaps": [
+        {
+          "ticker": "014830",
+          "role": "entry",
+          "snapshot_date": "2026-10-22",
+          "snapshot_updated_at": "2026-10-22T21:50:58+09:00",
+          "market": "KOSPI",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "014830",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "KOSPI",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "214450",
+          "role": "entry",
+          "snapshot_date": "2026-10-22",
+          "snapshot_updated_at": "2026-10-22T21:50:58+09:00",
+          "market": "KOSDAQ",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "214450",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "KOSDAQ",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "LEA",
+          "role": "entry",
+          "snapshot_date": "2026-10-22",
+          "snapshot_updated_at": "2026-10-22T21:50:58+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "LEA",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "LULU",
+          "role": "entry",
+          "snapshot_date": "2026-10-22",
+          "snapshot_updated_at": "2026-10-22T21:50:58+09:00",
+          "market": "NASDAQ",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "LULU",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "NASDAQ",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "ITRI",
+          "role": "entry",
+          "snapshot_date": "2026-10-22",
+          "snapshot_updated_at": "2026-10-22T21:50:58+09:00",
+          "market": "NASDAQ",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "ITRI",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "NASDAQ",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "MAS",
+          "role": "entry",
+          "snapshot_date": "2026-10-22",
+          "snapshot_updated_at": "2026-10-22T21:50:58+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "MAS",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "MATX",
+          "role": "entry",
+          "snapshot_date": "2026-10-22",
+          "snapshot_updated_at": "2026-10-22T21:50:58+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "MATX",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "MDLZ",
+          "role": "entry",
+          "snapshot_date": "2026-10-22",
+          "snapshot_updated_at": "2026-10-22T21:50:58+09:00",
+          "market": "NASDAQ",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "MDLZ",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "NASDAQ",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "458870",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "KOSDAQ",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "080580",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "KOSDAQ",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "PARR",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "257720",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "KOSDAQ",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "GOOG",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "NASDAQ",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "LKQ",
+          "role": "entry",
+          "snapshot_date": "2026-10-22",
+          "snapshot_updated_at": "2026-10-22T21:50:58+09:00",
+          "market": "NASDAQ",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "LKQ",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "NASDAQ",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        }
+      ],
+      "entry_snapshot_date": "2026-10-22"
     },
     "14d": {
-      "evaluation_status": "no_recommendations",
-      "cohort_size": 0,
-      "evaluated_count": 0,
-      "unresolved_count": 0,
-      "coverage_pct": null,
-      "unresolved": [],
-      "evaluation_date": "2026-10-27",
-      "snapshot_date": "2026-10-13",
-      "price_gap_count": 0,
-      "price_gaps": [],
-      "entry_snapshot_date": "2026-10-14"
+      "evaluation_status": "partial",
+      "cohort_size": 9,
+      "evaluated_count": 3,
+      "unresolved_count": 6,
+      "coverage_pct": 33.3,
+      "unresolved": [
+        {
+          "ticker": "000270",
+          "name": "기아",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "000660",
+          "name": "SK하이닉스",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "XOM",
+          "name": "ExxonMobil",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "080580",
+          "name": "오킨스전자",
+          "reason": "missing_entry_price"
+        },
+        {
+          "ticker": "PARR",
+          "name": "PARR",
+          "reason": "missing_evaluation_price"
+        },
+        {
+          "ticker": "012330",
+          "name": "현대모비스",
+          "reason": "missing_entry_price"
+        }
+      ],
+      "evaluation_date": "2026-10-28",
+      "snapshot_date": "2026-10-14",
+      "price_gap_count": 8,
+      "price_gaps": [
+        {
+          "ticker": "000270",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "KOSPI",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "000660",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "KOSPI",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "XOM",
+          "role": "entry",
+          "snapshot_date": "2026-10-15",
+          "snapshot_updated_at": "2026-10-15T23:09:47+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "080580",
+          "role": "entry",
+          "snapshot_date": "2026-10-15",
+          "snapshot_updated_at": "2026-10-15T23:09:47+09:00",
+          "market": "KOSDAQ",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "080580",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "KOSDAQ",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "PARR",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "NYSE",
+          "currency": "USD",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "012330",
+          "role": "entry",
+          "snapshot_date": "2026-10-15",
+          "snapshot_updated_at": "2026-10-15T23:09:47+09:00",
+          "market": "KOSPI",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        },
+        {
+          "ticker": "012330",
+          "role": "evaluation",
+          "snapshot_date": "2026-10-28",
+          "snapshot_updated_at": "2026-10-28T06:10:19+09:00",
+          "market": "KOSPI",
+          "currency": "KRW",
+          "price_basis": null,
+          "recovery_status": "unresolved",
+          "recovery_requires": [
+            "matching_identity",
+            "matching_quote_date_and_time",
+            "matching_currency",
+            "matching_adjustment_definition"
+          ]
+        }
+      ],
+      "entry_snapshot_date": "2026-10-15"
     },
     "30d": {
       "evaluation_status": "no_recommendations",
@@ -77,30 +677,29 @@
       "unresolved_count": 0,
       "coverage_pct": null,
       "unresolved": [],
-      "evaluation_date": "2026-10-27",
-      "snapshot_date": "2026-09-26",
+      "evaluation_date": "2026-10-28",
+      "snapshot_date": "2026-09-28",
       "price_gap_count": 0,
       "price_gaps": [],
-      "entry_snapshot_date": "2026-09-28"
+      "entry_snapshot_date": "2026-09-29"
     }
   },
   "factor_health": {
     "healthy": [
       "volatility",
-      "flow",
       "sentiment",
-      "momentum"
+      "flow"
     ],
     "weakening": [],
     "decaying": [
-      "safety_score",
-      "quality"
+      "quality",
+      "safety_score"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "prediction",
+      "factor": "timing",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
@@ -112,18 +711,18 @@
       "ic_recent": 0.0
     },
     {
-      "factor": "multi_factor",
+      "factor": "prediction",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     },
     {
-      "factor": "timing",
+      "factor": "multi_factor",
       "multiplier": 0.0,
       "status": "DEAD",
       "ic_recent": 0.0
     }
   ],
   "feedback_loop_status": "frozen",
-  "generated_at": "2026-10-27 23:04:51.575362+09:00"
+  "generated_at": "2026-10-28 07:22:03.519825+09:00"
 }
