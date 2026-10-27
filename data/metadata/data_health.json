@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-10-28T07:12:33.936601+09:00",
+  "generated_at": "2026-10-28T08:12:58.276903+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
@@ -13,27 +13,27 @@
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-10-28T07:12:33.877203+09:00",
+   "generated_at": "2026-10-28T08:12:58.213727+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
   },
   "coverage": {
-   "generated_at": "2026-10-27T23:17:57.251645+09:00",
+   "generated_at": "2026-10-28T07:45:24.209622+09:00",
    "max_age_h": 96,
-   "age_h": 7.91,
+   "age_h": 0.459,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-10-28T07:12:27.519567+09:00",
+   "generated_at": "2026-10-28T08:12:44.699258+09:00",
    "max_age_h": 3,
-   "age_h": 0.002,
+   "age_h": 0.004,
    "status": "fresh"
   },
   "annual_backfill": {
    "generated_at": "2026-10-27T20:32:42.843768+00:00",
    "max_age_h": 48,
-   "age_h": 1.664,
+   "age_h": 2.671,
    "status": "fresh"
   }
  },
@@ -42,11 +42,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-10-28T07:12:33.877203+09:00",
+  "generated_at": "2026-10-28T08:12:58.213727+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 35956,
+  "max_cdn_age_s": 43175,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -56,7 +56,7 @@
      "PBR": 95.9
     },
     "total": 2554,
-    "cdn_age_s": 17912,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -67,7 +67,7 @@
      "PBR": 73.7
     },
     "total": 5271,
-    "cdn_age_s": 35956,
+    "cdn_age_s": 43175,
     "error": null
    },
    {
@@ -78,7 +78,7 @@
      "PBR": 75.2
     },
     "total": 3972,
-    "cdn_age_s": 35954,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -92,7 +92,7 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-10-27T23:17:57.251645+09:00",
+  "generated_at": "2026-10-28T07:45:24.209622+09:00",
   "kr_total": 2554,
   "us_total": 5271,
   "core_fill_pct": {
@@ -104,10 +104,10 @@
   "last_run_blocked": false,
   "last_run_fails": 0,
   "last_run_warns": 0,
-  "last_run_at": "2026-10-27T23:17:57.382705+09:00"
+  "last_run_at": "2026-10-28T07:45:24.341341+09:00"
  },
  "freshness": {
-  "generated_at": "2026-10-28T07:12:27.519567+09:00",
+  "generated_at": "2026-10-28T08:12:44.699258+09:00",
   "summary": {
    "fresh": 59,
    "stale": 1,
@@ -148,7 +148,7 @@
   "producer_evidence": {
    "news_flash": {
     "status": "bound_query_complete",
-    "completed_at": "2026-10-28T07:02:31.163502+09:00",
+    "completed_at": "2026-10-28T08:02:24.133530+09:00",
     "clock_kind": "source_query_attempt",
     "asset_binding": "verified_sha256",
     "source_freshness_verified": false,
@@ -203,7 +203,7 @@
    {
     "id": "market_warnings",
     "last_ts": "2026-10-24T09:56:25.342429+09:00",
-    "age_eff_min": 3312.5,
+    "age_eff_min": 3372.7,
     "max_age_min": 2880
    }
   ]
