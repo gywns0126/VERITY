@@ -53,6 +53,9 @@ from .portfolio_prepared_business import (
     compatible_catalog_revision as _compatible_business_revision,
     pack_base_projection,
     checked_base_projection,
+    checked_news_index,
+    pack_news_index,
+    ARTIFACT_MAX_BYTES as _PREPARED_ARTIFACT_MAX_BYTES,
 )
 from .portfolio_business_incremental import BusinessRowMemo
 
@@ -205,14 +208,21 @@ class _ProjectedPublicIndexCache:
             self._base_template, self._base_revision = base, key
         return base, "accepted" if base is not None else "fallback"
 
-    def _news(self, documents, by_id, base_revision):
+    def _news(self, documents, by_id, base_revision, artifact=None, receipt=None):
         # News aliases use base-source names and this exact identity catalog,
         # never filings, financial values, caller selections or member state.
         revision = (_revision([base_revision, datetime.now(timezone.utc).date().isoformat(),
                                _business_identity_catalog(by_id)])
                     if base_revision is not None else None)
         if revision is None or self._news_index is None or self._news_revision != revision:
-            index = index_public_news_names(public_news_name_catalog(documents, list(by_id.values())))
+            index = checked_news_index(artifact, receipt, base_revision, by_id)
+            if base_revision is not None:
+                try:
+                    print("portfolio_prepared_news status=" + ("accepted" if index is not None else "fallback"), file=sys.stderr)
+                except Exception:
+                    pass
+            if index is None:
+                index = index_public_news_names(public_news_name_catalog(documents, list(by_id.values())))
             if revision is not None:
                 self._news_index, self._news_revision = index, revision
             return index
@@ -263,7 +273,8 @@ class _ProjectedPublicIndexCache:
                             documents, by_id, prepared_business_index, publisher_receipt
                         ),
                         _base_companies=owned_base,
-                        _reuse_news=lambda documents, by_id: self._news(documents, by_id, base_source_revision),
+                        _reuse_news=lambda documents, by_id: self._news(
+                            documents, by_id, base_source_revision, prepared_business_index, publisher_receipt),
                         _reuse_contracts=self._contracts,
                     )
                 self._revision = revision
@@ -315,14 +326,22 @@ def build_prepared_business_index(public_documents):
         source_revision = _business_index_revision(business_documents, by_id, utc_day=utc_day)
         if source_revision is None:
             raise ValueError("unbounded-business-index-input")
-        return {"schema": _PREPARED_BUSINESS_SCHEMA,
+        news = index_public_news_names(public_news_name_catalog(business_documents, catalog))
+        artifact = {"schema": _PREPARED_BUSINESS_SCHEMA,
                 "matcher_version": _PREPARED_MATCHER_VERSION,
                 "implementation_sha256": _prepared_implementation_sha256(),
                 "utc_day": utc_day,
                 "source_revision": source_revision,
                 "catalog": _business_identity_catalog(by_id),
                 "base_projection": pack_base_projection(business_documents),
+                "news_names": pack_news_index(news),
                 "index": _business_material_index(business_documents, by_id)}
+        if artifact["news_names"] is not None and len(json.dumps(
+                artifact, sort_keys=True, ensure_ascii=True, separators=(",", ":"),
+                allow_nan=False).encode("utf-8")) > _PREPARED_ARTIFACT_MAX_BYTES:
+            # The optional speedup must not evict the existing prepared base.
+            artifact["news_names"] = None
+        return artifact
 
 
 def _contract_index_revision(documents, by_id):

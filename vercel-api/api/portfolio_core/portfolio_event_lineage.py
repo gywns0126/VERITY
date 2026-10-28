@@ -159,7 +159,7 @@ def attach_event_lineage(artifact, document_list, company_catalog):
     for c in company_catalog:
         for name in c.get("source_names", [c["name"]]):
             names.setdefault(_name(name), set()).add(c["id"])
-    staged = {}
+    staged, documents_by_id = {}, None
     for row in rows:
         try:
             validate_family(row)
@@ -170,8 +170,17 @@ def attach_event_lineage(artifact, document_list, company_catalog):
             coverage["rejected"] += 1
             continue
         member = next(m for m in row["members"] if m["receipt_no"] == row["receipt_no"])
-        matched = [d for d in document_list if d["id"] == "DART:" + row["receipt_no"]
-                   and d["url"] == row["url"] and d["source"] == "DART" and d["kind"] == "disclosure"
+        if documents_by_id is None:
+            # Keep every duplicate in input order: lineage attaches only to the
+            # first exact match. Build lazily so rejected families never inspect
+            # document IDs, and non-string JSON IDs remain ordinary nonmatches.
+            documents_by_id = {}
+            for document in document_list:
+                identifier = document["id"]
+                if isinstance(identifier, str):
+                    documents_by_id.setdefault(identifier, []).append(document)
+        matched = [d for d in documents_by_id.get("DART:" + row["receipt_no"], [])
+                   if d["url"] == row["url"] and d["source"] == "DART" and d["kind"] == "disclosure"
                    and d["company_ids"] == [issuer] and d["as_of"] == member["published_on"]
                    and _contract_title(d["title"]) == _contract_title(member["title"])
                    and ("정정" in d["title"]) == member["amendment"]]
