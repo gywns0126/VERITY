@@ -1,32 +1,32 @@
 {
   "version": "v0",
-  "computed_at": "2026-10-28T14:10:31.249640+00:00",
+  "computed_at": "2026-10-28T16:15:34.315008+00:00",
   "status": "active",
   "sample_size": {
-    "total": 105,
-    "open": 20,
+    "total": 108,
+    "open": 23,
     "closed": 85,
-    "with_h5": 81,
-    "with_h14": 57,
+    "with_h5": 83,
+    "with_h14": 60,
     "with_h30": 43,
     "min_for_decompose": 30
   },
   "horizon_summary": {
     "h5": {
       "horizon_days": 5,
-      "n": 81,
-      "hit_rate_pct": 48.15,
-      "median_return_pct": -0.26,
-      "mean_return_pct": 0.58,
-      "ic": 0.111
+      "n": 83,
+      "hit_rate_pct": 49.4,
+      "median_return_pct": 0.0,
+      "mean_return_pct": 0.78,
+      "ic": 0.1
     },
     "h14": {
       "horizon_days": 14,
-      "n": 57,
-      "hit_rate_pct": 71.93,
-      "median_return_pct": 3.24,
-      "mean_return_pct": 3.2,
-      "ic": 0.127
+      "n": 60,
+      "hit_rate_pct": 70.0,
+      "median_return_pct": 3.15,
+      "mean_return_pct": 2.71,
+      "ic": 0.092
     },
     "h30": {
       "horizon_days": 30,
@@ -39,27 +39,27 @@
   },
   "feature_decomposition": {
     "rsi": {
-      "n": 57,
+      "n": 60,
       "boundaries": [
-        40.12,
-        44.07,
+        39.3,
+        43.73,
         46.05
       ],
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 15,
-          "mean_return_pct": -0.82
+          "n": 16,
+          "mean_return_pct": -1.83
         },
         {
           "q": 1,
-          "n": 14,
-          "mean_return_pct": 5.63
+          "n": 15,
+          "mean_return_pct": 4.85
         },
         {
           "q": 2,
-          "n": 14,
-          "mean_return_pct": 4.23
+          "n": 15,
+          "mean_return_pct": 4.18
         },
         {
           "q": 3,
@@ -69,27 +69,27 @@
       ]
     },
     "macd_hist": {
-      "n": 57,
+      "n": 60,
       "boundaries": [
-        -2.53,
-        -0.3,
+        -143.84,
+        -0.42,
         0.32
       ],
       "quartile_mean_return_pct": [
         {
           "q": 0,
           "n": 16,
-          "mean_return_pct": 0.36
+          "mean_return_pct": -1.48
         },
         {
           "q": 1,
-          "n": 13,
-          "mean_return_pct": 5.91
+          "n": 15,
+          "mean_return_pct": 5.55
         },
         {
           "q": 2,
-          "n": 14,
-          "mean_return_pct": 2.7
+          "n": 15,
+          "mean_return_pct": 2.75
         },
         {
           "q": 3,
@@ -99,37 +99,37 @@
       ]
     },
     "vol_ratio": {
-      "n": 57,
+      "n": 60,
       "boundaries": [
         0.72,
-        0.89,
-        1.26
+        0.91,
+        1.31
       ],
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 15,
-          "mean_return_pct": 1.45
+          "n": 16,
+          "mean_return_pct": 1.09
         },
         {
           "q": 1,
-          "n": 14,
-          "mean_return_pct": 5.58
+          "n": 15,
+          "mean_return_pct": 6.01
         },
         {
           "q": 2,
-          "n": 14,
-          "mean_return_pct": 3.77
+          "n": 15,
+          "mean_return_pct": 2.07
         },
         {
           "q": 3,
           "n": 14,
-          "mean_return_pct": 2.12
+          "mean_return_pct": 1.72
         }
       ]
     },
     "foreign_5d_sum": {
-      "n": 57,
+      "n": 60,
       "boundaries": [
         0.0,
         0.0,
@@ -138,8 +138,8 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 47,
-          "mean_return_pct": 3.17
+          "n": 49,
+          "mean_return_pct": 2.62
         },
         {
           "q": 1,
@@ -153,17 +153,17 @@
         },
         {
           "q": 3,
-          "n": 10,
-          "mean_return_pct": 3.31
+          "n": 11,
+          "mean_return_pct": 3.11
         }
       ]
     },
     "technical_score": {
-      "n": 57,
+      "n": 60,
       "boundaries": [
         42.0,
         47.0,
-        50.0
+        52.0
       ],
       "quartile_mean_return_pct": [
         {
@@ -173,38 +173,38 @@
         },
         {
           "q": 1,
-          "n": 12,
-          "mean_return_pct": 4.19
+          "n": 13,
+          "mean_return_pct": 3.52
         },
         {
           "q": 2,
-          "n": 12,
-          "mean_return_pct": 6.26
+          "n": 13,
+          "mean_return_pct": 6.29
         },
         {
           "q": 3,
-          "n": 13,
-          "mean_return_pct": 2.02
+          "n": 14,
+          "mean_return_pct": 0.31
         }
       ]
     },
     "safety_score": {
-      "n": 41,
+      "n": 44,
       "boundaries": [
-        73.0,
+        72.0,
         79.0,
         80.0
       ],
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 12,
-          "mean_return_pct": 0.09
+          "n": 13,
+          "mean_return_pct": 0.02
         },
         {
           "q": 1,
-          "n": 18,
-          "mean_return_pct": 3.41
+          "n": 20,
+          "mean_return_pct": 2.13
         },
         {
           "q": 2,
@@ -219,7 +219,7 @@
       ]
     },
     "flow_score": {
-      "n": 57,
+      "n": 60,
       "boundaries": [
         50.0,
         50.0,
@@ -228,8 +228,8 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 40,
-          "mean_return_pct": 2.87
+          "n": 41,
+          "mean_return_pct": 2.7
         },
         {
           "q": 1,
@@ -238,8 +238,8 @@
         },
         {
           "q": 2,
-          "n": 3,
-          "mean_return_pct": null
+          "n": 5,
+          "mean_return_pct": -2.49
         },
         {
           "q": 3,
@@ -265,8 +265,8 @@
       "status": "insufficient_data"
     },
     "Consumer Cyclical": {
-      "n": 7,
-      "hit_rate_pct": 71.43,
+      "n": 9,
+      "hit_rate_pct": 66.67,
       "median_return_pct": 0.92
     },
     "Energy": {
@@ -285,10 +285,14 @@
     "Healthcare": {
       "n": 1,
       "status": "insufficient_data"
+    },
+    "Consumer Defensive": {
+      "n": 1,
+      "status": "insufficient_data"
     }
   },
   "verdict_strength": {
-    "n": 57,
+    "n": 60,
     "multi_score_boundaries": [
       50.0,
       55.0,
@@ -297,13 +301,13 @@
     "quartile_mean_return_pct": [
       {
         "q": 0,
-        "n": 16,
-        "mean_return_pct": 2.81
+        "n": 17,
+        "mean_return_pct": 2.38
       },
       {
         "q": 1,
-        "n": 19,
-        "mean_return_pct": 1.62
+        "n": 20,
+        "mean_return_pct": 1.59
       },
       {
         "q": 2,
@@ -312,8 +316,8 @@
       },
       {
         "q": 3,
-        "n": 13,
-        "mean_return_pct": 6.16
+        "n": 14,
+        "mean_return_pct": 4.56
       }
     ]
   },
@@ -331,9 +335,9 @@
         "median_return_pct": 6.15
       },
       "60d_plus": {
-        "n": 25,
-        "hit_rate_pct": 76.0,
-        "median_return_pct": 3.46
+        "n": 28,
+        "hit_rate_pct": 71.43,
+        "median_return_pct": 3.04
       }
     }
   },
