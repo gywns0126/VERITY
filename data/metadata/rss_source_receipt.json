@@ -2,11 +2,11 @@
   "schema_version": 1,
   "producer": "RSSScout",
   "clock_kind": "source_query_attempt",
-  "started_at": "2026-10-28T08:32:26.691248+09:00",
-  "finished_at": "2026-10-28T08:32:27.033572+09:00",
-  "run_id": "40602539593",
+  "started_at": "2026-10-28T09:02:28.666550+09:00",
+  "finished_at": "2026-10-28T09:02:29.287791+09:00",
+  "run_id": "40605878703",
   "run_attempt": "1",
-  "input_commit": "7e5074072cb5a4dcf4e14576985830856c038e52",
+  "input_commit": "e785dcdb7de72f68109738d1446a28c67cb24d58",
   "scope": {
     "kind": "configured_rss_feed_query",
     "expected_feeds": 3,
@@ -14,49 +14,49 @@
     "asset_scope": "filtered incremental headlines; retained rows not revalidated"
   },
   "outcome": "complete",
-  "new_rows": 0,
+  "new_rows": 1,
   "feeds": [
     {
       "source": "SEC 공식 발표",
       "url": "https://www.sec.gov/news/pressreleases.rss",
-      "started_at": "2026-10-28T08:32:26.760387+09:00",
+      "started_at": "2026-10-28T09:02:28.727856+09:00",
       "outcome": "success",
       "entries": 25,
       "usable_entries": 25,
       "entries_without_source_date": 0,
       "http_status": 200,
-      "finished_at": "2026-10-28T08:32:26.862977+09:00"
+      "finished_at": "2026-10-28T09:02:28.880178+09:00"
     },
     {
       "source": "CNBC",
       "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
-      "started_at": "2026-10-28T08:32:26.863373+09:00",
+      "started_at": "2026-10-28T09:02:28.880548+09:00",
       "outcome": "success",
       "entries": 30,
       "usable_entries": 30,
       "entries_without_source_date": 0,
       "http_status": 200,
-      "finished_at": "2026-10-28T08:32:26.949342+09:00"
+      "finished_at": "2026-10-28T09:02:29.133757+09:00"
     },
     {
       "source": "Fed 공식 발표",
       "url": "https://www.federalreserve.gov/feeds/press_all.xml",
-      "started_at": "2026-10-28T08:32:26.949729+09:00",
+      "started_at": "2026-10-28T09:02:29.134041+09:00",
       "outcome": "success",
       "entries": 20,
       "usable_entries": 20,
       "entries_without_source_date": 0,
       "http_status": 200,
-      "finished_at": "2026-10-28T08:32:27.027594+09:00",
+      "finished_at": "2026-10-28T09:02:29.267089+09:00",
       "warning_type": "CharacterEncodingOverride"
     }
   ],
   "new_rows_scope": "selected before retention limit; not a full-file refresh",
   "asset": {
     "path": "data/news_flash.json",
-    "disposition": "unchanged_no_new_rows",
+    "disposition": "atomically_replaced",
     "status": "bound",
-    "sha256": "c12b8fe7604c06b2a0662b731d561ce974c8bd707a696052d36351ac098c139b",
+    "sha256": "a3360f37984aebd55eee77fe1d2a4c4a0ad0e154d7c353441aceae3ba4a5c58a",
     "rows": 200
   },
   "source_freshness_verified": false,
