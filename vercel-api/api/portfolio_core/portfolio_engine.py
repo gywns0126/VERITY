@@ -22,6 +22,7 @@ from .portfolio_public_sources import (
     PUBLIC_SOURCE_FILES,
     _temporary_public_text_cache,
     project_public_sources,
+    project_public_source_coverage,
     project_public_business_overviews,
     safe_public_text,
 )
@@ -53,6 +54,7 @@ from .portfolio_prepared_business import (
     pack_base_projection,
     checked_base_projection,
 )
+from .portfolio_business_incremental import BusinessRowMemo
 
 
 MAX_SYMBOLS = 30  # Analysis window, not a limit on a member's stored holdings.
@@ -92,6 +94,7 @@ class _ProjectedPublicIndexCache:
         self._base_template = None
         self._news_revision = None
         self._news_index = None
+        self._row_memo = BusinessRowMemo()
 
     @staticmethod
     def _build(public_documents, _reuse_business=None, _base_companies=None, _reuse_news=None):
@@ -147,8 +150,12 @@ class _ProjectedPublicIndexCache:
         revision = _business_index_revision(documents, by_id)
         if revision is None:
             _log_prepared_status("fallback_unbounded")
-            return _business_material_index(documents, by_id)
-        if self._business_index is not None and self._business_revision == revision:
+            return _business_material_index(documents, by_id, _memo=self._row_memo)
+        try:
+            cache_key = (revision, date.today().isoformat(), _prepared_implementation_sha256())
+        except OSError:
+            return _business_material_index(documents, by_id, _memo=self._row_memo)
+        if self._business_index is not None and self._business_revision == cache_key:
             # This index was already built/receipt-checked for these exact
             # matcher inputs and UTC day. A new filing need not recheck it.
             _log_prepared_status("reuse_cached")
@@ -167,14 +174,14 @@ class _ProjectedPublicIndexCache:
         if prepared is not None:
             _log_prepared_status("accepted")
             self._business_index = prepared
-            self._business_revision = revision
+            self._business_revision = cache_key
             return prepared
-        if self._business_index is None or self._business_revision != revision:
+        if self._business_index is None or self._business_revision != cache_key:
             if prepared_business_index is not None:
                 _log_prepared_status("fallback_rejected")
-            built = _business_material_index(documents, by_id)
+            built = _business_material_index(documents, by_id, _memo=self._row_memo)
             self._business_index = built
-            self._business_revision = revision
+            self._business_revision = cache_key
         else:
             _log_prepared_status("reuse_cached")
         return self._business_index
@@ -254,6 +261,7 @@ class _ProjectedPublicIndexCache:
             self._base_template = None
             self._news_revision = None
             self._news_index = None
+            self._row_memo.clear()
 
 
 _PROJECTED_PUBLIC_INDEX = _ProjectedPublicIndexCache()
@@ -400,9 +408,11 @@ def _company_mentions(text, trie, issuer):
     return sorted(matches), len(ambiguous)
 
 
-def _business_material_index(documents, by_id):
+def _business_material_index(documents, by_id, *, _memo=None):
     """Index the received public excerpt once per bundle, not once per member."""
     business = project_public_business_overviews(documents)
+    if _memo is not None:
+        _memo.prepare(documents, by_id, business)
     trie = _public_name_trie(documents, by_id) if business["rows"] else {}
     materials, index = {}, {}
     rejected_issuer, without_mentions, ambiguous_only = 0, 0, 0
@@ -411,7 +421,9 @@ def _business_material_index(documents, by_id):
         if issuer not in by_id:
             rejected_issuer += 1
             continue
-        mentions, ambiguous = _company_mentions(row["text"], trie, issuer)
+        mentions, ambiguous = (
+            _memo.mentions(row, lambda: _company_mentions(row["text"], trie, issuer))
+            if _memo is not None else _company_mentions(row["text"], trie, issuer))
         if not mentions:
             without_mentions += 1
             ambiguous_only += bool(ambiguous)
@@ -440,7 +452,8 @@ def _business_material_index(documents, by_id):
                 "ambiguous_alias_only": ambiguous_only,
                 "companies_with_materials": len(index)}
     return {"materials": materials, "by_company": index, "coverage": coverage,
-            "market_context": index_filing_market_context(business),
+            "market_context": (_memo.market_context(business) if _memo is not None
+                               else index_filing_market_context(business)),
             "reported_roles": index_business_roles(business, list(by_id.values()))}
 
 
@@ -780,6 +793,8 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
                 documents[key] = {field: doc[field] for field in
                                   ("id", "title", "url", "as_of", "kind", "source")}
                 documents[key]["company_ids"] = []
+                if "filing" in doc:
+                    documents[key]["filing"] = deepcopy(doc["filing"])
                 if doc.get("capture_archive") == 'retained-public-capture':
                     documents[key]["capture_archive"] = doc['capture_archive']
             target = documents[key]
@@ -865,6 +880,8 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
                               "facts": "available" if c["facts"] else "not-supplied-or-rejected",
                               "documents": "available" if c["document_ids"] else "not-supplied-or-rejected"}
                              for c in companies],
+            "company_sources": project_public_source_coverage(
+                public_documents, [row["id"] for row in requested]),
             "evidence": {
                 "document_links": len(document_list),
                 **({"capture_archive": deepcopy(projected['capture_archive'])}

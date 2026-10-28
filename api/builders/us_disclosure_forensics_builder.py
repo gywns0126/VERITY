@@ -45,7 +45,7 @@ KR DART 보다 정밀: restatement / auditor_change = 미장 특화 red flag (KR
   문서 파싱이 필요해 미구현 — proxy_annual 을 "희석 예고" 로 읽으면 안 된다.
 
 입력: data/us_smallcap_corner.json(종목) + data/sec_ticker_cik_map.json(CIK)
-출력: data/us_disclosure_forensics.json — 전 US 유니버스 수집 상태 + 최근 8-K + 심화 분류.
+출력: data/us_disclosure_forensics.json — 전 US 유니버스 수집 상태 + 최근 공시 + 8-K 심화 분류.
 LLM 0(RULE 6). 점수/랭킹 0(RULE 7) — 사실 카운트만. SEC throttle 0.3s (10 req/s 한도 안전).
 """
 import argparse
@@ -185,6 +185,8 @@ def _deep_existing() -> list:
 def _recent_counts(disclosures: list) -> dict:
     counts = {}
     for disclosure in disclosures:
+        if disclosure.get("label") not in (None, "", "8-K", "8-K/A"):
+            continue
         for code in disclosure.get("item_codes") or []:
             category = ITEM_CATEGORY.get(str(code).strip())
             if category:
@@ -193,7 +195,7 @@ def _recent_counts(disclosures: list) -> dict:
 
 
 def _merge_with_feed(deep_stocks: list) -> dict:
-    """일간 8-K feed와 월간 2년 심화 결과를 전 US 유니버스로 합친다.
+    """일간 공시 feed와 월간 2년 8-K 심화 결과를 전 US 유니버스로 합친다.
 
     feed의 성공 대장을 사용해 `최근 공시 없음`과 `미수집`을 분리한다. 이전 feed처럼
     성공 티커 대장이 없더라도 처리 수가 분모와 같을 때만 전수 성공으로 인정한다.
@@ -240,11 +242,18 @@ def _merge_with_feed(deep_stocks: list) -> dict:
     recent_window = int(feed_meta.get("window_days") or 90)
 
     rows = []
-    event_present = no_recent = classified = 0
+    event_present = no_recent = no_recent_filing = recent_8k_present = classified = 0
     for ticker in universe:
         recent = feed_rows.get(ticker) or {}
         disclosures = list(recent.get("disclosures") or [])
-        recent_counts = _recent_counts(disclosures)
+        # The original feed contract contained only 8-K. Mixed-form feeds
+        # declare forms; a missing label there must not silently become 8-K.
+        legacy_form = "8-K" if "forms" not in feed_meta else "unknown"
+        forms = [str(item.get("label") or legacy_form) for item in disclosures]
+        eight_k = [item for form, item in zip(forms, disclosures) if form in ("8-K", "8-K/A")]
+        form_counts = {form: forms.count(form) for form in sorted(set(forms))}
+        latest_8k = max((str(item.get("date") or "") for item in eight_k), default="")
+        recent_counts = _recent_counts(eight_k)
         deep = deep_rows.get(ticker)
         if deep:
             row = dict(deep)
@@ -262,18 +271,35 @@ def _merge_with_feed(deep_stocks: list) -> dict:
                 "ticker": ticker,
                 "name": names.get(ticker) or recent.get("name") or ticker,
                 "counts": recent_counts,
-                "n_8k": len(disclosures),
-                "latest_8k": recent.get("latest") or "",
+                "n_8k": len(eight_k),
+                "latest_8k": latest_8k,
                 "classification_window_days": recent_window,
             }
 
         row["recent_window_days"] = recent_window
-        row["recent_8k_n"] = len(disclosures)
+        row["recent_8k_n"] = len(eight_k)
+        # The shared feed cap can hide further 8-Ks even when retained rows
+        # include foreign forms. Keep this conservative lower-bound signal.
         row["recent_8k_truncated"] = len(disclosures) >= max_recent
+        row["recent_filing_n"] = len(disclosures)
+        row["recent_filing_counts"] = form_counts
+        row["recent_filing_truncated"] = len(disclosures) >= max_recent
+        row["latest_filing"] = max((str(item.get("date") or "") for item in disclosures), default="")
         row["recent_filings"] = disclosures
+        row["filing_state"] = "unknown"
+        row["recent_8k_state"] = "unknown"
         if ticker in processed:
             row["collection_status"] = "covered"
-            row["event_state"] = "recent_8k" if disclosures else "no_recent_8k"
+            row["filing_state"] = "recent_filing" if disclosures else "no_recent_filing"
+            row["event_state"] = "recent_8k" if eight_k else "recent_filing" if disclosures else "no_recent_8k"
+            row["recent_8k_state"] = (
+                "recent_8k" if eight_k else "unknown"
+                if row["recent_filing_truncated"] or "unknown" in form_counts else "no_recent_8k"
+            )
+            if row["recent_8k_state"] == "no_recent_8k":
+                no_recent += 1
+            if not disclosures:
+                no_recent_filing += 1
         elif ticker in unavailable:
             row["collection_status"] = "source_unavailable"
             row["event_state"] = "unknown"
@@ -286,10 +312,10 @@ def _merge_with_feed(deep_stocks: list) -> dict:
 
         if disclosures:
             event_present += 1
-            newest = max(str(row.get("latest_8k") or ""), str(recent.get("latest") or ""))
+        if eight_k:
+            recent_8k_present += 1
+            newest = max(str(row.get("latest_8k") or ""), latest_8k)
             row["latest_8k"] = newest
-        elif row["event_state"] == "no_recent_8k":
-            no_recent += 1
         if row.get("counts"):
             classified += 1
         rows.append(row)
@@ -299,20 +325,24 @@ def _merge_with_feed(deep_stocks: list) -> dict:
         "_meta": {
             "generated_at": _now_kst().isoformat(),
             "track": "us_forensics_full_universe",
-            "source": "SEC EDGAR 일간 8-K feed(최근 기간) + 월간 소형주 8-K item 심화",
+            "source": "SEC EDGAR 일간 8-K·6-K·20-F·40-F 및 정정 feed + 월간 소형주 8-K item 심화",
             "universe_n": len(universe),
             "processed_n": len(processed),
             "unprocessed_n": len(unprocessed),
             "unprocessed_tickers": unprocessed,
             "event_present_n": event_present,
+            "recent_8k_present_n": recent_8k_present,
             "no_recent_8k_n": no_recent,
+            "no_recent_filing_n": no_recent_filing,
             "deep_flagged_n": len(deep_rows),
             "classified_n": classified,
             "recent_window_days": recent_window,
             "deep_window_days": WINDOW_DAYS,
             "item_map": ITEM_CATEGORY,
-            "disclaimer": "8-K 제출과 SEC item 분류 사실만 표시한다. 분류는 위험도 판단이 아니다. "
-                          "최근 목록은 종목당 상한이 있어 recent_8k_truncated=true면 최소 건수다.",
+            "disclaimer": "공시 제출과 8-K 계열 SEC item 분류 사실만 표시한다. 분류는 위험도 판단이 아니다. "
+                          "recent_filing_counts는 보존된 양식별 건수, 최근 8-K 통계는 8-K·8-K/A만 포함한다. "
+                          "심화 n_8k와 counts의 기간은 deep_window_days를 따른다. "
+                          "최근 목록은 종목당 공유 상한이 있어 recent_filing_truncated=true면 최소 건수다.",
         },
         "stocks": rows,
     }
@@ -335,7 +365,7 @@ def main(merge_feed_only: bool = False) -> int:
         meta = out["_meta"]
         print(
             f"[us_forensics] feed merge OK | processed {meta['processed_n']}/{meta['universe_n']} "
-            f"| recent {meta['event_present_n']} | no_recent {meta['no_recent_8k_n']}"
+            f"| recent {meta['event_present_n']} | no_recent {meta['no_recent_filing_n']}"
         )
         return 0
 

@@ -705,8 +705,19 @@ def _quality_findings(row, source):
             # A named customer list following issuer-wide results cannot own
             # the preceding growth. Do not transfer either a number or its sign.
             # Keep thousands separators (8,837) inside their economic clause.
-            sections = re.split(r"(?<!\d)[,，]|[,，](?!\d)|[;；]", quote)
-            economic = [i for i, s in enumerate(sections) if re.search(channel[impact["channel"]], s, re.I)
+            boundaries = list(re.finditer(r"(?<!\d)[,，]|[,，](?!\d)|[;；]", quote))
+            ranges = list(zip([0] + [m.end() for m in boundaries],
+                              [m.start() for m in boundaries] + [len(quote)]))
+            sections = [quote[start:end] for start, end in ranges]
+            # Bind the mechanism to the cited span, not an uncited economic
+            # clause elsewhere in the sentence. Repeated support is ambiguous.
+            support_start = quote.index(support)
+            support_end = support_start + len(support)
+            cited = [quote[max(start, support_start):min(end, support_end)]
+                     for start, end in ranges]
+            economic = [i for i, s in enumerate(cited)
+                        if quote.count(support) == 1
+                        and re.search(channel[impact["channel"]], s, re.I)
                         and re.search(mechanism, s, re.I)]
             def linked(index):
                 section = sections[index]
@@ -727,7 +738,7 @@ def _quality_findings(row, source):
                         and not any(base._name_in_text(other, sections[index]) for other in names)
                         and base._direction_for_counterparty(
                             sections[index - 1], name, source["issuer_name"], names) is not None)
-            if economic and not any(linked(i) for i in economic):
+            if not economic or not any(linked(i) for i in economic):
                 flag("impact", "impact-party-attribution", [quote])
     return findings + _omitted_exposure_findings(row, source)
 
@@ -816,6 +827,8 @@ def project_company_judgments(answer, documents, candidates, reviews, *, as_of,
         if finding["axis"] in {"impact", "source_context"}:
             quality_reasons.setdefault(finding["judgment_id"], set()).add(finding["code"])
     quality_blocked = set(quality_reasons)
+    source_context_blocked = {finding["judgment_id"] for finding in result["quality_review"]["findings"]
+                              if finding["axis"] == "source_context"}
     receipts = {}
     for receipt in reviews:
         _keys(receipt, {"judgment_id", "judgment_revision", "decision", "reviewed_on", "reason", "checks"}
@@ -855,6 +868,9 @@ def project_company_judgments(answer, documents, candidates, reviews, *, as_of,
                 raise ValueError("judgment-materiality-review")
             if review["decision"] == "accept" and (
                     receipt["decision"] == "reject" or not all(review["checks"].values())
+                    # Separate axes may be reviewed independently, but neither
+                    # can accept a company/product identity or source-context gap.
+                    or identifier in source_context_blocked
                     or row["materiality_review_reasons"]
                     or row["proposal"]["economic_v2"]["materiality"]["value"] == "unrated"):
                 raise ValueError("judgment-materiality-unresolved")

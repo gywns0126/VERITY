@@ -102,8 +102,10 @@ def base_projection_revision(source_revisions):
 
 
 PUBLIC_FACT_FIELDS = ("metric", "value", "unit", "as_of", "source")
-# SEC 8-K documents may additionally carry a validated item_codes list.
+# SEC documents may additionally carry validated item_codes/filing metadata.
 PUBLIC_DOCUMENT_FIELDS = ("id", "title", "url", "as_of", "kind", "source")
+PUBLIC_SEC_FILING_FIELDS = ("form", "is_correction", "cik", "accession_number",
+                            "primary_document", "filing_date", "report_date", "acceptance_datetime")
 _SEC_ITEM_CODE_RE = re.compile(r"[1-9]\.[0-9]{2}", re.ASCII)
 _SEC_ITEM_CODES_MAX = 32
 
@@ -719,6 +721,55 @@ def _sec_item_codes(value: Any) -> list[str] | None:
     return list(value)
 
 
+
+def _sec_filing(raw: Mapping[str, Any], url: str, filed: str) -> dict[str, Any] | None:
+    """Bind optional typed metadata to this canonical filing, never to its title."""
+    form, correction = raw.get("label"), raw.get("is_correction")
+    if (not isinstance(form, str) or form not in {
+            "8-K", "8-K/A", "6-K", "6-K/A", "20-F", "20-F/A",
+            "40-F", "40-F/A", "10-K", "10-K/A", "10-Q", "10-Q/A"}
+            or type(correction) is not bool or correction != form.endswith("/A")):
+        return None
+    cik, accession, primary = raw.get("cik"), raw.get("accession_number"), raw.get("primary_document")
+    if (not isinstance(cik, str) or not re.fullmatch(r"[0-9]{1,10}", cik, re.ASCII)
+            or int(cik) <= 0 or not isinstance(accession, str)
+            or not re.fullmatch(r"[0-9]{10}-[0-9]{2}-[0-9]{6}", accession, re.ASCII)
+            or not isinstance(primary, str)):
+        return None
+    cik = str(int(cik))
+    if primary and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,199}", primary, re.ASCII):
+        return None
+    # A co-filer/agent may own the accession prefix; only the URL's issuer CIK
+    # must match the supplied issuer. Missing primary documents use this index.
+    base = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession.replace('-', '')}/"
+    if url not in ((base + primary,) if primary else
+                   (base + accession + "-index.htm", base + accession + "-index.html")):
+        return None
+    filing_date = _as_of(raw.get("filing_date"))
+    if (filing_date is None or filing_date != filed or not 1900 <= int(filed[:4]) <= 2100
+            or filing_date > date.today().isoformat()):
+        return None
+    report = raw.get("report_date")
+    if report in (None, ""):
+        report = None
+    elif _as_of(report) is None or report > filed or int(report[:4]) < 1900:
+        return None
+    acceptance = raw.get("acceptance_datetime")
+    if acceptance in (None, ""):
+        acceptance = None
+    else:
+        if _generated_at(acceptance) is None:
+            return None
+        parsed = datetime.fromisoformat(acceptance.replace("Z", "+00:00"))
+        if parsed.tzinfo is None or parsed > datetime.now(timezone.utc):
+            return None
+    # SEC acceptance time is retained literally; it is not public availability
+    # or the collector's observation clock and may cross the filing day's UTC boundary.
+    return {"form": form, "is_correction": correction, "cik": cik,
+            "accession_number": accession, "primary_document": primary or None,
+            "filing_date": filing_date, "report_date": report, "acceptance_datetime": acceptance}
+
+
 def _disclosure(
     raw: Mapping[str, Any], source: str
 ) -> dict[str, Any] | None:
@@ -740,7 +791,11 @@ def _disclosure(
         "kind": "disclosure",
         "source": source,
     }
-    if source == "SEC" and raw.get("label") == "8-K":
+    if source == "SEC":
+        filing = _sec_filing(raw, url, stamp)
+        if filing is not None:
+            projected["filing"] = filing
+    if source == "SEC" and raw.get("label") in ("8-K", "8-K/A"):
         codes = _sec_item_codes(raw.get("item_codes"))
         if codes is not None:
             projected["item_codes"] = codes
@@ -1078,9 +1133,10 @@ def project_public_sources(documents: Mapping[str, Any], *, _base_companies=None
     companies: dict[str, dict[str, Any]] = (
         {row["id"]: row for row in _base_companies} if _base_companies is not None else {})
     fact_keys: dict[str, set[tuple[Any, ...]]] = {}
-    document_keys: dict[str, set[str]] = {
-        identifier: {row["id"] for row in company["documents"]}
+    document_keys: dict[str, dict[str, dict[str, Any]]] = {
+        identifier: {row["id"]: row for row in company["documents"]}
         for identifier, company in companies.items()}
+    filing_updates: dict[tuple[str, str], dict[str, Any] | None] = {}
 
     container_fields = {
         "universe_search.json": "stocks",
@@ -1128,7 +1184,7 @@ def project_public_sources(documents: Mapping[str, Any], *, _base_companies=None
             }
             companies[company_id] = company
             fact_keys[company_id] = set()
-            document_keys[company_id] = set()
+            document_keys[company_id] = {}
         elif company["sector"] is None:
             company["sector"] = _sector(row)
         return company_id, company
@@ -1154,8 +1210,20 @@ def project_public_sources(documents: Mapping[str, Any], *, _base_companies=None
                 raise PublicSourceError("public source shape rejected")
             projected = _disclosure(raw, source)
             if projected and projected["id"] not in document_keys[company_id]:
-                document_keys[company_id].add(projected["id"])
+                document_keys[company_id][projected["id"]] = projected
                 company["documents"].append(projected)
+            elif projected and "filing" in projected:
+                existing = document_keys[company_id][projected["id"]]
+                if ("filing" not in existing
+                        and all(existing.get(key) == projected[key]
+                                for key in ("id", "url", "as_of", "kind", "source"))):
+                    key = (company_id, projected["id"])
+                    # Wait until every duplicate has been inspected: two valid
+                    # but conflicting optional claims must not select a winner.
+                    if key not in filing_updates:
+                        filing_updates[key] = projected["filing"]
+                    elif filing_updates[key] != projected["filing"]:
+                        filing_updates[key] = None
 
     for filename, default_market, source in (
         ("stock_report_public.json", "KR", "DART"),
@@ -1226,7 +1294,7 @@ def project_public_sources(documents: Mapping[str, Any], *, _base_companies=None
                 if projected["id"] in document_keys[identifier]:
                     calendar_counts["duplicate"] += 1
                     continue
-                document_keys[identifier].add(projected["id"])
+                document_keys[identifier][projected["id"]] = projected
                 companies[identifier]["documents"].append(projected)
                 calendar_counts["accepted"] += 1
 
@@ -1238,6 +1306,18 @@ def project_public_sources(documents: Mapping[str, Any], *, _base_companies=None
     if "etf_flow.json" in documents:
         from .portfolio_etf_facts import append_public_etf_facts
         etf_counts = append_public_etf_facts(documents["etf_flow.json"], companies)
+    enriched_companies = set()
+    for (company_id, identifier), filing in filing_updates.items():
+        if filing is not None:
+            # Prepared bases share nested documents across bundle revisions.
+            # Replace only enriched objects; never write into a cached header.
+            document_keys[company_id][identifier] = {
+                **document_keys[company_id][identifier], "filing": filing}
+            enriched_companies.add(company_id)
+    for company_id in enriched_companies:
+        company = companies[company_id]
+        companies[company_id] = {**company, "documents": [
+            document_keys[company_id][item["id"]] for item in company["documents"]]}
     result_companies = sorted(companies.values(), key=lambda company: company["id"])
     facts_projected = 0
     documents_projected = 0
@@ -1279,6 +1359,323 @@ def project_public_sources(documents: Mapping[str, Any], *, _base_companies=None
             **({"institutional_reuse": institutional_counts} if institutional_counts is not None else {}),
             **({"etf_reuse": etf_counts} if etf_counts is not None else {}),
         },
+    }
+
+
+# Receipt scope is deliberately limited to these existing issuer containers.
+# Other public artifacts retain their own projection/coverage contracts.
+_COMPANY_COVERAGE_SOURCES = (
+    ("universe_search.json", "stocks", None, None),
+    ("stock_report_public.json", "stocks", "KR", "DART"),
+    ("us_stock_report_public.json", "stocks", "US", "SEC"),
+    ("public_disclosure_feed.json", "items", "KR", "DART"),
+    ("us_disclosure_feed.json", "items", "US", "SEC"),
+    ("kr_business_overview_public.json", "rows", "KR", "DART"),
+)
+
+
+def _coverage_row(row, filename, market, source):
+    """Count retained payloads with existing guards, never certify their truth."""
+    if filename == "universe_search.json":
+        accepted = int(bool(_safe_text(row.get("name"), 160)
+                            or _safe_text(row.get("name_ko"), 160)))
+        return 1, accepted, [], []
+    supplied = False
+    inputs, accepted, publications, periods = 0, 0, set(), set()
+    if filename.endswith("stock_report_public.json"):
+        for field in ("facts", "fin_series"):
+            raw = row.get(field)
+            if raw is None:
+                continue
+            supplied = True
+            if not isinstance(raw, (list, Mapping)) or field == "fin_series" and not isinstance(raw, list):
+                raise PublicSourceError("public source shape rejected")
+            if field == "facts":
+                inputs += len(raw)
+            else:
+                for point in raw:
+                    if not isinstance(point, Mapping):
+                        inputs += 1
+                    else:
+                        inputs += max(1, sum(point.get(key) is not None for key in ("revenue", "op", "net")))
+        facts = [*_explicit_facts(row, market), *_series_facts(row, market, source)]
+        accepted += len(facts)
+        for fact in facts:
+            proof = fact.get("provenance", {})
+            periods.add(proof.get("period_end", fact["as_of"]))
+            filed = _as_of(proof.get("filed"))
+            if filed:
+                publications.add(filed)
+    disclosures = row.get("disclosures")
+    if disclosures is not None:
+        supplied = True
+        if not isinstance(disclosures, list):
+            raise PublicSourceError("public source shape rejected")
+        inputs += len(disclosures)
+        for raw in disclosures:
+            if not isinstance(raw, Mapping):
+                raise PublicSourceError("public source shape rejected")
+            document = _disclosure(raw, source)
+            if document:
+                accepted += 1
+                publications.add(document["as_of"])
+                report_date = document.get("filing", {}).get("report_date")
+                if report_date is not None:
+                    periods.add(report_date)
+    return (inputs if supplied else None), accepted, sorted(publications), sorted(periods)
+
+
+
+def _us_source_collection(document):
+    """Read the existing SEC builder receipt; its clock is batch-scoped only."""
+    unknown = {"status": "unknown", "attempted_at": None, "completed_at": None,
+               "successful_checked_at": None}
+    meta = document.get("_meta")
+    if not isinstance(meta, Mapping) or "source_collection" not in meta:
+        return None, {}
+    value, coverage = meta["source_collection"], document.get("_coverage")
+    try:
+        if (not isinstance(value, Mapping) or not isinstance(coverage, Mapping)
+                or value.get("endpoint") != "https://data.sec.gov/submissions/CIK{cik10}.json"
+                or value.get("scope") != "submissions.filings.recent; excludes ticker-map request and historical files"
+                or value.get("whole_market_coverage") is not False):
+            return unknown, {}
+        count_fields = ("requests", "requests_succeeded", "requests_failed", "reused_cik_tickers",
+                        "universe_n", "processed_n", "empty_n", "unavailable_n",
+                        "unresolved_n", "deferred_n")
+        if any(type(value.get(key)) is not int or value[key] < 0 for key in count_fields):
+            return unknown, {}
+        fields = {"processed": "processed_n", "empty": "empty_n", "unavailable": "unavailable_n",
+                  "unresolved": "unresolved_n", "unprocessed": "deferred_n",
+                  "carry_forward": None}
+        groups = {}
+        for name, count in fields.items():
+            tickers = coverage.get(name + "_tickers")
+            if (not isinstance(tickers, list)
+                    or any(_ticker(ticker, "US") is None for ticker in tickers)
+                    or len(set(tickers)) != len(tickers)
+                    or count is not None and len(tickers) != value[count]):
+                return unknown, {}
+            groups[name] = set(tickers)
+        partition = [groups[name] for name in ("processed", "unavailable", "unresolved", "unprocessed")]
+        if (sum(len(group) for group in partition) != len(set().union(*partition))
+                or sum(len(group) for group in partition) != value["universe_n"]
+                or coverage.get("universe_n") != value["universe_n"]
+                or not groups["empty"].issubset(groups["processed"])
+                or groups["carry_forward"] & groups["processed"]
+                or value["requests"] != value["requests_succeeded"] + value["requests_failed"]
+                or value["requests"] + value["reused_cik_tickers"] != value["processed_n"] + value["unavailable_n"]
+                or value["requests_succeeded"] > value["processed_n"]
+                or value["requests_failed"] > value["unavailable_n"]):
+            return unknown, {}
+        complete = value["universe_n"] > 0 and value["processed_n"] == value["universe_n"]
+        status = ("success" if complete else "partial" if value["processed_n"] or value["deferred_n"]
+                  else "error" if value["universe_n"] else "unknown")
+        if type(value.get("universe_complete")) is not bool or value["universe_complete"] != complete or value.get("status") != status:
+            return unknown, {}
+        now = datetime.now(timezone.utc)
+
+        def timestamp(raw):
+            if _generated_at(raw) is None:
+                raise ValueError
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            if parsed.tzinfo is None or parsed > now:
+                raise ValueError
+            return parsed
+
+        completed = timestamp(value["completed_at"])
+        if value["requests"]:
+            if timestamp(value["attempted_at"]) > completed:
+                return unknown, {}
+        elif value["attempted_at"] is not None:
+            return unknown, {}
+        if complete:
+            if timestamp(value["successful_checked_at"]) != completed:
+                return unknown, {}
+        elif value["successful_checked_at"] is not None:
+            return unknown, {}
+        return {key: value[key] for key in unknown}, groups
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return unknown, {}
+
+
+def project_public_source_coverage(
+    documents: Mapping[str, Any], selected_company_ids: Iterable[str]
+) -> dict[str, Any]:
+    """Describe selected issuer payloads in supplied artifacts, with no I/O.
+
+    available means a payload survived existing projection guards, not that its
+    financial values/relationships were independently verified. empty requires
+    an explicit empty company payload. Missing issuer rows remain not-collected
+    in this loaded scope, never evidence that the issuer has no filings.
+    Observation time is only copied from validated collection evidence; artifact
+    generation, filing dates and fiscal dates never stand in for observation.
+    This helper neither registers issuers nor changes the legacy projection.
+    Each of the six source containers is visited once; only selected payloads
+    are validated/projected. SEC batch-check timestamps remain collection
+    metadata and never become a selected issuer's observed_at.
+    """
+    if not isinstance(documents, Mapping) or not set(documents).issubset(PUBLIC_SOURCE_FILES):
+        raise PublicSourceError("public source set rejected")
+    if isinstance(selected_company_ids, (str, bytes, Mapping)):
+        raise PublicSourceError("public coverage selection rejected")
+    try:
+        identifiers = set()
+        for index, identifier in enumerate(selected_company_ids):
+            if index >= 30 or not isinstance(identifier, str):
+                raise ValueError
+            market, separator, ticker = identifier.partition(":")
+            if separator != ":" or market not in ("KR", "US") or _ticker(ticker, market) is None:
+                raise ValueError
+            identifiers.add(identifier)
+    except (TypeError, ValueError):
+        raise PublicSourceError("public coverage selection rejected") from None
+
+    receipts = []
+    for filename, field, default_market, source in _COMPANY_COVERAGE_SOURCES:
+        loaded = filename in documents
+        document = documents.get(filename)
+        meta = document.get("_meta") if isinstance(document, Mapping) else None
+        generated = _generated_at(meta.get("generated_at")) if isinstance(meta, Mapping) else None
+        collection = (_dart_source_collection(document)
+                      if filename == "public_disclosure_feed.json" and isinstance(document, Mapping) else None)
+        us_collection, us_groups = (_us_source_collection(document)
+                                   if filename == "us_disclosure_feed.json" and isinstance(document, Mapping)
+                                   else (None, {}))
+        rows, invalid = {}, False
+        if loaded:
+            try:
+                if not isinstance(document, Mapping):
+                    raise PublicSourceError("public source shape rejected")
+                if filename == "kr_business_overview_public.json":
+                    raw_rows = document.get("rows")
+                    if (not isinstance(raw_rows, Mapping) or not isinstance(meta, Mapping)
+                            or generated is None or type(meta.get("count")) is not int
+                            or meta["count"] != len(raw_rows)):
+                        raise PublicSourceError("public source metadata rejected")
+                value = document.get(field)
+                if isinstance(value, Mapping):
+                    entries = value.items()
+                elif isinstance(value, list):
+                    entries = ((None, row) for row in value)
+                else:
+                    raise PublicSourceError("public source shape rejected")
+                # Combine shape validation and identity selection in one pass,
+                # including invalid unselected rows, without building a catalog.
+                for hint, row in entries:
+                    if (not isinstance(row, Mapping)
+                            or isinstance(value, Mapping) and not isinstance(hint, str)):
+                        raise PublicSourceError("public source shape rejected")
+                    identity = _row_identity(row, default_market=default_market, ticker_hint=hint)
+                    if identity is not None:
+                        identifier = ":".join(identity)
+                        if identifier in identifiers:
+                            rows.setdefault(identifier, []).append((hint, row))
+            except PublicSourceError:
+                invalid = True
+        for identifier in sorted(identifiers):
+            market, ticker = identifier.split(":")
+            if default_market is not None and market != default_market:
+                continue
+            matches = rows.get(identifier, [])
+            receipt = {
+                "company_id": identifier, "source_file": filename,
+                "status": "not-collected",
+                "reason": "no-company-row-in-loaded-scope" if loaded else "source-not-loaded",
+                "matched_rows": len(matches), "input_records": 0, "accepted_records": 0,
+                "publication_dates": [], "data_dates": [], "observed_at": None,
+                "artifact_generated_at": generated,
+            }
+            if invalid:
+                receipt.update(status="error", reason="source-shape-rejected")
+            elif matches:
+                inputs, accepted, supplied, publications, periods = 0, 0, False, set(), set()
+                truncated = False
+                try:
+                    for hint, row in matches:
+                        if filename == "kr_business_overview_public.json":
+                            # The original metadata/container was checked above;
+                            # reuse the row validator without projecting other issuers.
+                            projected = project_public_business_overviews({
+                                filename: {"_meta": {**(meta if isinstance(meta, Mapping) else {}),
+                                                     "count": 1}, "rows": {ticker: row}}})
+                            n, kept = 1, len(projected["rows"])
+                            filed = [entry["source"]["as_of"] for entry in projected["rows"]]
+                            dates = [entry["fiscal_year"] for entry in projected["rows"]]
+                            truncated = truncated or any(entry["truncated"] for entry in projected["rows"])
+                        else:
+                            n, kept, filed, dates = _coverage_row(row, filename, market, source)
+                        supplied = supplied or n is not None
+                        inputs += n or 0
+                        accepted += kept
+                        publications.update(filed)
+                        periods.update(dates)
+                    receipt.update(input_records=inputs, accepted_records=accepted,
+                                   publication_dates=sorted(publications), data_dates=sorted(periods))
+                    if accepted:
+                        receipt.update(status="partial" if accepted < inputs or truncated else "available",
+                                       reason=("payload-partly-rejected" if accepted < inputs else
+                                               "payload-truncated" if truncated else "payload-present"))
+                    elif inputs:
+                        receipt.update(status="partial", reason="payload-rejected")
+                    elif supplied:
+                        receipt.update(status="empty", reason="explicit-empty-company-payload")
+                    else:
+                        receipt["reason"] = "company-payload-not-supplied"
+                except PublicSourceError:
+                    receipt.update(status="error", reason="company-payload-rejected")
+            if collection is not None:
+                receipt["collection_status"] = collection["status"]
+                receipt["collection_scope"] = "feed-query-groups"
+                receipt["observed_at"] = collection["successful_checked_at"]
+                receipt["collection_attempted_at"] = collection["attempted_at"]
+                receipt["collection_completed_at"] = collection["completed_at"]
+                if receipt["status"] != "error" and collection["status"] in ("partial", "running", "failed"):
+                    receipt.update(
+                        status="error" if collection["status"] == "failed" else "partial",
+                        reason="feed-collection-" + collection["status"])
+            if us_collection is not None:
+                receipt.update(
+                    collection_status=us_collection["status"],
+                    collection_scope="submissions.filings.recent",
+                    collection_attempted_at=us_collection["attempted_at"],
+                    collection_completed_at=us_collection["completed_at"],
+                    collection_checked_at=us_collection["successful_checked_at"],
+                    issuer_collection_status="unknown")
+                issuer_status = next((name for name in
+                    ("empty", "processed", "unavailable", "unresolved", "unprocessed", "carry_forward")
+                    if ticker in us_groups.get(name, ())), None)
+                if issuer_status is not None:
+                    receipt["issuer_collection_status"] = issuer_status
+                if receipt["status"] != "error":
+                    if issuer_status == "empty":
+                        if receipt["accepted_records"]:
+                            receipt.update(status="error", reason="collection-payload-conflict")
+                        else:
+                            receipt.update(status="empty", reason="checked-empty-recent-filings")
+                    elif issuer_status == "unavailable":
+                        receipt.update(status="error", reason="issuer-collection-failed")
+                    elif issuer_status == "unresolved":
+                        receipt.update(status="not-collected", reason="issuer-identity-unresolved")
+                    elif issuer_status in ("unprocessed", "carry_forward"):
+                        receipt.update(status="partial" if receipt["accepted_records"] else "not-collected",
+                                       reason="issuer-deferred" if issuer_status == "unprocessed"
+                                       else "retained-payload-not-checked")
+                    elif issuer_status == "processed" and not matches:
+                        receipt.update(status="partial", reason="checked-issuer-payload-missing")
+            receipts.append(receipt)
+    assessed = {entry[0] for entry in _COMPANY_COVERAGE_SOURCES}
+    return {
+        "scope": "selected-companies-in-loaded-sources",
+        "selected_companies": len(identifiers),
+        "loaded_sources": sorted(documents),
+        "assessed_sources": sorted(assessed),
+        "unassessed_loaded_sources": sorted(set(documents) - assessed),
+        "receipt_count": len(receipts),
+        "status_counts": {status: sum(row["status"] == status for row in receipts)
+                          for status in ("available", "empty", "not-collected", "partial", "error")},
+        "accuracy_verified": False,
+        "receipts": receipts,
     }
 
 

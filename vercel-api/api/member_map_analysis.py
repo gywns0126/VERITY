@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 import json
 import logging
 import re
@@ -98,7 +99,7 @@ def _origin_result(request, *, method_allowed=True):
 def _valid_fetch_result(bundle):
     required = {"documents", "coverage", "revision"}
     if (type(bundle) is not dict or not required.issubset(bundle)
-            or not set(bundle).issubset(required | {"index_revision", "base_revision"})):
+            or not set(bundle).issubset(required | {"index_revision", "base_revision", "refresh_receipt"})):
         return None
     documents = bundle.get("documents")
     coverage = bundle.get("coverage")
@@ -242,6 +243,14 @@ def analyze_request(request):
         )
         if type(result) is not dict or result.get("schema") != "alphaconsole-portfolio-v1":
             raise ValueError("invalid analysis result")
+        if "refresh_receipt" in source_bundle:
+            from api.portfolio_core.member_map_freshness import validate_collection_receipt
+            receipt = source_bundle["refresh_receipt"]
+            # Operational age must not change document/card revisions or cause
+            # an already-open map to relayout on an unchanged source snapshot.
+            result.setdefault("_meta", {})["source_health"] = (
+                deepcopy(receipt) if validate_collection_receipt(receipt)
+                else {"status": "rejected"})
         stage_status = "ok"
     except Exception:
         _LOGGER.warning("member map analysis failed [analysis_unavailable]")

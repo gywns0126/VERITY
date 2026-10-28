@@ -47,6 +47,9 @@ _CACHE_RESULT = None
 _CACHE_EXPIRES_AT = 0.0
 _CACHE_SOURCE_REVISIONS = {}
 _LIVE_STATES = {}
+_LIVE_CHECKPOINT_STATUS = "not-read"
+_CACHE_REFRESH_STATES = {}
+_CACHE_CHECKPOINT_STATUS = "not-read"
 _REFRESH_STORE = None
 _VALIDATED_SOURCES = {}
 _STRONG_ETAG = re.compile(r'"[\x21\x23-\x7e]{1,126}"\Z', re.ASCII)
@@ -78,7 +81,7 @@ def _refresh_overlay(documents, reader=None):
     fixed service-role adapter never reads member, price or AI tables. Only
     existing public feed fields enter the documents returned to the engine.
     """
-    global _LIVE_STATES
+    global _LIVE_STATES, _LIVE_CHECKPOINT_STATUS
     try:
         from .member_map_refresh_store import validate_state
         from .member_map_live_refresh import overlay_states
@@ -88,8 +91,10 @@ def _refresh_overlay(documents, reader=None):
         validated = {source: validate_state(source, state) for source, state in states.items()}
         merged = overlay_states(documents, validated)
         _LIVE_STATES = deepcopy(validated)
+        _LIVE_CHECKPOINT_STATUS = "available"
         return merged
     except Exception as error:
+        _LIVE_CHECKPOINT_STATUS = "retained" if _LIVE_STATES else "read-failed"
         try:
             from .member_map_refresh_store import safe_error_code
             print(f"member_map_checkpoint status={safe_error_code(error)}", file=sys.stderr)
@@ -338,6 +343,7 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None,
     The underscored hooks exist only for deterministic local contract tests.
     """
     global _CACHE_RESULT, _CACHE_EXPIRES_AT, _CACHE_SOURCE_REVISIONS
+    global _CACHE_REFRESH_STATES, _CACHE_CHECKPOINT_STATUS
 
     timing_started = time.monotonic()
     production = _fetcher is None and _refresh_reader is None
@@ -355,6 +361,7 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None,
             result["index_revision"] = _index_revision(_CACHE_SOURCE_REVISIONS)
             if production and _borrow_snapshot:
                 result["base_revision"] = base_projection_revision(_CACHE_SOURCE_REVISIONS)
+                result["refresh_receipt"] = _collection_receipt()
             if production:
                 _log_fetch_timing(cache="hit", status=result["coverage"]["status"],
                                   available=result["coverage"]["available"],
@@ -446,6 +453,14 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None,
             "revision": _bundle_revision(source_revisions),
             "index_revision": _index_revision(source_revisions),
         }
+        # Bind diagnostic clocks to this snapshot, not a later checkpoint read.
+        # Never put the feed, cursor, error body or lease owner in the receipt.
+        _CACHE_REFRESH_STATES = {
+            source: {key: state.get(key) for key in
+                     ("status", "last_attempt_at", "last_success_at")}
+            for source, state in _LIVE_STATES.items()
+        } if read_overlay else {}
+        _CACHE_CHECKPOINT_STATUS = _LIVE_CHECKPOINT_STATUS if read_overlay else "not-read"
         if documents:
             _CACHE_SOURCE_REVISIONS = dict(source_revisions)
             _CACHE_RESULT = result if _fetcher is None and _refresh_reader is None else deepcopy(result)
@@ -458,6 +473,7 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None,
         returned = copy_bundle(result)
         if production and _borrow_snapshot:
             returned["base_revision"] = base_projection_revision(source_revisions)
+            returned["refresh_receipt"] = _collection_receipt()
         if production:
             _log_fetch_timing(cache="miss", status=result["coverage"]["status"],
                               available=result["coverage"]["available"],
@@ -468,6 +484,12 @@ def fetch_public_sources(*, _fetcher=None, _clock=None, _refresh_reader=None,
                               hash_ms=hash_ms, overlay_ms=overlay_ms,
                               copy_ms=(time.monotonic() - copy_started) * 1000)
         return returned
+
+
+def _collection_receipt():
+    from .member_map_freshness import collection_receipt
+    return collection_receipt(_CACHE_REFRESH_STATES,
+        now=datetime.now(timezone.utc).isoformat(), checkpoint_status=_CACHE_CHECKPOINT_STATUS)
 
 
 def borrow_public_sources_for_analysis():
@@ -483,10 +505,14 @@ def borrow_public_sources_for_analysis():
 def _reset_cache_for_tests():
     """Clear process-local public data; not used by the deployed handler."""
     global _CACHE_RESULT, _CACHE_EXPIRES_AT, _CACHE_SOURCE_REVISIONS, _LIVE_STATES, _REFRESH_STORE
+    global _LIVE_CHECKPOINT_STATUS, _CACHE_REFRESH_STATES, _CACHE_CHECKPOINT_STATUS
     with _CACHE_LOCK:
         _CACHE_RESULT = None
         _CACHE_EXPIRES_AT = 0.0
         _CACHE_SOURCE_REVISIONS = {}
         _LIVE_STATES = {}
+        _LIVE_CHECKPOINT_STATUS = "not-read"
+        _CACHE_REFRESH_STATES = {}
+        _CACHE_CHECKPOINT_STATUS = "not-read"
         _REFRESH_STORE = None
         _VALIDATED_SOURCES.clear()
