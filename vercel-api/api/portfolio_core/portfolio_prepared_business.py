@@ -51,7 +51,9 @@ _FETCH_LOCK = threading.Lock()
 _FETCH_CACHE = None
 _FETCH_EXPIRES_AT = 0.0
 # Bump on any change to business matching, role/context indexing, or envelope.
-MATCHER_VERSION = "business-matchers-2026-10-27-v3"
+MATCHER_VERSION = "business-matchers-2026-10-29-v4"
+_ARTIFACT_KEYS = frozenset({"schema", "matcher_version", "implementation_sha256",
+    "source_revision", "utc_day", "catalog", "index", "base_projection"})
 _BASE_MAX_BYTES = 64 * 1024 * 1024
 _BASE_COMPANY_KEYS = frozenset(PUBLIC_COMPANY_FIELDS)
 _BASE_FACT_KEYS = frozenset(PUBLIC_FACT_FIELDS)
@@ -225,9 +227,8 @@ def _checked_receipt(artifact, receipt):
     try:
         code = implementation_sha256()
         day = datetime.now(timezone.utc).date().isoformat()
-        return (type(artifact) is dict and set(artifact) == {
-                    "schema", "matcher_version", "implementation_sha256", "source_revision",
-                    "utc_day", "catalog", "index", "base_projection"}
+        return (type(artifact) is dict and artifact.keys() in (
+                    _ARTIFACT_KEYS, _ARTIFACT_KEYS | {"news_names"})
                 and artifact["schema"] == SCHEMA and artifact["matcher_version"] == MATCHER_VERSION
                 and artifact["implementation_sha256"] == code and artifact["utc_day"] == day
                 and type(receipt) is dict and set(receipt) == {
@@ -340,6 +341,71 @@ def identity_catalog(by_id):
             for row in by_id.values()]
 
 
+def pack_news_index(index):
+    """Pack the public alias index within the existing artifact byte budget."""
+    raw = json.dumps({"aliases": {name: sorted(ids) for name, ids in index["aliases"].items()},
+                      "catalog_names": sorted(index["catalog_names"])},
+                     sort_keys=True, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
+    if len(raw) > ARTIFACT_MAX_BYTES:
+        return None
+    data = base64.b64encode(gzip.compress(raw, mtime=0)).decode("ascii")
+    return {"encoding": "gzip-base64-v1", "data": data} if len(data) <= ARTIFACT_MAX_BYTES else None
+
+
+def checked_news_index(artifact, receipt, source_revision, by_id):
+    """Read publisher-built names only for the exact public base and catalog.
+
+    The publisher runs the same collision/localized-name rules as the fallback.
+    Changed base rows, added archive identities, mixed releases, or malformed
+    optional indexes keep the existing runtime matcher.
+    """
+    try:
+        packed = artifact.get("base_projection") if type(artifact) is dict else None
+        if (type(source_revision) is not str or not _DIGEST.fullmatch(source_revision)
+                or type(packed) is not dict or packed.get("source_revision") != source_revision
+                or not _checked_receipt(artifact, receipt)
+                or artifact.get("catalog") != identity_catalog(by_id)):
+            return None
+        packed_names = artifact.get("news_names")
+        if (type(packed_names) is not dict or set(packed_names) != {"encoding", "data"}
+                or packed_names["encoding"] != "gzip-base64-v1"
+                or type(packed_names["data"]) is not str
+                or len(packed_names["data"]) > ARTIFACT_MAX_BYTES):
+            return None
+        decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        raw = decoder.decompress(base64.b64decode(packed_names["data"], validate=True),
+                                 ARTIFACT_MAX_BYTES + 1)
+        if (len(raw) > ARTIFACT_MAX_BYTES or not decoder.eof
+                or decoder.unconsumed_tail or decoder.unused_data):
+            return None
+        index = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_object,
+                           parse_constant=_reject_constant)
+        if type(index) is not dict or set(index) != {"aliases", "catalog_names"}:
+            return None
+        aliases, names = index["aliases"], index["catalog_names"]
+        if (type(aliases) is not dict or type(names) is not list
+                or len(names) > 100000 or len(aliases) > len(names)):
+            return None
+        catalog_names = set()
+        for name in names:
+            if (type(name) is not str or name in catalog_names
+                    or safe_public_text(name, 160) != name
+                    or " ".join(unicodedata.normalize("NFKC", name).casefold().split()) != name):
+                return None
+            catalog_names.add(name)
+        checked = {}
+        for name, ids in aliases.items():
+            if (name not in catalog_names or len(name) < 3
+                    or type(ids) is not list or len(ids) != 1
+                    or type(ids[0]) is not str or ids[0] not in by_id):
+                return None
+            checked[name] = frozenset(ids)
+        return {"aliases": checked, "catalog_names": frozenset(catalog_names)}
+    except (AttributeError, KeyError, TypeError, ValueError, UnicodeError,
+            RecursionError, OSError, zlib.error):
+        return None
+
+
 def compatible_catalog_revision(artifact, documents, by_id, revision_for):
     """Prove that added identities cannot affect any existing business excerpt.
 
@@ -404,8 +470,7 @@ def checked_business_index(artifact, publisher_receipt, source_revision, documen
     """
     if (type(source_revision) is not str or not _DIGEST.fullmatch(source_revision)
             or type(artifact) is not dict
-            or set(artifact) != {"schema", "matcher_version", "implementation_sha256",
-                                 "source_revision", "utc_day", "catalog", "index", "base_projection"}
+            or artifact.keys() not in (_ARTIFACT_KEYS, _ARTIFACT_KEYS | {"news_names"})
             or artifact["schema"] != SCHEMA
             or artifact["matcher_version"] != MATCHER_VERSION
             or artifact["source_revision"] != source_revision
