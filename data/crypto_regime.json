@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-10-28T15:32:50+09:00",
+  "collected_at": "2026-10-28T16:02:55+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
@@ -16,7 +16,7 @@
       "active": true,
       "drivers": {
         "fng": 51.0,
-        "search_trend_pct": 0.0
+        "search_trend_pct": -1.8
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -28,7 +28,7 @@
       "drivers": {
         "funding_signal": "neutral",
         "put_call_oi": 0.598,
-        "long_short_ratio": 1.97
+        "long_short_ratio": 1.96
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
@@ -38,9 +38,9 @@
       "read": "on",
       "active": true,
       "drivers": {
-        "btc_net_inflow_usd": 110344120.0,
-        "eth_net_inflow_usd": -88576872.0,
-        "combined_net_inflow_usd": 21767248.0
+        "btc_net_inflow_usd": 175993377.0,
+        "eth_net_inflow_usd": -60217804.824999996,
+        "combined_net_inflow_usd": 115775572.17500001
       },
       "rule": "ETF(BTC+ETH) 일일 순유입 on / 순유출 off"
     },
@@ -50,7 +50,7 @@
       "read": "neutral",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": -2.31
+        "btc_change_pct_7d": -2.17
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -61,7 +61,7 @@
       "active": false,
       "drivers": {
         "ssr": 6.42,
-        "stablecoin_supply_usd": 253088092820.8605
+        "stablecoin_supply_usd": 253045433889.758
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -80,7 +80,7 @@
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 80830.0,
+  "btc_price_at_call": 80781.0,
   "trail": [
     {
       "date": "2026-07-31",
@@ -709,7 +709,7 @@
       "date": "2026-10-28",
       "call": "neutral",
       "net_score": 1,
-      "btc_price": 80830.0,
+      "btc_price": 80781.0,
       "active_dims": 4
     }
   ],
@@ -719,7 +719,7 @@
         "horizon_days": 7,
         "n": 42,
         "hit_rate": 0.5476,
-        "mean_realized_return": 0.024973,
+        "mean_realized_return": 0.024958,
         "label": "예비 결과"
       },
       {
