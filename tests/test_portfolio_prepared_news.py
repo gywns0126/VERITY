@@ -89,11 +89,11 @@ def test_optional_names_leave_room_for_the_existing_prepared_base(engine, docume
     artifact = engine.build_prepared_business_index(documents)
     assert artifact['news_names'] is not None
     baseline = deepcopy(artifact)
-    baseline['news_names'] = None
+    del baseline['news_names']
     limit = len(json.dumps(baseline, sort_keys=True, ensure_ascii=True, separators=(',', ':')).encode())
     monkeypatch.setattr(engine, '_PREPARED_ARTIFACT_MAX_BYTES', limit)
     bounded = engine.build_prepared_business_index(documents)
-    assert bounded['news_names'] is None
+    assert 'news_names' not in bounded
     assert len(json.dumps(bounded, sort_keys=True, ensure_ascii=True, separators=(',', ':')).encode()) <= limit
 
 
