@@ -97,3 +97,111 @@ def test_contradictory_model_paraphrase_never_becomes_verified_content():
     output = worker.macro_bundle(verified, model="gpt-6.1-sol", generated_at="2026-10-26T00:00:00+00:00")
     assert verified["global"][0]["text"] == quote
     assert "인하" not in json.dumps(output, ensure_ascii=False)
+
+
+def _bok_primary(monkeypatch, *, body="소비자 조사 지수는 100.0으로 전월과 같았다.", counter="3124"):
+    page = (f'<dl><dt class="sr-only">등록일</dt><dd class="date">2026.10.27</dd>'
+            f'<dt class="sr-only">조회수</dt><dd class="hits">{counter}</dd></dl>'
+            f'<p>{body}</p>')
+    class Response:
+        headers = SimpleNamespace(get_content_charset=lambda: "utf-8")
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+        def read(self, limit):
+            return page.encode()
+    monkeypatch.setattr(worker.urllib.request, "build_opener",
+                        lambda *_: SimpleNamespace(open=lambda *a, **kw: Response()))
+    return worker.read_official_text("https://www.bok.or.kr/official-release")
+
+
+def test_bok_view_metadata_between_date_and_body_cannot_break_exact_quote(monkeypatch):
+    source = _bok_primary(monkeypatch)
+    quote = "2026.10.27 조회수 1960 소비자 조사 지수는 100.0으로 전월과 같았다."
+    value = {region: [{"text": quote, "source_quote": quote, "source_date": "2026-10-27",
+                      "source_url": "https://www.bok.or.kr/official-release"}]
+             for region in ("global", "kr")}
+    args = dict(now=datetime(2026, 10, 28, tzinfo=timezone.utc), reader=lambda _: source)
+    verified = worker.verify_macro_facts(value, **args)
+    delivered = "2026.10.27 소비자 조사 지수는 100.0으로 전월과 같았다."
+    assert source == "등록일 " + delivered
+    assert verified["kr"][0]["source_quote"] == delivered
+    # Owner-side re-verification must accept the already sanitized producer quote.
+    for region in value:
+        value[region][0].update(text=delivered, source_quote=delivered)
+    assert worker.verify_macro_facts(value, **args)["kr"][0]["text"] == delivered
+    value["kr"][0]["text"] = "조회수는 1960건이었다."
+    with pytest.raises(ValueError, match="unsupported_macro_number"):
+        worker.verify_macro_facts(value, **args)
+
+
+@pytest.mark.parametrize("change", [
+    lambda q: q.replace("100.0", "101.0"),
+    lambda q: q.replace("전월과 같았다", "전월보다 낮았다"),
+    lambda q: q.replace("2026.10.27", "2026.10.28"),
+])
+def test_bok_counter_exception_never_hides_fact_or_date_change(monkeypatch, change):
+    source = _bok_primary(monkeypatch)
+    quote = change("2026.10.27 조회수 1960 소비자 조사 지수는 100.0으로 전월과 같았다.")
+    value = {region: [{"text": quote, "source_quote": quote, "source_date": "2026-10-27",
+                      "source_url": "https://www.bok.or.kr/official-release"}]
+             for region in ("global", "kr")}
+    with pytest.raises(ValueError, match="macro_quote_not_in_primary_source"):
+        worker.verify_macro_facts(value, now=datetime(2026, 10, 28, tzinfo=timezone.utc),
+                                  reader=lambda _: source)
+
+
+def test_bok_article_prose_is_not_mistaken_for_view_metadata(monkeypatch):
+    body = "조회수 1960 증가로 조사 지수가 변동하지 않았다는 공식 발표문이다."
+    source = _bok_primary(monkeypatch, body=body)
+    assert body in source and "3124" not in source
+    quote = "2026.10.27 " + body
+    value = {region: [{"text": quote, "source_quote": quote, "source_date": "2026-10-27",
+                      "source_url": "https://www.bok.or.kr/official-release"}]
+             for region in ("global", "kr")}
+    with pytest.raises(ValueError, match="macro_quote_not_in_primary_source"):
+        worker.verify_macro_facts(value, now=datetime(2026, 10, 28, tzinfo=timezone.utc),
+                                  reader=lambda _: source)
+
+
+@pytest.mark.parametrize("fields", [0, 2])
+def test_bok_counter_omission_requires_one_actual_primary_metadata_field(fields):
+    quote = "2026.10.27 조회수 1960 소비자 조사 지수는 100.0으로 전월과 같았다."
+    source = worker.OfficialText("2026.10.27 소비자 조사 지수는 100.0으로 전월과 같았다.",
+                                 bok_view_fields=fields)
+    value = {region: [{"text": quote, "source_quote": quote, "source_date": "2026-10-27",
+                      "source_url": "https://www.bok.or.kr/official-release"}]
+             for region in ("global", "kr")}
+    with pytest.raises(ValueError, match="macro_quote_not_in_primary_source"):
+        worker.verify_macro_facts(value, now=datetime(2026, 10, 28, tzinfo=timezone.utc),
+                                  reader=lambda _: source)
+
+
+def test_bok_multiple_counter_fields_are_not_silently_removed(monkeypatch):
+    source = _bok_primary(monkeypatch)
+    quote = "2026.10.27 조회수 1960 조회수 1961 소비자 조사 지수는 100.0으로 전월과 같았다."
+    value = {region: [{"text": quote, "source_quote": quote, "source_date": "2026-10-27",
+                      "source_url": "https://www.bok.or.kr/official-release"}]
+             for region in ("global", "kr")}
+    with pytest.raises(ValueError, match="macro_quote_not_in_primary_source"):
+        worker.verify_macro_facts(value, now=datetime(2026, 10, 28, tzinfo=timezone.utc),
+                                  reader=lambda _: source)
+
+
+def test_macro_prompt_names_the_enforced_hosts_without_new_attempt_identity(tmp_path, monkeypatch):
+    def model(prompt, **options):
+        assert all(host in prompt for host in worker.OFFICIAL_HOSTS)
+        assert options["identity"].startswith("macro-facts-v1:protocol-v4:")
+        raise ValueError("model_not_invoked")
+    monkeypatch.setattr(worker, "read_json_with_codex", model)
+    with pytest.raises(ValueError, match="model_not_invoked"):
+        worker.run_macro(SimpleNamespace(cli=Path("/cli"), model="gpt-6.1-sol", runtime=tmp_path))
+
+
+def test_prompt_alignment_does_not_add_the_previous_rejected_government_host():
+    url = "https://m.korea.kr/official-release"
+    with pytest.raises(ValueError, match="unapproved_macro_source"):
+        worker._official_url(url)
+    with pytest.raises(ValueError, match="unapproved_macro_source"):
+        worker.OfficialRedirect().redirect_request(None, None, 302, "redirect", {}, url)

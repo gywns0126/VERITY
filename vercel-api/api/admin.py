@@ -1612,13 +1612,13 @@ def handle_portfolio_terminal(request_handler) -> dict:
 _BLOB_BASE = PORTFOLIO_URL.rsplit("/", 1)[0] + "/"
 
 
-def _make_operator_file_handler(public_name: str):
-    """public_name(예: 'history.json') → private '_operator/<name>' 우선 서빙 핸들러."""
+def _make_operator_file_handler(public_name: str, *, allow_public_fallback: bool = True):
+    """Serve the private file, with an optional legacy public fallback."""
     private_path = f"_operator/{public_name}"
 
     def _handler(request_handler) -> dict:
         data = _download_operator_file(private_path)
-        if data is None:
+        if data is None and allow_public_fallback:
             # 전환기 fallback: 공개 blob 제거 전엔 존재 (제거 후 private 만).
             try:
                 r = requests.get(_BLOB_BASE + public_name, timeout=_t(10))
@@ -1651,7 +1651,7 @@ ROUTES = {
     # 후보 편입/이탈 diff (2026-08-04) — 오퍼레이터 전용, 공개 fallback 없음.
     "candidates_diff": _make_operator_file_handler("candidates_diff.json"),
     # 거시 사실 번들 — 오퍼레이터 전용. 공개 fallback 없음(미존재 → 503).
-    "macro_synthesis": _make_operator_file_handler("macro_synthesis.json"),
+    "macro_synthesis": _make_operator_file_handler("macro_synthesis.json", allow_public_fallback=False),
     # ④ 검증 층(오퍼레이터 authed) — IC/팩터건강/성과. authed=본인전용이라 공개 노출 아님(봉인 무관).
     "verification": _make_operator_file_handler("verification_report.json"),
     # 중용 목표비중(③척추) — 태생 봉인 자산. authed=본인전용이라 노출 아님(공개 blob fallback 도 없음 — gitignore).
