@@ -255,16 +255,28 @@ function guardBusinessPair(dir) {
     } catch (e) { return { ok: false, reason: `사업 준비 산출물 읽기 실패 (${e.message})` }; }
     const digest = /^[a-f0-9]{64}$/;
     const today = new Date().toISOString().slice(0, 10);
-    const catalogBound = artifact && ["business-matchers-2026-10-27-v2", "business-matchers-2026-10-27-v3"].includes(artifact.matcher_version);
+    const namesBound = artifact && artifact.matcher_version === "business-matchers-2026-10-29-v4";
+    const catalogBound = artifact && ["business-matchers-2026-10-27-v2", "business-matchers-2026-10-27-v3", "business-matchers-2026-10-29-v4"].includes(artifact.matcher_version);
+    const baseBound = namesBound || artifact && artifact.matcher_version === "business-matchers-2026-10-27-v3";
     const artifactKeys = ["schema", "matcher_version", "implementation_sha256", "source_revision", "utc_day", "index"];
     if (catalogBound) artifactKeys.push("catalog");
-    if (artifact && artifact.matcher_version === "business-matchers-2026-10-27-v3") artifactKeys.push("base_projection");
+    if (baseBound) artifactKeys.push("base_projection");
+    if (namesBound && Object.hasOwn(artifact, "news_names")) artifactKeys.push("news_names");
     const base = artifact && artifact.base_projection;
-    if (artifact && artifact.matcher_version === "business-matchers-2026-10-27-v3" && base !== null &&
+    if (baseBound && base !== null &&
         (!base || Object.keys(base).sort().join() !== ["source_revision", "encoding", "data"].sort().join() ||
          !digest.test(base.source_revision) || base.encoding !== "gzip-base64-v1" ||
          typeof base.data !== "string" || base.data.length > 8 * 1024 * 1024)) {
         return { ok: false, reason: "공개 기초 자료 준비 계약 불일치" };
+    }
+    const names = namesBound ? artifact.news_names : null;
+    if (names != null &&
+        (!names || typeof names !== "object" || Array.isArray(names) ||
+         Object.keys(names).sort().join() !== ["encoding", "data"].sort().join() ||
+         names.encoding !== "gzip-base64-v1" || typeof names.data !== "string" ||
+         !names.data || names.data.length > 8 * 1024 * 1024 || names.data.length % 4 !== 0 ||
+         !/^[A-Za-z0-9+/]*={0,2}$/.test(names.data))) {
+        return { ok: false, reason: "공개 뉴스 이름 준비 계약 불일치" };
     }
     if (!artifact || typeof artifact !== "object" || Array.isArray(artifact) ||
         !receipt || typeof receipt !== "object" || Array.isArray(receipt) ||

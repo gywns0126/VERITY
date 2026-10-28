@@ -340,7 +340,7 @@ def build_prepared_business_index(public_documents):
                 artifact, sort_keys=True, ensure_ascii=True, separators=(",", ":"),
                 allow_nan=False).encode("utf-8")) > _PREPARED_ARTIFACT_MAX_BYTES:
             # The optional speedup must not evict the existing prepared base.
-            artifact["news_names"] = None
+            artifact.pop("news_names")
         return artifact
 
 
