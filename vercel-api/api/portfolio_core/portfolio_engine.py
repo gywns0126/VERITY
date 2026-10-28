@@ -94,10 +94,13 @@ class _ProjectedPublicIndexCache:
         self._base_template = None
         self._news_revision = None
         self._news_index = None
+        self._contract_revision = None
+        self._contract_index = None
         self._row_memo = BusinessRowMemo()
 
     @staticmethod
-    def _build(public_documents, _reuse_business=None, _base_companies=None, _reuse_news=None):
+    def _build(public_documents, _reuse_business=None, _base_companies=None, _reuse_news=None,
+               _reuse_contracts=None):
         projected = project_public_sources(public_documents,
             **({"_base_companies": _base_companies} if _base_companies is not None else {}))
         # Projection owns the company/list containers; validated base values
@@ -139,7 +142,8 @@ class _ProjectedPublicIndexCache:
                 else index_public_news_names(public_news_name_catalog(public_documents, list(by_id.values())))),
             "business_materials": (_reuse_business(public_documents, by_id)
                 if _reuse_business is not None else _business_material_index(public_documents, by_id)),
-            "contract_events": index_contract_events(public_documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values())),
+            "contract_events": (_reuse_contracts(public_documents, by_id) if _reuse_contracts is not None
+                else index_contract_events(auto_evidence, list(by_id.values()))),
             "filing_excerpts": index_filing_excerpts(public_documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values())),
             "annual_customer_tables": annual_customer_tables,
             "sec_relationships": sec_relationships,
@@ -214,6 +218,19 @@ class _ProjectedPublicIndexCache:
             return index
         return self._news_index
 
+    def _contracts(self, documents, by_id):
+        # Called under the public-index lock. Bind the exact source rows and
+        # public catalog used by the matcher, including document order/metadata
+        # and all alias owners. Financial facts and member selections are not
+        # inputs. One latest index only, with no response or selection cache.
+        revision = _contract_index_revision(documents, by_id)
+        if revision is not None and self._contract_index is not None and self._contract_revision == revision:
+            return self._contract_index
+        index = index_contract_events(documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values()))
+        self._contract_revision = revision
+        self._contract_index = index if revision is not None else None
+        return index
+
     def get(self, public_documents, revision, *, prepared_business_index=None,
             publisher_receipt=None, prepared_business_fetcher=None, base_source_revision=None):
         if revision is None:
@@ -247,6 +264,7 @@ class _ProjectedPublicIndexCache:
                         ),
                         _base_companies=owned_base,
                         _reuse_news=lambda documents, by_id: self._news(documents, by_id, base_source_revision),
+                        _reuse_contracts=self._contracts,
                     )
                 self._revision = revision
             return self._index
@@ -261,6 +279,8 @@ class _ProjectedPublicIndexCache:
             self._base_template = None
             self._news_revision = None
             self._news_index = None
+            self._contract_revision = None
+            self._contract_index = None
             self._row_memo.clear()
 
 
@@ -303,6 +323,37 @@ def build_prepared_business_index(public_documents):
                 "catalog": _business_identity_catalog(by_id),
                 "base_projection": pack_base_projection(business_documents),
                 "index": _business_material_index(business_documents, by_id)}
+
+
+def _contract_index_revision(documents, by_id):
+    """Bound only public inputs consumed by contract/lineage/notice indexing."""
+    try:
+        if len(by_id) > 50000:
+            return None
+        artifact = documents.get(_AUTOMATIC_EVIDENCE_FILE)
+        if artifact is not None and type(artifact) is not dict:
+            return None
+        sources = {key: artifact[key] for key in
+                   ("contract_facts", "documentFamilies", "contract_terminations")
+                   if artifact is not None and key in artifact}
+        # The underlying projectors reject oversized/malformed row collections.
+        # Do not spend extra hashing work or reuse a prior result on those paths.
+        if any(type(rows) is not list or len(rows) > 1000 for rows in sources.values()):
+            return None
+        catalog, document_count = [], 0
+        for row in by_id.values():
+            public = {key: row[key] for key in ("id", "name", "source_names") if key in row}
+            # The matcher collects documents only for exact KR issuers; all
+            # markets still participate in lineage's name-ambiguity checks.
+            if re.fullmatch(r"KR:[0-9]{6}", row["id"]):
+                public["documents"] = row.get("documents", [])
+                document_count += len(public["documents"])
+            if document_count > 500000:
+                return None
+            catalog.append(public)
+        return _revision([datetime.now(timezone.utc).date().isoformat(), sources, catalog])
+    except (AttributeError, KeyError, TypeError, ValueError, OverflowError, RecursionError):
+        return None
 
 
 def _business_index_revision(documents, by_id, *, utc_day=None):
@@ -754,6 +805,9 @@ def _document_revision(document):
     return _revision(fingerprint)
 
 
+# Selected-response joins repeat public text checks after index preparation.
+# Keep that memo request-local; the context clears it on success or failure.
+@_temporary_public_text_cache()
 def analyze_portfolio(positions, public_documents, *, public_bundle_revision=None, price_documents=None, change_projection=None):
     """Join a selected window against explicit public-only source projections.
 
