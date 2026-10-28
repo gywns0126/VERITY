@@ -421,6 +421,11 @@ def attach_contract_facts(artifact, document_list, company_catalog):
         coverage.update(rejected=coverage["input"], shape_errors=1)
         return coverage
     catalog = {row.get("id"): row for row in company_catalog if isinstance(row, dict)}
+    documents_by_id = {}
+    for document in document_list:
+        document_id = document.get("id")
+        if isinstance(document_id, str):
+            documents_by_id.setdefault(document_id, []).append(document)
     staged, receipts = {}, set()
     for raw in rows:
         try:
@@ -434,9 +439,8 @@ def attach_contract_facts(artifact, document_list, company_catalog):
         except (KeyError, TypeError, ValueError):
             coverage["rejected"] += 1
             continue
-        matched = [document for document in document_list
-                   if document.get("id") == "DART:" + receipt
-                   and document.get("url") == fact["source"]["main_url"]
+        matched = [document for document in documents_by_id.get("DART:" + receipt, [])
+                   if document.get("url") == fact["source"]["main_url"]
                    and document.get("source") == "DART"
                    and document.get("kind") == "disclosure"
                    and document.get("company_ids") == [issuer]
