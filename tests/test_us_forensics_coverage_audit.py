@@ -4,6 +4,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 from scripts.audit import us_forensics_coverage as audit
 
 
@@ -11,7 +13,8 @@ def _write(path: Path, payload):
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def test_audit_uses_dynamic_universe_and_keeps_event_absence_neutral(monkeypatch, tmp_path):
+@pytest.mark.parametrize("no_recent_filing", [None, 0, 1])
+def test_audit_uses_dynamic_universe_and_keeps_event_absence_neutral(monkeypatch, tmp_path, no_recent_filing):
     _write(tmp_path / "us_universe_combined.json", {"tickers": ["AAA", "BBB"]})
     for key, spec in audit.SOURCES.items():
         meta = {"generated_at": "2026-09-05T00:00:00+00:00"}
@@ -23,6 +26,8 @@ def test_audit_uses_dynamic_universe_and_keeps_event_absence_neutral(monkeypatch
                 "event_present_n": 1,
                 "no_recent_8k_n": 1,
             })
+            if no_recent_filing is not None:
+                meta["no_recent_filing_n"] = no_recent_filing
             stocks.append({"ticker": "BBB"})
         elif key == "short_interest":
             meta.update({"covered_n": 1, "universe_n": 2})
@@ -37,6 +42,8 @@ def test_audit_uses_dynamic_universe_and_keeps_event_absence_neutral(monkeypatch
     assert "이벤트 없음" in report["sources"]["insider"]["absence_means"]
     assert report["sources"]["disclosure_forensics"]["processed_n"] == 2
     assert report["sources"]["disclosure_forensics"]["record_present_n"] == 2
+    assert report["sources"]["disclosure_forensics"]["no_recent_event_n"] == (1 if no_recent_filing is None else no_recent_filing)
+    assert report["sources"]["disclosure_forensics"]["no_recent_8k_n"] == 1
 
 
 def test_daily_workflow_rebuilds_and_commits_all_three_outputs():

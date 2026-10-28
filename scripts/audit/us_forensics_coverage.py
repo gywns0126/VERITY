@@ -40,7 +40,7 @@ SOURCES = {
     },
     "disclosure_forensics": {
         "artifact": "us_disclosure_forensics.json",
-        "meaning": "SEC 8-K 수집 상태와 최근 이벤트를 함께 보유한 종목",
+        "meaning": "SEC 8-K·6-K·20-F·40-F 및 정정 수집 상태와 최근 이벤트를 함께 보유한 종목",
         "absence": "통합 산출물에 행이 없음",
     },
     "form144": {
@@ -120,7 +120,8 @@ def build_report(now: datetime | None = None) -> dict[str, Any]:
                 "unprocessed_n": len(unresolved),
                 "unprocessed_tickers": unresolved,
                 "event_present_n": int(meta.get("event_present_n") or 0),
-                "no_recent_event_n": int(meta.get("no_recent_8k_n") or 0),
+                "no_recent_event_n": int(meta.get("no_recent_filing_n", meta.get("no_recent_8k_n")) or 0),
+                "no_recent_8k_n": int(meta.get("no_recent_8k_n") or 0),
             })
         elif key == "short_interest":
             row.update({

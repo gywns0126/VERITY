@@ -125,7 +125,9 @@ def _fetch_one(key: str, fname: str, ticker: str):
         "processed_n",
         "unprocessed_n",
         "event_present_n",
+        "recent_8k_present_n",
         "no_recent_8k_n",
+        "no_recent_filing_n",
         "recent_window_days",
         "deep_window_days",
     )

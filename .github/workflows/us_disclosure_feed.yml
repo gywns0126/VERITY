@@ -1,8 +1,12 @@
-name: US Disclosure Feed (SEC 8-K)
+name: US Disclosure Feed (SEC filings)
 
 # 2026-07-09 전용 워크플로 신설 — 기존엔 daily_analysis_full 안에서 무예산 순회로 완주 못 해 2건만 남던 사고.
-# 8-K 수시공시 = KR public_disclosure_feed 의 美 짝. 유니버스 분모는
+# SEC 수시·연차공시 = KR public_disclosure_feed 의 美 짝. 유니버스 분모는
 # data/us_universe_combined.json 에서 매 실행 산출한다. SEC 무료(UA 연락처만).
+# 7-axis audit: existing SEC company_tickers/submissions endpoints and publication
+# secrets only; data-only commits do not trigger Vercel's vercel-api path gate.
+# Same daily schedule, concurrency and budgets; no KIS/AI or dependency changes.
+# Natural durable/public readback remains required; no forced run for this fix.
 
 on:
   schedule:
@@ -27,12 +31,17 @@ concurrency:
 
 jobs:
   build:
+    # The shared publisher serves origin/main, so branch runs cannot supply it.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 45  # budget 1800s(30분) + checkout/install/commit 여유. GH 6h 한도 내·public 무료.
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 100
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -44,45 +53,91 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Build US disclosure feed (SEC 8-K)
+      - name: Build US disclosure feed (SEC 8-K/6-K/20-F/40-F)
+        id: build
         # combined 유니버스 + 성공/실패 대장. SEC 무료. RULE 7 = 공시 사실만(점수 0).
         env:
           US_DISCLOSURE_MAX_SECONDS: ${{ github.event.inputs.max_seconds || '1800' }}
         run: |
+          set -euo pipefail
+          git diff --quiet
+          git diff --cached --quiet
+          echo "source_head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           python -m api.builders.us_disclosure_feed_builder
           python -m api.builders.us_disclosure_forensics_builder --merge-feed-only
           python scripts/audit/us_forensics_coverage.py --output data/metadata/us_forensics_coverage.json
 
       - name: Commit US disclosure artifacts
+        id: durable
+        env:
+          SOURCE_HEAD: ${{ steps.build.outputs.source_head }}
         run: |
+          set -euo pipefail
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
+          git cat-file -e "${SOURCE_HEAD}^{commit}"
+          git diff --cached --quiet
+          persist_paths=(data/us_disclosure_feed.json data/us_disclosure_forensics.json data/metadata/us_forensics_coverage.json)
+          # Include rotation/prioritization inputs and all six coverage sources,
+          # not just the combined universe. Output baselines are guarded below.
+          input_paths=(
+            .gitattributes
+            api/__init__.py api/builders/__init__.py api/intelligence/__init__.py
+            api/builders/us_disclosure_feed_builder.py api/builders/us_disclosure_forensics_builder.py
+            api/builders/us_insider_trades_public_builder.py api/intelligence/us_financials.py
+            scripts/audit/us_forensics_coverage.py requirements.txt
+            .github/workflows/us_disclosure_feed.yml .github/actions/publish-data
+            "data/us_universe_combined.json" "data/us_universe_sp1500.json" "data/us_financials/_summary.json"
+            "data/portfolio.json" "data/us_insider_trades.json" "data/us_major_holdings.json"
+            "data/us_smart_money_13f.json" "data/us_short_interest.json" "data/us_form144.json"
+          )
+          git diff --quiet "$SOURCE_HEAD" -- "${input_paths[@]}"
           git add data/us_disclosure_feed.json
           git add data/us_disclosure_forensics.json
           git add data/metadata/us_forensics_coverage.json
-          if git diff --staged --quiet; then
-            echo "[us_disclosure_feed] no changes"
-            exit 0
+          if ! git diff --cached --quiet; then
+            TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+            git commit -m "🗞️ us_disclosure_feed ${TODAY_KST}"
           fi
-          TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
-          git commit -m "🗞️ us_disclosure_feed ${TODAY_KST}"
-          BRANCH="${{ github.ref_name }}"
-          PUSHED=false
-          for i in 1 2 3 4 5; do
-            git rebase --abort 2>/dev/null || true
-            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
-              PUSHED=true
+          persist_head=$(git rev-parse HEAD)
+          persisted=false
+          for attempt in 1 2 3 4; do
+            # PR621: unrelated main advances only; never resolve conflicts here.
+            git pull --rebase --autostash origin main
+            test -z "$(git ls-files -u)"
+            # A clean automatic merge/autostash must preserve exact output bytes
+            # and the original source/code binding on EVERY attempt.
+            git diff --quiet "$persist_head" HEAD -- "${persist_paths[@]}"
+            git diff --quiet "$persist_head" -- "${persist_paths[@]}"
+            git diff --quiet "$SOURCE_HEAD" HEAD -- "${input_paths[@]}"
+            git diff --quiet "$SOURCE_HEAD" -- "${input_paths[@]}"
+            sync_base=$(git rev-parse origin/main)
+            if git push origin HEAD:main; then
+              git fetch origin main
+              git merge-base --is-ancestor HEAD origin/main
+              git diff --quiet "$persist_head" origin/main -- "${persist_paths[@]}"
+              git diff --quiet "$SOURCE_HEAD" origin/main -- "${input_paths[@]}"
+              persisted=true
               break
             fi
-            echo "push attempt $i failed, retrying in $((i * 5))s..."
-            sleep $((i * 5))
+            git fetch origin main
+            remote_head=$(git rev-parse origin/main)
+            if [ "$remote_head" = "$sync_base" ] || ! git merge-base --is-ancestor "$sync_base" origin/main; then
+              echo '::error::US disclosure persistence push failed without a concurrent main advance.'
+              exit 1
+            fi
+            echo "::warning::Concurrent main advance during US disclosure persistence ($attempt/4); rechecking inputs before retry."
           done
-          if [ "$PUSHED" != "true" ]; then
-            echo "::warning::push 5회 실패 — 다음 cron 재시도 (publish-data 는 main HEAD 기준 진행)"
+          if [ "$persisted" != true ]; then
+            echo '::error::US disclosure persistence exhausted four concurrent-main attempts; publication remains blocked.'
+            exit 1
           fi
 
       - name: Publish to VERITY-data + Vercel Blob
-        if: always()
+        # The shared action refetches main to retain unrelated public updates.
+        # This gate proves durable storage, not an atomic store/publish snapshot;
+        # verify the natural run's public bytes/source binding separately.
+        if: ${{ success() && steps.build.outcome == 'success' && steps.durable.outcome == 'success' }}
         uses: ./.github/actions/publish-data
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

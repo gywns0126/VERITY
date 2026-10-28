@@ -23,6 +23,7 @@ import zlib
 
 from .portfolio_public_sources import (project_public_business_overviews, safe_public_text,
     BASE_PROJECTION_FILES, PUBLIC_COMPANY_FIELDS, PUBLIC_FACT_FIELDS, PUBLIC_DOCUMENT_FIELDS,
+    PUBLIC_SEC_FILING_FIELDS, _sec_filing, _canonical_disclosure_url,
     base_projection_revision, project_public_sources)
 
 
@@ -57,6 +58,8 @@ _BASE_FACT_KEYS = frozenset(PUBLIC_FACT_FIELDS)
 _BASE_FACT_WITH_PROVENANCE = _BASE_FACT_KEYS | {"provenance"}
 _BASE_DOCUMENT_KEYS = frozenset(PUBLIC_DOCUMENT_FIELDS)
 _BASE_DOCUMENT_WITH_CODES = _BASE_DOCUMENT_KEYS | {"item_codes"}
+_BASE_DOCUMENT_WITH_FILING = _BASE_DOCUMENT_KEYS | {"filing"}
+_BASE_FILING_KEYS = frozenset(PUBLIC_SEC_FILING_FIELDS)
 _BASE_PROVENANCE_KEYS = frozenset({"kind", "rcept_no", "period_start", "period_end",
     "filed", "fs_div", "account_name", "source_url", "cik", "accession", "form",
     "tag", "currency_verified"})
@@ -76,6 +79,7 @@ _IMPLEMENTATION_FILES = (
     "portfolio_public_sources.py", "portfolio_company_names.py",
     "portfolio_business_roles.py", "portfolio_market_context.py",
     "portfolio_filing_excerpts.py",
+    "portfolio_business_incremental.py",
 )
 
 
@@ -297,7 +301,8 @@ def checked_base_projection(artifact, receipt, source_revision):
             ids = set()
             for document in row["documents"]:
                 if (type(document) is not dict or document.keys() not in (
-                        _BASE_DOCUMENT_KEYS, _BASE_DOCUMENT_WITH_CODES)
+                        _BASE_DOCUMENT_KEYS, _BASE_DOCUMENT_WITH_CODES,
+                        _BASE_DOCUMENT_WITH_FILING, _BASE_DOCUMENT_WITH_CODES | {"filing"})
                         or any(type(document[key]) is not str for key in PUBLIC_DOCUMENT_FIELDS)
                         or safe_public_text(document["title"], 300) != document["title"]
                         or document["id"] in ids):
@@ -306,6 +311,22 @@ def checked_base_projection(artifact, receipt, source_revision):
                 if "item_codes" in document and (type(codes) is not list or len(codes) > 32
                         or any(type(code) is not str or not re.fullmatch(r"[1-9]\.[0-9]{2}", code) for code in codes)):
                     return None
+                if "filing" in document:
+                    filing = document["filing"]
+                    if (document["source"] != "SEC" or document["kind"] != "disclosure"
+                            or row["market"] != "US" or type(filing) is not dict
+                            or filing.keys() != _BASE_FILING_KEYS
+                            or any(type(value) not in (str, bool, type(None))
+                                   or type(value) is str and len(value) > 240 for value in filing.values())):
+                        return None
+                    # Reuse the source contract for forms/amendments/dates and
+                    # URL issuer/accession binding, including its nullable fields.
+                    raw = {**filing, "label": filing["form"],
+                           "primary_document": filing["primary_document"] or ""}
+                    if (_sec_filing(raw, document["url"], document["as_of"]) != filing
+                            or _canonical_disclosure_url(document["url"], "SEC")
+                               != (document["url"], document["id"])):
+                        return None
                 ids.add(document["id"])
         return companies
     except (AttributeError, KeyError, TypeError, ValueError, UnicodeError,

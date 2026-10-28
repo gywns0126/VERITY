@@ -131,6 +131,37 @@ class PublicSourceCacheTests(unittest.TestCase):
         self.assertEqual(body["sources"]["insider"]["data_state"], "source_unavailable")
         self.assertEqual(headers["Cache-Control"], "no-store")
 
+    def test_forensic_public_meta_allowlist_keeps_old_and_new_aggregates(self):
+        module = self.forensics
+        for expanded in (False, True):
+            with self.subTest(expanded=expanded):
+                public_meta = {
+                    "generated_at": "2026-10-28T12:00:00+09:00", "source": "SEC EDGAR",
+                    "universe_n": 1, "processed_n": 1, "unprocessed_n": 0,
+                    "event_present_n": 1, "no_recent_8k_n": 0,
+                    "recent_window_days": 90, "deep_window_days": 730,
+                }
+                entry = {"ticker": "ADR", "event_state": "recent_8k"}
+                if expanded:
+                    public_meta.update(recent_8k_present_n=0, no_recent_filing_n=0, no_recent_8k_n=1)
+                    entry.update(event_state="recent_filing", filing_state="recent_filing",
+                                 recent_filing_counts={"6-K": 1}, recent_8k_n=0)
+                snapshot = {"stocks": [entry], "_meta": {
+                    **public_meta, "internal_debug": "must stay private",
+                    "unprocessed_tickers": ["INTERNAL"], "item_map": {"3.02": "dilution"},
+                    "source_collection": {"internal_receipt": True},
+                }}
+                def load_source(filename):
+                    return snapshot if filename == module.SOURCES["disclosure_forensics"] else {"stocks": []}
+                with patch.object(module, "_load_source", side_effect=load_source), \
+                        patch.object(module.requests, "get", side_effect=AssertionError("unexpected network")):
+                    code, _headers, body = invoke(module, "/api/us_forensics?ticker=ADR")
+                self.assertEqual(code, 200)
+                self.assertEqual(body["sections"]["disclosure_forensics"], entry)
+                self.assertEqual(body["sources"]["disclosure_forensics"], {
+                    "status": "ok", "data_state": entry["event_state"], **public_meta,
+                })
+
     def test_forensic_invalid_and_total_failure_are_not_cached(self):
         module = self.forensics
         code, headers, _ = invoke(module, "/api/us_forensics?ticker=bad%20ticker")
