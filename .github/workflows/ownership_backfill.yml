@@ -17,7 +17,7 @@ name: ownership-backfill
 # 10-K EX-21 / 20-F EX-8.1, as validated by the existing parser; never VIE inference).
 # 7-axis audit: scoped existing secrets; no push trigger; unchanged concurrency;
 # unchanged daily cron; no KIS/LLM execution; requirements + locked Blob SDK;
-# manual + next scheduled audits remain REQUIRED after authorized rollout (not run here).
+# Verify the next real scheduled store/publish/API chain; no forced rerun for this fix.
 
 on:
   repository_dispatch:
@@ -263,23 +263,48 @@ jobs:
           git diff --cached --quiet
           git add data/member_map_company_structure_sources.json
           git add data/member_map_company_structure_us_sources.json
+          persist_paths=(data/member_map_company_structure_sources.json data/member_map_company_structure_us_sources.json)
           if [ "$LEGACY_OUTCOME" = success ]; then
             git add data/kr_ownership.json
             git add data/metadata/kr_ownership_cursor.json
+            persist_paths+=(data/kr_ownership.json data/metadata/kr_ownership_cursor.json)
           fi
           if [ "$BUILD_OUTCOME" = success ]; then
             git add data/member_map_company_structure_index.json
+            persist_paths+=(data/member_map_company_structure_index.json)
           fi
           if ! git diff --cached --quiet; then
             git commit -m "Refresh public corporate structure sources and budgets"
           fi
-          # Fail closed on concurrent data changes: no -X theirs/ours and no swallowed push failure.
-          git pull --rebase --autostash origin main
-          # Autostash restoration can leave conflicts after a successful rebase.
-          test -z "$(git ls-files -u)"
-          git push origin HEAD:main
-          git fetch origin main
-          git merge-base --is-ancestor HEAD origin/main
+          persist_head=$(git rev-parse HEAD)
+          persisted=false
+          for attempt in 1 2 3 4; do
+            # Rebase unrelated main updates, but never resolve data conflicts automatically.
+            git pull --rebase --autostash origin main
+            # Autostash restoration can leave conflicts after a successful rebase.
+            test -z "$(git ls-files -u)"
+            # Even a clean automatic merge must not alter this run's saved source/budget/index bytes.
+            git diff --quiet "$persist_head" HEAD -- "${persist_paths[@]}"
+            sync_base=$(git rev-parse origin/main)
+            if git push origin HEAD:main; then
+              git fetch origin main
+              git merge-base --is-ancestor HEAD origin/main
+              persisted=true
+              break
+            fi
+            git fetch origin main
+            # Retry only a verified fast-forward race, not auth/branch-policy failures.
+            remote_head=$(git rev-parse origin/main)
+            if [ "$remote_head" = "$sync_base" ] || ! git merge-base --is-ancestor "$sync_base" origin/main; then
+              echo '::error::Structure persistence push failed without a concurrent main advance.'
+              exit 1
+            fi
+            echo "::warning::Concurrent main advance during structure persistence ($attempt/4); rebasing before retry."
+          done
+          if [ "$persisted" != true ]; then
+            echo '::error::Structure persistence exhausted four concurrent-main attempts; publication remains blocked.'
+            exit 1
+          fi
 
       - &structure-publish
         name: Publish verified immutable payloads then manifest
@@ -352,12 +377,32 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "Rebuild company structure publication index from saved sources"
           fi
-          git pull --rebase --autostash origin main
-          # Autostash restoration can leave conflicts after a successful rebase.
-          test -z "$(git ls-files -u)"
-          # Reject upstream input/code drift rather than publishing an obsolete replay.
-          git diff --quiet "$SOURCE_HEAD" HEAD -- data/kr_listed.json data/universe_search.json data/sec_ticker_cik_map.json data/member_map_company_structure_aliases.json data/group_structure.json data/kr_ownership.json data/member_map_company_structure_sources.json data/member_map_company_structure_us_sources.json vercel-api/public/member-map-review/company-structure.json scripts/member-map/build-live-company-structure.cjs review/member-map/company-structure-data.cjs scripts/member-map/publish-company-structure.cjs
-          git push origin HEAD:main
-          git fetch origin main
-          git merge-base --is-ancestor HEAD origin/main
+          persist_head=$(git rev-parse HEAD)
+          persisted=false
+          for attempt in 1 2 3 4; do
+            git pull --rebase --autostash origin main
+            # Autostash restoration can leave conflicts after a successful rebase.
+            test -z "$(git ls-files -u)"
+            git diff --quiet "$persist_head" HEAD -- data/member_map_company_structure_index.json
+            # Recheck upstream input/code drift on EVERY retry, before any publication.
+            git diff --quiet "$SOURCE_HEAD" HEAD -- data/kr_listed.json data/universe_search.json data/sec_ticker_cik_map.json data/member_map_company_structure_aliases.json data/group_structure.json data/kr_ownership.json data/member_map_company_structure_sources.json data/member_map_company_structure_us_sources.json vercel-api/public/member-map-review/company-structure.json scripts/member-map/build-live-company-structure.cjs review/member-map/company-structure-data.cjs scripts/member-map/publish-company-structure.cjs
+            sync_base=$(git rev-parse origin/main)
+            if git push origin HEAD:main; then
+              git fetch origin main
+              git merge-base --is-ancestor HEAD origin/main
+              persisted=true
+              break
+            fi
+            git fetch origin main
+            remote_head=$(git rev-parse origin/main)
+            if [ "$remote_head" = "$sync_base" ] || ! git merge-base --is-ancestor "$sync_base" origin/main; then
+              echo '::error::Structure index push failed without a concurrent main advance.'
+              exit 1
+            fi
+            echo "::warning::Concurrent main advance during index persistence ($attempt/4); rechecking inputs before retry."
+          done
+          if [ "$persisted" != true ]; then
+            echo '::error::Structure index persistence exhausted four concurrent-main attempts; publication remains blocked.'
+            exit 1
+          fi
       - *structure-publish

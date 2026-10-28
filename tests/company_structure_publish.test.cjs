@@ -160,7 +160,10 @@ test('workflow preserves schedule/concurrency, original annual backfill, explici
   assert.match(source, /print\(min\(n, 300\)\)/u);
   for (const file of ['member_map_company_structure_sources.json', 'member_map_company_structure_us_sources.json', INDEX, 'kr_ownership.json', 'metadata/kr_ownership_cursor.json']) assert.ok(source.includes('git add data/' + file));
   assert.match(source, /steps\.durable\.outcome == 'success'/u); assert.match(source, /git merge-base --is-ancestor HEAD origin\/main/u);
-  assert.match(source, /git pull --rebase --autostash origin main\n\s+# Autostash[^\n]*\n\s+test -z "\$\(git ls-files -u\)"\n\s+git push origin HEAD:main/u);
+  const durable = ownershipWorkflow().jobs.backfill.steps.find(s => s.id === 'durable').run;
+  assert.match(durable, /git pull --rebase --autostash origin main\n\s+# Autostash[^\n]*\n\s+test -z "\$\(git ls-files -u\)"/u);
+  assert.ok(durable.indexOf('test -z "$(git ls-files -u)"') < durable.indexOf('git push origin HEAD:main'));
+  assert.ok(durable.includes('git diff --quiet "$persist_head" HEAD -- "${persist_paths[@]}"'));
   const publication = source.split('name: Publish verified immutable payloads then manifest')[1].split('name: Report collection failures')[0];
   assert.match(publication, /always\(\).*steps\.safe\.outcome == 'success'/u);
   assert.doesNotMatch(publication, /steps\.(?:kr|us)\.outcome/u);
@@ -246,7 +249,8 @@ test('actual publish-only durable shell stops on rebase, conflict, input drift o
     try { execFileSync('bash', ['-c', stub + script], { env: { PATH: process.env.PATH, SOURCE_HEAD: 'offline-head', FAIL_AT: failAt }, stdio: 'pipe' }); }
     catch (e) { error = e; }
     assert.ok(error, failAt); const log = error.stderr.toString();
-    assert.equal(log.includes('MOCK git fetch origin main'), false);
+    // A refused push now reads main once to distinguish a race from a fixed rejection.
+    assert.equal(log.includes('MOCK git fetch origin main'), failAt === 'push');
     if (failAt !== 'push') assert.equal(log.includes('MOCK git push origin HEAD:main'), false);
   }
 });
