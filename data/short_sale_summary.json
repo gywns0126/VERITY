@@ -1,7 +1,7 @@
 {
- "as_of": "2026-10-28T11:09:01+09:00",
+ "as_of": "2026-10-28T17:12:57+09:00",
  "version": "short_sale_trail_v0",
- "n_observations": 9289,
+ "n_observations": 9256,
  "window_start": null,
  "thresholds_observed": {
   "kr_auto_avoid": 15.0,
@@ -70,8 +70,8 @@
    }
   },
   "missing": {
-   "n_observations": 1983,
-   "n_tickers": 260,
+   "n_observations": 1986,
+   "n_tickers": 273,
    "fwd_20d": {
     "n_tickers": 165,
     "n_observations": 1512,
@@ -112,8 +112,8 @@
    }
   },
   "downgrade": {
-   "n_observations": 47,
-   "n_tickers": 24,
+   "n_observations": 48,
+   "n_tickers": 26,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -132,8 +132,8 @@
    }
   },
   "clean": {
-   "n_observations": 3233,
-   "n_tickers": 506,
+   "n_observations": 3206,
+   "n_tickers": 515,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -152,8 +152,8 @@
    }
   },
   "missing": {
-   "n_observations": 2359,
-   "n_tickers": 350,
+   "n_observations": 2349,
+   "n_tickers": 355,
    "fwd_20d": {
     "n_tickers": 0,
     "n_observations": 0,
@@ -175,8 +175,8 @@
  "labels": [
   "예비 결과 — auto_avoid 종목 N=44 < 100",
   "🚨 auto_avoid 종목이 clean 보다 높다 (-0.13% vs -2.29%, 종목 N=44) — 규칙이 수익을 깎고 있을 가능성. 임계 조정이 아니라 지표 교체(등록 §4-나) 검토",
-  "US 지표 결측 2359건 — clean 과 분리 집계됨(무혐의 통과 아님)",
-  "KR 지표 결측 1983건 — 수집 이전 기간 포함. clean 과 분리 집계"
+  "US 지표 결측 2349건 — clean 과 분리 집계됨(무혐의 통과 아님)",
+  "KR 지표 결측 1986건 — 수집 이전 기간 포함. clean 과 분리 집계"
  ],
  "brain_input": false,
  "note": "공매도 규칙 사후 수익률 관측 — 임계·강도 재판단의 판정 근거. 점수·집행 입력 0. KR=거래량 비중(흐름) / US=숏인터레스트(포지션) 로 측정 대상이 다르므로 시장 간 수치를 비교하지 말 것. 수익률은 KR 전용(US 일봉 레이크 미도달)."
