@@ -257,3 +257,48 @@ def test_member_update_never_returns_financial_profile_fields(adm, monkeypatch, 
     assert member["id"] == "fixture-owner" and member["nickname"] == "updated"
     assert set(member) == set(adm._MEMBER_ADMIN_FIELDS)
     assert not (set(updated) - {"id", "nickname"}) & set(member)
+
+
+@pytest.mark.parametrize("outcome", [200, 404, 544, "timeout", "unconfigured"])
+def test_macro_route_never_falls_back_to_public(adm, monkeypatch, outcome):
+    monkeypatch.setattr(adm, "SUPABASE_SERVICE_ROLE_KEY", "fixture-service")
+    private = {"producer": "mac-mini-codex", "sources": {"fixture": "private"}}
+    if outcome == "unconfigured":
+        monkeypatch.setattr(adm, "SUPABASE_SERVICE_ROLE_KEY", "")
+
+    def get(url, **kwargs):
+        if url.startswith(adm._BLOB_BASE):
+            return response({"fixture_public": True})
+        assert url == adm.SUPABASE_URL + "/storage/v1/object/verity-reports/_operator/macro_synthesis.json"
+        assert kwargs["headers"]["Authorization"] == "Bearer fixture-service"
+        if outcome == "timeout":
+            raise requests.Timeout("upstream timeout")
+        return response(private, outcome)
+
+    adm.requests.get.side_effect = get
+    status, body = dispatch(adm, "macro_synthesis", headers={"X-Admin-Token": "fixture-server-token"})
+    assert status == (200 if outcome == 200 else 503)
+    assert body == (private if outcome == 200 else {"error": "operator_file_unavailable", "file": "macro_synthesis.json"})
+    calls = adm.requests.get.call_args_list
+    assert len(calls) == (0 if outcome == "unconfigured" else 1)
+    assert all(not call.args[0].startswith(adm._BLOB_BASE) for call in calls)
+
+
+def test_macro_budget_exhaustion_stays_503_without_public_request(adm, monkeypatch):
+    monkeypatch.setattr(adm, "SUPABASE_SERVICE_ROLE_KEY", "fixture-service")
+    monkeypatch.setattr(adm, "_t", Mock(side_effect=adm._BudgetExceeded("macro_synthesis", 12.1)))
+    status, body = dispatch(adm, "macro_synthesis", headers={"X-Admin-Token": "fixture-server-token"})
+    assert status == 503
+    assert body["error"] == "upstream_slow"
+    assert body["endpoint"] == body["stage"] == "macro_synthesis"
+    adm.requests.get.assert_not_called()
+
+
+def test_legacy_history_public_fallback_is_preserved(adm, monkeypatch):
+    monkeypatch.setattr(adm, "SUPABASE_SERVICE_ROLE_KEY", "fixture-service")
+    legacy = {"fixture_legacy": True}
+    adm.requests.get.side_effect = [response(None, 404), response(legacy)]
+    assert dispatch(adm, "history", headers={"X-Admin-Token": "fixture-server-token"}) == (200, legacy)
+    calls = adm.requests.get.call_args_list
+    assert len(calls) == 2
+    assert calls[1].args[0] == adm._BLOB_BASE + "history.json"

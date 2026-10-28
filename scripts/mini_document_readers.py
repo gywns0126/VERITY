@@ -52,6 +52,13 @@ class OfficialRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(request, fp, code, message, headers, newurl)
 
 
+class OfficialText(str):
+    def __new__(cls, value, *, bok_view_fields=0):
+        result = super().__new__(cls, value)
+        result.bok_view_fields = bok_view_fields
+        return result
+
+
 def read_official_text(url):
     _official_url(url)
     request = urllib.request.Request(url, headers={"User-Agent": "AlphaNest public-source verification"})
@@ -61,8 +68,20 @@ def read_official_text(url):
             raise ValueError("official_source_too_large")
         encoding = response.headers.get_content_charset() or "utf-8"
         text = body.decode(encoding, errors="replace")
+    bok_view_fields = 0
+    if urllib.parse.urlsplit(url).hostname in {"www.bok.or.kr", "bok.or.kr"}:
+        # BOK places this live UI counter BETWEEN the publication date and
+        # release body. Remove only its identified metadata element, never a
+        # similarly named number in article prose.
+        text, bok_view_fields = re.subn(
+            r'''(?is)<dt\s+class=["']sr-only["']>\s*조회수\s*</dt>\s*'''
+            r'''<dd\s+class=["']hits["']>\s*(?:[0-9]{1,3}(?:,[0-9]{3}){1,2}|[0-9]{1,9})\s*</dd>''',
+            " ", text)
+        if bok_view_fields > 1:
+            raise ValueError("official_view_metadata_ambiguous")
     text = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", text)
-    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", text))).strip()
+    value = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", text))).strip()
+    return OfficialText(value, bok_view_fields=bok_view_fields)
 
 
 def verify_macro_facts(result, *, now=None, reader=read_official_text):
@@ -85,14 +104,23 @@ def verify_macro_facts(result, *, now=None, reader=read_official_text):
             if date > now or (now.date() - date.date()).days > 3:
                 raise ValueError("macro_source_date_outside_window")
             quote = re.sub(r"\s+", " ", fact["source_quote"]).strip()
-            # Korean release pages append a live view counter to the dated
-            # title. It is not a macro fact and changes between two GETs.
-            # Remove only that terminal UI field, then require exact primary
-            # text/date/numeric support for the complete remaining quote.
-            quote = re.sub(r"\s+조회수\s*:\s*[0-9,]+$", "", quote)
+            original_quote = quote
+            source = reader(fact["source_url"])
+            # Retain the existing trailing-counter rule for other releases.
+            # BOK's embedded counter is omitted only when this exact primary
+            # read identified its single HTML metadata element. Every other
+            # character, publication date and macro number remains exact.
+            bok = urllib.parse.urlsplit(fact["source_url"]).hostname in {"www.bok.or.kr", "bok.or.kr"}
+            if not bok:
+                quote = re.sub(r"\s+조회수\s*:\s*[0-9,]+$", "", quote)
+            else:
+                pattern = r"(?<!\S)조회수\s+(?:[0-9]{1,3}(?:,[0-9]{3}){1,2}|[0-9]{1,9})(?=\s|$)"
+                quote, removed = re.subn(pattern, " ", quote)
+                if removed and (removed != 1 or getattr(source, "bok_view_fields", 0) != 1):
+                    raise ValueError("macro_quote_not_in_primary_source")
+                quote = re.sub(r"\s+", " ", quote).strip()
             if not 24 <= len(quote) <= 400 or not 1 <= len(fact["text"]) <= 600:
                 raise ValueError("macro_fact_length")
-            source = reader(fact["source_url"])
             if quote not in source:
                 raise ValueError("macro_quote_not_in_primary_source")
             # Bind the claimed event/release date to the SAME exact quotation;
@@ -105,7 +133,10 @@ def verify_macro_facts(result, *, now=None, reader=read_official_text):
             if not any(value in quote for value in date_forms) and not re.search(date_pattern, quote):
                 raise ValueError("macro_date_not_in_same_primary_quote")
             # All numeric claims must occur in the independently fetched quote.
-            if any(number not in quote for number in re.findall(r"\d+(?:[.,]\d+)*", fact["text"])):
+            claim_text = re.sub(r"\s+", " ", fact["text"]).strip()
+            if claim_text == original_quote:
+                claim_text = quote  # Only the discarded UI field was a number.
+            if any(number not in quote for number in re.findall(r"\d+(?:[.,]\d+)*", claim_text)):
                 raise ValueError("unsupported_macro_number")
             # Exact source text does not prove the meaning of a model's
             # paraphrase. Discard that paraphrase from the delivery entirely.
@@ -358,6 +389,7 @@ def run_macro(args):
     today = datetime.now(KST).strftime("%Y-%m-%d")
     prompt = (f"Today in Korea is {today}. Collect public macroeconomic FACTS only from the last72hours. "
         "Use primary releases from Bank of Korea, FSC, Korean government/statistics office, Fed, BLS, BEA, ECB, BOJ. "
+        "The initial URL and every redirect hostname must be one of: " + ", ".join(sorted(OFFICIAL_HOSTS)) + ". "
         "Search and open the exact primary release. No forecast, stock opinion, portfolio or causal speculation. "
         "Return JSON with exactly two arrays: global and kr, each exactly1 fact. Each fact has exactly text "
         "(the exact source_quote, in the source language; do not paraphrase or translate), "
@@ -367,6 +399,7 @@ def run_macro(args):
         "Choose a release whose visible date and first factual paragraph fit in400characters. "
         "Use plain-text prose, not an interest-rate table, iframe landing page or Markdown table. "
         "The quote must contain source words only: no Markdown headings, links, pipes or separators. "
+        "Exclude the live 조회수 UI field from a BOK release; the reader removes its HTML metadata element. "
         "No PDF or third-party URLs. Do not invent or infer dates from the current date. "
         "Do not access local files, credentials or accounts. No file edits, commands, APIs or messages.")
     # Preserve the failed pre-bridge and protocol-v2 receipts. The reviewed
