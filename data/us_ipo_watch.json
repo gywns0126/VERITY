@@ -1,30 +1,59 @@
 {
  "_meta": {
-  "generated_at": "2026-10-28T19:57:27+09:00",
+  "generated_at": "2026-10-29T20:19:43+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 31,
+  "sessions_scanned": 32,
   "sessions_missed": [
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 851,
-   "companies": 253,
+   "filings": 868,
+   "companies": 255,
    "by_stage": {
-    "신청": 95,
-    "정정(심사중)": 122,
+    "신청": 93,
+    "정정(심사중)": 126,
     "가격확정": 8,
     "거래소등록": 28
    },
    "spac_likely": 29,
-   "has_ticker_now": 187,
+   "has_ticker_now": 189,
    "priced_secondary_excluded": 6,
-   "foreign_issuer": 70,
+   "foreign_issuer": 71,
    "priced_parse_ok": 7
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
  },
  "items": [
+  {
+   "cik": "2142627",
+   "name": "BHAV Acquisition Corp II",
+   "forms": {
+    "CERT": 1,
+    "8-A12B": 1,
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260930",
+   "last_filed": "20261028",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142627&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "BHAI",
+    "region": "GRAND CAYMAN",
+    "state_of_inc": "E9"
+   }
+  },
   {
    "cik": "2131303",
    "name": "SPACCircle Acquisition Corp.",
@@ -59,34 +88,6 @@
     "parse_ok": false,
     "reason": "공모가 문구 없음",
     "source_url": "https://www.sec.gov/Archives/edgar/data/2131303/000118518526005030/spac424b4102626.htm"
-   }
-  },
-  {
-   "cik": "2142627",
-   "name": "BHAV Acquisition Corp II",
-   "forms": {
-    "8-A12B": 1,
-    "S-1/A": 1,
-    "S-1": 1
-   },
-   "first_filed": "20260930",
-   "last_filed": "20261027",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142627&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "BHAI",
-    "region": "GRAND CAYMAN",
-    "state_of_inc": "E9"
    }
   },
   {
@@ -1207,6 +1208,165 @@
    }
   },
   {
+   "cik": "2018222",
+   "name": "707 Cayman Holdings Ltd.",
+   "forms": {
+    "F-1/A": 3
+   },
+   "first_filed": "20260923",
+   "last_filed": "20261028",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 3,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2018222&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "5600",
+    "sic_desc": "Retail-Apparel & Accessory Stores",
+    "is_blank_check": false,
+    "ticker": "JEM",
+    "region": "HONG KONG, F4",
+    "state_of_inc": "K3"
+   }
+  },
+  {
+   "cik": "2070237",
+   "name": "Hacker Interstellar Inc.",
+   "forms": {
+    "F-1/A": 2
+   },
+   "first_filed": "20260924",
+   "last_filed": "20261028",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2070237&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7370",
+    "sic_desc": "Services-Computer Programming, Data Processing, Etc.",
+    "is_blank_check": false,
+    "ticker": "SOUD",
+    "region": "BEIJING",
+    "state_of_inc": "E9"
+   }
+  },
+  {
+   "cik": "1114859",
+   "name": "Glow Holdings, Inc.",
+   "forms": {
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20260922",
+   "last_filed": "20261028",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1114859&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7372",
+    "sic_desc": "Services-Prepackaged Software",
+    "is_blank_check": false,
+    "ticker": "GLOH",
+    "region": "LAS VEGAS, NV",
+    "state_of_inc": "NV"
+   }
+  },
+  {
+   "cik": "749647",
+   "name": "Imunon, Inc.",
+   "forms": {
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20261027",
+   "last_filed": "20261028",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=749647&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2834",
+    "sic_desc": "Pharmaceutical Preparations",
+    "is_blank_check": false,
+    "ticker": "IMNN",
+    "region": "LAWRENCEVILLE, NJ",
+    "state_of_inc": "DE"
+   }
+  },
+  {
+   "cik": "1698506",
+   "name": "Simwon America Corp.",
+   "forms": {
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20261009",
+   "last_filed": "20261028",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1698506&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3711",
+    "sic_desc": "Motor Vehicles & Passenger Car Bodies",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "SUNNYVALE, CA",
+    "state_of_inc": "CA"
+   }
+  },
+  {
+   "cik": "2049977",
+   "name": "Starton Holdings, Inc.",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20261028",
+   "last_filed": "20261028",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2049977&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2834",
+    "sic_desc": "Pharmaceutical Preparations",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "PARAMUS, NJ",
+    "state_of_inc": "DE"
+   }
+  },
+  {
    "cik": "1880995",
    "name": "Alopexx, Inc.",
    "forms": {
@@ -1379,14 +1539,14 @@
    "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
-   "has_ticker_now": false,
+   "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2124080&type=S-1&dateb=&owner=include&count=20",
    "profile": {
     "available": true,
     "sic": "2834",
     "sic_desc": "Pharmaceutical Preparations",
     "is_blank_check": false,
-    "ticker": null,
+    "ticker": "ASPE",
     "region": "SAN DIEGO, CA",
     "state_of_inc": "DE"
    }
@@ -1694,16 +1854,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1866501&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "3690",
-    "sic_desc": "Miscellaneous Electrical Machinery, Equipment & Supplies",
-    "is_blank_check": false,
-    "ticker": "WBX",
-    "region": "BARCELONA, U3",
-    "state_of_inc": "P7"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1866501&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1900851",
@@ -1720,16 +1871,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1900851&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7812",
-    "sic_desc": "Services-Motion Picture & Video Tape Production",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "LAS VEGAS, NV",
-    "state_of_inc": "NV"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1900851&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2036444",
@@ -1745,17 +1887,8 @@
    "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2036444&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "3812",
-    "sic_desc": "Search, Detection, Navigation, Guidance, Aeronautical Sys",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "SINGAPORE",
-    "state_of_inc": null
-   }
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2036444&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1787518",
@@ -1773,16 +1906,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1787518&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "8742",
-    "sic_desc": "Services-Management Consulting Services",
-    "is_blank_check": false,
-    "ticker": "DFNS",
-    "region": "NEW YORK, NY",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1787518&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "832370",
@@ -1799,16 +1923,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=832370&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7372",
-    "sic_desc": "Services-Prepackaged Software",
-    "is_blank_check": false,
-    "ticker": "EAXR",
-    "region": "MIAMI, FL",
-    "state_of_inc": null
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=832370&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2142699",
@@ -1825,16 +1940,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": true,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142699&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "FTPK",
-    "region": "NEW YORK, NY",
-    "state_of_inc": "E9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2142699&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2142855",
@@ -2370,23 +2476,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1779977&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2018222",
-   "name": "707 Cayman Holdings Ltd.",
-   "forms": {
-    "F-1/A": 2
-   },
-   "first_filed": "20260923",
-   "last_filed": "20261008",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2018222&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2114145",
    "name": "Tracx Logis Ltd.",
    "forms": {
@@ -2833,23 +2922,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1378140&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2070237",
-   "name": "Hacker Interstellar Inc.",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260924",
-   "last_filed": "20260924",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2070237&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1722731",
@@ -3517,6 +3589,23 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2074652&type=S-1&dateb=&owner=include&count=20"
   },
   {
+   "cik": "2123920",
+   "name": "Focus Media Network Ltd",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20261028",
+   "last_filed": "20261028",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123920&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
    "cik": "2159516",
    "name": "Aupenheim Holdings Inc.",
    "forms": {
@@ -3600,23 +3689,6 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1912165&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "749647",
-   "name": "Imunon, Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261027",
-   "last_filed": "20261027",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=749647&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2130357",
@@ -4333,23 +4405,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1840102&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "1698506",
-   "name": "Simwon America Corp.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261009",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1698506&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2132065",
    "name": "Centinel Spine Holdco, Inc.",
    "forms": {
@@ -4824,23 +4879,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1958133&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1114859",
-   "name": "Glow Holdings, Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20260922",
-   "last_filed": "20260922",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1114859&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1371128",
