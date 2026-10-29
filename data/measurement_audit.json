@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-29T11:10:34+09:00",
+ "as_of": "2026-10-29T17:11:18+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -14,7 +14,7 @@
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 46,
+   "episodes": 47,
    "phantom_sells": 59,
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
@@ -90,7 +90,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "43/43",
+     "coverage": "79/79",
      "via": [
       "current_price",
       "price"
@@ -101,7 +101,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "33/43",
+     "coverage": "52/79",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -112,7 +112,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "43/43",
+     "coverage": "79/79",
      "via": [
       "fscore_deltas"
      ],
@@ -122,7 +122,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "43/43",
+     "coverage": "78/79",
      "via": [
       "industry"
      ],
@@ -132,7 +132,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "18/43",
+     "coverage": "33/79",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -158,7 +158,7 @@
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 10,
+   "holdings_checked": 9,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -193,7 +193,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 15,
-   "stock_days": 9217,
+   "stock_days": 9223,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -250,27 +250,27 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 10,
+   "holdings_checked": 9,
    "coverage": {
     "sector": {
-     "filled": 10,
-     "total": 10,
+     "filled": 9,
+     "total": 9,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 10,
-     "total": 10,
+     "filled": 9,
+     "total": 9,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 10,
-     "total": 10,
+     "filled": 9,
+     "total": 9,
      "guard": "팩터 쏠림 차단"
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 25,
-    "scored": 25,
+    "with_pct": 38,
+    "scored": 38,
     "ok": true
    },
    "dead_guards": [],
@@ -278,7 +278,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 10,
+   "holdings_checked": 9,
    "no_profit_exit": [],
    "ladder_broken": [
     {
