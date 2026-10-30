@@ -5,6 +5,7 @@ const {performance}=require('node:perf_hooks');
 const source=fs.readFileSync(path.join(__dirname,'../review/member-map/prototype-network-layout.js'),'utf8');
 const box={Map,Set,Math,Number,Float64Array,TypeError};vm.runInNewContext(source,box);
 const layout=box.memberNetworkLayout;
+const explore=box.memberNetworkExplore;
 const item=(id,kind='document',stockIds=[])=>({id,kind,stockIds,width:160,height:64});
 const rows=map=>[...map].map(([id,p])=>[id,{...p}]);
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -83,4 +84,103 @@ test('mixed dimensions keep real bounds without clamping or mutating input, inva
  const {items,links}=graph(35,2);items.forEach((n,i)=>{n.width=80+i%5*20;n.height=24+i%6*8;});
  check(items,layout(items,links));
  assert.throws(()=>layout([item('same'),item('same')],[]),TypeError);
+});
+
+test('network exploration uses literal case-insensitive text across identity and evidence fields without mutation',()=>{
+ const items=[
+  {id:'stock:mix[ed]+',kind:'stock',name:'Café Labs',ticker:'MiXeD'},
+  {id:'filing:1',kind:'event',recordKind:'document',layer:'filing',name:'Annual report',
+   evidence:[{source:'Reuters',title:'Report (A+B)',explanation:'Literal .* punctuation'}]},
+  {id:'candidate:1',kind:'event',recordKind:'relationship',layer:'candidates',name:'Unreviewed'},
+ ];
+ const links=[{id:'public-edge',from:items[0].id,to:items[1].id}];
+ const before=JSON.stringify({items,links});freeze(items);freeze(links);
+ assert.deepEqual([...explore(items,links).ids].sort(),items.map(n=>n.id).sort(),'omitted kinds means all recognized kinds');
+ assert.deepEqual([...explore(items,links,{query:'MIXED'}).ids],[items[0].id]);
+ assert.deepEqual([...explore(items,links,{query:'reUTers'}).ids],[items[1].id]);
+ assert.deepEqual([...explore(items,links,{query:'a+b'}).ids],[items[1].id],'regex punctuation is a literal substring');
+ assert.deepEqual([...explore(items,links,{query:'.*'}).ids],[items[1].id]);
+ assert.deepEqual([...explore(items,links,{query:'mix[ed]+'}).ids],[items[0].id],'identity punctuation is also literal');
+ assert.equal(JSON.stringify({items,links}),before);
+});
+
+test('kind filters distinguish omitted from empty and use the runtime relationship/source/candidate classification',()=>{
+ const items=[
+  {id:'s',kind:'stock'},
+  {id:'r',kind:'event',recordKind:'relationship',layer:'relationships'},
+  {id:'src',kind:'event',recordKind:'document',layer:'filing'},
+  {id:'c',kind:'event',recordKind:'relationship',layer:'candidates'},
+  {id:'override',kind:'event',recordKind:'document',layer:'filing',networkKind:'candidate'},
+ ];
+ assert.deepEqual([...explore(items,[]).ids].sort(),items.map(n=>n.id).sort());
+ assert.equal(explore(items,[],{kinds:[]}).ids.size,0);
+ assert.deepEqual([...explore(items,[],{kinds:['relationship','candidate']}).ids].sort(),['c','override','r']);
+ assert.deepEqual([...explore(items,[],{kinds:['stock']}).ids],['s']);
+});
+
+test('local depth is a bounded BFS over allowed kinds and intersects with the literal search result',()=>{
+ const items=[
+  {id:'stock',kind:'stock',name:'Anchor'},
+  {id:'rel',kind:'event',recordKind:'relationship',layer:'relationships',name:'Reviewed relation'},
+  {id:'source',kind:'event',recordKind:'document',layer:'filing',name:'Public source'},
+  {id:'candidate',kind:'event',recordKind:'relationship',layer:'candidates',name:'Candidate bridge'},
+  {id:'far',kind:'event',recordKind:'document',layer:'filing',name:'Far source'},
+ ];
+ const links=[{id:'a',from:'stock',to:'rel'},{id:'b',from:'rel',to:'source'},
+  {id:'c',from:'stock',to:'candidate'},{id:'d',from:'source',to:'far'}];
+ assert.deepEqual([...explore(items,links,{anchor:'stock',depth:1}).ids].sort(),['candidate','rel','stock']);
+ assert.deepEqual([...explore(items,links,{anchor:'stock',depth:2,query:'source'}).ids],['source']);
+ assert.deepEqual([...explore(items,links,{anchor:'stock',depth:2,kinds:['stock','source']}).ids],['stock'],
+  'a filtered relationship cannot be traversed as a hidden bridge');
+ assert.deepEqual([...explore(items,links,{anchor:'missing',depth:1}).ids],[]);
+ assert.deepEqual([...explore(items,links,{anchor:'stock',depth:99}).ids].sort(),items.map(n=>n.id).sort(),
+  'depth is capped at three');
+ const result=explore(items,links,{anchor:'stock',depth:2});
+ assert.deepEqual(result.links.map(link=>link.id).sort(),['a','b','c']);
+ assert.ok(result.links.every(link=>links.includes(link)),'returned links are original input links, not invented edges');
+});
+
+test('orphan removal uses the visible induced links after query and kind filtering',()=>{
+ const items=[{id:'a',kind:'stock',name:'Keep A'},{id:'b',kind:'stock',name:'Keep B'},
+  {id:'alone',kind:'event',recordKind:'document',layer:'filing',name:'Keep alone'}];
+ const links=[{id:'edge',from:'a',to:'b'},{id:'dangling',from:'a',to:'missing'}];
+ assert.deepEqual([...explore(items,links,{showOrphans:false}).ids].sort(),['a','b']);
+ assert.deepEqual(explore(items,links,{query:'alone',showOrphans:false}).ids, new Set());
+ assert.deepEqual(explore(items,links,{kinds:['stock'],showOrphans:false}).links.map(link=>link.id),['edge']);
+});
+
+test('layout options preserve defaults, while pinned finite positions stay exact and reserve 16px clearance',()=>{
+ const items=[item('stock','stock'),item('record-a'),item('record-b')];
+ const links=[{from:'stock',to:'record-a'},{from:'record-a',to:'record-b'}];
+ const defaults=layout(items,links),explicitDefaults=layout(items,links,{});
+ assert.deepEqual(rows(explicitDefaults),rows(defaults));
+ assert.notDeepEqual(rows(layout(items,links,{linkDistance:420})),rows(defaults));
+ assert.notDeepEqual(rows(layout(items,links,{repulsion:0})),rows(defaults));
+ const pinned=new Map([['stock',{x:200,y:180}],['record-a',{x:200,y:180}]]);
+ const result=layout(items,links,{pinned});
+ assert.deepEqual([result.get('stock').x,result.get('stock').y],[200,180]);
+ assert.deepEqual([result.get('record-a').x,result.get('record-a').y],[200,180],'user-pinned overlaps remain intentional and unchanged');
+ const floating={...item('record-b'),...result.get('record-b')};
+ for(const id of ['stock','record-a']){
+  const fixed={...item(id,id==='stock'?'stock':'document'),...result.get(id)};
+  const dx=Math.abs(floating.x-fixed.x),dy=Math.abs(floating.y-fixed.y);
+  assert.ok(dx>=(floating.width+fixed.width)/2+16||dy>=(floating.height+fixed.height)/2+16,
+   `unpinned node clears reserved pin ${id}`);
+ }
+});
+
+test('a pin from the existing 500x340 world frame keeps free stock anchors in that same vicinity',()=>{
+ const {items,links}=graph(28,3),baseline=layout(items,links),pinId='stock-1',pin=baseline.get(pinId);
+ const result=layout(items,links,{pinned:new Map([[pinId,{...pin}]])});
+ assert.deepEqual(result.get(pinId),pin,'the supplied world coordinate remains exact');
+ for(const id of ['stock-0','stock-2'])assert.ok(distance(result.get(id),baseline.get(id))<200,
+  `${id} remains near its prior world anchor instead of shifting toward the origin`);
+});
+
+test('invalid and unknown pins are ignored and inputs remain unchanged',()=>{
+ const {items,links}=graph(16,2),before=JSON.stringify({items,links});
+ const invalid=new Map([['stock-0',{x:NaN,y:4}],['record-0000',{x:4,y:Infinity}],['unknown',{x:20,y:30}]]);
+ const expected=layout(items,links),actual=layout(items,links,{pinned:invalid});
+ assert.deepEqual(rows(actual),rows(expected));
+ assert.equal(JSON.stringify({items,links}),before);
 });
