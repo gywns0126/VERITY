@@ -6,6 +6,7 @@ import signal
 import subprocess
 import sys
 import time
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -352,6 +353,7 @@ def test_expired_budget_starts_no_process(monkeypatch):
 
 def test_retry_backoff_is_capped_by_total_budget(repos, monkeypatch):
     original = module.git
+    stdlib_monotonic, stdlib_sleep = time.monotonic, time.sleep
     clock = [100.0]
     sleeps = []
     fetches = []
@@ -368,15 +370,18 @@ def test_retry_backoff_is_capped_by_total_budget(repos, monkeypatch):
         sleeps.append(seconds)
         clock[0] += seconds
 
-    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
-    monkeypatch.setattr(module.time, "sleep", sleep)
+    # Isolate the producer's injected clock: module.time is otherwise the same
+    # stdlib module used by subprocess.Popen._wait, whose polling sleep is real.
+    monkeypatch.setattr(module, "time", SimpleNamespace(monotonic=lambda: clock[0], sleep=sleep))
+    assert time.monotonic is stdlib_monotonic
+    assert time.sleep is stdlib_sleep
     monkeypatch.setattr(module, "git", fail_fetch)
     before = repos.producer_state()
     with pytest.raises(module.GitFailure, match="retries exhausted"):
         module.persist(repos.producer, "main", attempts=3, budget_s=2, retry_delay=5)
     assert clock[0] <= 102.0
-    # Linux subprocess polling can split sleep into 0.001 + 0.499 seconds;
-    # binary floating-point summation is not exact. Keep the hard clock cap above.
+    # Binary floating-point accumulation may perturb the total slightly; the
+    # exact fake-clock deadline remains independently enforced above.
     assert sum(sleeps) == pytest.approx(0.5, abs=1e-9)
     assert fetches == [102.0] * 3
     assert repos.producer_state() == before
