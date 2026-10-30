@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-10-31T01:02:41+09:00",
+  "collected_at": "2026-10-31T01:32:43+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
@@ -16,7 +16,7 @@
       "active": true,
       "drivers": {
         "fng": 30.0,
-        "search_trend_pct": 18.2
+        "search_trend_pct": 17.2
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -27,8 +27,8 @@
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.672,
-        "long_short_ratio": 2.74
+        "put_call_oi": 0.673,
+        "long_short_ratio": 2.76
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
@@ -60,8 +60,8 @@
       "read": "누적 중",
       "active": false,
       "drivers": {
-        "ssr": 6.18,
-        "stablecoin_supply_usd": 252157110989.6664
+        "ssr": 6.17,
+        "stablecoin_supply_usd": 252158755350.92358
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -73,14 +73,14 @@
       "drivers": {
         "top_protocol_fees_24h": {
           "name": "Titan Builder",
-          "fees_24h": 24689178.0
+          "fees_24h": 24699717.0
         },
         "protocol_count": 25
       },
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 77483.0,
+  "btc_price_at_call": 77443.0,
   "trail": [
     {
       "date": "2026-08-03",
@@ -709,7 +709,7 @@
       "date": "2026-10-31",
       "call": "risk_off",
       "net_score": -3,
-      "btc_price": 77483.0,
+      "btc_price": 77443.0,
       "active_dims": 4
     }
   ],
@@ -719,7 +719,7 @@
         "horizon_days": 7,
         "n": 45,
         "hit_rate": 0.5778,
-        "mean_realized_return": 0.020048,
+        "mean_realized_return": 0.020015,
         "label": "예비 결과"
       },
       {
