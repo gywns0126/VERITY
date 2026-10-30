@@ -1,13 +1,13 @@
 {
   "version": "v0",
-  "computed_at": "2026-10-30T15:15:04.889787+00:00",
+  "computed_at": "2026-10-30T21:53:35.262648+00:00",
   "status": "active",
   "sample_size": {
     "total": 112,
     "open": 22,
     "closed": 90,
     "with_h5": 85,
-    "with_h14": 61,
+    "with_h14": 62,
     "with_h30": 43,
     "min_for_decompose": 30
   },
@@ -22,11 +22,11 @@
     },
     "h14": {
       "horizon_days": 14,
-      "n": 61,
-      "hit_rate_pct": 68.85,
-      "median_return_pct": 3.15,
-      "mean_return_pct": 2.63,
-      "ic": 0.079
+      "n": 62,
+      "hit_rate_pct": 67.74,
+      "median_return_pct": 3.11,
+      "mean_return_pct": 2.45,
+      "ic": 0.083
     },
     "h30": {
       "horizon_days": 30,
@@ -39,9 +39,9 @@
   },
   "feature_decomposition": {
     "rsi": {
-      "n": 61,
+      "n": 62,
       "boundaries": [
-        39.3,
+        39.25,
         43.73,
         46.05
       ],
@@ -49,12 +49,12 @@
         {
           "q": 0,
           "n": 16,
-          "mean_return_pct": -1.83
+          "mean_return_pct": -2.13
         },
         {
           "q": 1,
-          "n": 15,
-          "mean_return_pct": 4.85
+          "n": 16,
+          "mean_return_pct": 4.33
         },
         {
           "q": 2,
@@ -69,9 +69,9 @@
       ]
     },
     "macd_hist": {
-      "n": 61,
+      "n": 62,
       "boundaries": [
-        -143.84,
+        -162.52,
         -0.42,
         0.32
       ],
@@ -79,12 +79,12 @@
         {
           "q": 0,
           "n": 16,
-          "mean_return_pct": -1.48
+          "mean_return_pct": -2.03
         },
         {
           "q": 1,
-          "n": 15,
-          "mean_return_pct": 5.55
+          "n": 16,
+          "mean_return_pct": 5.25
         },
         {
           "q": 2,
@@ -99,10 +99,10 @@
       ]
     },
     "vol_ratio": {
-      "n": 61,
+      "n": 62,
       "boundaries": [
         0.72,
-        0.91,
+        0.94,
         1.26
       ],
       "quartile_mean_return_pct": [
@@ -113,13 +113,13 @@
         },
         {
           "q": 1,
-          "n": 15,
-          "mean_return_pct": 6.01
+          "n": 17,
+          "mean_return_pct": 5.62
         },
         {
           "q": 2,
-          "n": 15,
-          "mean_return_pct": 1.46
+          "n": 14,
+          "mean_return_pct": 0.61
         },
         {
           "q": 3,
@@ -129,7 +129,7 @@
       ]
     },
     "foreign_5d_sum": {
-      "n": 61,
+      "n": 62,
       "boundaries": [
         0.0,
         0.0,
@@ -153,13 +153,13 @@
         },
         {
           "q": 3,
-          "n": 11,
-          "mean_return_pct": 3.11
+          "n": 12,
+          "mean_return_pct": 2.17
         }
       ]
     },
     "technical_score": {
-      "n": 61,
+      "n": 62,
       "boundaries": [
         42.0,
         47.0,
@@ -168,8 +168,8 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 20,
-          "mean_return_pct": 1.54
+          "n": 21,
+          "mean_return_pct": 1.08
         },
         {
           "q": 1,
@@ -189,9 +189,9 @@
       ]
     },
     "safety_score": {
-      "n": 45,
+      "n": 46,
       "boundaries": [
-        70.0,
+        67.0,
         79.0,
         79.0
       ],
@@ -199,12 +199,12 @@
         {
           "q": 0,
           "n": 12,
-          "mean_return_pct": 1.6
+          "mean_return_pct": 1.82
         },
         {
           "q": 1,
-          "n": 22,
-          "mean_return_pct": 0.97
+          "n": 23,
+          "mean_return_pct": 0.46
         },
         {
           "q": 2,
@@ -219,7 +219,7 @@
       ]
     },
     "flow_score": {
-      "n": 61,
+      "n": 62,
       "boundaries": [
         50.0,
         50.0,
@@ -228,8 +228,8 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 42,
-          "mean_return_pct": 2.57
+          "n": 43,
+          "mean_return_pct": 2.33
         },
         {
           "q": 1,
@@ -265,9 +265,9 @@
       "status": "insufficient_data"
     },
     "Consumer Cyclical": {
-      "n": 9,
-      "hit_rate_pct": 66.67,
-      "median_return_pct": 0.92
+      "n": 10,
+      "hit_rate_pct": 60.0,
+      "median_return_pct": 0.83
     },
     "Energy": {
       "n": 19,
@@ -292,7 +292,7 @@
     }
   },
   "verdict_strength": {
-    "n": 61,
+    "n": 62,
     "multi_score_boundaries": [
       50.0,
       55.0,
@@ -306,8 +306,8 @@
       },
       {
         "q": 1,
-        "n": 20,
-        "mean_return_pct": 1.59
+        "n": 21,
+        "mean_return_pct": 1.13
       },
       {
         "q": 2,
@@ -335,9 +335,9 @@
         "median_return_pct": 6.15
       },
       "60d_plus": {
-        "n": 29,
-        "hit_rate_pct": 68.97,
-        "median_return_pct": 2.83
+        "n": 30,
+        "hit_rate_pct": 66.67,
+        "median_return_pct": 1.96
       }
     }
   },

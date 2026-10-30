@@ -1,75 +1,75 @@
 {
- "as_of": "2026-10-24T13:56:09+09:00",
+ "as_of": "2026-10-31T07:23:53+09:00",
  "version": "v0 (PREREG_POOL_ROTATION_2026_08_04 — 보고서만, 집행 없음)",
  "evidence_days": 40,
  "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 40일. 미달 임계는 발동하지 않음",
  "pool": {
-  "size": 76,
-  "kr": 48,
+  "size": 45,
+  "kr": 18,
   "kr_floor": 20,
-  "kr_deficit": 0,
-  "size_note": "정원 초과 76 > 70",
+  "kr_deficit": 2,
+  "size_note": "정원 미달 45 < 55",
   "sector_over_cap": {}
  },
  "r1_held": [
   "003550",
-  "028050",
   "060980",
   "065710",
   "068270",
   "195940",
+  "271560",
   "DORM",
   "INGR",
-  "MGY"
+  "MGY",
+  "SM"
  ],
  "r1_held_out_of_pool": [],
- "exits": [
-  {
-   "ticker": "V",
-   "reason": "R2a 배지 AVOID 40일 연속",
-   "avoid_streak": 40,
-   "pollution_streak": 0,
-   "lowliq_streak": 0,
-   "evidence_days": 40
-  }
- ],
+ "exits": [],
  "entries": [
   {
    "ticker": "317850",
    "name": "대모",
    "source": "smallcap",
-   "trading_value": 1656102413
+   "trading_value": 2091124659
   },
   {
-   "ticker": "483350",
-   "name": "딜리셔스",
+   "ticker": "126640",
+   "name": "화신정공",
    "source": "smallcap",
-   "trading_value": 1301820947
+   "trading_value": 1760002648
   },
   {
-   "ticker": "372910",
-   "name": "한컴라이프케어",
+   "ticker": "079650",
+   "name": "서산",
    "source": "smallcap",
-   "trading_value": 2609061449
+   "trading_value": 24035865123
   },
   {
-   "ticker": "228340",
-   "name": "동양파일",
+   "ticker": "348210",
+   "name": "넥스틴",
    "source": "smallcap",
-   "trading_value": 4366660314
+   "trading_value": 2604437847
   },
   {
-   "ticker": "153890",
-   "name": "져스텍",
+   "ticker": "060280",
+   "name": "큐렉소",
    "source": "smallcap",
-   "trading_value": 3251990473
+   "trading_value": 1736345750
   }
  ],
- "watch_streaks": [],
+ "watch_streaks": [
+  {
+   "ticker": "065710",
+   "avoid_streak": 0,
+   "pollution_streak": 0,
+   "lowliq_streak": 10,
+   "evidence_days": 14
+  }
+ ],
  "candidate_supply": {
-  "funnel_total": 44,
+  "funnel_total": 25,
   "funnel_kr_out_of_pool": 0,
-  "smallcap_total": 1692,
+  "smallcap_total": 1457,
   "smallcap_liquidity_field_missing": false
  },
  "swap_cap": 5,
