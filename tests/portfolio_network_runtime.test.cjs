@@ -21,7 +21,7 @@ function element(tag='div'){
  const el={tagName:tag.toUpperCase(),dataset:{},attributes:{},children:[],hidden:false,inert:false,isConnected:true,focusCalls:[],
   style:{setProperty(key,value){this[key]=value;}},classList:{add(){},contains(){return false;}},
   append(...children){this.children.push(...children);},replaceChildren(...children){this.children=children;},
-  setAttribute(key,value){this.attributes[key]=value;},querySelector(){return null;},
+  setAttribute(key,value){this.attributes[key]=value;},querySelector(){return null;},contains(node){return this.children.includes(node);},
   focus(options){this.focusCalls.push(options);},cloneNode(){return element(tag);},
   getBoundingClientRect(){return this.rect||{width:900,height:600,left:0,top:0};}};
  return el;
@@ -83,11 +83,39 @@ test('CSS contract allows long or unbroken network card and detail text to wrap'
  assert.match(source,/#an-map-design \.an-network-space\[data-stage=cards\] \.an-network-label\{[^}]*overflow:hidden;overflow-wrap:anywhere/);
  assert.match(source,/#an-map-design \.an-network-inspector p\{[^}]*overflow-wrap:anywhere/);
  assert.match(source,/#an-map-design \.an-network-inspector button\{[^}]*overflow-wrap:anywhere/);
- assert.match(source,/@media\(max-width:700px\)[^\n]*\.an-network-inspector\{max-height:150px/);
+ assert.match(source,/@media\(max-width:700px\)[^\n]*\.an-network-inspector\{max-height:220px/);
 });
 test('stage thresholds are dots / names / cards at the exact boundaries',()=>{
  const {context:c}=fixture();
  for(const [zoom,expected]of[[.02,'dots'],[.279999,'dots'],[.28,'names'],[.799999,'names'],[.8,'cards'],[4,'cards']])assert.equal(c.memberNetworkStage(zoom),expected);
+});
+test('compact overview retains every node, selection persists through hover, and clearing restores exploration',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+ assert.ok(s.camera.zoom<=.65);assert.equal(s.elements.size,3);
+ c.memberNetworkSelect('source');s.elements.get('candidate').onpointerenter();
+ assert.equal(f.engineState.highlights.at(-1),'source');assert.equal(s.elements.get('candidate').dataset.emphasis,'true');
+ s.elements.get('candidate').onpointerleave();assert.equal(s.elements.get('candidate').dataset.faded,'true');assert.equal(s.elements.get('candidate').dataset.emphasis,'false');
+ assert.equal(s.elements.get('stock').dataset.emphasis,'true');
+ c.memberNetworkSelect('');s.elements.get('candidate').onfocus();
+ assert.equal(f.engineState.highlights.at(-1),'candidate');
+ assert.match(source,/\[data-stage=cards\] \.an-network-node\{[^}]*height:32px/);
+ assert.match(source,/\[data-stage=cards\] \.an-network-node\[aria-pressed=true\]\{height:76px/);
+ assert.equal(f.layoutCalls(),1);c.closeMemberNetwork();f.assertNative();
+});
+test('inspector exposes literal full evidence and peer navigation without moving camera or editing native draft',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+ const explanation='<img src=x onerror=alert(1)>\n'+('긴 원문 근거 '.repeat(100));
+ s.byId.get('source').evidence[0]={url:'https://example.org/filing',source:'공식 원문',asOf:'2026-10-01',explanation};
+ c.memberNetworkSelect('source');
+ assert.equal(f.inspector.children.find(el=>el.className==='an-network-excerpt').textContent,explanation);
+ assert.ok(f.inspector.children.some(el=>el.textContent==='자료 기준 2026-10-01'));
+ assert.ok(f.inspector.children.some(el=>el.textContent==='https://example.org/filing'));
+ const peer=f.inspector.children.find(el=>el.tagName==='BUTTON'&&el.textContent.includes('Stock'));
+ assert.ok(peer);const camera=clone(s.camera),positions=clone([...s.positions]);
+ c.document.activeElement=peer;peer.onclick();
+ assert.equal(s.selected,'stock');assert.deepEqual(clone(f.inspector.children[0].focusCalls),[{preventScroll:true}]);
+ assert.deepEqual(clone(s.camera),camera);assert.deepEqual(clone([...s.positions]),positions);
+ assert.equal(f.layoutCalls(),1);c.closeMemberNetwork();f.assertNative();
 });
 test('keyboard traversal includes only projected visible nodes and re-admits them after explicit camera movement',async()=>{
  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
@@ -169,7 +197,7 @@ test('concurrent entry loads once and snapshots current scope only after loader 
 test('vendor viewport/select/highlight callbacks update exploration only and late viewport cannot resurrect a session',async()=>{
  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,hooks=f.engineCalls[0][5],before=clone([...s.positions]);
  hooks.viewport({zoom:.4,panX:21,panY:-11});assert.deepEqual({...s.camera},{zoom:.4,panX:21,panY:-11});assert.equal(f.engineState.stage,'names');
- hooks.select('source');assert.equal(s.selected,'source');hooks.highlight('stock');assert.equal(f.engineState.highlights.at(-1),'stock');
+ hooks.select('source');assert.equal(s.selected,'source');hooks.highlight('stock');assert.equal(f.engineState.highlights.at(-1),'source');
  assert.deepEqual(clone([...s.positions]),before);assert.equal(f.layoutCalls(),1);c.closeMemberNetwork();
  hooks.viewport({zoom:2,panX:99,panY:99});assert.equal(c.memberNetworkSession,null);assert.equal(f.host.hidden,true);f.assertNative();
  await c.openMemberNetwork();const next=c.memberNetworkSession,selected=next.selected,highlights=f.engineState.highlights.length;
