@@ -5391,7 +5391,7 @@ const memberNetworkStyle=document.createElement('style');memberNetworkStyle.text
 #an-map-design .an-network-view button{font:inherit;font-weight:700;border:0;border-radius:10px;color:var(--an-text);background:var(--an-panel);cursor:pointer}
 #an-map-design .an-network-head button{min-height:36px;padding:6px 10px;background:light-dark(#f8f9fb,#1d242c)}
 #an-map-design .an-network-view button:focus-visible{outline:none;background:light-dark(#e9edf2,#303945)}
-#an-map-design .an-network-main{min-height:0;flex:1;display:grid;grid-template-columns:minmax(0,1fr) 240px}
+#an-map-design .an-network-main{min-height:0;flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,320px)}
 #an-map-design .an-network-space{position:relative;min-width:0;min-height:0;overflow:clip;touch-action:none;cursor:grab}
 #an-map-design .an-network-space:focus-visible{outline:none}
 #an-map-design .an-network-space>svg{display:none}
@@ -5408,24 +5408,32 @@ const memberNetworkStyle=document.createElement('style');memberNetworkStyle.text
 #an-map-design .an-network-node[data-kind=relationship] .an-network-dot{background:var(--an-accent)}
 #an-map-design .an-network-label,#an-map-design .an-network-face,#an-map-design .an-network-meta{display:none}
 #an-map-design .an-network-space[data-stage=names] .an-network-label{display:block;position:absolute;left:calc(50% + 8px);top:50%;transform:translateY(-50%);width:var(--an-network-label-width);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:700;text-align:left;pointer-events:none}
-#an-map-design .an-network-space[data-stage=cards] .an-network-node{display:flex;align-items:center;gap:8px;width:160px;height:76px;padding:10px 12px;background:var(--an-panel);border-radius:14px;text-align:left;box-shadow:0 2px 8px var(--an-shadow)}
+#an-map-design .an-network-space[data-stage=cards] .an-network-node{display:flex;align-items:center;gap:8px;width:160px;height:32px;padding:5px 10px;background:var(--an-panel);border-radius:14px;text-align:left;box-shadow:0 2px 8px var(--an-shadow)}
+#an-map-design .an-network-space[data-stage=cards] .an-network-node[aria-pressed=true]{height:76px;padding:10px 12px}
 #an-map-design .an-network-space[data-stage=cards] .an-network-dot{display:none}
 #an-map-design .an-network-space[data-stage=cards] .an-network-face{display:flex;flex:0 0 20px;align-items:center;width:20px;height:20px}
 #an-map-design .an-network-face :is(svg,.an-logo){width:20px;height:20px;flex:0 0 20px}
 #an-map-design .an-network-face .an-logo img{width:100%;height:100%;object-fit:contain;border-radius:6px}
 #an-map-design .an-network-face .an-flag{width:10px;height:10px;right:-2px;bottom:-2px}
 #an-map-design .an-network-space[data-stage=cards] .an-network-node>span:last-child{flex:1;min-width:0}
-#an-map-design .an-network-space[data-stage=cards] .an-network-label{display:-webkit-box;overflow:hidden;overflow-wrap:anywhere;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:12px;line-height:18px;font-weight:800}
-#an-map-design .an-network-space[data-stage=cards] .an-network-meta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:600;color:var(--an-sub)}
+#an-map-design .an-network-space[data-stage=cards] .an-network-label{display:-webkit-box;overflow:hidden;overflow-wrap:anywhere;-webkit-line-clamp:1;-webkit-box-orient:vertical;font-size:12px;line-height:18px;font-weight:800}
+#an-map-design .an-network-space[data-stage=cards] .an-network-node[aria-pressed=true] .an-network-label{-webkit-line-clamp:2}
+#an-map-design .an-network-space[data-stage=cards] .an-network-node[aria-pressed=true] .an-network-meta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:600;color:var(--an-sub)}
+#an-map-design .an-network-space[data-stage=names] .an-network-node[data-kind=stock] .an-network-face{display:flex;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px}
+#an-map-design .an-network-space[data-stage=names] .an-network-node[data-kind=stock] .an-network-label{left:calc(50% + 16px);width:max(90px,var(--an-network-label-width))}
+#an-map-design .an-network-space[data-stage=names] .an-network-node:is([data-kind=source],[data-kind=candidate]):not([data-emphasis=true]) .an-network-label{display:none}
 #an-map-design .an-network-node[data-faded=true],#an-map-design .an-network-edge[data-faded=true]{opacity:.12}
 #an-map-design .an-network-node[aria-pressed=true]{background:light-dark(#e9edf2,#303945)}
 #an-map-design .an-network-inspector{overflow:auto;min-height:0;padding:16px;background:var(--an-panel);scrollbar-gutter:stable}
 #an-map-design .an-network-inspector h3{font-size:14px;font-weight:800;margin:0 0 8px;overflow-wrap:anywhere}
 #an-map-design .an-network-inspector p{margin:0 0 12px;color:var(--an-sub);overflow-wrap:anywhere}
+#an-map-design .an-network-inspector h4{font-size:13px;font-weight:800;margin:20px 0 8px}
+#an-map-design .an-network-inspector .an-network-excerpt{white-space:pre-wrap;line-height:1.7}
 #an-map-design .an-network-inspector button{display:block;width:100%;text-align:left;min-height:36px;padding:8px 10px;margin-top:8px;background:light-dark(#f8f9fb,#1d242c);overflow-wrap:anywhere}
 #an-map-design .an-network-foot{padding:8px 16px;background:var(--an-panel);color:var(--an-sub);font-size:11px}
+@media(prefers-reduced-motion:no-preference){#an-map-design .an-network-node{transition:opacity 160ms}}
 @media(hover:hover){#an-map-design .an-network-view button:hover{background:light-dark(#f1f3f5,#252c35)}}
-@media(max-width:700px){#an-map-design .an-network-main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) min(150px,35%)}#an-map-design .an-network-inspector{max-height:150px;padding:12px 16px}#an-map-design .an-network-head{padding:10px 12px;gap:6px}}
+@media(max-width:700px){#an-map-design .an-network-main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) min(220px,35%)}#an-map-design .an-network-inspector{max-height:220px;padding:12px 16px}#an-map-design .an-network-head{padding:10px 12px;gap:6px}}
 @media(pointer:coarse){#an-map-design .an-network-head button,#an-map-design .an-network-inspector button{min-height:44px}}
 `;root.append(memberNetworkStyle);
 const memberNetworkButton=document.createElement('button');memberNetworkButton.type='button';memberNetworkButton.className='an-tool';memberNetworkButton.textContent='전체 관계망';memberNetworkButton.setAttribute('aria-expanded','false');root.querySelector('.an-zoom').append(memberNetworkButton);
@@ -5438,28 +5446,35 @@ function memberNetworkKind(n){return n.kind==='stock'?'stock':memberRelationship
 function memberNetworkKindText(n){return {stock:'종목',relationship:'사건·관계',candidate:'미검수 후보',source:'근거 자료'}[memberNetworkKind(n)];}
 function memberNetworkSelect(id){
   const s=memberNetworkSession;if(!s)return;s.selected=s.selected===id?'':id;
+  const fromInspector=memberNetworkInspector.contains(document.activeElement);
   memberNetworkInspector.replaceChildren();
   const n=s.byId.get(s.selected),title=document.createElement('h3'),caption=document.createElement('p');
   title.textContent=n?n.name:s.elements.size?'연결을 선택해 보세요':'표시할 자료가 없어요';
-  caption.textContent=n?memberNetworkKindText(n)+' · '+memberRecordDateText(n):'현재 종목·필터 범위의 자료를 모두 표시합니다. 배치는 고정되며, 기존 작업판의 위치와 메모는 바뀌지 않아요.';
+  caption.textContent=n?memberNetworkKindText(n)+' · '+memberRecordDateText(n):'작은 점은 근거 자료, 이름이 보이는 점은 종목·사건입니다. 점을 선택하면 연결과 원문을 여기서 읽을 수 있어요. 확대해도 배치는 그대로예요.';
   memberNetworkInspector.append(title,caption);
   if(n){
+    const clear=document.createElement('button');clear.type='button';clear.textContent='선택 해제 · 전체 연결 보기';clear.onclick=()=>memberNetworkSelect('');memberNetworkInspector.append(clear);
     const connected=s.links.filter(e=>e.from===n.id||e.to===n.id),why=document.createElement('p');
     why.textContent=memberNetworkKind(n)==='source'?'점선은 원문이 해당 종목에 속한다는 뜻이며, 경제적 영향 판정은 아닙니다.':memberNetworkKind(n)==='candidate'?'검수 전 후보입니다. 확인된 관계로 표시하지 않습니다.':'연결 수는 경제적 중요도나 수익 확률이 아닙니다.';memberNetworkInspector.append(why);
     const count=document.createElement('p');count.textContent='표시 연결 '+connected.length+'개';memberNetworkInspector.append(count);
-    for(const e of connected){const peer=s.byId.get(e.from===n.id?e.to:e.from),v=s.visuals.get(e.id),line=document.createElement('p');line.textContent=[e.verb||'자료 연결',peer?.name||'종목 미확인',v?.statusLabel,v?.summaryLabel,v?.lineLabel].filter(Boolean).join(' · ');memberNetworkInspector.append(line);}
+    for(const e of connected){const peer=s.byId.get(e.from===n.id?e.to:e.from),v=s.visuals.get(e.id),line=document.createElement(peer?'button':'p');line.textContent=[e.verb||'자료 연결',peer?.name||'종목 미확인',v?.statusLabel,v?.summaryLabel,v?.lineLabel].filter(Boolean).join(' · ');if(peer){line.type='button';line.onclick=()=>memberNetworkSelect(peer.id);}memberNetworkInspector.append(line);}
     for(const evidence of n.evidence||[]){
+      const heading=document.createElement('h4');heading.textContent=evidence.title||evidence.source||'원문 근거';memberNetworkInspector.append(heading);
+      if(evidence.asOf){const date=document.createElement('p');date.textContent='자료 기준 '+evidence.asOf;memberNetworkInspector.append(date);}
+      if(evidence.explanation){const excerpt=document.createElement('p');excerpt.className='an-network-excerpt';excerpt.textContent=evidence.explanation;memberNetworkInspector.append(excerpt);}
       try{const url=new URL(evidence.url);if(url.protocol!=='https:'||url.username||url.password||/[\u0000-\u001f\u007f]/.test(decodeURIComponent(evidence.url)))continue;
+        const address=document.createElement('p');address.textContent=url.href;memberNetworkInspector.append(address);
         const b=document.createElement('button');b.type='button';b.textContent=evidence.source||evidence.title||'원문 열기';b.onclick=()=>memberPort.postMessage({type:'source',url:url.href});memberNetworkInspector.append(b);
       }catch{}
     }
   }
   memberNetworkHighlight(s.selected);
+  if(fromInspector){title.tabIndex=-1;title.focus({preventScroll:true});}
 }
 function memberNetworkHighlight(id){
-  const s=memberNetworkSession;if(!s)return;const linked=new Set(id?[id]:[]);
+  const s=memberNetworkSession;if(!s)return;const inspected=id;id=s.selected||id;const linked=new Set(id?[id]:[]);
   for(const e of s.links)if(e.from===id||e.to===id){linked.add(e.from);linked.add(e.to);}
-  for(const [key,el] of s.elements){el.dataset.faded=String(!!id&&!linked.has(key));el.setAttribute('aria-pressed',String(key===s.selected));}
+  for(const [key,el] of s.elements){el.dataset.faded=String(!!id&&!linked.has(key)&&key!==inspected);el.dataset.emphasis=String(linked.has(key)||key===inspected);el.setAttribute('aria-pressed',String(key===s.selected));}
   for(const [e,el] of s.paths)el.dataset.faded=String(!!id&&e.from!==id&&e.to!==id);
   s.engine?.highlight(id);
 }
@@ -5497,7 +5512,7 @@ function zoomMemberNetwork(next,at){
 function fitMemberNetwork(){
   const s=memberNetworkSession;if(!s)return;const ps=[...s.positions.values()],r=memberNetworkSpace.getBoundingClientRect();if(!ps.length)return;
   const left=Math.min(...ps.map(p=>p.x))-90,right=Math.max(...ps.map(p=>p.x))+90,top=Math.min(...ps.map(p=>p.y))-50,bottom=Math.max(...ps.map(p=>p.y))+50;
-  const z=Math.max(.02,Math.min(1,(r.width-48)/(right-left),(r.height-48)/(bottom-top)));
+  const z=Math.max(.02,Math.min(.65,(r.width-48)/(right-left),(r.height-48)/(bottom-top)));
   s.camera={zoom:z,panX:(500-(left+right)/2)*z,panY:(340-(top+bottom)/2)*z};drawMemberNetwork();
 }
 function closeMemberNetwork(){
