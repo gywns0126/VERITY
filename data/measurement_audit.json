@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-30T11:14:07+09:00",
+ "as_of": "2026-10-30T17:55:20+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -90,7 +90,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "42/42",
+     "coverage": "76/76",
      "via": [
       "current_price",
       "price"
@@ -101,7 +101,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "31/42",
+     "coverage": "49/76",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -112,7 +112,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "42/42",
+     "coverage": "76/76",
      "via": [
       "fscore_deltas"
      ],
@@ -122,7 +122,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "42/42",
+     "coverage": "75/76",
      "via": [
       "industry"
      ],
@@ -132,7 +132,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "18/42",
+     "coverage": "34/76",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -158,7 +158,7 @@
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 9,
+   "holdings_checked": 10,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -193,7 +193,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 15,
-   "stock_days": 9264,
+   "stock_days": 9280,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -250,27 +250,27 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 9,
+   "holdings_checked": 10,
    "coverage": {
     "sector": {
-     "filled": 9,
-     "total": 9,
+     "filled": 10,
+     "total": 10,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 9,
-     "total": 9,
+     "filled": 10,
+     "total": 10,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 9,
-     "total": 9,
+     "filled": 10,
+     "total": 10,
      "guard": "팩터 쏠림 차단"
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 24,
-    "scored": 24,
+    "with_pct": 37,
+    "scored": 37,
     "ok": true
    },
    "dead_guards": [],
@@ -278,7 +278,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 9,
+   "holdings_checked": 10,
    "no_profit_exit": [],
    "ladder_broken": [
     {
