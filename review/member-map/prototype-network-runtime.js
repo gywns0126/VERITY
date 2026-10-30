@@ -43,7 +43,7 @@ const memberNetworkStyle=document.createElement('style');memberNetworkStyle.text
 #an-map-design .an-network-space[data-stage=cards] .an-network-node[aria-pressed=true] .an-network-label{-webkit-line-clamp:2}
 #an-map-design .an-network-space[data-stage=cards] .an-network-node[aria-pressed=true] .an-network-meta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:600;color:var(--an-sub)}
 #an-map-design .an-network-space[data-stage=names] .an-network-node[data-kind=stock] .an-network-face{display:flex;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px}
-#an-map-design .an-network-space[data-stage=names] .an-network-node[data-kind=stock] .an-network-label{left:calc(50% + 16px)}
+#an-map-design .an-network-space[data-stage=names] .an-network-node[data-kind=stock] .an-network-label{left:calc(50% + 16px);width:max(90px,var(--an-network-label-width))}
 #an-map-design .an-network-space[data-stage=names] .an-network-node:is([data-kind=source],[data-kind=candidate]):not([data-emphasis=true]) .an-network-label{display:none}
 #an-map-design .an-network-node[data-faded=true],#an-map-design .an-network-edge[data-faded=true]{opacity:.12}
 #an-map-design .an-network-node[aria-pressed=true]{background:light-dark(#e9edf2,#303945)}
