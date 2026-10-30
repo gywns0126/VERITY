@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-30T17:55:20+09:00",
+ "as_of": "2026-10-30T23:32:47+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -90,7 +90,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "76/76",
+     "coverage": "60/60",
      "via": [
       "current_price",
       "price"
@@ -101,7 +101,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "49/76",
+     "coverage": "29/60",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -112,7 +112,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "76/76",
+     "coverage": "60/60",
      "via": [
       "fscore_deltas"
      ],
@@ -122,7 +122,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "75/76",
+     "coverage": "60/60",
      "via": [
       "industry"
      ],
@@ -132,7 +132,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "34/76",
+     "coverage": "16/60",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -180,9 +180,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 31,
-   "days_without_any_cap_pct": 19.5,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.3%). cap 없는 날 31/159일",
+   "days_without_any_cap": 30,
+   "days_without_any_cap_pct": 18.9,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.3%). cap 없는 날 30/159일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -193,7 +193,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 15,
-   "stock_days": 9280,
+   "stock_days": 9264,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -269,8 +269,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 37,
-    "scored": 37,
+    "with_pct": 40,
+    "scored": 40,
     "ok": true
    },
    "dead_guards": [],
