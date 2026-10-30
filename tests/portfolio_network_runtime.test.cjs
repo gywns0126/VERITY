@@ -56,7 +56,7 @@ function fixture(){
  const graph=element();
  const context={Map,Set,Math,Number,Float64Array,TypeError,URL,document:{createElement:element,createElementNS:(_,tag)=>element(tag)},
   root,memberNetworkHost:host,memberNetworkSpace:space,memberNetworkNodes:nodes,memberNetworkSvg:svg,memberNetworkInspector:inspector,
-  memberNetworkButton:button,memberNetworkResize:observer,memberNetworkSession:null,memberNetworkOpening:false,memberNetworkGraph:graph,memberReset:false,
+  memberNetworkButton:button,memberNetworkResize:observer,memberNetworkSession:null,memberNetworkOpening:false,memberNetworkCache:null,memberNetworkGraph:graph,memberReset:false,
   memberLoadNetworkEngine:async()=>{},memberCreateNetworkEngine(...args){engineCalls.push(args);return engine;},
   space:element(),nativeGesture:false,cancelGesture:null,closePreview(){},closeSearch(){},
   memberScope:()=>scope,edges,inScenario:e=>e.scenario==='current',eventHoldings:n=>n.kind==='stock'?[n.id]:['stock'],
@@ -68,11 +68,11 @@ function fixture(){
   state:native,nodeById:{stock,source:record,candidate},moveHistory:native.history,
   initialPositions:readOnlyMap([['source',{x:.5,y:.5}]]),focusOffsets:readOnlyMap([['source',{x:.01,y:.02}]]),
   memberLayoutBases:readOnlyMap([['source',{x:.5,y:.5}]])};
- const names=['memberNetworkStage','memberNetworkSnapshot','memberNetworkKind','memberNetworkKindText','memberNetworkSelect',
+ const names=['memberNetworkStage','memberNetworkSnapshot','memberNetworkKind','memberNetworkKindText','memberNetworkOptions','memberNetworkSyncControls','memberNetworkFilter','memberNetworkMove','memberNetworkArrange','memberNetworkCardDrag','memberNetworkSelect',
   'memberNetworkHighlight','renderMemberNetworkGrid','drawMemberNetwork','zoomMemberNetwork','fitMemberNetwork','closeMemberNetwork','openMemberNetwork'];
  vm.runInNewContext(geometry+'\n'+functionSource(relationship,'memberRelationshipIsMapRecord')+'\n'+names.map(name=>functionSource(source,name)).join('\n'),context);
  const actualLayout=context.memberNetworkLayout;let layoutCalls=0;
- context.memberNetworkLayout=(items,links)=>{layoutCalls++;return actualLayout(items,links);};
+ context.memberNetworkLayout=(items,links,options)=>{layoutCalls++;return actualLayout(items,links,options);};
  const nativeValues=()=>clone({scope,edges,native,initial:[...context.initialPositions],offsets:[...context.focusOffsets],bases:[...context.memberLayoutBases]});
  const before=nativeValues();
  return{context,scope,edges,stock,record,candidate,native,root,host,space,nodes,svg,inspector,live,button,controls,alreadyInert,observer,hostParts,
@@ -360,4 +360,43 @@ test('embedded network modules match their canonical source verbatim',()=>{
  const engine=fs.readFileSync(path.join(directory,'prototype-network-engine.js'),'utf8');
  assert.ok(canvas.includes(engine.trimEnd()),'engine not yet emitted or mismatched');
  assert.ok(canvas.includes(source.trimEnd()),'runtime not yet emitted or mismatched');
+});
+test('search/type/local-depth filters change only the visible induced graph, not world positions or camera',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+ const before=clone([...s.positions]),camera=clone(s.camera),calls=[];s.engine.setVisible=ids=>calls.push([...ids]);
+ s.options.query='Original';c.memberNetworkFilter();assert.deepEqual([...s.visible],['source']);assert.equal(s.visibleLinks.length,0);
+ assert.equal(s.elements.get('stock').hidden,true);assert.equal(s.elements.get('stock').tabIndex,-1);
+ s.options.query='';s.options.kinds=['stock','candidate'];c.memberNetworkFilter();assert.deepEqual([...s.visible].sort(),['candidate','stock']);assert.equal(s.visibleLinks.length,1);
+ s.options.kinds=['stock','source','candidate'];s.options.anchor='source';s.options.depth=1;c.memberNetworkFilter();assert.deepEqual([...s.visible].sort(),['source','stock']);
+ s.options.depth=2;c.memberNetworkFilter();assert.equal(s.visible.size,3);
+ s.options.query='no-such-match';c.memberNetworkFilter();assert.equal(s.visible.size,0);c.fitMemberNetwork();assert.ok(f.hostParts.get('footer').textContent.includes('표시 0/3'));
+ assert.equal(calls.length,5);assert.deepEqual(clone([...s.positions]),before);assert.deepEqual(clone(s.camera),camera);assert.equal(f.layoutCalls(),1);f.assertNative();
+});
+test('unlocked exploration move pins one node and survives view return without editing native draft',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,hooks=f.engineCalls[0][5],before=clone([...s.positions]);
+ hooks.move('stock',{x:123,y:456});assert.deepEqual(clone([...s.positions]),before,'locked');
+ s.draggable=true;hooks.move('stock',{x:123,y:456});assert.deepEqual({...s.positions.get('stock')},{x:123,y:456});assert.deepEqual({...s.pinned.get('stock')},{x:123,y:456});
+ hooks.move('stock',{x:NaN,y:1});assert.deepEqual({...s.positions.get('stock')},{x:123,y:456});
+ for(const [id,p]of before)if(id!=='stock')assert.deepEqual({...s.positions.get(id)},p);
+ c.closeMemberNetwork();await c.openMemberNetwork();assert.deepEqual({...c.memberNetworkSession.positions.get('stock')},{x:123,y:456});assert.equal(c.memberNetworkSession.draggable,false);f.assertNative();
+});
+test('explicit layout adjustment honors pinned point, updates engine positions, and leaves camera alone',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,camera=clone(s.camera),updates=[];
+ s.draggable=true;c.memberNetworkMove('stock',{x:700,y:100});s.engine.setPositions=ps=>updates.push([...ps]);
+ s.options.linkDistance=300;s.options.repulsion=2;c.memberNetworkArrange();
+ assert.equal(f.layoutCalls(),2);assert.equal(updates.length,1);assert.deepEqual({...s.positions.get('stock')},{x:700,y:100});assert.deepEqual(clone(s.camera),camera);f.assertNative();
+});
+test('card pointer drag prevents selection and writes exploration only',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,b=s.elements.get('source'),p={...s.positions.get('source')};
+ const moved=[];s.engine.setPositions=ps=>moved.push([...ps]);s.draggable=true;s.camera.zoom=2;
+ b.setPointerCapture=()=>{};b.hasPointerCapture=()=>true;b.releasePointerCapture=()=>{};
+ const event=(x,y)=>({button:0,pointerId:1,clientX:x,clientY:y,stopPropagation(){}});
+ b.onpointerdown(event(10,10));b.onpointermove(event(50,30));b.onpointerup(event(50,30));b.onclick();
+ assert.equal(s.selected,'');assert.deepEqual({...s.positions.get('source')},{x:p.x+20,y:p.y+10});assert.equal(moved.length,1);assert.equal(s.pinned.has('source'),true);f.assertNative();
+ b.onclick();assert.equal(s.selected,'source');
+});
+test('display threshold only changes stage, and editable controls bypass graph shortcuts',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,before=clone([...s.positions]);
+ s.options.labelThreshold=.6;c.zoomMemberNetwork(.4);assert.equal(f.space.dataset.stage,'dots');c.zoomMemberNetwork(.7);assert.equal(f.space.dataset.stage,'names');
+ assert.deepEqual(clone([...s.positions]),before);assert.match(source,/\['INPUT','SELECT','TEXTAREA','BUTTON','SUMMARY'\]\.includes\(e\.target\.tagName\)/);f.assertNative();
 });
