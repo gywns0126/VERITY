@@ -162,7 +162,8 @@ const TRANSPORT_CODES = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENO
   'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'UND_ERR_SOCKET', 'CERT_HAS_EXPIRED', 'ERR_TLS_CERT_ALTNAME_INVALID']);
 async function publish(dir, { put, head, fetch, token, pause = ms => new Promise(resolve => setTimeout(resolve, ms)),
   clock = () => performance.now(), diagnostic = value => process.stderr.write('Company structure operation failed: ' + JSON.stringify(value) + '\n'),
-  readWarning = value => process.stderr.write('Company structure read retry: ' + JSON.stringify(value) + '\n') } = {}) {
+  readWarning = value => process.stderr.write('Company structure read retry: ' + JSON.stringify(value) + '\n'),
+  recoveryWarning = value => process.stderr.write('Company structure write recovery: ' + JSON.stringify(value) + '\n') } = {}) {
   const data = loadArtifacts(dir); // Validate EVERY local file before any remote mutation.
   if (!/^vercel_blob_rw_rte5guenhonw9fzn_/iu.test(token || '')) throw Error('Expected Blob store credential missing');
   const diagnosed = new WeakSet();
@@ -172,8 +173,9 @@ async function publish(dir, { put, head, fetch, token, pause = ms => new Promise
     try { diagnostic({ stage, category, ...fields }); } catch { /* Logging must not hide a publication failure. */ }
     const error = new Error('Company structure publication failed'); diagnosed.add(error); throw error;
   }
+  const payloadReset = Symbol('payload-reset');
   let gate = Promise.resolve(), lastStart = -Infinity;
-  async function remote(stage, action) {
+  async function remote(stage, action, reconcileReset = false) {
     const prior = gate; let release;
     gate = new Promise(resolve => { release = resolve; });
     try {
@@ -190,6 +192,12 @@ async function publish(dir, { put, head, fetch, token, pause = ms => new Promise
       const transport = TRANSPORT_ERRORS.has(error?.name) ? error.name : null;
       const code = [error?.code, error?.cause?.code].find(value => TRANSPORT_CODES.has(value));
       const status = [error?.status, error?.statusCode].find(value => Number.isInteger(value) && value >= 100 && value <= 599);
+      // A reset does not establish whether an immutable PUT reached storage.
+      // Only its caller may reconcile bytes; SDK/HTTP/other transport failures
+      // and every manifest operation retain the original fail-closed path.
+      if (reconcileReset && stage === 'payload-write' && !sdk && !status && code === 'ECONNRESET') {
+        return { [payloadReset]: { ...(transport ? { errorClass: transport } : {}), transportCode: code } };
+      }
       stop(stage, sdk ? 'sdk' : transport || code ? 'transport' : 'unknown', {
         ...(sdk || transport ? { errorClass: sdk || transport } : {}), ...(code ? { transportCode: code } : {}),
         ...(status ? { httpStatus: status } : {}) });
@@ -201,7 +209,8 @@ async function publish(dir, { put, head, fetch, token, pause = ms => new Promise
         const response = await fetch(BASE + name + '?verify=' + Date.now(), { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000) });
         if (response.status === 404) return null;
         // Only a known transient HTTP response to an idempotent GET is replayed.
-        // PUT/HEAD, credentials, redirects, transport and byte/schema failures are not retried.
+        // This read loop never retries PUT/HEAD, credentials, redirects,
+        // transport or byte/schema failures. Payload reset reconciliation is separate.
         if ([429, 500, 502, 503, 504].includes(response.status) && attempt < 3) {
           try { await response.body?.cancel(); } catch { /* No response body enters diagnostics. */ }
           return { retryStatus: response.status };
@@ -217,7 +226,7 @@ async function publish(dir, { put, head, fetch, token, pause = ms => new Promise
       await pause(attempt * 1000);
     }
   }
-  let uploaded = 0, unchanged = 0;
+  let uploaded = 0, unchanged = 0, reconciled = 0;
   async function sync(name, bytes, expected) {
     const prefix = name === INDEX ? 'manifest' : 'payload';
     const prior = expected ? expected.prior : await readRemote(name, 'payload-read');
@@ -225,8 +234,23 @@ async function publish(dir, { put, head, fetch, token, pause = ms => new Promise
     const metadata = expected ? expected.metadata : prior ? await remote(prefix + '-metadata', () => head(BASE + name, { token, abortSignal: AbortSignal.timeout(30000) })) : null;
     if (prior && !metadata?.etag) stop(prefix + '-metadata', 'conditional-write-unavailable');
     if (metadata && (metadata.url !== BASE + name || metadata.pathname !== name)) stop(prefix + '-metadata', 'metadata-mismatch');
-    const result = await remote(prefix + '-write', () => put(name, bytes, { token, access: 'public', addRandomSuffix: false, allowOverwrite: !!prior,
-      ...(prior ? { ifMatch: metadata.etag } : {}), abortSignal: AbortSignal.timeout(30000), contentType: 'application/json', cacheControlMaxAge: name === INDEX ? 60 : 31536000 }));
+    const originalEtag = metadata?.etag;
+    let result;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      result = await remote(prefix + '-write', () => put(name, bytes, { token, access: 'public', addRandomSuffix: false, allowOverwrite: !!prior,
+        ...(prior ? { ifMatch: originalEtag } : {}), abortSignal: AbortSignal.timeout(30000), contentType: 'application/json', cacheControlMaxAge: name === INDEX ? 60 : 31536000 }), prefix === 'payload');
+      if (!result?.[payloadReset]) break;
+      try { recoveryWarning({ stage: 'payload-write', category: 'reset-reconciliation', transportCode: 'ECONNRESET', attempt, maxAttempts: 2 }); } catch { /* Logs cannot authorize a write. */ }
+      for (let probe = 0; probe < 3; probe++) {
+        if (probe) await pause(1000);
+        const actual = await readRemote(name, 'payload-write-readback');
+        if (actual?.equals(bytes)) { uploaded++; reconciled++; return; }
+        // Never repair a newly different object during error recovery. The
+        // original create-only/ETag precondition is retained on the sole retry.
+        if (prior ? !actual?.equals(prior) : actual !== null) stop('payload-write-readback', 'write-state-changed');
+      }
+      if (attempt === 2) stop('payload-write', 'transport', result[payloadReset]);
+    }
     if (result.url !== BASE + name) stop(prefix + '-write', 'destination-mismatch');
     uploaded++;
     for (let i = 0; i < 12; i++) {
@@ -260,7 +284,9 @@ async function publish(dir, { put, head, fetch, token, pause = ms => new Promise
   const current = await readRemote(INDEX, 'manifest-cas');
   if ((before === null) !== (current === null) || before && !before.equals(current)) stop('manifest-cas', 'manifest-changed');
   await sync(INDEX, data.manifestBytes, { prior: before, metadata: indexMetadata }); // Last write, only after every immutable payload is verified.
-  return { issuers: Object.keys(data.manifest.issuers).length, payloads: data.payloads.size, uploaded, unchanged };
+  // Reconciled is a subset of uploaded, not additional files or a source count.
+  return { issuers: Object.keys(data.manifest.issuers).length, payloads: data.payloads.size, uploaded, unchanged,
+    ...(reconciled ? { reconciled } : {}) };
 }
 
 async function main(argv = process.argv.slice(2)) {

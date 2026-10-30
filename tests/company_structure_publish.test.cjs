@@ -387,7 +387,7 @@ test('transport diagnostics use only allowlisted names/codes and never inspect s
       throw error;
     };
     await assert.rejects(publish(dir, r.options), error => error.message === 'Company structure publication failed');
-    assert.equal(calls, 1); assert.equal(r.writes.includes(INDEX), false);
+    assert.equal(calls, code === 'ECONNRESET' ? 2 : 1); assert.equal(r.writes.includes(INDEX), false);
     assert.deepEqual(r.diagnostics, [{ stage: 'payload-write', ...expected }]);
     assert.equal(JSON.stringify(r.diagnostics).includes('PRIVATE'), false);
   }
@@ -697,6 +697,7 @@ test('committed US snapshots preserve the 22-document baseline as parsed or expl
   }
   assert.equal(JSON.stringify(original), before); assert.deepEqual(safe.requestBudget, original.requestBudget);
   const result = buildArtifacts({ universe: committed('universe_search.json'), cikMap: committed('sec_ticker_cik_map.json'),
+    reviewedAliases: committed('member_map_company_structure_aliases.json'),
     generatedAt: original.generatedAt, usSources: safe, strictSources: true });
   assert.equal(result.manifest.coverage.US.checkedCiks, parsed.length);
   const boundPayloads = new Map([...result.payloads.values()].map(bytes => {
