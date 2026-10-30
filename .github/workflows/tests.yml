@@ -73,6 +73,9 @@ jobs:
       - name: Profile privacy SQL regression (isolated PostgreSQL)
         run: node tests/profile_private_boundary_sql.cjs
 
+      - name: Company structure publication recovery regression (offline)
+        run: node --test tests/company_structure_publish.test.cjs tests/company_structure_write_recovery.test.cjs
+
       - name: Syntax sanity (ast.parse on all .py)
         run: |
           python -c "
