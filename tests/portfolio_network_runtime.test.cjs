@@ -505,6 +505,17 @@ test('normal mouse canvas background is not captured by the custom adapter',asyn
  assert.deepEqual(clone(s.camera),before);f.assertNative();c.closeMemberNetwork();
 });
 
+test('a new ordinary mouse pointerdown clears release ghost suppression before the next engine selection',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,input=c.memberNetworkInput(s),hooks=f.engineCalls[0][5];
+ const camera=clone(s.camera),positions=clone([...s.positions]);input.suppressUntil=Date.now()+300;
+ hooks.select('source');assert.equal(s.selected,'','release ghost remains suppressed before a new pointerdown');
+ const down=inputEvent(f,{type:'pointerdown',pointerType:'mouse',target:f.graph});c.memberNetworkPointerDown(down);
+ assert.equal(input.suppressUntil,0);assert.equal(input.points.size,0);assert.equal(input.drag,null);
+ assert.equal(down.counts.prevented,0);assert.equal(down.counts.stopped,0);
+ hooks.select('source');assert.equal(s.selected,'source','the next genuine click is not swallowed');
+ assert.deepEqual(clone(s.camera),camera);assert.deepEqual(clone([...s.positions]),positions);f.assertNative();c.closeMemberNetwork();
+});
+
 test('one-finger touch starts pan on its first pointer without click/focus or native-node movement',async()=>{
  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,positions=clone([...s.positions]);
  s.camera={zoom:.6,panX:83,panY:-47};

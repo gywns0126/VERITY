@@ -140,6 +140,7 @@ function memberNetworkRestoreDrag(s,drag){
 }
 function memberNetworkPointerDown(e){
   const s=memberNetworkSession;if(!s||(e.button!==0&&e.button!==1))return;const input=memberNetworkInput(s),touch=e.pointerType==='touch',card=e.target.closest?.('.an-network-node');
+  if(!input.points.size&&!input.drag&&!input.cancelCard&&!input.engineDragging)input.suppressUntil=0;
   if(!touch&&!input.space&&e.button!==1&&(!card||s.draggable))return;
   input.points.set(e.pointerId,{x:e.clientX,y:e.clientY});input.gesture=null;
   if(touch||input.space||e.button===1){e.preventDefault();e.stopPropagation();memberNetworkSpace.setPointerCapture(e.pointerId);}
