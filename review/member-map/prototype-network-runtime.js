@@ -79,6 +79,7 @@ const memberNetworkHost=document.createElement('section');memberNetworkHost.clas
 memberNetworkHost.innerHTML='<header class="an-network-head"><h2>전체 관계망</h2><button type="button" data-network-action="lock" aria-pressed="true">배치 잠김</button><button type="button" data-network-action="out" aria-label="관계망 축소">−</button><output aria-label="관계망 배율"></output><button type="button" data-network-action="in" aria-label="관계망 확대">+</button><button type="button" data-network-action="fit">한눈에</button><button type="button" data-network-action="close">원래 보기</button></header><div class="an-network-main"><div class="an-network-space" tabindex="0" role="group" aria-label="관계망 · 배경 드래그로 이동, 휠로 확대축소"><svg aria-hidden="true"></svg><svg class="an-network-grid" aria-hidden="true"><path class="an-network-grid-fine"/><path class="an-network-grid-coarse"/></svg><div class="an-network-graph" aria-hidden="true"></div><div class="an-network-nodes"></div></div><aside class="an-network-side"><details class="an-network-settings" open><summary>탐색 설정</summary><label>검색<input type="search" data-network-filter="query" aria-label="관계망 검색" placeholder="종목·사건·원문 검색"></label><div class="an-network-results" aria-label="검색 결과"></div><div class="an-network-kinds"><label><input type="checkbox" data-network-kind="stock" checked>종목</label><label><input type="checkbox" data-network-kind="relationship" checked>사건·관계</label><label><input type="checkbox" data-network-kind="source" checked>근거 자료</label><label><input type="checkbox" data-network-kind="candidate" checked>미검수 후보</label></div><label><input type="checkbox" data-network-filter="orphans" checked>연결 없는 항목도 표시</label><label>연결 범위<select data-network-filter="depth" aria-label="연결 깊이"><option value="0">전체 연결</option><option value="1">선택 항목 주변 1단계</option><option value="2">선택 항목 주변 2단계</option><option value="3">선택 항목 주변 3단계</option></select></label><button type="button" data-network-action="filters-reset">필터 초기화</button><details><summary>표시·배치 조절</summary><label><input type="checkbox" data-network-degree checked>연결 수에 따라 점 크기</label><label>점 크기<input type="range" min="0.5" max="2" step="0.1" value="1" data-network-display="nodeScale"></label><label>선 굵기<input type="range" min="0.5" max="2" step="0.1" value="1" data-network-display="edgeScale"></label><label>이름 표시 배율<input type="range" min="0.1" max="0.7" step="0.01" value="0.28" data-network-display="labelThreshold"></label><label>연결 거리<input type="range" min="80" max="300" step="10" value="150" data-network-layout="linkDistance"></label><label>밀어내기<input type="range" min="0.5" max="3" step="0.25" value="1" data-network-layout="repulsion"></label><button type="button" data-network-action="arrange">배치 정돈</button><button type="button" data-network-action="unpin">탐색 위치 고정 해제</button><p>배치 정돈은 버튼을 눌렀을 때만 실행돼요. 직접 옮긴 점은 고정됩니다. 점 크기는 연결 수, 선은 기존 관계 판정을 따르며 조절값은 화면에만 적용돼요. 원래 지도 기록은 바뀌지 않아요. 탐색 위치는 이 페이지에서만 유지되며 새로고침하면 초기화돼요.</p></details></details><div class="an-network-inspector" aria-label="관계망 선택 자료"></div></aside></div><footer class="an-network-foot" aria-live="polite"></footer>';
 root.append(memberNetworkHost);
 const memberNetworkSpace=memberNetworkHost.querySelector('.an-network-space'),memberNetworkGraph=memberNetworkHost.querySelector('.an-network-graph'),memberNetworkSvg=memberNetworkHost.querySelector('svg'),memberNetworkNodes=memberNetworkHost.querySelector('.an-network-nodes'),memberNetworkInspector=memberNetworkHost.querySelector('.an-network-inspector');
+memberNetworkSpace.setAttribute('aria-label','관계망 · 휠·두 손가락 이동 · ⌘/Ctrl+휠·핀치 확대축소 · Space+드래그 이동');
 let memberNetworkSession=null,memberNetworkOpening=false,memberNetworkCache=null;
 function memberNetworkOptions(){return {query:'',kinds:['stock','relationship','source','candidate'],showOrphans:true,depth:0,anchor:'',nodeScale:1,edgeScale:1,degreeSizing:true,labelThreshold:.28,linkDistance:150,repulsion:1};}
 function memberNetworkSyncControls(){
@@ -112,11 +113,60 @@ function memberNetworkArrange(){
 }
 function memberNetworkCardDrag(b,id){
   let drag=null,suppress=false;
-  b.onpointerdown=e=>{const s=memberNetworkSession;if(!s?.draggable||e.button!==0)return;const p=s.positions.get(id);drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,p:{...p},moved:false};b.setPointerCapture(e.pointerId);e.stopPropagation();};
+  b.onpointerdown=e=>{const s=memberNetworkSession;if(!s?.draggable||e.button!==0||s.input?.space||e.pointerType==='touch')return;const p=s.positions.get(id);drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,p:{...p},pin:s.pinned.get(id),moved:false,cancel:()=>finish(e,true)};memberNetworkInput(s).cancelCard=drag.cancel;b.setPointerCapture(e.pointerId);e.stopPropagation();};
   b.onpointermove=e=>{const s=memberNetworkSession;if(!s||!drag||drag.pointer!==e.pointerId)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)<4&&!drag.moved)return;drag.moved=true;const p={x:drag.p.x+dx/s.camera.zoom,y:drag.p.y+dy/s.camera.zoom};memberNetworkMove(id,p);s.engine?.setPositions?.(new Map([[id,p]]));e.stopPropagation();};
-  const finish=e=>{if(!drag||drag.pointer!==e.pointerId)return;suppress=drag.moved;drag=null;if(b.hasPointerCapture(e.pointerId))b.releasePointerCapture(e.pointerId);e.stopPropagation();memberNetworkFilter();};
-  b.onpointerup=finish;b.onpointercancel=finish;
+  const finish=(e,cancelled=false)=>{if(!drag||drag.pointer!==e.pointerId)return;const before=drag;drag=null;suppress=before.moved||cancelled;const s=memberNetworkSession;if(s?.input?.cancelCard===before.cancel)s.input.cancelCard=null;if(cancelled&&s){s.positions.set(id,before.p);if(before.pin)s.pinned.set(id,before.pin);else s.pinned.delete(id);b.dataset.pinned=String(s.pinned.has(id));s.engine?.setPositions?.(new Map([[id,before.p]]));}if(b.hasPointerCapture(e.pointerId))b.releasePointerCapture(e.pointerId);e.stopPropagation();memberNetworkFilter();};
+  b.onpointerup=e=>finish(e);b.onpointercancel=e=>finish(e,true);b.onlostpointercapture=e=>finish(e,true);
   b.onclick=()=>{if(suppress){suppress=false;return;}memberNetworkSelect(id);};
+}
+function memberNetworkInput(s){return s.input||(s.input={points:new Map(),drag:null,gesture:null,space:false,suppressUntil:0});}
+function memberNetworkWheel(e){
+  const s=memberNetworkSession;if(!s)return;e.preventDefault();e.stopPropagation();const input=memberNetworkInput(s);if(input.gesture||input.points.size||input.drag||input.cancelCard||input.engineDragging)return;
+  const r=memberNetworkSpace.getBoundingClientRect(),unit=e.deltaMode===1?16:e.deltaMode===2?r.height:1;
+  if(!e.ctrlKey&&!e.metaKey){s.camera.panX-=(e.shiftKey&&!e.deltaX?e.deltaY:e.deltaX)*unit;s.camera.panY-=(e.shiftKey&&!e.deltaX?0:e.deltaY)*unit;drawMemberNetwork();return;}
+  const delta=Math.max(-120,Math.min(120,e.deltaY*unit));zoomMemberNetwork(s.camera.zoom*Math.exp(-delta*(e.ctrlKey ? .012 : .003)),{x:e.clientX-r.left,y:e.clientY-r.top});
+}
+function memberNetworkGestureStart(e){const s=memberNetworkSession;if(!s)return;e.preventDefault();e.stopPropagation();const input=memberNetworkInput(s);if(input.points.size)return;input.gesture={zoom:s.camera.zoom,scale:e.scale||1,x:e.clientX,y:e.clientY};}
+function memberNetworkGestureChange(e){const s=memberNetworkSession;if(!s)return;e.preventDefault();e.stopPropagation();const g=memberNetworkInput(s).gesture;if(!g)return;const r=memberNetworkSpace.getBoundingClientRect();zoomMemberNetwork(g.zoom*(e.scale||1)/g.scale,{x:g.x-r.left,y:g.y-r.top});}
+function memberNetworkGestureEnd(e){if(!memberNetworkSession)return;e.preventDefault();e.stopPropagation();memberNetworkInput(memberNetworkSession).gesture=null;}
+function memberNetworkTouchHit(e,s){
+  const card=e.target.closest?.('.an-network-node');if(card)return card.dataset.networkNode;
+  const r=memberNetworkSpace.getBoundingClientRect();let nearest='',distance=18;
+  for(const [id,p] of s.positions){if(!s.visible.has(id))continue;const d=Math.hypot(e.clientX-r.left-r.width/2-(p.x-500)*s.camera.zoom-s.camera.panX,e.clientY-r.top-r.height/2-(p.y-340)*s.camera.zoom-s.camera.panY);if(d<distance){nearest=id;distance=d;}}
+  return nearest;
+}
+function memberNetworkRestoreDrag(s,drag){
+  if(drag?.mode!=='node'||!drag.p)return;s.positions.set(drag.id,{...drag.p});if(drag.pin)s.pinned.set(drag.id,{...drag.pin});else s.pinned.delete(drag.id);s.elements.get(drag.id).dataset.pinned=String(s.pinned.has(drag.id));s.engine?.setPositions?.(new Map([[drag.id,drag.p]]));drawMemberNetwork();
+}
+function memberNetworkPointerDown(e){
+  const s=memberNetworkSession;if(!s||(e.button!==0&&e.button!==1))return;const input=memberNetworkInput(s),touch=e.pointerType==='touch',card=e.target.closest?.('.an-network-node');
+  if(!touch&&!input.space&&e.button!==1&&(!card||s.draggable))return;
+  input.points.set(e.pointerId,{x:e.clientX,y:e.clientY});input.gesture=null;
+  if(touch||input.space||e.button===1){e.preventDefault();e.stopPropagation();memberNetworkSpace.setPointerCapture(e.pointerId);}
+  if(input.points.size>1){memberNetworkRestoreDrag(s,input.drag);const [a,b]=[...input.points.values()];input.drag={mode:'pinch',distance:Math.max(1,Math.hypot(b.x-a.x,b.y-a.y)),x:(a.x+b.x)/2,y:(a.y+b.y)/2,camera:{...s.camera},moved:true};input.suppressUntil=Date.now()+300;return;}
+  const id=touch?memberNetworkTouchHit(e,s):card?.dataset.networkNode||'';
+  input.drag={mode:touch&&s.draggable&&id&&!input.space?'node':'pan',id,p:id?{...s.positions.get(id)}:null,pin:s.pinned.get(id),x:e.clientX,y:e.clientY,camera:{...s.camera},pointer:e.pointerId,moved:false,touch};
+}
+function memberNetworkPointerMove(e){
+  const s=memberNetworkSession,input=s?.input;if(!input?.points.has(e.pointerId)||!input.drag)return;input.points.set(e.pointerId,{x:e.clientX,y:e.clientY});const d=input.drag;
+  if(input.points.size>1){const [a,b]=[...input.points.values()],r=memberNetworkSpace.getBoundingClientRect(),x=(a.x+b.x)/2-r.left-r.width/2,y=(a.y+b.y)/2-r.top-r.height/2,z=Math.max(.02,Math.min(4,d.camera.zoom*Math.hypot(b.x-a.x,b.y-a.y)/d.distance)),ratio=z/d.camera.zoom;
+    s.camera={zoom:z,panX:x-(d.x-r.left-r.width/2-d.camera.panX)*ratio,panY:y-(d.y-r.top-r.height/2-d.camera.panY)*ratio};
+  }else{const dx=e.clientX-d.x,dy=e.clientY-d.y;if(!d.moved&&Math.hypot(dx,dy)<4)return;d.moved=true;
+    if(d.mode==='node'){const p={x:d.p.x+dx/s.camera.zoom,y:d.p.y+dy/s.camera.zoom};memberNetworkMove(d.id,p);s.engine?.setPositions?.(new Map([[d.id,p]]));}
+    else{s.camera.panX=d.camera.panX+dx;s.camera.panY=d.camera.panY+dy;}}
+  e.preventDefault();e.stopPropagation();memberNetworkSpace.setPointerCapture(e.pointerId);input.suppressUntil=Date.now()+300;drawMemberNetwork();
+}
+function memberNetworkPointerEnd(e){
+  const s=memberNetworkSession,input=s?.input;if(!input?.points.has(e.pointerId))return;const d=input.drag,cancelled=e.type==='pointercancel'||e.type==='lostpointercapture';input.points.delete(e.pointerId);
+  if(cancelled)memberNetworkRestoreDrag(s,d);
+  if(input.points.size){const [pointer,p]=[...input.points][0];input.drag={mode:'pan',id:'',pointer,x:p.x,y:p.y,camera:{...s.camera},moved:true,touch:true};}
+  else input.drag=null;
+  if(memberNetworkSpace.hasPointerCapture(e.pointerId))memberNetworkSpace.releasePointerCapture(e.pointerId);
+  if(d?.moved||cancelled){input.suppressUntil=Date.now()+300;e.preventDefault();e.stopPropagation();}
+  else if(d?.touch){memberNetworkSelect(d.id||'');input.suppressUntil=Date.now()+300;e.preventDefault();e.stopPropagation();}
+}
+function memberNetworkCancelInput(){
+  const s=memberNetworkSession,input=s?.input;if(!input)return;input.cancelCard?.();memberNetworkRestoreDrag(s,input.drag);memberNetworkRestoreDrag(s,input.engineDrag);input.engineDrag=null;input.engineDragging=false;input.drag=null;input.gesture=null;input.space=false;const ids=[...input.points.keys()];input.points.clear();for(const id of ids)if(memberNetworkSpace.hasPointerCapture(id))memberNetworkSpace.releasePointerCapture(id);
 }
 function memberNetworkKind(n){return n.kind==='stock'?'stock':memberRelationshipIsMapRecord(n)?'relationship':n.layer==='candidates'?'candidate':'source';}
 function memberNetworkKindText(n){return {stock:'종목',relationship:'사건·관계',candidate:'미검수 후보',source:'근거 자료'}[memberNetworkKind(n)];}
@@ -195,7 +245,7 @@ function fitMemberNetwork(){
   s.camera={zoom:z,panX:(500-(left+right)/2)*z,panY:(340-(top+bottom)/2)*z};drawMemberNetwork();
 }
 function closeMemberNetwork(){
-  const s=memberNetworkSession;if(!s)return;memberNetworkCache={key:s.key,positions:new Map(s.positions),pinned:new Map(s.pinned),options:{...s.options,kinds:s.options.kinds.slice()},camera:{...s.camera}};s.engine?.destroy();memberNetworkSession=null;memberNetworkHost.hidden=true;delete root.dataset.networkOpen;
+  const s=memberNetworkSession;if(!s)return;memberNetworkCancelInput();memberNetworkCache={key:s.key,positions:new Map(s.positions),pinned:new Map(s.pinned),options:{...s.options,kinds:s.options.kinds.slice()},camera:{...s.camera}};s.engine?.destroy();memberNetworkSession=null;memberNetworkHost.hidden=true;delete root.dataset.networkOpen;
   for(const [el,inert] of s.inert)if(el.isConnected&&root.contains(el))el.inert=inert;
   memberNetworkNodes.replaceChildren();memberNetworkSvg.replaceChildren();memberNetworkGraph.replaceChildren();memberNetworkResize.disconnect();memberNetworkButton.setAttribute('aria-expanded','false');
   if(!memberReset&&memberNetworkButton.isConnected)memberNetworkButton.focus({preventScroll:true});
@@ -230,7 +280,11 @@ async function openMemberNetwork(){
   }
   try{s.engine=memberCreateNetworkEngine(memberNetworkGraph,items,links,s.positions,s.visuals,{
     viewport(camera){if(memberNetworkSession!==s)return;s.camera=camera;drawMemberNetwork();},
-    select(id){if(memberNetworkSession===s)memberNetworkSelect(id);},highlight(id){if(memberNetworkSession===s)memberNetworkHighlight(id||s.selected);},move(id,p){if(memberNetworkSession===s){memberNetworkMove(id,p);}},moveEnd(){if(memberNetworkSession===s)memberNetworkFilter();}
+    select(id){if(memberNetworkSession===s&&Date.now()>=(s.input?.suppressUntil||0))memberNetworkSelect(id);},highlight(id){if(memberNetworkSession===s)memberNetworkHighlight(id||s.selected);},
+    moveStart(id){if(memberNetworkSession!==s)return;const input=memberNetworkInput(s);input.engineDragging=true;input.engineDrag={mode:'node',id,p:{...s.positions.get(id)},pin:s.pinned.get(id)};},
+    move(id,p){if(memberNetworkSession===s){memberNetworkInput(s).engineDragging=true;memberNetworkMove(id,p);}},
+    moveEnd(){if(memberNetworkSession===s){const input=memberNetworkInput(s);input.engineDragging=false;input.engineDrag=null;memberNetworkFilter();}},
+    moveRelease(){if(memberNetworkSession===s){const input=memberNetworkInput(s);input.engineDragging=false;input.engineDrag=null;}}
   });}catch{closeMemberNetwork();const live=root.querySelector('#an-live');if(!memberReset&&root.isConnected&&live)live.textContent='관계망을 표시하지 못했어요. 원래 작업판은 그대로예요.';return;}
   s.engine?.setDisplay?.(s.options);memberNetworkSyncControls();memberNetworkResize.observe(memberNetworkSpace);memberNetworkSelect('');memberNetworkFilter();if(!cached)fitMemberNetwork();memberNetworkHost.querySelector('[data-network-action=close]').focus({preventScroll:true});
 }
@@ -253,6 +307,20 @@ memberNetworkHost.addEventListener('input',e=>{const s=memberNetworkSession,el=e
   if(el.dataset.networkLayout){s.options[el.dataset.networkLayout]=Number(el.value);return;}
   memberNetworkFilter();
 });
+// Capture wheel even over HTML cards; focus and vendor defaults must not choose its meaning.
+memberNetworkSpace.addEventListener('wheel',memberNetworkWheel,{passive:false,capture:true});
+memberNetworkSpace.addEventListener('gesturestart',memberNetworkGestureStart,{passive:false,capture:true});
+memberNetworkSpace.addEventListener('gesturechange',memberNetworkGestureChange,{passive:false,capture:true});
+memberNetworkSpace.addEventListener('gestureend',memberNetworkGestureEnd,{passive:false,capture:true});
+memberNetworkSpace.addEventListener('pointerdown',memberNetworkPointerDown,true);
+memberNetworkSpace.addEventListener('pointermove',memberNetworkPointerMove,true);
+for(const type of ['pointerup','pointercancel','lostpointercapture'])memberNetworkSpace.addEventListener(type,memberNetworkPointerEnd,true);
+for(const type of ['touchstart','touchmove','touchend','touchcancel'])memberNetworkSpace.addEventListener(type,e=>{if(memberNetworkSession){e.preventDefault();e.stopPropagation();}},{passive:false,capture:true});
+memberNetworkSpace.addEventListener('click',e=>{if(e.detail!==0&&Date.now()<(memberNetworkSession?.input?.suppressUntil||0)){e.preventDefault();e.stopPropagation();}},true);
+memberNetworkSpace.addEventListener('pointerenter',()=>{if(memberNetworkSession)memberNetworkSession.hovered=true;});
+memberNetworkSpace.addEventListener('pointerleave',()=>{if(memberNetworkSession)memberNetworkSession.hovered=false;});
+memberNetworkHost.addEventListener('keyup',e=>{if(memberNetworkSession&&e.code==='Space'){memberNetworkInput(memberNetworkSession).space=false;e.preventDefault();e.stopPropagation();}},true);
+window.addEventListener('blur',memberNetworkCancelInput);
 // Do not bubble exploratory actions into the native draft-edit event listeners.
 for(const type of ['click','input','change','pointerup','keyup'])memberNetworkHost.addEventListener(type,e=>e.stopPropagation());
 memberNetworkHost.addEventListener('keydown',e=>{
@@ -262,6 +330,7 @@ memberNetworkHost.addEventListener('keydown',e=>{
     const focusable=[...memberNetworkHost.querySelectorAll('button:not([disabled]):not([tabindex="-1"]),input,select,summary,[tabindex="0"]')].filter(el=>!el.hidden&&el.getClientRects().length),first=focusable[0],last=focusable.at(-1);
     if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}return;
   }
+  if(e.code==='Space'&&!e.ctrlKey&&!e.metaKey&&(memberNetworkSpace.contains(e.target)||memberNetworkSession.hovered&&!e.target.closest('button,input,select,textarea,summary,[contenteditable]'))&&!e.target.closest('input,select,textarea,summary,[contenteditable]')){e.preventDefault();memberNetworkInput(memberNetworkSession).space=true;return;}
   if(['INPUT','SELECT','TEXTAREA','BUTTON','SUMMARY'].includes(e.target.tagName)||e.target.closest('button,summary'))return;
   if(e.code==='Space'){e.preventDefault();return;}
   if(['+','=','-','_'].includes(e.key)){e.preventDefault();zoomMemberNetwork(memberNetworkSession.camera.zoom*(['+','='].includes(e.key)?2:.5));return;}

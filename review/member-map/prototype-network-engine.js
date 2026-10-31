@@ -27,6 +27,7 @@ function memberCreateNetworkEngine(container,items,links,positions,visuals,hooks
   try{
     cy=window.cytoscape({container,elements,layout:{name:'preset',fit:false,animate:false},minZoom:.02,maxZoom:4,
       autolock:true,autoungrabify:true,autounselectify:true,boxSelectionEnabled:false,
+      userZoomingEnabled:false,userPanningEnabled:true,
       style:[
         {selector:'node',style:{width:14,height:14,'background-color':nodeLine,'overlay-opacity':0,label:''}},
         {selector:'node[kind="stock"]',style:{width:24,height:24,'background-color':nodeText}},
@@ -51,6 +52,7 @@ function memberCreateNetworkEngine(container,items,links,positions,visuals,hooks
     cy.on('grab','node',event=>{if(destroyed||!draggable)return;
       const id=event.target.id(),p=event.target.position();suppressedTap='';
       drag=visible.has(originalIds.get(id))?{id,x:p.x,y:p.y}:null;
+      if(drag)hooks.moveStart?.(originalIds.get(id));
     });
     cy.on('drag','node',event=>{if(destroyed||!draggable||!drag||drag.id!==event.target.id())return;
       const id=originalIds.get(drag.id),p=event.target.position();
@@ -58,7 +60,7 @@ function memberCreateNetworkEngine(container,items,links,positions,visuals,hooks
       drag={id:drag.id,x:p.x,y:p.y};suppressedTap=drag.id;hooks.move?.(id,{x:p.x,y:p.y});
     });
     cy.on('free','node',event=>{if(destroyed||!drag||drag.id!==event.target.id())return;
-      const id=drag.id,moved=suppressedTap===id;drag=null;if(moved)hooks.moveEnd?.(originalIds.get(id));});
+      const id=drag.id,moved=suppressedTap===id;drag=null;if(moved)hooks.moveEnd?.(originalIds.get(id));hooks.moveRelease?.(originalIds.get(id));});
     cy.on('tap','node',event=>{const key=event.target.id(),id=originalIds.get(key);
       if(!destroyed&&visible.has(id)&&key!==suppressedTap)hooks.select(id);});
     cy.on('mouseover','node',event=>{if(!destroyed)hooks.highlight(originalIds.get(event.target.id()));});
