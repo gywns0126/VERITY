@@ -71,7 +71,9 @@ test('adapter uses exact frozen supplied positions and preset-only locked layout
  const f=fixture(),api=f.create(),config=f.state.config;
  assert.deepEqual(copy(config.layout),{name:'preset',fit:false,animate:false});
  assert.equal(config.autolock,true);assert.equal(config.autoungrabify,true);
- assert.equal(config.wheelSensitivity,undefined,'vendor default wheel sensitivity is retained');
+  assert.equal(config.userZoomingEnabled,false,'the shared input adapter owns user wheel/pinch zoom');
+  assert.equal(config.userPanningEnabled,true,'ordinary mouse background pan remains available without a prior click');
+  assert.equal(config.wheelSensitivity,undefined,'no vendor sensitivity override is needed when user zoom is disabled');
  const nodes=config.elements.filter(e=>e.position);assert.equal(nodes.length,f.items.length);
  nodes.forEach((node,index)=>{assert.deepEqual(copy(node.position),copy(f.positions.get(f.ids[index])));assert.notEqual(node.position,f.positions.get(f.ids[index]));
   assert.equal(node.data.name,undefined);assert.equal(node.data.evidence,undefined);});
@@ -237,6 +239,7 @@ test('pinned real vendor headless preserves supplied preset positions and safe a
  vm.runInNewContext(functionSource(source,'memberCreateNetworkEngine'),context);
  const api=context.memberCreateNetworkEngine(f.container,f.items,f.links,f.positions,f.visuals,{viewport(){},select(){},highlight(){}});
  try{assert.equal(core.nodes().length,f.items.length);assert.equal(core.edges().length,f.links.length);
+  assert.equal(core.userZoomingEnabled(),false);assert.equal(core.userPanningEnabled(),true);
   core.nodes().forEach((node,index)=>assert.deepEqual(copy(node.position()),copy(f.positions.get(f.ids[index]))));
   core.edges().forEach((edge,index)=>{assert.equal(edge.data('semantic'),f.links[index].status);
    assert.equal(edge.style('width'),f.visuals.get(f.links[index].id).width+'px');assert.equal(edge.style('line-style'),index?'dashed':'solid');});

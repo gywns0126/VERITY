@@ -54,6 +54,8 @@ function fixture(){
  const engine={setCamera(camera){engineState.camera={...camera};},getCamera:()=>({...engineState.camera}),setStage(stage,zoom){engineState.stage=stage;engineState.stageZoom=zoom;},
   resize(){engineState.resizes++;},highlight(id){engineState.highlights.push(id);},destroy(){engineState.destroys++;}};
  const graph=element();
+ const captures=new Set();space.setPointerCapture=id=>captures.add(id);space.hasPointerCapture=id=>captures.has(id);space.releasePointerCapture=id=>captures.delete(id);
+ space.contains=target=>target===space||target===graph||nodes.children.includes(target);
  const context={Map,Set,Math,Number,Float64Array,TypeError,URL,document:{createElement:element,createElementNS:(_,tag)=>element(tag)},
   root,memberNetworkHost:host,memberNetworkSpace:space,memberNetworkNodes:nodes,memberNetworkSvg:svg,memberNetworkInspector:inspector,
   memberNetworkButton:button,memberNetworkResize:observer,memberNetworkSession:null,memberNetworkOpening:false,memberNetworkCache:null,memberNetworkGraph:graph,memberReset:false,
@@ -70,7 +72,10 @@ function fixture(){
   memberLayoutBases:readOnlyMap([['source',{x:.5,y:.5}]])};
  const names=['memberNetworkStage','memberNetworkSnapshot','memberNetworkKind','memberNetworkKindText','memberNetworkOptions','memberNetworkSyncControls','memberNetworkFilter','memberNetworkMove','memberNetworkArrange','memberNetworkCardDrag','memberNetworkSelect',
   'memberNetworkHighlight','renderMemberNetworkGrid','drawMemberNetwork','zoomMemberNetwork','fitMemberNetwork','closeMemberNetwork','openMemberNetwork'];
- vm.runInNewContext(geometry+'\n'+functionSource(relationship,'memberRelationshipIsMapRecord')+'\n'+names.map(name=>functionSource(source,name)).join('\n'),context);
+ // Include the exact input functions and their local helpers, not copied input
+ // logic. Keep the existing synthetic native-state and engine fixture intact.
+ const inputNames=[...source.matchAll(/\bfunction (memberNetwork[A-Za-z0-9_]+)\(/g)].map(match=>match[1]);
+ vm.runInNewContext(geometry+'\n'+functionSource(relationship,'memberRelationshipIsMapRecord')+'\n'+[...new Set([...names,...inputNames])].map(name=>functionSource(source,name)).join('\n'),context);
  const actualLayout=context.memberNetworkLayout;let layoutCalls=0;
  context.memberNetworkLayout=(items,links,options)=>{layoutCalls++;return actualLayout(items,links,options);};
  const nativeValues=()=>clone({scope,edges,native,initial:[...context.initialPositions],offsets:[...context.focusOffsets],bases:[...context.memberLayoutBases]});
@@ -229,8 +234,10 @@ test('HTML click and vendor select-other/reselect preserve network camera, world
   c.closeMemberNetwork();f.assertNative();
  }
 });
-test('runtime delegates gestures to vendor rather than adding custom pointer/wheel handlers',()=>{
- assert.doesNotMatch(source,/memberNetworkSpace\.addEventListener\(['"](?:wheel|pointerdown)['"]/);
+test('shared wheel capture covers engine canvas and sibling HTML cards without a focus prerequisite',()=>{
+ const listener=source.match(/memberNetworkSpace\.addEventListener\(['"]wheel['"],\s*memberNetworkWheel,\s*\{([^}]+)\}/);
+ assert.ok(listener,'wheel must be owned by the common ancestor, not only the vendor canvas');
+ assert.match(listener[1],/capture\s*:\s*true/);assert.match(listener[1],/passive\s*:\s*false/);
 });
 test('geometry failure reports a user message before changing native inert state or creating a session',async()=>{
  const f=fixture(),c=f.context,children=f.root.children.slice(),dataset={...f.root.dataset};
@@ -399,4 +406,236 @@ test('display threshold only changes stage, and editable controls bypass graph s
  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,before=clone([...s.positions]);
  s.options.labelThreshold=.6;c.zoomMemberNetwork(.4);assert.equal(f.space.dataset.stage,'dots');c.zoomMemberNetwork(.7);assert.equal(f.space.dataset.stage,'names');
  assert.deepEqual(clone([...s.positions]),before);assert.match(source,/\['INPUT','SELECT','TEXTAREA','BUTTON','SUMMARY'\]\.includes\(e\.target\.tagName\)/);f.assertNative();
+});
+
+// Input tests call the delivered handlers directly. They need no browser focus,
+// DOM event dispatcher, member account, network, or duplicated input algorithm.
+function inputEvent(f,values={}){
+ const counts={prevented:0,stopped:0};
+ const target=values.target||f.graph;
+ if(!target.closest)target.closest=selector=>selector.includes('.an-network-node')&&target.dataset?.networkNode?target:null;
+ return{type:'wheel',deltaX:0,deltaY:0,deltaMode:0,ctrlKey:false,metaKey:false,shiftKey:false,
+  pointerId:1,pointerType:'mouse',button:0,clientX:150,clientY:200,target,currentTarget:f.space,
+  preventDefault(){counts.prevented++;},stopPropagation(){counts.stopped++;},...values,counts};
+}
+function worldAt(f,camera,x,y){const r=f.space.getBoundingClientRect();return{x:500+(x-r.left-r.width/2-camera.panX)/camera.zoom,y:340+(y-r.top-r.height/2-camera.panY)/camera.zoom};}
+function nearPoint(actual,expected){for(const key of ['x','y'])assert.ok(Math.abs(actual[key]-expected[key])<1e-8,`${key}: ${actual[key]} != ${expected[key]}`);}
+
+test('first plain wheel pans without click/focus, normalizes all delta modes and Shift, including HTML cards',async()=>{
+ for(const zoom of [.4,1.2])for(const [deltaMode,unit]of [[0,1],[1,16],[2,600]])for(const [dx,dy,shift]of [[7,11,false],[0,11,true],[7,11,true]]){
+  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+  s.camera={zoom,panX:83,panY:-47};const before=clone([...s.positions]);
+  const e=inputEvent(f,{deltaX:dx,deltaY:dy,deltaMode,shiftKey:shift,target:zoom<.8?f.graph:s.elements.get('source')});
+  assert.equal(c.document.activeElement,undefined);c.memberNetworkWheel(e);
+  assert.deepEqual({...s.camera},{zoom,panX:83-(shift&&!dx?dy:dx)*unit,panY:-47-(shift&&!dx?0:dy)*unit});
+  assert.equal(e.counts.prevented,1);assert.equal(e.counts.stopped,1);
+  assert.deepEqual(clone([...s.positions]),before);assert.equal(s.selected,'');assert.equal(f.layoutCalls(),1);f.assertNative();c.closeMemberNetwork();
+ }
+});
+
+test('Ctrl/Meta wheel matches core exponential zoom and clamp while preserving the cursor world anchor',async()=>{
+ for(const modifier of ['ctrlKey','metaKey'])for(const [deltaMode,raw,unit]of [[0,12,1],[0,-12,1],[1,20,16],[2,-1,600]]){
+  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+  f.space.rect={left:37,top:19,width:900,height:600};s.camera={zoom:.6,panX:83,panY:-47};
+  const x=168,y=246,before=worldAt(f,s.camera,x,y),positions=clone([...s.positions]);
+  const e=inputEvent(f,{[modifier]:true,deltaMode,deltaY:raw,clientX:x,clientY:y,target:s.elements.get('source')});
+  c.memberNetworkWheel(e);
+  const delta=Math.max(-120,Math.min(120,raw*unit)),expected=Math.max(.02,Math.min(4,.6*Math.exp(-delta*(modifier==='ctrlKey'?.012:.003))));
+  assert.ok(Math.abs(s.camera.zoom-expected)<1e-10);nearPoint(worldAt(f,s.camera,x,y),before);
+  assert.equal(e.counts.prevented,1);assert.equal(e.counts.stopped,1);assert.deepEqual(clone([...s.positions]),positions);
+  assert.equal(s.selected,'');assert.equal(f.layoutCalls(),1);f.assertNative();c.closeMemberNetwork();
+ }
+});
+
+test('wheel is consumed but cannot change camera during an owned pointer, node drag, or Safari gesture',async()=>{
+ for(const active of ['pointer','drag','gesture']){
+  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,input=c.memberNetworkInput(s),before=clone(s.camera),positions=clone([...s.positions]);
+  if(active==='pointer')input.points.set(7,{x:10,y:20});
+  if(active==='drag')input.drag={mode:'pan',moved:true};
+  if(active==='gesture')input.gesture={zoom:s.camera.zoom,scale:1,x:10,y:20};
+  for(const ctrlKey of [false,true]){const e=inputEvent(f,{deltaY:20,ctrlKey});c.memberNetworkWheel(e);assert.equal(e.counts.prevented,1);assert.equal(e.counts.stopped,1);}
+  assert.deepEqual(clone(s.camera),before);assert.deepEqual(clone([...s.positions]),positions);f.assertNative();c.closeMemberNetwork();
+ }
+});
+
+test('Safari gesture zoom works on first gesture, uses initial scale and cursor anchor, and ends cleanly',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+ f.space.rect={left:37,top:19,width:900,height:600};s.camera={zoom:.6,panX:83,panY:-47};
+ const x=168,y=246,anchor=worldAt(f,s.camera,x,y),positions=clone([...s.positions]);
+ const start=inputEvent(f,{type:'gesturestart',scale:2,clientX:x,clientY:y});c.memberNetworkGestureStart(start);
+ assert.equal(c.document.activeElement,undefined);
+ for(const scale of [3,1]){const e=inputEvent(f,{type:'gesturechange',scale,clientX:x+50,clientY:y+50});c.memberNetworkGestureChange(e);
+  assert.ok(Math.abs(s.camera.zoom-.6*scale/2)<1e-10);nearPoint(worldAt(f,s.camera,x,y),anchor);
+  assert.equal(e.counts.prevented,1);assert.equal(e.counts.stopped,1);}
+ const end=inputEvent(f,{type:'gestureend'});c.memberNetworkGestureEnd(end);assert.equal(s.input.gesture,null);
+ const before=clone(s.camera);c.memberNetworkGestureChange(inputEvent(f,{type:'gesturechange',scale:9}));assert.deepEqual(clone(s.camera),before);
+ c.memberNetworkWheel(inputEvent(f,{deltaY:5}));assert.equal(s.camera.panY,before.panY-5);
+ assert.deepEqual(clone([...s.positions]),positions);assert.equal(s.selected,'');assert.equal(f.layoutCalls(),1);f.assertNative();c.closeMemberNetwork();
+});
+
+test('Safari gesture cannot double-apply an active pointer pinch, and closed input calls are inert',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,input=c.memberNetworkInput(s),before=clone(s.camera);
+ input.points.set(1,{x:100,y:100});input.points.set(2,{x:200,y:100});
+ c.memberNetworkGestureStart(inputEvent(f,{type:'gesturestart',scale:1}));c.memberNetworkGestureChange(inputEvent(f,{type:'gesturechange',scale:2}));
+ assert.equal(input.gesture,null);assert.deepEqual(clone(s.camera),before);f.assertNative();c.closeMemberNetwork();
+ for(const name of ['memberNetworkWheel','memberNetworkGestureStart','memberNetworkGestureChange','memberNetworkGestureEnd'])assert.doesNotThrow(()=>c[name](inputEvent(f,{scale:2})));
+ f.assertNative();
+});
+
+test('Space, middle button and locked overlay card pan immediately without selecting or changing geometry',async()=>{
+ for(const path of ['space','middle','locked-card']){
+  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,positions=clone([...s.positions]);
+  s.camera={zoom:1.2,panX:83,panY:-47};if(path==='space')c.memberNetworkInput(s).space=true;
+  const target=path==='locked-card'||path==='space'?s.elements.get('source'):f.graph;
+  const down=inputEvent(f,{type:'pointerdown',target,clientX:100,clientY:150,button:path==='middle'?1:0});
+  c.memberNetworkPointerDown(down);
+  c.memberNetworkPointerMove(inputEvent(f,{type:'pointermove',target,clientX:130,clientY:138}));
+  assert.deepEqual({...s.camera},{zoom:1.2,panX:113,panY:-59});
+  c.memberNetworkPointerEnd(inputEvent(f,{type:'pointerup',target,clientX:130,clientY:138}));
+  assert.equal(s.input.points.size,0);assert.equal(s.input.drag,null);assert.equal(f.space.hasPointerCapture(1),false);
+  f.engineCalls[0][5].select('source');assert.equal(s.selected,'','a moved pan cannot leak a vendor tap');
+  assert.deepEqual(clone([...s.positions]),positions);assert.equal(s.pinned.size,0);assert.equal(f.layoutCalls(),1);f.assertNative();c.closeMemberNetwork();
+ }
+});
+
+test('normal mouse canvas background is not captured by the custom adapter',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,before=clone(s.camera);
+ const down=inputEvent(f,{type:'pointerdown'});c.memberNetworkPointerDown(down);
+ assert.equal(down.counts.prevented,0);assert.equal(down.counts.stopped,0);assert.equal(s.input.points.size,0);assert.equal(s.input.drag,null);
+ assert.deepEqual(clone(s.camera),before);f.assertNative();c.closeMemberNetwork();
+});
+
+test('a new ordinary mouse pointerdown clears release ghost suppression before the next engine selection',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,input=c.memberNetworkInput(s),hooks=f.engineCalls[0][5];
+ const camera=clone(s.camera),positions=clone([...s.positions]);input.suppressUntil=Date.now()+300;
+ hooks.select('source');assert.equal(s.selected,'','release ghost remains suppressed before a new pointerdown');
+ const down=inputEvent(f,{type:'pointerdown',pointerType:'mouse',target:f.graph});c.memberNetworkPointerDown(down);
+ assert.equal(input.suppressUntil,0);assert.equal(input.points.size,0);assert.equal(input.drag,null);
+ assert.equal(down.counts.prevented,0);assert.equal(down.counts.stopped,0);
+ hooks.select('source');assert.equal(s.selected,'source','the next genuine click is not swallowed');
+ assert.deepEqual(clone(s.camera),camera);assert.deepEqual(clone([...s.positions]),positions);f.assertNative();c.closeMemberNetwork();
+});
+
+test('one-finger touch starts pan on its first pointer without click/focus or native-node movement',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,positions=clone([...s.positions]);
+ s.camera={zoom:.6,panX:83,panY:-47};
+ const down=inputEvent(f,{type:'pointerdown',pointerType:'touch',clientX:20,clientY:20});c.memberNetworkPointerDown(down);
+ assert.equal(c.document.activeElement,undefined);assert.equal(down.counts.prevented,1);assert.equal(down.counts.stopped,1);
+ c.memberNetworkPointerMove(inputEvent(f,{type:'pointermove',pointerType:'touch',clientX:50,clientY:5}));
+ assert.deepEqual({...s.camera},{zoom:.6,panX:113,panY:-62});
+ c.memberNetworkPointerEnd(inputEvent(f,{type:'pointerup',pointerType:'touch',clientX:50,clientY:5}));
+ assert.equal(s.input.points.size,0);assert.equal(s.selected,'');assert.deepEqual(clone([...s.positions]),positions);f.assertNative();c.closeMemberNetwork();
+});
+
+test('touch pinch scales and translates around its midpoint, then reanchors remaining finger without a jump',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,positions=clone([...s.positions]);
+ f.space.rect={left:37,top:19,width:900,height:600};s.camera={zoom:.6,panX:83,panY:-47};
+ const event=(type,pointerId,x,y)=>inputEvent(f,{type,pointerType:'touch',pointerId,clientX:x,clientY:y});
+ c.memberNetworkPointerDown(event('pointerdown',7,100,100));c.memberNetworkPointerDown(event('pointerdown',3,200,100));
+ const world=worldAt(f,s.camera,150,100);
+ c.memberNetworkPointerMove(event('pointermove',7,90,120));c.memberNetworkPointerMove(event('pointermove',3,230,140));
+ assert.ok(Math.abs(s.camera.zoom-.6*Math.hypot(140,20)/100)<1e-10);nearPoint(worldAt(f,s.camera,160,130),world);
+ c.memberNetworkPointerEnd(event('pointerup',3,230,140));const remaining=clone(s.camera);
+ c.memberNetworkPointerMove(event('pointermove',7,110,135));
+ assert.deepEqual({...s.camera},{zoom:remaining.zoom,panX:remaining.panX+20,panY:remaining.panY+15});
+ c.memberNetworkPointerEnd(event('pointerup',7,110,135));assert.equal(s.input.drag,null);assert.equal(s.input.points.size,0);
+ f.engineCalls[0][5].select('source');assert.equal(s.selected,'');assert.equal(f.space.hasPointerCapture(3),false);assert.equal(f.space.hasPointerCapture(7),false);
+ assert.deepEqual(clone([...s.positions]),positions);assert.equal(f.layoutCalls(),1);f.assertNative();c.closeMemberNetwork();
+});
+
+test('touch hit-test selects the nearest visible point on first tap, with no second synthetic selection',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+ s.positions=new Map([['stock',{x:500,y:340}],['source',{x:900,y:340}],['candidate',{x:1300,y:340}]]);
+ s.camera={zoom:1,panX:0,panY:0};const positions=clone([...s.positions]),camera=clone(s.camera);
+ const event=type=>inputEvent(f,{type,pointerType:'touch',clientX:455,clientY:304});
+ c.memberNetworkPointerDown(event('pointerdown'));c.memberNetworkPointerEnd(event('pointerup'));assert.equal(s.selected,'stock');
+ f.engineCalls[0][5].select('stock');assert.equal(s.selected,'stock','compatibility tap must not toggle the first selection off');
+ assert.equal(c.memberNetworkTouchHit(event('pointerdown'),s),'stock');s.visible.delete('stock');assert.equal(c.memberNetworkTouchHit(event('pointerdown'),s),'');
+ assert.deepEqual(clone(s.camera),camera);assert.deepEqual(clone([...s.positions]),positions);f.assertNative();c.closeMemberNetwork();
+});
+
+test('unlocked touch moves one point only; pointercancel and capture loss restore its previous position and pin',async()=>{
+ for(const endType of ['pointercancel','lostpointercapture'])for(const wasPinned of [false,true]){
+  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,id='source',card=s.elements.get(id);
+  s.draggable=true;s.camera={zoom:2,panX:83,panY:-47};const original={...s.positions.get(id)},pin={x:original.x+2,y:original.y-3};
+  if(wasPinned)s.pinned.set(id,pin);const before=clone([...s.positions]),camera=clone(s.camera),updates=[];s.engine.setPositions=ps=>updates.push(clone([...ps]));
+  const event=(type,x,y)=>inputEvent(f,{type,pointerType:'touch',target:card,clientX:x,clientY:y});
+  c.memberNetworkPointerDown(event('pointerdown',10,10));c.memberNetworkPointerMove(event('pointermove',50,30));
+  assert.deepEqual({...s.positions.get(id)},{x:original.x+20,y:original.y+10});assert.equal(s.pinned.has(id),true);
+  c.memberNetworkPointerEnd(event(endType,50,30));assert.deepEqual(clone([...s.positions]),before);assert.equal(s.pinned.has(id),wasPinned);
+  if(wasPinned)assert.deepEqual({...s.pinned.get(id)},pin);
+  assert.equal(updates.length,2);assert.deepEqual(clone(s.camera),camera);assert.equal(s.selected,'');f.assertNative();c.closeMemberNetwork();
+ }
+});
+
+test('second touch restores an in-flight node drag before pinch takes ownership',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,id='source',card=s.elements.get(id),before=clone([...s.positions]);s.draggable=true;
+ s.camera.zoom=1.2;c.drawMemberNetwork();
+ const event=(type,pointerId,x,y)=>inputEvent(f,{type,pointerType:'touch',target:card,pointerId,clientX:x,clientY:y});
+ c.memberNetworkPointerDown(event('pointerdown',1,10,10));c.memberNetworkPointerMove(event('pointermove',1,50,30));assert.equal(s.pinned.has(id),true);
+ c.memberNetworkPointerDown(event('pointerdown',2,90,30));assert.deepEqual(clone([...s.positions]),before);assert.equal(s.pinned.has(id),false);
+ assert.equal(s.input.drag.mode,'pinch');c.memberNetworkCancelInput();assert.equal(s.input.points.size,0);assert.equal(s.input.drag,null);assert.equal(s.input.space,false);
+ f.assertNative();c.closeMemberNetwork();
+});
+
+test('close cancels an owned touch drag before caching and releases every pointer',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,id='source',card=s.elements.get(id),before=clone([...s.positions]);s.draggable=true;
+ s.camera.zoom=1.2;c.drawMemberNetwork();
+ c.memberNetworkPointerDown(inputEvent(f,{type:'pointerdown',pointerType:'touch',target:card,clientX:10,clientY:10}));
+ c.memberNetworkPointerMove(inputEvent(f,{type:'pointermove',pointerType:'touch',target:card,clientX:50,clientY:30}));c.closeMemberNetwork();
+ assert.equal(f.space.hasPointerCapture(1),false);await c.openMemberNetwork();assert.deepEqual(clone([...c.memberNetworkSession.positions]),before);assert.equal(c.memberNetworkSession.pinned.has(id),false);
+ f.assertNative();c.closeMemberNetwork();
+});
+
+test('HTML card cancel/capture loss restores both its manual point and exact previous pin',async()=>{
+ for(const endType of ['pointercancel','lostpointercapture'])for(const wasPinned of [false,true]){
+  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,id='source',b=s.elements.get(id),p={...s.positions.get(id)},pin={x:p.x+2,y:p.y-3};
+  s.draggable=true;s.camera.zoom=1.2;c.drawMemberNetwork();if(wasPinned)s.pinned.set(id,pin);const before=clone([...s.positions]);
+  b.setPointerCapture=()=>{};b.hasPointerCapture=()=>true;b.releasePointerCapture=()=>{};
+  b.onpointerdown(inputEvent(f,{type:'pointerdown',target:b,clientX:10,clientY:10}));b.onpointermove(inputEvent(f,{type:'pointermove',target:b,clientX:50,clientY:30}));
+  b['on'+endType](inputEvent(f,{type:endType,target:b,clientX:50,clientY:30}));
+  assert.deepEqual(clone([...s.positions]),before);assert.equal(s.pinned.has(id),wasPinned);if(wasPinned)assert.deepEqual({...s.pinned.get(id)},pin);
+  b.onclick();assert.equal(s.selected,'');f.assertNative();c.closeMemberNetwork();
+ }
+});
+
+test('a real HTML card drag blocks wheel until its release',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,b=s.elements.get('source');s.draggable=true;
+ s.camera.zoom=1.2;c.drawMemberNetwork();
+ b.setPointerCapture=()=>{};b.hasPointerCapture=()=>true;b.releasePointerCapture=()=>{};
+ b.onpointerdown(inputEvent(f,{type:'pointerdown',target:b,clientX:10,clientY:10}));b.onpointermove(inputEvent(f,{type:'pointermove',target:b,clientX:50,clientY:30}));
+ const camera=clone(s.camera),positions=clone([...s.positions]);c.memberNetworkWheel(inputEvent(f,{target:b,deltaY:20,ctrlKey:true}));
+ assert.deepEqual(clone(s.camera),camera);assert.deepEqual(clone([...s.positions]),positions);
+ b.onpointerup(inputEvent(f,{type:'pointerup',target:b,clientX:50,clientY:30}));f.assertNative();c.closeMemberNetwork();
+});
+
+test('native canvas point drag also blocks wheel until its moveEnd callback',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,hooks=f.engineCalls[0][5];s.draggable=true;
+ hooks.move('source',{x:500,y:350});const camera=clone(s.camera),positions=clone([...s.positions]);
+ c.memberNetworkWheel(inputEvent(f,{deltaY:20,ctrlKey:true}));assert.deepEqual(clone(s.camera),camera);assert.deepEqual(clone([...s.positions]),positions);
+ hooks.moveEnd('source');c.memberNetworkWheel(inputEvent(f,{deltaY:5}));assert.equal(s.camera.panY,camera.panY-5);
+ f.assertNative();c.closeMemberNetwork();
+});
+
+test('close also cancels a live HTML card drag before its session positions are cached',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession,b=s.elements.get('source'),before=clone([...s.positions]);s.draggable=true;
+ s.camera.zoom=1.2;c.drawMemberNetwork();
+ b.setPointerCapture=()=>{};b.hasPointerCapture=()=>true;b.releasePointerCapture=()=>{};
+ b.onpointerdown(inputEvent(f,{type:'pointerdown',target:b,clientX:10,clientY:10}));b.onpointermove(inputEvent(f,{type:'pointermove',target:b,clientX:50,clientY:30}));
+ c.closeMemberNetwork();await c.openMemberNetwork();assert.deepEqual(clone([...c.memberNetworkSession.positions]),before);assert.equal(c.memberNetworkSession.pinned.size,0);
+ f.assertNative();c.closeMemberNetwork();
+});
+
+test('Space keeps side-panel controls usable even when the pointer remains over the graph, but arms pan on a node',async()=>{
+ const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+ const marker="memberNetworkHost.addEventListener('keydown',e=>{",start=source.indexOf(marker)+marker.length,end=source.indexOf('\n},true);',start);
+ assert.ok(start>=marker.length&&end>start);vm.runInNewContext('function dispatchNetworkKeyDown(e){'+source.slice(start,end)+'\n}',c);
+ s.hovered=true;
+ for(const tag of ['button','input','select','textarea','summary']){
+  const target=element(tag);target.closest=selector=>selector.split(',').some(part=>part===tag)?target:null;
+  const e=inputEvent(f,{type:'keydown',code:'Space',key:' ',target});c.dispatchNetworkKeyDown(e);
+  assert.equal(e.counts.prevented,0,tag+' keeps its normal Space activation/input');assert.equal(c.memberNetworkInput(s).space,false);
+ }
+ const card=s.elements.get('source'),e=inputEvent(f,{type:'keydown',code:'Space',key:' ',target:card});c.dispatchNetworkKeyDown(e);
+ assert.equal(e.counts.prevented,1);assert.equal(s.input.space,true);c.memberNetworkCancelInput();f.assertNative();c.closeMemberNetwork();
 });
