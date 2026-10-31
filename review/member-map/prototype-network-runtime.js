@@ -160,7 +160,8 @@ function memberNetworkPointerMove(e){
 function memberNetworkPointerEnd(e){
   const s=memberNetworkSession,input=s?.input;if(!input?.points.has(e.pointerId))return;const d=input.drag,cancelled=e.type==='pointercancel'||e.type==='lostpointercapture';input.points.delete(e.pointerId);
   if(cancelled)memberNetworkRestoreDrag(s,d);
-  if(input.points.size){const [pointer,p]=[...input.points][0];input.drag={mode:'pan',id:'',pointer,x:p.x,y:p.y,camera:{...s.camera},moved:true,touch:true};}
+  if(input.points.size>1){const [a,b]=[...input.points.values()];input.drag={mode:'pinch',distance:Math.max(1,Math.hypot(b.x-a.x,b.y-a.y)),x:(a.x+b.x)/2,y:(a.y+b.y)/2,camera:{...s.camera},moved:true};}
+  else if(input.points.size){const [pointer,p]=[...input.points][0];input.drag={mode:'pan',id:'',pointer,x:p.x,y:p.y,camera:{...s.camera},moved:true,touch:true};}
   else input.drag=null;
   if(memberNetworkSpace.hasPointerCapture(e.pointerId))memberNetworkSpace.releasePointerCapture(e.pointerId);
   if(d?.moved||cancelled){input.suppressUntil=Date.now()+300;e.preventDefault();e.stopPropagation();}
@@ -171,6 +172,15 @@ function memberNetworkCancelInput(){
 }
 function memberNetworkKind(n){return n.kind==='stock'?'stock':memberRelationshipIsMapRecord(n)?'relationship':n.layer==='candidates'?'candidate':'source';}
 function memberNetworkKindText(n){return {stock:'종목',relationship:'사건·관계',candidate:'미검수 후보',source:'근거 자료'}[memberNetworkKind(n)];}
+function memberNetworkJudgments(record,links){
+  const rows=new Map();if(!record||typeof memberCompanyJudgment!=='function')return [];
+  for(const edge of links){
+    const source=record.kind==='stock'?nodeById[edge.from===record.id?edge.to:edge.from]:record;
+    const row=memberCompanyJudgment(edge,source);
+    if(row)rows.set(row.record_id+'|'+row.company_id,row);
+  }
+  return [...rows.values()];
+}
 function memberNetworkSelect(id,refresh=false){
   const s=memberNetworkSession;if(!s)return;s.selected=refresh?id:s.selected===id?'':id;
   if(!refresh&&s.options.depth&&s.selected){s.options.anchor=s.selected;memberNetworkFilter();}
@@ -188,6 +198,8 @@ function memberNetworkSelect(id,refresh=false){
     why.textContent=memberNetworkKind(n)==='source'?'점선은 원문이 해당 종목에 속한다는 뜻이며, 경제적 영향 판정은 아닙니다.':memberNetworkKind(n)==='candidate'?'검수 전 후보입니다. 확인된 관계로 표시하지 않습니다.':'연결 수는 경제적 중요도나 수익 확률이 아닙니다.';memberNetworkInspector.append(why);
     const count=document.createElement('p');count.textContent='표시 연결 '+connected.length+'개';memberNetworkInspector.append(count);
     for(const e of connected){const peer=s.byId.get(e.from===n.id?e.to:e.from),v=s.visuals.get(e.id),line=document.createElement(peer?'button':'p');line.textContent=[e.verb||'자료 연결',peer?.name||'종목 미확인',v?.statusLabel,v?.summaryLabel,v?.lineLabel].filter(Boolean).join(' · ');if(peer){line.type='button';line.onclick=()=>memberNetworkSelect(peer.id);}memberNetworkInspector.append(line);}
+    const meaning=document.createElement('p');meaning.textContent='주제색은 호재·악재 판정이 아니에요. 검수된 조건부 수혜는 빨강, 부담은 파랑이며, 선 굵기는 연결 정도입니다. 점 크기는 연결 수로 경제적 중요도와 별개예요.';memberNetworkInspector.append(meaning);
+    for(const row of memberNetworkJudgments(n,connected))appendMemberCompanyJudgment(memberNetworkInspector,row);
     for(const evidence of n.evidence||[]){
       const heading=document.createElement('h4');heading.textContent=evidence.title||evidence.source||'원문 근거';memberNetworkInspector.append(heading);
       if(evidence.asOf){const date=document.createElement('p');date.textContent='자료 기준 '+evidence.asOf;memberNetworkInspector.append(date);}
