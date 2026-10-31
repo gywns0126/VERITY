@@ -1,6 +1,6 @@
 """Offline company-scoped business interpretation, separate from fact extraction.
 
-Used by a local reviewer or a future scheduled chat with the same public packet.
+Used by the scheduled proposal worker and a separate local evidence reviewer.
 No transport, credentials, cache migration, member data or publication. Literal
 validation does NOT establish semantic accuracy: retained interpretations remain
 candidates. Only a separate, revision-bound local review can authorize scoped
@@ -14,7 +14,8 @@ import json
 import re
 
 VERSION = "company-business-judgment-v1"
-CACHE_VERSION = "company-business-judgment-prompt-v2"
+CACHE_VERSION = "company-business-judgment-prompt-v3"
+LEGACY_CACHE_VERSIONS = ("company-business-judgment-prompt-v2",)
 MAX_DOCUMENTS = 8
 MAX_JUDGMENTS = 16
 _MISSING = {"entity_scope", "role", "object", "period", "scale", "denominator",
@@ -103,6 +104,16 @@ missing profit or scale does not erase supplied scope. Preserve supplied consoli
 separate-financial and period context in reason, never splice it into quote/period_quote.
 Distinguish a stated domestic/product/group denominator from missing whole-company
 materiality. Exposure degree does not describe company-wide economic importance.
+Always assess economic_v2.materiality separately: material, limited or unrated.
+Use only an explicit qualitative economic statement in this SAME document, not
+an invented threshold or a customer label. For material/limited, quote one complete
+eligible sentence and copy its scope, reporting period and economic mechanism.
+Scope is company/division/product; never promote product impact to the company.
+The source must explicitly state important/significant or minor economic impact
+on sales/profit/cash flow/cost/assets/liabilities. Keep negation and qualifications.
+If that support is absent, use value unrated, scope unknown and all quotes null.
+Unknown impact does not erase supported materiality, or vice versa. This field
+still needs its own independent review; no automatic acceptance is authorized.
 """
 
 
@@ -127,6 +138,12 @@ SCHEMA = _object({
         "counter_evidence_quotes": {"type": "array", "maxItems": 4, "items": deepcopy(_STR)},
         "missing_evidence": {"type": "array", "maxItems": len(_MISSING),
                              "items": {"type": "string", "enum": sorted(_MISSING)}},
+        "economic_v2": _object({"materiality": _object({
+            "value": {"type": "string", "enum": ["material", "limited", "unrated"]},
+            "scope": {"type": "string", "enum": ["company", "division", "product", "unknown"]},
+            **{key: deepcopy(_NULL) for key in
+               ("scope_quote", "period_quote", "quote", "mechanism_quote")},
+        })}),
     })},
     "remaining_count": {"type": "integer", "minimum": 0, "maximum": 500},
 })
@@ -264,8 +281,8 @@ def _sentence(value, doc):
 
 
 def _proposal_keys(row):
-    # The v1 model schema/prompt and saved receipts remain unchanged. This is an
-    # opt-in offline extension, not permission for another model call.
+    # Old v1/v2 answers and receipts remain readable. New live proposals include
+    # economic_v2, but adding it must not rewrite immutable legacy answers.
     optional = {key for key in ("economic_v2", "period_context_v2", "period_context_v3") if type(row) is dict and key in row}
     _keys(row, _FIELDS | optional)
 

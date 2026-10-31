@@ -182,6 +182,36 @@ function restoreCurrentStructuredProvenance(base, priorCaptures) {
     restored.push({ baseId, priorRelation });
   }
 
+  // No emitted issuer source is not proof that the raw snapshot omitted it.
+  // Retain only the literal prior receipt/row with unchanged identity binding;
+  // the existing consumer labels it reported-at-settlement-not-current.
+  const emittedIssuers = new Set(Object.values(base.sources || {}).filter(row => row
+    && ['local-structured-relation-candidate', 'dart-structured-relation'].includes(row.kind))
+    .map(row => row.documentIssuer));
+  for (const priorRelation of priorRelations.values()) {
+    const priorSource = structuredSources.get(priorRelation.sourceId);
+    if (emittedIssuers.has(priorSource.documentIssuer)) continue;
+    for (const ticker of [priorRelation.from, priorRelation.to]) {
+      const currentIndex = enriched.tickerIndex[ticker], priorIndex = priorCaptures.tickerIndex[ticker];
+      if (!currentIndex || !priorIndex || !isDeepStrictEqual(currentIndex.issuer, priorIndex.issuer)
+          || !priorIndex.sourceCandidates.includes(priorRelation.sourceId)
+          || !priorIndex.relationCandidates.includes(priorRelation.id)) {
+        throw Error('Invalid enriched public catalog: structured provenance binding');
+      }
+    }
+    for (const [existing, expected] of [[enriched.sources[priorRelation.sourceId], priorSource],
+      [enriched.relations[priorRelation.id], priorRelation]]) {
+      if (existing && !isDeepStrictEqual(existing, expected)) {
+        throw Error('Invalid enriched public catalog: structured provenance collision');
+      }
+    }
+    enriched.sources[priorRelation.sourceId] = JSON.parse(JSON.stringify(priorSource));
+    enriched.relations[priorRelation.id] = JSON.parse(JSON.stringify(priorRelation));
+    enriched.denominators.relationsInput += 1;
+    enriched.denominators.relationsAccepted += 1;
+    restored.push({ priorRelation });
+  }
+
   const referencedSources = new Set([
     ...Object.values(enriched.events || {}).map(row => row && row.sourceId),
     ...Object.values(enriched.relations || {}).map(row => row && row.sourceId),

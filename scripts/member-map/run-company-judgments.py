@@ -71,9 +71,11 @@ def plan(documents, *, as_of):
             continue
         packet = prepare_judgment_prompt_packet([doc], as_of=as_of)
         payload = ai._openai_payload(doc)
-        payload.update(instructions=SYSTEM, input=json.dumps(packet, ensure_ascii=False))
+        payload.update(instructions=SYSTEM, input=ai.serialize_judgment_packet(packet))
         payload["text"]["format"].update(name="company_judgment", schema=SCHEMA)
-        if len(json.dumps(payload, ensure_ascii=False).encode()) > ai.MAX_PROMPT_BYTES:
+        wire_bytes = ai.serialize_openai_payload(payload)
+        byte_limit = ai.prompt_payload_byte_limit(payload, judgment_mode=True)
+        if len(wire_bytes) > byte_limit:
             oversized += 1
             continue
         selected.append(doc)
@@ -92,7 +94,9 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
     if type(limit) is not int or not 1 <= limit <= 10:
         raise ValueError("operating-limit")
     runner = runner or ai.run_document
-    counts, calls, pending, grade_proposals, findings, stop = Counter(), 0, 0, Counter(), 0, None
+    counts, calls, pending, grade_proposals = Counter(), 0, 0, Counter()
+    impact_directions, materiality_values = Counter(), Counter()
+    legacy_answers_missing_economic_v2, findings, stop = 0, 0, None
     errors, archived_failures, transport_diagnostics = Counter(), 0, []
     sentence_rejections = Counter()
     for doc in documents:
@@ -122,6 +126,9 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
                             and type(row.get("sentence_check")) is str
                             and row["sentence_check"] in SENTENCE_REJECTION_CHECKS):
                         sentence_rejections[row["sentence_check"]] += 1
+        legacy_count = result.get("legacy_answers_missing_economic_v2")
+        if type(legacy_count) is int and 0 <= legacy_count <= 16:
+            legacy_answers_missing_economic_v2 += legacy_count
         diagnostic = result.get("transport_diagnostic")
         if (status in {"ok", "error"} and type(diagnostic) is dict
                 and set(diagnostic) == {"stage", "elapsed_ms", "socket_timeout_seconds"}
@@ -139,7 +146,24 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
         if status in {"ok", "cached"} and not archived_error:
             judgments = result.get("judgments", [])
             pending += len(judgments)
-            grade_proposals.update(row["proposal"]["degree"]["value"] for row in judgments)
+            if type(judgments) is list and len(judgments) <= 16:
+                for row in judgments:
+                    if type(row) is not dict or type(row.get("proposal")) is not dict:
+                        continue
+                    proposal = row["proposal"]
+                    degree = proposal.get("degree")
+                    degree_value = degree.get("value") if type(degree) is dict else None
+                    if type(degree_value) is str and degree_value in {"high", "medium", "low", "unrated"}:
+                        grade_proposals[degree_value] += 1
+                    impact = proposal.get("impact")
+                    direction = impact.get("direction") if type(impact) is dict else None
+                    if type(direction) is str and direction in {"positive", "negative", "mixed", "unknown"}:
+                        impact_directions[direction] += 1
+                    economic = proposal.get("economic_v2")
+                    materiality = economic.get("materiality") if type(economic) is dict else None
+                    value = materiality.get("value") if type(materiality) is dict else None
+                    if type(value) is str and value in {"material", "limited", "unrated"}:
+                        materiality_values[value] += 1
             findings += len(result.get("quality_review", {}).get("findings", []))
         if result.get("budget_settlement") == "pending-reservation-retained":
             stop = "budget-settlement-pending"
@@ -153,6 +177,9 @@ def run_batch(documents, ledger_path, api_key, budget, *, as_of, limit, runner=N
             "results": dict(counts), "paid_attempts": calls,
             "processed_documents": sum(counts.values()), "pending_judgments": pending,
             "proposed_degree_counts": dict(grade_proposals), "quality_findings": findings,
+            "proposed_impact_direction_counts": dict(impact_directions),
+            "proposed_economic_materiality_counts": dict(materiality_values),
+            "legacy_answers_missing_economic_v2": legacy_answers_missing_economic_v2,
             "error_counts": dict(errors), "sentence_rejection_counts": dict(sentence_rejections),
             "archived_failed_documents": archived_failures,
             "transport_diagnostics": transport_diagnostics,

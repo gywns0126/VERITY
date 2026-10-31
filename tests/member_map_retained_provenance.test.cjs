@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { spawnSync } = require('node:child_process');
+const path = require('node:path');
 const {
   CAPTURE_FIELDS,
   buildPublicCatalog,
@@ -33,7 +35,7 @@ const sourceRow = {
   },
 };
 
-function catalog({ structured, pct = 12.5, role = '합성 주요주주 관계', target = '900002', family = 'major_shareholders', generatedAt }) {
+function catalog({ structured, pct = 12.5, role = '합성 주요주주 관계', target = '900002', family = 'major_shareholders', missingIssuer = false, emptyRelations = false, identities = universe, generatedAt }) {
   const rowProvenance = {
     ...provenance,
     ...(family === 'subsidiaries' ? { endpoint: 'otrCprInvstmntSttus' } : {}),
@@ -56,15 +58,15 @@ function catalog({ structured, pct = 12.5, role = '합성 주요주주 관계', 
   };
   return buildPublicCatalog({
     generatedAt,
-    universe,
+    universe: identities,
     chainSnippets: { updated_at: '2026-10-05T00:00:00Z', documents: [] },
     groupStructure: {
-      updated_at: '2026-10-05T00:00:00Z', count: 1,
-      structures: {
+      updated_at: '2026-10-05T00:00:00Z', count: missingIssuer ? 0 : 1,
+      structures: missingIssuer ? {} : {
         '900001': {
           ticker: '900001', collected_at: '2024-10-15T02:30:00Z',
-          major_shareholders: family === 'major_shareholders' ? [row] : [],
-          subsidiaries: family === 'subsidiaries' ? [row] : [],
+          major_shareholders: !emptyRelations && family === 'major_shareholders' ? [row] : [],
+          subsidiaries: !emptyRelations && family === 'subsidiaries' ? [row] : [],
         },
       },
     },
@@ -155,4 +157,95 @@ test('public rebuild restores only exact retained structured provenance and keep
     ambiguousPrior.tickerIndex[ticker].relationCandidates.push(relationCopy.id);
   }
   assert.throws(() => mergePriorCaptures(current, ambiguousPrior), /ambiguous structured provenance/);
+});
+
+test('a missing issuer snapshot retains literal receipt-bound rows as historical, not freshly collected relations', () => {
+  for (const family of ['major_shareholders', 'subsidiaries']) {
+    const prior = withEmptyCaptures(catalog({ structured: true, family, generatedAt: '2025-01-01T00:00:00Z' }));
+    const current = catalog({ structured: false, missingIssuer: true, generatedAt: '2026-11-01T00:00:00Z' });
+    const beforeCurrent = structuredClone(current), beforePrior = structuredClone(prior);
+    const retained = mergePriorCaptures(current, prior);
+    assert.deepEqual(current, beforeCurrent); assert.deepEqual(prior, beforePrior);
+    assert.deepEqual(retained.relations, prior.relations);
+    assert.deepEqual(retained.sources, Object.fromEntries(Object.entries(prior.sources)
+      .filter(([, source]) => source.kind === 'dart-structured-relation')));
+    assert.equal(retained.generatedAt, current.generatedAt);
+    assert.deepEqual(retained.inputs, current.inputs);
+    assert.deepEqual(retained.artifactTimestamps, current.artifactTimestamps);
+    assert.deepEqual(retained.sourceDateCoverage, current.sourceDateCoverage);
+    assert.equal(retained.scope.runtimeFreshness, 'not-automatically-reverified');
+    assert.equal(retained.denominators.relationsInput, 1);
+    assert.equal(retained.denominators.relationsAccepted, 1);
+    assert.equal(retained.denominators.relationsRejected, 0);
+    for (const relation of Object.values(prior.relations)) {
+      assert.equal(retained.sources[relation.sourceId].receiptNo, provenance.rcept_no);
+      assert.equal(retained.sources[relation.sourceId].sourceDate, null);
+      assert.equal(retained.sources[relation.sourceId].settlementDate, provenance.stlm_dt);
+      assert.equal(retained.relations[relation.id].artifactObservedAt, '2024-10-15T02:30:00Z');
+      for (const ticker of [relation.from, relation.to]) {
+        assert.ok(retained.tickerIndex[ticker].sourceCandidates.includes(relation.sourceId));
+        assert.ok(retained.tickerIndex[ticker].relationCandidates.includes(relation.id));
+      }
+    }
+    for (const field of CAPTURE_FIELDS) assert.deepEqual(retained[field], prior[field]);
+    assert.deepEqual(mergePriorCaptures(current, retained), retained, 'rebuilding must not duplicate historical rows');
+    const projected = spawnSync('python3', ['-B', '-c', [
+      'import json,sys',
+      'from api.intelligence.portfolio_evidence import project_portfolio_evidence',
+      'result=project_portfolio_evidence(json.load(sys.stdin),[{"ticker":"900001","market":"KR"}])',
+      'print(json.dumps(result["relationships"]))',
+    ].join('\n')], { cwd: path.resolve(__dirname, '..'), input: JSON.stringify(retained), encoding: 'utf8', timeout: 15000 });
+    assert.equal(projected.status, 0, projected.stderr);
+    const relationships = JSON.parse(projected.stdout);
+    assert.equal(relationships.length, 1);
+    assert.equal(relationships[0].status, 'accepted_reported');
+    assert.equal(relationships[0].snapshot_scope, 'reported-at-settlement-not-current');
+    assert.equal(relationships[0].source.as_of, null);
+    assert.equal(relationships[0].source.artifact_observed_at, '2024-10-15T02:30:00Z');
+    assert.equal(relationships[0].source.settlement_date, provenance.stlm_dt);
+    assert.deepEqual(relationships[0].evidence.source_row, Object.values(prior.relations)[0].sourceRow);
+  }
+});
+
+test('an explicitly empty or wholly rejected current issuer keeps its source marker and cannot restore prior relations', () => {
+  const prior = withEmptyCaptures(catalog({ structured: true, generatedAt: '2025-01-01T00:00:00Z' }));
+  for (const options of [{ emptyRelations: true }, { target: '999999' }]) {
+    const current = catalog({ structured: false, generatedAt: '2026-11-01T00:00:00Z', ...options });
+    assert.equal(Object.keys(current.relations).length, 0);
+    assert.ok(Object.values(current.sources).some(source => source.documentIssuer === 'KR:900001'
+      && source.kind === 'local-structured-relation-candidate'), 'known raw issuer emits a source even without accepted relations');
+    assert.equal(current.denominators.relationsAccepted, 0);
+    assert.equal(current.denominators.relationsRejected, options.emptyRelations ? 0 : 1);
+    const before = structuredClone(current);
+    assert.throws(() => mergePriorCaptures(current, prior), /structured source family downgrade/);
+    assert.deepEqual(current, before);
+  }
+});
+
+test('a raw issuer may emit no source when unresolved, but the missing current identity still blocks historical retention', () => {
+  const prior = withEmptyCaptures(catalog({ structured: true, generatedAt: '2025-01-01T00:00:00Z' }));
+  const identities = { ...universe, _meta: { ...universe._meta, count: 2 },
+    stocks: universe.stocks.filter(row => row.ticker !== '900001') };
+  // The fixture still contains the raw 900001 issuer with explicit empty arrays.
+  const current = catalog({ structured: false, emptyRelations: true, identities, generatedAt: '2026-11-01T00:00:00Z' });
+  assert.equal(Object.keys(current.sources).length, 0);
+  assert.equal(Object.keys(current.relations).length, 0);
+  assert.equal(current.tickerIndex['KR:900001'], undefined);
+  assert.throws(() => mergePriorCaptures(current, prior), /structured provenance binding/);
+});
+
+test('historical retention fails closed on identity, source/index binding and identifier collisions', () => {
+  const prior = withEmptyCaptures(catalog({ structured: true, generatedAt: '2025-01-01T00:00:00Z' }));
+  const current = catalog({ structured: false, missingIssuer: true, generatedAt: '2026-11-01T00:00:00Z' });
+  const relation = Object.values(prior.relations)[0];
+  const renamed = structuredClone(current); renamed.tickerIndex[relation.from].issuer.name = '다른 합성 주주';
+  assert.throws(() => mergePriorCaptures(renamed, prior), /structured provenance binding/);
+  const missing = structuredClone(prior); missing.tickerIndex[relation.from].relationCandidates = [];
+  assert.throws(() => mergePriorCaptures(current, missing), /structured provenance binding/);
+  for (const [field, value] of [['rcept_no', '20241015000002'], ['corp_code', '00000002'], ['stlm_dt', '2023-12-31']]) {
+    const changed = structuredClone(prior); changed.relations[relation.id].sourceRow.fields[field] = value;
+    assert.throws(() => mergePriorCaptures(current, changed), /structured provenance binding/);
+  }
+  const collision = structuredClone(current); collision.sources[relation.sourceId] = { id: relation.sourceId, kind: 'conflicting' };
+  assert.throws(() => mergePriorCaptures(collision, prior), /structured provenance collision/);
 });

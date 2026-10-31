@@ -68,8 +68,22 @@ def _zip(*, quote=QUOTE, table=TABLE, member=RECEIPT + ".xml", corp="01101254",
 <SECTION-2><TITLE>4. 매출 및 수주상황</TITLE>{table}</SECTION-2></SECTION-1></DOCUMENT>"""
     output = BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr(member, xml.encode())
+        # Byte-bound witnesses must not change when two calls cross a ZIP
+        # timestamp's two-second boundary. Only synthetic fixture time is fixed.
+        info = zipfile.ZipInfo(member, date_time=(2026, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        archive.writestr(info, xml.encode())
     return output.getvalue()
+
+
+def test_synthetic_archive_bytes_do_not_depend_on_wall_clock(monkeypatch):
+    with monkeypatch.context() as clock:
+        clock.setattr(zipfile.time, "localtime", lambda *args: (2026, 10, 31, 15, 40, 0, 5, 304, 0))
+        first = _zip()
+        clock.setattr(zipfile.time, "localtime", lambda *args: (2026, 10, 31, 15, 40, 2, 5, 304, 0))
+        second = _zip()
+    assert first == second
+    assert first != _zip(extra="<P>different source bytes</P>")
 
 
 def _build(source=None, row=None, archive=None, registry=None):

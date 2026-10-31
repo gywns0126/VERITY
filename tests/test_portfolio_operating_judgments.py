@@ -16,7 +16,7 @@ import pytest
 
 from api.intelligence import portfolio_business_judgment as business
 from api.intelligence.portfolio_ai_budget_ledger import SupabaseBudgetLedger
-from api.intelligence.portfolio_ai_fallback import openai_transport
+from api.intelligence.portfolio_ai_fallback import openai_transport, serialize_openai_payload
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,17 +79,30 @@ def _cached_answer(doc):
         "degree": {"value": "medium", "basis": "reported_qualitative", "quote": "주요 매출처"},
         "impact": {"direction": "unknown", "channel": "revenue", "condition": None,
                    "quote": "Synthetic A는 당사의 주요 매출처"},
+        "economic_v2": {"materiality": {"value": "unrated", "scope": "unknown",
+                                        "scope_quote": None, "period_quote": None,
+                                        "quote": None, "mechanism_quote": None}},
         "counter_evidence_quotes": [], "missing_evidence": [],
         "reason": "원문이 해당 회사를 주요 매출처로 명시합니다.", "review_trigger": "semantic-review-required",
     }], "remaining_count": 0}
 
 
-def _payload_size(worker, doc):
+def _wire_payload(worker, doc):
     packet = worker.prepare_judgment_prompt_packet([doc], as_of=AS_OF)
     payload = worker.ai._openai_payload(doc)
-    payload.update(instructions=worker.SYSTEM, input=json.dumps(packet, ensure_ascii=False))
+    payload.update(instructions=worker.SYSTEM,
+                   input=worker.ai.serialize_judgment_packet(packet))
     payload["text"]["format"].update(name="company_judgment", schema=worker.SCHEMA)
-    return len(json.dumps(payload, ensure_ascii=False).encode())
+    return payload
+
+
+def _wire_input_bytes(worker, payload):
+    empty = {**payload, "input": ""}
+    return len(worker.ai.serialize_openai_payload(payload)) - len(worker.ai.serialize_openai_payload(empty))
+
+
+def _payload_size(worker, doc):
+    return len(worker.ai.serialize_openai_payload(_wire_payload(worker, doc)))
 
 
 def test_fixed_public_reader_delegates_only_to_existing_public_worker(worker, monkeypatch):
@@ -148,15 +161,45 @@ def test_plan_checks_the_complete_utf8_payload_cap(worker, monkeypatch):
     oversized["issuer_name"] = "합성발행기업" * 24
     assert len(oversized["text"]) <= 600
     assert worker.ai.MAX_PROMPT_BYTES == 8000
-    assert _payload_size(worker, normal) <= 8000 < _payload_size(worker, oversized)
+    normal_payload, oversized_payload = _wire_payload(worker, normal), _wire_payload(worker, oversized)
+    normal_input_bytes = _wire_input_bytes(worker, normal_payload)
+    oversized_input_bytes = _wire_input_bytes(worker, oversized_payload)
+    assert _payload_size(worker, normal) > 8000
+    assert normal_input_bytes < oversized_input_bytes <= worker.ai.MAX_JUDGMENT_INPUT_WIRE_BYTES
     monkeypatch.setattr(worker.ai, "select_documents", lambda _, **kw: ([normal, oversized], {"input": 2, "eligible": 2}))
+    monkeypatch.setattr(worker.ai, "MAX_JUDGMENT_INPUT_WIRE_BYTES", normal_input_bytes)
     docs, coverage = worker.plan({}, as_of=AS_OF)
     assert docs == [normal] and coverage["input_too_large"] == 1
-    exact = _payload_size(worker, normal)
-    monkeypatch.setattr(worker.ai, "MAX_PROMPT_BYTES", exact)
+    monkeypatch.setattr(worker.ai, "MAX_JUDGMENT_INPUT_WIRE_BYTES", normal_input_bytes + 1)
     assert worker.plan({}, as_of=AS_OF)[0] == [normal]
-    monkeypatch.setattr(worker.ai, "MAX_PROMPT_BYTES", exact - 1)
+    monkeypatch.setattr(worker.ai, "MAX_JUDGMENT_INPUT_WIRE_BYTES", normal_input_bytes - 1)
     assert worker.plan({}, as_of=AS_OF)[0] == []
+
+
+def test_judgment_wire_limit_tracks_schema_but_never_exceeds_reserved_token_cost(worker):
+    payload = _wire_payload(worker, _doc())
+    empty_size = len(worker.ai.serialize_openai_payload({**payload, "input": ""}))
+    limit = worker.ai.prompt_payload_byte_limit(payload, judgment_mode=True)
+    assert limit == min(empty_size + worker.ai.MAX_JUDGMENT_INPUT_WIRE_BYTES,
+                       worker.ai.MAX_PROVIDER_BUDGET_WIRE_BYTES, 24_000)
+
+    enlarged = deepcopy(payload)
+    enlarged["instructions"] += " synthetic schema overhead"
+    enlarged_empty_size = len(worker.ai.serialize_openai_payload({**enlarged, "input": ""}))
+    enlarged_limit = worker.ai.prompt_payload_byte_limit(enlarged, judgment_mode=True)
+    assert enlarged_limit - limit == enlarged_empty_size - empty_size
+
+    # The explicit body cap keeps the conservative byte/token estimate under
+    # the reservation, with room for overhead/rate drift. This is not an invoice
+    # maximum-cost guarantee.
+    assert worker.ai.MAX_PROVIDER_BUDGET_WIRE_BYTES == 79_520
+    assert worker.ai.MAX_PROVIDER_WIRE_BYTES == min(worker.ai.MAX_PROVIDER_BUDGET_WIRE_BYTES, 24_000)
+    worst_case_tenths_micro_usd = (worker.ai.MAX_PROVIDER_WIRE_BYTES *
+                                   worker.ai.INPUT_PRICE_TENTHS_MICRO_USD_PER_TOKEN +
+                                   worker.ai.OPENAI_MAX_OUTPUT_TOKENS *
+                                   worker.ai.OUTPUT_PRICE_TENTHS_MICRO_USD_PER_TOKEN)
+    assert worst_case_tenths_micro_usd < worker.ai.RESERVE_MICRO_USD * 10
+    assert limit <= worker.ai.MAX_PROVIDER_WIRE_BYTES <= 24_000
 
 
 def test_probe_window_is_bounded_deterministic_and_excludes_future_sources(worker, monkeypatch):
@@ -228,6 +271,67 @@ def test_actual_cached_answer_preserves_old_assessment_and_spends_nothing(worker
     assert seen[0]["raw_answer"] == answer
     assert seen[0]["judgments"][0]["display"] == {"degree": "unrated", "impact": "unknown", "importance": "unrated"}
     assert ledger.read_bytes() == before
+
+
+def test_run_batch_reports_closed_impact_and_materiality_counts_as_separate_axes(worker, tmp_path):
+    def row(direction, materiality):
+        proposal = {"degree": {"value": "medium"}, "impact": {"direction": direction}}
+        if materiality is not None:
+            proposal["economic_v2"] = {"materiality": {"value": materiality}}
+        return {"proposal": proposal}
+
+    result = {"status": "ok", "judgments": [
+        row("positive", "material"), row("negative", "limited"),
+        row("mixed", "unrated"), row("unknown", None),
+    ], "legacy_answers_missing_economic_v2": 1,
+        "raw_answer": {"private": QUOTE}}
+    summary = worker.run_batch([_doc()], tmp_path / "summary.sqlite3", "synthetic-key", object(),
+                               as_of=AS_OF, limit=1, runner=lambda *args, **kwargs: result)
+    assert summary["pending_judgments"] == 4
+    assert summary["proposed_impact_direction_counts"] == {
+        "positive": 1, "negative": 1, "mixed": 1, "unknown": 1}
+    assert summary["proposed_economic_materiality_counts"] == {
+        "material": 1, "limited": 1, "unrated": 1}
+    assert summary["legacy_answers_missing_economic_v2"] == 1
+    rendered = json.dumps(summary, ensure_ascii=False)
+    assert QUOTE not in rendered and "raw_answer" not in summary
+
+
+def test_legacy_v2_answer_is_counted_but_does_not_mask_fresh_v3_interpretation(worker, tmp_path):
+    doc, ledger = _doc(), tmp_path / "legacy-v2.sqlite3"
+    old_answer = _cached_answer(doc)
+    old_answer["judgments"][0].pop("economic_v2")
+    legacy_result = {"status": "ok", "assessed_as_of": AS_OF, "raw_answer": old_answer}
+    legacy_key = worker.ai._digest([
+        worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT,
+        business.LEGACY_CACHE_VERSIONS[0], doc])
+    current_key = worker.ai._digest([
+        worker.ai.PROVIDER, worker.ai.MODEL, worker.ai.REASONING_EFFORT,
+        business.CACHE_VERSION, doc])
+    with sqlite3.connect(ledger) as db:
+        db.execute("CREATE TABLE calls (key TEXT PRIMARY KEY, day TEXT NOT NULL, reserved INTEGER NOT NULL, result TEXT)")
+        db.execute("INSERT INTO calls VALUES (?,?,?,?)",
+                   (legacy_key, AS_OF, 123, json.dumps(legacy_result)))
+
+    provider_payloads = []
+    def synthetic_provider(payload, key):
+        assert key == "synthetic-key"
+        provider_payloads.append(payload)
+        assert payload["text"]["format"]["schema"] == business.SCHEMA
+        assert "economic_v2" in payload["text"]["format"]["schema"]["properties"]["judgments"]["items"]["properties"]
+        return _cached_answer(doc), {"input_tokens": 10, "output_tokens": 5}
+
+    result = worker.ai.run_document(doc, ledger, "synthetic-key", enabled=True,
+                                    judgment_as_of=AS_OF, transport=synthetic_provider)
+    assert len(provider_payloads) == 1
+    assert result["status"] == "ok"
+    assert result["legacy_answers_missing_economic_v2"] == 1
+    assert result["judgments"][0]["proposal"]["economic_v2"]["materiality"]["value"] == "unrated"
+    with sqlite3.connect(ledger) as db:
+        rows = dict(db.execute("SELECT key,result FROM calls"))
+    assert set(rows) == {legacy_key, current_key}
+    assert json.loads(rows[legacy_key]) == legacy_result  # immutable v2 archive remains readable
+    assert json.loads(rows[current_key])["raw_answer"]["judgments"][0]["economic_v2"]
 
 
 def test_cached_failed_diagnostic_answer_is_free_and_not_a_successful_grade(worker, tmp_path):
@@ -678,6 +782,24 @@ def test_successful_transport_uses_scoped_wait_and_closed_timing(monkeypatch, pa
     answer, usage = openai_transport(payload, "synthetic-key")
     assert answer == {} and usage["_transport_diagnostic"]["socket_timeout_seconds"] == timeout
     assert usage["_transport_diagnostic"]["stage"] == "provider-response-complete"
+
+
+def test_openai_request_body_equals_canonical_serialization_helper(monkeypatch):
+    payload = {"model": "synthetic-model", "instructions": "공개자료 only",
+               "input": '{"text":"한글 source"}', "max_output_tokens": 32}
+    body = {"status": "completed", "output": [{"type": "message", "status": "completed",
+            "content": [{"type": "output_text", "text": "{}"}]}],
+            "usage": {"input_tokens": 1, "output_tokens": 1}}
+    seen = []
+
+    def open_request(request, *, timeout):
+        assert timeout == 25 and request.get_method() == "POST"
+        seen.append(request.data)
+        return io.BytesIO(json.dumps(body).encode())
+
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *handlers: SimpleNamespace(open=open_request))
+    answer, _ = openai_transport(payload, "synthetic-key")
+    assert answer == {} and seen == [serialize_openai_payload(payload)]
 
 
 @pytest.mark.parametrize("diagnostic", [
