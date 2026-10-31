@@ -1,13 +1,13 @@
 *{box-sizing:border-box}body{margin:0;background:#fff;color:#191f28;font:400 13px/1.6 Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif}
-.review-bar{height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid #e5e8eb}
-.review-bar strong{font-size:13px;font-weight:650;display:flex;align-items:center;gap:4px}.review-bar i{font-style:normal;color:#6c5ce7;font-size:17px}.review-bar span{font-size:11px;color:#6b7684;font-weight:400;margin-left:8px}
-.review-bar button{border:0;border-radius:8px;padding:4px 10px;min-height:30px;color:#191f28;background:#f8f9fb;font:inherit;font-size:12px;cursor:pointer;transition:background 160ms}
+.review-bar{min-height:36px;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:2px 18px;background:#fff}
+.review-bar span{font-size:11px;color:#6b7684;font-weight:600}
+.review-bar button{border:0;border-radius:8px;padding:4px 10px;min-height:32px;color:#191f28;background:#f8f9fb;font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:background 160ms}
 .review-bar button:focus-visible{outline:0;background:#e9edf2}
 @media(hover:hover){.review-bar button:hover{background:#f1f3f5}}
 .review-boundary{font-size:12px;color:#6b7684;margin:10px 0}.review-auth{max-width:400px;margin:24px auto;padding:0 12px}
 .review-auth[hidden]{display:none}.review-help{text-align:center;color:#6b7684;padding:0 20px}main{width:100%;padding:0}main>.ppm{border-radius:0}
 @media(max-width:600px){.review-bar{padding:0 12px}.review-bar span{display:none}}
-@media(pointer:coarse){.review-bar{height:48px}.review-bar button{min-height:44px;min-width:44px}}
+@media(pointer:coarse){.review-bar{min-height:48px}.review-bar button{min-height:44px;min-width:44px}}
 .an-data-refresh.an-data-refresh{padding:4px 10px;gap:4px 8px}
 .an-data-refresh.an-data-refresh button{min-height:28px;padding:4px 8px}
 @media(pointer:coarse){.an-data-refresh.an-data-refresh button{min-height:44px!important}}
