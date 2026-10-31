@@ -186,6 +186,7 @@ def prepare_judgment_packet(documents, *, as_of):
     Input and extraction caches are immutable. Versions bind exact document bytes.
     """
     from .portfolio_ai_fallback import validate_document
+    from .portfolio_judgment_context import validate_retained_context
     _day(as_of)
     if type(documents) is not list or not 1 <= len(documents) <= MAX_DOCUMENTS:
         raise ValueError("judgment-documents")
@@ -196,7 +197,13 @@ def prepare_judgment_packet(documents, *, as_of):
         if doc["as_of"] > as_of or doc["source_id"] in seen:
             raise ValueError("judgment-source-date-or-duplicate")
         seen.add(doc["source_id"])
-        sources.append({**deepcopy(doc), "source_version": _digest(doc)})
+        source = {**deepcopy(doc), "source_version": _digest(doc)}
+        if "retained_context_v1" in doc:
+            # Keep the original excerpt and digest immutable. Validators inspect
+            # the retained same-filing context, not a concatenation of sources.
+            source["excerpt_text"] = doc["text"]
+            source["text"] = validate_retained_context(doc)
+        sources.append(source)
     if len(json.dumps(sources, ensure_ascii=False).encode()) > 80_000:
         raise ValueError("judgment-packet-too-large")
     return {"schema": VERSION, "as_of": as_of, "sources": sources,
@@ -233,6 +240,12 @@ def prepare_judgment_prompt_packet(documents, *, as_of):
         if blocked:
             source["unquotable_choices"] = blocked
         del source["text"]
+        source.pop("excerpt_text", None)
+        if "retained_context_v1" in source:
+            # The sentence choices already carry the context. Do not pay for a
+            # second copy, or mistake retained bounded text for the full filing.
+            source["retained_context_v1"].pop("text")
+            source["context_scope"] = "same-filing-retained-excerpt-not-full-filing"
     return packet
 
 
@@ -298,7 +311,10 @@ def _period_context(row, source, *, period_archives=None, issuer_registry=None):
         if "period_context_v2" in row:
             raise ValueError("judgment-period-context-conflict")
         from .portfolio_reported_period import validate_reported_customer_period
-        original = {key: value for key, value in source.items() if key != "source_version"}
+        original = {key: value for key, value in source.items()
+                    if key not in {"source_version", "excerpt_text"}}
+        if "excerpt_text" in source:
+            original["text"] = source["excerpt_text"]
         context = validate_reported_customer_period(
             row["period_context_v3"], original, row,
             archives=period_archives, issuer_registry=issuer_registry)
@@ -901,6 +917,7 @@ def project_company_judgments(answer, documents, candidates, reviews, *, as_of,
     catalog = [{"market": key.split(":")[0], "ticker": key.split(":")[1], "name": name}
                for key, name in names.items()]
     output, bound = [], set()
+    source_documents = {doc["source_id"]: doc for doc in documents}
     for row in result["judgments"]:
         proposal = row["proposal"]
         matching = [c for c in candidates if type(c) is dict
@@ -967,6 +984,16 @@ def project_company_judgments(answer, documents, candidates, reviews, *, as_of,
                                    "counter_evidence_quotes": deepcopy(proposal["counter_evidence_quotes"])}
             if accepted:
                 item["review_reasons"] = [r for r in item["review_reasons"] if r != "counter-evidence-review"]
+            original = source_documents[proposal["source_id"]]
+            if "retained_context_v1" in original:
+                quotes = [materiality["quote"], *proposal["counter_evidence_quotes"]]
+                quotes = list(dict.fromkeys(q for q in quotes if q is not None))
+                if quotes:
+                    item["evidence_context_v1"] = {
+                        "source_version": proposal["source_version"],
+                        "raw_sha256": original["retained_context_v1"]["raw_sha256"],
+                        "quotes": quotes,
+                    }
         # Review decisions and source/proposal revisions all participate. Old
         # read acknowledgements cannot silently cover a newly changed judgment.
         item["revision"] = _digest([row["revision"], receipt, item])

@@ -11,6 +11,7 @@ import argparse
 import importlib.util
 import json
 import os
+import stat
 from pathlib import Path
 import sys
 
@@ -44,6 +45,27 @@ def read_sources():
     return module.read_sources()
 
 
+def read_retained_context():
+    """One fixed public-source cache; no arbitrary path or member input."""
+    from api.intelligence.portfolio_public_sources import _reject_duplicate_keys
+    path = ROOT / "data" / "dart_business_overview.json"
+    if (ROOT / "data").is_symlink() or path.is_symlink():
+        raise ValueError("retained-context-path")
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return None
+    maximum = 24 * 1024 * 1024
+    with os.fdopen(descriptor, "rb") as handle:
+        info = os.fstat(handle.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size > maximum:
+            raise ValueError("retained-context-file")
+        raw = handle.read(maximum + 1)
+    if len(raw) > maximum:
+        raise ValueError("retained-context-file")
+    return json.loads(raw, object_pairs_hook=_reject_duplicate_keys)
+
+
 def check_operating_environment(env):
     if (env.get("PORTFOLIO_AI_OPERATING_ENABLED") != "1"
             or env.get("PORTFOLIO_AI_LEDGER") != "supabase"
@@ -62,8 +84,12 @@ def check_operating_environment(env):
                                 env.get("SUPABASE_SERVICE_ROLE_KEY", ""))
 
 
-def plan(documents, *, as_of):
+def plan(documents, *, as_of, retained_context=None):
     rows, coverage = ai.select_documents(documents, include_claims=True)
+    if retained_context is not None:
+        from api.intelligence.portfolio_judgment_context import enrich_judgment_documents
+        rows, context_coverage = enrich_judgment_documents(rows, retained_context)
+        coverage["retained_context"] = context_coverage
     selected, oversized, future = [], 0, 0
     for doc in rows:
         if doc["as_of"] > as_of:
@@ -194,7 +220,7 @@ def main():
     if not 1 <= args.limit <= 10:
         parser.error("limit must be between 1 and 10")
     as_of = datetime.now(timezone(timedelta(hours=9))).date().isoformat()
-    docs, coverage = plan(read_sources(), as_of=as_of)
+    docs, coverage = plan(read_sources(), as_of=as_of, retained_context=read_retained_context())
     if not args.execute:
         print(json.dumps({"status": "dry-run", "coverage": coverage, "paid_attempts": 0,
                           "model": ai.MODEL, "reasoning_effort": ai.REASONING_EFFORT,

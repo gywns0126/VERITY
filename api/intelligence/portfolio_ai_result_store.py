@@ -40,6 +40,8 @@ def check_envelope(body, doc):
     if body["status"] == "ok" and usage is None:
         raise ValueError("private-result-usage")
     judgment = body["task_version"] == business.VERSION
+    if "retained_context_v1" in doc and not judgment:
+        raise ValueError("private-result-context-task")
     if judgment:
         stamp = body["assessed_as_of"]
         if type(stamp) is not str or date.fromisoformat(stamp).isoformat() != stamp or stamp < doc["as_of"]:

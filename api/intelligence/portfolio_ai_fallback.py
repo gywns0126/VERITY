@@ -21,6 +21,7 @@ import urllib.request
 
 from .portfolio_business_roles import _names, _source, _UNRESOLVED_SCOPE, _OTHER_SUBJECT, index_business_roles
 from .portfolio_filing_excerpts import _legal_name
+from .portfolio_judgment_context import validate_retained_context
 from .portfolio_public_sources import (
     project_public_sources, project_public_business_overviews, safe_public_text,
 )
@@ -477,7 +478,8 @@ def _historical_relation_clauses(sentence, name, party_names):
 
 def validate_document(doc):
     """Closed outbound schema; no account IDs, holdings, notes or arbitrary metadata."""
-    if type(doc) is not dict or set(doc) not in (_DOC_FIELDS, _DOC_FIELDS | {"resolved_relations"}):
+    if (type(doc) is not dict or not _DOC_FIELDS <= set(doc)
+            or set(doc) - _DOC_FIELDS - {"resolved_relations", "retained_context_v1"}):
         raise ValueError("public-document-shape")
     for key, limit in (("issuer_name", 160), ("text", 600)):
         if safe_public_text(doc[key], limit) is None:
@@ -519,6 +521,7 @@ def validate_document(doc):
                 or not _ID.fullmatch(str(relation["counterparty_id"]))
                 or relation["role"] not in ("customer", "supplier")):
             raise ValueError("public-document-resolved")
+    validate_retained_context(doc)
     return doc
 
 
@@ -885,6 +888,8 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
         return {"status": "disabled", "candidates": []}
     validate_document(doc)
     judgment_mode = judgment_as_of is not None
+    if not judgment_mode and "retained_context_v1" in doc:
+        raise ValueError("retained-context-judgment-only")
     if judgment_mode:
         # Explicit bounded evaluation, not the automatic extraction worker.
         # A new task namespace must not reuse extraction as economic judgment,
