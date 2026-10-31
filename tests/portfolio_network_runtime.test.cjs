@@ -543,6 +543,39 @@ test('touch pinch scales and translates around its midpoint, then reanchors rema
  assert.deepEqual(clone([...s.positions]),positions);assert.equal(f.layoutCalls(),1);f.assertNative();c.closeMemberNetwork();
 });
 
+test('three-to-two touch release or cancellation restarts pinch, then one finger pans and zero ends without native changes',async()=>{
+ for(const endType of ['pointerup','pointercancel','lostpointercapture'])for(const ended of [1,2,3]){
+  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
+  f.space.rect={left:37,top:19,width:900,height:600};s.camera={zoom:.6,panX:83,panY:-47};
+  s.pinned.set('source',{...s.positions.get('source')});c.memberNetworkSelect('stock');
+  const positions=clone([...s.positions]),pins=clone([...s.pinned]),points=new Map([[1,{x:100,y:100}],[2,{x:200,y:100}],[3,{x:300,y:120}]]);
+  const event=(type,id,p)=>inputEvent(f,{type,pointerType:'touch',pointerId:id,clientX:p.x,clientY:p.y});
+  for(const [id,p]of points)c.memberNetworkPointerDown(event('pointerdown',id,p));
+  points.set(2,{x:220,y:110});c.memberNetworkPointerMove(event('pointermove',2,points.get(2)));
+  const camera=clone(s.camera);c.memberNetworkPointerEnd(event(endType,ended,points.get(ended)));points.delete(ended);
+  const [[first,a],[second,b]]=[...points],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},distance=Math.hypot(b.x-a.x,b.y-a.y);
+  assert.equal(s.input.points.size,2);assert.equal(s.input.drag.mode,'pinch',endType+' ending '+ended);
+  assert.equal(s.input.drag.distance,distance);assert.equal(s.input.drag.x,mid.x);assert.equal(s.input.drag.y,mid.y);
+  assert.deepEqual(clone(s.input.drag.camera),camera);assert.deepEqual(clone(s.camera),camera,'release itself never jumps the camera');
+  assert.equal(f.space.hasPointerCapture(ended),false);
+  const anchor=worldAt(f,camera,mid.x,mid.y),moved={x:a.x-20,y:a.y+15};
+  c.memberNetworkPointerMove(event('pointermove',first,moved));
+  assert.ok(Object.values(s.camera).every(Number.isFinite),'remaining pinch must not produce NaN');
+  assert.ok(Math.abs(s.camera.zoom-camera.zoom*Math.hypot(b.x-moved.x,b.y-moved.y)/distance)<1e-10);
+  nearPoint(worldAt(f,s.camera,(moved.x+b.x)/2,(moved.y+b.y)/2),anchor);
+  const pinched=clone(s.camera);c.memberNetworkPointerEnd(event('pointerup',second,b));
+  assert.equal(s.input.points.size,1);assert.equal(s.input.drag.mode,'pan');assert.deepEqual(clone(s.camera),pinched);
+  const panned={x:moved.x+17,y:moved.y-9};c.memberNetworkPointerMove(event('pointermove',first,panned));
+  assert.deepEqual({...s.camera},{zoom:pinched.zoom,panX:pinched.panX+17,panY:pinched.panY-9});
+  c.memberNetworkPointerEnd(event('pointerup',first,panned));
+  assert.equal(s.input.points.size,0);assert.equal(s.input.drag,null);
+  for(const id of [1,2,3])assert.equal(f.space.hasPointerCapture(id),false);
+  f.engineCalls[0][5].select('source');assert.equal(s.selected,'stock','release cannot leak a selection');
+  assert.deepEqual(clone([...s.positions]),positions);assert.deepEqual(clone([...s.pinned]),pins);assert.equal(f.layoutCalls(),1);
+  f.assertNative();c.closeMemberNetwork();f.assertNative();
+ }
+});
+
 test('touch hit-test selects the nearest visible point on first tap, with no second synthetic selection',async()=>{
  const f=fixture(),c=f.context;await c.openMemberNetwork();const s=c.memberNetworkSession;
  s.positions=new Map([['stock',{x:500,y:340}],['source',{x:900,y:340}],['candidate',{x:1300,y:340}]]);

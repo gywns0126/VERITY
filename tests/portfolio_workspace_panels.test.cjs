@@ -10,13 +10,13 @@ function extract(name){
 }
 function fixture(){
   const state={panX:73,panY:-29,zoom:.39,focusId:'stock',notes:{n:{x:.2,y:.7,text:'retained'}}};
-  const calls={render:0,cancel:0,focus:0,preview:0};
+  const calls={render:0,cancel:0,focus:0,preview:0,fit:0},frames=[];
   const c={state,space:{clientWidth:900,clientHeight:400},nodeMoveActive:false,pendingMapResize:false,narrowFocusLayout:false,
-    memberPanelResizeOrigin:null,cancelGesture:()=>calls.cancel++,closePreview:()=>calls.preview++,renderMap:()=>calls.render++,focusStock:()=>calls.focus++};
-  vm.runInNewContext(extract('memberLibraryHeight')+'\n'+extract('applyMapResize'),c);
+    memberPanelResizeOrigin:null,memberInitialViewportPending:false,memberInitialViewportFrame:0,memberInitialViewportSize:'',hasSavedCamera:false,requestAnimationFrame:fn=>(frames.push(fn),frames.length),cancelGesture:()=>calls.cancel++,closePreview:()=>calls.preview++,renderMap:()=>calls.render++,focusStock:()=>calls.focus++,fitNodes:()=>calls.fit++};
+  vm.runInNewContext(extract('memberLibraryHeight')+'\n'+extract('queueMemberInitialViewport')+'\n'+extract('fitMemberInitialViewport')+'\n'+extract('applyMapResize'),c);
   const origin=()=>[c.space.clientWidth/2+state.panX,c.space.clientHeight/2+state.panY];
   const begin=()=>{c.memberPanelResizeOrigin={width:c.space.clientWidth,height:c.space.clientHeight,panX:state.panX,panY:state.panY};};
-  return {c,state,calls,origin,begin};
+  return {c,state,calls,origin,begin,frame:()=>frames.shift()?.()};
 }
 test('height bounds retain a reachable header, cap short viewports and reject nonfinite input',()=>{
   const f=fixture();
@@ -45,4 +45,32 @@ test('ordinary window resize keeps the existing cancellation and explicit narrow
   const f=fixture();f.c.space.clientWidth=390;f.c.applyMapResize();
   assert.equal(f.calls.cancel,1);assert.equal(f.calls.focus,1);assert.equal(f.calls.render,1);assert.equal(f.c.narrowFocusLayout,true);
   assert.deepEqual([f.state.panX,f.state.panY],[73,-29]);
+});
+test('initial fit waits for a measurable viewport and runs only once without changing notes',()=>{
+  const f=fixture(),notes=JSON.stringify(f.state.notes);f.c.cancelGesture=null;f.c.memberInitialViewportPending=true;
+  f.c.space.clientWidth=0;f.c.space.clientHeight=0;f.begin();
+  assert.equal(f.c.fitMemberInitialViewport(),false);f.c.applyMapResize();
+  assert.equal(f.calls.fit,0);assert.equal(f.c.memberInitialViewportPending,true);assert.equal(f.c.memberPanelResizeOrigin,null);
+  f.c.space.clientWidth=980;f.c.space.clientHeight=389;f.c.applyMapResize();
+  f.frame();assert.equal(f.calls.fit,0);f.frame();
+  assert.equal(f.calls.fit,1);assert.equal(f.c.memberInitialViewportPending,false);
+  f.c.applyMapResize();assert.equal(f.calls.fit,1);assert.equal(JSON.stringify(f.state.notes),notes);
+});
+test('restored camera cancels deferred fit; a zero-size origin cannot shift a later visible map',()=>{
+  const f=fixture(),before=[f.state.panX,f.state.panY,f.state.zoom];f.c.cancelGesture=null;
+  f.c.memberInitialViewportPending=true;f.c.hasSavedCamera=true;
+  f.c.memberPanelResizeOrigin={width:0,height:0,panX:0,panY:0};f.c.applyMapResize();f.frame();
+  assert.equal(f.calls.fit,0);assert.equal(f.c.memberInitialViewportPending,false);
+  assert.deepEqual([f.state.panX,f.state.panY,f.state.zoom],before);
+});
+test('initial fit waits for the final library height across animation frames',()=>{
+  const f=fixture();f.c.cancelGesture=null;f.c.memberInitialViewportPending=true;
+  f.c.space.clientHeight=589;f.c.applyMapResize();f.frame();assert.equal(f.calls.fit,0);
+  f.c.space.clientHeight=389;f.c.applyMapResize();f.frame();assert.equal(f.calls.fit,0);
+  f.frame();assert.equal(f.calls.fit,1);assert.equal(f.c.memberPanelResizeOrigin,null);
+});
+test('queued panel compensation preserves newer camera input rather than restoring stale captured pan',()=>{
+  const f=fixture();f.begin();f.state.panX+=22;f.state.panY-=13;
+  const before=f.origin();f.c.space.clientHeight=220;f.c.applyMapResize();
+  assert.deepEqual(f.origin(),before);assert.equal(f.calls.cancel,0);
 });
