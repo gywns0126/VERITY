@@ -5177,6 +5177,19 @@ ${r.reason}`,
 }
 
 // framer-components/public-probe/PortfolioStockSearch.ts
+// Receiver identity only: never carry arbitrary URL fields into auth redirects
+// or infer a company name/market from a ticker alone.
+function parsePortfolioMapEntry(search) {
+  if (typeof search !== "string" || search.length > 2048) return null;
+  const params = new URLSearchParams(search);
+  if (params.getAll("ticker").length !== 1 || params.getAll("market").length !== 1) return null;
+  const stock = { ticker: params.get("ticker").toUpperCase(), market: params.get("market") };
+  return validIdentity(stock) ? stock : null;
+}
+function portfolioMapEntryPath(search) {
+  const stock = parsePortfolioMapEntry(search);
+  return "/member-map-review" + (stock ? "?" + new URLSearchParams(stock) : "");
+}
 var MAX_RESULTS = 12;
 var MAX_BODY_BYTES = 64 * 1024;
 var KR_MARKETS2 = /* @__PURE__ */ new Set(["KR", "KOSPI", "KOSDAQ", "KONEX"]);
@@ -5590,6 +5603,8 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
   let searchRequest = null, searchRevision = 0;
   let searchStocks = /* @__PURE__ */ new Map();
   let exploration = null;
+  const entry = validIdentity(options.entryStock) ? { stock: { ...options.entryStock }, phase: "waiting", windowKey: "" } : null;
+  let entryRequest = null;
   let logoRequest = new AbortController();
   const requestedLogos = /* @__PURE__ */ new Set();
   const sendLogos = (stocks) => {
@@ -5646,10 +5661,59 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
     if (pendingFocus) pendingFocus.requested = true;
     flushReturnFocus();
   };
+  // One temporary exploration after both private restore and frame hydration.
+  // Graph acknowledgement is separate: never focus a node the frame lacks yet.
+  const applyEntry = () => {
+    if (!entry || disposed || !port || !hydrated || appliedOriginGeneration !== originGeneration || current.phase !== "ready" || current.privateState.phase !== "ready" || !current.privateState.document || !owner || owner !== account()) return;
+    if (entry.phase === "focusing") {
+      const company = current.graph?.companies.find(row => row.ticker === entry.stock.ticker && row.market === entry.stock.market);
+      entry.phase = "done";
+      if (company && entry.windowKey === focusWindowKey(current)) port.postMessage({ type: "focus-stock", id: company.id });
+      return;
+    }
+    if (entry.phase !== "waiting" || exploration) return;
+    entry.phase = "resolving";
+    const version = generation, member = owner, windowKey = focusWindowKey(current);
+    const controller = new AbortController();
+    entryRequest = controller;
+    const isCurrent = () => {
+      if (disposed || controller.signal.aborted || version !== generation || member !== owner || member !== account()) return false;
+      const state = workspace.getState();
+      return state.phase === "ready" && focusWindowKey(state) === windowKey;
+    };
+    void (async () => {
+      let activeExploration = null;
+      try {
+        let stock = workspaceStocks(workspace.getState()).find(row => row.ticker === entry.stock.ticker);
+        if (!stock) {
+          const result = await (options.searchLoader || fetchPortfolioStockSearch)(entry.stock.ticker, { signal: controller.signal });
+          if (!isCurrent()) return;
+          stock = result.stocks.find(row => row.ticker === entry.stock.ticker && row.market === entry.stock.market);
+        }
+        if (!isCurrent() || !stock || stock.market !== entry.stock.market || exploration) return;
+        activeExploration = { ticker: stock.ticker, version };
+        exploration = activeExploration;
+        const success = await workspace.exploreStock(stock);
+        if (!success || disposed || controller.signal.aborted || version !== generation || member !== owner || member !== account()) return;
+        entry.windowKey = focusWindowKey(workspace.getState());
+        entry.phase = "focusing";
+        applyEntry();
+      } catch {
+        // Invalid, unavailable, ambiguous or over-limit entry leaves the saved
+        // workspace and any in-memory draft intact; no retry and no save.
+      } finally {
+        if (entry.phase === "resolving") entry.phase = "done";
+        if (entryRequest === controller) entryRequest = null;
+        if (exploration === activeExploration) exploration = null;
+      }
+    })();
+  };
   const close = () => {
     generation++;
     searchRevision++;
     searchRequest?.abort();
+    entryRequest?.abort();
+    if (entry && entry.phase !== "waiting") entry.phase = "done";
     searchStocks.clear();
     logoRequest.abort();
     logoRequest = new AbortController();
@@ -5705,6 +5769,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
         flushReturnFocus();
         status();
         rememberVisit();
+        applyEntry();
         return;
       }
       if (command.type === "graph-applied") {
@@ -5712,6 +5777,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
           appliedOriginGeneration = originGeneration;
           status();
           rememberVisit();
+          applyEntry();
         }
         return;
       }
@@ -5894,6 +5960,7 @@ function mountMemberPrototype(frame, template, workspace, options = {}) {
     } else {
       status();
       if (waiting) loaded();
+      applyEntry();
     }
   });
   const cleanup = () => {
@@ -6929,7 +6996,7 @@ function PublicPortfolioPrototype({ template = "", templateURL }) {
       }
     });
     const logoLoader = createPortfolioPublicLogoLoader();
-    const unmount = mountMemberPrototype(frame.current, template, workspace, { openSource: setSource, openHoldings: () => setView("holdings"), templateURL, logoLoader });
+    const unmount = mountMemberPrototype(frame.current, template, workspace, { openSource: setSource, openHoldings: () => setView("holdings"), templateURL, logoLoader, entryStock: parsePortfolioMapEntry(window.location.search) });
     bridge.current = unmount;
     const unbind = workspace.bindAuth(window);
     const stopDataRefresh = workspace.bindDataRefresh(window);
@@ -7035,6 +7102,8 @@ addPropertyControls(PublicPortfolioMapReview, {
   minHeight: { type: ControlType.Number, title: "최소 높이", defaultValue: 820, min: 480, max: 1200, step: 20 }
 });
 export {
+  parsePortfolioMapEntry,
+  portfolioMapEntryPath,
   PublicPortfolioMapReview as default
 };
 /** @preserve User-approved review-only member map. Preserve the published site and existing member data.

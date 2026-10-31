@@ -1,11 +1,12 @@
 import * as React from "react"
 import { createRoot } from "react-dom/client"
 import AlphaNestAuth, { getVeritySession } from "./Auth.snapshot"
-import PublicPortfolioMapReview from "./Map.snapshot"
+import PublicPortfolioMapReview, { portfolioMapEntryPath } from "./Map.snapshot"
 import CompanyStructureView, { useCompanyStructureBridge } from "./company-structure-view"
 
 declare const __PUBLIC_AUTH__: { url: string; anon: string }
-const RETURN_URL = "https://project-yw131.vercel.app/member-map-review"
+const RETURN_PATH = portfolioMapEntryPath(window.location.search)
+const RETURN_URL = "https://project-yw131.vercel.app" + RETURN_PATH
 
 function Review() {
     const [memberId, setMemberId] = React.useState<string | null>(null)
@@ -34,7 +35,7 @@ function Review() {
         <section className="review-auth" hidden={signedIn && !accountOpen} aria-label="알파네스트 로그인">
             <p className="review-boundary">회원 검수용 작업판입니다. 여기서 기존 보유종목은 변경하지 않아요.</p>
             <AlphaNestAuth supabaseUrl={__PUBLIC_AUTH__.url} supabaseAnonKey={__PUBLIC_AUTH__.anon}
-                redirectUrl={RETURN_URL} afterLoginPath="/member-map-review" dark={false}
+                redirectUrl={RETURN_URL} afterLoginPath={RETURN_PATH} dark={false}
                 termsUrl="https://www.alphanest.kr/policy" privacyUrl="https://www.alphanest.kr/policy" />
         </section>
         {signedIn ? <main><PublicPortfolioMapReview /></main> :
