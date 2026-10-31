@@ -11,9 +11,9 @@ function extract(name){
 function fixture(){
   const state={panX:73,panY:-29,zoom:.39,focusId:'stock',notes:{n:{x:.2,y:.7,text:'retained'}}};
   const calls={render:0,cancel:0,focus:0,preview:0,fit:0},frames=[];
-  const c={state,space:{clientWidth:900,clientHeight:400},nodeMoveActive:false,pendingMapResize:false,narrowFocusLayout:false,
+  const c={state,space:{clientWidth:900,clientHeight:400,classList:{contains:()=>false}},nodeMoveActive:false,nativeGesture:null,pendingMapResize:false,narrowFocusLayout:false,
     memberPanelResizeOrigin:null,memberInitialViewportPending:false,memberInitialViewportFrame:0,memberInitialViewportSize:'',hasSavedCamera:false,requestAnimationFrame:fn=>(frames.push(fn),frames.length),cancelGesture:()=>calls.cancel++,closePreview:()=>calls.preview++,renderMap:()=>calls.render++,focusStock:()=>calls.focus++,fitNodes:()=>calls.fit++};
-  vm.runInNewContext(extract('memberLibraryHeight')+'\n'+extract('queueMemberInitialViewport')+'\n'+extract('fitMemberInitialViewport')+'\n'+extract('applyMapResize'),c);
+  vm.runInNewContext(extract('memberLibraryHeight')+'\n'+extract('cancelMemberInitialViewport')+'\n'+extract('queueMemberInitialViewport')+'\n'+extract('fitMemberInitialViewport')+'\n'+extract('applyMapResize'),c);
   const origin=()=>[c.space.clientWidth/2+state.panX,c.space.clientHeight/2+state.panY];
   const begin=()=>{c.memberPanelResizeOrigin={width:c.space.clientWidth,height:c.space.clientHeight,panX:state.panX,panY:state.panY};};
   return {c,state,calls,origin,begin,frame:()=>frames.shift()?.()};
@@ -73,4 +73,16 @@ test('queued panel compensation preserves newer camera input rather than restori
   const f=fixture();f.begin();f.state.panX+=22;f.state.panY-=13;
   const before=f.origin();f.c.space.clientHeight=220;f.c.applyMapResize();
   assert.deepEqual(f.origin(),before);assert.equal(f.calls.cancel,0);
+});
+test('delayed startup fit never overrides native pinch, background pan or completed deliberate input',()=>{
+  for(const mode of ['pinch','pan','input']){
+    const f=fixture(),before=[f.state.zoom,f.state.panX,f.state.panY];f.c.cancelGesture=null;f.c.memberInitialViewportPending=true;
+    f.c.queueMemberInitialViewport();f.frame();
+    if(mode==='pinch')f.c.nativeGesture={zoom:1};
+    if(mode==='pan')f.c.space.classList.contains=name=>name==='panning';
+    if(mode==='input')f.c.cancelMemberInitialViewport();
+    f.frame();assert.equal(f.calls.fit,0,mode);assert.equal(f.c.memberInitialViewportPending,false);
+    assert.deepEqual([f.state.zoom,f.state.panX,f.state.panY],before);
+  }
+  assert.match(source,/for\(const type of \['wheel','pointerdown','keydown','gesturestart'\]\)\s+space\.addEventListener\(type,cancelMemberInitialViewport,\{capture:true,passive:true\}\)/);
 });

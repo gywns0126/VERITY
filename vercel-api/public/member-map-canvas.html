@@ -2584,6 +2584,9 @@ html>body{padding:0}</style>
       let pendingMapResize=false;
       let memberPanelResizeOrigin=null;
       let memberInitialViewportPending=false,memberInitialViewportFrame=0,memberInitialViewportSize='';
+      function cancelMemberInitialViewport(){memberInitialViewportPending=false;}
+      for(const type of ['wheel','pointerdown','keydown','gesturestart'])
+        space.addEventListener(type,cancelMemberInitialViewport,{capture:true,passive:true});
       function queueMemberInitialViewport(){
         if(memberInitialViewportPending&&!memberInitialViewportFrame)
           memberInitialViewportFrame=requestAnimationFrame(()=>{memberInitialViewportFrame=0;fitMemberInitialViewport();});
@@ -2592,7 +2595,7 @@ html>body{padding:0}</style>
         if(!memberInitialViewportPending)return false;
         if(hasSavedCamera){memberInitialViewportPending=false;return false;}
         if(space.clientWidth<=0||space.clientHeight<=0){memberInitialViewportSize='';return false;}
-        if(nodeMoveActive||cancelGesture){memberInitialViewportPending=false;return false;}
+        if(nodeMoveActive||cancelGesture||nativeGesture||space.classList.contains('panning')){memberInitialViewportPending=false;return false;}
         const size=space.clientWidth+':'+space.clientHeight;
         if(memberInitialViewportSize!==size){memberInitialViewportSize=size;queueMemberInitialViewport();return false;}
         memberInitialViewportPending=false;memberPanelResizeOrigin=null;
