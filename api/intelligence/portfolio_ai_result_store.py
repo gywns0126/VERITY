@@ -76,8 +76,9 @@ def replay_result(saved, doc, *, judgment_as_of=None):
     version = body["task_version"]
     accepted_keys = {ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT, version, doc])}
     if version == business.VERSION:
-        accepted_keys.add(ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT,
-                                      business.CACHE_VERSION, doc]))
+        for prompt_version in (business.CACHE_VERSION, *business.LEGACY_CACHE_VERSIONS):
+            accepted_keys.add(ai._digest([ai.PROVIDER, ai.MODEL, ai.REASONING_EFFORT,
+                                          prompt_version, doc]))
     if saved["key"] not in accepted_keys:
         raise ValueError("private-result-key-mismatch")
     if (judgment_as_of is not None) != (version == business.VERSION):

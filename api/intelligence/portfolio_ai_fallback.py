@@ -47,14 +47,56 @@ DAY_LIMIT_MICRO_USD = 300_000
 # Older calls and unknown/crashed calls retain reservations, never free retries.
 RESERVE_MICRO_USD = 10_000
 MAX_PROMPT_BYTES = 8_000
+# Judgment packets are a single validator-bounded public document. Keep the
+# same 8 KB limit on its variable provider-wire input portion; instructions and
+# the live response schema are code-owned overhead and are counted dynamically.
+MAX_JUDGMENT_INPUT_WIRE_BYTES = MAX_PROMPT_BYTES
 MAX_OUTPUT_TOKENS = 1_024
 OPENAI_MAX_OUTPUT_TOKENS = 4_096
+# Conservative public Standard Luna bounds used by the charge estimator below:
+# $0.10/M input and $0.50/M output. Count every UTF-8 byte as a possible token
+# and reserve the full output cap at full price (no cached-input discount).
+INPUT_PRICE_TENTHS_MICRO_USD_PER_TOKEN = 1
+OUTPUT_PRICE_TENTHS_MICRO_USD_PER_TOKEN = 5
+MAX_PROVIDER_BUDGET_WIRE_BYTES = (RESERVE_MICRO_USD * 10 -
+                                  OPENAI_MAX_OUTPUT_TOKENS * OUTPUT_PRICE_TENTHS_MICRO_USD_PER_TOKEN) // \
+    INPUT_PRICE_TENTHS_MICRO_USD_PER_TOKEN
+# Additional headroom for tokenizer/protocol overhead and rate drift. This is
+# an operational request-size bound, not a guarantee of maximum invoice cost.
+MAX_PROVIDER_WIRE_BYTES = min(MAX_PROVIDER_BUDGET_WIRE_BYTES, 24_000)
 # Synchronous judgment responses need more headroom than short extraction.
 # These are socket-operation limits, not a total request deadline or a retry.
 OPENAI_TIMEOUT_SECONDS = 25
 JUDGMENT_TIMEOUT_SECONDS = 90
 _PROVIDER_ERROR_CODES = {"insufficient_quota", "rate_limit_exceeded", "invalid_api_key",
                          "model_not_found", "unsupported_country_region_territory"}
+
+
+def serialize_judgment_packet(packet):
+    """Compact JSON punctuation only; preserve every source character/value."""
+    return json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+
+
+def serialize_openai_payload(payload):
+    """The exact UTF-8 bytes sent by the OpenAI transport."""
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def prompt_payload_byte_limit(payload, *, judgment_mode=False):
+    """Bound source input bytes while accounting for live judgment schema size.
+
+    Non-judgment requests retain the historical whole-body cap. Judgment
+    requests reserve the same 8 KB for the variable input portion, measured on
+    the final compact wire representation; fixed instructions/schema bytes are
+    recalculated from the actual payload so schema additions do not starve it.
+    """
+    if not judgment_mode:
+        return MAX_PROMPT_BYTES
+    fixed_payload = dict(payload)
+    fixed_payload["input"] = ""
+    fixed_wire_bytes = len(serialize_openai_payload(fixed_payload))
+    return min(fixed_wire_bytes + MAX_JUDGMENT_INPUT_WIRE_BYTES,
+               MAX_PROVIDER_WIRE_BYTES)
 _ROLE = re.compile(r"고객|매출처|공급|납품|구매|매입|원재료|customer|suppl", re.I)
 _ID = re.compile(r"(?:KR:[0-9]{6}|US:[A-Z][A-Z0-9.-]{0,12})\Z")
 _INSTRUCTION = re.compile(r"ignore.{0,30}instruction|system\s*prompt|api[_ -]?key|비밀|지시를?\s*무시", re.I)
@@ -725,7 +767,7 @@ def openai_transport(payload, api_key):
             return None
     request = urllib.request.Request(
         "https://api.openai.com/v1/responses", method="POST",
-        data=json.dumps(payload, ensure_ascii=False).encode(),
+        data=serialize_openai_payload(payload),
         headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"})
     text = payload.get("text")
     format_ = text.get("format") if type(text) is dict else None
@@ -869,7 +911,7 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
         return {"status": "missing-key", "candidates": []}
     payload = _openai_payload(doc, with_context=with_context, with_claims=with_claims)
     if judgment_mode:
-        payload.update(instructions=business.SYSTEM, input=json.dumps(packet, ensure_ascii=False))
+        payload.update(instructions=business.SYSTEM, input=serialize_judgment_packet(packet))
         payload["text"]["format"].update(name="company_judgment", schema=business.SCHEMA)
     path = Path(ledger_path)
     if path.is_symlink() or path.parent.is_symlink():
@@ -882,14 +924,59 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
         version = business.VERSION
     cache_version = business.CACHE_VERSION if judgment_mode else version
     key = _digest([PROVIDER, MODEL, REASONING_EFFORT, cache_version, doc])
+    legacy_cache_keys = ([
+        _digest([PROVIDER, MODEL, REASONING_EFFORT, old, doc])
+        for old in getattr(business, "LEGACY_CACHE_VERSIONS", ())
+        if old != cache_version
+    ] if judgment_mode else [])
     prior_keys = list(dict.fromkeys([key, *[
         _digest([PROVIDER, MODEL, REASONING_EFFORT, old, doc])
         for old in (() if judgment_mode else (VERSION, CONTEXT_VERSION, claim_version))]]))
+    lookup_keys = list(dict.fromkeys([*prior_keys, *legacy_cache_keys]))
+    # A v2 answer is accepted only for read-only archive recovery. A v3
+    # assessment is a distinct interpretation and must reserve only its own key.
+    reservation_keys = [key] if judgment_mode else prior_keys
+    legacy_answers_missing_economic_v2 = 0
+
+    def with_legacy_count(result):
+        if judgment_mode and legacy_answers_missing_economic_v2:
+            result["legacy_answers_missing_economic_v2"] = legacy_answers_missing_economic_v2
+        return result
+
+    def missing_economic_count(validation):
+        rows = validation.get("judgments", []) if type(validation) is dict else []
+        if type(rows) is not list or len(rows) > 16:
+            return 0
+        return sum(1 for row in rows if type(row) is dict
+                   and type(row.get("proposal")) is dict
+                   and "economic_v2" not in row["proposal"])
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     try:
         connection.execute("CREATE TABLE IF NOT EXISTS calls (key TEXT PRIMARY KEY, day TEXT NOT NULL, reserved INTEGER NOT NULL, result TEXT)")
         connection.execute("BEGIN IMMEDIATE")
         existing = connection.execute("SELECT result FROM calls WHERE key=?", (key,)).fetchone()
+        if judgment_mode and existing is None:
+            # Inspect an old local answer only to count its missing new axis.
+            # Never return it as a complete v3 cache hit or overwrite it.
+            for old_key in legacy_cache_keys:
+                prior = connection.execute("SELECT result FROM calls WHERE key=?", (old_key,)).fetchone()
+                if prior is None or prior[0] is None:
+                    continue
+                try:
+                    old_result = json.loads(prior[0])
+                    assessed = old_result.get("assessed_as_of")
+                    raw = old_result.get("raw_answer")
+                    if type(assessed) is not str or type(raw) is not dict:
+                        continue
+                    safe = business.safe_saved_judgment_answer(raw, [doc], as_of=assessed)
+                    if safe is None:
+                        continue
+                    old_validation = business.validate_company_judgments(safe, [doc], as_of=assessed)
+                    if not old_validation.get("rejected"):
+                        legacy_answers_missing_economic_v2 = max(
+                            legacy_answers_missing_economic_v2, missing_economic_count(old_validation))
+                except (ValueError, TypeError, KeyError, OverflowError):
+                    continue
         for prior_version in (() if judgment_mode else (VERSION, CONTEXT_VERSION, claim_version)):
             if existing is not None:
                 break
@@ -917,8 +1004,8 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
                               fresh_assessment=assessed_as_of == judgment_as_of)
             else:
                 result = _revalidate_cached_result(result, doc)
-            return {**result, "status": "cached", "original_status": result["status"],
-                    **({"claims_available": "claims" in result} if with_claims else {})}
+            return with_legacy_count({**result, "status": "cached", "original_status": result["status"],
+                **({"claims_available": "claims" in result} if with_claims else {})})
         # A different/restarted worker must recover a durable response BEFORE
         # making another reservation. Server storage failure is fail-closed.
         from .portfolio_ai_budget_ledger import BudgetLedgerUnavailable, SupabaseBudgetLedger
@@ -928,28 +1015,37 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
                 budget_ledger = budget_ledger or SupabaseBudgetLedger.from_environment()
             except BudgetLedgerUnavailable:
                 connection.rollback()
-                return {"status": "budget-ledger-unavailable", "candidates": []}
+                return with_legacy_count({"status": "budget-ledger-unavailable", "candidates": []})
             try:
                 result_store = result_store or SupabaseResultStore(budget_ledger)
-                saved = result_store.get(prior_keys)
+                saved = result_store.get(lookup_keys)
                 if saved is not None:
                     recovered = replay_result(saved, doc, judgment_as_of=judgment_as_of)
-                    connection.rollback()
-                    return {**recovered, **({"claims_available": "claims" in recovered} if with_claims else {})}
+                    if not judgment_mode or saved.get("key") == key:
+                        connection.rollback()
+                        return with_legacy_count({**recovered,
+                            **({"claims_available": "claims" in recovered} if with_claims else {})})
+                    # Validate the old archive, then request the new schema if
+                    # budget permits. The old result remains immutable and is
+                    # never presented as a fresh economic-materiality answer.
+                    legacy_answers_missing_economic_v2 = max(
+                        legacy_answers_missing_economic_v2, missing_economic_count(recovered))
             except (BudgetLedgerUnavailable, ValueError, TypeError, KeyError):
                 connection.rollback()
-                return {"status": "result-store-unavailable", "candidates": []}
+                return with_legacy_count({"status": "result-store-unavailable", "candidates": []})
         # The outbound limit must not block free recovery of a previously paid
         # answer after instructions grow. It still precedes every reservation
         # and provider call; cached source/answer bytes are never rewritten.
-        if len(json.dumps(payload, ensure_ascii=False).encode()) > MAX_PROMPT_BYTES:
+        wire_bytes = serialize_openai_payload(payload)
+        byte_limit = prompt_payload_byte_limit(payload, judgment_mode=judgment_mode)
+        if len(wire_bytes) > byte_limit:
             connection.rollback()
-            return {"status": "input-too-large", "candidates": []}
+            return with_legacy_count({"status": "input-too-large", "candidates": []})
         month = connection.execute("SELECT COALESCE(SUM(reserved),0) FROM calls WHERE day LIKE ?", (today[:7] + "%",)).fetchone()[0]
         day = connection.execute("SELECT COALESCE(SUM(reserved),0) FROM calls WHERE day=?", (today,)).fetchone()[0]
         if month + RESERVE_MICRO_USD > MONTH_LIMIT_MICRO_USD or day + RESERVE_MICRO_USD > DAY_LIMIT_MICRO_USD:
             connection.rollback()
-            return {"status": "budget-exhausted", "candidates": []}
+            return with_legacy_count({"status": "budget-exhausted", "candidates": []})
         # SQLite remains a private result archive and an additional local brake.
         # Every real provider call also requires the authoritative durable ledger.
         # A synthetic transport can test offline without credentials or network.
@@ -958,14 +1054,14 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
         if budget_ledger is not None or transport is None:
             try:
                 budget_ledger = budget_ledger or SupabaseBudgetLedger.from_environment()
-                reservation = budget_ledger.reserve(prior_keys)
+                reservation = budget_ledger.reserve(reservation_keys)
                 if reservation["status"] != "reserved":
                     connection.rollback()
-                    return {"status": reservation["status"], "candidates": [],
-                            "budget_backend": "supabase"}
+                    return with_legacy_count({"status": reservation["status"], "candidates": [],
+                            "budget_backend": "supabase"})
             except BudgetLedgerUnavailable:
                 connection.rollback()
-                return {"status": "budget-ledger-unavailable", "candidates": []}
+                return with_legacy_count({"status": "budget-ledger-unavailable", "candidates": []})
         connection.execute("INSERT INTO calls VALUES (?,?,?,NULL)", (key, today, RESERVE_MICRO_USD))
         connection.commit()  # Crash/timeout stays reserved: never spend twice.
         counts, estimate, validation, answer = None, None, None, None
@@ -1051,6 +1147,8 @@ def run_document(doc, ledger_path, api_key, *, enabled=False, transport=None, wi
         if judgment_mode:
             result.update(judgment_version=version, purpose="local-business-judgment-evaluation",
                           assessed_as_of=judgment_as_of, published=False)
+            if legacy_answers_missing_economic_v2:
+                result["legacy_answers_missing_economic_v2"] = legacy_answers_missing_economic_v2
         if counts is not None:
             result["budget_charged_usd"] = charged_micro_usd / 1_000_000
         # Atomic settlement with the result. A crash before commit keeps the

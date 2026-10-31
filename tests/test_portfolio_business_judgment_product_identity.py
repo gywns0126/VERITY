@@ -197,7 +197,7 @@ def test_v1_archived_judgment_remains_readable_after_v2_prompt_namespace():
     assert replay["raw_answer"] == answer and replay["provider_calls"] == 0
     assert budget.get_calls == 1 and budget.reserve_calls == budget.settle_calls == 0
     assert business.VERSION == legacy_version
-    assert business.CACHE_VERSION == "company-business-judgment-prompt-v2"
+    assert business.CACHE_VERSION == "company-business-judgment-prompt-v3"
 
 
 def test_product_flag_reaches_pending_projection_and_blocks_even_complete_accept_receipt():
@@ -244,8 +244,11 @@ def _oversized_case():
 
 
 @pytest.mark.parametrize("cached", [True, False])
-def test_oversized_outbound_payload_allows_free_restore_but_never_a_new_reservation(tmp_path, cached):
+def test_oversized_outbound_payload_allows_free_restore_but_never_a_new_reservation(tmp_path, monkeypatch, cached):
     doc, answer = _oversized_case()
+    # The variable evidence budget is separate from code-owned schema overhead.
+    # Exercise the actual new boundary rather than the obsolete whole-body cap.
+    monkeypatch.setattr(ai, "MAX_JUDGMENT_INPUT_WIRE_BYTES", 32)
     saved = _saved(doc, answer) if cached else None
     before = deepcopy((doc, answer, saved))
     budget = ReadOnlyBudget(saved)
@@ -344,7 +347,7 @@ def test_archived_heading_fragment_remains_an_error_and_never_spends_again(tmp_p
                                    "sentence_check": "partial-sentence"}]
     assert budget.get_calls == 1 and budget.reserve_calls == budget.settle_calls == 0
     assert saved == before and business.VERSION == "company-business-judgment-v1"
-    assert business.CACHE_VERSION == "company-business-judgment-prompt-v2"
+    assert business.CACHE_VERSION == "company-business-judgment-prompt-v3"
 
 
 @pytest.mark.parametrize("quote,text,check", [
