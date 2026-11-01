@@ -4,10 +4,10 @@ const fs = require('node:fs')
 const path = require('node:path')
 const vm = require('node:vm')
 const source = fs.readFileSync(path.resolve(__dirname, '../review/member-map/Map.snapshot.tsx'), 'utf8')
-const start = source.indexOf('// framer-components/public-probe/MemberMapState.tsx')
+const start = source.indexOf('// framer-components/public-probe/PortfolioMapData.tsx')
 const end = source.indexOf('// framer-components/public-probe/PortfolioHoldingsPanel.tsx', start)
 assert.ok(start >= 0 && end > start)
-const context = { AbortController, URL, URLSearchParams, Response, TextDecoder, DOMException, setTimeout, clearTimeout }
+const context = { AbortController, URL, URLSearchParams, Response, TextDecoder, TextEncoder, crypto: require('node:crypto').webcrypto, DOMException, setTimeout, clearTimeout }
 vm.runInNewContext(source.slice(start, end) + '\nglobalThis.api={createPortfolioMapWorkspace,normalizeSearchResults,fetchPortfolioStockSearch,prototypeMemberModel,mountMemberPrototype}', context)
 const { createPortfolioMapWorkspace, normalizeSearchResults, fetchPortfolioStockSearch, prototypeMemberModel } = context.api
 const clone = value => JSON.parse(JSON.stringify(value))

@@ -13,7 +13,7 @@ const between = (start, end) => {
     return source.slice(from, to)
 }
 const draft = between("// framer-components/public-probe/PortfolioHoldingsDraft.ts", "// framer-components/public-probe/PortfolioHoldingsList.tsx")
-const editor = between("// framer-components/public-probe/PortfolioHoldingsEditor.ts", "// framer-components/public-probe/PublicPortfolioPrototype.tsx")
+const editor = between("// framer-components/public-probe/PortfolioHoldingsEditor.ts", "// framer-components/public-probe/PortfolioMapTheme.tsx")
 const csv = between("// framer-components/public-probe/PortfolioHoldingsCsv.ts", "// framer-components/public-probe/PortfolioHoldingsCsvPanel.tsx")
 const box = { exports: {} }
 vm.runInNewContext(`

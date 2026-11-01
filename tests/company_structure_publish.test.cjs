@@ -699,14 +699,35 @@ test('committed US snapshots preserve the 22-document baseline as parsed or expl
   const result = buildArtifacts({ universe: committed('universe_search.json'), cikMap: committed('sec_ticker_cik_map.json'),
     reviewedAliases: committed('member_map_company_structure_aliases.json'),
     generatedAt: original.generatedAt, usSources: safe, strictSources: true });
-  assert.equal(result.manifest.coverage.US.checkedCiks, parsed.length);
+  // A retained parsed exhibit is historical proof, not a successful latest
+  // refresh. Keep checking every archived CIK; only current successful attempts
+  // belong in checkedCiks (needs-review/source-gap must never become success).
+  const currentParsed = parsed.filter(([, s]) => ['success', 'cached-same-accession'].includes(s.attemptStatus));
+  const currentCiks = new Set(currentParsed.map(([cik]) => cik)), retainedParsed = [];
+  assert.equal(result.manifest.coverage.US.checkedCiks, currentParsed.length);
   const boundPayloads = new Map([...result.payloads.values()].map(bytes => {
     const payload = JSON.parse(bytes); return [payload.coverage.cik, payload];
   }));
   for (const [cik, source] of parsed) {
     const payload = boundPayloads.get(cik);
-    assert.ok(payload?.coverage.sourceChecked, `Original parsed source lost: ${cik}`);
+    assert.ok(payload, `Original parsed source lost: ${cik}`);
+    assert.equal(payload.coverage.sourceChecked, currentCiks.has(cik), `Latest attempt eligibility changed: ${cik}`);
     assert.equal(payload.coverage.documentSha256, source.exhibit.documentSha256);
+    assert.equal(payload.coverage.lastSuccessAt, source.lastSuccessAt);
+    if (!currentCiks.has(cik)) {
+      const expectedStatus = ['needs-review', 'source-gap', 'budget-deferred', 'attempting'].includes(source.attemptStatus) ? source.attemptStatus : 'refresh-error';
+      assert.equal(payload.coverage.status, expectedStatus);
+      assert.equal(payload.coverage.attemptStatus, source.attemptStatus);
+      assert.equal(payload.coverage.sourceGap, source.sourceGap || undefined);
+      if (source.attemptStatus === 'needs-review' && source.reviewExhibit) {
+        assert.deepEqual(payload.coverage.pendingReview, {
+          filedDate: source.reviewExhibit.filedDate, periodEnd: source.reviewExhibit.periodEnd,
+          documentSha256: source.reviewExhibit.documentSha256,
+          ...(source.reviewExhibit.reviewReason ? { reason: source.reviewExhibit.reviewReason } : {}),
+        });
+      }
+      retainedParsed.push({ cik, tickerAliases: source.tickerAliases, attemptStatus: source.attemptStatus, sourceGap: source.sourceGap });
+    }
     if (source.exhibit.rows.length) assert.ok(payload.relations.length, `Admitted relations lost: ${cik}`);
     else {
       // Some real exhibits contain only excluded entity labels. Keeping their
@@ -744,6 +765,6 @@ test('committed US snapshots preserve the 22-document baseline as parsed or expl
   assert.ok(retainedCollectorErrors > 0, 'Committed HTTP/collector errors must remain refresh-error');
   const output = path.join(path.dirname(dir), 'committed-us'); writeArtifacts(result, output);
   assert.equal((await main(['--output-dir', output])).validated, true);
-  t.diagnostic(JSON.stringify({ parsedCiks: parsed.length, quarantinedCiks: quarantined.length, checkedCiks: result.manifest.coverage.US.checkedCiks,
+  t.diagnostic(JSON.stringify({ parsedCiks: parsed.length, retainedParsed, quarantinedCiks: quarantined.length, checkedCiks: result.manifest.coverage.US.checkedCiks,
     checkedSecurities: result.manifest.coverage.US.checked, payloads: result.payloads.size, retainedCollectorErrors, requestsPreserved: safe.requestBudget.requests }));
 });

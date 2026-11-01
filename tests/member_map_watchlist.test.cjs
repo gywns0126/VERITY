@@ -6,10 +6,10 @@ const vm = require("node:vm")
 
 // Execute the delivered JS segments, not source imports or a second transpilation.
 const source = fs.readFileSync(path.resolve(__dirname, "../review/member-map/Map.snapshot.tsx"), "utf8")
-const start = source.indexOf("// framer-components/public-probe/MemberMapState.tsx")
+const start = source.indexOf("// framer-components/public-probe/PortfolioMapData.tsx")
 const end = source.indexOf("// framer-components/public-probe/PortfolioPrototypeHost.ts", start)
 assert.ok(start >= 0 && end > start, "generated member/workspace/reviewed segments exist")
-const context = { AbortController, URL, JSON, Error, setTimeout, clearTimeout }
+const context = { AbortController, URL, JSON, Error, TextEncoder, crypto: require('node:crypto').webcrypto, setTimeout, clearTimeout }
 vm.runInNewContext(source.slice(start, end) + `
 globalThis.runtime = { normalizeMapWatchlist, createPortfolioMapWorkspace, workspaceStocks,
     normalizeMapHoldings, projectReviewedPrototype, mapReadState };
