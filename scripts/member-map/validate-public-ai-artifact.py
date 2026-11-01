@@ -92,9 +92,15 @@ def validate(artifact, expected_sha256, source_dir, output, *, period_input=None
     sources = read_review_sources(source_dir)
     catalog = project_public_sources(sources)["companies"]
     from portfolio_core.portfolio_contract_facts import index_contract_events
+    from portfolio_core.portfolio_company_names import add_public_company_names
+    from portfolio_core.portfolio_capture_archive import retain_captured_documents
     from api.intelligence.portfolio_ai_public import project_public_company_judgments
     canonical = sources.get("member_map_auto_evidence.json", {})
-    events = index_contract_events(canonical, catalog)
+    # Use the same exact public names and preserved filing headers as runtime
+    # and export; never infer identities from the reviewed row itself.
+    contract_catalog, _ = retain_captured_documents(
+        canonical, add_public_company_names(sources, catalog))
+    events = index_contract_events(canonical, contract_catalog)
     facts = {}
     for fact in canonical.get("contract_facts", []):
         if fact["receipt_no"] in facts:

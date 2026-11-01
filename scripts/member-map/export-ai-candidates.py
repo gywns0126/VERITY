@@ -140,6 +140,8 @@ def _period_originals(documents, directory, registry_path):
 
 def _contract_context(sources, catalog):
     from portfolio_core.portfolio_contract_facts import index_contract_events
+    from portfolio_core.portfolio_company_names import add_public_company_names
+    from portfolio_core.portfolio_capture_archive import retain_captured_documents
     from api.intelligence.portfolio_ai_public import validated_contract_sources
     artifact = sources.get("member_map_auto_evidence.json", {})
     facts = artifact.get("contract_facts", [])
@@ -151,7 +153,12 @@ def _contract_context(sources, catalog):
         if receipt in indexed:
             raise ValueError("duplicate-contract-review-source")
         indexed[receipt] = fact
-    return artifact, index_contract_events(artifact, catalog if facts else []), validated_contract_sources(artifact)
+    # Match the runtime's public registry/archive projection. Rolling feeds may
+    # omit a captured filing; only existing validated captures and registered
+    # report-name aliases may restore its exact source binding.
+    contract_catalog, _ = retain_captured_documents(
+        artifact, add_public_company_names(sources, catalog))
+    return artifact, index_contract_events(artifact, contract_catalog if facts else []), validated_contract_sources(artifact)
 
 
 def export_candidates(input_path, source_dir, output_path, *, worker_state=False,

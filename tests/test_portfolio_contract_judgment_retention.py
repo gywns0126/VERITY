@@ -1,5 +1,6 @@
 """Offline export retention of synthetic, already-reviewed public contract rows."""
 from copy import deepcopy
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -259,3 +260,46 @@ def test_duplicate_canonical_receipt_rejects_without_replacing_output(retention_
     with pytest.raises(ValueError, match="^duplicate-contract-review-source$"):
         _retain(case)
     assert case["output"].read_bytes() == before
+
+
+def test_four_public_files_restore_captured_contract_through_export_and_validation(retention_case, tmp_path):
+    case = retention_case
+    source_dir = case["source_dir"]
+    _write(source_dir / "universe_search.json", {"stocks": [
+        {key: row[key] for key in ("ticker", "market", "name")} for row in case["catalog"]]})
+    _write(source_dir / "public_disclosure_feed.json", {"items": []})
+    _write(source_dir / "member_map_auto_evidence.json", case["sources"]["member_map_auto_evidence.json"])
+    _write(source_dir / "member_map_ai_candidates.json", case["baseline"])
+    _write(case["incoming"], {"schema": "local-ai-review-input-v1", "entries": []})
+    before = {p.name: p.read_bytes() for p in source_dir.iterdir()}
+    result = case["exporter"].export_candidates(case["incoming"], source_dir, case["output"],
+        retained_public_judgments=source_dir / "member_map_ai_candidates.json")
+    actual = json.loads(case["output"].read_bytes())
+    assert result["network_calls"] == 0 and result["published"] is False
+    assert actual["candidates"] == []  # Isolate contracts from AI-candidate bindings.
+    assert actual["company_judgments"]["judgments"] == [case["contract_row"]]
+    spec = importlib.util.spec_from_file_location("contract_retention_public_validator",
+        Path(case["exporter"].__file__).with_name("validate-public-ai-artifact.py"))
+    validator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(validator)
+    destination = tmp_path / "validated" / "member_map_ai_candidates.json"
+    destination.parent.mkdir()
+    body = case["output"].read_bytes()
+    validation = validator.validate(case["output"], hashlib.sha256(body).hexdigest(), source_dir, destination)
+    assert validation["network_calls"] == 0 and destination.read_bytes() == body
+    assert {p.name: p.read_bytes() for p in source_dir.iterdir()} == before
+
+
+@pytest.mark.parametrize("collision", [False, True])
+def test_registered_report_alias_only_restores_unambiguous_captured_issuer(retention_case, collision):
+    case = retention_case
+    case["catalog"][0].update(name="Registered Display Name", documents=[])
+    report = {"028050": {"ticker": "028050", "market": "KR", "name": case["fact"]["issuer"]["name"]}}
+    if collision:
+        report["111111"] = {"ticker": "111111", "market": "KR", "name": case["fact"]["issuer"]["name"]}
+    case["sources"]["stock_report_public.json"] = {"stocks": report}
+    before = deepcopy(case["catalog"]), deepcopy(case["sources"])
+    actual = _retain(case)
+    expected = case["baseline"]["company_judgments"]["judgments"][:1] if collision else case["baseline"]["company_judgments"]["judgments"]
+    assert actual["company_judgments"]["judgments"] == expected
+    assert (case["catalog"], case["sources"]) == before
