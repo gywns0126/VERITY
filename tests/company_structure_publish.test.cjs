@@ -699,13 +699,21 @@ test('committed US snapshots preserve the 22-document baseline as parsed or expl
   const result = buildArtifacts({ universe: committed('universe_search.json'), cikMap: committed('sec_ticker_cik_map.json'),
     reviewedAliases: committed('member_map_company_structure_aliases.json'),
     generatedAt: original.generatedAt, usSources: safe, strictSources: true });
-  assert.equal(result.manifest.coverage.US.checkedCiks, parsed.length);
+  // A retained parsed snapshot still proves its historical relationships, but
+  // a later review hold/source gap must not count as a current successful check.
+  const checked = parsed.filter(([, s]) => ['success', 'cached-same-accession'].includes(s.attemptStatus));
+  assert.equal(result.manifest.coverage.US.checkedCiks, checked.length);
   const boundPayloads = new Map([...result.payloads.values()].map(bytes => {
     const payload = JSON.parse(bytes); return [payload.coverage.cik, payload];
   }));
   for (const [cik, source] of parsed) {
     const payload = boundPayloads.get(cik);
-    assert.ok(payload?.coverage.sourceChecked, `Original parsed source lost: ${cik}`);
+    assert.ok(payload, `Original parsed source lost: ${cik}`);
+    assert.equal(payload.coverage.sourceChecked, ['success', 'cached-same-accession'].includes(source.attemptStatus), `Current source status changed: ${cik}`);
+    assert.equal(payload.coverage.attemptStatus, source.attemptStatus);
+    if (!payload.coverage.sourceChecked) {
+      assert.equal(payload.coverage.status, ['needs-review', 'source-gap', 'budget-deferred', 'attempting'].includes(source.attemptStatus) ? source.attemptStatus : 'refresh-error');
+    }
     assert.equal(payload.coverage.documentSha256, source.exhibit.documentSha256);
     if (source.exhibit.rows.length) assert.ok(payload.relations.length, `Admitted relations lost: ${cik}`);
     else {
@@ -744,6 +752,6 @@ test('committed US snapshots preserve the 22-document baseline as parsed or expl
   assert.ok(retainedCollectorErrors > 0, 'Committed HTTP/collector errors must remain refresh-error');
   const output = path.join(path.dirname(dir), 'committed-us'); writeArtifacts(result, output);
   assert.equal((await main(['--output-dir', output])).validated, true);
-  t.diagnostic(JSON.stringify({ parsedCiks: parsed.length, quarantinedCiks: quarantined.length, checkedCiks: result.manifest.coverage.US.checkedCiks,
+  t.diagnostic(JSON.stringify({ parsedCiks: parsed.length, retainedParsedCiks: parsed.length - checked.length, quarantinedCiks: quarantined.length, checkedCiks: result.manifest.coverage.US.checkedCiks,
     checkedSecurities: result.manifest.coverage.US.checked, payloads: result.payloads.size, retainedCollectorErrors, requestsPreserved: safe.requestBudget.requests }));
 });
