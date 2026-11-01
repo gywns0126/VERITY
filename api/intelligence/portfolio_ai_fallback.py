@@ -501,6 +501,8 @@ def validate_document(doc):
     stamp = datetime.strptime(doc["as_of"], "%Y-%m-%d").date()
     if stamp > datetime.now(timezone.utc).date():
         raise ValueError("public-document-date")
+    # Validate the complete retained binding before it can authorize a tail name.
+    effective_text = validate_retained_context(doc)
     parties = doc["counterparties"]
     if type(parties) is not list or not 1 <= len(parties) <= 8:
         raise ValueError("public-document-parties")
@@ -513,7 +515,7 @@ def validate_document(doc):
         if (type(party) is not dict or set(party) != {"id", "name"}
                 or not _ID.fullmatch(str(party["id"])) or party["id"] == doc["issuer_id"]
                 or party["id"] in seen or safe_public_text(party["name"], 160) is None
-                or not _name_in_text(party["name"], doc["text"])):
+                or not _name_in_text(party["name"], effective_text)):
             raise ValueError("public-document-party")
         name_key = _legal_name(party["name"]).casefold()
         if not name_key or name_key in name_keys:
@@ -528,12 +530,13 @@ def validate_document(doc):
                 or not _ID.fullmatch(str(relation["counterparty_id"]))
                 or relation["role"] not in ("customer", "supplier")):
             raise ValueError("public-document-resolved")
-    validate_retained_context(doc)
     return doc
 
 
-def select_documents(documents, *, include_claims=False):
+def select_documents(documents, *, include_claims=False, judgment_mode=False, retained_context=None):
     """Scan shared public inputs, never a member-selected subset."""
+    if retained_context is not None and (not judgment_mode or not include_claims):
+        raise ValueError("retained-context-judgment-only")
     companies = project_public_sources(documents)["companies"]
     business = project_public_business_overviews(documents)
     by_id, aliases = _names(companies)
@@ -544,10 +547,16 @@ def select_documents(documents, *, include_claims=False):
             (p["id"], relation["evidence"]["role"]) for p in relation["participants"] if p["role"] != "document_issuer")
         resolved_quotes.setdefault(relation["source"]["id"], set()).add(relation["evidence"]["quote"])
     selected, skipped = [], {"rule_resolved": 0, "no_named_relation": 0, "rejected": 0}
+    recovery_sources, recovery_reasons = [], {}
     for row in business["rows"]:
         if _source(row, by_id, aliases) is None:
             skipped["rejected"] += 1
             continue
+        if judgment_mode and retained_context is not None:
+            source = row["source"]
+            recovery_sources.append({"source_id": source["id"], "issuer_id": row["issuer_id"],
+                "issuer_name": row["name"], "as_of": source["as_of"], "url": source["url"],
+                "text": row["text"], "counterparties": []})
         text = row["text"]
         parties = []
         known = resolved.get(row["source"]["id"], set())
@@ -556,6 +565,7 @@ def select_documents(documents, *, include_claims=False):
                               if q not in resolved_quotes.get(row["source"]["id"], set())]
         if not eligible_sentences and known:
             skipped["rule_resolved"] += 1
+            recovery_reasons[(row["issuer_id"], row["source"]["id"])] = "rule_resolved"
             continue
         if eligible_sentences:
             mentions = {}
@@ -573,6 +583,8 @@ def select_documents(documents, *, include_claims=False):
         parties = list({r["id"]: r for r in parties}.values())
         if not 1 <= len(parties) <= 8:
             skipped["no_named_relation"] += 1
+            if not parties:
+                recovery_reasons[(row["issuer_id"], row["source"]["id"])] = "no_named_relation"
             continue
         source = row["source"]
         doc = {"source_id": source["id"], "issuer_id": row["issuer_id"],
@@ -584,11 +596,56 @@ def select_documents(documents, *, include_claims=False):
             selected.append(validate_document(doc))
         except ValueError:
             skipped["rejected"] += 1
+    if judgment_mode and retained_context is not None:
+        from .portfolio_judgment_context import CONTEXT_FIELD, enrich_judgment_documents
+        # Bind all source-valid rows together so duplicate filing IDs still
+        # reject every join. Existing selected documents/parties are immutable.
+        contexts, context_counts = enrich_judgment_documents(recovery_sources, retained_context)
+        recovered, invalid, no_named, too_many, resolved_without_context = 0, 0, 0, 0, 0
+        for doc in contexts:
+            reason = recovery_reasons.get((doc["issuer_id"], doc["source_id"]))
+            if reason is None or CONTEXT_FIELD not in doc:
+                resolved_without_context += int(reason == "rule_resolved")
+                continue
+            text = validate_retained_context(doc)
+            mentions = {}
+            for sentence in claim_sentences(text):
+                matches = _registered_company_mentions(sentence, by_id, aliases, name_index=name_index)
+                names = [name for _, name in matches]
+                for identifier, name in matches:
+                    if identifier != doc["issuer_id"] and not _ambiguous_party_name(sentence, name, names):
+                        if identifier not in mentions or len(name) > len(mentions[identifier]):
+                            mentions[identifier] = name
+            if not mentions:
+                no_named += 1
+                continue
+            if len(mentions) > 8:
+                too_many += 1
+                continue
+            doc["counterparties"] = [{"id": identifier, "name": name}
+                                     for identifier, name in sorted(mentions.items())]
+            known = resolved.get(doc["source_id"], set())
+            if known:
+                doc["resolved_relations"] = [{"counterparty_id": target, "role": role}
+                                             for target, role in sorted(known)]
+            try:
+                validate_document(doc)
+            except ValueError:
+                invalid += 1
+                continue
+            selected.append(doc)
+            skipped[reason] -= 1
+            recovered += 1
+        skipped["retained_recovery"] = {"recovered": recovered, "invalid_candidates": invalid,
+            "no_named_relation": no_named, "too_many_parties": too_many,
+            "rule_resolved_without_context": resolved_without_context,
+            "scope": "longer-validated-same-filing-context-only", "context": context_counts}
     return selected, {"input": len(business["rows"]), "eligible": len(selected), **skipped}
 
 
 def validate_candidates(payload, doc):
     validate_document(doc)
+    effective_text = validate_retained_context(doc)
     if type(payload) is not dict or set(payload) != {"candidates"}:
         raise ValueError("candidate-shape")
     rows = payload["candidates"]
@@ -602,25 +659,27 @@ def validate_candidates(payload, doc):
         target, role, quote = row["counterparty_id"], row["role"], row["quote"]
         if (type(target) is not str or target not in parties or role not in ("customer", "supplier")
                 or safe_public_text(quote, 600) is None or len(quote) < 12
-                or quote not in doc["text"] or not _name_in_text(parties[target], quote)
+                or quote not in effective_text or not _name_in_text(parties[target], quote)
                 or not _ROLE.search(quote) or (target, role) in seen):
             raise ValueError("candidate-evidence")
         # Restore the entire original sentence if the model omitted a heading.
         # Crucially, negation/conditions are checked on that full source sentence,
         # not on a selectively extracted fragment. Never manufacture missing text.
-        sentences = {sentence for sentence in _sentences(doc["text"])
+        sentences = {sentence for sentence in _sentences(effective_text)
                      if sentence[-1] in ".!?"}
         enclosing = [sentence for sentence in sentences if quote in sentence]
         if len(enclosing) != 1 or _has_unresolved_scope(enclosing[0]) or _OTHER_SUBJECT.search(enclosing[0]):
             raise ValueError("candidate-uncertain-sentence")
         quote = enclosing[0]
+        if safe_public_text(quote, 600) is None:
+            raise ValueError("candidate-evidence")
         if _ambiguous_party_name(quote, parties[target], parties.values()):
             raise ValueError("candidate-direction-uncertain")
         direction = _direction_for_counterparty(quote, parties[target], doc["issuer_name"],
                                                 parties.values())
         if direction is not None and direction != role:
             raise ValueError("candidate-direction-uncertain")
-        if _inherits_other_entity_scope(doc["text"], quote, doc["issuer_name"], direction):
+        if _inherits_other_entity_scope(effective_text, quote, doc["issuer_name"], direction):
             raise ValueError("candidate-uncertain-sentence")
         # A supply contract is bilateral: its existence alone does not identify
         # which named party buys or supplies. Do not invent that direction from
