@@ -56,7 +56,7 @@ RUNTIME_DISABLED_SOURCES = ("SEC", "news")
 RECOVERABLE_STORE_CODES = frozenset((
     "refresh-read-timeout", "refresh-read-busy", "refresh-transport-failure",
     "refresh-transport-timeout", "refresh-http-unavailable", "refresh-http-rate-limited",
-    "refresh-cache-conflict", "refresh-save-conflict", "refresh-lease-lost",
+    "refresh-cache-conflict", "refresh-save-conflict", "refresh-lease-lost", "refresh-schema-pending",
 ))
 SOURCE_ERROR_CODES = frozenset(("dart-quota-exceeded", "transport_timeout", "transport_failure",
                                 "dart_api_failure", "incomplete_page", "page_limit", "record_limit"))
@@ -77,20 +77,17 @@ def not_due_result(previous, now):
             "retry_after_seconds": max(1, math.ceil(remaining))}
 
 
-def supabase_cycle(store, catalog, api_key, owner, now=None, *, transport=None):
+def supabase_cycle(store, catalog, api_key, owner, now=None, *, transport=None, dart_v2=False):
     """DART 공개 목록만 수집한다. 원자 예약/lease/CAS 이외 원격 쓰기는 없다."""
     from api.collectors.member_map_listing_delta import DART_LIST, ListingError, bounded_transport
     from api.collectors.member_map_refresh_store import RefreshStoreError
     if type(api_key) is not str or not api_key.strip():
         raise RefreshStoreError("refresh-config-rejected")
     now = now or datetime.now(timezone.utc).isoformat()
-    universe = build_kr_universe(catalog)
-    if not universe:
-        raise RefreshStoreError("refresh-catalog-rejected")
     previous = store.read_states().get("DART", {})
     if not due("DART", previous, now):
         return not_due_result(previous, now)
-    claim = store.claim("DART", owner)
+    claim = store.claim_dart(owner) if dart_v2 else store.claim("DART", owner)
     # 불명확했던 claim 응답을 재호출해도 같은 예약으로 수집을 반복하지 않는다.
     if claim["status"] != "claimed":
         return {"status": claim["status"], "requests": 0,
@@ -99,6 +96,17 @@ def supabase_cycle(store, catalog, api_key, owner, now=None, *, transport=None):
     previous = claim["state"]
     if not due("DART", previous, now):
         return not_due_result(previous, now)
+    if catalog is None:
+        catalog = getattr(store, "_dart_catalog", None)
+        if catalog is None:
+            from api.collectors.member_map_refresh_store import read_public_catalog
+            catalog = read_public_catalog()
+    universe = build_kr_universe(catalog)
+    if not universe:
+        raise RefreshStoreError("refresh-catalog-rejected")
+    # One successful public catalog read per worker, after the migration gate.
+    # Restart changes are detected by the persisted pending catalog digest.
+    store._dart_catalog = catalog
     generation, revision = claim["generation"], claim["revision"]
     calls, lease_failed = 0, False
     def guarded_transport(endpoint, **kwargs):
@@ -112,19 +120,34 @@ def supabase_cycle(store, catalog, api_key, owner, now=None, *, transport=None):
             raise ListingError("transport_failure") from None
         calls += 1
         return (transport or bounded_transport)(endpoint, **kwargs)
-    result = collect_dart_delta(universe, previous.get("feed", {"items": []}), previous.get("cursor"),
-        now, api_key, transport=guarded_transport, max_pages=10, max_records=1000,
-        window_days=2 if previous.get("cursor") is None else 1,
-        catchup_phase=previous.get("catchup_phase"))
+    if dart_v2:
+        from api.collectors.member_map_listing_delta import collect_dart_continuation, dart_aggregate_size
+        result = collect_dart_continuation(universe, previous.get("feed", {"items": []}), previous.get("cursor"),
+            now, api_key, claim["dart_checkpoint"], transport=guarded_transport)
+    else:
+        result = collect_dart_delta(universe, previous.get("feed", {"items": []}), previous.get("cursor"),
+            now, api_key, transport=guarded_transport, max_pages=10, max_records=1000,
+            window_days=2 if previous.get("cursor") is None else 1,
+            catchup_phase=previous.get("catchup_phase"))
     if lease_failed:
         return {"status": "lease-lost", "requests": calls}
     if result.get("error") == "dart-quota-exceeded":
         # 운영 차단 상태는 오류다. 직전 정상 피드/커서는 그대로 유지한다.
         result = {**result, "status": "error", "complete": False, "records": []}
+        if dart_v2:
+            result.update(dart_checkpoint=claim["dart_checkpoint"], dart_pages=[], dart_sealed=False,
+                          cursor=previous.get("cursor"), next_cursor=None)
     state = apply_result("DART", previous, result, now)
+    if dart_v2 and dart_aggregate_size(state, result["dart_checkpoint"]) > 4 * 1024 * 1024:
+        # No pruning of receipt evidence or cursor IDs to fit the envelope.
+        result.update(status="error", complete=False, error="record_limit", records=[], dart_pages=[],
+                      dart_checkpoint=claim["dart_checkpoint"], dart_sealed=False,
+                      cursor=previous.get("cursor"), next_cursor=None)
+        state = apply_result("DART", previous, result, now)
     store.renew("DART", owner, generation)
     try:
-        saved = store.save("DART", owner, generation, revision, state)
+        saved = (store.save_dart(owner, generation, revision, state, result["dart_pages"], result["dart_catalog"])
+                 if dart_v2 else store.save("DART", owner, generation, revision, state))
     except RefreshStoreError:
         # 불명확 저장은 데이터 읽기로만 조정한다. 수집기/저장 요청을 재시도하지 않는다.
         try:
@@ -155,11 +178,9 @@ def run_supabase(catalog, duration_seconds):
         started = time.monotonic()
         attempt += 1
         try:
-            if catalog is None:
-                catalog = read_public_catalog()
-                # Initial catalog loading is not part of the collection cadence.
-                started = time.monotonic()
-            result = supabase_cycle(store, catalog, api_key, owner)
+            # The RPC is the activation gate. Before migration there is no
+            # catalog/provider collection, v1 fallback, or fabricated success.
+            result = supabase_cycle(store, catalog, api_key, owner, dart_v2=True)
         except Exception as error:
             checked_at = datetime.now(timezone.utc).isoformat()
             code = safe_error_code(error)

@@ -440,7 +440,8 @@ def test_runtime_loop_cadence_no_provider_after_duration(monkeypatch, capsys):
     monkeypatch.setattr(runner.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0]+seconds))
     monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: object())
     monkeypatch.setenv("DART_API_KEY", "synthetic-key")
-    def cycle(*args):
+    def cycle(*args, **kwargs):
+        assert kwargs == {"dart_v2": True}
         starts.append(clock[0]); clock[0] += 20
         return {"status": "success", "requests": 1}
     monkeypatch.setattr(runner, "supabase_cycle", cycle)
@@ -646,3 +647,148 @@ def test_midnight_bootstrap_preserves_two_day_window_before_success():
     assert second["status"] == "success" and "catchup_phase" not in store.state
     assert windows == [("20261012", "20261012"), ("20261013", "20261013")]
     assert store.reserved == 20
+
+
+class V2MemoryStore(MemoryStore):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.checkpoint = None
+    def claim_dart(self, owner):
+        return {**self.claim("DART", owner), "dart_checkpoint": deepcopy(self.checkpoint)}
+    def save_dart(self, owner, generation, revision, current, pages, catalog):
+        if current["error"] not in ("dart-quota-exceeded", "record_limit") or pages:
+            cp, sealed, error = delta.dart_replay_pages(self.checkpoint, self.state.get("cursor"),
+                current["last_attempt_at"], catalog, pages)
+        else:
+            cp = deepcopy(self.checkpoint)
+        storage.validate_dart_bundle(current, cp)
+        saved = self.save("DART", owner, generation, revision, current)
+        self.checkpoint = cp
+        return saved
+
+
+def dart_v2_sql_fixture(now):
+    """Actual Python producers -> SQL roundtrip; synthetic rows, no network."""
+    from datetime import datetime, timedelta, timezone
+    stamp = datetime.fromisoformat(now.replace("Z", "+00:00"))
+    today = stamp.astimezone(timezone(timedelta(hours=9))).date()
+    boundary = (today - timedelta(days=1)).isoformat()
+    old = (stamp - timedelta(days=1)).isoformat()
+    prior = {"cursor": {"source": "DART", "through_date": boundary, "checked_at": old,
+                       "ids": [f'DART:{boundary.replace("-", "")}{i:06d}' for i in range(1, 996)]},
+             "last_success_at": old, "last_attempt_at": old, "feed": {"items": []}, "requests": 10,
+             "status": "success", "error": None, "coverage": {}, "health": {"status": "on-time", "age_seconds": 0},
+             "screen_delivery_verified": False, "analysis_delivery_verified": False}
+    state0 = deepcopy(prior); cp = None; frames = []
+    def provider(endpoint, **kwargs):
+        day = kwargs["params"]["bgn_de"]; number = int(kwargs["params"]["page_no"])
+        count = 1062 if day == boundary.replace("-", "") else 1
+        rows = [{"rcept_no": f"{day}{i:06d}", "rcept_dt": day, "stock_code": "123456",
+                 "report_nm": "Synthetic filing", "flr_nm": "Issuer"}
+                for i in range((number-1)*100+1, min(number*100, count)+1)]
+        return json.dumps({"status": "000", "page_no": number, "page_count": 100,
+                           "total_count": count, "total_page": (count+99)//100, "list": rows}).encode()
+    for index in range(6):
+        attempt = (stamp + timedelta(seconds=index*120)).isoformat()
+        r = delta.collect_dart_continuation({"123456": "Synthetic"}, prior["feed"], prior["cursor"], attempt,
+                                           "synthetic", cp, transport=provider)
+        current = apply_result("DART", prior, r, attempt)
+        storage.validate_state("DART", current); storage.validate_dart_bundle(current, r["dart_checkpoint"])
+        frames.append({"state": current, "checkpoint": r["dart_checkpoint"], "pages": r["dart_pages"], "catalog": r["dart_catalog"]})
+        prior, cp = current, r["dart_checkpoint"]
+    return {"prior": state0, "frames": frames}
+
+
+def test_v2_runner_catalog_cached_after_activation_and_zero_fetch_before_schema(monkeypatch):
+    reads = []
+    monkeypatch.setattr(storage, "read_public_catalog", lambda: reads.append(1) or CATALOG)
+    class Pending(V2MemoryStore):
+        def claim_dart(self, owner):
+            raise storage.RefreshStoreError("refresh-schema-pending")
+    with pytest.raises(storage.RefreshStoreError, match="refresh-schema-pending"):
+        runner.supabase_cycle(Pending(), None, "synthetic", OWNER, NOW, dart_v2=True,
+                              transport=lambda *a, **k: pytest.fail("provider before schema"))
+    assert reads == []
+    store = V2MemoryStore()
+    for minute in (0, 2, 4, 6):
+        runner.supabase_cycle(store, None, "synthetic", OWNER, f"2026-10-12T01:{minute:02d}:00Z", dart_v2=True,
+                              transport=lambda *a, **k: b'{"status":"013"}')
+    assert reads == [1] and store.reserved == 40 and store.state["status"] == "success"
+    assert store.state["last_success_at"] == "2026-10-12T01:06:00Z"
+
+
+def test_v2_404_is_schema_pending_only_for_v2_rpc(monkeypatch):
+    fake_session(monkeypatch, b"must not read error body", status=404)
+    with pytest.raises(storage.RefreshStoreError, match="refresh-schema-pending"):
+        storage.RefreshStore("synthetic-role").claim_dart(OWNER)
+    with pytest.raises(storage.RefreshStoreError, match="refresh-http-failure"):
+        storage.RefreshStore("synthetic-role").claim("DART", OWNER)
+
+
+def test_v2_bundle_aggregate_cap_and_cursor_proof_binding():
+    fixture = dart_v2_sql_fixture("2026-11-01T06:00:00Z")
+    sealed = fixture["frames"][3]
+    storage.validate_dart_bundle(sealed["state"], sealed["checkpoint"])
+    bad = deepcopy(sealed["state"]); bad["cursor"]["id_count"] -= 1
+    with pytest.raises(storage.RefreshStoreError):
+        storage.validate_dart_bundle(bad, sealed["checkpoint"])
+    badcp = deepcopy(sealed["checkpoint"]); badcp["version"] = "2"
+    with pytest.raises(delta.ListingError): delta.validate_dart_checkpoint(badcp)
+    # Each component alone fits, but the aggregate cannot be stored.
+    cp = deepcopy(fixture["frames"][0]["checkpoint"])
+    cp["pending"]["observed"] = [f"DART:20261031{i:06d}" for i in range(140000)]
+    assert delta.dart_aggregate_size({}, cp) < storage.STATE_MAX_BYTES
+    bulky = {"padding": "x" * (storage.STATE_MAX_BYTES - delta.dart_aggregate_size({}, cp) + 100)}
+    with pytest.raises(storage.RefreshStoreError): storage.validate_dart_bundle(bulky, cp)
+
+
+def test_v2_quota_error_discards_new_progress_and_feed():
+    store = V2MemoryStore(previous=state())
+    before = deepcopy(store.state)
+    result = runner.supabase_cycle(store, CATALOG, "synthetic", OWNER, "2026-10-12T01:02:00Z", dart_v2=True,
+                                  transport=lambda *a, **k: b'{"status":"020"}')
+    assert result["error"] == "dart-quota-exceeded" and store.checkpoint is None
+    for field in ("cursor", "feed", "last_success_at"): assert store.state[field] == before[field]
+
+
+def test_v2_claim_returns_progress_bound_to_current_revision(monkeypatch):
+    fixture = dart_v2_sql_fixture("2026-11-01T06:00:00Z")["frames"][0]
+    reply = {**claim_response(previous=fixture["state"]), "dart_checkpoint": fixture["checkpoint"]}
+    monkeypatch.setattr(storage, "_request_json", lambda *a, **k: deepcopy(reply))
+    store = storage.RefreshStore("synthetic-role")
+    assert store.claim_dart(OWNER)["dart_checkpoint"] == fixture["checkpoint"]
+    assert store._dart_checkpoint == fixture["checkpoint"]
+    bad = deepcopy(fixture["checkpoint"]); bad["pending"]["next_page"] += 1
+    reply["dart_checkpoint"] = bad
+    with pytest.raises(storage.RefreshStoreError): store.claim_dart(OWNER)
+
+
+def test_v2_bundle_rejects_mismatched_legacy_seed_and_future_pending():
+    frame = dart_v2_sql_fixture("2026-11-01T06:00:00Z")["frames"][0]
+    for mode in ("missing_committed", "missing_cursor", "legacy_ids", "future_pending"):
+        current, cp = deepcopy(frame["state"]), deepcopy(frame["checkpoint"])
+        if mode == "missing_committed": cp["committed"] = None
+        if mode == "missing_cursor": current["cursor"] = None
+        if mode == "legacy_ids": cp["committed"]["ids"] = []
+        if mode == "future_pending": cp["pending"]["started_at"] = "2026-11-01T07:00:00Z"
+        with pytest.raises(storage.RefreshStoreError): storage.validate_dart_bundle(current, cp)
+
+
+@pytest.mark.parametrize("denial", ["busy", "quota-blocked", "budget-exhausted", "already-claimed"])
+def test_v2_denials_do_not_collect_or_save(denial):
+    store = V2MemoryStore(denial=denial)
+    result = runner.supabase_cycle(store, CATALOG, "synthetic", OWNER, NOW, dart_v2=True,
+        transport=lambda *a, **k: pytest.fail("provider called after denial"))
+    assert result["status"] == denial and result["requests"] == 0
+    assert store.checkpoint is None and store.events == ["claim"]
+
+
+def test_v2_lease_loss_keeps_progress_and_committed_state():
+    frame = dart_v2_sql_fixture("2026-11-01T06:00:00Z")["frames"][0]
+    store = V2MemoryStore(previous=frame["state"], renew_failure=True)
+    store.checkpoint = deepcopy(frame["checkpoint"])
+    result = runner.supabase_cycle(store, CATALOG, "synthetic", OWNER, "2026-11-01T06:02:00Z", dart_v2=True,
+        transport=lambda *a, **k: pytest.fail("expired lease must not collect"))
+    assert result == {"status": "lease-lost", "requests": 0}
+    assert store.state == frame["state"] and store.checkpoint == frame["checkpoint"]
+    assert store.reserved == 10 and "save" not in store.events
