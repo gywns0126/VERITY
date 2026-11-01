@@ -199,7 +199,8 @@ def run_supabase(catalog, duration_seconds):
             source_status = result.get("status")
             error_code = result.get("error")
             if type(error_code) is not str or error_code not in SOURCE_ERROR_CODES:
-                error_code = "source-error" if source_status in ("error", "partial", "lease-lost") else None
+                normal_partial = source_status == "partial" and error_code is None
+                error_code = "source-error" if source_status in ("error", "partial", "lease-lost") and not normal_partial else None
             if source_status not in ("success", "partial", "error", "not-due", "busy",
                     "quota-blocked", "budget-exhausted", "lease-lost", "already-claimed"):
                 print(json.dumps(runtime_event(checked_at=checked_at, attempt=attempt,
