@@ -793,7 +793,8 @@ def _empty_answer_findings(sources):
         seen = set()
         for quote in base._sentences(excerpt["text"]):
             if (not issuer_lead.search(quote) or base._OTHER_SUBJECT.search(quote)
-                    or base._has_unresolved_scope(quote)):
+                    or base._has_unresolved_scope(quote)
+                    or re.search(r"(?:지\s*|(?<![A-Za-z0-9가-힣]))못\s*(?:했|하|해|합|한|할)", quote)):
                 continue
             try:
                 _sentence(quote, excerpt)
@@ -804,17 +805,22 @@ def _empty_answer_findings(sources):
                 if (party["id"] in seen or base._ambiguous_party_name(quote, name, names)
                         or base._historical_relation_clauses(quote, name, names)):
                     continue
+                # A reported other-company action is not issuer exposure.
+                # Require an explicit reporting construction for trade recall;
+                # a relative clause such as '성능이 좋은 부품' is not a new actor.
+                prefix = quote[:quote.index(name)].rsplit(",", 1)[-1].rsplit("，", 1)[-1]
+                prefix = issuer_lead.sub("", prefix)
+                other_subject = re.search(r"[A-Za-z0-9가-힣]+(?:은|는|이|가)\s+", prefix)
+                reported = re.search(r"(?:다고|라고|다는|라는)\s*(?:설명|보고|발표|언급|전달|밝)", quote)
+                reported_subject = reported and re.search(r"[A-Za-z0-9가-힣]+(?:은|는|이|가)\s+$", prefix)
                 # Also cover the explicit tier-one supplier statement whose
                 # optional parenthesized acronym is part of the literal quote.
                 tier_one = re.search(re.escape(name) + r"(?:\([^()]{1,30}\))?"
                                      r"\s*(?:등\s+)?(?:[가-힣]{2,12}\s+){0,4}"
                                      r"(?:제조사|기업|업체|회사|고객사)?의\s+1차\s+협력사"
                                      r"(?:로서|입니다|이며|로\s+)", quote)
-                if tier_one:
-                    prefix = quote[:tier_one.start()].rsplit(",", 1)[-1].rsplit("，", 1)[-1]
-                    prefix = issuer_lead.sub("", prefix)
-                    if re.search(r"[A-Za-z0-9가-힣]+(?:은|는|이|가)\s+", prefix):
-                        tier_one = None  # A different subject introduced this relation.
+                if (tier_one and other_subject) or reported_subject:
+                    continue
                 direction = base._direction_for_counterparty(quote, name, source["issuer_name"], names)
                 if not tier_one and direction is None:
                     continue

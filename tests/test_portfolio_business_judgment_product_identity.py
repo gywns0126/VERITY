@@ -557,3 +557,39 @@ def test_empty_answer_does_not_use_retained_materiality_tail_as_new_relation_evi
     source["excerpt_text"] = source["text"]
     source["text"] += _TIER_ONE_QUOTE
     assert business._empty_answer_findings([source]) == []
+
+
+@pytest.mark.parametrize("text", [
+    "당사는 고객기업에 부품을 공급하지 못했습니다.",
+    "당사는 고객기업에 부품을 공급하지못했습니다.",
+    "당사는 고객기업에 부품을 공급 못했습니다.",
+    "당사는 고객기업에 부품을 공급하지 못하고 있습니다.",
+    "당사는 다른기업이 고객기업에 부품을 공급한다고 설명했습니다.",
+    "당사는 연구를 수행하며, 다른기업은 고객기업에 부품을 공급한다고 보고했습니다.",
+    "당사는 다른기업이 고객기업에 부품을 공급하고 있다고 발표했습니다.",
+    "당사는 다른기업이 고객기업의 1차 협력사라고 설명했습니다.",
+])
+def test_empty_recall_excludes_explicit_failure_and_reported_other_subject(text):
+    doc, _ = _case(name="고객기업")
+    doc["text"] = text
+    answer = {"judgments": [], "remaining_count": 0}
+    before = deepcopy((doc, answer))
+    result = business.validate_company_judgments(answer, [doc], as_of=AS_OF)
+    assert result["quality_review"]["findings"] == []
+    assert result["judgments"] == result["rejected"] == []
+    assert (doc, answer) == before
+
+
+@pytest.mark.parametrize("text", [
+    "당사는 고객기업에 부품을 공급했습니다.",
+    "당사는 고객기업에 못을 공급합니다.",
+    "당사는 성능이 좋은 부품을 고객기업에 공급합니다.",
+    "당사는 고객기업에 부품을 공급한다고 설명했습니다.",
+    "당사는 성능이 좋은 부품을 고객기업에 공급한다고 설명했습니다.",
+])
+def test_empty_recall_keeps_affirmative_issuer_trade_and_does_not_blacklist_report_verbs(text):
+    doc, _ = _case(name="고객기업")
+    doc["text"] = text
+    result = business.validate_company_judgments({"judgments": [], "remaining_count": 0}, [doc], as_of=AS_OF)
+    assert len(result["quality_review"]["findings"]) == 1
+    assert result["judgments"] == []
