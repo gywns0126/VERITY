@@ -7,34 +7,63 @@ function memberRelationshipOverviewNodes(){
   return nodes.filter(n=>n.kind==='event'&&shown(n)).map(n=>({id:n.id,n,el:nodesEl.querySelector('[data-node="'+n.id+'"]')}));
 }
 function memberRelationshipSlotsFor(records,stocks,obstacles=[],prior=new Map()){
-  const gap=24,placed=new Map(),occupied=obstacles.map(b=>({...b}));
+  const gap=24,placed=new Map(),occupied=obstacles.map(b=>({...b})),segments=[];
   const rect=p=>({left:p.x-p.width/2,right:p.x+p.width/2,top:p.y-p.height/2,bottom:p.y+p.height/2});
   const hits=(a,b)=>a.left<b.right+gap&&a.right>b.left-gap&&a.top<b.bottom+gap&&a.bottom>b.top-gap;
-  for(const s of stocks)occupied.push(rect(s));
-  const existing=records.filter(r=>prior.has(r.id)),fresh=records.filter(r=>!prior.has(r.id));
-  // Prior insertion order, not changed reading order, owns established slots.
-  existing.sort((a,b)=>[...prior.keys()].indexOf(a.id)-[...prior.keys()].indexOf(b.id));
-  const displaced=[];
-  // Reserve every still-safe prior slot before relocating a newly obstructed
-  // card. Otherwise one moved memo can cascade through unaffected records.
+  const stockRects=stocks.map(s=>({...rect(s),id:s.id}));occupied.push(...stockRects);
+  const peers=r=>stocks.filter(s=>(r.stockIds||[]).includes(s.id));
+  const reserve=(r,p)=>{placed.set(r.id,p);occupied.push(rect(p));for(const stock of peers(r))segments.push({a:p,b:stock});};
+  const order=new Map([...prior.keys()].map((id,i)=>[id,i]));
+  const existing=records.filter(r=>prior.has(r.id)).sort((a,b)=>order.get(a.id)-order.get(b.id)),fresh=records.filter(r=>!prior.has(r.id)),displaced=[];
+  // Reserve safe established slots before allocating any additions. New records
+  // cannot push earlier expanded cards, manual obstacles or stock anchors away.
   for(const r of existing){
-    const p={...prior.get(r.id),width:r.width,height:r.height},b=rect(p);
-    if(occupied.some(o=>hits(b,o)))displaced.push(r);
-    else{placed.set(r.id,p);occupied.push(b);}
+    const p={...prior.get(r.id),width:r.width,height:r.height};
+    if(occupied.some(o=>hits(rect(p),o)))displaced.push(r);else reserve(r,p);
   }
+  const turn=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+  const crosses=(a,b,c,d)=>turn(a,b,c)*turn(a,b,d)<-1e-6&&turn(c,d,a)*turn(c,d,b)<-1e-6;
+  const through=(a,b,box)=>{
+    const corners=[{x:box.left,y:box.top},{x:box.right,y:box.top},{x:box.right,y:box.bottom},{x:box.left,y:box.bottom}];
+    return corners.some((c,i)=>crosses(a,b,c,corners[(i+1)%4]));
+  };
   for(const r of [...displaced,...fresh]){
-    const peers=stocks.filter(s=>(r.stockIds||[]).includes(s.id)),linked=peers.length?peers:stocks;
-    const x=linked.length?linked.reduce((a,s)=>a+s.x,0)/linked.length:500;
-    const bottom=linked.length?Math.max(...linked.map(s=>s.y+s.height/2)):340;
-    const old=prior.get(r.id),p={x:old?.x??x,y:old?.y??bottom+70+r.height/2,width:r.width,height:r.height};
-    // Keep X aligned with this relationship's participants; avoid only downward.
-    // Appending or folding sources never participates in this calculation.
-    for(let i=0;i<=occupied.length;i++){
-      const b=rect(p),collisions=occupied.filter(o=>hits(b,o));
-      if(!collisions.length)break;
-      p.y=Math.max(...collisions.map(o=>o.bottom))+gap+r.height/2;
+    const linked=peers(r),anchors=linked.length?linked:stocks;
+    const home={x:anchors.length?anchors.reduce((sum,s)=>sum+s.x,0)/anchors.length:500,y:anchors.length?anchors.reduce((sum,s)=>sum+s.y,0)/anchors.length:340};
+    const stepX=r.width+gap,stepY=r.height+gap,candidates=[];
+    const add=(x,y)=>candidates.push({x,y,width:r.width,height:r.height});
+    add(home.x,home.y);
+    // Adjacent faces of actual participants are usually closer than a free
+    // lattice cell. Four directions prevent the old downward-only tower.
+    for(const stock of anchors){
+      add(stock.x-stock.width/2-gap-r.width/2,stock.y);add(stock.x+stock.width/2+gap+r.width/2,stock.y);
+      add(stock.x,stock.y-stock.height/2-gap-r.height/2);add(stock.x,stock.y+stock.height/2+gap+r.height/2);
     }
-    placed.set(r.id,p);occupied.push(rect(p));
+    let best=null,bestCost=Infinity;
+    const cost=p=>{
+      const box=rect(p),all=[...occupied,box];
+      const width=Math.max(...all.map(o=>o.right))-Math.min(...all.map(o=>o.left)),height=Math.max(...all.map(o=>o.bottom))-Math.min(...all.map(o=>o.top));
+      let value=Math.hypot(p.x-home.x,p.y-home.y)+width*.12+height*.24;
+      if(linked.length)value+=linked.reduce((sum,stock)=>sum+Math.hypot(p.x-stock.x,p.y-stock.y),0)/linked.length;
+      for(const stock of linked){
+        value+=segments.filter(line=>line.b.id!==stock.id&&crosses(p,stock,line.a,line.b)).length*120;
+        value+=stockRects.filter(o=>o.id!==stock.id&&through(p,stock,o)).length*240;
+      }
+      return value;
+    };
+    const consider=()=>{for(const p of candidates.splice(0)){if(occupied.some(o=>hits(rect(p),o)))continue;const score=cost(p);if(score<bestCost){best=p;bestCost=score;}}};
+    consider();
+    // Finite outward rings, then compare one more ring after finding a free
+    // candidate. Geometry/order alone determines ties; there is no simulation.
+    let foundRing=best?0:null;
+    for(let ring=1;ring<=occupied.length+2;ring++){
+      for(let x=-ring;x<=ring;x++){add(home.x+x*stepX,home.y-ring*stepY);add(home.x+x*stepX,home.y+ring*stepY);}
+      for(let y=-ring+1;y<ring;y++){add(home.x-ring*stepX,home.y+y*stepY);add(home.x+ring*stepX,home.y+y*stepY);}
+      consider();if(best&&foundRing===null)foundRing=ring;if(foundRing!==null&&ring>=foundRing+1)break;
+    }
+    // A finite obstacle family always has space beyond its rightmost bound.
+    if(!best)best={x:Math.max(home.x,...occupied.map(o=>o.right))+gap+r.width/2,y:home.y,width:r.width,height:r.height};
+    reserve(r,best);
   }
   return placed;
 }
@@ -222,36 +251,98 @@ if(typeof memberSaveButton!=='undefined')memberSaveButton.onclick=()=>{
   if(memberApplyingGraph||!memberWritable)return;
   memberPort.postMessage({type:'save',draft:memberDraft(),origins:memberRelationshipCaptureSaveOrigins(),...memberOriginStamp()});
 };
+// Graph stage geometry is independent of the reading panel. Toggling the
+// panel never calls fit/layout/save or replaces an in-progress note editor.
 const memberRelationshipStyle=document.createElement('style');memberRelationshipStyle.textContent=`
-#an-map-design .an-body{grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(180px,1fr) 200px;grid-template-areas:'map detail' 'library detail'}
+#an-map-design{--an-bg:light-dark(#f8f9fb,#1d242c);--an-panel:light-dark(#ffffff,#171c23);--an-text:light-dark(#191f28,#e3e7ec);--an-sub:light-dark(#6b7684,#9aa4b1);--an-accent:light-dark(#6c5ce7,#a99bff);--an-soft:light-dark(#e9edf2,#303945)}
+#an-map-design .an-body{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(180px,1fr);grid-template-areas:'map';position:relative}
 #an-map-design .an-map{grid-area:map;min-width:0;min-height:0}
-#an-map-design .an-detail{grid-area:detail}
-#an-map-design .an-inbox{grid-area:library;display:grid!important;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));align-content:start;align-items:start;gap:12px;padding:16px 20px;background:light-dark(#f8f9fb,#1d242c);scrollbar-gutter:stable}
-#an-map-design .an-inbox>h3{grid-column:1/-1;margin:0;font-size:14px;font-weight:800;color:light-dark(#191f28,#e3e7ec)}
-#an-map-design .an-inbox>[data-member-list]{margin:0;min-width:0;box-shadow:0 2px 8px light-dark(rgb(25 31 40 / 4%),rgb(0 0 0 / 12%))}
-#an-map-design .an-inbox>[data-member-list]>summary{min-height:44px;padding:10px 12px}
-#an-map-design .an-inbox>[data-member-list]>[data-select]{display:block;text-align:left;width:calc(100% - 16px);font-size:12px;white-space:normal;overflow-wrap:anywhere}
-#an-map-design .an-inbox>[data-member-list]>[data-select] strong{display:block;white-space:normal;font-size:12px;line-height:1.5;font-weight:700}
-#an-map-design .an-inbox>[data-member-list]>[data-select] small{display:block;font-size:11px;font-weight:600;line-height:1.5;margin-top:4px}
-#an-map-design .an-inbox>[data-member-list]>[data-select] .an-record-date{display:none}
-#an-map-design .an-inbox .an-aside-note{grid-column:1/-1;margin:0;font-size:11px;font-weight:600}
-#an-map-design #an-member-groups,#an-map-design #an-member-sections{visibility:hidden;pointer-events:none}
-#an-map-design .an-inbox .an-node{position:static;transform:none}
+#an-map-design .an-relation-panel{position:absolute;z-index:6;top:var(--an-relation-panel-top,8px);right:8px;bottom:8px;width:320px;max-width:calc(100% - 16px);display:flex;flex-direction:column;min-height:0;overflow:hidden;border-radius:18px;background:var(--an-panel);box-shadow:0 4px 16px var(--an-shadow)}
+#an-map-design .an-relation-panel-head{display:flex;align-items:center;gap:4px;flex:none;padding:8px}
+#an-map-design .an-relation-panel-head button{min-height:44px;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:700}
+#an-map-design .an-relation-panel-head [data-relation-tab][aria-pressed=true]{background:var(--an-soft)}
+#an-map-design .an-relation-panel-head .an-relation-close{margin-left:auto;min-width:44px}
+#an-map-design .an-relation-panel .an-inbox{display:block!important;flex:1;min-height:0;min-width:0;padding:12px;overflow:auto;background:var(--an-panel);scrollbar-gutter:stable}
+#an-map-design .an-relation-panel :is(.an-inbox,.an-detail)[hidden]{display:none!important}
+#an-map-design .an-relation-panel .an-inbox>h3{margin:0 8px 12px;font-size:14px;font-weight:800}
+#an-map-design .an-relation-panel .an-inbox>[data-member-list]{margin:0 0 10px;box-shadow:none;background:var(--an-bg)}
+#an-map-design .an-relation-panel .an-inbox>[data-member-list]>summary{min-height:44px;padding:10px 12px}
+#an-map-design .an-relation-panel .an-inbox>[data-member-list]>[data-select]{display:block;text-align:left;width:calc(100% - 16px);padding:10px 12px;font-size:12px;white-space:normal;overflow-wrap:anywhere}
+#an-map-design .an-relation-panel [data-select] strong{display:block;white-space:normal;font-size:13px;line-height:1.55;font-weight:700}
+#an-map-design .an-relation-panel [data-select] small{display:block;font-size:11px;font-weight:600;line-height:1.55;margin-top:4px}
+#an-map-design .an-relation-panel .an-detail{position:static;display:block;flex:1;min-height:0;min-width:0;width:auto;height:auto;max-height:none;padding:20px;border-radius:0;box-shadow:none;overflow:auto;background:var(--an-panel)}
+#an-map-design .an-relation-panel .an-aside-note{font-size:11px;font-weight:600;line-height:1.6}
 #an-map-design .an-note-marker[data-free=true]{transform:translate(-50%,-50%) scale(var(--an-relationship-zoom,1))}
+#an-map-design #an-member-groups,#an-map-design #an-member-sections{visibility:hidden;pointer-events:none}
 #an-map-design #an-nodes .an-node[data-overview-title=true] .an-category-icon{width:18px;height:18px;flex-basis:18px}
 #an-map-design #an-nodes .an-node.event[data-overview-title=true] :is(.an-record-category,.an-record-date,.an-record-criteria,.an-relation-summary){display:none!important}
 #an-map-design #an-nodes .an-node.event[data-overview-title=true] strong{display:block!important;white-space:nowrap!important;line-height:18px!important;-webkit-line-clamp:unset}
-@media(max-width:1100px){#an-map-design .an-body{grid-template-columns:minmax(0,1fr) 280px}}
-@media(max-width:700px){#an-map-design .an-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(160px,1fr) 164px;grid-template-areas:'map' 'library'}#an-map-design .an-inbox{grid-template-columns:minmax(0,1fr);padding:12px;gap:10px}#an-map-design .an-detail{grid-area:auto}}
+#an-map-design :is(button,select,input,textarea,a,summary):focus-visible{filter:none;background-color:var(--an-soft)}
+#an-map-design .an-relation-panel :is(button,summary){transition:background-color 160ms}
+@media(hover:hover){#an-map-design .an-relation-panel :is(button,summary):hover,#an-map-design .an-tool:hover,#an-map-design .an-zoom button:hover{background:light-dark(#f1f3f5,#252c35);filter:none}}
+@media(max-width:700px){#an-map-design .an-relation-panel{bottom:8px;width:300px;max-width:calc(100% - 56px)}}
+@media(prefers-reduced-motion:reduce){#an-map-design .an-relation-panel :is(button,summary){transition:none}}
 `;root.append(memberRelationshipStyle);
-inbox.setAttribute('aria-label','종목별 근거 자료');inbox.querySelector('h3').textContent='근거 자료 · 사건과 구분해 보기';
+inbox.setAttribute('aria-label','변화와 근거 자료');inbox.querySelector('h3').textContent='변화와 근거 자료';
+// Only explicit/initial fit consumes this visible reading area. Panel toggles
+// neither invoke fit nor change the stage, camera, node positions or drafts.
+function memberRelationFitViewport(){
+  const map=space.getBoundingClientRect(),panel=root.querySelector('.an-relation-panel');
+  const width=space.clientWidth,height=space.clientHeight;
+  if(panel&&!panel.hidden&&innerWidth>700){
+    const box=panel.getBoundingClientRect();
+    if(box.top<map.bottom&&box.bottom>map.top&&box.left<map.right&&box.right>map.left){
+      const available=Math.max(1,Math.min(width,box.left-map.left-12));
+      return {width:available,height,offsetX:(available-width)/2,offsetY:0};
+    }
+  }
+  return {width,height,offsetX:0,offsetY:0};
+}
+function installMemberRelationPanel(){
+  const panel=document.createElement('aside'),bar=document.createElement('div');
+  panel.id='an-relation-panel';panel.className='an-relation-panel';panel.setAttribute('aria-label','변화 목록과 선택 근거');
+  bar.className='an-relation-panel-head';panel.append(bar,inbox,detail);root.querySelector('.an-body').append(panel);
+  const toggle=document.createElement('button');toggle.type='button';toggle.id='an-relation-changes';toggle.className='an-tool';toggle.textContent='변화·자료';toggle.setAttribute('aria-controls',panel.id);primaryTools.append(toggle);
+  const make=(text,tab)=>{const b=document.createElement('button');b.type='button';b.textContent=text;b.dataset.relationTab=tab;bar.append(b);return b;};
+  const changes=make('변화·자료','changes'),evidence=make('선택 근거','detail'),close=document.createElement('button');close.type='button';close.className='an-relation-close';close.textContent='×';close.setAttribute('aria-label','변화·근거 패널 접기');bar.append(close);
+  let open=innerWidth>700,tab='changes',selection=state.selected,note=state.activeNote,noteList=state.noteList,stockList=memberStockList,guide=showGuide;
+  // The panel is a sibling of the stage so its controls never enter the map's
+  // capture listeners. Follow wrapped toolbar height without resizing the map.
+  function positionPanel(){
+    const body=root.querySelector('.an-body').getBoundingClientRect(),map=space.getBoundingClientRect();
+    root.style.setProperty('--an-relation-panel-top',Math.max(8,map.top-body.top+8)+'px');
+  }
+  const panelResize=new ResizeObserver(positionPanel);
+  for(const el of [root.querySelector('.an-body'),space,primaryTools,workbar])panelResize.observe(el);
+  positionPanel();
+  function sync(){
+    panel.hidden=!open;inbox.hidden=tab!=='changes';detail.hidden=tab!=='detail';
+    toggle.setAttribute('aria-expanded',String(open));changes.setAttribute('aria-pressed',String(tab==='changes'));evidence.setAttribute('aria-pressed',String(tab==='detail'));
+    root.dataset.relationPanel=open?tab:'closed';
+  }
+  function show(next){open=true;tab=next;closePreview();sync();}
+  toggle.onclick=()=>{if(cancelGesture)return;if(open&&tab==='changes')open=false;else{open=true;tab='changes';}closePreview();sync();};
+  changes.onclick=()=>show('changes');evidence.onclick=()=>show('detail');
+  close.onclick=()=>{open=false;closePreview();sync();toggle.focus({preventScroll:true});};
+  // Background events in the native source/details DOM must not move the map.
+  panel.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.defaultPrevented&&!editable(e.target)){e.preventDefault();e.stopPropagation();open=false;sync();toggle.focus({preventScroll:true});}});
+  const priorDetail=renderDetail;
+  renderDetail=function(){
+    const changed=selection!==state.selected||note!==state.activeNote||noteList!==state.noteList||stockList!==memberStockList||guide!==showGuide;
+    priorDetail();
+    if(changed&&(state.selected||state.activeNote||state.noteList||memberStockList||showGuide)){open=true;tab='detail';}
+    selection=state.selected;note=state.activeNote;noteList=state.noteList;stockList=memberStockList;guide=showGuide;sync();
+  };
+  sync();
+}
+installMemberRelationPanel();
 const memberRelationshipDrawGroups=drawMemberGroups;
 drawMemberGroups=function(){
   memberRelationshipDrawGroups();memberGroupLines.replaceChildren();memberSectionLayer.replaceChildren();
   root.style.setProperty('--an-relationship-zoom',String(state.zoom));
   root.dataset.relationshipCentered='true';
   root.querySelector('#an-counts').textContent='종목 '+memberScope().stocks.length+' · 사건·고정 자료 '+memberEligible.filter(n=>memberVisible.has(n.id)).length+' · 전체 자료 '+memberEligible.length;
-  root.querySelector('.an-foot > span:last-of-type').textContent='사건 중심 지도 · 아래 자료함에서 원문 펼치기 · Space+드래그로 이동';
+  root.querySelector('.an-foot > span:last-of-type').textContent='관계 중심 지도 · 변화·자료에서 원문 확인 · 배경 드래그 이동 · Shift+드래그 선택';
   for(const button of inbox.querySelectorAll('[data-select]')){
     const n=nodeById[button.dataset.select],small=button.querySelector('small');if(!n||!small)continue;
     const kind=memberRelationshipIsMapRecord(n)?'사건·관계':n.layer==='candidates'?'미검수 후보':'근거 자료';
