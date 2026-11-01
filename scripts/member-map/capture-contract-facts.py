@@ -349,6 +349,110 @@ def reparse(sources, directory):
     return evidence
 
 
+def backfill_same_sha_financial(evidence, cache_directories):
+    """Fill absent financial fields from exact historical bytes, never replace.
+
+    No current feed/name catalog is needed: the retained fact binds the issuer,
+    filing, URLs and observation. Missing, changed or conflicting input leaves
+    that fact intact. Only fixed receipt.viewer.html filenames are read.
+    """
+    _validate_capture_fields(evidence, evidence)
+    directories = [Path(path) for path in cache_directories]
+    if not 1 <= len(directories) <= 8 or any(path.is_symlink() or not path.is_dir() for path in directories):
+        raise ValueError('invalid-financial-cache-directory')
+    rows = evidence.get('contract_facts', [])
+    if len(rows) > 1000:
+        raise ValueError('financial-backfill-row-limit')
+    result, records, bytes_read = deepcopy(evidence), [], 0
+    financial = ('financial_terms', 'financial_notes', 'revenue_basis')
+    for index, fact in enumerate(rows):
+        source = fact['source']
+        record = {'receipt_no': fact['receipt_no'], 'issuer_id': fact['issuer']['id'],
+                  'content_sha256': source['content_sha256'], 'status': 'missing-source'}
+        raw, matched_path = None, None
+        for directory in directories:
+            path = directory / (fact['receipt_no'] + '.viewer.html')
+            try:
+                descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            except FileNotFoundError:
+                continue
+            except OSError:
+                record['status'] = 'unsafe-source'
+                continue
+            with os.fdopen(descriptor, 'rb') as handle:
+                info = os.fstat(handle.fileno())
+                if not stat.S_ISREG(info.st_mode):
+                    record['status'] = 'unsafe-source'
+                    continue
+                if info.st_size != source['bytes']:
+                    record['status'] = 'changed-source'
+                    continue
+                blob = handle.read(source['bytes'] + 1)
+            bytes_read += len(blob)
+            if bytes_read > 32 * 1024 * 1024:
+                raise ValueError('financial-backfill-byte-limit')
+            if len(blob) != source['bytes'] or hashlib.sha256(blob).hexdigest() != source['content_sha256']:
+                record['status'] = 'changed-source'
+                continue
+            raw, matched_path = blob, path
+            break
+        if raw is None:
+            records.append(record)
+            continue
+        try:
+            parsed = parse_contract_facts(raw, receipt_no=fact['receipt_no'],
+                issuer_id=fact['issuer']['id'], issuer_name=fact['issuer']['name'],
+                filed_on=fact['filing']['filed_on'], main_url=source['main_url'],
+                viewer_url=source['viewer_url'], observed_at=source['observed_at'])
+            validate_contract_fact(parsed)
+        except ValueError:
+            record['status'] = 'source-parser-rejected'
+            records.append(record)
+            continue
+        protected, parsed_protected = deepcopy(fact), deepcopy(parsed)
+        # The retained feed title is not reconstructed from the viewer title.
+        protected['filing'].pop('source_title', None)
+        for key in financial:
+            protected['contract'].pop(key, None)
+            parsed_protected['contract'].pop(key, None)
+        conflict = protected != parsed_protected
+        for key in financial:
+            old, new = fact['contract'].get(key), parsed['contract'].get(key)
+            if key == 'financial_terms' and old is not None:
+                conflict |= any(new is None or new.get(term) != value for term, value in old.items())
+            elif key in fact['contract']:
+                conflict |= old != new
+        if conflict:
+            record['status'] = 'conflict'
+            records.append(record)
+            continue
+        candidate, added = deepcopy(fact), []
+        for key in financial:
+            if key not in parsed['contract']:
+                continue
+            if key == 'financial_terms':
+                for term, value in parsed['contract'][key].items():
+                    if term not in candidate['contract'].get(key, {}):
+                        candidate['contract'].setdefault(key, {})[term] = deepcopy(value)
+                        added.append(key + '.' + term)
+            elif key not in candidate['contract']:
+                candidate['contract'][key] = deepcopy(parsed['contract'][key])
+                added.append(key)
+        validate_contract_fact(candidate)
+        result['contract_facts'][index] = candidate
+        record.update(status='updated' if added else 'unchanged', added_fields=added,
+                      cache_file=str(matched_path))
+        records.append(record)
+    _validate_capture_fields(evidence, result)
+    counts = {status: sum(row['status'] == status for row in records) for status in (
+        'updated', 'unchanged', 'missing-source', 'changed-source', 'unsafe-source',
+        'source-parser-rejected', 'conflict')}
+    return result, {'schema': 'same-sha-financial-backfill-v1', 'input': len(rows),
+                    'counts': counts, 'bytes_read': bytes_read, 'rows': records,
+                    'public_gets': 0, 'ai_calls': 0, 'applied': False,
+                    'scope': 'missing-financial-fields-only; historical observation unchanged'}
+
+
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument('--source-dir', type=Path, required=True)
@@ -356,10 +460,34 @@ def main():
     cli.add_argument('--limit', type=int, choices=range(1, 21))
     cli.add_argument('--fetch-public', action='store_true')
     cli.add_argument('--reparse', action='store_true')
+    cli.add_argument('--backfill-financial-from', type=Path, action='append',
+                     help='Offline SAME-SHA missing-field review copy from retained viewer HTML directory (at most 8)')
     cli.add_argument('--filing-type', choices=('contract', 'termination'), help='Type of new public filings to capture; replay uses its manifest')
     cli.add_argument('--refresh-base', type=Path, help='Merge validated prior captures into a strict fresh base catalog; local only')
     cli.add_argument('--apply-local', action='store_true', help='Atomically update this local source directory after validation; never uploads')
     args = cli.parse_args()
+    if args.backfill_financial_from is not None:
+        if (args.fetch_public or args.reparse or args.refresh_base is not None or args.apply_local
+                or args.filing_type is not None or args.limit is not None):
+            cli.error('--backfill-financial-from is offline review-only and conflicts with capture/apply options')
+        if args.source_dir.is_symlink() or not args.source_dir.is_dir():
+            cli.error('Invalid local source directory')
+        if args.output_dir.exists() or args.output_dir.is_symlink():
+            cli.error('Financial backfill requires a new output directory')
+        baseline = _read_regular_json(args.source_dir / 'member_map_auto_evidence.json')
+        evidence, proof = backfill_same_sha_financial(baseline, args.backfill_financial_from)
+        raw = json.dumps(evidence, ensure_ascii=False, indent=2).encode('utf-8')
+        if len(raw) > min(_JSON_LIMIT, PUBLIC_SOURCE_MAX_BYTES['member_map_auto_evidence.json']):
+            raise ValueError('local-evidence-too-large')
+        proof.update(input_canonical_sha256=hashlib.sha256(json.dumps(baseline, ensure_ascii=False,
+            sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
+            candidate_sha256=hashlib.sha256(raw).hexdigest())
+        args.output_dir.mkdir(parents=True, exist_ok=False)
+        write_result(args.output_dir / 'member_map_auto_evidence.financial-backfill.json', evidence)
+        write_result(args.output_dir / 'financial-backfill-proof.json', proof)
+        print(json.dumps({'input': proof['input'], 'counts': proof['counts'], 'public_gets': 0,
+                          'ai_calls': 0, 'applied': False, 'output': str(args.output_dir)}))
+        return
     if args.refresh_base is not None:
         if args.fetch_public or args.reparse or args.filing_type is not None or args.limit is not None:
             cli.error('--refresh-base conflicts with fetch, reparse, filing-type, and limit options')
