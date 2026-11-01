@@ -1,6 +1,8 @@
 """Synthetic identity/recovery boundaries; not live-company quality evidence."""
 from copy import deepcopy
+import importlib.util
 import json
+from pathlib import Path
 import socket
 import sqlite3
 import urllib.request
@@ -361,3 +363,233 @@ def test_sentence_rejection_diagnostics_use_fixed_labels_without_source_content(
         business._sentence(quote, {"text": text})
     assert caught.value.judgment_sentence_check == check
     assert str(caught.value) == "judgment-incomplete-sentence"
+
+
+# Public 321260 wording, preserving the no-whitespace sentence boundary.
+_TIER_ONE_QUOTE = (
+    "당사는 세계 최초의 필름형 프로브 블록(Probe Block) 특허를 기반으로 디스플레이 검사 시장 내 "
+    "독보적인 기술 장벽을 구축하였으며, 이를 바탕으로 삼성디스플레이(SDC)와 LG디스플레이(LGD) 등 "
+    "국내외 글로벌 패널 제조사의 1차 협력사로서 디스플레이 검사 시장에서 독보적인 위치를 가지게 되었습니다."
+)
+
+
+def _empty_case(text=None, *, name="LG디스플레이"):
+    doc, _ = _case(name=name)
+    doc.update(issuer_id="KR:321260", issuer_name="프로이천", as_of="2026-03-20",
+               source_id="source:dart:20260320000879",
+               url="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260320000879",
+               text=text if text is not None else "당사는 검사 장치 전문기업으로 자리 잡았습니다." + _TIER_ONE_QUOTE,
+               counterparties=[{"id": "KR:034220", "name": name}])
+    return doc, {"judgments": [], "remaining_count": 0}
+
+
+def test_empty_answer_flags_public_tier_one_sentence_without_creating_a_judgment():
+    doc, answer = _empty_case()
+    before = deepcopy((doc, answer))
+    prompt = business.prepare_judgment_prompt_packet([doc], as_of=AS_OF)
+    assert _TIER_ONE_QUOTE in prompt["sources"][0]["sentence_choices"]
+    result = business.validate_company_judgments(answer, [doc], as_of=AS_OF)
+    source = business.prepare_judgment_packet([doc], as_of=AS_OF)["sources"][0]
+    start = doc["text"].index(_TIER_ONE_QUOTE)
+    assert result["quality_review"]["findings"] == [{
+        "axis": "recall", "code": "empty-answer-named-exposure", "company_id": "KR:321260",
+        "counterparty_id": "KR:034220", "source_id": doc["source_id"],
+        "source_version": source["source_version"], "evidence_quotes": [_TIER_ONE_QUOTE],
+        "evidence_refs": [{"start": start, "end": start + len(_TIER_ONE_QUOTE)}]}]
+    assert result["judgments"] == result["rejected"] == []
+    assert result["coverage"]["input"] == result["coverage"]["retained"] == 0
+    projected = business.project_company_judgments(answer, [doc], [], [], as_of=AS_OF)
+    assert projected["judgments"] == []
+    assert (doc, answer) == before
+
+
+@pytest.mark.parametrize("text,name", [
+    ("스마트 디바이스, AI, IoT, 블록 체인 등 4차 산업혁명에 따라 업체들 간 상호협력이 중요합니다.", "디바이스"),
+    (_TIER_ONE_QUOTE + " 다른등록기업의 시장 동향을 조사합니다.", "다른등록기업"),
+    (_TIER_ONE_QUOTE[:-1], "LG디스플레이"),
+    (_TIER_ONE_QUOTE + _TIER_ONE_QUOTE, "LG디스플레이"),
+    ("당사는 LG디스플레이의 1차 협력사가 될 계획입니다.", "LG디스플레이"),
+    ("당사의 종속회사는 LG디스플레이의 1차 협력사로서 제품을 공급합니다.", "LG디스플레이"),
+    ("다른기업은 LG디스플레이의 1차 협력사로서 제품을 공급합니다.", "LG디스플레이"),
+    ("당사는 LG디스플레이 시장 동향을 조사합니다.", "LG디스플레이"),
+])
+def test_empty_answer_does_not_flag_unbound_ambiguous_or_unquotable_evidence(text, name):
+    doc, answer = _empty_case(text, name=name)
+    result = business.validate_company_judgments(answer, [doc], as_of=AS_OF)
+    assert result["quality_review"]["findings"] == []
+    assert result["judgments"] == result["rejected"] == []
+
+
+def test_empty_answer_explicit_trade_is_diagnostic_only_and_does_not_repeat_per_party():
+    doc, _ = _case(name="고객기업")
+    doc["text"] += " 당사는 고객기업에 추가 부품을 공급합니다."
+    result = business.validate_company_judgments({"judgments": [], "remaining_count": 0}, [doc], as_of=AS_OF)
+    assert len(result["quality_review"]["findings"]) == 1
+    assert result["judgments"] == []
+
+
+def test_empty_answer_cached_replay_adds_diagnostic_without_spending_or_changing_raw(tmp_path):
+    doc, answer = _empty_case()
+    saved = _saved(doc, answer)
+    before = deepcopy((doc, answer, saved))
+    budget = ReadOnlyBudget(saved)
+    result = ai.run_document(doc, tmp_path / "empty.sqlite3", "synthetic-key", enabled=True,
+                             judgment_as_of=NEXT_DAY, budget_ledger=budget,
+                             result_store=archive.SupabaseResultStore(budget))
+    assert result["status"] == "cached" and result["provider_calls"] == 0
+    assert result["published"] is False and result["judgments"] == []
+    assert result["raw_answer"] == answer
+    assert [f["code"] for f in result["quality_review"]["findings"]] == ["empty-answer-named-exposure"]
+    assert budget.get_calls == 1 and budget.reserve_calls == budget.settle_calls == 0
+    assert (doc, answer, saved) == before
+    assert business.CACHE_VERSION == "company-business-judgment-prompt-v3"
+    # The archive/SQL envelope receives only the original closed answer; recall
+    # is recomputed on replay and does not acquire a fictional judgment ID.
+    packed = archive.pack_result({**result, "status": "ok"}, doc, business.VERSION, 25)
+    assert "quality_review" not in packed and packed["raw_answer"] == answer
+    worker_path = Path(__file__).resolve().parents[1] / "scripts/member-map/run-company-judgments.py"
+    spec = importlib.util.spec_from_file_location("empty_recall_worker_test", worker_path)
+    worker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(worker)
+    summary = worker.run_batch([doc], tmp_path / "unused.sqlite3", None, None,
+                               as_of=NEXT_DAY, limit=1, runner=lambda *a, **kw: result)
+    assert summary["quality_findings"] == 1 and summary["pending_judgments"] == 0
+    assert summary["paid_attempts"] == 0 and summary["accepted_judgments"] == 0
+    assert summary["published"] is False and _TIER_ONE_QUOTE not in json.dumps(summary)
+
+
+def test_empty_input_contract_and_rejected_nonempty_answer_are_unchanged():
+    doc, answer = _empty_case()
+    with pytest.raises(ValueError):
+        business.validate_company_judgments(answer, [], as_of=AS_OF)
+    empty = {**doc, "text": ""}
+    with pytest.raises(ValueError):
+        business.validate_company_judgments(answer, [empty], as_of=AS_OF)
+    result = business.validate_company_judgments({"judgments": [{}], "remaining_count": 0}, [doc], as_of=AS_OF)
+    assert result["rejected"] and result["quality_review"]["findings"] == []
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("당사는 LG디스플레이의 1차 협력사입니다.", 1),
+    ("당사는 LG디스플레이 등 주요 자동차 제조사의 1차 협력사로서 부품을 생산합니다.", 1),
+    ("당사는 LG디스플레이의 1차 협력사로 부품을 생산합니다.", 1),
+    ("당사는 연구를 수행하며, 다른기업은 LG디스플레이의 1차 협력사로서 제품을 생산합니다.", 0),
+    ("당사는 LG디스플레이의 1차 협력사로서 거래하지 않습니다.", 0),
+    ("당사는 LG디스플레이의 1차 협력사로서 거래를 종료했습니다.", 0),
+])
+def test_empty_tier_one_recall_is_industry_independent_and_preserves_scope_guards(text, expected):
+    doc, answer = _empty_case(text)
+    result = business.validate_company_judgments(answer, [doc], as_of=AS_OF)
+    assert len(result["quality_review"]["findings"]) == expected
+    assert result["judgments"] == []
+
+
+def _selection_bundle(text, *, company_name="디바이스"):
+    doc, _ = _empty_case(text, name=company_name)
+    return {
+        "universe_search.json": {"stocks": [
+            {"ticker": "321260", "market": "KOSDAQ", "name": "프로이천"},
+            {"ticker": "187870", "market": "KOSDAQ", "name": company_name},
+        ]},
+        "kr_business_overview_public.json": {
+            "_meta": {"count": 1, "generated_at": "2026-10-01T00:00:00Z"},
+            "rows": {"321260": {"name": doc["issuer_name"], "text": text, "chars": len(text),
+                                 "truncated": False, "fiscal_year": "2025", "filed_at": "20260320",
+                                 "report": "사업보고서 (2025.12)", "url": doc["url"]}},
+        },
+    }
+
+
+@pytest.mark.parametrize("text,ambiguous", [
+    ("스마트 디바이스, AI, IoT, 블록 체인 분야 업체들 간 상호협력이 중요합니다.", True),
+    ("당사는 스마트 디바이스를 공급합니다.", True),
+    ("당사는 디바이스에 부품을 공급합니다.", False),
+    ("당사는 주식회사 디바이스에 부품을 공급합니다.", False),
+    ("당사는 디바이스(주)에 부품을 공급합니다.", False),
+    ("당사는 스마트 디바이스(주)에 부품을 공급합니다.", False),
+    ("스마트 디바이스를 개발하며, 당사는 디바이스에 부품을 공급합니다.", False),
+])
+def test_smart_device_guard_is_per_occurrence_and_not_a_company_blacklist(text, ambiguous):
+    assert ai._ambiguous_party_name(text, "디바이스", ["디바이스"]) is ambiguous
+
+
+@pytest.mark.parametrize("include_claims", [False, True])
+def test_selection_reuses_ambiguity_guard_but_retains_separate_real_company_mention(include_claims):
+    generic = "스마트 디바이스, AI, IoT, 블록 체인 분야 업체들 간 상호협력이 중요합니다."
+    bundle = _selection_bundle(generic)
+    before = deepcopy(bundle)
+    selected, counts = ai.select_documents(bundle, include_claims=include_claims)
+    assert selected == [] and counts["no_named_relation"] == 1
+    assert bundle == before
+    # No rule-resolved literal list: this remains eligible for existing review.
+    for real in ("당사는 디바이스와 부품 공급 기술을 공동 연구합니다.",
+                 "당사는 주식회사 디바이스와 부품 공급 기술을 공동 연구합니다.",
+                 "당사는 디바이스(주)와 부품 공급 기술을 공동 연구합니다."):
+        selected, counts = ai.select_documents(_selection_bundle(generic + real), include_claims=include_claims)
+        assert counts["eligible"] == 1
+        assert selected[0]["counterparties"] == [{"id": "KR:187870", "name": "디바이스"}]
+
+
+def test_selection_does_not_block_full_registered_name_containing_technical_compound():
+    selected, counts = ai.select_documents(_selection_bundle(
+        "당사는 스마트디바이스와 기술 협력을 수행합니다.", company_name="스마트디바이스"), include_claims=True)
+    assert counts["eligible"] == 1
+    assert selected[0]["counterparties"] == [{"id": "KR:187870", "name": "스마트디바이스"}]
+
+
+@pytest.mark.parametrize("tier_one", [False, True])
+@pytest.mark.parametrize("resolved_role,expected", [("customer", 0), ("supplier", 1)])
+def test_empty_answer_does_not_warn_for_the_same_rule_resolved_party_role(tier_one, resolved_role, expected):
+    doc, answer = _empty_case() if tier_one else _case(name="고객기업")
+    answer = {"judgments": [], "remaining_count": 0}
+    doc["resolved_relations"] = [{"counterparty_id": doc["counterparties"][0]["id"], "role": resolved_role}]
+    before = deepcopy((doc, answer))
+    result = business.validate_company_judgments(answer, [doc], as_of=AS_OF)
+    assert len(result["quality_review"]["findings"]) == expected
+    assert result["judgments"] == [] and (doc, answer) == before
+
+
+def test_empty_answer_does_not_use_retained_materiality_tail_as_new_relation_evidence():
+    doc, _ = _empty_case("당사는 LG디스플레이 시장 동향을 조사합니다.")
+    source = business.prepare_judgment_packet([doc], as_of=AS_OF)["sources"][0]
+    # Isolate the already-validated packet scan; retained context validation is
+    # covered separately. The original excerpt remains the primary proof limit.
+    source["excerpt_text"] = source["text"]
+    source["text"] += _TIER_ONE_QUOTE
+    assert business._empty_answer_findings([source]) == []
+
+
+@pytest.mark.parametrize("text", [
+    "당사는 고객기업에 부품을 공급하지 못했습니다.",
+    "당사는 고객기업에 부품을 공급하지못했습니다.",
+    "당사는 고객기업에 부품을 공급 못했습니다.",
+    "당사는 고객기업에 부품을 공급하지 못하고 있습니다.",
+    "당사는 다른기업이 고객기업에 부품을 공급한다고 설명했습니다.",
+    "당사는 연구를 수행하며, 다른기업은 고객기업에 부품을 공급한다고 보고했습니다.",
+    "당사는 다른기업이 고객기업에 부품을 공급하고 있다고 발표했습니다.",
+    "당사는 다른기업이 고객기업의 1차 협력사라고 설명했습니다.",
+])
+def test_empty_recall_excludes_explicit_failure_and_reported_other_subject(text):
+    doc, _ = _case(name="고객기업")
+    doc["text"] = text
+    answer = {"judgments": [], "remaining_count": 0}
+    before = deepcopy((doc, answer))
+    result = business.validate_company_judgments(answer, [doc], as_of=AS_OF)
+    assert result["quality_review"]["findings"] == []
+    assert result["judgments"] == result["rejected"] == []
+    assert (doc, answer) == before
+
+
+@pytest.mark.parametrize("text", [
+    "당사는 고객기업에 부품을 공급했습니다.",
+    "당사는 고객기업에 못을 공급합니다.",
+    "당사는 성능이 좋은 부품을 고객기업에 공급합니다.",
+    "당사는 고객기업에 부품을 공급한다고 설명했습니다.",
+    "당사는 성능이 좋은 부품을 고객기업에 공급한다고 설명했습니다.",
+])
+def test_empty_recall_keeps_affirmative_issuer_trade_and_does_not_blacklist_report_verbs(text):
+    doc, _ = _case(name="고객기업")
+    doc["text"] = text
+    result = business.validate_company_judgments({"judgments": [], "remaining_count": 0}, [doc], as_of=AS_OF)
+    assert len(result["quality_review"]["findings"]) == 1
+    assert result["judgments"] == []

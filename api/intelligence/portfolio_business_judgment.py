@@ -776,6 +776,71 @@ def _quality_findings(row, source):
     return findings + _omitted_exposure_findings(row, source)
 
 
+def _empty_answer_findings(sources):
+    """Flag literal named exposure overlooked by an empty answer, without a proposal.
+
+    Bounded recall only: complete, unique, issuer-led sentences in the original
+    excerpt, registered exact names and explicit trade/tier-one partner wording.
+    Retained materiality context must not enlarge primary relation evidence.
+    """
+    from . import portfolio_ai_fallback as base
+    findings = []
+    for source in sources:
+        excerpt = {**source, "text": source.get("excerpt_text", source["text"])}
+        names = [party["name"] for party in source["counterparties"]]
+        issuer_lead = re.compile(r"^(?:당사|" + re.escape(source["issuer_name"])
+                                 + r")(?:는|가|의|은)\s+")
+        seen = set()
+        for quote in base._sentences(excerpt["text"]):
+            if (not issuer_lead.search(quote) or base._OTHER_SUBJECT.search(quote)
+                    or base._has_unresolved_scope(quote)
+                    or re.search(r"(?:지\s*|(?<![A-Za-z0-9가-힣]))못\s*(?:했|하|해|합|한|할)", quote)):
+                continue
+            try:
+                _sentence(quote, excerpt)
+            except ValueError:
+                continue
+            for party in source["counterparties"]:
+                name = party["name"]
+                if (party["id"] in seen or base._ambiguous_party_name(quote, name, names)
+                        or base._historical_relation_clauses(quote, name, names)):
+                    continue
+                # A reported other-company action is not issuer exposure.
+                # Require an explicit reporting construction for trade recall;
+                # a relative clause such as '성능이 좋은 부품' is not a new actor.
+                prefix = quote[:quote.index(name)].rsplit(",", 1)[-1].rsplit("，", 1)[-1]
+                prefix = issuer_lead.sub("", prefix)
+                other_subject = re.search(r"[A-Za-z0-9가-힣]+(?:은|는|이|가)\s+", prefix)
+                reported = re.search(r"(?:다고|라고|다는|라는)\s*(?:설명|보고|발표|언급|전달|밝)", quote)
+                reported_subject = reported and re.search(r"[A-Za-z0-9가-힣]+(?:은|는|이|가)\s+$", prefix)
+                # Also cover the explicit tier-one supplier statement whose
+                # optional parenthesized acronym is part of the literal quote.
+                tier_one = re.search(re.escape(name) + r"(?:\([^()]{1,30}\))?"
+                                     r"\s*(?:등\s+)?(?:[가-힣]{2,12}\s+){0,4}"
+                                     r"(?:제조사|기업|업체|회사|고객사)?의\s+1차\s+협력사"
+                                     r"(?:로서|입니다|이며|로\s+)", quote)
+                if (tier_one and other_subject) or reported_subject:
+                    continue
+                direction = base._direction_for_counterparty(quote, name, source["issuer_name"], names)
+                if not tier_one and direction is None:
+                    continue
+                # The original excerpt still contains rule-resolved sentences.
+                # Skipping the same party/role is intentional, not model loss;
+                # an unrelated role must not hide this evidence. A tier-one
+                # issuer supplier names its customer, solely for this skip.
+                role = direction or "customer"
+                if {"counterparty_id": party["id"], "role": role} in source.get("resolved_relations", []):
+                    continue
+                start = excerpt["text"].index(quote)
+                findings.append({"axis": "recall", "code": "empty-answer-named-exposure",
+                                 "company_id": source["issuer_id"], "counterparty_id": party["id"],
+                                 "source_id": source["source_id"], "source_version": source["source_version"],
+                                 "evidence_quotes": [quote],
+                                 "evidence_refs": [{"start": start, "end": start + len(quote)}]})
+                seen.add(party["id"])
+    return findings
+
+
 def validate_company_judgments(answer, documents, *, as_of, period_archives=None,
                                issuer_registry=None):
     """Retain safe proposals with reasons, isolating malformed rows from siblings."""
@@ -807,6 +872,8 @@ def validate_company_judgments(answer, documents, *, as_of, period_archives=None
             rejected.append(rejection)
     findings = [finding for row in kept
                 for finding in _quality_findings(row, sources[row["proposal"]["source_id"]])]
+    if not answer["judgments"]:
+        findings.extend(_empty_answer_findings(sources.values()))
     return {"schema": VERSION, "judgments": kept, "rejected": rejected,
             "quality_review": {"version": "judgment-axis-checks-v2", "findings": findings,
                                "scope": "bounded-contradiction-checks-not-semantic-approval"},
