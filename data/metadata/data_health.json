@@ -1,10 +1,11 @@
 {
  "_meta": {
-  "generated_at": "2026-11-01T15:12:52.928118+09:00",
+  "generated_at": "2026-11-01T16:12:44.074814+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
- "status": "amber",
+ "status": "red",
  "reasons": [
+  "P0 stale 1건",
   "연간 재무 수집 실패 5/55칸",
   "연간 재무 미해결 수집 오류 5칸",
   "연간 재무 원천 기간 공란 1칸",
@@ -12,27 +13,27 @@
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-11-01T15:12:52.852450+09:00",
+   "generated_at": "2026-11-01T16:12:43.988769+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
   },
   "coverage": {
-   "generated_at": "2026-10-31T14:40:36.289893+09:00",
+   "generated_at": "2026-11-01T15:08:04.401705+09:00",
    "max_age_h": 96,
-   "age_h": 24.538,
+   "age_h": 1.078,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-11-01T15:12:43.494905+09:00",
+   "generated_at": "2026-11-01T16:12:37.011836+09:00",
    "max_age_h": 3,
-   "age_h": 0.003,
+   "age_h": 0.002,
    "status": "fresh"
   },
   "annual_backfill": {
    "generated_at": "2026-10-31T20:32:28.760544+00:00",
    "max_age_h": 48,
-   "age_h": 9.673,
+   "age_h": 10.671,
    "status": "fresh"
   }
  },
@@ -41,11 +42,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-11-01T15:12:52.852450+09:00",
+  "generated_at": "2026-11-01T16:12:43.988769+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 82798,
+  "max_cdn_age_s": 154769,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -55,7 +56,7 @@
      "PBR": 95.9
     },
     "total": 2554,
-    "cdn_age_s": 82798,
+    "cdn_age_s": 2329,
     "error": null
    },
    {
@@ -66,7 +67,7 @@
      "PBR": 73.7
     },
     "total": 5274,
-    "cdn_age_s": 53993,
+    "cdn_age_s": 154769,
     "error": null
    },
    {
@@ -77,7 +78,7 @@
      "PBR": 75.2
     },
     "total": 3972,
-    "cdn_age_s": 43209,
+    "cdn_age_s": 64789,
     "error": null
    },
    {
@@ -91,7 +92,7 @@
   ]
  },
  "coverage": {
-  "generated_at": "2026-10-31T14:40:36.289893+09:00",
+  "generated_at": "2026-11-01T15:08:04.401705+09:00",
   "kr_total": 2554,
   "us_total": 5274,
   "core_fill_pct": {
@@ -103,19 +104,19 @@
   "last_run_blocked": false,
   "last_run_fails": 0,
   "last_run_warns": 0,
-  "last_run_at": "2026-10-31T14:40:36.417015+09:00"
+  "last_run_at": "2026-11-01T15:08:04.533466+09:00"
  },
  "freshness": {
-  "generated_at": "2026-11-01T15:12:43.494905+09:00",
+  "generated_at": "2026-11-01T16:12:37.011836+09:00",
   "summary": {
-   "fresh": 30,
-   "stale": 0,
+   "fresh": 29,
+   "stale": 1,
    "closed": 33,
    "discontinued": 3,
    "unmeasured": 1,
    "p0": {
     "total": 8,
-    "fresh": 2,
+    "fresh": 1,
     "closed": 6,
     "active": 2,
     "unmeasured": 0
@@ -194,7 +195,13 @@
     "quality_reason": "source_access_stop"
    }
   },
-  "stale_p0": [],
+  "stale_p0": [
+   {
+    "id": "macro_snapshot",
+    "label": "매크로 스냅샷",
+    "age_min": 10.1
+   }
+  ],
   "stale_other": [],
   "stale_other_details": []
  },
