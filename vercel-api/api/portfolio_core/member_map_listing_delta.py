@@ -613,7 +613,6 @@ def validate_dart_checkpoint(checkpoint):
                     or p["phase"] not in ("scan", "verify") or type(p["next_page"]) is not int
                     or not 1 <= p["next_page"] <= 10000000
                     or not all(_dart_map(p[k]) for k in ("rows", "baseline", "first", "last"))
-                    or any(i[5:13] != p["date"].replace("-", "") for k in ("rows", "baseline", "first", "last") for i in p[k])
                     or type(p["observed"]) is not list
                     or any(type(i) is not str or not re.fullmatch(r"DART:[0-9]{14}", i) for i in p["observed"])
                     or p["observed"] != sorted(set(p["observed"]))):
@@ -685,8 +684,10 @@ def dart_begin(checkpoint, cursor, now, catalog):
 def dart_replay_pages(checkpoint, cursor, now, catalog, pages):
     """Deterministic transition also implemented by the private SQL helper.
 
-    Proofs carry only receipt IDs and canonical row digests. Guards consume the
-    same ten HTTP requests as forward pages. A phase boundary ends this batch.
+    Proofs bind the queried date to receipt IDs and canonical row digests
+    (including parsed rcept_dt). Receipt-number prefixes are not reported dates.
+    The producer checks every row date before hashing; opaque digests cannot
+    independently prove source contents here. Guards share the ten-request cap.
     """
     if type(pages) is not list or len(pages) > 10:
         raise ListingError("invalid_pagination")
@@ -694,7 +695,8 @@ def dart_replay_pages(checkpoint, cursor, now, catalog, pages):
     p = cp["pending"]
     guards = list(dict.fromkeys((1, p["next_page"] - 1))) if p["next_page"] > 1 else []
     for index, proof in enumerate(pages):
-        if (type(proof) is not dict or set(proof) != {"page_no", "total_count", "rows"}
+        if (type(proof) is not dict or set(proof) != {"queried_date", "page_no", "total_count", "rows"}
+                or type(proof["queried_date"]) is not str or proof["queried_date"] != p["date"]
                 or type(proof["page_no"]) is not int or type(proof["total_count"]) is not int
                 or not 0 <= proof["total_count"] <= 999999999 or type(proof["rows"]) is not list
                 or any(type(pair) is not list or len(pair) != 2
@@ -702,7 +704,7 @@ def dart_replay_pages(checkpoint, cursor, now, catalog, pages):
             raise ListingError("invalid_pagination")
         rows = dict(proof["rows"])
         page, total = proof["page_no"], proof["total_count"]
-        if (not _dart_map(rows) or any(i[5:13] != p["date"].replace("-", "") for i in rows)
+        if (not _dart_map(rows)
                 or len(rows) != len(proof["rows"]) or not 1 <= page <= max(1, (total + 99) // 100)
                 or len(rows) != min(100, max(0, total - (page - 1) * 100))):
             raise ListingError("incomplete_unique_records")
@@ -778,7 +780,9 @@ def collect_dart_continuation(universe, previous_feed, cursor, checked_at, api_k
                 raise ListingError("invalid_pagination")
             if any(row["date"] != p["date"] for row in parsed["rows"]):
                 raise ListingError("date_outside_window")
-            proof = {"page_no": page, "total_count": parsed["total_count"], "rows": [[row["id"],
+            # Keep the existing canonical digest so retained pending sweeps can
+            # resume; parsed row.date/source_date_field bind actual rcept_dt.
+            proof = {"queried_date": p["date"], "page_no": page, "total_count": parsed["total_count"], "rows": [[row["id"],
                 hashlib.sha256(json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()]
                 for row in parsed["rows"]]}
             pages = result["dart_pages"] + [proof]
