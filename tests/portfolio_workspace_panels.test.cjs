@@ -8,21 +8,58 @@ function extract(name){
   for(let i=begin;i<source.length;i++){if(source[i]==='{')depth++;else if(source[i]==='}'&&--depth===0)return source.slice(start,i+1);}
   assert.fail('Unclosed '+name);
 }
+// Exercise the delivered panel controller against existing editor elements.
+// Panel navigation must never reconstruct a draft editor or touch the camera.
+function panelFixture(width=1240){
+  function element(){return {children:[],dataset:{},attributes:{},events:{},hidden:false,
+    style:{setProperty(){}},getBoundingClientRect(){return {top:0}},
+    append(...children){this.children.push(...children)},setAttribute(k,v){this.attributes[k]=v},
+    addEventListener(k,v){this.events[k]=v},focus(){this.focused=true}};}
+  const root=element(),body=element(),inbox=element(),detail=element(),primaryTools=element();
+  const editor={value:'unsaved synthetic memo',selectionStart:7,selectionEnd:12};detail.append(editor);
+  root.querySelector=()=>body;
+  const state={zoom:.71,panX:37,panY:-19,selected:null,activeNote:null,noteList:false,notes:{n:{text:'retained'}},marks:{}};
+  const c={root,inbox,detail,primaryTools,state,memberStockList:false,showGuide:false,cancelGesture:null,
+    innerWidth:width,space:element(),workbar:element(),ResizeObserver:class{observe(){}},
+    document:{createElement:element},closePreview(){},renderDetail(){},editable:target=>target===editor};
+  vm.runInNewContext(extract('installMemberRelationPanel'),c);c.installMemberRelationPanel();
+  const panel=body.children[0],bar=panel.children[0],[changes,evidence,close]=bar.children,toggle=primaryTools.children[0];
+  return {c,state,panel,inbox,detail,editor,toggle,changes,evidence,close};
+}
+test('relation side panel toggles and tabs preserve camera, notes and the exact unsaved editor',()=>{
+  const f=panelFixture(),before=JSON.stringify(f.state),editor=f.editor;
+  for(let i=0;i<12;i++){
+    f.toggle.onclick();assert.equal(f.panel.hidden,true);
+    f.toggle.onclick();f.evidence.onclick();assert.equal(f.inbox.hidden,true);assert.equal(f.detail.hidden,false);
+    f.changes.onclick();assert.equal(f.inbox.hidden,false);assert.equal(f.detail.hidden,true);
+  }
+  assert.equal(JSON.stringify(f.state),before);assert.equal(f.detail.children[0],editor);
+  assert.equal(editor.value,'unsaved synthetic memo');assert.equal(editor.selectionStart,7);assert.equal(editor.selectionEnd,12);
+  f.close.onclick();assert.equal(f.panel.hidden,true);assert.equal(f.toggle.focused,true);
+});
+test('narrow view starts with the reading panel folded and opens without moving the map',()=>{
+  const f=panelFixture(390),before=JSON.stringify(f.state);assert.equal(f.panel.hidden,true);
+  f.toggle.onclick();assert.equal(f.panel.hidden,false);assert.equal(JSON.stringify(f.state),before);
+});
+test('panel does not steal Escape from a note editor and repeated rendering retains the chosen tab',()=>{
+  const f=panelFixture();let prevented=0;
+  f.panel.events.keydown({key:'Escape',target:f.editor,preventDefault(){prevented++}});
+  assert.equal(prevented,0);assert.equal(f.panel.hidden,false);
+  f.state.activeNote='n';f.c.renderDetail();assert.equal(f.detail.hidden,false);
+  f.changes.onclick();f.c.renderDetail();assert.equal(f.inbox.hidden,false);
+  f.panel.events.keydown({key:'Escape',target:f.panel,preventDefault(){prevented++},stopPropagation(){}});
+  assert.equal(prevented,1);assert.equal(f.panel.hidden,true);
+});
 function fixture(){
   const state={panX:73,panY:-29,zoom:.39,focusId:'stock',notes:{n:{x:.2,y:.7,text:'retained'}}};
   const calls={render:0,cancel:0,focus:0,preview:0,fit:0},frames=[];
   const c={state,space:{clientWidth:900,clientHeight:400,classList:{contains:()=>false}},nodeMoveActive:false,nativeGesture:null,pendingMapResize:false,narrowFocusLayout:false,
     memberPanelResizeOrigin:null,memberInitialViewportPending:false,memberInitialViewportFrame:0,memberInitialViewportSize:'',hasSavedCamera:false,requestAnimationFrame:fn=>(frames.push(fn),frames.length),cancelGesture:()=>calls.cancel++,closePreview:()=>calls.preview++,renderMap:()=>calls.render++,focusStock:()=>calls.focus++,fitNodes:()=>calls.fit++};
-  vm.runInNewContext(extract('memberLibraryHeight')+'\n'+extract('cancelMemberInitialViewport')+'\n'+extract('queueMemberInitialViewport')+'\n'+extract('fitMemberInitialViewport')+'\n'+extract('applyMapResize'),c);
+  vm.runInNewContext(extract('cancelMemberInitialViewport')+'\n'+extract('queueMemberInitialViewport')+'\n'+extract('fitMemberInitialViewport')+'\n'+extract('applyMapResize'),c);
   const origin=()=>[c.space.clientWidth/2+state.panX,c.space.clientHeight/2+state.panY];
   const begin=()=>{c.memberPanelResizeOrigin={width:c.space.clientWidth,height:c.space.clientHeight,panX:state.panX,panY:state.panY};};
   return {c,state,calls,origin,begin,frame:()=>frames.shift()?.()};
 }
-test('height bounds retain a reachable header, cap short viewports and reject nonfinite input',()=>{
-  const f=fixture();
-  for(const [input,min,max,expected]of[[200,36,500,200],[-4,36,500,36],[999,36,500,500],[0,52,52,52],[NaN,36,500,36],[Infinity,36,500,36]])
-    assert.equal(f.c.memberLibraryHeight(input,min,max),expected);
-});
 test('library expansion/collapse keeps the exact visible world origin, zoom and notes without cancelling its gesture or fitting',()=>{
   const f=fixture(),before=f.origin(),notes=JSON.stringify(f.state.notes),zoom=f.state.zoom;
   for(const height of [240,600,400,240,400]){

@@ -76,7 +76,7 @@ test('only reviewed event and relationship kinds enter the relationship map', ()
     for (const [record, expected] of cases) assert.equal(memberRelationshipIsMapRecord(record), expected, JSON.stringify(record))
 })
 
-test('shared event centers between both stock anchors and starts below the lower stock', () => {
+test('shared event uses the free space between participants without a downward tower', () => {
     const { memberRelationshipSlotsFor } = helpers()
     const stocks = [
         { id: 'left', x: 100, y: 100, width: 160, height: 52 },
@@ -91,11 +91,13 @@ test('shared event centers between both stock anchors and starts below the lower
     assert.equal(slots.size, records.length)
     const shared = slots.get('shared')
     assert.equal(shared.x, 400)
-    assert.equal(shared.y, 200 + 80 / 2 + 70 + 100 / 2)
+    assert.equal(shared.y, 150)
     assert.equal(shared.width, 180)
     assert.equal(shared.height, 100)
-    assert.equal(slots.get('left-only').x, 100)
-    assert.ok(slots.get('left-only').y >= 100 + 52 / 2 + 70 + 100 / 2)
+    for (const slot of slots.values()) for (const stock of stocks) assert.ok(separated(rect(slot), rect(stock)))
+    assert.ok(separated(rect(shared), rect(slots.get('left-only'))))
+    assert.ok(Math.max(...[...slots.values()].map(p=>p.y+p.height/2)) <= 264,
+        'two relationship cards stay near the participants instead of stacking below them')
 })
 
 for (const stockCount of [2, 15, 30]) {
