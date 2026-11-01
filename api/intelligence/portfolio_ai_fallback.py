@@ -213,7 +213,14 @@ def _name_in_text(name, text):
 def _ambiguous_party_name(text, name, party_names):
     if name.strip().casefold() in _GENERIC_PARTY_NAMES:
         return True
+    def technical_occurrence(match):
+        # Exclude only this generic compound occurrence, not the registered
+        # company name elsewhere (including an explicit legal-form suffix).
+        return (name == "디바이스"
+                and re.search(r"(?<![A-Za-z0-9가-힣])스마트\s+$", text[:match.start()]) is not None
+                and re.match(r"\s*(?:\(주\)|㈜|주식회사)", text[match.end():]) is None)
     if not any(_name_match_is_exact(text, match, name, party_names)
+               and not technical_occurrence(match)
                for match in re.finditer(re.escape(name), text)):
         return True
     escaped = re.escape(name)
@@ -553,8 +560,11 @@ def select_documents(documents, *, include_claims=False):
         if eligible_sentences:
             mentions = {}
             for sentence in eligible_sentences:
-                for identifier, source_name in _registered_company_mentions(sentence, by_id, aliases, name_index=name_index):
-                    if identifier != row["issuer_id"]:
+                sentence_mentions = _registered_company_mentions(sentence, by_id, aliases, name_index=name_index)
+                names = [name for _, name in sentence_mentions]
+                for identifier, source_name in sentence_mentions:
+                    if (identifier != row["issuer_id"]
+                            and not _ambiguous_party_name(sentence, source_name, names)):
                         prior = mentions.get(identifier)
                         if prior is None or len(source_name) > len(prior):
                             mentions[identifier] = source_name
