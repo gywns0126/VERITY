@@ -89,6 +89,14 @@ directional catalyst. Cite an explicit change/contribution and its economic chan
 for THIS relation; do not borrow another clause's issuer-wide growth. If both
 headwinds and mitigation appear, retain both and distinguish a scoped contribution
 from net company impact. Unknown net effect does not erase a known relationship.
+Example (instructions, not source evidence): an eligible sentence explicitly
+calling the issuer a named counterparty's "1차 협력사" can support an unreviewed
+proposal even with unknown net effect. Without independent support for each
+axis, keep degree unrated, impact unknown and economic_v2.materiality unrated;
+the label alone establishes neither importance nor positive impact.
+"공급하지 못했다", "협력 예정", or "다른 회사가 그 상대의 협력사" do not establish
+a current direct issuer relationship. Preserve negation, plans and source scope;
+do not force a proposal for a mere mention or ambiguous link.
 Hedging, pass-through, diversification, timing, contrary evidence
 and unknown exposure can change the result. Return complete counter-evidence
 sentences from the provided document, not another firm's clause; never invent a
