@@ -85,6 +85,11 @@ from api.collectors.member_map_live_refresh import apply_result
 from api.collectors.member_map_refresh_store import validate_state,validate_dart_bundle
 now=datetime.fromisoformat(sys.argv[1].replace('Z','+00:00'))
 kst=timezone(timedelta(hours=9)); today=now.astimezone(kst).date(); history=today-timedelta(days=2)
+# Keep synthetic attempts on SQL's current KST day and never in the future.
+# Near midnight compress the simulated window, not the production SQL guards.
+midnight=datetime.combine(today,datetime.min.time(),tzinfo=kst)
+window=min(timedelta(seconds=1200),now-midnight)
+def tick_before(seconds): return (now-window*(seconds/1200)).isoformat()
 old=datetime.combine(history,datetime.min.time(),tzinfo=kst)+timedelta(hours=1)
 stamp=old.isoformat(); day=history.isoformat(); prefix=history.strftime('%Y%m%d')
 cursor={'source':'DART','through_date':day,'checked_at':stamp,'ids':['DART:'+prefix+f'{i:06d}' for i in range(1,996)]}
@@ -95,7 +100,7 @@ universe={'123456':'Synthetic Issuer'}
 def run(mapped=True,mode='stable'):
  prior=deepcopy(initial); cp=None; steps=[]
  for index in range(8 if mode=='stable' else (2 if mode in ('guard','empty','quota') else 4)):
-  tick=(now-timedelta(seconds=1200-index*130)).isoformat()
+  tick=tick_before(1200-index*130)
   calls=[]
   def transport(endpoint,**kw):
    assert endpoint==d.DART_LIST
@@ -127,7 +132,7 @@ def receipt_resume():
  seed['coverage'].update(pages_succeeded=9,listing_records=900)
  prior=deepcopy(seed)
  for index in range(7):
-  tick=(now-timedelta(seconds=1000-index*130)).isoformat();calls=[]
+  tick=tick_before(1000-index*130);calls=[]
   def transport(endpoint,**kw):
    assert endpoint==d.DART_LIST
    p=kw['params'];page=int(p['page_no']);calls.append(page)
@@ -148,7 +153,7 @@ def receipt_resume():
 def bootstrap():
  prior={};cp=None;steps=[]
  for index in range(4):
-  tick=(now-timedelta(seconds=600-index*130)).isoformat()
+  tick=tick_before(600-index*130)
   result=d.collect_dart_continuation(universe,prior.get('feed',{'items':[]}),prior.get('cursor'),tick,
    'synthetic-not-a-real-key',cp,transport=lambda *a,**kw:b'{"status":"013"}')
   state=apply_result('DART',prior,result,tick)
@@ -179,6 +184,24 @@ check('forward migration preserves every source row, live legacy pending and fun
     const dart=activationWitness.after.find(r=>r.source==='DART');
     assert.equal(dart.dart_checkpoint.pending.next_page,10);
     assert.equal(Object.keys(dart.dart_checkpoint.pending.rows).length,900);
+});
+check('fixture clocks stay on the same KST day at UTC/KST date boundaries without future attempts', () => {
+    for(const clock of ['2026-11-01T01:00:00Z','2026-11-01T14:59:00Z',
+        '2026-11-01T15:00:00Z','2026-11-01T15:05:04Z','2026-11-01T16:00:00Z']) {
+        const sample=loadFixtures(clock);
+        for(const steps of [sample.mapped,sample.unmapped,sample.receipt_resume.steps,sample.bootstrap]) {
+            let previous=-Infinity;
+            for(const step of steps) {
+                const attempt=Date.parse(step.state.last_attempt_at);
+                assert.ok(attempt>=previous && attempt<=Date.parse(clock),clock);
+                assert.equal(new Date(attempt+9*3600000).toISOString().slice(0,10),sample.today,clock);
+                previous=attempt;
+            }
+            assert.ok(steps.slice(0,-1).every(step=>step.state.status==='partial'),clock);
+            assert.equal(steps.at(-1).state.status,'success',clock);
+            assert.equal(steps.at(-1).state.cursor.through_date,sample.today,clock);
+        }
+    }
 });
 check('legacy 900-row pending resumes with seven differing receipt prefixes through verify and current date', async () => {
     const fixture=fixtures.receipt_resume;

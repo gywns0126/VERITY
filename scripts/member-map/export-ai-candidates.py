@@ -140,6 +140,8 @@ def _period_originals(documents, directory, registry_path):
 
 def _contract_context(sources, catalog):
     from portfolio_core.portfolio_contract_facts import index_contract_events
+    from portfolio_core.portfolio_company_names import add_public_company_names
+    from portfolio_core.portfolio_capture_archive import retain_captured_documents
     from api.intelligence.portfolio_ai_public import validated_contract_sources
     artifact = sources.get("member_map_auto_evidence.json", {})
     facts = artifact.get("contract_facts", [])
@@ -151,7 +153,12 @@ def _contract_context(sources, catalog):
         if receipt in indexed:
             raise ValueError("duplicate-contract-review-source")
         indexed[receipt] = fact
-    return artifact, index_contract_events(artifact, catalog if facts else []), validated_contract_sources(artifact)
+    # Match the runtime's public registry/archive projection. Rolling feeds may
+    # omit a captured filing; only existing validated captures and registered
+    # report-name aliases may restore its exact source binding.
+    contract_catalog, _ = retain_captured_documents(
+        artifact, add_public_company_names(sources, catalog))
+    return artifact, index_contract_events(artifact, contract_catalog if facts else []), validated_contract_sources(artifact)
 
 
 def export_candidates(input_path, source_dir, output_path, *, worker_state=False,
@@ -315,13 +322,22 @@ def export_candidates(input_path, source_dir, output_path, *, worker_state=False
                 raise ValueError("unsafe-append-public-judgments")
     elif retained_public_judgments is not None:
         from api.intelligence.portfolio_ai_public import project_public_company_judgments
-        prior = validate_public_ai_review(_read_judgment_input(retained_public_judgments, limit=2_000_000), catalog)
+        _, contract_events, contract_sources = _contract_context(sources, catalog)
+        context = {"contract_events": contract_events, "contract_sources": contract_sources}
+        prior = validate_public_ai_review(
+            _read_judgment_input(retained_public_judgments, limit=2_000_000), catalog, **context)
         prior_rows = prior.get("company_judgments", {}).get("judgments", [])
         current = {c["id"]: c for c in artifact["candidates"]}
         # Already public, sanitized rows may survive an unchanged-source refresh.
         # A new/changed/removed source withdraws the old grade, never retargets it.
         retained = []
         for item in prior_rows:
+            if item.get("core_selection", {}).get("basis") == "contract-announcement":
+                # Already-public receipts were checked against current canonical
+                # facts/events above. They bind to a contract, not an AI candidate;
+                # retain their exact bytes without re-signing an old review.
+                retained.append(item)
+                continue
             candidate = current.get(item["record_id"])
             if (candidate and item["base_read_revision"] == int(candidate["revision"][:13], 16) + 1
                     and item["company_id"] == candidate["issuer_id"]
@@ -331,8 +347,8 @@ def export_candidates(input_path, source_dir, output_path, *, worker_state=False
                     and document_versions.get(item["source_id"]) == {item.get("source_version")}):
                 retained.append(item)
         artifact["company_judgments"] = project_public_company_judgments(
-            {"schema": "local-company-judgments-v1", "judgments": retained}, artifact["candidates"])
-        artifact = validate_public_ai_review(artifact, catalog)
+            {"schema": "local-company-judgments-v1", "judgments": retained}, artifact["candidates"], **context)
+        artifact = validate_public_ai_review(artifact, catalog, **context)
     body = (json.dumps(artifact, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n").encode()
     if len(body) > 2_000_000:
         raise ValueError("public-ai-output-too-large")
