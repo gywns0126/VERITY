@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-11-01T16:01:27.179638+09:00",
+  "generated_at": "2026-11-01T16:06:21.133283+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 433638,
-    "python_modules": 1390,
+    "code_lines_tsx_py": 435276,
+    "python_modules": 1396,
     "tsx_components": 152,
     "json_data_files": 2552,
     "json_total_tracked": 2581,
     "workflows": 82,
     "scheduled_workflows": 59,
     "cron_triggers": 69,
-    "git_tracked_files": 8929
+    "git_tracked_files": 8939
   },
   "subsystems": {
     "ingest": {
@@ -113,7 +113,7 @@
     },
     "brain": {
       "label": "두뇌",
-      "count": 91,
+      "count": 92,
       "modules": [
         "api/intelligence/__init__.py",
         "api/intelligence/ai_leaderboard.py",
@@ -179,6 +179,7 @@
         "api/intelligence/portfolio_event_lineage.py",
         "api/intelligence/portfolio_evidence.py",
         "api/intelligence/portfolio_filing_excerpts.py",
+        "api/intelligence/portfolio_judgment_context.py",
         "api/intelligence/portfolio_parent_excerpts.py",
         "api/intelligence/portfolio_public_sources.py",
         "api/intelligence/portfolio_rate_excerpts.py",
@@ -788,8 +789,8 @@
     }
   },
   "python_by_dir": {
-    "tests": 557,
-    "api": 503,
+    "tests": 562,
+    "api": 504,
     "scripts": 188,
     "vercel-api": 127,
     "server": 9,
