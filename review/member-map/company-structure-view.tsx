@@ -159,6 +159,57 @@ export function resetInitialFocusAfterInitialLoad(initial: boolean, initialFocus
     if (initial) initialFocus.current = null
 }
 
+type StructureCamera = { x: number; y: number; zoom: number }
+export function installStructureCameraInput(element: HTMLDivElement, camera: { current: StructureCamera }, update: (next: StructureCamera) => void, dragging: () => boolean) {
+    let gesture: { zoom: number; scale: number; x: number; y: number; worldX: number; worldY: number } | null = null
+    type PinchEvent = Event & { scale?: number; clientX?: number; clientY?: number }
+    const point = (event: PinchEvent, fallback?: { x: number; y: number }) => {
+        const r = element.getBoundingClientRect()
+        return { x: Number.isFinite(event.clientX) ? event.clientX! - r.left : fallback?.x ?? r.width / 2,
+            y: Number.isFinite(event.clientY) ? event.clientY! - r.top : fallback?.y ?? r.height / 2 }
+    }
+    const write = (next: StructureCamera) => { camera.current = next; update(next) }
+    const zoomAt = (zoom: number, p: { x: number; y: number }) => {
+        const c = camera.current, z = Math.max(.12, Math.min(2.5, zoom)), ratio = z / c.zoom
+        write({ x: p.x - (p.x - c.x) * ratio, y: p.y - (p.y - c.y) * ratio, zoom: z })
+    }
+    const wheel = (event: WheelEvent) => {
+        event.preventDefault(); event.stopPropagation()
+        if (dragging() || gesture || !Number.isFinite(event.deltaX) || !Number.isFinite(event.deltaY)) return
+        const r = element.getBoundingClientRect(), c = camera.current
+        let dx = event.deltaX * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? r.width : 1)
+        let dy = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? r.height : 1)
+        if (event.ctrlKey || event.metaKey) zoomAt(c.zoom * Math.exp(-dy * .0015), point(event))
+        else {
+            if (event.shiftKey && !dx) { dx = dy; dy = 0 }
+            write({ ...c, x: c.x - dx, y: c.y - dy })
+        }
+    }
+    const start = (event: PinchEvent) => {
+        event.preventDefault(); event.stopPropagation()
+        if (dragging()) return
+        const c = camera.current, p = point(event)
+        gesture = { ...p, zoom: c.zoom, scale: Number.isFinite(event.scale) && event.scale! > 0 ? event.scale! : 1,
+            worldX: (p.x - c.x) / c.zoom, worldY: (p.y - c.y) / c.zoom }
+    }
+    const change = (event: PinchEvent) => {
+        event.preventDefault(); event.stopPropagation()
+        if (!gesture || dragging() || !Number.isFinite(event.scale) || event.scale! <= 0) return
+        const p = point(event, gesture), zoom = Math.max(.12, Math.min(2.5, gesture.zoom * event.scale! / gesture.scale))
+        write({ x: p.x - gesture.worldX * zoom, y: p.y - gesture.worldY * zoom, zoom })
+    }
+    const end = (event: Event) => { event.preventDefault(); event.stopPropagation(); gesture = null }
+    element.addEventListener("wheel", wheel, { passive: false, capture: true })
+    element.addEventListener("gesturestart", start, { passive: false })
+    element.addEventListener("gesturechange", change, { passive: false })
+    element.addEventListener("gestureend", end, { passive: false })
+    return () => {
+        element.removeEventListener("wheel", wheel, true)
+        element.removeEventListener("gesturestart", start); element.removeEventListener("gesturechange", change); element.removeEventListener("gestureend", end)
+        gesture = null
+    }
+}
+
 export default function CompanyStructureView({ snapshot, onClose }: { snapshot: Snapshot; onClose: () => void }) {
     const [catalogue, setCatalogue] = React.useState<Catalogue | null>(null), [error, setError] = React.useState(false)
     const [focusIndex, setFocusIndex] = React.useState(0), [collapsed, setCollapsed] = React.useState<Set<string>>(new Set())
@@ -245,8 +296,7 @@ export default function CompanyStructureView({ snapshot, onClose }: { snapshot: 
     }
     React.useEffect(() => {
         const element = space.current; if (!element) return
-        const wheel = (event: WheelEvent) => { event.preventDefault(); const r = element.getBoundingClientRect(); zoomTo(cameraRef.current.zoom * Math.exp(-event.deltaY * .0015), event.clientX - r.left, event.clientY - r.top) }
-        element.addEventListener("wheel", wheel, { passive: false }); return () => element.removeEventListener("wheel", wheel)
+        return installStructureCameraInput(element, cameraRef, setCamera, () => drag.current !== null)
     }, [])
     function keyDown(e: React.KeyboardEvent) {
         if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onClose(); return }
@@ -264,7 +314,7 @@ export default function CompanyStructureView({ snapshot, onClose }: { snapshot: 
         <header className="acs-head"><strong className="acs-brand"><i>α</i> ALPHANEST</strong><nav className="acs-tabs" aria-label="지도 보기"><button type="button" className="acs-close" onClick={onClose}>핵심 지도</button><button type="button" aria-current="page">기업 구조</button></nav><label>중심 종목<select aria-label="기업 구조 중심 종목" value={focusIndex} onChange={e => setFocusIndex(Number(e.target.value))}>{snapshot.stocks.map((s, i) => <option key={s.id} value={i}>{s.name}</option>)}</select></label></header>
         <div className="acs-toolbar"><span title={`${focus?.name || "기업 구조"}의 주주·출자 연결`}>{focus?.name || "기업 구조"}의 주주·출자 연결</span>{visible.some(n => n.parent && isFlowEligibleRelation(n.relation)) && <button type="button" aria-pressed={flowPaused} aria-label={flowPaused ? "선 움직임 켜기" : "선 움직임 멈추기"} onClick={() => setFlowPaused(v => !v)}>{flowPaused ? "선 움직임 켜기" : "선 움직임 멈추기"}</button>}<button type="button" aria-pressed={includeStored} onClick={() => setIncludeStored(v => !v)}>{includeStored ? "저장 자료 포함" : "저장 자료 함께 보기"}</button><button type="button" aria-label="기업 구조 축소" onClick={() => zoomTo(camera.zoom / 1.2)}>−</button><output aria-label="기업 구조 배율">{Math.round(camera.zoom * 100)}%</output><button type="button" aria-label="기업 구조 확대" onClick={() => zoomTo(camera.zoom * 1.2)}>+</button><button type="button" onClick={fit}>한눈에</button><button type="button" onClick={() => setCollapsed(new Set(layout ? [...layout.byId].filter(([id, n]) => n.depth > 0 && id !== focus?.id).map(([id]) => id) : []))}>가지 접기</button></div>
         <div className="acs-main">
-            <div className="acs-space" ref={space} tabIndex={0} role="group" aria-label="기업 구조 작업판 · 빈 공간 드래그로 이동, 휠로 확대축소" style={{ backgroundSize: `${40 * camera.zoom}px ${40 * camera.zoom}px`, backgroundPosition: `${camera.x}px ${camera.y}px` }}
+            <div className="acs-space" ref={space} tabIndex={0} role="group" aria-label="기업 구조 작업판 · 빈 공간 드래그·두 손가락 쓸기로 이동, 핀치로 확대축소" style={{ backgroundSize: `${40 * camera.zoom}px ${40 * camera.zoom}px`, backgroundPosition: `${camera.x}px ${camera.y}px` }}
                 onPointerDown={e => { if ((e.target as HTMLElement).closest("button,a,select")) return; drag.current = { x: e.clientX, y: e.clientY, startX: camera.x, startY: camera.y, pointer: e.pointerId }; e.currentTarget.setPointerCapture(e.pointerId) }}
                 onPointerMove={e => { const d = drag.current; if (d?.pointer === e.pointerId) setCamera(c => ({ ...c, x: d.startX + e.clientX - d.x, y: d.startY + e.clientY - d.y })) }}
                 onPointerUp={e => { drag.current = null; if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId) }} onPointerCancel={() => { drag.current = null }}
