@@ -175,8 +175,36 @@ def test_startup_catalog_load_follows_schema_gate_and_keeps_cycle_cadence(monkey
     events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert [event["status"] for event in events] == (["degraded", "partial", "partial"] if schema_pending else ["partial"] * 3)
     assert all(event["last_success_at"] is None for event in events)
+    assert all(event["error_code"] is None for event in events if event["status"] == "partial")
     if schema_pending:
         assert events[0]["error_code"] == "refresh-schema-pending" and events[0]["backoff_seconds"] == 120
+
+
+@pytest.mark.parametrize("status, error, expected", [
+    ("partial", None, None),
+    ("partial", "incomplete_page", "incomplete_page"),
+    ("partial", "private-provider-detail", "source-error"),
+    ("partial", "", "source-error"),
+    ("error", None, "source-error"),
+    ("error", "transport_failure", "transport_failure"),
+    ("lease-lost", None, "source-error"),
+])
+def test_source_event_preserves_normal_progress_and_sanitizes_errors(monkeypatch, capsys, status, error, expected):
+    from api.collectors import member_map_refresh_store as storage
+    monkeypatch.setenv("DART_API_KEY", "synthetic")
+    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: object())
+    old_success = "2026-10-12T01:00:00+00:00"
+    def cycle(*args, dart_v2):
+        assert dart_v2 is True
+        return {"status": status, "error": error, "last_success_at": old_success}
+    monkeypatch.setattr(runner, "supabase_cycle", cycle)
+    runner.run_supabase({}, 0)
+    event = json.loads(capsys.readouterr().out)
+    assert event["status"] == status
+    assert event["error_code"] == expected
+    assert event["last_success_at"] == old_success
+    assert event["screen_delivery_verified"] is False
+    assert "private-provider-detail" not in json.dumps(event)
 
 
 @pytest.mark.parametrize("remaining, delay", [(0, 1), (1, 1), (5, 5), (300, 300),
