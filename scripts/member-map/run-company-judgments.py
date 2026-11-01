@@ -85,7 +85,8 @@ def check_operating_environment(env):
 
 
 def plan(documents, *, as_of, retained_context=None):
-    rows, coverage = ai.select_documents(documents, include_claims=True)
+    recovery = {"judgment_mode": True, "retained_context": retained_context} if retained_context is not None else {}
+    rows, coverage = ai.select_documents(documents, include_claims=True, **recovery)
     if retained_context is not None:
         from api.intelligence.portfolio_judgment_context import enrich_judgment_documents
         rows, context_coverage = enrich_judgment_documents(rows, retained_context)
