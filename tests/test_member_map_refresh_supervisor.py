@@ -166,3 +166,13 @@ def test_cancel_cleans_up_owned_child_and_reader(monkeypatch):
     assert seen["terminated"]
     assert "KIS_APP_KEY" not in seen["env"] and "OPENAI_API_KEY" not in seen["env"]
     assert not refresh.status()["worker_alive"]
+
+
+def test_schema_pending_health_is_visible_without_success_promotion():
+    refresh._STATUS.clear()
+    refresh._STATUS.update(enabled=True, worker_alive=True)
+    previous = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    refresh._accept_event(event(error_code="refresh-schema-pending", last_success_at=previous))
+    assert refresh.status()["status"] == "degraded"
+    assert refresh.status()["error_code"] == "refresh-schema-pending"
+    assert refresh.status()["last_success_at"] == previous

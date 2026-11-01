@@ -73,7 +73,8 @@ def apply_result(source, previous, result, now):
                and result.get("coverage", {}).get("historical_gap") is True
                and result.get("next_cursor") is not None
                and result.get("catchup_phase") in ("replayed", "advanced"))
-    if complete or status == "initialized" or catchup:
+    sealed = source == "DART" and result.get("dart_sealed") is True and result.get("next_cursor") is not None
+    if complete or status == "initialized" or catchup or sealed:
         state["cursor"] = result.get("cursor")
     retry = (source == "DART" and not complete and not catchup and result.get("error") is not None
              and previous.get("catchup_phase") in ("replayed", "advanced")
@@ -81,6 +82,8 @@ def apply_result(source, previous, result, now):
     if catchup:
         state["catchup_phase"] = result["catchup_phase"]
     elif not retry:
+        state.pop("catchup_phase", None)
+    if source == "DART" and "dart_catalog" in result:
         state.pop("catchup_phase", None)
     if complete:
         state["last_success_at"] = now

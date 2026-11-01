@@ -27,7 +27,8 @@ def test_transient_read_recovers_on_next_bounded_cycle(monkeypatch, capsys, code
     monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(runner.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
     calls = []
-    def cycle(*args):
+    def cycle(*args, dart_v2):
+        assert dart_v2 is True
         calls.append(clock[0])
         if len(calls) == 1:
             raise RefreshStoreError(code)
@@ -46,7 +47,8 @@ def test_unknown_and_auth_errors_stop_without_repeating(monkeypatch, capsys):
     monkeypatch.setenv("DART_API_KEY", "synthetic")
     monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: object())
     calls = []
-    def cycle(*args):
+    def cycle(*args, dart_v2):
+        assert dart_v2 is True
         calls.append(1)
         raise RefreshStoreError("refresh-auth-rejected")
     monkeypatch.setattr(runner, "supabase_cycle", cycle)
@@ -105,7 +107,8 @@ def test_exponential_delay_caps_at_five_minutes(monkeypatch, capsys):
     clock = [0]
     monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(runner.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
-    def cycle(*args):
+    def cycle(*args, dart_v2):
+        assert dart_v2 is True
         raise RefreshStoreError("refresh-read-timeout")
     monkeypatch.setattr(runner, "supabase_cycle", cycle)
     runner.run_supabase({"stocks": []}, 661)
@@ -113,24 +116,67 @@ def test_exponential_delay_caps_at_five_minutes(monkeypatch, capsys):
     assert [event["backoff_seconds"] for event in events] == [120, 240, 300, 300]
 
 
-def test_startup_catalog_delay_does_not_advance_next_collection_tick(monkeypatch, capsys):
+@pytest.mark.parametrize("schema_pending", [False, True])
+def test_startup_catalog_load_follows_schema_gate_and_keeps_cycle_cadence(monkeypatch, capsys, schema_pending):
+    from datetime import datetime, timedelta, timezone
+    from api.collectors import member_map_listing_delta as delta
     from api.collectors import member_map_refresh_store as storage
-    clock, starts = [0.0], []
+    clock, claims, catalogs, sources = [0.0], [], [], []
+    base = datetime(2026, 10, 12, 1, tzinfo=timezone.utc)
+    class Clock:
+        @staticmethod
+        def now(tz):
+            return base + timedelta(seconds=clock[0])
+    class Store:
+        state, checkpoint, revision = {}, None, 0
+        def read_states(self):
+            return {"DART": self.state}
+        def claim_dart(self, owner):
+            claims.append(clock[0])
+            if schema_pending and len(claims) == 1:
+                raise RefreshStoreError("refresh-schema-pending")
+            return {"status": "claimed", "state": self.state, "dart_checkpoint": self.checkpoint,
+                    "generation": len(claims), "revision": self.revision}
+        def renew(self, *args):
+            return {"status": "renewed"}
+        def save_dart(self, owner, generation, revision, state, pages, digest):
+            assert revision == self.revision
+            self.checkpoint = delta.dart_replay_pages(self.checkpoint, self.state.get("cursor"),
+                state["last_attempt_at"], digest, pages)[0]
+            storage.validate_state("DART", state)
+            storage.validate_dart_bundle(state, self.checkpoint)
+            self.state = state
+            self.revision += 1
+            return {"revision": self.revision}
+    store = Store()
     monkeypatch.setenv("DART_API_KEY", "synthetic")
-    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: object())
+    monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: store)
+    monkeypatch.setattr(runner, "datetime", Clock)
     monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(runner.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
     def catalog():
+        assert claims and len(claims) > int(schema_pending)
+        catalogs.append(clock[0])
         clock[0] += .2
-        return {}
-    def cycle(*args):
-        starts.append(clock[0])
+        return {"stocks": [{"ticker": "123456", "market": "KR", "name": "Synthetic"}]}
+    def provider(endpoint, **kwargs):
+        assert endpoint == delta.DART_LIST and catalogs
+        sources.append(clock[0])
         clock[0] += 9
-        return {"status": "success"}
+        return b'{"status":"013"}'
     monkeypatch.setattr(storage, "read_public_catalog", catalog)
-    monkeypatch.setattr(runner, "supabase_cycle", cycle)
+    monkeypatch.setattr(delta, "bounded_transport", provider)
+    # Exercise the real run_supabase -> supabase_cycle -> v2 collector path.
     runner.run_supabase(None, 241)
-    assert starts == pytest.approx([.2, 120.2, 240.2])
+    assert claims == [0, 120, 240]
+    assert catalogs == [120 if schema_pending else 0]
+    assert sources == pytest.approx([120.2, 240] if schema_pending else [.2, 120, 240])
+    assert store.revision == len(sources) and hasattr(store, "_dart_catalog")
+    events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert [event["status"] for event in events] == (["degraded", "partial", "partial"] if schema_pending else ["partial"] * 3)
+    assert all(event["last_success_at"] is None for event in events)
+    if schema_pending:
+        assert events[0]["error_code"] == "refresh-schema-pending" and events[0]["backoff_seconds"] == 120
 
 
 @pytest.mark.parametrize("remaining, delay", [(0, 1), (1, 1), (5, 5), (300, 300),
@@ -142,7 +188,8 @@ def test_not_due_wait_is_bounded_and_relative_to_response(monkeypatch, capsys, r
     monkeypatch.setattr(storage.RefreshStore, "from_environment", lambda **_: object())
     monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(runner.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
-    def cycle(*args):
+    def cycle(*args, dart_v2):
+        assert dart_v2 is True
         starts.append(clock[0])
         clock[0] += 4  # A slow read must not consume the server's remaining wait.
         if len(starts) == 1:

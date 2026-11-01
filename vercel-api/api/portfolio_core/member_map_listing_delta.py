@@ -21,6 +21,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import date, datetime, timedelta, timezone
 import json
+import hashlib
 import re
 import time
 from typing import Any, Callable, Mapping
@@ -552,6 +553,264 @@ def collect_dart_delta(universe: Mapping[str, str], previous_feed: Mapping[str, 
                     completed["coverage"]["historical_gap"] = True
                 return completed
         raise ListingError("page_limit")
+    except ListingError as exc:
+        return _failure(result, str(exc))
+    except Exception:
+        return _failure(result, "collection_failure")
+
+
+# DART v2 is deliberately source-specific. SQL replays these bounded page proofs
+# under the same lease/revision; the worker cannot submit a new checkpoint alone.
+DART_CHECKPOINT_BYTES = 4 * 1024 * 1024
+
+
+def dart_ids_digest(ids):
+    return hashlib.sha256("\n".join(sorted(ids)).encode()).hexdigest()
+
+
+def dart_v2_cursor(committed):
+    return {"source": "DART", "version": 2, "through_date": committed["date"],
+            "checked_at": committed["checked_at"], "id_count": len(committed["ids"]),
+            "ids_sha256": dart_ids_digest(committed["ids"])}
+
+
+def dart_aggregate_size(state, checkpoint):
+    # Default separators match jsonb::text spacing; neither JSON contains floats
+    # except the already validated health clock. Enforce again in PostgreSQL.
+    return sum(len(json.dumps(v, ensure_ascii=False, allow_nan=False).encode())
+               for v in (state, checkpoint) if v is not None)
+
+
+def _dart_map(value):
+    return (type(value) is dict and all(type(k) is str and re.fullmatch(r"DART:[0-9]{14}", k)
+            and type(v) is str and re.fullmatch(r"[0-9a-f]{64}", v) for k, v in value.items()))
+
+
+def validate_dart_checkpoint(checkpoint):
+    """Closed public evidence only; no provider body, names, URLs or keys."""
+    if checkpoint is None:
+        return None
+    try:
+        if (type(checkpoint) is not dict or set(checkpoint) != {"version", "committed", "pending"}
+                or type(checkpoint["version"]) is not int or checkpoint["version"] != 2
+                or dart_aggregate_size({}, checkpoint) > DART_CHECKPOINT_BYTES):
+            raise ValueError
+        committed, p = checkpoint["committed"], checkpoint["pending"]
+        if committed is not None:
+            if type(committed) is not dict or set(committed) != {"date", "ids", "checked_at"}:
+                raise ValueError
+            date.fromisoformat(committed["date"]); _stamp(committed["checked_at"])
+            ids = committed["ids"]
+            if (type(ids) is not list or any(type(i) is not str or not re.fullmatch(r"DART:[0-9]{14}", i) for i in ids)
+                    or ids != sorted(set(ids))):
+                raise ValueError
+        if p is not None:
+            if type(p) is not dict or set(p) != {"date", "catalog", "started_at", "phase", "next_page",
+                    "total", "rows", "baseline", "first", "last", "observed"}:
+                raise ValueError
+            day = date.fromisoformat(p["date"]); _stamp(p["started_at"])
+            if (type(p["catalog"]) is not str or not re.fullmatch(r"[0-9a-f]{64}", p["catalog"])
+                    or p["phase"] not in ("scan", "verify") or type(p["next_page"]) is not int
+                    or not 1 <= p["next_page"] <= 10000000
+                    or not all(_dart_map(p[k]) for k in ("rows", "baseline", "first", "last"))
+                    or any(i[5:13] != p["date"].replace("-", "") for k in ("rows", "baseline", "first", "last") for i in p[k])
+                    or type(p["observed"]) is not list
+                    or any(type(i) is not str or not re.fullmatch(r"DART:[0-9]{14}", i) for i in p["observed"])
+                    or p["observed"] != sorted(set(p["observed"]))):
+                raise ValueError
+            total = p["total"]
+            if total is not None and (type(total) is not int or not 0 <= total <= 999999999):
+                raise ValueError
+            if total is None:
+                if p["next_page"] != 1 or p["phase"] != "scan" or any(p[k] for k in ("rows", "baseline", "first", "last")):
+                    raise ValueError
+            else:
+                if len(p["rows"]) != min((p["next_page"] - 1) * 100, total):
+                    raise ValueError
+                if p["next_page"] > max(1, (total + 99) // 100):
+                    raise ValueError
+                if p["phase"] == "scan" and p["baseline"] or p["phase"] == "verify" and len(p["baseline"]) != total:
+                    raise ValueError
+            if p["next_page"] == 1:
+                if p["first"] or p["last"]:
+                    raise ValueError
+            elif (len(p["first"]) != 100 or len(p["last"]) != 100
+                    or any(p["rows"].get(k) != v for part in ("first", "last") for k, v in p[part].items())):
+                raise ValueError
+            if not set(p["rows"]) | set(p["baseline"]) <= set(p["observed"]):
+                raise ValueError
+            if committed is not None and not date.fromisoformat(committed["date"]) <= day <= date.fromisoformat(committed["date"]) + timedelta(days=1):
+                raise ValueError
+        return deepcopy(checkpoint)
+    except (ValueError, TypeError, KeyError, OverflowError):
+        raise ListingError("invalid_cursor") from None
+
+
+def _dart_pending(day, catalog, now, observed=()):
+    return {"date": day, "catalog": catalog, "started_at": now, "phase": "scan", "next_page": 1,
+            "total": None, "rows": {}, "baseline": {}, "first": {}, "last": {}, "observed": sorted(set(observed))}
+
+
+def dart_begin(checkpoint, cursor, now, catalog):
+    today = _stamp(now).astimezone(KST).date()
+    if type(catalog) is not str or not re.fullmatch(r"[0-9a-f]{64}", catalog):
+        raise ListingError("invalid_configuration")
+    cp = validate_dart_checkpoint(checkpoint)
+    if cp is None:
+        if cursor and "version" in cursor:
+            raise ListingError("invalid_cursor")
+        committed = ({"date": cursor["through_date"], "ids": sorted(set(cursor["ids"])),
+                      "checked_at": cursor["checked_at"]} if cursor else None)
+        cp = {"version": 2, "committed": committed, "pending": None}
+    c, p = cp["committed"], cp["pending"]
+    if c is not None:
+        if date.fromisoformat(c["date"]) > today or _stamp(c["checked_at"]) > _stamp(now):
+            raise ListingError("invalid_cursor")
+        if cursor and cursor.get("version") == 2 and cursor != dart_v2_cursor(c):
+            raise ListingError("invalid_cursor")
+    if p is None:
+        day = date.fromisoformat(c["date"]) if c else today - timedelta(days=1)
+        # A boundary last checked while that day was live must be replayed after
+        # midnight. Two completed historical sweeps permit exactly one next day.
+        if c and day < today and _stamp(c["checked_at"]).astimezone(KST).date() > day:
+            day += timedelta(days=1)
+        cp["pending"] = _dart_pending(day.isoformat(), catalog, now)
+    elif p["catalog"] != catalog:
+        cp["pending"] = _dart_pending(p["date"], catalog, now, p["observed"])
+    if date.fromisoformat(cp["pending"]["date"]) > today or _stamp(cp["pending"]["started_at"]) > _stamp(now):
+        raise ListingError("invalid_cursor")
+    return cp
+
+
+def dart_replay_pages(checkpoint, cursor, now, catalog, pages):
+    """Deterministic transition also implemented by the private SQL helper.
+
+    Proofs carry only receipt IDs and canonical row digests. Guards consume the
+    same ten HTTP requests as forward pages. A phase boundary ends this batch.
+    """
+    if type(pages) is not list or len(pages) > 10:
+        raise ListingError("invalid_pagination")
+    cp = dart_begin(checkpoint, cursor, now, catalog)
+    p = cp["pending"]
+    guards = list(dict.fromkeys((1, p["next_page"] - 1))) if p["next_page"] > 1 else []
+    for index, proof in enumerate(pages):
+        if (type(proof) is not dict or set(proof) != {"page_no", "total_count", "rows"}
+                or type(proof["page_no"]) is not int or type(proof["total_count"]) is not int
+                or not 0 <= proof["total_count"] <= 999999999 or type(proof["rows"]) is not list
+                or any(type(pair) is not list or len(pair) != 2
+                       or any(type(value) is not str for value in pair) for pair in proof["rows"])):
+            raise ListingError("invalid_pagination")
+        rows = dict(proof["rows"])
+        page, total = proof["page_no"], proof["total_count"]
+        if (not _dart_map(rows) or any(i[5:13] != p["date"].replace("-", "") for i in rows)
+                or len(rows) != len(proof["rows"]) or not 1 <= page <= max(1, (total + 99) // 100)
+                or len(rows) != min(100, max(0, total - (page - 1) * 100))):
+            raise ListingError("incomplete_unique_records")
+        expected = guards[index] if index < len(guards) else p["next_page"]
+        if page != expected:
+            raise ListingError("invalid_pagination")
+        p["observed"] = sorted(set(p["observed"]) | rows.keys())
+        changed = p["total"] is not None and p["total"] != total
+        if index < len(guards):
+            changed = changed or rows != p["first" if page == 1 else "last"]
+        elif set(rows) & p["rows"].keys():
+            changed = True
+        if changed:
+            if index != len(pages) - 1:
+                raise ListingError("invalid_pagination")
+            cp["pending"] = _dart_pending(p["date"], catalog, now, p["observed"])
+            return cp, False, "pagination_changed"
+        if index < len(guards):
+            continue
+        p["total"] = total
+        p["rows"].update(rows)
+        if page == 1:
+            p["first"] = rows
+        p["last"] = rows
+        p["next_page"] = page + 1
+        if page >= max(1, (total + 99) // 100):
+            if index != len(pages) - 1 or len(p["rows"]) != total:
+                raise ListingError("incomplete_unique_records")
+            if p["phase"] == "scan":
+                p.update(phase="verify", next_page=1, baseline=p["rows"], rows={}, first={}, last={})
+                return cp, False, None
+            if p["baseline"] != p["rows"]:
+                cp["pending"] = _dart_pending(p["date"], catalog, now, p["observed"])
+                return cp, False, "pagination_changed"
+            ids = set(p["observed"])
+            if cp["committed"] and cp["committed"]["date"] == p["date"]:
+                ids.update(cp["committed"]["ids"])
+            cp["committed"] = {"date": p["date"], "ids": sorted(ids), "checked_at": now}
+            cp["pending"] = None
+            return cp, True, None
+    return cp, False, None
+
+
+def collect_dart_continuation(universe, previous_feed, cursor, checked_at, api_key, checkpoint, *, transport=None):
+    """Unfiltered DART list: at most ten requests/1000 rows including guards."""
+    result = _result(previous_feed, cursor)
+    catalog = hashlib.sha256(json.dumps(sorted(universe.items()), ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+    result.update(dart_checkpoint=deepcopy(checkpoint), dart_pages=[], dart_catalog=catalog, dart_sealed=False)
+    try:
+        if type(api_key) is not str or not api_key.strip():
+            raise ListingError("invalid_configuration")
+        start = dart_begin(checkpoint, cursor, checked_at, catalog)
+        p = start["pending"]
+        guards = list(dict.fromkeys((1, p["next_page"] - 1))) if p["next_page"] > 1 else []
+        next_page, known = p["next_page"], _known(previous_feed)
+        # Exact committed IDs, not the eight-row display feed, preserve replay
+        # deduplication. All listing IDs still participate in completeness proof.
+        old_ids = set(start["committed"]["ids"]) if start["committed"] and start["committed"]["date"] == p["date"] else set()
+        fetch = transport or bounded_transport
+        for index in range(10):
+            page = guards[index] if index < len(guards) else next_page
+            result["requests"] += 1
+            body = fetch(DART_LIST, params={"crtfc_key": api_key, "bgn_de": p["date"].replace("-", ""),
+                "end_de": p["date"].replace("-", ""), "sort": "date", "sort_mth": "desc",
+                "page_no": str(page), "page_count": "100"}, headers={"Accept": "application/json"}, timeout=10, max_bytes=MAX_BYTES)
+            try:
+                parsed = parse_dart_list(json.loads(_body(body)))
+            except (ValueError, UnicodeError) as exc:
+                if isinstance(exc, ListingError):
+                    raise
+                raise ListingError("invalid_json") from None
+            if parsed["page_no"] != page or parsed["total_page"] and parsed["page_count"] != 100:
+                raise ListingError("invalid_pagination")
+            if any(row["date"] != p["date"] for row in parsed["rows"]):
+                raise ListingError("date_outside_window")
+            proof = {"page_no": page, "total_count": parsed["total_count"], "rows": [[row["id"],
+                hashlib.sha256(json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()]
+                for row in parsed["rows"]]}
+            pages = result["dart_pages"] + [proof]
+            cp, sealed, error = dart_replay_pages(checkpoint, cursor, checked_at, catalog, pages)
+            result.update(dart_checkpoint=cp, dart_pages=pages, dart_sealed=sealed)
+            result["coverage"].update(total_pages=parsed["total_page"], total_records=parsed["total_count"])
+            result["coverage"]["pages_succeeded"] += 1
+            result["coverage"]["listing_records"] += len(parsed["rows"])
+            for row in parsed["rows"]:
+                name = universe.get(row["ticker"])
+                if name is None:
+                    result["unmapped"] += 1
+                elif row["id"] in known or row["id"] in old_ids:
+                    result["duplicates"] += 1
+                else:
+                    known.add(row["id"])
+                    result["records"].append({**row, "name": name, "observed_at": checked_at})
+            if error:
+                return _failure(result, error)
+            if sealed:
+                new_cursor = dart_v2_cursor(cp["committed"])
+                result.update(cursor=new_cursor, next_cursor=new_cursor)
+                if cp["committed"]["date"] == _stamp(checked_at).astimezone(KST).date().isoformat():
+                    return _success(result, previous_feed, new_cursor, checked_at, 8)
+                result.update(status="partial", complete=False)
+                return result
+            if cp["pending"]["phase"] != p["phase"]:
+                break
+            if index >= len(guards):
+                next_page += 1
+        result.update(status="partial", complete=False)
+        return result
     except ListingError as exc:
         return _failure(result, str(exc))
     except Exception:

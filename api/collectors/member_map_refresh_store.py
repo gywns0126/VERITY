@@ -22,7 +22,8 @@ RESPONSE_MAX_BYTES = 3 * STATE_MAX_BYTES + ENVELOPE_MAX_BYTES
 TABLE = "member_map_refresh_checkpoint"
 RPC_TIMEOUT_SECONDS = 3
 BACKGROUND_TIMEOUT_SECONDS = 10
-RPC_NAMES = frozenset(("member_map_refresh_claim", "member_map_refresh_renew", "member_map_refresh_save"))
+RPC_NAMES = frozenset(("member_map_refresh_claim", "member_map_refresh_renew", "member_map_refresh_save",
+                      "member_map_refresh_claim_v2", "member_map_refresh_save_v2"))
 SOURCES = frozenset(("DART", "SEC", "news"))
 DART_REQUEST_BUDGET = 10
 DART_DAILY_CAP = 8000
@@ -40,6 +41,7 @@ SAFE_ERROR_CODES = frozenset((
     "refresh-read-timeout", "refresh-response-rejected", "refresh-revision-rejected",
     "refresh-rpc-rejected", "refresh-save-conflict", "refresh-source-rejected",
     "refresh-state-rejected", "refresh-transport-failure", "refresh-transport-timeout",
+    "refresh-schema-pending",
 ))
 
 
@@ -80,8 +82,10 @@ def _unique(pairs):
     return result
 
 
-def _read_json_response(response, limit, deadline):
+def _read_json_response(response, limit, deadline, *, missing_rpc=False):
     if response.status_code != 200:
+        if missing_rpc and response.status_code == 404:
+            raise RefreshStoreError("refresh-schema-pending")
         # Never read/log an error body: it may contain SQL, credentials or URLs.
         if response.status_code in (401, 403):
             raise RefreshStoreError("refresh-auth-rejected")
@@ -109,7 +113,7 @@ def _read_json_response(response, limit, deadline):
 
 
 def _request_json(method, url, *, headers, body=None, limit=RESPONSE_MAX_BYTES, deadline=None,
-                  timeout_seconds=None, _session=None):
+                  timeout_seconds=None, _session=None, missing_rpc=False):
     timeout_seconds = RPC_TIMEOUT_SECONDS if timeout_seconds is None else timeout_seconds
     remaining = timeout_seconds if deadline is None else min(timeout_seconds, deadline - time.monotonic())
     if remaining <= 0:
@@ -122,7 +126,7 @@ def _request_json(method, url, *, headers, body=None, limit=RESPONSE_MAX_BYTES, 
                                  timeout=remaining, allow_redirects=False, stream=True) as response:
                 if response.url != url:
                     raise RefreshStoreError("refresh-response-rejected")
-                result = _read_json_response(response, limit, deadline)
+                result = _read_json_response(response, limit, deadline, missing_rpc=missing_rpc)
                 if time.monotonic() >= deadline:
                     raise RefreshStoreError("refresh-read-timeout")
                 return result
@@ -271,17 +275,30 @@ def validate_state(source, value, *, public_sources=None):
     if cursor is not None:
         fields = {"source", "checked_at", "through_date", "ids"} if source == "DART" else {
             "source", "checked_at", "anchor_id", "historical_gap"}
+        v2 = source == "DART" and type(cursor) is dict and "version" in cursor
+        if v2:
+            fields = {"source", "checked_at", "through_date", "version", "id_count", "ids_sha256"}
         if source == "news" or type(cursor) is not dict or set(cursor) != fields or cursor["source"] != source:
             raise RefreshStoreError("refresh-state-rejected")
         checked = _instant(cursor["checked_at"])
         if checked > attempt or status in ("success", "initialized") and checked != attempt:
             raise RefreshStoreError("refresh-state-rejected")
         if source == "DART":
-            ids = cursor["ids"]
-            if _date(cursor["through_date"]) > attempt.astimezone(timezone(timedelta(hours=9))).date() or (
+            today = attempt.astimezone(timezone(timedelta(hours=9))).date()
+            if _date(cursor["through_date"]) > today:
+                raise RefreshStoreError("refresh-state-rejected")
+            if v2:
+                if (type(cursor["version"]) is not int or cursor["version"] != 2
+                        or type(cursor["id_count"]) is not int or not 0 <= cursor["id_count"] <= 999999999
+                        or type(cursor["ids_sha256"]) is not str or not re.fullmatch(r"[0-9a-f]{64}", cursor["ids_sha256"])
+                        or "catchup_phase" in value or status == "success" and _date(cursor["through_date"]) != today):
+                    raise RefreshStoreError("refresh-state-rejected")
+            else:
+                ids = cursor["ids"]
+                if (
                     type(ids) is not list or len(ids) > 1000 or any(type(i) is not str or not re.fullmatch(r"DART:[0-9]{14}", i) for i in ids)
                     or len(set(ids)) != len(ids)):
-                raise RefreshStoreError("refresh-state-rejected")
+                    raise RefreshStoreError("refresh-state-rejected")
         elif type(cursor["historical_gap"]) is not bool or type(cursor["anchor_id"]) is not str or not re.fullmatch(
                 r"SEC:[1-9][0-9]{0,9}:[0-9]{18}", cursor["anchor_id"]):
             raise RefreshStoreError("refresh-state-rejected")
@@ -407,6 +424,7 @@ class RefreshStore:
         self._uncertain_sources = set()
         self._cache_lock = threading.Lock()
         self._read_inflight = None
+        self._dart_checkpoint = None
 
     @classmethod
     def from_environment(cls, *, background=False):
@@ -420,7 +438,8 @@ class RefreshStore:
             headers={"apikey": self._key, "Authorization": "Bearer " + self._key,
                      "Content-Type": "application/json", "Accept": "application/json"},
             body=_json_bytes(parameters, STATE_MAX_BYTES + ENVELOPE_MAX_BYTES),
-            limit=STATE_MAX_BYTES + ENVELOPE_MAX_BYTES, timeout_seconds=self._timeout_seconds)
+            limit=STATE_MAX_BYTES + ENVELOPE_MAX_BYTES, timeout_seconds=self._timeout_seconds,
+            missing_rpc=name.endswith("_v2"))
         if type(result) is not dict:
             raise RefreshStoreError("refresh-response-rejected")
         return result
@@ -534,14 +553,14 @@ class RefreshStore:
             raise RefreshStoreError("refresh-read-timeout")
         return states, revisions, feeds, returned
 
-    def claim(self, source, owner):
+    def claim(self, source, owner, *, _dart_v2=False):
         source, owner = _source(source), _owner(owner)
         budget = DART_REQUEST_BUDGET if source == "DART" else 0
         with self._cache_lock:
             known_revision = self._state_revisions.get(source, -1) if source not in self._uncertain_sources else -1
             cached = self._states.get(source)
             cached_feed_revision = self._feed_revisions.get(source)
-        result = self._rpc("member_map_refresh_claim", {"p_source": source, "p_owner": owner,
+        result = self._rpc("member_map_refresh_claim_v2" if _dart_v2 else "member_map_refresh_claim", {"p_source": source, "p_owner": owner,
             "p_request_budget": budget, "p_known_revision": known_revision})
         if result.get("status") == "not-due" and set(result) == {"status", "retry_after_seconds"} and (
                 type(result["retry_after_seconds"]) is int and 0 <= result["retry_after_seconds"] <= 300):
@@ -550,6 +569,11 @@ class RefreshStore:
             return result
         required = {"status", "source", "generation", "revision", "feed_revision", "state", "lease_until",
                     "request_day", "requests_reserved", "request_budget"}
+        checkpoint = None
+        if _dart_v2:
+            if "dart_checkpoint" not in result:
+                raise RefreshStoreError("refresh-response-rejected")
+            checkpoint = result.pop("dart_checkpoint")
         if set(result) != required or result["status"] not in ("claimed", "already-claimed") or result["source"] != source:
             raise RefreshStoreError("refresh-response-rejected")
         _integer(result["generation"], positive=True); _integer(result["revision"])
@@ -570,6 +594,10 @@ class RefreshStore:
             result["state"] = deepcopy(cached)
         else:
             result["state"] = validate_state(source, result["state"])
+        if _dart_v2:
+            validate_dart_bundle(result["state"], checkpoint)
+            self._dart_checkpoint = deepcopy(checkpoint)
+            result["dart_checkpoint"] = checkpoint
         with self._cache_lock:
             if result["revision"] < self._state_revisions.get(source, 0) or feed_revision < self._feed_revisions.get(source, 0):
                 raise RefreshStoreError("refresh-cache-conflict")
@@ -578,6 +606,9 @@ class RefreshStore:
             self._feed_revisions[source] = feed_revision
             self._uncertain_sources.discard(source)
         return result
+
+    def claim_dart(self, owner):
+        return self.claim("DART", owner, _dart_v2=True)
 
     def renew(self, source, owner, generation):
         source, owner, generation = _source(source), _owner(owner), _integer(generation, positive=True)
@@ -590,15 +621,29 @@ class RefreshStore:
         _integer(result["revision"]); _integer(result["generation"], positive=True); _instant(result["lease_until"])
         return result
 
-    def save(self, source, owner, generation, expected_revision, state):
+    def save(self, source, owner, generation, expected_revision, state, *, dart_pages=None, dart_catalog=None):
         source, owner = _source(source), _owner(owner)
         generation, expected_revision = _integer(generation, positive=True), _integer(expected_revision)
         state = validate_state(source, state)
         if not state:
             raise RefreshStoreError("refresh-state-rejected")
+        parameters = {"p_source": source, "p_owner": owner, "p_generation": generation,
+                      "p_expected_revision": expected_revision, "p_state": state}
+        checkpoint = None
+        if dart_pages is not None:
+            from .member_map_listing_delta import dart_replay_pages, ListingError
+            if source != "DART" or self._state_revisions.get(source) != expected_revision:
+                raise RefreshStoreError("refresh-cache-conflict")
+            prior = self._states[source]
+            try:
+                checkpoint = (deepcopy(self._dart_checkpoint) if state["error"] in ("dart-quota-exceeded", "record_limit") and not dart_pages
+                    else dart_replay_pages(self._dart_checkpoint, prior.get("cursor"), state["last_attempt_at"], dart_catalog, dart_pages)[0])
+            except ListingError:
+                raise RefreshStoreError("refresh-state-rejected") from None
+            validate_dart_bundle(state, checkpoint)
+            parameters.update(p_pages=dart_pages, p_catalog=dart_catalog)
         try:
-            result = self._rpc("member_map_refresh_save", {"p_source": source, "p_owner": owner,
-                "p_generation": generation, "p_expected_revision": expected_revision, "p_state": state})
+            result = self._rpc("member_map_refresh_save_v2" if dart_pages is not None else "member_map_refresh_save", parameters)
             if result in ({"status": "lease-lost"}, {"status": "revision-conflict"}):
                 raise RefreshStoreError("refresh-save-conflict")
             if set(result) != {"status", "source", "generation", "revision", "feed_revision", "updated_at"} or (
@@ -619,9 +664,42 @@ class RefreshStore:
                 self._state_revisions[source] = result["revision"]
                 self._feed_revisions[source] = feed_revision
                 self._uncertain_sources.discard(source)
+                if dart_pages is not None:
+                    self._dart_checkpoint = checkpoint
         except RefreshStoreError:
             # 저장 응답이 불명확하면 제출본을 확정하지 않는다. 다음 읽기는 본문까지 재확인한다.
             with self._cache_lock:
                 self._uncertain_sources.add(source)
             raise
         return result
+
+    def save_dart(self, owner, generation, expected_revision, state, pages, catalog):
+        return self.save("DART", owner, generation, expected_revision, state, dart_pages=pages, dart_catalog=catalog)
+
+
+def validate_dart_bundle(state, checkpoint):
+    from .member_map_listing_delta import validate_dart_checkpoint, dart_aggregate_size, dart_v2_cursor, ListingError
+    try:
+        cp = validate_dart_checkpoint(checkpoint)
+        if dart_aggregate_size(state, cp) > STATE_MAX_BYTES:
+            raise ListingError("record_limit")
+        cursor = state.get("cursor")
+        if cursor and cursor.get("version") == 2:
+            if cp is None or cp["committed"] is None or cursor != dart_v2_cursor(cp["committed"]):
+                raise ListingError("invalid_cursor")
+        if cp is not None:
+            committed, pending = cp["committed"], cp["pending"]
+            if bool(cursor) != (committed is not None):
+                raise ListingError("invalid_cursor")
+            attempt = _instant(state["last_attempt_at"])
+            today = attempt.astimezone(timezone(timedelta(hours=9))).date().isoformat()
+            if committed is not None:
+                if committed["date"] > today or _instant(committed["checked_at"]) > attempt:
+                    raise ListingError("invalid_cursor")
+                if "version" not in cursor and committed != {"date": cursor["through_date"],
+                        "checked_at": cursor["checked_at"], "ids": sorted(set(cursor["ids"]))}:
+                    raise ListingError("invalid_cursor")
+            if pending is not None and (pending["date"] > today or _instant(pending["started_at"]) > attempt):
+                raise ListingError("invalid_cursor")
+    except (ListingError, ValueError, TypeError, KeyError):
+        raise RefreshStoreError("refresh-state-rejected") from None

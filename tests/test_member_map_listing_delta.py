@@ -410,3 +410,129 @@ def test_fixed_transport_rejects_arbitrary_url_redirect_body_limit(monkeypatch):
     response.status_code = 200
     with pytest.raises(delta.ListingError, match="body_limit"):
         delta.bounded_transport(delta.DART_LIST, params={}, headers={}, max_bytes=10)
+
+
+def continuation_source(day="20261030", total=1062, mapped=True):
+    calls = []
+    rows = [{"rcept_no": f"{day}{i:06d}", "rcept_dt": day,
+             "stock_code": "123456" if mapped else "", "report_nm": "Synthetic filing", "flr_nm": "Issuer"}
+            for i in range(1, total + 1)]
+    def fetch(endpoint, **kwargs):
+        assert endpoint == delta.DART_LIST
+        params = kwargs["params"]
+        assert "corp_cls" not in params and "corp_code" not in params and params["page_count"] == "100"
+        assert params["bgn_de"] == params["end_de"] == day
+        page = int(params["page_no"]); calls.append(page)
+        return dart_page(rows[(page-1)*100:page*100], page=page, page_size=100, total=len(rows))
+    return fetch, calls, rows
+
+
+@pytest.mark.parametrize("mapped", [True, False])
+def test_dart_v2_1062_resume_two_sweeps_preserves_denominator_and_legacy_ids(mapped):
+    from api.collectors.member_map_live_refresh import apply_result
+    from api.collectors.member_map_refresh_store import validate_state, validate_dart_bundle
+    stamp = "2026-10-30T08:30:32+00:00"
+    prior = {"cursor": {"source": "DART", "through_date": "2026-10-30", "checked_at": stamp,
+                        "ids": [f"DART:20261030{i:06d}" for i in range(1, 996)]},
+             "last_success_at": stamp, "feed": {"items": []}}
+    cp = None
+    fetch, calls, _ = continuation_source(mapped=mapped)
+    for index, expected in enumerate((list(range(1, 11)), [1, 10, 11], list(range(1, 11)), [1, 10, 11])):
+        calls.clear(); now = f"2026-11-01T06:{index*2:02d}:00+00:00"
+        result = delta.collect_dart_continuation(UNIVERSE, prior["feed"], prior["cursor"], now, "synthetic", cp, transport=fetch)
+        assert calls == expected and result["requests"] <= 10 and len(result["records"]) <= 1000
+        assert result["coverage"]["listing_records"] <= 1000 and result["coverage"]["total_records"] == 1062
+        assert result["status"] == "partial" and result["error"] is None
+        prior = apply_result("DART", prior, result, now); cp = json.loads(json.dumps(result["dart_checkpoint"]))
+        validate_state("DART", prior); validate_dart_bundle(prior, cp)
+        assert prior["last_success_at"] == stamp
+    assert cp["pending"] is None and len(cp["committed"]["ids"]) == 1062
+    assert prior["cursor"]["id_count"] == 1062 and "ids" not in prior["cursor"]
+    assert bool(prior["feed"]["items"]) == mapped
+
+
+def test_dart_v2_same_count_middle_page_change_fails_verification():
+    cursor = {"source": "DART", "through_date": "2026-10-30", "ids": [], "checked_at": "2026-10-30T01:00:00Z"}
+    fetch, calls, rows = continuation_source()
+    cp = None
+    for index in range(4):
+        if index == 2:
+            rows[450] = {**rows[450], "rcept_no": "20261030999999"}
+        result = delta.collect_dart_continuation(UNIVERSE, {"items": []}, cursor, f"2026-11-01T06:{index*2:02d}:00Z",
+                                               "synthetic", cp, transport=fetch)
+        cp = result["dart_checkpoint"]
+    assert result["error"] == "pagination_changed" and not result["dart_sealed"]
+    assert result["cursor"] == cursor and cp["committed"]["ids"] == []
+    assert cp["pending"]["phase"] == "scan" and cp["pending"]["next_page"] == 1
+    assert len(cp["pending"]["observed"]) == 1063  # retain observations across the changed pass
+
+
+def test_dart_v2_guard_change_resets_without_skipping_date():
+    cursor = {"source": "DART", "through_date": "2026-10-30", "ids": ["DART:20261029000001"], "checked_at": "2026-10-30T01:00:00Z"}
+    fetch, calls, rows = continuation_source()
+    first = delta.collect_dart_continuation(UNIVERSE, {"items": []}, cursor, "2026-11-01T06:00:00Z", "synthetic", None, transport=fetch)
+    rows[0] = {**rows[0], "rcept_no": "20261030999999"}; calls.clear()
+    result = delta.collect_dart_continuation(UNIVERSE, {"items": []}, cursor, "2026-11-01T06:02:00Z", "synthetic", first["dart_checkpoint"], transport=fetch)
+    assert calls == [1] and result["error"] == "pagination_changed"
+    assert result["cursor"] == cursor and result["dart_checkpoint"]["pending"]["date"] == "2026-10-30"
+    assert result["dart_checkpoint"]["committed"]["ids"] == cursor["ids"]
+
+
+def test_dart_v2_current_day_needs_verify_and_midnight_does_not_fake_current_success():
+    cursor = {"source": "DART", "through_date": "2026-10-30", "ids": [], "checked_at": "2026-10-30T01:00:00Z"}
+    fetch, _, _ = continuation_source(total=1)
+    scan = delta.collect_dart_continuation(UNIVERSE, {"items": []}, cursor, "2026-10-30T14:58:00Z", "synthetic", None, transport=fetch)
+    assert scan["status"] == "partial" and not scan["dart_sealed"]
+    current = delta.collect_dart_continuation(UNIVERSE, {"items": []}, cursor, "2026-10-30T14:59:00Z", "synthetic", scan["dart_checkpoint"], transport=fetch)
+    assert current["status"] == "success" and current["dart_sealed"]
+    rolled = delta.collect_dart_continuation(UNIVERSE, {"items": []}, cursor, "2026-10-30T15:00:00Z", "synthetic", scan["dart_checkpoint"], transport=fetch)
+    assert rolled["status"] == "partial" and rolled["dart_sealed"]
+
+
+def test_dart_v2_013_two_sweeps_keep_legacy_boundary_ids():
+    cursor = {"source": "DART", "through_date": "2026-10-30", "ids": ["DART:20261029000001"], "checked_at": "2026-10-30T01:00:00Z"}
+    scan = delta.collect_dart_continuation(UNIVERSE, {"items": []}, cursor, "2026-11-01T06:00:00Z", "synthetic", None, transport=lambda *a, **k: b'{"status":"013"}')
+    verified = delta.collect_dart_continuation(UNIVERSE, {"items": []}, cursor, "2026-11-01T06:02:00Z", "synthetic", scan["dart_checkpoint"], transport=lambda *a, **k: b'{"status":"013"}')
+    assert verified["dart_sealed"] and verified["dart_checkpoint"]["committed"]["ids"] == cursor["ids"]
+    assert verified["status"] == "partial"
+
+
+def test_dart_v2_catalog_change_restarts_pass_and_bad_proof_cannot_advance():
+    cursor = {"source": "DART", "through_date": "2026-10-30", "ids": [], "checked_at": "2026-10-30T01:00:00Z"}
+    fetch, calls, _ = continuation_source()
+    scan = delta.collect_dart_continuation(UNIVERSE, {"items": []}, cursor, "2026-11-01T06:00:00Z", "synthetic", None, transport=fetch)
+    calls.clear()
+    restarted = delta.collect_dart_continuation({"123456": "Changed catalog"}, {"items": []}, cursor,
+        "2026-11-01T06:02:00Z", "synthetic", scan["dart_checkpoint"], transport=fetch)
+    assert calls == list(range(1, 11)) and restarted["dart_checkpoint"]["pending"]["phase"] == "scan"
+    for proofs in (scan["dart_pages"] * 2, [dict(scan["dart_pages"][0], page_no=2)],
+                   [dict(scan["dart_pages"][0], rows=scan["dart_pages"][0]["rows"] * 2)]):
+        with pytest.raises(delta.ListingError):
+            delta.dart_replay_pages(None, cursor, "2026-11-01T06:00:00Z", scan["dart_catalog"], proofs)
+
+
+@pytest.mark.parametrize("bad_version", ["2", 2.0, True])
+def test_dart_v2_checkpoint_version_is_strict_integer(bad_version):
+    with pytest.raises(delta.ListingError):
+        delta.validate_dart_checkpoint({"version": bad_version, "committed": None, "pending": None})
+
+
+def test_dart_v2_new_proof_day_binding_does_not_reject_legacy_ids():
+    cursor = {"source": "DART", "through_date": "2026-10-30", "ids": ["DART:20261029000001"],
+              "checked_at": "2026-10-30T01:00:00Z"}
+    now, catalog = "2026-11-01T06:00:00Z", "a" * 64
+    proof = {"page_no": 1, "total_count": 1, "rows": [["DART:20261029000002", "b" * 64]]}
+    with pytest.raises(delta.ListingError):
+        delta.dart_replay_pages(None, cursor, now, catalog, [proof])
+    proof["rows"][0][0] = "DART:20261030000002"
+    cp, sealed, error = delta.dart_replay_pages(None, cursor, now, catalog, [proof])
+    assert cp["committed"]["ids"] == cursor["ids"] and not sealed and error is None
+    cp["pending"]["baseline"] = {"DART:20261029000002": "b" * 64}
+    with pytest.raises(delta.ListingError): delta.validate_dart_checkpoint(cp)
+
+
+@pytest.mark.parametrize("pair", [[["invalid-key"], "b" * 64], [True, "b" * 64], ["DART:20261030000001", None]])
+def test_dart_v2_malformed_proof_pairs_are_fixed_errors(pair):
+    with pytest.raises(delta.ListingError, match="invalid_pagination"):
+        delta.dart_replay_pages(None, None, "2026-10-31T06:00:00Z", "a" * 64,
+                               [{"page_no": 1, "total_count": 1, "rows": [pair]}])

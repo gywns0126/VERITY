@@ -20,7 +20,7 @@ _ERROR_CODES = frozenset(("refresh-read-timeout", "refresh-read-busy", "refresh-
     "refresh-auth-rejected", "refresh-config-rejected", "refresh-catalog-rejected", "refresh-cache-conflict",
     "refresh-state-rejected", "refresh-response-rejected", "refresh-read-rejected", "refresh-lease-lost",
     "refresh-owner-rejected", "refresh-payload-rejected", "refresh-revision-rejected", "refresh-rpc-rejected",
-    "refresh-save-conflict", "refresh-source-rejected",
+    "refresh-save-conflict", "refresh-source-rejected", "refresh-schema-pending",
     "refresh-http-failure", "refresh-unexpected-error", "refresh-unclassified",
     "dart-quota-exceeded", "transport_timeout", "transport_failure", "dart_api_failure",
     "incomplete_page", "page_limit", "record_limit", "source-error"))
