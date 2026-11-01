@@ -1,6 +1,7 @@
 """Offline listing fixtures and runner contract tests; never call live services."""
 from copy import deepcopy
 from datetime import date, timedelta
+import hashlib
 import json
 
 import pytest
@@ -521,13 +522,14 @@ def test_dart_v2_new_proof_day_binding_does_not_reject_legacy_ids():
     cursor = {"source": "DART", "through_date": "2026-10-30", "ids": ["DART:20261029000001"],
               "checked_at": "2026-10-30T01:00:00Z"}
     now, catalog = "2026-11-01T06:00:00Z", "a" * 64
-    proof = {"page_no": 1, "total_count": 1, "rows": [["DART:20261029000002", "b" * 64]]}
+    proof = {"queried_date": "2026-10-29", "page_no": 1, "total_count": 1, "rows": [["DART:20261029000002", "b" * 64]]}
     with pytest.raises(delta.ListingError):
         delta.dart_replay_pages(None, cursor, now, catalog, [proof])
-    proof["rows"][0][0] = "DART:20261030000002"
+    proof["queried_date"] = "2026-10-30"
     cp, sealed, error = delta.dart_replay_pages(None, cursor, now, catalog, [proof])
     assert cp["committed"]["ids"] == cursor["ids"] and not sealed and error is None
-    cp["pending"]["baseline"] = {"DART:20261029000002": "b" * 64}
+    assert cp["pending"]["baseline"] == {"DART:20261029000002": "b" * 64}
+    cp["pending"]["baseline"] = {"DART:20261030000002": "b" * 64}  # Unobserved ID remains invalid.
     with pytest.raises(delta.ListingError): delta.validate_dart_checkpoint(cp)
 
 
@@ -535,4 +537,118 @@ def test_dart_v2_new_proof_day_binding_does_not_reject_legacy_ids():
 def test_dart_v2_malformed_proof_pairs_are_fixed_errors(pair):
     with pytest.raises(delta.ListingError, match="invalid_pagination"):
         delta.dart_replay_pages(None, None, "2026-10-31T06:00:00Z", "a" * 64,
-                               [{"page_no": 1, "total_count": 1, "rows": [pair]}])
+                               [{"queried_date": "2026-10-30", "page_no": 1, "total_count": 1, "rows": [pair]}])
+
+
+# Frozen public fields from dart_catalyst_alerts.jsonl, 2026-10-30 entries
+# 22954..22958 and 22965..22966. Receipt identity is not the reported date.
+REPORTED_DATE_ROWS = [
+    {"rcept_no": receipt, "rcept_dt": "20261030", "stock_code": ticker, "report_nm": title, "flr_nm": filer}
+    for receipt, ticker, title, filer in [
+        ("20261029000666", "114840", "주식등의대량보유상황보고서(일반)", "MarubeniCorporation"),
+        ("20261029000668", "006370", "[기재정정]주요사항보고서(유형자산양도결정)", "대구백화점"),
+        ("20261029000669", "429270", "주요사항보고서(유상증자결정)", "시지트로닉스"),
+        ("20261029000671", "163730", "임원ㆍ주요주주특정증권등소유상황보고서", "안인주"),
+        ("20261029000672", "179530", "[기재정정]주요사항보고서(전환사채권발행결정)", "애드바이오텍"),
+        ("20261029000673", "179530", "[기재정정]주요사항보고서(전환사채권발행결정)", "애드바이오텍"),
+        ("20261029000674", "179530", "주요사항보고서(전환사채권발행결정)", "애드바이오텍"),
+    ]
+]
+
+
+def canonical_digest(row):
+    return hashlib.sha256(json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+
+
+@pytest.mark.parametrize("row", REPORTED_DATE_ROWS, ids=lambda r: r["rcept_no"])
+def test_actual_reported_date_counterexamples_preserve_identity_and_date_in_digest(row):
+    payload = dart_page([row])
+    parsed = delta.parse_dart_list(json.loads(payload))["rows"][0]
+    assert parsed["id"] == "DART:" + row["rcept_no"]
+    assert parsed["date"] == "2026-10-30" and parsed["source_date_field"] == "rcept_dt"
+    cursor = {"source": "DART", "through_date": "2026-10-30", "ids": [], "checked_at": "2026-10-30T01:00:00Z"}
+    result = delta.collect_dart_continuation({row["stock_code"]: row["flr_nm"]}, {"items": []}, cursor,
+        "2026-11-01T06:00:00Z", "synthetic", None, transport=lambda *a, **kw: payload)
+    assert result["error"] is None and not result["dart_sealed"]
+    assert result["dart_pages"] == [{"queried_date": "2026-10-30", "page_no": 1, "total_count": 1,
+                                      "rows": [[parsed["id"], canonical_digest(parsed)]]}]
+    assert result["records"][0]["date"] == "2026-10-30"
+    changed = delta.parse_dart_list(json.loads(dart_page([{**row, "rcept_dt": "20261029"}])))["rows"][0]
+    assert changed["id"] == parsed["id"] and canonical_digest(changed) != canonical_digest(parsed)
+    assert delta.validate_dart_checkpoint(result["dart_checkpoint"]) == result["dart_checkpoint"]
+
+
+def test_reported_date_1062_replay_resumes_legacy_900_row_checkpoint_without_migration():
+    from api.collectors.member_map_live_refresh import apply_result
+    from api.collectors.member_map_refresh_store import validate_state, validate_dart_bundle
+    fetch, calls, rows = continuation_source()
+    # Synthetic page placement exercises the former page-10 stop; no claim
+    # about the seven real records' historical listing page/order.
+    rows[900:907] = deepcopy(REPORTED_DATE_ROWS)
+    universe = {**UNIVERSE, **{r["stock_code"]: r["flr_nm"] for r in REPORTED_DATE_ROWS}}
+    stamp = "2026-10-30T08:30:32+00:00"
+    cursor = {"source": "DART", "through_date": "2026-10-30", "checked_at": stamp,
+              "ids": sorted("DART:" + r["rcept_no"] for r in rows[:995])}
+    first = delta.collect_dart_continuation(universe, {"items": []}, cursor, "2026-11-01T06:00:00Z",
+                                            "synthetic", None, transport=fetch)
+    assert first["error"] is None
+    cp, sealed, error = delta.dart_replay_pages(None, cursor, "2026-11-01T06:00:00Z", first["dart_catalog"], first["dart_pages"][:9])
+    assert not sealed and error is None and len(cp["pending"]["rows"]) == 900 and cp["pending"]["next_page"] == 10
+    # Exact old checkpoint shape: queried_date belongs only to transient proofs.
+    assert cp["version"] == 2 and "queried_date" not in json.dumps(cp)
+    before = deepcopy(cp)
+    prior = {"cursor": cursor, "last_success_at": stamp, "feed": {"items": []}}
+    for index, expected in enumerate(([1, 9, 10, 11], list(range(1, 11)), [1, 10, 11])):
+        calls.clear(); now = f"2026-11-01T06:{(index+1)*2:02d}:00Z"
+        result = delta.collect_dart_continuation(universe, prior["feed"], prior["cursor"], now, "synthetic", cp, transport=fetch)
+        assert calls == expected and result["error"] is None and result["status"] == "partial"
+        assert result["requests"] <= 10 and len(result["records"]) <= 1000
+        assert result["coverage"]["total_records"] == 1062 and result["coverage"]["listing_records"] <= 1000
+        assert all(p["queried_date"] == "2026-10-30" for p in result["dart_pages"])
+        prior = apply_result("DART", prior, result, now); cp = json.loads(json.dumps(result["dart_checkpoint"]))
+        validate_state("DART", prior); validate_dart_bundle(prior, cp)
+        assert prior["last_success_at"] == stamp and delta.dart_aggregate_size(prior, cp) <= 4*1024*1024
+    assert before["pending"]["next_page"] == 10 and len(before["pending"]["rows"]) == 900
+    assert result["dart_sealed"] and cp["pending"] is None and len(cp["committed"]["ids"]) == 1062
+    assert set(cursor["ids"]) <= set(cp["committed"]["ids"])
+    assert all("DART:" + row["rcept_no"] in cp["committed"]["ids"] for row in REPORTED_DATE_ROWS)
+    assert prior["cursor"]["id_count"] == 1062
+
+
+@pytest.mark.parametrize("queried_date", [None, "2026-10-29", "20261030", True])
+def test_proof_requires_exact_queried_date_without_accepting_old_nonempty_proofs(queried_date):
+    cursor = {"source": "DART", "through_date": "2026-10-30", "ids": [], "checked_at": "2026-10-30T01:00:00Z"}
+    proof = {"page_no": 1, "total_count": 1, "rows": [["DART:20261029000666", "b"*64]]}
+    if queried_date is not None: proof["queried_date"] = queried_date
+    before = deepcopy((cursor, proof))
+    with pytest.raises(delta.ListingError, match="invalid_pagination"):
+        delta.dart_replay_pages(None, cursor, "2026-11-01T06:00:00Z", "a"*64, [proof])
+    assert (cursor, proof) == before
+
+
+@pytest.mark.parametrize("mapped", [False, True])
+@pytest.mark.parametrize("violation,error", [("reported_date", "date_outside_window"), ("duplicate", "incomplete_unique_records")])
+def test_reported_date_and_real_duplicate_guards_still_reject_bad_page_ten(mapped, violation, error):
+    fetch, calls, rows = continuation_source(mapped=mapped)
+    rows[900:907] = [{**r, "stock_code": r["stock_code"] if mapped else ""} for r in REPORTED_DATE_ROWS]
+    if violation == "reported_date": rows[900]["rcept_dt"] = "20261029"
+    else: rows[901] = deepcopy(rows[900])
+    universe = {**UNIVERSE, **{r["stock_code"]: r["flr_nm"] for r in REPORTED_DATE_ROWS}} if mapped else UNIVERSE
+    cursor = {"source": "DART", "through_date": "2026-10-30", "ids": [], "checked_at": "2026-10-30T01:00:00Z"}
+    result = delta.collect_dart_continuation(universe, {"items": []}, cursor, "2026-11-01T06:00:00Z", "synthetic", None, transport=fetch)
+    assert result["error"] == error and not result["dart_sealed"] and result["next_cursor"] is None
+    assert result["cursor"] == cursor and result["requests"] == 10
+    assert len(result["dart_pages"]) == 9 and len(result["dart_checkpoint"]["pending"]["rows"]) == 900
+    assert result["dart_checkpoint"]["committed"]["ids"] == cursor["ids"]
+
+
+def test_queried_date_does_not_hide_tampered_guard_digest_or_mutate_retained_checkpoint():
+    fetch, _, _ = continuation_source()
+    cursor = {"source": "DART", "through_date": "2026-10-30", "ids": [], "checked_at": "2026-10-30T01:00:00Z"}
+    first = delta.collect_dart_continuation(UNIVERSE, {"items": []}, cursor, "2026-11-01T06:00:00Z", "synthetic", None, transport=fetch)
+    cp, proof = deepcopy(first["dart_checkpoint"]), deepcopy(first["dart_pages"][0])
+    before = deepcopy(cp); proof["rows"][0][1] = "0"*64
+    reset, sealed, error = delta.dart_replay_pages(cp, cursor, "2026-11-01T06:02:00Z", first["dart_catalog"], [proof])
+    assert error == "pagination_changed" and not sealed and cp == before
+    assert reset["pending"]["next_page"] == 1 and reset["committed"] == before["committed"]
+    assert set(before["pending"]["observed"]) <= set(reset["pending"]["observed"])

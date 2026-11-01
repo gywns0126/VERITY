@@ -10,10 +10,11 @@ const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const root = path.resolve(__dirname, '..');
 const draft = path.resolve(root, process.env.MEMBER_MAP_DART_SQL || 'supabase/migrations/20261101075403_member_map_dart_continuation.sql');
+const forward = path.resolve(root, process.env.MEMBER_MAP_DART_DATE_SQL || 'supabase/migrations/20261101115404_member_map_dart_reported_date.sql');
 const sha = value => createHash('sha256').update(value).digest('hex');
 const inputs = [
     'supabase/migrations/2026101201_member_map_refresh_checkpoint.sql',
-    'supabase/migrations/2026102401_member_map_dart_catchup.sql', draft,
+    'supabase/migrations/2026102401_member_map_dart_catchup.sql', draft, forward,
     'api/collectors/member_map_listing_delta.py', 'api/collectors/member_map_live_refresh.py',
     'api/collectors/member_map_refresh_store.py', __filename,
 ].map(name => {
@@ -23,12 +24,13 @@ const inputs = [
 const baseSQL = fs.readFileSync(inputs[0].path, 'utf8');
 const catchupSQL = fs.readFileSync(inputs[1].path, 'utf8');
 const draftSQL = fs.readFileSync(draft, 'utf8');
+const forwardSQL = fs.readFileSync(forward, 'utf8');
 const A = '00000000-0000-4000-8000-000000000001';
 const B = '00000000-0000-4000-8000-000000000002';
 const copy = value => structuredClone(value);
 const cases = [];
 const check = (name, run) => cases.push({name, run});
-let db, fixtures, passed = 0;
+let db, fixtures, activationWitness, passed = 0;
 const rows = async (sql, args = []) => (await db.query(sql, args)).rows;
 const value = async (sql, args = []) => (await rows(sql, args))[0].v;
 async function role(name = '') { await db.exec('RESET ROLE'); if (name) await db.exec('SET ROLE ' + name); }
@@ -71,7 +73,7 @@ async function validBundle(state, cp) {
 function loadFixtures(clock) {
     // Real collector -> real transition -> real apply_result. Only the fixed
     // public-list transport is synthetic, and socket access is forbidden.
-    return JSON.parse(execFileSync('python3', ['-c', String.raw`
+    return JSON.parse(execFileSync(process.env.PYTHON || 'python3', ['-c', String.raw`
 import json,sys,socket,urllib.request
 from copy import deepcopy
 from datetime import datetime,timedelta,timezone
@@ -115,6 +117,34 @@ def run(mapped=True,mode='stable'):
     'checkpoint':result['dart_checkpoint'],'sealed':result['dart_sealed'],'calls':calls})
   prior=deepcopy(state);cp=deepcopy(result['dart_checkpoint'])
  return steps
+def receipt_resume():
+ prior=deepcopy(initial); cp=None; steps=[]
+ oldprefix=(history-timedelta(days=1)).strftime('%Y%m%d')
+ stable=run(False)[0]
+ first_pages=stable['pages'][:9]
+ cp=d.dart_replay_pages(None,prior['cursor'],stable['state']['last_attempt_at'],stable['catalog'],first_pages)[0]
+ seed=deepcopy(stable['state']);seed.update(error='incomplete_unique_records',requests=10)
+ seed['coverage'].update(pages_succeeded=9,listing_records=900)
+ prior=deepcopy(seed)
+ for index in range(7):
+  tick=(now-timedelta(seconds=1000-index*130)).isoformat();calls=[]
+  def transport(endpoint,**kw):
+   assert endpoint==d.DART_LIST
+   p=kw['params'];page=int(p['page_no']);calls.append(page)
+   assert p['bgn_de']==p['end_de'] and p['page_count']=='100'
+   if p['bgn_de']!=prefix:return b'{"status":"013"}'
+   entries=[{'rcept_no':(oldprefix if 901<=i<=907 else prefix)+f'{i:06d}',
+      'rcept_dt':prefix,'stock_code':'','report_nm':'Synthetic filing','flr_nm':'Synthetic Issuer'}
+      for i in range((page-1)*100+1,min(page*100,1062)+1)]
+   return json.dumps({'status':'000','page_no':page,'page_count':100,'total_count':1062,'total_page':11,'list':entries}).encode()
+  result=d.collect_dart_continuation(universe,prior['feed'],prior['cursor'],tick,'synthetic',cp,transport=transport)
+  state=apply_result('DART',prior,result,tick);validate_state('DART',state);validate_dart_bundle(state,result['dart_checkpoint'])
+  steps.append({'state':state,'pages':result['dart_pages'],'catalog':result['dart_catalog'],
+   'checkpoint':result['dart_checkpoint'],'sealed':result['dart_sealed'],'calls':calls})
+  prior=deepcopy(state);cp=deepcopy(result['dart_checkpoint'])
+ return {'seed':seed,'checkpoint':d.dart_replay_pages(None,initial['cursor'],seed['last_attempt_at'],stable['catalog'],first_pages)[0],
+   'catalog':stable['catalog'],'steps':steps}
+
 def bootstrap():
  prior={};cp=None;steps=[]
  for index in range(4):
@@ -139,9 +169,66 @@ validate_state('SEC',sec)
 # Its actual apply_result output is still checked by the unchanged SQL below.
 print(json.dumps({'initial':initial,'mapped':run(),'unmapped':run(False),'guard':run(mode='guard'),
  'middle':run(mode='middle'),'empty':run(mode='empty'),'quota':run(mode='quota'),'bootstrap':bootstrap(),
- 'SEC':sec,'news':news,'today':today.isoformat()}))
+ 'SEC':sec,'news':news,'today':today.isoformat(),'receipt_resume':receipt_resume()}))
 `,clock], {cwd:root, env:{PATH:process.env.PATH,PYTHONDONTWRITEBYTECODE:'1'}, maxBuffer:32*1024*1024}).toString());
 }
+
+check('forward migration preserves every source row, live legacy pending and function ACL bytes', async () => {
+    assert.deepEqual(activationWitness.after,activationWitness.before);
+    assert.deepEqual(activationWitness.afterACL,activationWitness.beforeACL);
+    const dart=activationWitness.after.find(r=>r.source==='DART');
+    assert.equal(dart.dart_checkpoint.pending.next_page,10);
+    assert.equal(Object.keys(dart.dart_checkpoint.pending.rows).length,900);
+});
+check('legacy 900-row pending resumes with seven differing receipt prefixes through verify and current date', async () => {
+    const fixture=fixtures.receipt_resume;
+    await owner("UPDATE public.member_map_refresh_checkpoint SET state=$1::jsonb,dart_checkpoint=$2::jsonb WHERE source='DART'",
+        [JSON.stringify(fixture.seed),JSON.stringify(fixture.checkpoint)]);
+    assert.deepEqual(fixture.steps[0].calls,[1,9,10,11]);
+    assert.equal(fixture.steps[0].checkpoint.pending.phase,'verify');
+    for(const [index,step] of fixture.steps.entries()) {
+        assert.ok(step.calls.length<=10);assert.ok(step.state.coverage.listing_records<=1000);
+        assert.equal(step.state.error,null);
+        const c=await claim();assert.equal((await save(c,step)).status,'saved');
+        const stored=await snapshot();assert.deepEqual(stored.state,step.state);assert.deepEqual(stored.dart_checkpoint,step.checkpoint);
+        if(index<fixture.steps.length-1) assert.equal(stored.state.last_success_at,fixture.seed.last_success_at);
+    }
+    const historical=fixture.steps[2];assert.equal(historical.sealed,true);
+    const ids=historical.checkpoint.committed.ids, prefix=historical.checkpoint.committed.date.replaceAll('-','');
+    assert.equal(ids.filter(id=>id.slice(5,13)!==prefix).length,7);
+    // Legacy boundary IDs are preserved, including IDs not present in new sweeps.
+    assert.ok(fixture.seed.cursor.ids.every(id=>ids.includes(id)));
+    const final=await snapshot();assert.equal(final.state.status,'success');
+    assert.equal(final.state.cursor.through_date,fixtures.today);
+});
+check('old nonempty proof lacks queried_date and cannot save or advance after activation', async () => {
+    const step=copy(fixtures.mapped[0]);for(const page of step.pages) delete page.queried_date;
+    await rejected(step);
+});
+check('altered valid digest in a resumed guard invalidates sweep without advancing committed success', async () => {
+    await drive(fixtures.mapped,1);
+    const step=copy(fixtures.mapped[1]);step.pages=step.pages.slice(0,1);
+    step.pages[0].rows[0][1]='f'.repeat(64);
+    const r=(await owner('SELECT public.member_map_dart_replay($1::jsonb,$2::jsonb,$3,$4,$5::jsonb) v',
+        [JSON.stringify(fixtures.mapped[0].checkpoint),JSON.stringify(fixtures.initial.cursor),
+         step.state.last_attempt_at,step.catalog,JSON.stringify(step.pages)]))[0].v;
+    assert.equal(r.error,'pagination_changed');assert.equal(r.sealed,false);
+    assert.deepEqual(r.checkpoint.committed,fixtures.mapped[0].checkpoint.committed);
+    // A caller cannot submit the original expected state while concealing that reset.
+    await rejected(step);
+});
+check('forward migration rejects unexpected helper grant and rolls back definitions without touching rows', async () => {
+    const isolated=new PGlite();
+    try {
+        await isolated.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS; CREATE ROLE unrelated_service; GRANT USAGE ON SCHEMA public TO anon,authenticated,service_role;');
+        await isolated.exec(baseSQL);await isolated.exec(catchupSQL);await isolated.exec(draftSQL);
+        await isolated.exec('GRANT EXECUTE ON FUNCTION public.member_map_dart_replay(jsonb,jsonb,text,text,jsonb) TO unrelated_service');
+        const before=(await isolated.query("SELECT prosrc,proacl FROM pg_proc WHERE proname='member_map_dart_replay'")).rows;
+        await assert.rejects(()=>isolated.exec(forwardSQL),/refresh-reported-date-unsafe-grants/);
+        await isolated.exec('ROLLBACK');
+        assert.deepEqual((await isolated.query("SELECT prosrc,proacl FROM pg_proc WHERE proname='member_map_dart_replay'")).rows,before);
+    } finally {await isolated.close();}
+});
 
 check('schema/ACL: exactly three sources, RLS, five public RPC grants, private helpers inaccessible', async () => {
     assert.deepEqual((await rows('SELECT source FROM public.member_map_refresh_checkpoint ORDER BY source')).map(x=>x.source), ['DART','SEC','news']);
@@ -320,7 +407,9 @@ check('020 keeps checkpoint and feed, consumes reservation and blocks only DART 
 check('page/order/duplicate-ID/wrong-day proof and coverage mutations rejected atomically', async () => {
     assert.equal(await validBundle(fixtures.mapped[0].state,fixtures.mapped[0].checkpoint),true,'positive proof control rejected before mutation checks');
     const mutations=[s=>s.pages[0].page_no=2,s=>s.pages[0].page_no='1',s=>s.pages[0].rows.push(s.pages[0].rows[0]),
-        s=>s.pages[0].rows[0][0]='DART:20000101000001',s=>s.pages[0].rows[0][1]='not-a-digest',
+        s=>s.pages[0].rows[0][0]='DART:invalid',
+        s=>s.pages[0].queried_date='2000-01-01',s=>delete s.pages[0].queried_date,
+        s=>s.pages[0].queried_date=null,s=>s.pages[0].queried_date=20261030,s=>s.pages[0].rows[0][1]='not-a-digest',
         s=>s.pages.push(s.pages[0]),s=>s.state.coverage.listing_records--,s=>s.state.requests=11,
         s=>s.state.coverage.total_records++,s=>s.state.member_id=A];
     for(const mutate of mutations) {const s=copy(fixtures.mapped[0]);mutate(s);await rejected(s);}
@@ -333,7 +422,7 @@ check('SQL replay agrees with Python and accepts its own generated first-cycle c
     assert.equal(transition.sealed,false);
     assert.equal(await helper('member_map_dart_checkpoint_valid',transition.checkpoint),true,'SQL rejects its own replay checkpoint');
 });
-check('checkpoint/cursor string version and wrong-day stored row cannot pass closed validators', async () => {
+check('checkpoint/cursor strict version and inconsistent retained guard membership rejected', async () => {
     const step=fixtures.mapped[0];assert.equal(await helper('member_map_dart_checkpoint_valid',step.checkpoint),true);
     for(const mutate of [cp=>cp.version='2',cp=>cp.version=true,cp=>cp.pending.next_page='11',cp=>{
         const key=Object.keys(cp.pending.rows)[0], digest=cp.pending.rows[key];delete cp.pending.rows[key];cp.pending.rows['DART:20000101000001']=digest;
@@ -397,6 +486,14 @@ check('aggregate 4MiB bound rejects two individually valid components without tr
     // Exercise actual v1 adoption, then load the unmodified continuation SQL.
     await role('service_role');const legacy=await legacyClaim('DART');assert.equal((await legacySave('DART',legacy,fixtures.initial)).status,'saved');
     await role();await db.exec(draftSQL);
+    const seed=fixtures.receipt_resume;
+    await db.query("UPDATE public.member_map_refresh_checkpoint SET state=$1::jsonb,dart_checkpoint=$2::jsonb WHERE source='DART'",
+        [JSON.stringify(seed.seed),JSON.stringify(seed.checkpoint)]);
+    const before=await rows('SELECT * FROM public.member_map_refresh_checkpoint ORDER BY source');
+    const beforeACL=await rows("SELECT oid,proacl FROM pg_proc WHERE proname LIKE 'member_map_%' ORDER BY oid");
+    await db.exec(forwardSQL);
+    activationWitness={before,after:await rows('SELECT * FROM public.member_map_refresh_checkpoint ORDER BY source'),
+        beforeACL,afterACL:await rows("SELECT oid,proacl FROM pg_proc WHERE proname LIKE 'member_map_%' ORDER BY oid")};
     const failures=[];
     for(const item of cases) {
         await reset();await role('service_role');
