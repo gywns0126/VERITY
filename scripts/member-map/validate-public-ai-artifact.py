@@ -111,6 +111,7 @@ def validate(artifact, expected_sha256, source_dir, output, *, period_input=None
     period_rows = [row for row in rows if "period_context_v3" in row]
     if bool(period_rows) != (period_input is not None):
         raise ValueError("missing-or-unused-public-period-originals")
+    originals = {}
     if period_rows:
         # prepared wire의 해시 결속을 원문 진위 검증으로 대체하지 않는다.
         spec = importlib.util.spec_from_file_location("member_map_period_export_reader",
@@ -130,6 +131,30 @@ def validate(artifact, expected_sha256, source_dir, output, *, period_input=None
         if project_public_company_judgments(subset, payload["candidates"],
                 source_documents=documents, **originals) != subset:
             raise ValueError("stale-public-period-original")
+    retained_rows = [row for row in rows if "evidence_context_v1" in row]
+    if retained_rows:
+        # Prepared fingerprints bind bytes, not the authenticity of the retained
+        # original. Reconstruct only from the worker's fixed local public files;
+        # never call plan/run/provider or accept an alternate source path.
+        spec = importlib.util.spec_from_file_location("member_map_retained_publish_reader",
+            Path(__file__).with_name("run-company-judgments.py"))
+        reader = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(reader)
+        raw = reader.read_retained_context()
+        if raw is None:
+            raise ValueError("missing-public-retained-original")
+        documents, _ = reader.ai.select_documents(reader.read_sources(), include_claims=True)
+        from api.intelligence.portfolio_judgment_context import enrich_judgment_documents
+        documents, _ = enrich_judgment_documents(documents, raw)
+        source_ids = {row["source_id"] for row in retained_rows}
+        documents = [doc for doc in documents if doc["source_id"] in source_ids]
+        if ({doc["source_id"] for doc in documents} != source_ids
+                or any("retained_context_v1" not in doc for doc in documents)):
+            raise ValueError("unbound-public-retained-original")
+        subset = {"schema": "local-company-judgments-v1", "judgments": retained_rows}
+        if project_public_company_judgments(subset, payload["candidates"],
+                source_documents=documents, **originals) != subset:
+            raise ValueError("stale-public-retained-original")
     output.write_bytes(body)
     return {"sha256": expected_sha256, "count": len(payload["candidates"]), "network_calls": 0}
 

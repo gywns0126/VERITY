@@ -394,9 +394,52 @@ def _public_contract_judgment(row, events, sources=None, *, public_wire=False):
     return out
 
 
+def _evidence_context_quotes(row, source):
+    """Bound retained economic sentences; prepared hashes are not authenticity."""
+    context = row["evidence_context_v1"]
+    _keys(context, {"source_version", "raw_sha256", "quotes"})
+    if _hash_value(context["source_version"]) != row["source_version"]:
+        _fail()
+    _hash_value(context["raw_sha256"])
+    quotes = context["quotes"]
+    if type(quotes) is not list or not 1 <= len(quotes) <= 5:
+        _fail()
+    for quote in quotes:
+        _text(quote, 600)
+        if quote != quote.strip() or not re.search(r"[.!?]$", quote):
+            _fail()
+    if len(set(quotes)) != len(quotes):
+        _fail()
+    # The extension carries only the actual materiality/counter-evidence
+    # sentences, never extra prose or support for primary/impact/period grades.
+    economic = row["economic_v2"]
+    expected = [economic["materiality"]["quote"], *economic["counter_evidence_quotes"]]
+    if quotes != list(dict.fromkeys(q for q in expected if q is not None)):
+        _fail()
+    if source is not None:
+        retained = source.get("retained_context_v1")
+        if (type(retained) is not dict
+                or context["raw_sha256"] != retained["raw_sha256"]
+                or context["source_version"] != source["source_version"]):
+            _fail()
+        # Source export only. Runtime never imports the offline judgment lane.
+        from .portfolio_business_judgment import _sentence
+        for quote in quotes:
+            _sentence(quote, source)
+    return quotes
+
+
+def _bound_economic_quote(value, candidate_quotes, retained_quotes):
+    # Existing candidate-span behavior stays unchanged. New retained support
+    # must be the WHOLE validated sentence, not a substring dropping context.
+    if value is not None and value in retained_quotes:
+        return value
+    return _bound_quote(value, candidate_quotes)
+
+
 def _public_judgment(row, candidates, *, source_documents=None, public_wire=False,
                      period_archives=None, issuer_registry=None):
-    optional = {k for k in ("economic_v2", "period_context_v2", "period_context_v3", "comparison", "core_selection") if type(row) is dict and k in row}
+    optional = {k for k in ("economic_v2", "evidence_context_v1", "period_context_v2", "period_context_v3", "comparison", "core_selection") if type(row) is dict and k in row}
     _keys(row, _JUDGMENT_FIELDS | {"source_version"} | optional)
     if "period_context_v2" in row and "period_context_v3" in row:
         _fail()
@@ -429,7 +472,10 @@ def _public_judgment(row, candidates, *, source_documents=None, public_wire=Fals
             _fail()
     elif not public_wire:
         _fail()
-    # Economic evidence remains limited to existing public candidate spans.
+    retained_quotes = (_evidence_context_quotes(row, source if source_documents is not None else None)
+                       if "evidence_context_v1" in row else [])
+    # Candidate evidence remains unchanged; retained sentences are admitted
+    # separately for economic materiality and counter-evidence only.
     for container in [c, *c.get("claims", [])]:
         quotes.extend(q for q in container.get("context", {}).values() if q is not None)
         quotes.extend(container.get("counter_evidence_quotes", []))
@@ -450,7 +496,10 @@ def _public_judgment(row, candidates, *, source_documents=None, public_wire=Fals
         if checked != context:
             _fail()
         if source_documents is not None:
-            original = {key: value for key, value in source.items() if key != "source_version"}
+            original = {key: value for key, value in source.items()
+                        if key not in {"source_version", "excerpt_text"}}
+            if "excerpt_text" in source:
+                original["text"] = source["excerpt_text"]
             checked = validate_reported_customer_period(
                 context, original, helper_row, archives=period_archives, issuer_registry=issuer_registry)
             if checked != context:
@@ -473,7 +522,7 @@ def _public_judgment(row, candidates, *, source_documents=None, public_wire=Fals
         if source_documents is not None:
             # Literal binding only. The offline producer already owns sentence
             # adjacency, issuer scope and semantic review; do not import it here.
-            if source["text"].count(period_support) != 1:
+            if source.get("excerpt_text", source["text"]).count(period_support) != 1:
                 _fail()
         # Prepared public wire is checked by equality with its candidate-bound
         # fingerprint below; hashes are not publisher authenticity. No source
@@ -512,7 +561,7 @@ def _public_judgment(row, candidates, *, source_documents=None, public_wire=Fals
         _enum(m["scope"], {"company", "division", "product", "unknown"})
         m["review_reason"] = _review_label(m, row["published_on"])
         _codes(m["review_reasons"], _MATERIALITY_CODES, 3)
-        _bound_quote(m["quote"], quotes)
+        _bound_economic_quote(m["quote"], quotes, retained_quotes)
         if m["quote"] is not None and not re.search(r"[.!?]$", m["quote"]):
             _fail()
         for key in ("scope_quote", "period_quote", "mechanism_quote"):
@@ -524,7 +573,7 @@ def _public_judgment(row, candidates, *, source_documents=None, public_wire=Fals
         for q in counters:
             if q is None or q == row["quote"]:
                 _fail()
-            _bound_quote(q, quotes)
+            _bound_economic_quote(q, quotes, retained_quotes)
         if len(set(counters)) != len(counters):
             _fail()
         if row["status"] == "accepted" and impact["direction"] != "unknown" and not econ["impact_quote"]:
@@ -618,9 +667,10 @@ def _public_core_selection(value, row, candidate, sources):
         if (not current or not previous or previous["source_version"] != p["source_version"]
                 or previous["issuer_id"] != row["company_id"]
                 or previous["url"] != p["source_url"] or previous["as_of"] != p["published_on"]
-                or previous["text"].count(p["quote"]) != 1
+                or previous.get("excerpt_text", previous["text"]).count(p["quote"]) != 1
                 or not any(v["id"] == row["counterparty_id"] for v in previous["counterparties"])
-                or any(current["text"].count(value[key]) != 1 for key in ("current_quote", "period_quote", "change_quote"))):
+                or any(current.get("excerpt_text", current["text"]).count(value[key]) != 1
+                       for key in ("current_quote", "period_quote", "change_quote"))):
             _fail()
     if type(value["reason"]) is not str or not value["reason"].strip():
         _fail()
@@ -645,7 +695,7 @@ def _judgment_sources(documents):
         _fail()
     sources = {}
     for doc in documents:
-        optional = {"resolved_relations"} if type(doc) is dict and "resolved_relations" in doc else set()
+        optional = set(doc) & {"resolved_relations", "retained_context_v1"} if type(doc) is dict else set()
         _keys(doc, {"source_id", "issuer_id", "issuer_name", "url", "as_of", "text", "counterparties"} | optional)
         match = _SOURCE.fullmatch(doc["source_id"]) if type(doc["source_id"]) is str else None
         if (not match or doc["source_id"] in sources
@@ -678,6 +728,12 @@ def _judgment_sources(documents):
             _entity(relation["counterparty_id"])
             _enum(relation["role"], {"customer", "supplier"})
         sources[doc["source_id"]] = {**doc, "source_version": _digest(doc)}
+        if "retained_context_v1" in doc:
+            # Optional offline source handoff only. Keep the original digest
+            # and excerpt so other proof lanes cannot borrow the retained tail.
+            from .portfolio_judgment_context import validate_retained_context
+            sources[doc["source_id"]]["excerpt_text"] = doc["text"]
+            sources[doc["source_id"]]["text"] = validate_retained_context(doc)
     return sources
 
 
