@@ -26,7 +26,7 @@ vm.runInNewContext(code, {
     throw new Error(`unexpected module: ${name}`);
   },
 }, { timeout: 1000 });
-const { makeStructureLayout, validateStructure, loadCompanyStructure, structureCoverageText, resolveFocus, isFlowEligibleRelation, resetInitialFocusAfterInitialLoad } = box.exports;
+const { makeStructureLayout, validateStructure, loadCompanyStructure, structureCoverageText, resolveFocus, isFlowEligibleRelation, resetInitialFocusAfterInitialLoad, installStructureCameraInput } = box.exports;
 
 const company = id => ({ id, name: `Company ${id}` });
 const relation = (id, from, to, extra = {}) => ({
@@ -196,4 +196,89 @@ test('only a successful initial catalogue load releases the focus-fit guard', ()
   initialFocus.current = 'KR:AORT:false';
   resetInitialFocusAfterInitialLoad(false, initialFocus);
   assert.equal(initialFocus.current, 'KR:AORT:false');
+});
+
+function cameraInputFixture() {
+  const listeners = new Map(), rect = { left: 10, top: 20, width: 800, height: 600 };
+  const camera = { current: { x: 31, y: -17, zoom: .8 } }, updates = [];
+  let dragging = false;
+  const element = {
+    getBoundingClientRect: () => rect,
+    addEventListener(name, run, options) { listeners.set(name, { run, options }); },
+    removeEventListener(name, run) { if (listeners.get(name)?.run === run) listeners.delete(name); },
+  };
+  const cleanup = installStructureCameraInput(element, camera, value => updates.push(value), () => dragging);
+  const emit = (type, fields = {}) => {
+    const event = { deltaX: 0, deltaY: 0, deltaMode: 0, clientX: 310, clientY: 220,
+      ctrlKey: false, metaKey: false, shiftKey: false, prevented: false, stopped: false,
+      preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; }, ...fields };
+    listeners.get(type)?.run(event); return event;
+  };
+  return { camera, updates, listeners, rect, emit, cleanup, drag(value) { dragging = value; } };
+}
+const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
+const atPointer = f => ({ x: (300 - f.camera.current.x) / f.camera.current.zoom, y: (200 - f.camera.current.y) / f.camera.current.zoom });
+
+test('ordinary two-finger wheel pans on first input and overlay cards without changing zoom or source geometry', () => {
+  const f = cameraInputFixture();
+  const catalogue = { schema: 'alphanest-company-structure-v1', companies: [company('focus'), company('child')], relations: [relation('edge','focus','child')] };
+  const layout = makeStructureLayout(catalogue, company('focus'));
+  const native = { catalogue, positions: [...layout.byId.values()].map(n => [n.company.id, n.x, n.y]), notes: { synthetic: 'unchanged' } };
+  const before = structuredClone(native);
+  const event = f.emit('wheel', { deltaX: 12, deltaY: 45, target: { tagName: 'BUTTON' } });
+  near(f.camera.current.x, 19); near(f.camera.current.y, -62); near(f.camera.current.zoom, .8);
+  assert.equal(event.prevented, true); assert.equal(event.stopped, true);
+  f.emit('wheel', { deltaX: -12, deltaY: -45 });
+  near(f.camera.current.x, 31); near(f.camera.current.y, -17);
+  assert.deepEqual(native, before);
+  assert.equal(f.listeners.get('wheel').options.capture, true);
+  assert.equal(f.listeners.get('wheel').options.passive, false);
+  assert.match(source, /installStructureCameraInput\(element, cameraRef, setCamera, \(\) => drag.current !== null\)/);
+});
+
+test('line/page deltas and Shift pan are normalized; nonfinite input never poisons the camera', () => {
+  const f = cameraInputFixture();
+  f.emit('wheel', { deltaX: 1, deltaY: 2, deltaMode: 1 }); near(f.camera.current.x, 15); near(f.camera.current.y, -49);
+  f.emit('wheel', { deltaX: 1, deltaY: 1, deltaMode: 2 }); near(f.camera.current.x, -785); near(f.camera.current.y, -649);
+  f.emit('wheel', { deltaY: 10, shiftKey: true }); near(f.camera.current.x, -795); near(f.camera.current.y, -649);
+  const before = structuredClone(f.camera.current); f.emit('wheel', { deltaX: NaN, deltaY: 5 });
+  assert.deepEqual({ ...f.camera.current }, before); near(f.camera.current.zoom, .8);
+});
+
+for (const modifier of ['ctrlKey', 'metaKey']) test(`${modifier} wheel pinches around a stable pointer anchor and composes before React rerenders`, () => {
+  const f = cameraInputFixture(), anchor = atPointer(f);
+  f.emit('wheel', { [modifier]: true, deltaY: -20 });
+  f.emit('wheel', { [modifier]: true, deltaY: -20 });
+  near(f.camera.current.zoom, .8 * Math.exp(.06)); near(atPointer(f).x, anchor.x); near(atPointer(f).y, anchor.y);
+  f.emit('wheel', { [modifier]: true, deltaY: -100000 }); near(f.camera.current.zoom, 2.5);
+  near(atPointer(f).x, anchor.x); near(atPointer(f).y, anchor.y);
+  f.emit('wheel', { [modifier]: true, deltaY: 100000 }); near(f.camera.current.zoom, .12);
+  near(atPointer(f).x, anchor.x); near(atPointer(f).y, anchor.y);
+});
+
+test('WebKit gesture uses its starting scale and anchor; duplicate wheel cannot zoom twice', () => {
+  const f = cameraInputFixture(), anchor = atPointer(f);
+  f.emit('gesturestart', { scale: 2 });
+  f.emit('gesturechange', { scale: 3 }); near(f.camera.current.zoom, 1.2);
+  near(atPointer(f).x, anchor.x); near(atPointer(f).y, anchor.y);
+  const before = structuredClone(f.camera.current);
+  f.emit('wheel', { ctrlKey: true, deltaY: -50 }); assert.deepEqual({ ...f.camera.current }, before);
+  f.emit('gesturechange', { scale: 4, clientX: 330, clientY: 230 }); near(f.camera.current.zoom, 1.6);
+  near((320 - f.camera.current.x) / 1.6, anchor.x); near((210 - f.camera.current.y) / 1.6, anchor.y);
+  f.emit('gesturechange', { scale: NaN }); near(f.camera.current.zoom, 1.6);
+  f.emit('gestureend'); f.emit('wheel', { deltaY: 10 }); near(f.camera.current.zoom, 1.6);
+  near(f.camera.current.y, 210 - anchor.y * 1.6 - 10);
+});
+
+test('gesture without pointer coordinates anchors at center, active drag owns input, and unmount removes handlers', () => {
+  const f = cameraInputFixture(), initial = structuredClone(f.camera.current);
+  f.drag(true); f.emit('wheel', { deltaY: 20 }); f.emit('gesturestart', { scale: 1 }); f.emit('gesturechange', { scale: 2 });
+  assert.deepEqual({ ...f.camera.current }, initial);
+  f.drag(false); f.emit('gesturechange', { scale: 2 }); assert.deepEqual({ ...f.camera.current }, initial);
+  f.emit('gesturestart', { scale: 1, clientX: undefined, clientY: undefined });
+  const x = (400 - initial.x) / .8, y = (300 - initial.y) / .8;
+  f.emit('gesturechange', { scale: 2, clientX: undefined, clientY: undefined });
+  near((400 - f.camera.current.x) / 1.6, x); near((300 - f.camera.current.y) / 1.6, y);
+  f.cleanup(); assert.equal(f.listeners.size, 0);
+  const before = structuredClone(f.camera.current); f.emit('wheel', { deltaY: 20 }); assert.deepEqual({ ...f.camera.current }, before);
 });
