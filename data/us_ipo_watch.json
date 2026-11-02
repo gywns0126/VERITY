@@ -1,25 +1,25 @@
 {
  "_meta": {
-  "generated_at": "2026-11-01T20:31:46+09:00",
+  "generated_at": "2026-11-02T21:39:29+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 31,
+  "sessions_scanned": 30,
   "sessions_missed": [
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 813,
-   "companies": 249,
+   "filings": 779,
+   "companies": 239,
    "by_stage": {
-    "신청": 92,
-    "정정(심사중)": 119,
-    "가격확정": 8,
-    "거래소등록": 30
+    "신청": 91,
+    "정정(심사중)": 113,
+    "가격확정": 6,
+    "거래소등록": 29
    },
    "spac_likely": 28,
-   "has_ticker_now": 190,
-   "priced_secondary_excluded": 7,
-   "foreign_issuer": 67,
-   "priced_parse_ok": 8
+   "has_ticker_now": 184,
+   "priced_secondary_excluded": 6,
+   "foreign_issuer": 61,
+   "priced_parse_ok": 7
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
@@ -253,7 +253,7 @@
    "pricing": {
     "parse_ok": false,
     "reason": "공모가 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/1070965/000110465926119890/tm2620318-22_424b4.htm"
+    "source_url": "https://www.sec.gov/Archives/edgar/data/1070965/0001104659-26-119890.txt"
    }
   },
   {
@@ -315,7 +315,7 @@
    "pricing": {
     "parse_ok": false,
     "reason": "공모가 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2131303/000118518526005030/spac424b4102626.htm"
+    "source_url": "https://www.sec.gov/Archives/edgar/data/2131303/0001185185-26-005030.txt"
    }
   },
   {
@@ -1012,44 +1012,6 @@
    }
   },
   {
-   "cik": "2088082",
-   "name": "Electra Therapeutics, Inc.",
-   "forms": {
-    "424B4": 1,
-    "8-A12B": 1,
-    "CERT": 1,
-    "S-1MEF": 1
-   },
-   "first_filed": "20260917",
-   "last_filed": "20260918",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2088082&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2836",
-    "sic_desc": "Biological Products, (No Diagnostic Substances)",
-    "is_blank_check": false,
-    "ticker": "ETRA",
-    "region": "SOUTH SAN FRANCISCO, CA",
-    "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": true,
-    "shares": 23333334,
-    "price_usd": 15.0,
-    "gross_usd": 350000010,
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2088082/000119312526395670/d61940d424b4.htm",
-    "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
-   }
-  },
-  {
    "cik": "1995075",
    "name": "Megan Holdings Ltd.",
    "forms": {
@@ -1195,10 +1157,9 @@
    "name": "Basel Medical Group Ltd",
    "forms": {
     "424B4": 1,
-    "F-1/A": 1,
-    "F-1": 1
+    "F-1/A": 1
    },
-   "first_filed": "20260917",
+   "first_filed": "20260923",
    "last_filed": "20261008",
    "lineage": true,
    "stage": 3,
@@ -1218,67 +1179,6 @@
     "state_of_inc": "D8"
    },
    "pre_existing_reporter": true
-  },
-  {
-   "cik": "2003061",
-   "name": "Star Fashion Culture Holdings Ltd",
-   "forms": {
-    "424B4": 1,
-    "F-1": 1
-   },
-   "first_filed": "20260917",
-   "last_filed": "20260925",
-   "lineage": true,
-   "stage": 3,
-   "stage_ko": "가격확정",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2003061&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7310",
-    "sic_desc": "Services-Advertising",
-    "is_blank_check": false,
-    "ticker": "STFS",
-    "region": "XIAMEN CITY, FUJIAN PROVINCE",
-    "state_of_inc": null
-   },
-   "pre_existing_reporter": true
-  },
-  {
-   "cik": "2094989",
-   "name": "RUI Holdings Inc",
-   "forms": {
-    "424B4": 1,
-    "F-1/A": 1
-   },
-   "first_filed": "20260917",
-   "last_filed": "20260924",
-   "lineage": true,
-   "stage": 3,
-   "stage_ko": "가격확정",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2094989&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "8744",
-    "sic_desc": "Services-Facilities Support Management Services",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "KING ABDULLAH ECONOMIC CITY",
-    "state_of_inc": "E9"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "공모가 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2094989/000118518526004253/ruihold424b4092326.htm"
-   }
   },
   {
    "cik": "2023153",
@@ -1602,14 +1502,14 @@
    "cik": "2114145",
    "name": "Tracx Logis Ltd.",
    "forms": {
-    "F-1/A": 4
+    "F-1/A": 3
    },
-   "first_filed": "20260917",
+   "first_filed": "20260922",
    "last_filed": "20261029",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 4,
+   "amend_count": 3,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -1877,24 +1777,42 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2049977&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2049977&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2834",
+    "sic_desc": "Pharmaceutical Preparations",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "PARAMUS, NJ",
+    "state_of_inc": "DE"
+   }
   },
   {
    "cik": "1880995",
    "name": "Alopexx, Inc.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20260917",
+   "first_filed": "20261027",
    "last_filed": "20261027",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1880995&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1880995&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2836",
+    "sic_desc": "Biological Products, (No Diagnostic Substances)",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "CAMBRIDGE, MA",
+    "state_of_inc": null
+   }
   },
   {
    "cik": "1842556",
@@ -1911,7 +1829,16 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1842556&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1842556&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "1311",
+    "sic_desc": "Crude Petroleum & Natural Gas",
+    "is_blank_check": false,
+    "ticker": "EONR",
+    "region": "HOUSTON, TX",
+    "state_of_inc": "DE"
+   }
   },
   {
    "cik": "1660851",
@@ -2312,14 +2239,14 @@
    "cik": "720762",
    "name": "NON INVASIVE MONITORING SYSTEMS INC /FL/",
    "forms": {
-    "S-1/A": 4
+    "S-1/A": 3
    },
-   "first_filed": "20260917",
+   "first_filed": "20261006",
    "last_filed": "20261020",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 4,
+   "amend_count": 3,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -2760,14 +2687,14 @@
    "cik": "2123380",
    "name": "Gravity Acquisition Corp.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20260917",
+   "first_filed": "20261008",
    "last_filed": "20261008",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": true,
    "has_ticker_now": true,
@@ -3404,108 +3331,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1770069&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2049323",
-   "name": "AM PM Group Ltd",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260917",
-   "last_filed": "20260917",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2049323&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2134090",
-   "name": "Aggreko Inc.",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260917",
-   "last_filed": "20260917",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2134090&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1851535",
-   "name": "Lannister Mining Corp.",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260917",
-   "last_filed": "20260917",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1851535&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2099952",
-   "name": "Star Integratia Ltd",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260917",
-   "last_filed": "20260917",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2099952&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2112634",
-   "name": "Sensei Harbor Corp.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260917",
-   "last_filed": "20260917",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2112634&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2091438",
-   "name": "Nex Neo Tech Inc.",
-   "forms": {
-    "S-1/A": 2
-   },
-   "first_filed": "20260129",
-   "last_filed": "20260225",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2091438&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2074652",
@@ -5070,23 +4895,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1817760&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "832489",
-   "name": "GeoVax Labs, Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20260917",
-   "last_filed": "20260917",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=832489&type=S-1&dateb=&owner=include&count=20"
   }
  ]
 }
