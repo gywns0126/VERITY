@@ -472,41 +472,41 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 58.5,
-      "prediction_std": 25.5,
+      "up_probability": 59.4,
+      "prediction_std": 25.3,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7019,
+      "conformal_q_hat": 0.699,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 51.7,
+      "model_accuracy": 51.5,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 53.3,
+          "wf_accuracy": 51.7,
           "val_accuracy": 42.9,
           "wf_folds": 6,
-          "weight": 0.5333
+          "weight": 0.5167
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.0,
+          "wf_accuracy": 50.7,
           "val_accuracy": 45.7,
           "wf_folds": 6,
-          "weight": 0.51
+          "weight": 0.5067
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.7,
+          "wf_accuracy": 52.3,
           "val_accuracy": 41.4,
           "wf_folds": 6,
-          "weight": 0.5167
+          "weight": 0.5233
         },
         "mlp": {
           "architecture": "neural_net",
@@ -525,11 +525,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 34.8171,
-        "rsi14": 22.854,
-        "macd_hist": 22.3954,
-        "bb_position": 19.0282,
-        "ma20_ratio": 18.8188
+        "volatility_20d": 33.0903,
+        "macd_hist": 25.4985,
+        "rsi14": 24.315,
+        "ma20_ratio": 17.1774,
+        "vol_ratio": 17.1461
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -551,7 +551,7 @@
         "RSI 65.57 고평가 접근",
         "MACD 상승반전 신호",
         "거래량 폭증 + 상승 — 매집 신호",
-        "AI 상승확률 58.5%",
+        "AI 상승확률 59.4%",
         "외국인·기관 강한 순매수"
       ]
     },
@@ -884,7 +884,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -945,7 +945,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -1011,7 +1011,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 79.0,
-          "prediction": 58.5,
+          "prediction": 59.4,
           "backtest": 46.3,
           "timing": 74.0,
           "commodity_margin": 42.2,
@@ -1261,10 +1261,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 54,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -1345,7 +1345,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "KISCO홀딩스: 브레인 50점 (팩트 43 / 심리 54 / VCI -11) | 팩트 최강 canslim_growth(63) / 최약 quant_volatility(9) | 퀀트: 고변동↓9 | 지분: 최대주주 장세홍 45.58% | NAV -29.4% 할인 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "KISCO홀딩스: 브레인 50점 (팩트 43 / 심리 54 / VCI -11) | 팩트 최강 canslim_growth(63) / 최약 quant_volatility(9) | 퀀트: 고변동↓9 | 지분: 최대주주 장세홍 45.58% | NAV -29.4% 할인 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -2341,7 +2341,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -2402,7 +2402,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -2717,10 +2717,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 54,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -2801,7 +2801,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "한국철강: 브레인 46점 (팩트 42 / 심리 54 / VCI -12) | 팩트 최강 canslim_growth(68) / 최약 quant_volatility(9) | 퀀트: 모멘텀↑78 | 고변동↓9 | 지분: 최대주주 KISCO홀딩스(주) 60.34% | NAV +1343.9% 할증 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "한국철강: 브레인 46점 (팩트 42 / 심리 54 / VCI -12) | 팩트 최강 canslim_growth(68) / 최약 quant_volatility(9) | 퀀트: 모멘텀↑78 | 고변동↓9 | 지분: 최대주주 KISCO홀딩스(주) 60.34% | NAV +1343.9% 할증 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -3088,7 +3088,7 @@
       "bb_upper": 4170.0,
       "bb_lower": 3173.0,
       "bb_position": 137.5,
-      "vol_ratio": 16.86,
+      "vol_ratio": 16.88,
       "vol_direction": "up",
       "trend_strength": 1,
       "price_change_pct": 26.07,
@@ -3717,7 +3717,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -3778,7 +3778,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -4094,10 +4094,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -4178,7 +4178,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "에어레인: 브레인 50점 (팩트 47 / 심리 56 / VCI -9) | 팩트 최강 canslim_growth(65) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓23 | 고변동↓9 | 지분: 최대주주 하성용 16.68% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "에어레인: 브레인 50점 (팩트 47 / 심리 56 / VCI -9) | 팩트 최강 canslim_growth(65) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓23 | 고변동↓9 | 지분: 최대주주 하성용 16.68% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 46점 (관망) — 관찰 필요",
@@ -4748,40 +4748,40 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 10.6,
-      "prediction_std": 8.3,
+      "up_probability": 10.7,
+      "prediction_std": 8.8,
       "confidence_interval": [
         0.0,
         99.9
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8925,
+      "conformal_q_hat": 0.8921,
       "conformal_width_pct": 99.9,
       "prediction_set": [
         0
       ],
-      "model_accuracy": 51.7,
+      "model_accuracy": 51.5,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.0,
+          "wf_accuracy": 47.7,
           "val_accuracy": 44.3,
           "wf_folds": 6,
-          "weight": 0.48
+          "weight": 0.4767
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 50.0,
-          "val_accuracy": 47.1,
+          "wf_accuracy": 50.7,
+          "val_accuracy": 45.7,
           "wf_folds": 6,
-          "weight": 0.5
+          "weight": 0.5067
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.7,
-          "val_accuracy": 47.1,
+          "wf_accuracy": 51.7,
+          "val_accuracy": 42.9,
           "wf_folds": 6,
-          "weight": 0.5267
+          "weight": 0.5167
         },
         "mlp": {
           "architecture": "neural_net",
@@ -4800,11 +4800,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 31.4119,
-        "macd_hist": 27.6629,
-        "rsi14": 21.6962,
-        "vol_ratio": 20.9516,
-        "return_5d": 20.3915
+        "volatility_20d": 30.378,
+        "macd_hist": 26.5544,
+        "vol_ratio": 21.2012,
+        "rsi14": 20.9839,
+        "return_5d": 19.3723
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -4827,7 +4827,7 @@
         "MACD 골든크로스 — 상승전환",
         "MACD 상승반전 신호",
         "거래량 폭증 + 상승 — 매집 신호",
-        "AI 상승확률 10.6% — 강한 하락 신호"
+        "AI 상승확률 10.7% — 강한 하락 신호"
       ]
     },
     "low_52w": 20550.0,
@@ -5127,7 +5127,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -5188,7 +5188,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -5254,7 +5254,7 @@
         "components": {
           "multi_factor": 47.0,
           "consensus": 44.0,
-          "prediction": 10.6,
+          "prediction": 10.7,
           "backtest": 32.3,
           "timing": 53.0,
           "commodity_margin": 41.0,
@@ -5504,10 +5504,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -5588,7 +5588,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "샘표식품: 브레인 54점 (팩트 51 / 심리 56 / VCI -5) | 팩트 최강 quant_quality(81) / 최약 quant_volatility(15) | 퀀트: 퀄리티↑81 | 고변동↓15 | 지분: 최대주주 샘표 주식회사 49.38% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "샘표식품: 브레인 54점 (팩트 51 / 심리 56 / VCI -5) | 팩트 최강 quant_quality(81) / 최약 quant_volatility(15) | 퀀트: 퀄리티↑81 | 고변동↓15 | 지분: 최대주주 샘표 주식회사 49.38% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -6722,7 +6722,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -6755,7 +6755,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -6783,7 +6785,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -6831,8 +6833,10 @@
       },
       "final_score": 60,
       "raw_brain_score": 59.7,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 60,
@@ -7098,10 +7102,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 57,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -7174,15 +7178,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 33.3,
-        "max_pct": 7,
-        "rationale": "Kelly 33.3% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 33.3% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "세아제강: 브레인 60점 (팩트 58 / 심리 57 / VCI +1) | 팩트 최강 graham_value(77) / 최약 quant_volatility(41) | V5: Graham가치↑77 | 지분: 최대주주 (주)세아제강지주 50.11% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "세아제강: 브레인 60점 (팩트 58 / 심리 57 / VCI +1) | 팩트 최강 graham_value(77) / 최약 quant_volatility(41) | V5: Graham가치↑77 | 지분: 최대주주 (주)세아제강지주 50.11% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -8117,7 +8121,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -8150,7 +8154,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -8178,7 +8184,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -8226,8 +8232,10 @@
       },
       "final_score": 62,
       "raw_brain_score": 61.6,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 62,
@@ -8493,10 +8501,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 54,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -8569,15 +8577,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 36.7,
-        "max_pct": 7,
-        "rationale": "Kelly 36.7% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 36.7% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "HD현대에너지솔루션: 브레인 62점 (팩트 62 / 심리 54 / VCI +8) | 팩트 최강 graham_value(87) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓20 | 퀄리티↑82 | 고변동↓15 | V5: Graham가치↑87 | 지분: 최대주주 HD한국조선해양(주) 53.57% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "HD현대에너지솔루션: 브레인 62점 (팩트 62 / 심리 54 / VCI +8) | 팩트 최강 graham_value(87) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓20 | 퀄리티↑82 | 고변동↓15 | V5: Graham가치↑87 | 지분: 최대주주 HD한국조선해양(주) 53.57% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 61점 (매수) — 관찰 필요",
@@ -9492,7 +9500,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -9553,7 +9561,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -9869,10 +9877,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 55,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -9953,7 +9961,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "태성: 브레인 48점 (팩트 43 / 심리 55 / VCI -12) | 팩트 최강 graham_value(55) / 최약 quant_volatility(24) | 퀀트: 모멘텀↓22 | 고변동↓24 | 지분: 최대주주 김종학 21.88% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "태성: 브레인 48점 (팩트 43 / 심리 55 / VCI -12) | 팩트 최강 graham_value(55) / 최약 quant_volatility(24) | 퀀트: 모멘텀↓22 | 고변동↓24 | 지분: 최대주주 김종학 21.88% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 41점 (주의) — 리스크 주의",
@@ -10977,7 +10985,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -11010,7 +11018,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -11038,7 +11048,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -11086,8 +11096,10 @@
       },
       "final_score": 65,
       "raw_brain_score": 64.7,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 65,
@@ -11353,10 +11365,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 48,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -11429,15 +11441,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 41.7,
-        "max_pct": 7,
-        "rationale": "Kelly 41.7% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 41.7% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "SK바이오팜: 브레인 65점 (팩트 69 / 심리 48 / VCI +21) | 팩트 최강 graham_value(87) / 최약 quant_volatility(41) | 퀀트: 모멘텀↓24 | 퀄리티↑83 | V5: Graham가치↑87 | 지분: 최대주주 SK(주) 64.0% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "SK바이오팜: 브레인 65점 (팩트 69 / 심리 48 / VCI +21) | 팩트 최강 graham_value(87) / 최약 quant_volatility(41) | 퀀트: 모멘텀↓24 | 퀄리티↑83 | V5: Graham가치↑87 | 지분: 최대주주 SK(주) 64.0% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -12361,7 +12373,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -12422,7 +12434,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -12737,10 +12749,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 51,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -12821,7 +12833,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "RF머트리얼즈: 브레인 57점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 quant_quality(74) / 최약 quant_volatility(32) | 퀀트: 모멘텀↓24 | 지분: 최대주주 알에프에이치아이씨㈜ 41.85% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "RF머트리얼즈: 브레인 57점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 quant_quality(74) / 최약 quant_volatility(32) | 퀀트: 모멘텀↓24 | 지분: 최대주주 알에프에이치아이씨㈜ 41.85% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -13423,40 +13435,40 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 85.4,
-      "prediction_std": 8.1,
+      "up_probability": 85.6,
+      "prediction_std": 7.9,
       "confidence_interval": [
-        8.1,
+        9.2,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7731,
-      "conformal_width_pct": 91.9,
+      "conformal_q_hat": 0.764,
+      "conformal_width_pct": 90.8,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 52.9,
+      "model_accuracy": 52.7,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 53.3,
+          "wf_accuracy": 53.7,
           "val_accuracy": 41.4,
           "wf_folds": 6,
-          "weight": 0.5333
+          "weight": 0.5367
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.0,
-          "val_accuracy": 47.1,
+          "wf_accuracy": 51.7,
+          "val_accuracy": 44.3,
           "wf_folds": 6,
-          "weight": 0.52
+          "weight": 0.5167
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.7,
+          "wf_accuracy": 52.0,
           "val_accuracy": 32.9,
           "wf_folds": 6,
-          "weight": 0.5267
+          "weight": 0.52
         },
         "mlp": {
           "architecture": "neural_net",
@@ -13475,11 +13487,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 49.4565,
-        "macd_hist": 19.8575,
-        "rsi14": 19.5576,
-        "rsi7": 19.5185,
-        "volume_price_trend": 19.1597
+        "volatility_20d": 48.7884,
+        "rsi14": 22.2244,
+        "rsi7": 20.1854,
+        "ma20_ratio": 18.8993,
+        "volume_price_trend": 18.826
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -13500,7 +13512,7 @@
       "reasons": [
         "RSI 25.51 과매도 — 반등 가능",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 85.4% — 강한 매수 신호"
+        "AI 상승확률 85.6% — 강한 매수 신호"
       ]
     },
     "low_52w": 272000.0,
@@ -14086,7 +14098,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -14119,7 +14131,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -14147,7 +14161,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -14195,8 +14209,10 @@
       },
       "final_score": 67,
       "raw_brain_score": 67.4,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 67,
@@ -14213,7 +14229,7 @@
         "components": {
           "multi_factor": 62.0,
           "consensus": 50.0,
-          "prediction": 85.4,
+          "prediction": 85.6,
           "backtest": 28.6,
           "timing": 69.0,
           "commodity_margin": 48.1,
@@ -14462,10 +14478,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 57,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -14538,15 +14554,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 45.0,
-        "max_pct": 7,
-        "rationale": "Kelly 45.0% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 45.0% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "HD현대중공업: 브레인 67점 (팩트 69 / 심리 57 / VCI +12) | 팩트 최강 graham_value(87) / 최약 quant_volatility(41) | 퀀트: 모멘텀↓19 | 퀄리티↑83 | V5: Graham가치↑87 | 지분: 최대주주 HD한국조선해양㈜ 69.23% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "HD현대중공업: 브레인 67점 (팩트 69 / 심리 57 / VCI +12) | 팩트 최강 graham_value(87) / 최약 quant_volatility(41) | 퀀트: 모멘텀↓19 | 퀄리티↑83 | V5: Graham가치↑87 | 지분: 최대주주 HD한국조선해양㈜ 69.23% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 62점 (매수) — 관찰 필요",
@@ -15506,7 +15522,7 @@
     "low_52w": 110.39180755615234,
     "price_1m": 561.7418823242188,
     "price_3m": 466.6236267089844,
-    "price_6m": 210.99856567382812,
+    "price_6m": 210.9985809326172,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -15628,7 +15644,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -15999,10 +16015,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -16095,7 +16111,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "DELL: 브레인 46점 (팩트 52 / 심리 49 / VCI +3) | 팩트 최강 canslim_growth(67) / 최약 quant_volatility(24) | 퀀트: 고변동↓24 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -42.44 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "DELL: 브레인 46점 (팩트 52 / 심리 49 / VCI +3) | 팩트 최강 canslim_growth(67) / 최약 quant_volatility(24) | 퀀트: 고변동↓24 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -42.44 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -16898,20 +16914,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 44.1,
+      "up_probability": 44.2,
       "prediction_std": 17.4,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6946,
+      "conformal_q_hat": 0.694,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 52.2,
+      "model_accuracy": 52.0,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -16922,17 +16938,17 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 56.3,
+          "wf_accuracy": 55.7,
           "val_accuracy": 53.4,
           "wf_folds": 7,
-          "weight": 0.5629
+          "weight": 0.5571
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 54.6,
+          "wf_accuracy": 54.3,
           "val_accuracy": 52.1,
           "wf_folds": 7,
-          "weight": 0.5457
+          "weight": 0.5429
         },
         "mlp": {
           "architecture": "neural_net",
@@ -16976,7 +16992,7 @@
       "reasons": [
         "RSI 65.46 고평가 접근",
         "MACD 상승반전 신호",
-        "AI 상승확률 44.1%",
+        "AI 상승확률 44.2%",
         "외국인·기관 강한 순매수"
       ]
     },
@@ -17110,7 +17126,7 @@
       "credit": {
         "debt_ratio_pct": 76.5
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -17137,7 +17153,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "timing_signal": {
       "score": 58.9,
       "signal": "NEUTRAL",
@@ -17209,8 +17227,10 @@
       },
       "final_score": 61,
       "raw_brain_score": 60.6,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 61,
@@ -17227,7 +17247,7 @@
         "components": {
           "multi_factor": 60.0,
           "consensus": 71.0,
-          "prediction": 44.1,
+          "prediction": 44.2,
           "backtest": 70.2,
           "timing": 56.0,
           "commodity_margin": 49.5,
@@ -17476,10 +17496,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -17555,15 +17575,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 35.0,
-        "max_pct": 7,
-        "rationale": "Kelly 35.0% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 35.0% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "FDX: 브레인 61점 (팩트 63 / 심리 55 / VCI +8) | 팩트 최강 quant_volatility(79) / 최약 canslim_growth(50) | 퀀트: 저변동↑79 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "FDX: 브레인 61점 (팩트 63 / 심리 55 / VCI +8) | 팩트 최강 quant_volatility(79) / 최약 canslim_growth(50) | 퀀트: 저변동↑79 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
@@ -18664,7 +18684,7 @@
         "risk_flag": true
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -19035,10 +19055,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 55,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -19122,7 +19142,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "GDDY: 브레인 47점 (팩트 52 / 심리 52 / VCI +0) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(30) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -68.49 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "GDDY: 브레인 47점 (팩트 52 / 심리 52 / VCI +0) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(30) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -68.49 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
@@ -19917,41 +19937,41 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 34.8,
-      "prediction_std": 9.9,
+      "up_probability": 34.1,
+      "prediction_std": 9.3,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7352,
+      "conformal_q_hat": 0.7418,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 52.7,
+      "model_accuracy": 52.9,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 50.9,
+          "wf_accuracy": 51.4,
           "val_accuracy": 46.6,
           "wf_folds": 7,
-          "weight": 0.5086
+          "weight": 0.5143
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 50.9,
-          "val_accuracy": 42.5,
+          "wf_accuracy": 51.4,
+          "val_accuracy": 46.6,
           "wf_folds": 7,
-          "weight": 0.5086
+          "weight": 0.5143
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.3,
+          "wf_accuracy": 51.7,
           "val_accuracy": 45.2,
           "wf_folds": 7,
-          "weight": 0.5229
+          "weight": 0.5171
         },
         "mlp": {
           "architecture": "neural_net",
@@ -19971,10 +19991,10 @@
       "confidence_level": "medium",
       "top_features": {
         "volatility_20d": 33.0529,
-        "macd_hist": 27.3416,
-        "volume_price_trend": 25.8935,
-        "vol_ratio": 22.5431,
-        "return_5d": 20.3458
+        "vol_ratio": 26.8764,
+        "volume_price_trend": 26.2269,
+        "macd_hist": 26.0083,
+        "ma5_ratio": 20.7895
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -19996,7 +20016,7 @@
         "RSI 70.57 과매수 — 차익실현 고려",
         "MACD 상승반전 신호",
         "이동평균 정배열 — 상승 추세",
-        "AI 상승확률 34.8% — 강한 하락 신호"
+        "AI 상승확률 34.1% — 강한 하락 신호"
       ]
     },
     "low_52w": 122.41759490966797,
@@ -20126,7 +20146,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -20243,7 +20263,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 53.0,
-          "prediction": 34.8,
+          "prediction": 34.1,
           "backtest": 76.9,
           "timing": 39.0,
           "commodity_margin": 56.5,
@@ -20492,10 +20512,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 60,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -20588,7 +20608,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "IDA: 브레인 55점 (팩트 62 / 심리 54 / VCI +8) | 팩트 최강 quant_volatility(70) / 최약 graham_value(53) | US 미수집: 옵션플로우 | 하향조정: FCF $-577M (음수) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "IDA: 브레인 55점 (팩트 62 / 심리 54 / VCI +8) | 팩트 최강 quant_volatility(70) / 최약 graham_value(53) | US 미수집: 옵션플로우 | 하향조정: FCF $-577M (음수) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -21624,7 +21644,7 @@
       "credit": {
         "debt_ratio_pct": 34.7
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -21990,10 +22010,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 63,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -22077,7 +22097,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "MRVL: 브레인 51점 (팩트 49 / 심리 57 / VCI -8) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "MRVL: 브레인 51점 (팩트 49 / 심리 57 / VCI -8) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -23175,7 +23195,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 3,
     "quadrant_info": {
@@ -23541,10 +23561,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -23628,7 +23648,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "NOW: 브레인 42점 (팩트 38 / 심리 50 / VCI -12) | 팩트 최강 quant_quality(66) / 최약 quant_volatility(9) | 퀀트: 고변동↓9 | V5: Graham가치↓34 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "NOW: 브레인 42점 (팩트 38 / 심리 50 / VCI -12) | 팩트 최강 quant_quality(66) / 최약 quant_volatility(9) | 퀀트: 고변동↓9 | V5: Graham가치↓34 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -24439,34 +24459,34 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 62.1,
+      "up_probability": 62.0,
       "prediction_std": 28.0,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6677,
+      "conformal_q_hat": 0.6675,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 49.1,
+      "model_accuracy": 48.8,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 45.7,
+          "wf_accuracy": 44.6,
           "val_accuracy": 56.2,
           "wf_folds": 7,
-          "weight": 0.4571
+          "weight": 0.4457
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.4,
-          "val_accuracy": 52.1,
+          "wf_accuracy": 49.1,
+          "val_accuracy": 47.9,
           "wf_folds": 7,
-          "weight": 0.4943
+          "weight": 0.4914
         },
         "catboost": {
           "architecture": "gbdt",
@@ -24493,10 +24513,10 @@
       "confidence_level": "low",
       "top_features": {
         "volatility_20d": 38.1695,
-        "macd_hist": 32.9831,
-        "bb_position": 21.4329,
-        "rsi14": 21.4015,
-        "vol_ratio": 21.1988
+        "macd_hist": 32.3165,
+        "bb_position": 21.7663,
+        "rsi14": 20.7349,
+        "drawdown_20d": 20.2582
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -24517,7 +24537,7 @@
       "reasons": [
         "RSI 63.1 고평가 접근",
         "MACD 상승반전 신호",
-        "AI 상승확률 62.1%",
+        "AI 상승확률 62.0%",
         "수급 우호적"
       ]
     },
@@ -24651,7 +24671,7 @@
         "debt_ratio_pct": 140.4,
         "note": "부채비율 140% — 평균 이상"
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -24678,7 +24698,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "timing_signal": {
       "score": 58.2,
       "signal": "NEUTRAL",
@@ -24750,8 +24772,10 @@
       },
       "final_score": 66,
       "raw_brain_score": 65.9,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 66,
@@ -24768,7 +24792,7 @@
         "components": {
           "multi_factor": 60.0,
           "consensus": 60.0,
-          "prediction": 62.1,
+          "prediction": 62.0,
           "backtest": 61.5,
           "timing": 62.0,
           "commodity_margin": 42.5,
@@ -25016,10 +25040,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -25095,15 +25119,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 43.3,
-        "max_pct": 7,
-        "rationale": "Kelly 43.3% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 43.3% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "OKE: 브레인 66점 (팩트 71 / 심리 54 / VCI +17) | 팩트 최강 quant_volatility(79) / 최약 graham_value(65) | 퀀트: 저변동↑79 | V5: CANSLIM↑73 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "OKE: 브레인 66점 (팩트 71 / 심리 54 / VCI +17) | 팩트 최강 quant_volatility(79) / 최약 graham_value(65) | 퀀트: 저변동↑79 | V5: CANSLIM↑73 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
@@ -26146,7 +26170,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -26512,10 +26536,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -26589,7 +26613,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "SKYW: 브레인 48점 (팩트 45 / 심리 55 / VCI -10) | 팩트 최강 graham_value(57) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "SKYW: 브레인 48점 (팩트 45 / 심리 55 / VCI -10) | 팩트 최강 graham_value(57) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
@@ -27685,7 +27709,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -28051,10 +28075,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -28147,7 +28171,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "SNDK: 브레인 54점 (팩트 61 / 심리 53 / VCI +8) | 팩트 최강 graham_value(84) / 최약 quant_volatility(24) | 퀀트: 고변동↓24 | V5: Graham가치↑84 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -88.49 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "SNDK: 브레인 54점 (팩트 61 / 심리 53 / VCI +8) | 팩트 최강 graham_value(84) / 최약 quant_volatility(24) | 퀀트: 고변동↓24 | V5: Graham가치↑84 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -88.49 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -28928,41 +28952,41 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 47.5,
+      "up_probability": 47.3,
       "prediction_std": 15.6,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7456,
+      "conformal_q_hat": 0.7449,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 43.5,
+      "model_accuracy": 43.3,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 40.6,
+          "wf_accuracy": 40.9,
           "val_accuracy": 45.2,
           "wf_folds": 7,
-          "weight": 0.4057
+          "weight": 0.4086
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 44.6,
+          "wf_accuracy": 43.7,
           "val_accuracy": 43.8,
           "wf_folds": 7,
-          "weight": 0.4457
+          "weight": 0.4371
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 44.3,
+          "wf_accuracy": 43.7,
           "val_accuracy": 39.7,
           "wf_folds": 7,
-          "weight": 0.4429
+          "weight": 0.4371
         },
         "mlp": {
           "architecture": "neural_net",
@@ -29138,7 +29162,7 @@
       "credit": {
         "debt_ratio_pct": 59.5
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 3,
     "quadrant_info": {
@@ -29255,7 +29279,7 @@
         "components": {
           "multi_factor": 49.0,
           "consensus": 49.0,
-          "prediction": 47.5,
+          "prediction": 47.3,
           "backtest": 67.5,
           "timing": 51.0,
           "commodity_margin": 66.1,
@@ -29504,10 +29528,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -29591,7 +29615,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "SXT: 브레인 53점 (팩트 53 / 심리 52 / VCI +1) | 팩트 최강 quant_quality(66) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "SXT: 브레인 53점 (팩트 53 / 심리 52 / VCI +1) | 팩트 최강 quant_quality(66) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -30371,7 +30395,7 @@
         "AI 상승확률 43.0%"
       ]
     },
-    "low_52w": 373.790283203125,
+    "low_52w": 373.7903137207031,
     "price_1m": 463.9100036621094,
     "price_3m": 471.1261901855469,
     "price_6m": 484.2536926269531,
@@ -30500,7 +30524,7 @@
       "credit": {
         "debt_ratio_pct": 53.8
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 8,
     "quadrant_info": {
@@ -30866,10 +30890,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 60,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -30960,7 +30984,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "TT: 브레인 52점 (팩트 50 / 심리 57 / VCI -7) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "TT: 브레인 52점 (팩트 50 / 심리 57 / VCI -7) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -31691,18 +31715,18 @@
     },
     "prediction": {
       "up_probability": 78.0,
-      "prediction_std": 16.2,
+      "prediction_std": 16.4,
       "confidence_interval": [
-        11.1,
+        8.7,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.669,
-      "conformal_width_pct": 88.9,
+      "conformal_q_hat": 0.6929,
+      "conformal_width_pct": 91.3,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 53.2,
+      "model_accuracy": 53.1,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -31713,17 +31737,17 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 55.1,
-          "val_accuracy": 41.1,
+          "wf_accuracy": 54.6,
+          "val_accuracy": 39.7,
           "wf_folds": 7,
-          "weight": 0.5514
+          "weight": 0.5457
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 54.9,
-          "val_accuracy": 54.8,
+          "wf_accuracy": 55.1,
+          "val_accuracy": 52.1,
           "wf_folds": 7,
-          "weight": 0.5486
+          "weight": 0.5514
         },
         "mlp": {
           "architecture": "neural_net",
@@ -31742,11 +31766,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 30.7683,
-        "macd_hist": 27.8145,
-        "rsi14": 24.363,
-        "vol_ratio": 21.6011,
-        "volume_price_trend": 19.8857
+        "volatility_20d": 29.0043,
+        "rsi14": 26.5248,
+        "macd_hist": 26.357,
+        "ma20_ratio": 20.8718,
+        "vol_ratio": 20.4281
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -31884,7 +31908,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -32252,10 +32276,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -32356,7 +32380,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "WPC: 브레인 47점 (팩트 44 / 심리 55 / VCI -11) | 팩트 최강 quant_volatility(56) / 최약 graham_value(35) | V5: Graham가치↓35 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 3.8 (Lynch 절대 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "WPC: 브레인 47점 (팩트 44 / 심리 55 / VCI -11) | 팩트 최강 quant_volatility(56) / 최약 graham_value(35) | V5: Graham가치↓35 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 3.8 (Lynch 절대 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "AVOID",
     "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -33117,7 +33141,7 @@
         "AI 상승확률 30.2% — 강한 하락 신호"
       ]
     },
-    "low_52w": 151.63661193847656,
+    "low_52w": 151.6365966796875,
     "price_1m": 181.22999572753906,
     "price_3m": 192.68016052246094,
     "price_6m": 164.2803497314453,
@@ -33242,7 +33266,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -33269,7 +33293,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "timing_signal": {
       "score": 47.3,
       "signal": "WEAK",
@@ -33341,8 +33367,10 @@
       },
       "final_score": 62,
       "raw_brain_score": 62.1,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 62,
@@ -33608,10 +33636,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 54,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -33694,15 +33722,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 36.7,
-        "max_pct": 7,
-        "rationale": "Kelly 36.7% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 36.7% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "MSA: 브레인 62점 (팩트 66 / 심리 53 / VCI +13) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(62) | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "MSA: 브레인 62점 (팩트 66 / 심리 53 / VCI +13) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(62) | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -34427,7 +34455,7 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7212,
+      "conformal_q_hat": 0.7211,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -34437,10 +34465,10 @@
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.3,
+          "wf_accuracy": 48.0,
           "val_accuracy": 60.3,
           "wf_folds": 7,
-          "weight": 0.4829
+          "weight": 0.48
         },
         "lightgbm": {
           "architecture": "gbdt",
@@ -34624,7 +34652,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -34990,10 +35018,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -35094,7 +35122,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "SSD: 브레인 49점 (팩트 48 / 심리 52 / VCI -4) | 팩트 최강 canslim_growth(53) / 최약 graham_value(42) | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 9.4 (Lynch 절대 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "SSD: 브레인 49점 (팩트 48 / 심리 52 / VCI -4) | 팩트 최강 canslim_growth(53) / 최약 graham_value(42) | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 9.4 (Lynch 절대 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "AVOID",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -35778,20 +35806,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 30.8,
+      "up_probability": 30.9,
       "prediction_std": 18.4,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7319,
+      "conformal_q_hat": 0.7312,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 48.5,
+      "model_accuracy": 48.3,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -35802,10 +35830,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.0,
+          "wf_accuracy": 47.1,
           "val_accuracy": 47.9,
           "wf_folds": 7,
-          "weight": 0.48
+          "weight": 0.4714
         },
         "catboost": {
           "architecture": "gbdt",
@@ -35855,7 +35883,7 @@
       "color": "#FCA5A5",
       "reasons": [
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 30.8% — 강한 하락 신호"
+        "AI 상승확률 30.9% — 강한 하락 신호"
       ]
     },
     "low_52w": 28.285409927368164,
@@ -35979,7 +36007,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -36096,7 +36124,7 @@
         "components": {
           "multi_factor": 52.0,
           "consensus": 54.0,
-          "prediction": 30.8,
+          "prediction": 30.9,
           "backtest": 58.3,
           "timing": 34.0,
           "commodity_margin": 51.2,
@@ -36346,10 +36374,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -36441,7 +36469,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "ST: 브레인 56점 (팩트 58 / 심리 51 / VCI +7) | 팩트 최강 quant_quality(66) / 최약 canslim_growth(50) | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "ST: 브레인 56점 (팩트 58 / 심리 51 / VCI +7) | 팩트 최강 quant_quality(66) / 최약 canslim_growth(50) | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
@@ -38552,7 +38580,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -38613,7 +38641,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -38931,10 +38959,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 57,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -39015,7 +39043,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "신영증권: 브레인 47점 (팩트 45 / 심리 57 / VCI -12) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(33) | 퀀트: 모멘텀↓22 | 지분: 최대주주 원국희 10.42% | NAV +59.5% 할증 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "신영증권: 브레인 47점 (팩트 45 / 심리 57 / VCI -12) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(33) | 퀀트: 모멘텀↓22 | 지분: 최대주주 원국희 10.42% | NAV +59.5% 할증 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
@@ -40048,7 +40076,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -40109,7 +40137,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -40424,10 +40452,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 55,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -40508,7 +40536,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "스피어: 브레인 32점 (팩트 35 / 심리 55 / VCI -20) | 팩트 최강 canslim_growth(45) / 최약 quant_volatility(24) | 퀀트: 모멘텀↓21 | 고변동↓24 | V5: Graham가치↓34 | 지분: 최대주주 최광수 29.98% | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "스피어: 브레인 32점 (팩트 35 / 심리 55 / VCI -20) | 팩트 최강 canslim_growth(45) / 최약 quant_volatility(24) | 퀀트: 모멘텀↓21 | 고변동↓24 | V5: Graham가치↓34 | 지분: 최대주주 최광수 29.98% | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 45점 (관망) — 관찰 필요",
@@ -41599,7 +41627,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -41632,7 +41660,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -41660,7 +41690,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -41708,8 +41738,10 @@
       },
       "final_score": 68,
       "raw_brain_score": 68.3,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 68,
@@ -41974,10 +42006,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 55,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -42050,15 +42082,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 46.7,
-        "max_pct": 7,
-        "rationale": "Kelly 46.7% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 46.7% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "쿠쿠홀딩스: 브레인 68점 (팩트 74 / 심리 55 / VCI +19) | 팩트 최강 graham_value(82) / 최약 canslim_growth(68) | 퀀트: 퀄리티↑75 | V5: Graham가치↑82 | 지분: 최대주주 구본학 45.11% | NAV +125.1% 할증 | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "쿠쿠홀딩스: 브레인 68점 (팩트 74 / 심리 55 / VCI +19) | 팩트 최강 graham_value(82) / 최약 canslim_growth(68) | 퀀트: 퀄리티↑75 | V5: Graham가치↑82 | 지분: 최대주주 구본학 45.11% | NAV +125.1% 할증 | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
@@ -42646,40 +42678,40 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 75.7,
-      "prediction_std": 11.7,
+      "up_probability": 75.4,
+      "prediction_std": 11.1,
       "confidence_interval": [
-        5.3,
+        5.2,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7043,
-      "conformal_width_pct": 94.7,
+      "conformal_q_hat": 0.7021,
+      "conformal_width_pct": 94.8,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 54.2,
+      "model_accuracy": 54.5,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
           "wf_accuracy": 51.3,
-          "val_accuracy": 44.3,
+          "val_accuracy": 41.4,
           "wf_folds": 6,
           "weight": 0.5133
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.3,
+          "wf_accuracy": 53.3,
           "val_accuracy": 45.7,
           "wf_folds": 6,
-          "weight": 0.5233
+          "weight": 0.5333
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 53.0,
+          "wf_accuracy": 53.7,
           "val_accuracy": 41.4,
           "wf_folds": 6,
-          "weight": 0.53
+          "weight": 0.5367
         },
         "mlp": {
           "architecture": "neural_net",
@@ -42698,11 +42730,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 32.1312,
-        "drawdown_20d": 25.5849,
-        "vol_ratio": 20.691,
-        "bb_position": 20.4168,
-        "ma5_ratio": 19.6718
+        "volatility_20d": 32.1309,
+        "drawdown_20d": 27.2525,
+        "return_1d": 21.7985,
+        "vol_ratio": 21.3583,
+        "volume_price_trend": 20.3165
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -42722,7 +42754,7 @@
       "color": "#86EFAC",
       "reasons": [
         "RSI 39.58 저평가 구간",
-        "AI 상승확률 75.7% — 강한 매수 신호"
+        "AI 상승확률 75.4% — 강한 매수 신호"
       ]
     },
     "low_52w": 36989.8125,
@@ -43268,7 +43300,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -43329,7 +43361,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -43395,7 +43427,7 @@
         "components": {
           "multi_factor": 51.0,
           "consensus": 52.0,
-          "prediction": 75.7,
+          "prediction": 75.4,
           "backtest": 38.6,
           "timing": 68.0,
           "commodity_margin": 51.1,
@@ -43644,10 +43676,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 53,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -43728,7 +43760,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "하나머티리얼즈: 브레인 59점 (팩트 61 / 심리 53 / VCI +8) | 팩트 최강 graham_value(82) / 최약 quant_volatility(15) | 퀀트: 퀄리티↑80 | 고변동↓15 | V5: Graham가치↑82 | 지분: 최대주주 하나마이크론 32.5% | NAV +269.8% 할증 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "하나머티리얼즈: 브레인 59점 (팩트 61 / 심리 53 / VCI +8) | 팩트 최강 graham_value(82) / 최약 quant_volatility(15) | 퀀트: 퀄리티↑80 | 고변동↓15 | V5: Graham가치↑82 | 지분: 최대주주 하나마이크론 32.5% | NAV +269.8% 할증 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -44662,7 +44694,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -44695,7 +44727,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -44723,7 +44757,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -44771,8 +44805,10 @@
       },
       "final_score": 62,
       "raw_brain_score": 61.6,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 62,
@@ -45038,10 +45074,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 54,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -45114,15 +45150,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 36.7,
-        "max_pct": 7,
-        "rationale": "Kelly 36.7% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 36.7% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "샘씨엔에스: 브레인 62점 (팩트 62 / 심리 54 / VCI +8) | 팩트 최강 quant_quality(83) / 최약 quant_volatility(15) | 퀀트: 퀄리티↑83 | 고변동↓15 | V5: Graham가치↑80 | 지분: 최대주주 ㈜와이씨 38.16% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "샘씨엔에스: 브레인 62점 (팩트 62 / 심리 54 / VCI +8) | 팩트 최강 quant_quality(83) / 최약 quant_volatility(15) | 퀀트: 퀄리티↑83 | 고변동↓15 | V5: Graham가치↑80 | 지분: 최대주주 ㈜와이씨 38.16% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
@@ -46275,7 +46311,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -46308,7 +46344,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -46336,7 +46374,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -46384,8 +46422,10 @@
       },
       "final_score": 65,
       "raw_brain_score": 64.9,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 65,
@@ -46651,10 +46691,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 51,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -46727,15 +46767,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 41.7,
-        "max_pct": 7,
-        "rationale": "Kelly 41.7% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 41.7% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "롯데정밀화학: 브레인 65점 (팩트 68 / 심리 51 / VCI +17) | 팩트 최강 graham_value(82) / 최약 quant_volatility(53) | 퀀트: 모멘텀↓22 | V5: Graham가치↑82 | 지분: 최대주주 롯데케미칼(주) 43.5% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "롯데정밀화학: 브레인 65점 (팩트 68 / 심리 51 / VCI +17) | 팩트 최강 graham_value(82) / 최약 quant_volatility(53) | 퀀트: 모멘텀↓22 | V5: Graham가치↑82 | 지분: 최대주주 롯데케미칼(주) 43.5% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
@@ -47680,7 +47720,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -47741,7 +47781,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -48056,10 +48096,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 49,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -48140,7 +48180,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "티엘비: 브레인 56점 (팩트 59 / 심리 49 / VCI +10) | 팩트 최강 graham_value(75) / 최약 quant_volatility(24) | 퀀트: 고변동↓24 | V5: Graham가치↑75 | 지분: 최대주주 백성현 19.36% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "티엘비: 브레인 56점 (팩트 59 / 심리 49 / VCI +10) | 팩트 최강 graham_value(75) / 최약 quant_volatility(24) | 퀀트: 고변동↓24 | V5: Graham가치↑75 | 지분: 최대주주 백성현 19.36% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
@@ -49100,7 +49140,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -49133,7 +49173,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -49161,7 +49203,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -49209,8 +49251,10 @@
       },
       "final_score": 63,
       "raw_brain_score": 63.4,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 63,
@@ -49476,10 +49520,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 54,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -49552,15 +49596,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 38.3,
-        "max_pct": 7,
-        "rationale": "Kelly 38.3% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 38.3% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "씨어스: 브레인 63점 (팩트 66 / 심리 54 / VCI +12) | 팩트 최강 quant_quality(96) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓20 | 퀄리티↑96 | 고변동↓15 | V5: Graham가치↑87 | 지분: 최대주주 이영신 26.74% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "씨어스: 브레인 63점 (팩트 66 / 심리 54 / VCI +12) | 팩트 최강 quant_quality(96) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓20 | 퀄리티↑96 | 고변동↓15 | V5: Graham가치↑87 | 지분: 최대주주 이영신 26.74% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -50594,7 +50638,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -50655,7 +50699,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -50970,10 +51014,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -51054,7 +51098,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "롯데관광개발: 브레인 54점 (팩트 51 / 심리 56 / VCI -5) | 팩트 최강 graham_value(69) / 최약 quant_volatility(21) | 퀀트: 모멘텀↓21 | 고변동↓21 | 지분: 최대주주 김기병 22.72% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "롯데관광개발: 브레인 54점 (팩트 51 / 심리 56 / VCI -5) | 팩트 최강 graham_value(69) / 최약 quant_volatility(21) | 퀀트: 모멘텀↓21 | 고변동↓21 | 지분: 최대주주 김기병 22.72% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -52527,7 +52571,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -52593,7 +52637,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -52908,10 +52952,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 52,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -52992,7 +53036,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "솔브레인홀딩스: 브레인 47점 (팩트 42 / 심리 52 / VCI -10) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓21 | 고변동↓15 | 지분: 최대주주 정지완 55.89% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "솔브레인홀딩스: 브레인 47점 (팩트 42 / 심리 52 / VCI -10) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓21 | 고변동↓15 | 지분: 최대주주 정지완 55.89% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 44점 (주의) — 리스크 주의",
@@ -53576,14 +53620,14 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 59.2,
-      "prediction_std": 30.3,
+      "up_probability": 59.8,
+      "prediction_std": 30.8,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.9567,
+      "conformal_q_hat": 0.9589,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -53594,21 +53638,21 @@
         "xgboost": {
           "architecture": "gbdt",
           "wf_accuracy": 44.0,
-          "val_accuracy": 51.4,
+          "val_accuracy": 48.6,
           "wf_folds": 6,
           "weight": 0.44
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 43.7,
-          "val_accuracy": 45.7,
+          "wf_accuracy": 44.0,
+          "val_accuracy": 47.1,
           "wf_folds": 6,
-          "weight": 0.4367
+          "weight": 0.44
         },
         "catboost": {
           "architecture": "gbdt",
           "wf_accuracy": 44.7,
-          "val_accuracy": 44.3,
+          "val_accuracy": 47.1,
           "wf_folds": 6,
           "weight": 0.4467
         },
@@ -53629,11 +53673,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "macd_hist": 28.3097,
-        "volatility_20d": 25.8681,
-        "volume_price_trend": 21.4883,
-        "ma20_ratio": 20.425,
-        "bb_position": 19.8731
+        "macd_hist": 29.3167,
+        "volatility_20d": 27.6007,
+        "ma20_ratio": 20.4416,
+        "volume_price_trend": 20.2197,
+        "bb_position": 19.3155
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -53653,7 +53697,7 @@
       "color": "#22C55E",
       "reasons": [
         "MACD 상승반전 신호",
-        "AI 상승확률 59.2%",
+        "AI 상승확률 59.8%",
         "외국인·기관 강한 순매수"
       ]
     },
@@ -53927,7 +53971,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -53988,7 +54032,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -54054,7 +54098,7 @@
         "components": {
           "multi_factor": 56.0,
           "consensus": 74.0,
-          "prediction": 59.2,
+          "prediction": 59.8,
           "backtest": 73.5,
           "timing": 71.0,
           "commodity_margin": 28.3,
@@ -54303,10 +54347,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -54397,7 +54441,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "에스에이엠티: 브레인 54점 (팩트 51 / 심리 56 / VCI -5) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(32) | 지분: 최대주주 삼지전자 주식회사 49.84% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "에스에이엠티: 브레인 54점 (팩트 51 / 심리 56 / VCI -5) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(32) | 지분: 최대주주 삼지전자 주식회사 49.84% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -55457,7 +55501,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -55518,7 +55562,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -55833,10 +55877,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 54,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -55917,7 +55961,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "레이크머티리얼즈: 브레인 52점 (팩트 49 / 심리 54 / VCI -5) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓20 | 고변동↓15 | 지분: 최대주주 김진동 27.92% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "레이크머티리얼즈: 브레인 52점 (팩트 49 / 심리 54 / VCI -5) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓20 | 고변동↓15 | 지분: 최대주주 김진동 27.92% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
@@ -56845,7 +56889,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -56878,7 +56922,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -56906,7 +56952,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -56954,8 +57000,10 @@
       },
       "final_score": 60,
       "raw_brain_score": 60.4,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 60,
@@ -57221,10 +57269,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 57,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -57297,15 +57345,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 33.3,
-        "max_pct": 7,
-        "rationale": "Kelly 33.3% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 33.3% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "GS피앤엘: 브레인 60점 (팩트 59 / 심리 57 / VCI +2) | 팩트 최강 graham_value(82) / 최약 quant_quality(45) | 퀀트: 모멘텀↓23 | V5: Graham가치↑82 | 지분: 최대주주 ㈜GS 58.62% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "GS피앤엘: 브레인 60점 (팩트 59 / 심리 57 / VCI +2) | 팩트 최강 graham_value(82) / 최약 quant_quality(45) | 퀀트: 모멘텀↓23 | V5: Graham가치↑82 | 지분: 최대주주 ㈜GS 58.62% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -58349,7 +58397,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -58382,7 +58430,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -58410,7 +58460,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -58458,8 +58508,10 @@
       },
       "final_score": 67,
       "raw_brain_score": 67.1,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 67,
@@ -58724,10 +58776,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -58800,15 +58852,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 45.0,
-        "max_pct": 7,
-        "rationale": "Kelly 45.0% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 45.0% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "미원에스씨: 브레인 67점 (팩트 69 / 심리 56 / VCI +13) | 팩트 최강 quant_quality(82) / 최약 graham_value(60) | 퀀트: 퀄리티↑82 | 지분: 최대주주 미원홀딩스주식회사 33.94% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "미원에스씨: 브레인 67점 (팩트 69 / 심리 56 / VCI +13) | 팩트 최강 quant_quality(82) / 최약 graham_value(60) | 퀀트: 퀄리티↑82 | 지분: 최대주주 미원홀딩스주식회사 33.94% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 67점 (매수) — 기술적·펀더멘털·수급 양호",
@@ -59416,19 +59468,19 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 27.7,
+      "up_probability": 27.6,
       "prediction_std": 11.5,
       "confidence_interval": [
         0.0,
-        99.3
+        99.4
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7166,
-      "conformal_width_pct": 99.3,
+      "conformal_q_hat": 0.7177,
+      "conformal_width_pct": 99.4,
       "prediction_set": [
         0
       ],
-      "model_accuracy": 48.3,
+      "model_accuracy": 48.5,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -59439,10 +59491,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 45.0,
+          "wf_accuracy": 46.3,
           "val_accuracy": 38.6,
           "wf_folds": 6,
-          "weight": 0.45
+          "weight": 0.4633
         },
         "catboost": {
           "architecture": "gbdt",
@@ -59492,7 +59544,7 @@
       "color": "#888",
       "reasons": [
         "이동평균 정배열 — 상승 추세",
-        "AI 상승확률 27.7% — 강한 하락 신호"
+        "AI 상승확률 27.6% — 강한 하락 신호"
       ]
     },
     "low_52w": 109629.921875,
@@ -59874,7 +59926,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -59935,7 +59987,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -60001,7 +60053,7 @@
         "components": {
           "multi_factor": 54.0,
           "consensus": 55.0,
-          "prediction": 27.7,
+          "prediction": 27.6,
           "backtest": 58.3,
           "timing": 46.0,
           "commodity_margin": 75.1,
@@ -60249,10 +60301,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 54,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -60333,7 +60385,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "미원상사: 브레인 57점 (팩트 58 / 심리 54 / VCI +4) | 팩트 최강 quant_quality(71) / 최약 quant_volatility(41) | 지분: 최대주주 김정돈 18.33% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "미원상사: 브레인 57점 (팩트 58 / 심리 54 / VCI +4) | 팩트 최강 quant_quality(71) / 최약 quant_volatility(41) | 지분: 최대주주 김정돈 18.33% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -60955,7 +61007,7 @@
         91.9
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7767,
+      "conformal_q_hat": 0.7768,
       "conformal_width_pct": 91.9,
       "prediction_set": [
         0
@@ -60964,10 +61016,10 @@
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 55.3,
+          "wf_accuracy": 55.7,
           "val_accuracy": 55.7,
           "wf_folds": 6,
-          "weight": 0.5533
+          "weight": 0.5567
         },
         "lightgbm": {
           "architecture": "gbdt",
@@ -60978,10 +61030,10 @@
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 55.3,
+          "wf_accuracy": 55.0,
           "val_accuracy": 50.0,
           "wf_folds": 6,
-          "weight": 0.5533
+          "weight": 0.55
         },
         "mlp": {
           "architecture": "neural_net",
@@ -61522,7 +61574,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -61555,7 +61607,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -61583,7 +61637,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -61631,8 +61685,10 @@
       },
       "final_score": 61,
       "raw_brain_score": 60.9,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 61,
@@ -61897,10 +61953,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 55,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -61973,15 +62029,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 35.0,
-        "max_pct": 7,
-        "rationale": "Kelly 35.0% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 35.0% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "뉴파워프라즈마: 브레인 61점 (팩트 62 / 심리 55 / VCI +7) | 팩트 최강 quant_quality(84) / 최약 quant_volatility(15) | 퀀트: 모멘텀↑75 | 퀄리티↑84 | 고변동↓15 | V5: Graham가치↑77 | 지분: 최대주주 최대규 21.16% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "뉴파워프라즈마: 브레인 61점 (팩트 62 / 심리 55 / VCI +7) | 팩트 최강 quant_quality(84) / 최약 quant_volatility(15) | 퀀트: 모멘텀↑75 | 퀄리티↑84 | 고변동↓15 | V5: Graham가치↑77 | 지분: 최대주주 최대규 21.16% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -63112,7 +63168,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -63145,7 +63201,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -63173,7 +63231,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -63221,8 +63279,10 @@
       },
       "final_score": 68,
       "raw_brain_score": 67.8,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 68,
@@ -63488,10 +63548,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -63564,15 +63624,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 46.7,
-        "max_pct": 7,
-        "rationale": "Kelly 46.7% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 46.7% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "덕산네오룩스: 브레인 68점 (팩트 70 / 심리 56 / VCI +14) | 팩트 최강 graham_value(87) / 최약 quant_volatility(50) | 퀀트: 모멘텀↓19 | 퀄리티↑78 | V5: Graham가치↑87 | 지분: 최대주주 덕산하이메탈(주) 36.67% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "덕산네오룩스: 브레인 68점 (팩트 70 / 심리 56 / VCI +14) | 팩트 최강 graham_value(87) / 최약 quant_volatility(50) | 퀀트: 모멘텀↓19 | 퀄리티↑78 | V5: Graham가치↑87 | 지분: 최대주주 덕산하이메탈(주) 36.67% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -64569,7 +64629,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -64630,7 +64690,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -64945,10 +65005,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 53,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -65029,7 +65089,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "프로텍: 브레인 57점 (팩트 59 / 심리 53 / VCI +6) | 팩트 최강 graham_value(87) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | V5: Graham가치↑87 | 지분: 최대주주 최승환 30.5% | NAV +1052.4% 할증 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "프로텍: 브레인 57점 (팩트 59 / 심리 53 / VCI +6) | 팩트 최강 graham_value(87) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | V5: Graham가치↑87 | 지분: 최대주주 최승환 30.5% | NAV +1052.4% 할증 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
@@ -66544,7 +66604,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -66605,7 +66665,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -66923,10 +66983,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 54,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -67007,7 +67067,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "한온시스템: 브레인 53점 (팩트 50 / 심리 54 / VCI -4) | 팩트 최강 quant_quality(59) / 최약 quant_volatility(41) | 지분: 최대주주 한국타이어앤테크놀로지(주) 51.07% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "한온시스템: 브레인 53점 (팩트 50 / 심리 54 / VCI -4) | 팩트 최강 quant_quality(59) / 최약 quant_volatility(41) | 지분: 최대주주 한국타이어앤테크놀로지(주) 51.07% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
@@ -67180,7 +67240,7 @@
       "1y": {
         "change_pct": 138.12,
         "high": 2986353.0,
-        "low": 499527.0,
+        "low": 499528.0,
         "avg_volume": 4635507
       }
     },
@@ -67577,20 +67637,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 51.5,
+      "up_probability": 51.6,
       "prediction_std": 14.6,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.766,
+      "conformal_q_hat": 0.7655,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 47.1,
+      "model_accuracy": 46.9,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -67601,10 +67661,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 43.7,
+          "wf_accuracy": 43.0,
           "val_accuracy": 50.0,
           "wf_folds": 6,
-          "weight": 0.4367
+          "weight": 0.43
         },
         "catboost": {
           "architecture": "gbdt",
@@ -67657,10 +67717,10 @@
         "MACD 상승반전 신호"
       ]
     },
-    "low_52w": 517474.59375,
+    "low_52w": 517474.5625,
     "price_1m": 1833000.0,
     "price_3m": 1321713.375,
-    "price_6m": 1291503.875,
+    "price_6m": 1291504.0,
     "fscore_deltas": {
       "delta_roa": 21.5,
       "c5_delta_leverage_negative": true,
@@ -68675,7 +68735,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -68744,7 +68804,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -68810,7 +68870,7 @@
         "components": {
           "multi_factor": 55.0,
           "consensus": 55.0,
-          "prediction": 51.5,
+          "prediction": 51.6,
           "backtest": 69.8,
           "timing": 70.0,
           "commodity_margin": 52.7,
@@ -69062,10 +69122,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 59,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -69146,7 +69206,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "SK하이닉스: 브레인 55점 (팩트 53 / 심리 58 / VCI -5) | 팩트 최강 quant_quality(74) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | 지분: 최대주주 SK스퀘어(주) 20.07% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "SK하이닉스: 브레인 55점 (팩트 53 / 심리 58 / VCI -5) | 팩트 최강 quant_quality(74) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | 지분: 최대주주 SK스퀘어(주) 20.07% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -69717,40 +69777,40 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 82.2,
-      "prediction_std": 11.0,
+      "up_probability": 82.0,
+      "prediction_std": 10.5,
       "confidence_interval": [
-        3.9,
+        2.6,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.783,
-      "conformal_width_pct": 96.1,
+      "conformal_q_hat": 0.7931,
+      "conformal_width_pct": 97.4,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 47.5,
+      "model_accuracy": 46.6,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 42.7,
-          "val_accuracy": 42.9,
+          "wf_accuracy": 40.7,
+          "val_accuracy": 38.6,
           "wf_folds": 6,
-          "weight": 0.4267
+          "weight": 0.4067
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 43.0,
-          "val_accuracy": 38.6,
+          "wf_accuracy": 42.7,
+          "val_accuracy": 35.7,
           "wf_folds": 6,
-          "weight": 0.43
+          "weight": 0.4267
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.7,
-          "val_accuracy": 50.0,
+          "wf_accuracy": 47.3,
+          "val_accuracy": 42.9,
           "wf_folds": 6,
-          "weight": 0.4967
+          "weight": 0.4733
         },
         "mlp": {
           "architecture": "neural_net",
@@ -69769,11 +69829,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 32.8054,
-        "rsi14": 23.3517,
-        "volume_price_trend": 21.22,
-        "macd_hist": 20.3487,
-        "drawdown_20d": 20.1484
+        "volatility_20d": 37.7051,
+        "rsi14": 23.3634,
+        "drawdown_20d": 23.2032,
+        "volume_price_trend": 20.2301,
+        "macd_hist": 20.1235
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -69794,7 +69854,7 @@
       "reasons": [
         "RSI 36.6 저평가 구간",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 82.2% — 강한 매수 신호"
+        "AI 상승확률 82.0% — 강한 매수 신호"
       ]
     },
     "low_52w": 75229.625,
@@ -70746,7 +70806,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -70779,7 +70839,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -70807,7 +70869,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -70855,8 +70917,10 @@
       },
       "final_score": 63,
       "raw_brain_score": 63.0,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 63,
@@ -70873,7 +70937,7 @@
         "components": {
           "multi_factor": 55.0,
           "consensus": 55.0,
-          "prediction": 82.2,
+          "prediction": 82.0,
           "backtest": 64.7,
           "timing": 62.0,
           "commodity_margin": 57.9,
@@ -71125,10 +71189,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 59,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -71201,15 +71265,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 38.3,
-        "max_pct": 7,
-        "rationale": "Kelly 38.3% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 38.3% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "LG: 브레인 63점 (팩트 68 / 심리 58 / VCI +10) | 팩트 최강 graham_value(82) / 최약 canslim_growth(60) | V5: Graham가치↑82 | 지분: 최대주주 구광모 16.27% | NAV +80.9% 할증 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "LG: 브레인 63점 (팩트 68 / 심리 58 / VCI +10) | 팩트 최강 graham_value(82) / 최약 canslim_growth(60) | V5: Graham가치↑82 | 지분: 최대주주 구광모 16.27% | NAV +80.9% 할증 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -73005,7 +73069,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -73066,7 +73130,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -73384,10 +73448,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 53,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -73478,7 +73542,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "셀트리온: 브레인 59점 (팩트 63 / 심리 53 / VCI +10) | 팩트 최강 graham_value(70) / 최약 quant_quality(59) | V5: Graham가치↑70 | 지분: 최대주주 (주)셀트리온홀딩스 24.44% | NAV +595.6% 할증 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "셀트리온: 브레인 59점 (팩트 63 / 심리 53 / VCI +10) | 팩트 최강 graham_value(70) / 최약 quant_quality(59) | V5: Graham가치↑70 | 지분: 최대주주 (주)셀트리온홀딩스 24.44% | NAV +595.6% 할증 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -74414,7 +74478,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 8,
     "quadrant_info": {
@@ -74780,10 +74844,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 65,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -74874,7 +74938,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "DORM: 브레인 55점 (팩트 53 / 심리 59 / VCI -6) | 팩트 최강 quant_quality(66) / 최약 canslim_growth(45) | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "DORM: 브레인 55점 (팩트 53 / 심리 59 / VCI -6) | 팩트 최강 quant_quality(66) / 최약 canslim_growth(45) | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -74977,8 +75041,8 @@
     "price_bar_value": 44950.0,
     "price_bar_date": "2026-11-02",
     "price_bar_as_of": "2026-11-02T00:00:00+09:00",
-    "volume": 2846,
-    "trading_value": 127927700,
+    "volume": 2865,
+    "trading_value": 128781750,
     "market_cap": 226256683008,
     "high_52w": 55335.207463752195,
     "drop_from_high_pct": -18.77,
@@ -75126,8 +75190,8 @@
       "trend_strength": 0,
       "price_change_pct": 1.24,
       "return_5d_pct": 0.67,
-      "atr_14d": 1080.6579,
-      "atr_14d_pct": 2.4,
+      "atr_14d": 1105.6579,
+      "atr_14d_pct": 2.46,
       "atr_14d_source": "operational",
       "atr_14d_method": "wilder_ema_14",
       "signals": [
@@ -75431,14 +75495,14 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 61.0,
-      "prediction_std": 10.3,
+      "up_probability": 58.1,
+      "prediction_std": 8.4,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8033,
+      "conformal_q_hat": 0.7999,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -75448,24 +75512,24 @@
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.7,
+          "wf_accuracy": 50.0,
           "val_accuracy": 47.1,
           "wf_folds": 6,
-          "weight": 0.4967
+          "weight": 0.5
         },
         "lightgbm": {
           "architecture": "gbdt",
           "wf_accuracy": 50.7,
-          "val_accuracy": 40.0,
+          "val_accuracy": 38.6,
           "wf_folds": 6,
           "weight": 0.5067
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.3,
-          "val_accuracy": 57.1,
+          "wf_accuracy": 51.0,
+          "val_accuracy": 54.3,
           "wf_folds": 6,
-          "weight": 0.5133
+          "weight": 0.51
         },
         "mlp": {
           "architecture": "neural_net",
@@ -75484,11 +75548,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 51.8876,
-        "macd_hist": 26.3928,
-        "drawdown_20d": 20.8697,
-        "rsi7": 20.8563,
-        "ma20_ratio": 20.6149
+        "volatility_20d": 52.369,
+        "macd_hist": 27.4841,
+        "drawdown_20d": 23.6449,
+        "ma20_ratio": 20.3036,
+        "rsi14": 18.7235
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -75508,11 +75572,11 @@
       "color": "#86EFAC",
       "reasons": [
         "MACD 상승반전 신호",
-        "AI 상승확률 61.0%",
+        "AI 상승확률 58.1%",
         "수급 우호적"
       ]
     },
-    "low_52w": 36674.5859375,
+    "low_52w": 36674.58984375,
     "price_1m": 43450.0,
     "price_3m": 41700.0,
     "price_6m": 44521.27734375,
@@ -75780,7 +75844,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -75841,7 +75905,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -75907,7 +75971,7 @@
         "components": {
           "multi_factor": 55.0,
           "consensus": 60.0,
-          "prediction": 61.0,
+          "prediction": 58.1,
           "backtest": 51.5,
           "timing": 67.0,
           "commodity_margin": 51.1,
@@ -76159,10 +76223,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 54,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -76243,7 +76307,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "서호전기: 브레인 59점 (팩트 58 / 심리 54 / VCI +4) | 팩트 최강 quant_quality(69) / 최약 quant_volatility(38) | 지분: 최대주주 이상호 54.32% | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "서호전기: 브레인 59점 (팩트 58 / 심리 54 / VCI +4) | 팩트 최강 quant_quality(69) / 최약 quant_volatility(38) | 지분: 최대주주 이상호 54.32% | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -76273,26 +76337,26 @@
         "trigger": "진입 대기 — 현재가 44,950 > MA20 43,915 (구간 위) · RSI 55 > 50 (단기 과열)",
         "active": false
       },
-      "position_pct": 3.1,
+      "position_pct": 3.0,
       "position_pct_range": {
         "min": 0,
         "max": 5,
         "note": "관망 우선 — 진입 시 시범 비중"
       },
       "exit_target": {
-        "price": 47652,
-        "condition": "+1R 부분익절 (deprecated 단일값 — exit_targets 참조). 1R=2,702원",
+        "price": 47714,
+        "condition": "+1R 부분익절 (deprecated 단일값 — exit_targets 참조). 1R=2,764원",
         "deprecated": true
       },
       "exit_targets": {
         "target_1": {
-          "price": 47652,
+          "price": 47714,
           "r_multiple": 1.0,
           "exit_pct": 50.0,
           "reason": "+1.0R reached, lock in gains"
         },
         "target_2": {
-          "price": 50354,
+          "price": 50478,
           "r_multiple": 2.0,
           "exit_pct": 30.0,
           "reason": "+2.0R reached, scale out"
@@ -76303,13 +76367,13 @@
         }
       },
       "stop_loss": {
-        "price": 42248,
+        "price": 42186,
         "method": "atr_dynamic",
-        "atr_value": 1080.6579,
+        "atr_value": 1105.6579,
         "atr_multiplier": 2.5,
-        "stop_loss_pct": -6.01,
-        "condition": "ATR(14) 1080.66 × 2.5 = 2702원 거리 (-6.01%) — 가격 도달 시 수동 손절 검토",
-        "risk_per_share": 2702.0
+        "stop_loss_pct": -6.15,
+        "condition": "ATR(14) 1105.66 × 2.5 = 2764원 거리 (-6.15%) — 가격 도달 시 수동 손절 검토",
+        "risk_per_share": 2764.0
       },
       "transition_triggers": {
         "current_verdict": "WATCH",
@@ -76983,41 +77047,41 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 35.0,
-      "prediction_std": 17.2,
+      "up_probability": 35.2,
+      "prediction_std": 16.9,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6918,
+      "conformal_q_hat": 0.6935,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 46.7,
+      "model_accuracy": 47.1,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.1,
+          "wf_accuracy": 47.7,
           "val_accuracy": 56.2,
           "wf_folds": 7,
-          "weight": 0.4914
+          "weight": 0.4771
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 46.6,
-          "val_accuracy": 69.9,
+          "wf_accuracy": 47.4,
+          "val_accuracy": 68.5,
           "wf_folds": 7,
-          "weight": 0.4657
+          "weight": 0.4743
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 47.4,
-          "val_accuracy": 74.0,
+          "wf_accuracy": 50.3,
+          "val_accuracy": 67.1,
           "wf_folds": 7,
-          "weight": 0.4743
+          "weight": 0.5029
         },
         "mlp": {
           "architecture": "neural_net",
@@ -77036,11 +77100,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 32.2782,
-        "rsi14": 30.8105,
-        "macd_hist": 25.5203,
-        "vol_ratio": 24.7602,
-        "volume_price_trend": 21.4522
+        "volatility_20d": 34.1822,
+        "rsi14": 27.1935,
+        "macd_hist": 25.6384,
+        "vol_ratio": 25.528,
+        "volume_price_trend": 21.8225
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -77054,14 +77118,14 @@
       "test_samples": 73
     },
     "timing": {
-      "timing_score": 51,
-      "action": "HOLD",
-      "label": "관망",
-      "color": "#888",
+      "timing_score": 56,
+      "action": "BUY",
+      "label": "매수 고려",
+      "color": "#86EFAC",
       "reasons": [
         "RSI 61.16 고평가 접근",
         "MACD 상승반전 신호",
-        "AI 상승확률 35.0% — 강한 하락 신호",
+        "AI 상승확률 35.2%",
         "외국인·기관 강한 순매수"
       ]
     },
@@ -77204,7 +77268,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -77231,7 +77295,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "timing_signal": {
       "score": 59.6,
       "signal": "NEUTRAL",
@@ -77303,8 +77369,10 @@
       },
       "final_score": 70,
       "raw_brain_score": 70.0,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 70,
@@ -77321,9 +77389,9 @@
         "components": {
           "multi_factor": 62.0,
           "consensus": 73.0,
-          "prediction": 35.0,
+          "prediction": 35.2,
           "backtest": 66.4,
-          "timing": 51.0,
+          "timing": 56.0,
           "commodity_margin": 56.5,
           "export_trade": 73.0,
           "moat_quality": 70.0,
@@ -77569,10 +77637,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 61,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -77655,15 +77723,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 50.0,
-        "max_pct": 7,
-        "rationale": "Kelly 50.0% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 50.0% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Magnolia Oil & Gas Corporation: 브레인 70점 (팩트 76 / 심리 56 / VCI +20) | 팩트 최강 graham_value(87) / 최약 canslim_growth(65) | 퀀트: 저변동↑79 | V5: Graham가치↑87 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Magnolia Oil & Gas Corporation: 브레인 70점 (팩트 76 / 심리 56 / VCI +20) | 팩트 최강 graham_value(87) / 최약 canslim_growth(65) | 퀀트: 저변동↑79 | V5: Graham가치↑87 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 62점 (매수) — 관찰 필요",
@@ -78701,7 +78769,7 @@
       "credit": {
         "ig_spread_pp": 0.69
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -78734,7 +78802,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "pbr_normalized_neutral": true,
     "data_quality_fixes": [
       "pbr_invalid_to_1.0"
@@ -78762,7 +78832,7 @@
       "yield_penalty": 0.007,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1342.96,
+        "usdkrw": 1341.58,
         "cape_pct": 99.0,
         "us_10y": 4.98,
         "us_10y_percentile": 80.7,
@@ -78810,8 +78880,10 @@
       },
       "final_score": 66,
       "raw_brain_score": 66.2,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 66,
@@ -79080,10 +79152,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
-          "fx_sentiment": 44.45,
-          "commodity_sentiment": 59.72,
+          "fx_sentiment": 45.95,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 73.95,
           "geopolitical_score": 30.0,
           "macro_headlines": 50.0,
@@ -79155,15 +79227,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 43.3,
-        "max_pct": 7,
-        "rationale": "Kelly 43.3% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 43.3% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "오리온: 브레인 66점 (팩트 69 / 심리 53 / VCI +16) | 팩트 최강 quant_volatility(85) / 최약 canslim_growth(53) | 퀀트: 저변동↑85 | V5: Graham가치↑82 | 지분: 최대주주 (주)오리온홀딩스 37.37% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "오리온: 브레인 66점 (팩트 69 / 심리 53 / VCI +16) | 팩트 최강 quant_volatility(85) / 최약 canslim_growth(53) | 퀀트: 저변동↑85 | V5: Graham가치↑82 | 지분: 최대주주 (주)오리온홀딩스 37.37% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -79894,7 +79966,7 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7648,
+      "conformal_q_hat": 0.7653,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -79904,10 +79976,10 @@
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 46.3,
+          "wf_accuracy": 47.1,
           "val_accuracy": 60.3,
           "wf_folds": 7,
-          "weight": 0.4629
+          "weight": 0.4714
         },
         "lightgbm": {
           "architecture": "gbdt",
@@ -79918,10 +79990,10 @@
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 43.1,
+          "wf_accuracy": 42.3,
           "val_accuracy": 52.1,
           "wf_folds": 7,
-          "weight": 0.4314
+          "weight": 0.4229
         },
         "mlp": {
           "architecture": "neural_net",
@@ -80096,7 +80168,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -80123,7 +80195,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "timing_signal": {
       "score": 59.8,
       "signal": "NEUTRAL",
@@ -80195,8 +80269,10 @@
       },
       "final_score": 65,
       "raw_brain_score": 65.3,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 65,
@@ -80462,10 +80538,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -80538,15 +80614,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 41.7,
-        "max_pct": 7,
-        "rationale": "Kelly 41.7% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 41.7% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "SM Energy Company: 브레인 65점 (팩트 71 / 심리 52 / VCI +19) | 팩트 최강 graham_value(87) / 최약 quant_volatility(50) | 퀀트: 모멘텀↑79 | V5: Graham가치↑87 | CANSLIM↑78 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "SM Energy Company: 브레인 65점 (팩트 71 / 심리 52 / VCI +19) | 팩트 최강 graham_value(87) / 최약 quant_volatility(50) | 퀀트: 모멘텀↑79 | V5: Graham가치↑87 | CANSLIM↑78 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
@@ -81341,7 +81417,7 @@
         "이동평균 정배열 — 상승 추세"
       ]
     },
-    "low_52w": 294.36175537109375,
+    "low_52w": 294.3617858886719,
     "price_1m": 360.6600036621094,
     "price_3m": 368.9046630859375,
     "price_6m": 325.5690002441406,
@@ -81474,7 +81550,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -81841,10 +81917,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 61,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -81944,7 +82020,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Visa: 브레인 51점 (팩트 55 / 심리 55 / VCI +0) | 팩트 최강 quant_volatility(70) / 최약 graham_value(44) | 퀀트: 모멘텀↑79 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -44.29 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Visa: 브레인 51점 (팩트 55 / 심리 55 / VCI +0) | 팩트 최강 quant_volatility(70) / 최약 graham_value(44) | 퀀트: 모멘텀↑79 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -44.29 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -82817,7 +82893,7 @@
       "credit": {
         "debt_ratio_pct": 42.0
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -83184,10 +83260,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 62,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -83288,7 +83364,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "S&P Global Inc.: 브레인 53점 (팩트 52 / 심리 55 / VCI -3) | 팩트 최강 quant_volatility(79) / 최약 graham_value(32) | 퀀트: 저변동↑79 | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.5 (Lynch 절대 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "S&P Global Inc.: 브레인 53점 (팩트 52 / 심리 55 / VCI -3) | 팩트 최강 quant_volatility(79) / 최약 graham_value(32) | 퀀트: 저변동↑79 | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.5 (Lynch 절대 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "AVOID",
     "ai_verdict": "멀티팩터 57점 (관망) — 관찰 필요",
@@ -83961,13 +84037,13 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8191,
+      "conformal_q_hat": 0.819,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 50.7,
+      "model_accuracy": 50.6,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -83978,10 +84054,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 50.6,
+          "wf_accuracy": 50.3,
           "val_accuracy": 50.7,
           "wf_folds": 7,
-          "weight": 0.5057
+          "weight": 0.5029
         },
         "catboost": {
           "architecture": "gbdt",
@@ -84036,7 +84112,7 @@
         "AI 상승확률 65.0% — 강한 매수 신호"
       ]
     },
-    "low_52w": 150.06103515625,
+    "low_52w": 150.06105041503906,
     "price_1m": 292.3729553222656,
     "price_3m": 282.2523498535156,
     "price_6m": 276.69586181640625,
@@ -84171,7 +84247,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -84198,7 +84274,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "timing_signal": {
       "score": 61.1,
       "signal": "BUY",
@@ -84270,8 +84348,10 @@
       },
       "final_score": 60,
       "raw_brain_score": 60.0,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 60,
@@ -84537,10 +84617,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -84623,15 +84703,15 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 33.3,
-        "max_pct": 7,
-        "rationale": "Kelly 33.3% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 33.3% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Texas Instruments Incorporated: 브레인 60점 (팩트 63 / 심리 53 / VCI +10) | 팩트 최강 canslim_growth(70) / 최약 quant_volatility(53) | V5: CANSLIM↑70 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Texas Instruments Incorporated: 브레인 60점 (팩트 63 / 심리 53 / VCI +10) | 팩트 최강 canslim_growth(70) / 최약 quant_volatility(53) | V5: CANSLIM↑70 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
@@ -85342,27 +85422,27 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7441,
+      "conformal_q_hat": 0.7439,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 52.1,
+      "model_accuracy": 51.8,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.4,
+          "wf_accuracy": 50.9,
           "val_accuracy": 63.0,
           "wf_folds": 7,
-          "weight": 0.5143
+          "weight": 0.5086
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.1,
+          "wf_accuracy": 48.6,
           "val_accuracy": 56.2,
           "wf_folds": 7,
-          "weight": 0.4914
+          "weight": 0.4857
         },
         "catboost": {
           "architecture": "gbdt",
@@ -85386,7 +85466,7 @@
           "weight": 0.5086
         }
       },
-      "confidence_level": "medium",
+      "confidence_level": "low",
       "top_features": {
         "volatility_20d": 41.8746,
         "macd_hist": 31.9145,
@@ -85549,7 +85629,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -85916,10 +85996,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -86019,7 +86099,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CME Group Inc.: 브레인 47점 (팩트 52 / 심리 52 / VCI +0) | 팩트 최강 canslim_growth(61) / 최약 quant_quality(46) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -48.35 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "CME Group Inc.: 브레인 47점 (팩트 52 / 심리 52 / VCI +0) | 팩트 최강 canslim_growth(61) / 최약 quant_quality(46) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -48.35 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -86695,15 +86775,15 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 82.6,
-      "prediction_std": 12.0,
+      "up_probability": 82.7,
+      "prediction_std": 12.1,
       "confidence_interval": [
-        11.6,
+        11.5,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7099,
-      "conformal_width_pct": 88.4,
+      "conformal_q_hat": 0.7118,
+      "conformal_width_pct": 88.5,
       "prediction_set": [
         1
       ],
@@ -86747,11 +86827,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 33.9982,
-        "return_5d": 33.1716,
-        "macd_hist": 30.9885,
-        "volume_price_trend": 21.9555,
-        "return_1d": 20.7125
+        "volatility_20d": 31.6649,
+        "return_5d": 30.1716,
+        "macd_hist": 27.3218,
+        "rsi14": 22.0284,
+        "volume_price_trend": 21.2888
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -86772,7 +86852,7 @@
       "reasons": [
         "RSI 21.38 과매도 — 반등 가능",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 82.6% — 강한 매수 신호"
+        "AI 상승확률 82.7% — 강한 매수 신호"
       ]
     },
     "low_52w": 273.1611633300781,
@@ -86918,7 +86998,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -87035,7 +87115,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 58.0,
-          "prediction": 82.6,
+          "prediction": 82.7,
           "backtest": 57.1,
           "timing": 69.0,
           "commodity_margin": 50.0,
@@ -87284,10 +87364,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -87378,7 +87458,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Alphabet: 브레인 56점 (팩트 54 / 심리 50 / VCI +4) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Alphabet: 브레인 56점 (팩트 54 / 심리 50 / VCI +4) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -88288,7 +88368,7 @@
       "credit": {
         "debt_ratio_pct": 16.9
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -88654,10 +88734,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -88757,7 +88837,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Amazon: 브레인 50점 (팩트 53 / 심리 49 / VCI +4) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(33) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -47.78 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Amazon: 브레인 50점 (팩트 53 / 심리 49 / VCI +4) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(33) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -47.78 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -89416,14 +89496,14 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 83.8,
+      "up_probability": 83.7,
       "prediction_std": 9.8,
       "confidence_interval": [
         14.5,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6928,
+      "conformal_q_hat": 0.6926,
       "conformal_width_pct": 85.5,
       "prediction_set": [
         1
@@ -89439,10 +89519,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 44.0,
+          "wf_accuracy": 43.7,
           "val_accuracy": 47.9,
           "wf_folds": 7,
-          "weight": 0.44
+          "weight": 0.4371
         },
         "catboost": {
           "architecture": "gbdt",
@@ -89494,7 +89574,7 @@
         "RSI 77.89 과매수 — 차익실현 고려",
         "MACD 상승반전 신호",
         "이동평균 정배열 — 상승 추세",
-        "AI 상승확률 83.8% — 강한 매수 신호"
+        "AI 상승확률 83.7% — 강한 매수 신호"
       ]
     },
     "low_52w": 848.5313110351562,
@@ -89644,7 +89724,7 @@
         "debt_ratio_pct": 160.2,
         "note": "부채비율 160% — 평균 이상"
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -89761,7 +89841,7 @@
         "components": {
           "multi_factor": 55.0,
           "consensus": 58.0,
-          "prediction": 83.8,
+          "prediction": 83.7,
           "backtest": 66.3,
           "timing": 59.0,
           "commodity_margin": 50.0,
@@ -90010,10 +90090,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -90104,7 +90184,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Eli Lilly: 브레인 49점 (팩트 46 / 심리 53 / VCI -7) | 팩트 최강 canslim_growth(71) / 최약 graham_value(16) | 퀀트: 모멘텀↑80 | V5: Graham가치↓16 | CANSLIM↑71 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Eli Lilly: 브레인 49점 (팩트 46 / 심리 53 / VCI -7) | 팩트 최강 canslim_growth(71) / 최약 graham_value(16) | 퀀트: 모멘텀↑80 | V5: Graham가치↓16 | CANSLIM↑71 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -90817,7 +90897,7 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.75,
+      "conformal_q_hat": 0.7497,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -90827,10 +90907,10 @@
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.0,
+          "wf_accuracy": 51.4,
           "val_accuracy": 47.9,
           "wf_folds": 7,
-          "weight": 0.52
+          "weight": 0.5143
         },
         "lightgbm": {
           "architecture": "gbdt",
@@ -90848,10 +90928,10 @@
         },
         "mlp": {
           "architecture": "neural_net",
-          "wf_accuracy": 50.6,
+          "wf_accuracy": 50.9,
           "val_accuracy": 52.1,
           "wf_folds": 7,
-          "weight": 0.5057
+          "weight": 0.5086
         },
         "logistic": {
           "architecture": "linear",
@@ -91035,7 +91115,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -91401,10 +91481,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -91495,7 +91575,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Union Pacific Corporation: 브레인 58점 (팩트 60 / 심리 55 / VCI +5) | 팩트 최강 quant_quality(70) / 최약 graham_value(42) | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Union Pacific Corporation: 브레인 58점 (팩트 60 / 심리 55 / VCI +5) | 팩트 최강 quant_quality(70) / 최약 graham_value(42) | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
@@ -91603,9 +91683,9 @@
     "market_cap": 308565114880,
     "high_52w": 109.37000274658203,
     "drop_from_high_pct": -0.62,
-    "per": 12.0,
-    "pbr": 1.67,
-    "eps": 9.06,
+    "per": 9.43,
+    "pbr": 1.57,
+    "eps": 11.52,
     "div_yield": 2.87,
     "fundamental_missing_fields": [],
     "debt_ratio": 38.1,
@@ -92152,13 +92232,13 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8248,
+      "conformal_q_hat": 0.8252,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 55.7,
+      "model_accuracy": 55.5,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -92183,10 +92263,10 @@
         },
         "mlp": {
           "architecture": "neural_net",
-          "wf_accuracy": 59.7,
+          "wf_accuracy": 58.9,
           "val_accuracy": 68.5,
           "wf_folds": 7,
-          "weight": 0.5971
+          "weight": 0.5886
         },
         "logistic": {
           "architecture": "linear",
@@ -92230,7 +92310,7 @@
     "low_52w": 68.43347930908203,
     "price_1m": 96.2300033569336,
     "price_3m": 89.05949401855469,
-    "price_6m": 87.68936157226562,
+    "price_6m": 87.68936920166016,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -92362,7 +92442,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -92388,7 +92468,9 @@
       "quadrant_source": "fred.gdp_growth",
       "growth_input_note": "fred.gdp_growth = RECPROUSM156N(침체확률) 의 선형변환 2.5−0.08×rp. GDP 실측이 아니다"
     },
-    "overrides_applied": [],
+    "overrides_applied": [
+      "oil_shock"
+    ],
     "timing_signal": {
       "score": 63.3,
       "signal": "BUY",
@@ -92411,7 +92493,7 @@
       "cape_penalty": 0.1,
       "yield_penalty": 0.007,
       "inputs": {
-        "pbr": 1.67,
+        "pbr": 1.57,
         "usdkrw": null,
         "cape_pct": 99.0,
         "us_10y": 4.98,
@@ -92460,8 +92542,10 @@
       },
       "final_score": 69,
       "raw_brain_score": 68.9,
-      "grade": "BUY",
-      "grade_caps_applied": []
+      "grade": "WATCH",
+      "grade_caps_applied": [
+        "oil_shock"
+      ]
     },
     "verity_brain": {
       "brain_score": 69,
@@ -92728,10 +92812,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -92804,22 +92888,22 @@
       },
       "red_flag_penalty": 0,
       "position_guide": {
-        "recommended_pct": 7,
+        "recommended_pct": 3,
         "kelly_raw_pct": 48.3,
-        "max_pct": 7,
-        "rationale": "Kelly 48.3% → BUY 상한 7% 적용",
+        "max_pct": 3,
+        "rationale": "Kelly 48.3% → WATCH 상한 3% 적용",
         "is_executor": false,
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Shell plc: 브레인 69점 (팩트 74 / 심리 57 / VCI +17) | 팩트 최강 graham_value(97) / 최약 quant_quality(60) | 퀀트: 모멘텀↑78 | V5: Graham가치↑97 | CANSLIM↑78 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Shell plc: 브레인 69점 (팩트 74 / 심리 57 / VCI +17) | 팩트 최강 graham_value(97) / 최약 quant_quality(60) | 퀀트: 모멘텀↑78 | V5: Graham가치↑97 | CANSLIM↑78 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
     "confidence": 59,
     "risk_flags": [],
     "company_tagline": "",
-    "gold_insight": "PER 12.0배 저평가",
+    "gold_insight": "PER 9.43배 저평가",
     "silver_insight": "뉴스 긍정 64점 | 애널리스트 매수 우세 (15/25) | 실적 서프라이즈 +127.4%",
     "detected_risk_keywords": [],
     "analyst_view": "WATCH",
@@ -93477,7 +93561,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -93848,10 +93932,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 52,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -93932,7 +94016,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Warner Bros. Discovery Inc: 브레인 50점 (팩트 49 / 심리 51 / VCI -2) | 팩트 최강 canslim_growth(55) / 최약 graham_value(42) | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Warner Bros. Discovery Inc: 브레인 50점 (팩트 49 / 심리 51 / VCI -2) | 팩트 최강 canslim_growth(55) / 최약 graham_value(42) | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -94519,7 +94603,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 8,
     "quadrant_info": {
@@ -94886,10 +94970,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 56,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -94970,7 +95054,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Ingredion Incorporated: 브레인 59점 (팩트 61 / 심리 54 / VCI +7) | 팩트 최강 graham_value(77) / 최약 canslim_growth(42) | V5: Graham가치↑77 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Ingredion Incorporated: 브레인 59점 (팩트 61 / 심리 54 / VCI +7) | 팩트 최강 graham_value(77) / 최약 canslim_growth(42) | V5: Graham가치↑77 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -95075,7 +95159,7 @@
       "beta": 0.0665
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -96021,7 +96105,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -96387,10 +96471,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 51,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -96484,7 +96568,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Adobe: 브레인 48점 (팩트 47 / 심리 49 / VCI -2) | 팩트 최강 quant_quality(60) / 최약 graham_value(39) | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.5 (Lynch 절대 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Adobe: 브레인 48점 (팩트 47 / 심리 49 / VCI -2) | 팩트 최강 quant_quality(60) / 최약 graham_value(39) | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.5 (Lynch 절대 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "AVOID",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -96540,7 +96624,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -97434,7 +97518,7 @@
       "credit": {
         "debt_ratio_pct": 51.8
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -97802,10 +97886,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -97898,7 +97982,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Coinbase: 브레인 38점 (팩트 38 / 심리 53 / VCI -15) | 팩트 최강 canslim_growth(50) / 최약 quant_volatility(32) | 퀀트: 모멘텀↓23 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -52.52 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Coinbase: 브레인 38점 (팩트 38 / 심리 53 / VCI -15) | 팩트 최강 canslim_growth(50) / 최약 quant_volatility(32) | 퀀트: 모멘텀↓23 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -52.52 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 31점 (주의) — 리스크 주의",
@@ -97954,7 +98038,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -98977,7 +99061,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -99342,10 +99426,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 62,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -99429,7 +99513,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Walt Disney: 브레인 57점 (팩트 58 / 심리 56 / VCI +2) | 팩트 최강 quant_volatility(79) / 최약 graham_value(50) | 퀀트: 저변동↑79 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Walt Disney: 브레인 57점 (팩트 58 / 심리 56 / VCI +2) | 팩트 최강 quant_volatility(79) / 최약 graham_value(50) | 퀀트: 저변동↑79 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
@@ -99519,7 +99603,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -100436,7 +100520,7 @@
       "credit": {
         "debt_ratio_pct": 58.7
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -100802,10 +100886,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -100898,7 +100982,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Cisco: 브레인 47점 (팩트 52 / 심리 53 / VCI -1) | 팩트 최강 canslim_growth(67) / 최약 quant_volatility(41) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -62.23 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Cisco: 브레인 47점 (팩트 52 / 심리 53 / VCI -1) | 팩트 최강 canslim_growth(67) / 최약 quant_volatility(41) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -62.23 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
@@ -100954,7 +101038,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -101786,7 +101870,7 @@
       "credit": {
         "debt_ratio_pct": 40.8
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -102153,10 +102237,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 49,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -102249,7 +102333,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Intel: 브레인 38점 (팩트 40 / 심리 45 / VCI -5) | 팩트 최강 canslim_growth(50) / 최약 graham_value(31) | V5: Graham가치↓31 | US 미수집: 옵션플로우 | 하향조정: FCF $-4,949M (음수) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Intel: 브레인 38점 (팩트 40 / 심리 45 / VCI -5) | 팩트 최강 canslim_growth(50) / 최약 graham_value(31) | V5: Graham가치↓31 | US 미수집: 옵션플로우 | 하향조정: FCF $-4,949M (음수) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 42점 (주의) — 리스크 주의",
@@ -102305,7 +102389,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -103200,7 +103284,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -103566,10 +103650,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -103653,7 +103737,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Johnson & Johnson: 브레인 49점 (팩트 48 / 심리 53 / VCI -5) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(38) | 퀀트: 모멘텀↑78 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Johnson & Johnson: 브레인 49점 (팩트 48 / 심리 53 / VCI -5) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(38) | 퀀트: 모멘텀↑78 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -103743,7 +103827,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -104654,7 +104738,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -105020,10 +105104,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -105116,7 +105200,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Meta Platforms: 브레인 54점 (팩트 60 / 심리 52 / VCI +8) | 팩트 최강 graham_value(67) / 최약 quant_volatility(50) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -44.97 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Meta Platforms: 브레인 54점 (팩트 60 / 심리 52 / VCI +8) | 팩트 최강 graham_value(67) / 최약 quant_volatility(50) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -44.97 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 39점 (주의) — 리스크 주의",
@@ -105172,7 +105256,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -106089,7 +106173,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -106454,10 +106538,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 62,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -106550,7 +106634,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Microsoft: 브레인 59점 (팩트 63 / 심리 55 / VCI +8) | 팩트 최강 quant_volatility(70) / 최약 graham_value(60) | 퀀트: 모멘텀↑80 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -47.07 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Microsoft: 브레인 59점 (팩트 63 / 심리 55 / VCI +8) | 팩트 최강 quant_volatility(70) / 최약 graham_value(60) | 퀀트: 모멘텀↑80 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -47.07 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
@@ -106606,7 +106690,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -107493,7 +107577,7 @@
       "credit": {
         "debt_ratio_pct": 54.3
       },
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -107859,10 +107943,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -107946,7 +108030,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Netflix: 브레인 57점 (팩트 59 / 심리 52 / VCI +7) | 팩트 최강 graham_value(67) / 최약 quant_volatility(53) | 퀀트: 모멘텀↓22 | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Netflix: 브레인 57점 (팩트 59 / 심리 52 / VCI +7) | 팩트 최강 graham_value(67) / 최약 quant_volatility(53) | 퀀트: 모멘텀↓22 | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 40점 (주의) — 리스크 주의",
@@ -108036,7 +108120,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -108966,7 +109050,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -109331,10 +109415,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -109428,7 +109512,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Procter & Gamble: 브레인 47점 (팩트 44 / 심리 55 / VCI -11) | 팩트 최강 quant_quality(60) / 최약 graham_value(27) | V5: Graham가치↓27 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 10.5 (Lynch 절대 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Procter & Gamble: 브레인 47점 (팩트 44 / 심리 55 / VCI -11) | 팩트 최강 quant_quality(60) / 최약 graham_value(27) | V5: Graham가치↓27 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 10.5 (Lynch 절대 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "AVOID",
     "ai_verdict": "멀티팩터 61점 (매수) — 관찰 필요",
@@ -109484,7 +109568,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -110403,7 +110487,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -110769,10 +110853,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 52,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -110866,7 +110950,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Qualcomm: 브레인 49점 (팩트 56 / 심리 50 / VCI +6) | 팩트 최강 quant_volatility(61) / 최약 canslim_growth(47) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -57.72 (대량 매도) | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Qualcomm: 브레인 49점 (팩트 56 / 심리 50 / VCI +6) | 팩트 최강 quant_volatility(61) / 최약 canslim_growth(47) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -57.72 (대량 매도) | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 57점 (관망) — 관찰 필요",
@@ -110922,7 +111006,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -111834,7 +111918,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "us_fscore": 2,
     "quadrant_info": {
@@ -112200,10 +112284,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 50,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -112305,7 +112389,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Super Micro Computer: 브레인 42점 (팩트 54 / 심리 48 / VCI +6) | 팩트 최강 graham_value(87) / 최약 quant_volatility(24) | 퀀트: 고변동↓24 | V5: Graham가치↑87 | US 미수집: 옵션플로우 | 하향조정: FCF $-6,972M (음수); 실적 발표 D-1 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "Super Micro Computer: 브레인 42점 (팩트 54 / 심리 48 / VCI +6) | 팩트 최강 graham_value(87) / 최약 quant_volatility(24) | 퀀트: 고변동↓24 | V5: Graham가치↑87 | US 미수집: 옵션플로우 | 하향조정: FCF $-6,972M (음수); 실적 발표 D-1 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -112361,7 +112445,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -113271,7 +113355,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-02T22:15:32+09:00"
+      "updated_at": "2026-11-02T23:16:50+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -113637,10 +113721,10 @@
           "market_mood": 55,
           "consensus_opinion": 50.0,
           "crypto_macro": 46,
-          "market_fear_greed": 24.0,
+          "market_fear_greed": 26.0,
           "social_sentiment": 62,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 59.72,
+          "commodity_sentiment": 60.24,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
           "macro_headlines": 50.0,
@@ -113724,7 +113808,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "UnitedHealth: 브레인 56점 (팩트 56 / 심리 57 / VCI -1) | 팩트 최강 canslim_growth(68) / 최약 quant_volatility(45) | US 미수집: 옵션플로우 | 매크로 원유 뉴스 반응: WTI $99.45 -4.49% — OPEC/재고 뉴스 반응 (정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)"
+      "reasoning": "UnitedHealth: 브레인 56점 (팩트 56 / 심리 57 / VCI -1) | 팩트 최강 canslim_growth(68) / 최약 quant_volatility(45) | US 미수집: 옵션플로우 | 매크로 원유 급변동: WTI $97.8 -6.07% 급락 (정유주 충격) — 정치·공급 충격"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -113814,7 +113898,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-02T22:09:54+09:00",
+      "as_of": "2026-11-02T23:10:05+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
