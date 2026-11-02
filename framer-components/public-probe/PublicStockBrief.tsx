@@ -1,3 +1,4 @@
+import { REPORT_SHELL, REPORT_PRESENTATION_CSS } from "./ReportPresentation.tsx"
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { useEffect, useState } from "react"
 
@@ -46,6 +47,7 @@ function resolveTicker(): string {
 }
 
 export default function PublicStockBrief(props: {
+    reportLayout?: boolean
     width?: number
     dark?: boolean
     apiBase?: string
@@ -87,6 +89,7 @@ export default function PublicStockBrief(props: {
         color: C.ink,
         padding: 14,
         boxSizing: "border-box",
+        ...(props.reportLayout ? REPORT_SHELL : {}),
     }
     const btnBase: any = {
         border: "none",
@@ -101,16 +104,17 @@ export default function PublicStockBrief(props: {
         gap: 6,
     }
 
-    if (assetKind === "etf" || assetKind === "etn" || /^CMD_/.test(String(tk).toUpperCase())) return null // ETF/ETN = 기업 전용 섹션 숨김
+    if (assetKind === "etf" || assetKind === "etn" || assetKind === "index" || /^(CMD|IDX)_/.test(String(tk).toUpperCase())) return null // Non-company assets have no corporate report/map action.
 
     return (
-        <div style={wrap}>
+        <div className={props.reportLayout ? "an-report-layout an-rp-sbf" : undefined} data-rp-theme={props.reportLayout && props.dark ? "dark" : undefined} style={wrap}>
             <style>{AN_PALETTE}</style>
+            {props.reportLayout && <style>{REPORT_PRESENTATION_CSS + ".an-report-layout.an-rp-sbf{--an-sbf-ink:var(--an-rp-text);--an-sbf-sub:var(--an-rp-sub);--an-sbf-faint:var(--an-rp-sub);--an-sbf-card:var(--an-rp-card);--an-sbf-bg:var(--an-rp-soft);--an-sbf-chip:var(--an-rp-soft);--an-sbf-hover:var(--an-rp-hover);--an-sbf-focus:var(--an-rp-focus)}"}</style>}
             <div
                 data-noprint
                 style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
             >
-                <button
+                <button className={props.reportLayout ? "rp-action" : undefined}
                     onClick={() => {
                         if (tk && typeof window !== "undefined")
                             window.open(
@@ -122,6 +126,7 @@ export default function PublicStockBrief(props: {
                     disabled={!tk}
                     style={{
                         ...btnBase,
+                        ...(props.reportLayout ? { minHeight: 44, borderRadius: 10 } : {}),
                         cursor: tk ? "pointer" : "default",
                         opacity: tk ? 1 : 0.5,
                         background: C.violetSoft,
@@ -131,10 +136,22 @@ export default function PublicStockBrief(props: {
                     <PhPrinter size={14} />
                     분석 리포트 PDF
                 </button>
+                <a
+                    className="an-stock-mindmap-entry"
+                    href={tk ? "/mindmap?market=" + (/^\d{6}$/.test(tk) ? "KR" : "US") + "&ticker=" + encodeURIComponent(tk) : undefined}
+                    target="_blank" rel="noopener noreferrer"
+                    aria-disabled={!tk || onCanvas}
+                    aria-label="이 종목 마인드맵 베타 · 새 탭에서 열기"
+                    onClick={(event) => { if (!tk || onCanvas) event.preventDefault() }}
+                    style={{ ...btnBase, minHeight: 44, boxSizing: "border-box", textDecoration: "none", cursor: tk ? "pointer" : "default", opacity: tk ? 1 : 0.5 }}
+                >
+                    마인드맵 베타
+                </a>
+                <style>{`.an-stock-mindmap-entry{background:#f8f9fb;color:#191f28;transition:background-color 160ms,color 160ms}.an-stock-mindmap-entry:focus-visible{background:#e9edf2;outline:none}body[data-framer-theme="dark"] .an-stock-mindmap-entry,[data-rp-theme="dark"] .an-stock-mindmap-entry{background:#1d242c;color:#e3e7ec}body[data-framer-theme="dark"] .an-stock-mindmap-entry:focus-visible,[data-rp-theme="dark"] .an-stock-mindmap-entry:focus-visible{background:#303945}@media(hover:hover){.an-stock-mindmap-entry:hover{background:#f1f3f5}body[data-framer-theme="dark"] .an-stock-mindmap-entry:hover,[data-rp-theme="dark"] .an-stock-mindmap-entry:hover{background:#252c35}}@media(prefers-reduced-motion:reduce){.an-stock-mindmap-entry{transition:none}}`}</style>
             </div>
             <div
                 data-noprint
-                style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, marginTop: 7, lineHeight: 1.5, textAlign: "center" }}
+                style={{ fontSize: props.reportLayout ? 12 : 10.5, color: C.faint, fontWeight: 600, marginTop: 7, lineHeight: 1.5, textAlign: "center" }}
             >
                 실적 변화·공시 원문·확인할 질문과 내 AI용 분석 자료
             </div>
@@ -143,8 +160,8 @@ export default function PublicStockBrief(props: {
 }
 
 addPropertyControls(PublicStockBrief, {
+    reportLayout: { type: ControlType.Boolean, title: "Report Layout", defaultValue: false },
     width: { type: ControlType.Number, title: "Width", defaultValue: 380 },
     dark: { type: ControlType.Boolean, title: "Dark(미사용)", defaultValue: false, enabledTitle: "On", disabledTitle: "Off" },
     apiBase: { type: ControlType.String, title: "API Base", defaultValue: DEFAULT_API },
 })
-
