@@ -283,6 +283,8 @@ def _literal_span(value, doc):
 def _sentence(value, doc):
     from .portfolio_ai_fallback import _sentences
     _literal_span(value, doc)
+    # Compare sentence boundaries without changing the literal quote or source.
+    value = value.strip()
     # Reject partial sentences, repeated spans and embedded prompt instructions.
     enclosing = [s for s in _sentences(doc["text"]) if value in s and s[-1] in ".!?"]
     if len(enclosing) != 1:
