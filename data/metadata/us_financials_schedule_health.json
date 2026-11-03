@@ -1,36 +1,36 @@
 {
-  "checked_at": "2026-11-03T10:14:22.577119Z",
-  "slot": "2026-11-02T10:30:00Z",
-  "status": "delivered",
-  "severity": "PASS",
+  "checked_at": "2026-11-03T11:14:08.273436Z",
+  "slot": "2026-11-03T10:30:00Z",
+  "status": "attempt_limit",
+  "severity": "FAIL",
   "acceptance_scope": "workflow_delivery_only",
   "inspected_runs": [
     {
-      "id": 41519474315,
-      "event": "schedule",
-      "status": "completed",
-      "conclusion": "success",
-      "head_sha": "1afa780d736c199084d9da0b68839ca7ea8eb0ef",
-      "created_at": "2026-11-02T20:28:15Z",
-      "duplicate_noop": true
-    },
-    {
-      "id": 41431292035,
+      "id": 41621846790,
       "event": "repository_dispatch",
       "status": "completed",
-      "conclusion": "success",
-      "head_sha": "8af16f0df1b9ca1ac4ed42a12bfb661d0d3e5eb5",
-      "created_at": "2026-11-02T10:45:06Z"
+      "conclusion": "failure",
+      "head_sha": "760e5faa8e67c1bb063c435ee36f549f6480ea29",
+      "created_at": "2026-11-03T10:45:04Z"
+    },
+    {
+      "id": 41619769658,
+      "event": "repository_dispatch",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "2b50ed4b92dffe7bcc2f0c3da26813fb57cfe491",
+      "created_at": "2026-11-03T10:30:05Z"
     }
   ],
-  "attempt_count": 1,
-  "delivery_run_id": 41431292035,
+  "attempt_count": 2,
+  "delivery_run_id": null,
   "expected_slot_count": 1,
   "inspected_run_count": 2,
-  "reason": "required_workflow_steps_delivered",
+  "reason": "attempt_limit",
   "alert_state": {
     "2026-10-19T10:30:00Z|unknown": "2026-10-19T20:14:04.764398Z",
-    "2026-10-28T10:30:00Z|attempt_limit": "2026-10-28T11:14:25.868611Z"
+    "2026-10-28T10:30:00Z|attempt_limit": "2026-10-28T11:14:25.868611Z",
+    "2026-11-03T10:30:00Z|attempt_limit": "2026-11-03T11:14:08.273436Z"
   },
-  "alert_outcome": "not_incident"
+  "alert_outcome": "sent"
 }
