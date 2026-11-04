@@ -61,7 +61,7 @@ TELEGRAM_VOLUME_SCHEMA = pa.DataFrameSchema({
 
 # 실측 관측값. hard check 가 아니라 **경고 대상** — 새 값은 통과시킨다.
 TELEGRAM_VOLUME_ENUMS = {
-    "outcome": {"sent", "dedupe_skip", "quiet_skip", "no_token", "api_fail"},
+    "outcome": {"sent", "dedupe_skip", "quiet_skip", "no_token", "api_fail", "policy_skip"},
 }
 
 

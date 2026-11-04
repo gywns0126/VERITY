@@ -1150,7 +1150,7 @@ def _format_recovery_summary(report: Dict[str, Any]) -> List[str]:
         "<b>✅ cron health — RECOVERED</b>",
         f"<i>checked {_esc(report['checked_at'])}</i>",
         "",
-        "이전 cron health 비정상 상태가 회복됐습니다.",
+        f"이전 중요 장애가 해소됐습니다. 현재 상태: {_esc(report.get('severity') or 'unknown')}",
     ]
 
 
@@ -1197,7 +1197,7 @@ def _finding_is_failure_driver(issue: str) -> bool:
 
 def _incident_fingerprint(report: Dict[str, Any]) -> Optional[str]:
     severity = str(report.get("severity") or "")
-    if severity == "PASS":
+    if severity != "FAIL" and not _has_critical_signal(report):
         return None
     all_issues = sorted({
         issue for issue in (
@@ -1210,7 +1210,18 @@ def _incident_fingerprint(report: Dict[str, Any]) -> Optional[str]:
     # actual FAIL-driving set.  Fall back to every finding if a future FAIL source
     # is not yet classified, so an unknown critical failure is never hidden.
     failure_drivers = [issue for issue in all_issues if _finding_is_failure_driver(issue)]
-    issues = failure_drivers if severity == "FAIL" and failure_drivers else all_issues
+    critical_issues = [
+        issue for issue in all_issues
+        if _has_critical_signal({"findings": [issue.replace("kis", "KIS").replace("p0", "P0")]})
+    ]
+    issues = sorted(set(failure_drivers + critical_issues))
+    if severity == "FAIL" and not issues:
+        issues = all_issues
+    if report.get("kis_lock_commits_24h") == 0:
+        issues.append("kis-lock-missing")
+    fred_age = report.get("fred_age_h")
+    if isinstance(fred_age, (int, float)) and fred_age > 24:
+        issues.append("fred-over-24h")
     payload = json.dumps(
         {"severity": severity, "issues": issues},
         ensure_ascii=False, sort_keys=True, separators=(",", ":"),
@@ -1232,10 +1243,11 @@ def _load_previous_alert_entry(path: Optional[str] = None) -> Optional[Dict[str,
 
 
 def _entry_incident_fingerprint(entry: Optional[Dict[str, Any]]) -> Optional[str]:
-    if not entry or entry.get("severity") == "PASS":
+    if not entry:
         return None
-    saved = entry.get("alert_incident_fingerprint")
-    return str(saved) if saved else _incident_fingerprint(entry)
+    # Recompute from retained evidence so rows written by the previous policy
+    # do not become artificial transitions on deployment.
+    return _incident_fingerprint(entry)
 
 
 def _plan_alert(
@@ -1249,10 +1261,9 @@ def _plan_alert(
     current_fp = _incident_fingerprint(report)
     previous_fp = _entry_incident_fingerprint(previous)
     previous_status = str((previous or {}).get("alert_notification_status") or "")
-    severity = report.get("severity")
     recovery_fp = None
 
-    if severity != "PASS":
+    if current_fp is not None:
         if always_notify:
             event, wanted = "snapshot", True
         elif previous_fp is None:
@@ -1271,8 +1282,6 @@ def _plan_alert(
                 and previous_status not in _ALERT_SENT_STATES:
             recovery_fp = (previous or {}).get("alert_recovered_fingerprint")
             event, wanted = "recovered", bool(recovery_fp)
-        elif always_notify:
-            event, wanted = "snapshot", True
         else:
             event, wanted = "healthy", False
 
@@ -1281,7 +1290,7 @@ def _plan_alert(
         notification_status = "pending"
     elif wanted:
         notification_status = "disabled"
-    elif severity != "PASS" and previous_status in _ALERT_SENT_STATES:
+    elif current_fp is not None and previous_status in _ALERT_SENT_STATES:
         notification_status = "already_sent"
     else:
         notification_status = "not_needed"
@@ -1299,7 +1308,8 @@ def _notify_telegram(lines: List[str]) -> bool:
         sys.path.insert(0, _REPO_ROOT)
         from api.notifications.telegram import send_message
         msg = "\n".join(lines)
-        sent = bool(send_message(msg, dedupe=False, bypass_quiet=True))
+        sent = bool(send_message(msg, dedupe=False, bypass_quiet=True,
+                                 notification_kind="essential"))
         sys.stderr.write(f"[cron_health] telegram sent={sent}\n")
         return sent
     except Exception as e:
@@ -1454,6 +1464,14 @@ def main() -> int:
             _format_recovery_summary(report)
             if alert_plan["event"] == "recovered" else lines
         )
+        if alert_plan["event"] != "recovered" and report["severity"] == "PASS":
+            telegram_lines = list(telegram_lines)
+            telegram_lines[0] = "<b>🚨 cron health — 중요 신호 감지</b>"
+            if report.get("kis_lock_commits_24h") == 0:
+                telegram_lines.append("• KIS 잠금 커밋: 최근 24시간 0건")
+            fred_age = report.get("fred_age_h")
+            if isinstance(fred_age, (int, float)) and fred_age > 24:
+                telegram_lines.append(f"• FRED 상태 기록 경과: {_esc(fred_age)}시간")
         sent = _notify_telegram(telegram_lines)
         _mark_persisted_notification(report, "sent" if sent else "failed")
 
@@ -1473,7 +1491,7 @@ def main() -> int:
     if prev == "FAIL":
         sys.stderr.write("[cron_health] consecutive FAIL — exit 1 (지속 결함)\n")
         return 1
-    sys.stderr.write("[cron_health] single FAIL — exit 0 (Telegram 발송 완료, noise 차단)\n")
+    sys.stderr.write("[cron_health] single FAIL — exit 0 (중복 workflow 알림 차단)\n")
     return 0
 
 

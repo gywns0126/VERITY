@@ -144,7 +144,7 @@ def test_notification_result_updates_only_matching_latest_persisted_row(tmp_path
 
 
 def test_main_persists_before_send_and_records_failed_delivery(monkeypatch):
-    current = report("WARNING", ["event_study stale"])
+    current = report("WARNING", ["⚠ KIS 토큰 발급 2회/24h"])
     current.update({
         "daily_summary": {"success": 1, "total": 1, "failure": 0},
         "universe_scan_summary": {"success": 1, "total": 1},

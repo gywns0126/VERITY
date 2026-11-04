@@ -82,7 +82,7 @@ def main() -> int:
         lines.append(f"참고 KNOWN: {', '.join(audit['known_unresolved'])}")
 
     from api.notifications.telegram import send_message
-    ok = send_message("\n".join(lines))
+    ok = send_message("\n".join(lines), notification_kind="essential")
     print(f"[measurement_audit_push] 발송={'성공' if ok else '실패/미설정'} · 대상 {failing}")
     return 0
 
