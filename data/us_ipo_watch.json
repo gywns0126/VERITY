@@ -1,30 +1,57 @@
 {
  "_meta": {
-  "generated_at": "2026-11-03T21:14:25+09:00",
+  "generated_at": "2026-11-04T21:26:52+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 30,
+  "sessions_scanned": 31,
   "sessions_missed": [
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 757,
-   "companies": 228,
+   "filings": 774,
+   "companies": 230,
    "by_stage": {
-    "신청": 86,
+    "신청": 87,
     "정정(심사중)": 108,
     "가격확정": 6,
-    "거래소등록": 28
+    "거래소등록": 29
    },
    "spac_likely": 27,
-   "has_ticker_now": 177,
+   "has_ticker_now": 179,
    "priced_secondary_excluded": 6,
-   "foreign_issuer": 57,
+   "foreign_issuer": 59,
    "priced_parse_ok": 7
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
  },
  "items": [
+  {
+   "cik": "2073616",
+   "name": "Canary Staked INJ ETF",
+   "forms": {
+    "8-A12B": 1,
+    "S-1/A": 3
+   },
+   "first_filed": "20260924",
+   "last_filed": "20261103",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 3,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2073616&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6199",
+    "sic_desc": "Finance Services",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "BRENTWOOD, TN",
+    "state_of_inc": "DE"
+   }
+  },
   {
    "cik": "2124080",
    "name": "Aspen Neuroscience, Inc.",
@@ -494,7 +521,7 @@
    "pricing": {
     "parse_ok": false,
     "reason": "주식수 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2141616/0001193125-26-422334.txt"
+    "source_url": "https://www.sec.gov/Archives/edgar/data/2141616/000119312526422334/project_alchemy_-_424b4.htm"
    }
   },
   {
@@ -734,7 +761,7 @@
    "pricing": {
     "parse_ok": false,
     "reason": "주식수 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2076561/0001477932-26-006063.txt"
+    "source_url": "https://www.sec.gov/Archives/edgar/data/2076561/000147793226006063/ptree_424b4.htm"
    }
   },
   {
@@ -1144,6 +1171,85 @@
    "pre_existing_reporter": true
   },
   {
+   "cik": "2065232",
+   "name": "Fitness Fanatics Ltd",
+   "forms": {
+    "F-1/A": 2
+   },
+   "first_filed": "20260922",
+   "last_filed": "20261103",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2065232&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "5190",
+    "sic_desc": "Wholesale-Miscellaneous Nondurable Goods",
+    "is_blank_check": false,
+    "ticker": "FIT",
+    "region": "FO TAN, NEW TERRITORIES",
+    "state_of_inc": null
+   }
+  },
+  {
+   "cik": "2114145",
+   "name": "Tracx Logis Ltd.",
+   "forms": {
+    "F-1/A": 4
+   },
+   "first_filed": "20260922",
+   "last_filed": "20261103",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 4,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2114145&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "4210",
+    "sic_desc": "Trucking & Courier Services (No Air)",
+    "is_blank_check": false,
+    "ticker": "TRCX",
+    "region": "JURONG EAST",
+    "state_of_inc": "U0"
+   }
+  },
+  {
+   "cik": "1930510",
+   "name": "VCI Global Ltd",
+   "forms": {
+    "F-1/A": 1,
+    "F-1": 1
+   },
+   "first_filed": "20260929",
+   "last_filed": "20261103",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1930510&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "8744",
+    "sic_desc": "Services-Facilities Support Management Services",
+    "is_blank_check": false,
+    "ticker": "VCIG",
+    "region": "KUALA LUMPUR",
+    "state_of_inc": "N8"
+   }
+  },
+  {
    "cik": "2023153",
    "name": "HomesToLife Ltd",
    "forms": {
@@ -1191,34 +1297,8 @@
     "sic": "7372",
     "sic_desc": "Services-Prepackaged Software",
     "is_blank_check": false,
-    "ticker": null,
+    "ticker": "ANT",
     "region": "SAN FRANCISCO, CA",
-    "state_of_inc": "DE"
-   }
-  },
-  {
-   "cik": "2073616",
-   "name": "Canary Staked INJ ETF",
-   "forms": {
-    "S-1/A": 3
-   },
-   "first_filed": "20260924",
-   "last_filed": "20261102",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 3,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2073616&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6199",
-    "sic_desc": "Finance Services",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "BRENTWOOD, TN",
     "state_of_inc": "DE"
    }
   },
@@ -1515,32 +1595,6 @@
    }
   },
   {
-   "cik": "2114145",
-   "name": "Tracx Logis Ltd.",
-   "forms": {
-    "F-1/A": 3
-   },
-   "first_filed": "20260922",
-   "last_filed": "20261029",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 3,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2114145&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "4210",
-    "sic_desc": "Trucking & Courier Services (No Air)",
-    "is_blank_check": false,
-    "ticker": "TRCX",
-    "region": "JURONG EAST",
-    "state_of_inc": "U0"
-   }
-  },
-  {
    "cik": "1620704",
    "name": "MED-X, INC.",
    "forms": {
@@ -1562,7 +1616,7 @@
     "sic": "2870",
     "sic_desc": "Agricultural Chemicals",
     "is_blank_check": false,
-    "ticker": null,
+    "ticker": "MXRX",
     "region": "CANOGA PARK, CA",
     "state_of_inc": "NV"
    }
@@ -1793,16 +1847,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2049977&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2834",
-    "sic_desc": "Pharmaceutical Preparations",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "PARAMUS, NJ",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2049977&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1880995",
@@ -1819,16 +1864,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1880995&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2836",
-    "sic_desc": "Biological Products, (No Diagnostic Substances)",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "CAMBRIDGE, MA",
-    "state_of_inc": null
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1880995&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1842556",
@@ -3082,23 +3118,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2125056&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2065232",
-   "name": "Fitness Fanatics Ltd",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260922",
-   "last_filed": "20260922",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2065232&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "1876431",
    "name": "Prenetics Global Ltd",
    "forms": {
@@ -3233,6 +3252,40 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2074652&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2023796",
+   "name": "Fitness Champs Holdings Ltd",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20261103",
+   "last_filed": "20261103",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2023796&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2020228",
+   "name": "Masonglory Ltd",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20261103",
+   "last_filed": "20261103",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2020228&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2013320",
@@ -4474,23 +4527,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1891856&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1930510",
-   "name": "VCI Global Ltd",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20260929",
-   "last_filed": "20260929",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1930510&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2116517",
