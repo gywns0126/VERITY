@@ -15,6 +15,10 @@ import time
 import requests
 from typing import Any, Dict, List, Optional
 
+from api.notifications.essential_policy import (
+    should_send_notification, is_essential_alert, essential_only_enabled,
+)
+
 from api.config import (
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
@@ -50,7 +54,7 @@ def _append_volume_ledger(entry: Dict[str, Any]) -> None:
     feedback_data_collection_verification_mandatory 정합:
       - silent skip 절대 금지 (실패해도 stderr 명시)
       - logged=True 표식
-    적재 schema: ts_kst, outcome (sent/quiet_skip/dedupe_skip/no_token/api_fail/exception),
+    적재 schema: ts_kst, outcome (sent/quiet_skip/dedupe_skip/policy_skip/no_token/api_fail/exception),
                  bypass_quiet, fingerprint, msg_first_line (헤더 1줄, 종목명 마스킹 X — fp 로 식별)
     """
     logged = False
@@ -203,7 +207,7 @@ def _message_fingerprint(text: str) -> str:
 
 
 def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False,
-                 source: str = "") -> bool:
+                 source: str = "", notification_kind: str = "unspecified") -> bool:
     """텔레그램 메시지 전송.
 
     dedupe=True (기본): 프로세스 내 이미 보낸 동일 메시지면 skip (완전 중복 방지).
@@ -229,6 +233,10 @@ def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False,
         "msg_first_line": first_line,
         "source": source,
     }
+
+    if not should_send_notification(text, source=source, kind=notification_kind):
+        _append_volume_ledger({**base_entry, "outcome": "policy_skip"})
+        return False
 
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print(f"[Telegram] 토큰/챗ID 미설정 → 콘솔 출력:\n{text}")
@@ -371,13 +379,14 @@ def _may_bypass_quiet(alerts: List[Dict[str, Any]]) -> bool:
     return any(_alert_key(a) in _QUIET_BYPASS_KEYS for a in alerts)
 
 
-def send_alerts(alerts: list[dict]) -> bool:
+def send_alerts(alerts: list[dict], *, sent_alerts: Optional[List[Dict[str, Any]]] = None) -> bool:
     """알림 목록 전송. 성공 시 True (토큰 미설정 시 콘솔만이면 False).
 
     2026-05-12 정책 변경 (사용자 spam 호소):
       - 묶음 단위 bypass 폐기. CRITICAL 알림과 나머지(WARNING/INFO) 분리하여 각각 묶음 발송.
-      - CRITICAL 묶음만 bypass_quiet=True. WARNING/INFO 묶음은 quiet hours respect.
-      - TELEGRAM_CRITICAL_ONLY=1 이면 CRITICAL 0건일 때 묶음 자체 skip.
+      - 집행 계열 CRITICAL 포함 묶음만 야간 통과. WARNING/INFO는 quiet hours 적용.
+      - TELEGRAM_CRITICAL_ONLY=1 이면 CRITICAL 외 묶음을 생략한다.
+      - essential 모드는 생성 원장을 보존한 뒤 필요한 항목만 발송한다.
     """
     if not alerts:
         return False
@@ -398,6 +407,12 @@ def send_alerts(alerts: list[dict]) -> bool:
     #   발송 성공 여부와 무관하게 **생성된 알림**을 기록한다(quiet/dedupe 로 안 간 것도 관측 대상).
     _append_alert_type_ledger(crit, rest)
 
+    # Record every generated alert above; restrict only the outgoing batches.
+    essential_only = essential_only_enabled()
+    if essential_only:
+        crit = [a for a in crit if is_essential_alert(a)]
+        rest = [a for a in rest if is_essential_alert(a)]
+
     if crit:
         lines = ["<b>🚨 긴급 알림</b>\n"]
         for alert in crit:
@@ -405,15 +420,21 @@ def send_alerts(alerts: list[dict]) -> bool:
         # 🚨 2026-08-17 — 종전에는 CRITICAL 묶음이 **무조건** 야간을 통과했다.
         #   실측상 그 통과의 대부분이 거시·실적(정보성)이라 새벽에 깨웠다.
         #   이제 집행 계열이 포함된 묶음만 통과한다 (`_may_bypass_quiet`).
-        if send_message("\n".join(lines), bypass_quiet=_may_bypass_quiet(crit)):
+        if send_message("\n".join(lines), bypass_quiet=_may_bypass_quiet(crit),
+                        notification_kind="essential" if essential_only else "unspecified"):
             sent_any = True
+            if sent_alerts is not None:
+                sent_alerts.extend(crit)
 
     if rest and not TELEGRAM_CRITICAL_ONLY:
         lines = ["<b>🔔 알림</b>\n"]
         for alert in rest:
             lines.append(alert["message"])
-        if send_message("\n".join(lines), bypass_quiet=False):
+        if send_message("\n".join(lines), bypass_quiet=False,
+                        notification_kind="essential" if essential_only else "unspecified"):
             sent_any = True
+            if sent_alerts is not None:
+                sent_alerts.extend(rest)
 
     return sent_any
 
@@ -523,7 +544,7 @@ def send_daily_report(portfolio: dict):
             lines.append("")
             lines.append(f"<i>🛢 {comm_f}</i>")
 
-    send_message("\n".join(lines))
+    send_message("\n".join(lines), notification_kind="routine")
 
 
 def send_morning_briefing(portfolio: dict):
@@ -663,7 +684,7 @@ def send_morning_briefing(portfolio: dict):
 
     lines.append("\n<i>장 개장 전 모닝 브리핑</i>")
     # 모닝 브리핑은 KST 09:00 cron — quiet hours 밖이지만 안전하게 bypass.
-    send_message("\n".join(lines), bypass_quiet=True)
+    send_message("\n".join(lines), bypass_quiet=True, notification_kind="routine")
 
 
 def send_deadman_alert(reasons: list[str]) -> bool:
@@ -680,7 +701,7 @@ def send_deadman_alert(reasons: list[str]) -> bool:
         "데이터 소스 복구 확인 후 수동 재실행 필요:",
         "<code>ANALYSIS_MODE=full</code> → workflow_dispatch",
     ])
-    return send_message("\n".join(lines), bypass_quiet=True)
+    return send_message("\n".join(lines), bypass_quiet=True, notification_kind="essential")
 
 
 def send_cross_verification_alert(
@@ -715,7 +736,7 @@ def send_cross_verification_alert(
             lines.append(f"  💬 {reason[:100]}")
         lines.append("")
     lines.append("<i>두 AI 판단이 갈리는 종목은 신중하게 접근하세요.</i>")
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), notification_kind="routine")
 
 
 def _postmortem_sample_caveat(n: int) -> tuple[str, str]:
@@ -769,7 +790,7 @@ def send_postmortem_report(report: dict) -> bool:
     if lesson:
         lines.append(f"<b>교훈{lesson_tag}:</b> {lesson}")
 
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), notification_kind="routine")
 
 
 def send_vams_simulation_report(portfolio: dict) -> bool:
@@ -802,7 +823,7 @@ def send_vams_simulation_report(portfolio: dict) -> bool:
     if worst:
         lines.append(f"  💀 최악: {worst.get('name', '?')} ({worst.get('pnl', 0):+,.0f}원)")
 
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), notification_kind="routine")
 
 
 def send_export_trade_top3(
@@ -821,7 +842,7 @@ def send_export_trade_top3(
 
     if not top_rows:
         lines.append("집계 가능한 수출 증가율 데이터가 없습니다. API 키·HS 매핑을 확인하세요.")
-        return send_message("\n".join(lines))
+        return send_message("\n".join(lines), notification_kind="routine")
 
     for i, r in enumerate(top_rows, 1):
         mom = r.get("mom_export_pct")
@@ -834,7 +855,7 @@ def send_export_trade_top3(
         lines.append(f"   수출액 전월비 {mom_s} · 전년동월비 {yoy_s}")
         lines.append("")
 
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), notification_kind="routine")
 
 
 # ══════════════════════════════════════════════════
@@ -893,7 +914,7 @@ def send_timing_signal_alert(transitions: List[Dict[str, Any]]) -> bool:
         lines.append("")
 
     lines.append("<i>타이밍 전이 감지</i>")
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), notification_kind="routine")
 
 
 def send_paper_trade_alert(events: List[Dict[str, Any]]) -> bool:
@@ -941,7 +962,7 @@ def send_paper_trade_alert(events: List[Dict[str, Any]]) -> bool:
             reason = _html_escape(str(e.get("reason", ""))[:80])
             lines.append(f"  {name}: {reason}")
 
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), notification_kind="routine")
 
 
 def send_auto_trade_intent(orders: List[Dict[str, Any]], dry_run: bool = False) -> bool:
@@ -982,7 +1003,7 @@ def send_auto_trade_intent(orders: List[Dict[str, Any]], dry_run: bool = False) 
     if dry_run:
         lines.append("<i>⚠️ DRY RUN 모드 — 실제 주문은 전송되지 않습니다</i>")
 
-    return send_message("\n".join(lines), bypass_quiet=True)
+    return send_message("\n".join(lines), bypass_quiet=True, notification_kind="routine" if dry_run else "essential")
 
 
 def send_auto_trade_filled(results: List[Dict[str, Any]]) -> bool:
@@ -1015,7 +1036,7 @@ def send_auto_trade_filled(results: List[Dict[str, Any]]) -> bool:
             lines.append(f"   {emoji} 실현손익: {pnl:+,.0f}원")
         lines.append("")
 
-    return send_message("\n".join(lines), bypass_quiet=True)
+    return send_message("\n".join(lines), bypass_quiet=True, notification_kind="essential")
 
 
 def send_auto_trade_failed(order: Dict[str, Any], error: str) -> bool:
@@ -1031,7 +1052,7 @@ def send_auto_trade_failed(order: Dict[str, Any], error: str) -> bool:
         f"{side} {name} ({ticker}) {qty}주",
         f"사유: {_html_escape(str(error)[:200])}",
     ]
-    return send_message("\n".join(lines), bypass_quiet=True)
+    return send_message("\n".join(lines), bypass_quiet=True, notification_kind="essential")
 
 
 def send_auto_trade_blocked(blocks: List[Dict[str, Any]]) -> bool:
@@ -1045,4 +1066,4 @@ def send_auto_trade_blocked(blocks: List[Dict[str, Any]]) -> bool:
         reason = _html_escape(str(b.get("reason", ""))[:100])
         lines.append(f"  • {name}: {reason}")
 
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), notification_kind="essential")

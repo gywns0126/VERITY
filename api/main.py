@@ -2669,9 +2669,13 @@ def main():
         ]
         tg_alerts = filter_deduped_realtime_alerts(tg_alerts, portfolio)
         if tg_alerts:
+            delivered_alerts = []
             try:
-                if send_alerts(tg_alerts):
-                    mark_realtime_alerts_sent(portfolio, tg_alerts)
+                try:
+                    send_alerts(tg_alerts, sent_alerts=delivered_alerts)
+                finally:
+                    if delivered_alerts:
+                        mark_realtime_alerts_sent(portfolio, delivered_alerts)
             except Exception as e:
                 print(f"  장중 알림 전송 스킵: {e}")
 

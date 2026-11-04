@@ -168,8 +168,9 @@ def test_send_alerts_informational_critical_stays_quiet(monkeypatch):
     assert len(sent) == 0, "정보성 CRITICAL 이 야간을 뚫었다 — 8/17 교정 회귀"
 
 
-def test_send_alerts_informational_critical_sends_in_daytime(monkeypatch):
-    """낮에는 종전과 동일하게 전부 발송된다 — 이 교정은 **야간 자격만** 바꾼다."""
+def test_send_alerts_informational_critical_sends_in_daytime_when_all_opted_in(monkeypatch):
+    """The explicit legacy all mode still honors the existing daytime gate."""
+    monkeypatch.setenv("TELEGRAM_NOTIFICATION_MODE", "all")
     monkeypatch.setenv("TELEGRAM_QUIET_HOURS_ENABLED", "1")
     cfg, qh, tg = _reload_modules()
     monkeypatch.setattr(qh, "is_quiet_hours", lambda now=None: False)

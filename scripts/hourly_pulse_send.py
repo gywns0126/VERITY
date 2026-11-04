@@ -191,6 +191,12 @@ def _build_message(region: str, label: str, pp: Dict[str, Any], pf: Dict[str, An
 
 
 def main() -> int:
+    sys.path.insert(0, str(ROOT))
+    from api.notifications.essential_policy import essential_only_enabled
+    if essential_only_enabled():
+        print("[hourly_pulse] policy_skip: routine market update")
+        return 0
+
     now_utc = datetime.now(timezone.utc)
     region, label = _resolve_slot(now_utc)
     if region == "NONE":
@@ -221,7 +227,7 @@ def main() -> int:
         sys.stderr.write(f"[hourly_pulse] import send_message 실패: {e}\n")
         return 1
 
-    ok = send_message(msg, dedupe=True, bypass_quiet=True)
+    ok = send_message(msg, dedupe=True, bypass_quiet=True, notification_kind="routine")
     print(f"[hourly_pulse] sent={ok} region={region} label={label}")
     return 0 if ok else 1
 
