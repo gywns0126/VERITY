@@ -24,6 +24,13 @@ _DATA_BASE = "https://data.sec.gov"  # submissions/CIK + /api/xbrl/companyfacts/
 # workflow log trace: SEC CIK resolve failed for CRM/BAC/...: 404 from data.sec.gov.
 # www.sec.gov = 200 OK confirmed. submissions/XBRL 은 data.sec.gov 유지.
 _WWW_BASE = "https://www.sec.gov"
+# XOM redomiciliation transition only. SEC's current ticker map now points XOM
+# to CIK 0002115436 (ExxonMobil Holdings Corp), while that new CIK has no 10-K
+# yet. SEC 2026-06-30 Form 10-Q (CIK 0000034088, accession 0000034088-26-000093)
+# states ExxonMobil Holdings became the publicly traded parent of the consolidated
+# group; the preceding annual filing remains under the former CIK until the new
+# CIK publishes its own 10-K. Do not generalize this fallback to other tickers.
+_PROPERTY_FILING_PREDECESSORS = {("XOM", "0002115436"): "0000034088"}
 _SESSION = requests.Session()
 _LAST_CALL = 0.0
 _MIN_INTERVAL = 0.12  # 10req/sec → ~0.1s
@@ -429,6 +436,30 @@ def fetch_10k_properties_section(ticker: str, user_agent: str) -> Dict:
     prims = recent.get("primaryDocument", [])
 
     idx = next((i for i, f in enumerate(forms) if f in ("10-K", "10-K/A")), None)
+    if idx is None:
+        predecessor_cik = _PROPERTY_FILING_PREDECESSORS.get((ticker.upper(), str(cik).zfill(10)))
+        if predecessor_cik:
+            _throttle()
+            try:
+                predecessor_url = f"{_DATA_BASE}/submissions/CIK{predecessor_cik}.json"
+                predecessor_response = _SESSION.get(
+                    predecessor_url, headers=_headers(user_agent), timeout=12)
+                predecessor_response.raise_for_status()
+                predecessor_data = predecessor_response.json()
+                response_cik = predecessor_data.get("cik")
+                if (not str(response_cik or "").isdigit()
+                        or str(response_cik).zfill(10) != predecessor_cik):
+                    return {"error": "predecessor_identity_mismatch"}
+                cik = predecessor_cik
+                recent = predecessor_data.get("filings", {}).get("recent", {})
+                forms = recent.get("form", [])
+                dates = recent.get("filingDate", [])
+                accs = recent.get("accessionNumber", [])
+                prims = recent.get("primaryDocument", [])
+                idx = next((i for i, f in enumerate(forms) if f in ("10-K", "10-K/A")), None)
+            except Exception:
+                logger.warning("SEC predecessor submissions unavailable for %s", ticker)
+                return {"error": "predecessor_submissions_unavailable"}
     if idx is None:
         return {"error": "no_10k"}
 
