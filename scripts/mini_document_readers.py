@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 import fcntl
 import hashlib
 import html
@@ -21,6 +22,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -32,6 +34,11 @@ OFFICIAL_HOSTS = frozenset({"www.bok.or.kr", "bok.or.kr", "www.fsc.go.kr", "fsc.
     "www.moef.go.kr", "moef.go.kr", "kostat.go.kr", "www.kostat.go.kr", "www.krx.co.kr",
     "www.federalreserve.gov", "federalreserve.gov", "www.bls.gov", "bls.gov",
     "www.bea.gov", "bea.gov", "www.ecb.europa.eu", "www.boj.or.jp"})
+KR_RELEASE_FEEDS = (
+    "https://www.bok.or.kr/portal/bbs/B0000501/news.rss?menuNo=201264",
+    "https://www.bok.or.kr/portal/bbs/P0000559/news.rss?menuNo=200690",
+    "https://www.bok.or.kr/portal/bbs/P0001773/news.rss?menuNo=200568",
+)
 
 
 def stamp():
@@ -82,6 +89,80 @@ def read_official_text(url):
     text = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", text)
     value = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", text))).strip()
     return OfficialText(value, bok_view_fields=bok_view_fields)
+
+
+def read_official_feed(url):
+    _official_url(url)
+    request = urllib.request.Request(url, headers={"User-Agent": "AlphaNest public-source verification"})
+    with urllib.request.build_opener(OfficialRedirect()).open(request, timeout=20) as response:
+        body = response.read(1_048_577)
+    if len(body) > 1_048_576 or b"<!DOCTYPE" in body.upper() or b"<!ENTITY" in body.upper():
+        raise ValueError("macro_feed_size_or_entity")
+    return body
+
+
+def korean_macro_fact(*, now=None, feed_reader=read_official_feed, reader=read_official_text):
+    """Select an actual dated Korean release before the one model invocation.
+
+    RSS is discovery only. The visible registration date and numeric release
+    prose must fit in the same unchanged HTML quotation. Empty/PDF-only or
+    stale releases remain unavailable; neither model text nor a feed date can
+    stand in for primary-page evidence.
+    """
+    now = now or datetime.now(KST)
+    seen = set()
+    for feed in KR_RELEASE_FEEDS:
+        try:
+            body = feed_reader(feed)
+            if (not isinstance(body, bytes) or len(body) > 1_048_576
+                    or b"<!DOCTYPE" in body.upper() or b"<!ENTITY" in body.upper()):
+                raise ValueError("macro_feed_size_or_entity")
+            items = ET.fromstring(body).findall("./channel/item")[:100]
+        except (OSError, ValueError, ET.ParseError):
+            continue
+        checked = 0
+        for item in items:
+            if checked == 3:
+                break
+            url = item.findtext("link") or ""
+            try:
+                _official_url(url)
+                parsed = urllib.parse.urlsplit(url)
+                if (parsed.hostname != "www.bok.or.kr" or not re.fullmatch(
+                        r"/portal/bbs/(?:B0000501|P0000559|P0001773)/view\.do", parsed.path)):
+                    continue
+                published = parsedate_to_datetime(item.findtext("pubDate") or "")
+                if (published.tzinfo is None or published > now
+                        or not 0 <= (now.date() - published.astimezone(KST).date()).days <= 3):
+                    continue
+                if url in seen:
+                    continue
+                seen.add(url)
+                checked += 1
+                # Auction announcements are not auction results.
+                if "P0001773" in parsed.path and "결과" not in (item.findtext("title") or ""):
+                    continue
+                source = reader(url)
+                dates = list(re.finditer(r"등록일\s+(\d{4})\.(\d{2})\.(\d{2})", source))
+                if len(dates) != 1:
+                    continue
+                registered = dates[0]
+                day = "-".join(registered.groups())
+                if day != published.astimezone(KST).date().isoformat():
+                    continue
+                quote = source[registered.start(1):]
+                quote = re.split(r"목록|연관자료|관련 뉴스/자료|유용한 정보가 되었나요", quote, maxsplit=1)[0].strip()
+                if len(quote) > 400:
+                    quote = quote[:400].rsplit(" ", 1)[0]
+                content_start = max((m.end() for m in re.finditer(r"첨부파일|다운로드|뷰어", quote)), default=0)
+                if not re.search(r"\d[\d,.]*\s*(?:억달러|조\s*원|억\s*원|%|bp)", quote[content_start:]):
+                    continue
+                if not 24 <= len(quote) <= 400:
+                    continue
+                return {"text": quote, "source_url": url, "source_date": day, "source_quote": quote}
+            except (OSError, ValueError, TypeError, OverflowError):
+                continue
+    raise ValueError("kr_primary_source_unavailable")
 
 
 def verify_macro_facts(result, *, now=None, reader=read_official_text):
@@ -145,7 +226,7 @@ def verify_macro_facts(result, *, now=None, reader=read_official_text):
     return accepted
 
 
-def macro_bundle(verified, *, model, generated_at):
+def macro_bundle(verified, *, model, generated_at, kr_direct=False):
     sources = {}
     for region, facts in verified.items():
         sources["codex_" + region] = {
@@ -153,6 +234,8 @@ def macro_bundle(verified, *, model, generated_at):
             "content": "\n".join(f"- {f['source_date']} {f['text']}" for f in facts),
             "citations": [f["source_url"] for f in facts], "facts": facts,
             "source_as_of": max(f["source_date"] for f in facts), "error": None}
+        if region == "kr" and kr_direct:
+            sources["codex_kr"].update(provider="official-rss", model=None)
     return {"contract": "macro-facts-v1", "producer": "mac-mini-codex",
             "generated_at": generated_at, "source_verification": "2/2", "sources": sources,
             "google_calls": 0, "_cache": "miss",
@@ -202,10 +285,18 @@ def receive_dispatch(path, *, root=ROOT, reader=read_official_text, environ=None
     facts = {region: [{k: fact[k] for k in ("text", "source_url", "source_date", "source_quote")} for fact in rows]
              for region, rows in facts.items()}
     verified = verify_macro_facts(facts, reader=reader)
-    model = doc["sources"]["codex_global"]["model"]
-    if model != doc["sources"]["codex_kr"]["model"] or model != "gpt-6.1-sol":
+    global_source, kr_source = doc["sources"]["codex_global"], doc["sources"]["codex_kr"]
+    model = global_source["model"]
+    kr_direct = kr_source.get("provider") == "official-rss" and kr_source.get("model") is None
+    if (model != "gpt-6.1-sol" or global_source.get("provider") != "codex-cli"
+            or not (kr_direct or (kr_source.get("provider") == "codex-cli" and kr_source.get("model") == model))):
         raise ValueError("macro_dispatch_model")
-    value = macro_bundle(verified, model=model, generated_at=doc["generated_at"])
+    if kr_direct and any(urllib.parse.urlsplit(f["source_url"]).hostname != "www.bok.or.kr"
+                         or not re.fullmatch(r"/portal/bbs/(?:B0000501|P0000559|P0001773)/view\.do",
+                                             urllib.parse.urlsplit(f["source_url"]).path)
+                         for f in facts["kr"]):
+        raise ValueError("macro_dispatch_kr_source")
+    value = macro_bundle(verified, model=model, generated_at=doc["generated_at"], kr_direct=kr_direct)
     value["verified_at"] = stamp()
     atomic_json(root / "data/macro_synthesis.json", value)
     return {"status": "verified", "source_verification": "2/2", "google_calls": 0,
@@ -387,11 +478,12 @@ def run_filings(args):
 
 def run_macro(args):
     today = datetime.now(KST).strftime("%Y-%m-%d")
+    kr_fact = korean_macro_fact()
     prompt = (f"Today in Korea is {today}. Collect public macroeconomic FACTS only from the last72hours. "
-        "Use primary releases from Bank of Korea, FSC, Korean government/statistics office, Fed, BLS, BEA, ECB, BOJ. "
+        "Find one GLOBAL fact from Fed, BLS, BEA, ECB or BOJ. The Korean fact is collected separately from official releases. "
         "The initial URL and every redirect hostname must be one of: " + ", ".join(sorted(OFFICIAL_HOSTS)) + ". "
         "Search and open the exact primary release. No forecast, stock opinion, portfolio or causal speculation. "
-        "Return JSON with exactly two arrays: global and kr, each exactly1 fact. Each fact has exactly text "
+        "Return JSON with exactly one array: global, containing exactly1 fact. Each fact has exactly text "
         "(the exact source_quote, in the source language; do not paraphrase or translate), "
         "source_url (direct official HTML), source_date (YYYY-MM-DD), "
         "source_quote (24to400 consecutive characters copied exactly from the source, including every numeric "
@@ -402,15 +494,18 @@ def run_macro(args):
         "Exclude the live 조회수 UI field from a BOK release; the reader removes its HTML metadata element. "
         "No PDF or third-party URLs. Do not invent or infer dates from the current date. "
         "Do not access local files, credentials or accounts. No file edits, commands, APIs or messages.")
-    # Preserve the failed pre-bridge and protocol-v2 receipts. The reviewed
-    # protocol fix has a separate version, still only one attempt per day.
+    # Preserve old rejected receipts. Global-only discovery has a new identity;
+    # there is still one invocation in the native daily slot, never a retry.
     value, receipt = read_json_with_codex(prompt, cli=args.cli, model=args.model, runtime=args.runtime,
-                                        identity="macro-facts-v1:protocol-v4:" + today, search=True)
-    verified = verify_macro_facts(value)
-    document = macro_bundle(verified, model=args.model, generated_at=receipt["completed_at"])
+                                        identity="macro-facts-v1:protocol-v5:" + today, search=True)
+    if set(value) != {"global"}:
+        raise ValueError("macro_regions_missing")
+    verified = verify_macro_facts({"global": value["global"], "kr": [kr_fact]})
+    document = macro_bundle(verified, model=args.model, generated_at=receipt["completed_at"], kr_direct=True)
     document["verified_at"] = stamp()
     atomic_json(ROOT / "data/macro_synthesis.json", document)
     result = {"source_verification": "2/2", "ai_invocations": int(not receipt["reused"]), "google_calls": 0,
+              "kr_source_selection": "official_rss_primary_html",
               "source_as_of": {key: val["source_as_of"] for key, val in document["sources"].items()}}
     if args.publish:
         result["delivery"] = publish_macro(ROOT)

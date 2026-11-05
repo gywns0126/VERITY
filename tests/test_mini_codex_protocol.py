@@ -189,12 +189,13 @@ def test_bok_multiple_counter_fields_are_not_silently_removed(monkeypatch):
                                   reader=lambda _: source)
 
 
-def test_macro_prompt_names_the_enforced_hosts_without_new_attempt_identity(tmp_path, monkeypatch):
+def test_global_only_protocol_keeps_host_allowlist_and_single_daily_identity(tmp_path, monkeypatch):
     def model(prompt, **options):
         assert all(host in prompt for host in worker.OFFICIAL_HOSTS)
-        assert options["identity"].startswith("macro-facts-v1:protocol-v4:")
+        assert options["identity"] == "macro-facts-v1:protocol-v5:" + datetime.now(worker.KST).strftime("%Y-%m-%d")
         raise ValueError("model_not_invoked")
     monkeypatch.setattr(worker, "read_json_with_codex", model)
+    monkeypatch.setattr(worker, "korean_macro_fact", lambda: {})
     with pytest.raises(ValueError, match="model_not_invoked"):
         worker.run_macro(SimpleNamespace(cli=Path("/cli"), model="gpt-6.1-sol", runtime=tmp_path))
 

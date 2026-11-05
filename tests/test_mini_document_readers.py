@@ -294,3 +294,147 @@ def test_krw_letter_prefixed_identity_never_enters_sec_collector(monkeypatch):
         {"ticker": "ABCDEF", "name": "Public KR", "currency": "KRW", "corp_code": "00126380"})
     assert calls == ["00126380"] and extractor == "dart-facilities-v1"
     assert source["source_id"] == "source:dart:20260318001234"
+
+
+def kr_feed(*, url="https://www.bok.or.kr/portal/bbs/B0000501/view.do?nttId=123&menuNo=201264",
+            published="Thu, 05 Nov 2026 08:00:00 +0900", count=1):
+    from xml.sax.saxutils import escape
+    item = f"<item><title>국제수지</title><link>{escape(url)}</link><pubDate>{published}</pubDate></item>"
+    return ("<rss><channel>" + item * count + "</channel></rss>").encode()
+
+
+KR_SOURCE = ("한국은행 보도자료 등록일 2026.11.05 키워드 국제수지 담당부서 국제수지팀(02-759-4570) "
+             "첨부파일 BOP.hwp 다운로드 BOP.pdf 다운로드 뷰어 "
+             "□ 2026년 9월 경상수지는 614.6억달러 흑자를 기록 □ 자세한 내용은 붙임 참조 목록 관련자료")
+KR_NOW = datetime(2026, 11, 5, 12, tzinfo=worker.KST)
+
+
+def test_korean_fact_uses_rss_for_discovery_and_exact_primary_html_for_evidence():
+    reads = []
+    fact = worker.korean_macro_fact(now=KR_NOW, feed_reader=lambda _: kr_feed(),
+        reader=lambda url: reads.append(url) or KR_SOURCE)
+    assert len(reads) == 1 and fact["source_date"] == "2026-11-05"
+    assert fact["text"] == fact["source_quote"] and fact["source_quote"] in KR_SOURCE
+    assert "614.6억달러" in fact["source_quote"] and "목록" not in fact["source_quote"]
+    verified = worker.verify_macro_facts({"kr": [fact], "global": [fact]}, now=KR_NOW, reader=lambda _: KR_SOURCE)
+    assert verified["kr"][0]["verification"] == "primary_quote_exact_match"
+
+
+@pytest.mark.parametrize("problem", ["stale", "future", "undated", "date_mismatch", "pdf_only", "no_fact", "outside_quote", "entity", "foreign_host"])
+def test_korean_fact_never_fills_missing_primary_evidence(problem):
+    feed, source = kr_feed(), KR_SOURCE
+    if problem == "stale":
+        feed = kr_feed(published="Sun, 01 Nov 2026 08:00:00 +0900")
+    elif problem == "future":
+        feed = kr_feed(published="Fri, 06 Nov 2026 08:00:00 +0900")
+    elif problem == "undated":
+        source = source.replace("등록일 2026.11.05", "등록일 없음")
+    elif problem == "date_mismatch":
+        source = source.replace("등록일 2026.11.05", "등록일 2026.11.04")
+    elif problem == "pdf_only":
+        source = "등록일 2026.11.05 첨부파일 통계.pdf 다운로드 자세한 내용은 붙임 참조 목록"
+    elif problem == "no_fact":
+        source = "등록일 2026.11.05 담당부서 02-759-4000 첨부파일 총재.hwp 다운로드 출국 예정입니다 목록"
+    elif problem == "outside_quote":
+        source = "등록일 2026.11.05 " + "메타데이터 " * 100 + "□ 경상수지는 614.6억달러 흑자를 기록 목록"
+    elif problem == "entity":
+        feed = b'<!DOCTYPE rss [<!ENTITY x "bad">]><rss><channel/></rss>'
+    elif problem == "foreign_host":
+        feed = kr_feed(url="https://www.bok.or.kr.evil.test/portal/bbs/B0000501/view.do")
+    with pytest.raises(ValueError, match="kr_primary_source_unavailable"):
+        worker.korean_macro_fact(now=KR_NOW, feed_reader=lambda _: feed, reader=lambda _: source)
+
+
+def test_korean_source_candidates_are_bounded_and_same_url_is_not_retried():
+    reads = []
+    with pytest.raises(ValueError, match="kr_primary_source_unavailable"):
+        worker.korean_macro_fact(now=KR_NOW, feed_reader=lambda _: kr_feed(count=100),
+            reader=lambda url: reads.append(url) or "no primary release")
+    assert len(reads) == 1
+
+
+def test_model_cannot_drop_korean_fact_collected_before_its_single_invocation(tmp_path, monkeypatch):
+    fact = worker.korean_macro_fact(now=KR_NOW, feed_reader=lambda _: kr_feed(), reader=lambda _: KR_SOURCE)
+    today = KR_NOW.date().isoformat()
+    quote = f"{today}. The policy rate is 4.00 percent in this official release."
+    global_fact = dict(text=quote, source_quote=quote, source_date=today,
+                       source_url="https://www.federalreserve.gov/release")
+    # Use the real count/quote/date validator with an injected primary reader.
+    original_verify = worker.verify_macro_facts
+    calls = []
+    monkeypatch.setattr(worker, "ROOT", tmp_path)
+    monkeypatch.setattr(worker, "korean_macro_fact", lambda: fact)
+    monkeypatch.setattr(worker, "verify_macro_facts", lambda value: original_verify(value, now=KR_NOW,
+        reader=lambda url: KR_SOURCE if "bok.or.kr" in url else quote))
+    def model(prompt, **options):
+        calls.append(options)
+        assert "exactly one array: global" in prompt
+        return {"global": [global_fact]}, {"completed_at": today + "T00:00:00+00:00", "reused": False}
+    monkeypatch.setattr(worker, "read_json_with_codex", model)
+    result = worker.run_macro(SimpleNamespace(cli=Path("/cli"), model="gpt-6.1-sol", runtime=tmp_path, publish=False))
+    saved = cli.strict_json((tmp_path / "data/macro_synthesis.json").read_bytes())
+    assert result["source_verification"] == "2/2" and len(calls) == 1
+    assert saved["sources"]["codex_kr"]["facts"][0]["source_quote"] == fact["source_quote"]
+    assert saved["sources"]["codex_kr"]["provider"] == "official-rss"
+    assert saved["sources"]["codex_kr"]["model"] is None
+    assert calls[0]["identity"].startswith("macro-facts-v1:protocol-v5:")
+
+
+def test_unavailable_korean_source_stops_before_model_and_preserves_previous_artifact(tmp_path, monkeypatch):
+    path = tmp_path / "data/macro_synthesis.json"
+    path.parent.mkdir(exist_ok=True)
+    path.write_bytes(b"previous accepted artifact")
+    monkeypatch.setattr(worker, "ROOT", tmp_path)
+    monkeypatch.setattr(worker, "read_json_with_codex", lambda *a, **k: pytest.fail("model must not run"))
+    def unavailable():
+        raise ValueError("kr_primary_source_unavailable")
+    monkeypatch.setattr(worker, "korean_macro_fact", unavailable)
+    with pytest.raises(ValueError, match="kr_primary_source_unavailable"):
+        worker.run_macro(SimpleNamespace())
+    assert path.read_bytes() == b"previous accepted artifact"
+
+
+def test_empty_region_is_still_rejected_by_existing_delivery_validator():
+    with pytest.raises(ValueError, match="macro_fact_count"):
+        worker.verify_macro_facts({"global": [], "kr": []})
+
+
+def test_owner_receiver_preserves_direct_korean_provenance_and_rechecks_quote(tmp_path):
+    day = datetime.now(worker.KST).strftime("%Y-%m-%d")
+    quote = f"{day}. Official interest rates are unchanged at 4.00 percent."
+    kr_url = "https://www.bok.or.kr/portal/bbs/B0000501/view.do?nttId=123"
+    values = {region: [dict(text=quote, source_quote=quote, source_date=day,
+        source_url=kr_url if region == "kr" else "https://www.federalreserve.gov/release")]
+        for region in ("global", "kr")}
+    verified = worker.verify_macro_facts(values, reader=lambda _: quote)
+    generated = worker.stamp()
+    doc = worker.macro_bundle(verified, model="gpt-6.1-sol", generated_at=generated, kr_direct=True)
+    doc["verified_at"] = generated
+    path = tmp_path / "event.json"
+    path.write_text(json.dumps({"action": "mini_macro_facts", "client_payload": {"document": doc}}))
+    env = {"GITHUB_EVENT_NAME": "repository_dispatch", "GITHUB_ACTOR": "owner", "GITHUB_REPOSITORY_OWNER": "owner"}
+    calls = []
+    worker.receive_dispatch(path, root=tmp_path, reader=lambda url: calls.append(url) or quote, environ=env)
+    saved = cli.strict_json((tmp_path / "data/macro_synthesis.json").read_bytes())
+    assert len(calls) == 2 and saved["generated_at"] == generated
+    assert saved["sources"]["codex_kr"]["provider"] == "official-rss"
+    assert saved["sources"]["codex_kr"]["model"] is None
+    before = (tmp_path / "data/macro_synthesis.json").read_bytes()
+    with pytest.raises(ValueError, match="macro_quote_not_in_primary_source"):
+        worker.receive_dispatch(path, root=tmp_path, reader=lambda _: "changed primary text", environ=env)
+    assert (tmp_path / "data/macro_synthesis.json").read_bytes() == before
+    doc["sources"]["codex_kr"]["facts"][0]["source_url"] = "https://www.federalreserve.gov/release"
+    path.write_text(json.dumps({"action": "mini_macro_facts", "client_payload": {"document": doc}}))
+    with pytest.raises(ValueError, match="macro_dispatch_kr_source"):
+        worker.receive_dispatch(path, root=tmp_path, reader=lambda _: quote, environ=env)
+
+
+def test_kr_feed_failure_can_use_another_official_release_without_model_retry():
+    feeds = []
+    def feed(url):
+        feeds.append(url)
+        if url == worker.KR_RELEASE_FEEDS[0]:
+            raise OSError("unavailable")
+        return kr_feed()
+    fact = worker.korean_macro_fact(now=KR_NOW, feed_reader=feed, reader=lambda _: KR_SOURCE)
+    assert len(feeds) == 2 and fact["source_quote"] in KR_SOURCE
