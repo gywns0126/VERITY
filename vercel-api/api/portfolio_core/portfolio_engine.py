@@ -91,6 +91,7 @@ class _ProjectedPublicIndexCache:
         self._lock = threading.Lock()
         self._revision = None
         self._index = None
+        self._index_day = None
         self._business_revision = None
         self._business_index = None
         self._base_revision = None
@@ -249,11 +250,17 @@ class _ProjectedPublicIndexCache:
         if type(revision) is not str or not _PUBLIC_BUNDLE_REVISION.fullmatch(revision):
             raise ValueError("invalid-public-bundle-revision")
         with self._lock:
-            if revision != self._revision or self._index is None:
+            filing_day = date.today().isoformat()
+            index_day = (filing_day, datetime.now(timezone.utc).date().isoformat())
+            if revision != self._revision or self._index is None or index_day != self._index_day:
+                if self._index_day is not None and index_day != self._index_day:
+                    # Revalidate for local filing and UTC publisher-day boundaries.
+                    self._base_revision = None
+                    self._base_template = None
                 # A cold revision reads the public pair once across concurrent requests.
                 if prepared_business_fetcher is not None:
                     prepared_business_index, publisher_receipt = prepared_business_fetcher()
-                with _temporary_public_text_cache():
+                with _temporary_public_text_cache(filing_day=filing_day):
                     base, base_status = self._base(
                         prepared_business_index, publisher_receipt, base_source_revision)
                     if base_status is not None:
@@ -278,12 +285,14 @@ class _ProjectedPublicIndexCache:
                         _reuse_contracts=self._contracts,
                     )
                 self._revision = revision
+                self._index_day = index_day
             return self._index
 
     def clear(self):
         with self._lock:
             self._revision = None
             self._index = None
+            self._index_day = None
             self._business_revision = None
             self._business_index = None
             self._base_revision = None
