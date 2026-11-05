@@ -117,6 +117,145 @@ def test_duplicate_checks_reuse_only_within_each_request(engine, documents, monk
         assert sources._TEXT_CACHE.get() is None
 
 
+def test_date_format_cache_is_bounded_request_local_and_preserves_inputs(engine, monkeypatch):
+    sources = importlib.import_module(engine.__package__ + ".portfolio_public_sources")
+    original = sources._as_of_uncached
+    calls = []
+
+    def counted(value, *, annual_ok=False):
+        calls.append((value, annual_ok))
+        return original(value, annual_ok=annual_ok)
+
+    monkeypatch.setattr(sources, "_as_of_uncached", counted)
+    with sources._temporary_public_text_cache():
+        cache = sources._DATE_FORMAT_CACHE.get()
+        assert sources._as_of("2026-02-28") == "2026-02-28"
+        assert sources._as_of("2026-02-28") == "2026-02-28"
+        assert sources._as_of("2026-02-30") is None
+        assert sources._as_of("2026-02-30") is None
+        assert sources._as_of("2026", annual_ok=True) == "2026"
+        assert sources._as_of("2026") is None
+        assert sources._as_of(True, annual_ok=True) is None
+        assert calls.count(("2026-02-28", False)) == 1
+        assert calls.count(("2026-02-30", False)) == 1
+        assert cache.cache_info().maxsize == 8192
+    assert sources._DATE_FORMAT_CACHE.get() is None
+    assert cache.cache_info().currsize == 0
+
+
+def test_sec_filing_uses_build_day_and_rechecks_next_context(engine, monkeypatch):
+    sources = importlib.import_module(engine.__package__ + ".portfolio_public_sources")
+    real_date = sources.date
+    current = [real_date(2026, 3, 17)]
+
+    class MovingDate:
+        fromisoformat = real_date.fromisoformat
+
+        @staticmethod
+        def today():
+            return current[0]
+
+    monkeypatch.setattr(sources, "date", MovingDate)
+    raw = {"label": "6-K", "is_correction": False, "cik": "1234",
+           "accession_number": "0000001234-26-000001", "primary_document": "filing.htm",
+           "filing_date": "2026-03-18", "report_date": None, "acceptance_datetime": None}
+    url = "https://www.sec.gov/Archives/edgar/data/1234/000000123426000001/filing.htm"
+    with sources._temporary_public_text_cache():
+        assert sources._sec_filing(raw, url, "2026-03-18") is None
+        current[0] = real_date(2026, 3, 18)
+        assert sources._sec_filing(raw, url, "2026-03-18") is None
+    with sources._temporary_public_text_cache():
+        assert sources._sec_filing(raw, url, "2026-03-18")["filing_date"] == "2026-03-18"
+
+
+def test_public_index_rebuilds_and_rechecks_base_on_local_day_change(engine, monkeypatch):
+    real_date = engine.date
+    current = [real_date(2026, 3, 17)]
+
+    class MovingDate:
+        @staticmethod
+        def today():
+            return current[0]
+
+    monkeypatch.setattr(engine, "date", MovingDate)
+    cache = engine._ProjectedPublicIndexCache()
+    built = Mock(return_value={"public": True})
+    monkeypatch.setattr(cache, "_build", built)
+    base_seen = []
+
+    def base(*args):
+        base_seen.append(cache._base_template)
+        cache._base_template = ["prior public base"]
+        return None, "fallback"
+
+    monkeypatch.setattr(cache, "_base", base)
+    cache.get({}, "a" * 64)
+    cache.get({}, "a" * 64)
+    assert built.call_count == 1
+    current[0] = real_date(2026, 3, 18)
+    cache.get({}, "a" * 64)
+    assert built.call_count == 2
+    assert base_seen == [None, None]
+    cache.clear()
+    assert cache._index_day is None
+
+
+def test_public_index_rebuilds_and_rechecks_base_on_utc_day_change(engine, monkeypatch):
+    current = [datetime(2026, 3, 17, 23, 59, tzinfo=engine.timezone.utc)]
+
+    class MovingUTC:
+        @staticmethod
+        def now(tz=None):
+            return current[0]
+
+    monkeypatch.setattr(engine, "datetime", MovingUTC)
+    cache = engine._ProjectedPublicIndexCache()
+    built = Mock(return_value={"public": True})
+    monkeypatch.setattr(cache, "_build", built)
+    base_seen = []
+
+    def base(*args):
+        base_seen.append(cache._base_template)
+        cache._base_template = ["prior public base"]
+        return None, "fallback"
+
+    monkeypatch.setattr(cache, "_base", base)
+    cache.get({}, "a" * 64)
+    cache.get({}, "a" * 64)
+    assert built.call_count == 1
+    current[0] += timedelta(minutes=2)
+    cache.get({}, "a" * 64)
+    assert built.call_count == 2
+    assert base_seen == [None, None]
+
+
+def test_expired_prepared_pair_falls_back_after_utc_rollover(engine, documents, monkeypatch, capsys):
+    helper = importlib.import_module(engine.__package__ + ".portfolio_prepared_business")
+    artifact, receipt = _prepare(engine, documents)
+    base_revision = artifact["base_projection"]["source_revision"]
+    assert helper._checked_receipt(artifact, receipt)
+    first = engine._PROJECTED_PUBLIC_INDEX._index
+    capsys.readouterr()
+
+    class Tomorrow:
+        @staticmethod
+        def now(tz=None):
+            return datetime.now(tz) + timedelta(days=1)
+
+    monkeypatch.setattr(engine, "datetime", Tomorrow)
+    monkeypatch.setattr(helper, "datetime", Tomorrow)
+    assert not helper._checked_receipt(artifact, receipt)
+    next_index = engine.prepare_public_index(documents, "a" * 64,
+        prepared_business_index=artifact, publisher_receipt=receipt,
+        base_source_revision=base_revision)
+    assert next_index is not first
+    assert "portfolio_prepared_projection status=fallback" in capsys.readouterr().err
+    fallback = _bytes(engine.analyze_portfolio(POSITIONS, documents, public_bundle_revision="a" * 64))
+    engine._reset_projection_cache_for_tests()
+    engine.prepare_public_index(documents, "a" * 64)
+    assert _bytes(engine.analyze_portfolio(POSITIONS, documents, public_bundle_revision="a" * 64)) == fallback
+
+
 @pytest.mark.parametrize("quote", ["person@example.com", "<script>private</script>", "x" * 10001])
 def test_rejected_public_text_still_rejects(engine, documents, quote):
     _prepare(engine, documents)

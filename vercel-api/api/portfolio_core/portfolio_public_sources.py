@@ -229,6 +229,8 @@ _PATH_RE = re.compile(
 _URL_IN_TEXT_RE = re.compile(r"(?i)(?:https?|ftp|data|javascript):")
 _HTML_RE = re.compile(r"<[^>]*>|&(?:lt|gt|#(?:x[0-9a-f]+|\d+));", re.IGNORECASE)
 _TEXT_CACHE = ContextVar("public_text_cache", default=None)
+_DATE_FORMAT_CACHE = ContextVar("public_date_format_cache", default=None)
+_FILING_EVALUATION_DAY = ContextVar("public_filing_evaluation_day", default=None)
 
 
 class PublicSourceError(ValueError):
@@ -362,13 +364,19 @@ def _safe_text_uncached(value: Any, maximum: int) -> str | None:
 
 
 @contextmanager
-def _temporary_public_text_cache():
+def _temporary_public_text_cache(*, filing_day=None):
     """Share validation only while building one public index, never across requests."""
     cached = lru_cache(maxsize=65_536)(_safe_text_uncached)
+    dates = lru_cache(maxsize=8192)(_as_of_uncached)
     token = _TEXT_CACHE.set(cached)
+    date_token = _DATE_FORMAT_CACHE.set(dates)
+    day_token = _FILING_EVALUATION_DAY.set(filing_day or date.today().isoformat())
     try:
         yield
     finally:
+        _FILING_EVALUATION_DAY.reset(day_token)
+        _DATE_FORMAT_CACHE.reset(date_token)
+        dates.cache_clear()
         _TEXT_CACHE.reset(token)
         cached.cache_clear()
 
@@ -379,6 +387,13 @@ def safe_public_text(value: Any, maximum: int) -> str | None:
 
 
 def _as_of(value: Any, *, annual_ok: bool = False) -> str | None:
+    cached = _DATE_FORMAT_CACHE.get()
+    if cached is not None and type(value) in (str, int) and type(annual_ok) is bool:
+        return cached(value, annual_ok=annual_ok)
+    return _as_of_uncached(value, annual_ok=annual_ok)
+
+
+def _as_of_uncached(value: Any, *, annual_ok: bool = False) -> str | None:
     if annual_ok and isinstance(value, int) and not isinstance(value, bool):
         return str(value) if 1900 <= value <= 2100 else None
     if annual_ok and isinstance(value, str) and re.fullmatch(r"[0-9]{4}", value, re.ASCII):
@@ -747,7 +762,7 @@ def _sec_filing(raw: Mapping[str, Any], url: str, filed: str) -> dict[str, Any] 
         return None
     filing_date = _as_of(raw.get("filing_date"))
     if (filing_date is None or filing_date != filed or not 1900 <= int(filed[:4]) <= 2100
-            or filing_date > date.today().isoformat()):
+            or filing_date > (_FILING_EVALUATION_DAY.get() or date.today().isoformat())):
         return None
     report = raw.get("report_date")
     if report in (None, ""):
