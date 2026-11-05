@@ -372,3 +372,188 @@ def test_budget_before_first_request_is_deferred_not_failed(source, monkeypatch)
     assert receipt["attempted_at"] is receipt["successful_checked_at"] is None
     assert result["_coverage"]["unprocessed_tickers"] == ["ADR", "ADR.B"]
     assert result["_coverage"]["carry_forward_tickers"] == ["ADR"]
+
+
+@pytest.fixture
+def public_universe(monkeypatch, tmp_path):
+    """Only the two fixed public sources; never read a portfolio or real universe."""
+    from api.builders import us_insider_trades_public_builder as insider_builder
+
+    report, catalog = tmp_path / "report.json", tmp_path / "catalog.json"
+    monkeypatch.setattr(builder, "PUBLIC_REPORT_PATH", str(report))
+    monkeypatch.setattr(builder, "PUBLIC_UNIVERSE_PATH", str(catalog))
+    monkeypatch.setattr(builder, "SUMMARY_PATH", str(tmp_path / "summary.json"))
+    monkeypatch.setattr(insider_builder, "_ordered_universe", lambda: ["BASE", "BASE"])
+    monkeypatch.setattr(insider_builder, "_universe", lambda: ["BASE", "BASE"])
+    monkeypatch.setattr(insider_builder, "_rec_us_set", lambda: set())
+    monkeypatch.setattr(insider_builder, "_suspect_tickers", lambda: [])
+    monkeypatch.setattr(insider_builder, "_now_kst", lambda: datetime(2026, 1, 7, tzinfo=timezone.utc))
+    monkeypatch.setattr(requests.sessions.Session, "request",
+                        lambda *_args, **_kwargs: pytest.fail("unexpected network request"))
+
+    def write(report_rows, catalog_rows=None):
+        report.write_text(json.dumps({"stocks": report_rows}), encoding="utf-8")
+        catalog.write_text(json.dumps({"stocks": report_rows if catalog_rows is None else catalog_rows}),
+                           encoding="utf-8")
+        return report, catalog
+
+    return write
+
+
+def test_public_adr_union_is_deduplicated_and_preserves_base_order(public_universe):
+    public_universe([{"ticker": ticker, "market": "US", "type": "ADR", "name": "Issuer " + ticker}
+                     for ticker in ("BASE", "ADR.B", "ADR", "ADR")])
+    assert builder._universe() == ["BASE", "ADR", "ADR.B"]
+
+
+@pytest.mark.parametrize("row", [
+    {"ticker": "../PRIVATE", "market": "US", "name": "Unsafe"},
+    {"ticker": "ADR/US", "market": "US", "name": "Unsafe"},
+    {"ticker": "adr", "market": "US", "name": "Lowercase"},
+    {"ticker": " ADR", "market": "US", "name": "Whitespace"},
+    {"ticker": "A" * 17, "market": "US", "name": "Long"},
+    {"ticker": 123, "market": "US", "name": "Numeric"},
+    {"ticker": "000660", "market": "KR", "name": "Korean"},
+    {"ticker": "ADR", "market": "KR", "name": "Wrong market"},
+    {"ticker": "ADR", "market": "US", "type": "ADR", "name": "Issuer", "id": "US:OTHER"},
+    {"ticker": "ADR", "market": "US", "type": "ADR", "name": "Issuer", "etf": True},
+    {"ticker": "ADR", "market": "US", "type": "ADR", "name": "Issuer", "etf": "false"},
+    {"ticker": "ADR", "market": "US", "name": "Issuer", "type": "ETF"},
+    {"ticker": "ADR", "market": "US", "name": ""},
+    {"ticker": "ADR", "market": "US", "type": "ADR", "name": "Issuer\nInjected"},
+    None,
+])
+def test_invalid_or_nonstock_public_rows_cannot_expand_universe(public_universe, row):
+    public_universe([row])
+    assert builder._universe() == ["BASE"]
+
+
+def test_public_union_requires_two_matching_unambiguous_identities(public_universe):
+    adr = {"ticker": "ADR", "market": "US", "type": "ADR", "name": "Issuer ADR"}
+    other = {"ticker": "ONLY", "market": "US", "type": "CS", "name": "Other"}
+    for report, catalog in [([adr], []), ([], [adr]), ([adr], [dict(adr, name="Different issuer")]),
+                            ([adr, dict(adr, name="Conflict")], [adr]),
+                            ([adr], [adr, dict(adr, market="KR")])]:
+        public_universe(report, catalog)
+        assert builder._universe() == ["BASE"]
+    public_universe([adr, other], [dict(adr, name=" issuer   ADR "), other])
+    assert builder._universe() == ["BASE", "ADR", "ONLY"]
+
+
+@pytest.mark.parametrize("bad", [None, [], {"recommendations": [{"ticker": "PRIVATE"}]},
+                                 {"stocks": {"PRIVATE": {"market": "US"}}}])
+def test_absent_or_invalid_public_source_keeps_original_universe(public_universe, bad):
+    valid = [{"ticker": "ADR", "market": "US", "type": "ADR", "name": "Issuer ADR"}]
+    paths = public_universe(valid)
+    for path in paths:
+        path.write_text(json.dumps(bad), encoding="utf-8")
+        assert builder._universe() == ["BASE"]
+        path.write_text("not json", encoding="utf-8")
+        assert builder._universe() == ["BASE"]
+        path.unlink()
+        assert builder._universe() == ["BASE"]
+        public_universe(valid)
+
+
+@pytest.mark.parametrize("supplement", [False, True])
+def test_public_union_preserves_summary_fallback(public_universe, monkeypatch, supplement):
+    from api.builders import us_insider_trades_public_builder as insider_builder
+
+    public_universe([{"ticker": "ADR", "market": "US", "type": "ADR", "name": "Issuer ADR"}]
+                    if supplement else [])
+    monkeypatch.setattr(insider_builder, "_universe", lambda: [])
+    monkeypatch.setattr(insider_builder, "_ordered_universe", lambda: [])
+    with open(builder.SUMMARY_PATH, "w", encoding="utf-8") as f:
+        json.dump({"rows": [{"ticker": "OLD"}]}, f)
+    assert builder._universe() == (["OLD", "ADR"] if supplement else ["OLD"])
+
+
+def test_supplement_still_uses_sec_cik_map_and_unresolved_boundary(public_universe, source, monkeypatch):
+    original_universe = builder._universe
+    original_names = builder._name_map
+    public_universe([{"ticker": ticker, "market": "US", "type": "ADR", "name": "Issuer " + ticker,
+                      "cik": "9999999999"} for ticker in ("ADR", "MISS")])
+    calls, sleeps, _path = source(["BASE", "ADR", "MISS"], {"BASE": "2", "ADR": "1"}, {
+        builder.SEC_SUBMISSIONS.format(cik10="0000000002"): _Response(_payload(cik=2)),
+        builder.SEC_SUBMISSIONS.format(cik10="0000000001"): _Response(_payload("6-K")),
+    })
+    monkeypatch.setattr(builder, "_universe", original_universe)
+    monkeypatch.setattr(builder, "_name_map", original_names)
+    monkeypatch.setattr(builder, "COMBINED_PATH", builder.SUMMARY_PATH + ".absent")
+    result = builder.build_feed()
+    assert result["_coverage"]["universe_n"] == 3
+    assert result["_coverage"]["processed_tickers"] == ["ADR", "BASE"]
+    assert result["_coverage"]["unresolved_tickers"] == ["MISS"]
+    assert [url for url, _kwargs in calls] == [builder.SEC_SUBMISSIONS.format(cik10=cik)
+                                             for cik in ("0000000002", "0000000001")]
+    assert sleeps == [builder.SEC_DELAY] * 2
+    disc = result["items"][0]["disclosures"][0]
+    assert result["items"][0]["name"] == disc["filer"] == "Issuer ADR"
+    assert disc["label"] == "6-K" and disc["cik"] == "1"
+    assert disc["date"] == "2026-09-04" and disc["report_date"] == "2026-06-30"
+
+
+@pytest.mark.parametrize("security_type", ["bond", "warrant", "etn", "fund", "preferred", "unknown", "", None])
+@pytest.mark.parametrize("side", ["report", "catalog"])
+def test_non_common_security_type_in_either_source_blocks_supplement(public_universe, security_type, side):
+    valid = {"ticker": "ADR", "market": "US", "name": "Issuer ADR", "type": "ADRC", "etf": False}
+    bad = dict(valid, type=security_type)
+    public_universe([bad] if side == "report" else [valid],
+                    [bad] if side == "catalog" else [valid])
+    assert builder._universe() == ["BASE"]
+
+
+def test_untyped_legacy_stock_requires_both_public_schemas(public_universe, monkeypatch):
+    report = {"ticker": "ADR", "market": "US", "name": "Issuer ADR", "business": "Semiconductors",
+              "facts": {"ROE": "10%"}}
+    catalog = {"ticker": "ADR", "market": "US", "name": "Issuer ADR", "name_ko": "발행사", "nv": "ADR", "kw": "IssuerADR"}
+    public_universe([report], [catalog])
+    monkeypatch.setattr(builder, "COMBINED_PATH", builder.SUMMARY_PATH + ".absent")
+    assert builder._universe() == ["BASE", "ADR"]
+    assert builder._name_map()["ADR"] == "Issuer ADR"
+    for key in ("business", "facts"):
+        bad = dict(report)
+        bad.pop(key)
+        public_universe([bad], [catalog])
+        assert builder._universe() == ["BASE"]
+    public_universe([report], [{key: value for key, value in catalog.items() if key != "nv"}])
+    assert builder._universe() == ["BASE", "ADR"]  # Legacy catalog rows can omit Naver identity.
+    public_universe([report], [dict(catalog, nv="OTHER")])
+    assert builder._universe() == ["BASE"]
+    for key in ("name_ko", "kw"):
+        bad = dict(catalog)
+        bad.pop(key)
+        public_universe([report], [bad])
+        assert builder._universe() == ["BASE"]
+
+
+def test_supplement_enters_bounded_rotation_without_displacing_priority(public_universe, source, monkeypatch):
+    from api.builders import us_insider_trades_public_builder as insider
+
+    original_universe = builder._universe
+    base = ["SUS", "REC"] + ["BASE" + str(i) for i in range(14)]
+    added = ["ADR", "NEW"]
+    public_universe([{"ticker": ticker, "market": "US", "name": "Issuer " + ticker, "type": "ADR"}
+                     for ticker in added])
+    monkeypatch.setattr(insider, "_universe", lambda: base)
+    monkeypatch.setattr(insider, "_rec_us_set", lambda: {"REC"})
+    monkeypatch.setattr(insider, "_suspect_tickers", lambda: ["SUS"])
+    cik_map = {ticker: str(i + 1) for i, ticker in enumerate(base + added)}
+    responses = {builder.SEC_SUBMISSIONS.format(cik10=str(i + 1).zfill(10)):
+                 _Response(_payload("6-K", cik=i + 1)) for i in range(len(cik_map))}
+    selected = set()
+    for day in range(1, 8):
+        monkeypatch.setattr(insider, "_now_kst", lambda day=day: datetime(2026, 1, day, tzinfo=timezone.utc))
+        calls, _sleeps, _path = source(base + added, cik_map, responses)
+        monkeypatch.setattr(builder, "_universe", original_universe)
+        assert builder._universe()[:2] == ["SUS", "REC"]
+        # Fixed budget checks permit five issuers, then stop; no real clock or IO.
+        clock = iter([0] * 6 + [2, 2])
+        monkeypatch.setattr(builder.time, "monotonic", lambda: next(clock))
+        monkeypatch.setattr(builder, "MAX_SECONDS", 1)
+        result = builder.build_feed()
+        assert len(calls) == 5
+        assert result["_meta"]["unprocessed_n"] == len(cik_map) - 5
+        assert {"SUS", "REC"} <= set(result["_coverage"]["processed_tickers"])
+        selected.update(result["_coverage"]["processed_tickers"])
+    assert selected == set(base + added)
