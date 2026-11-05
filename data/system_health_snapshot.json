@@ -1,73 +1,73 @@
 {
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-11-06T06:09:53+09:00",
+    "checked_at": "2026-11-06T06:34:47+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 14383,
+    "elapsed_ms": 16087,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 993,
+        "latency_ms": 907,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 290,
+        "latency_ms": 408,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 350,
+        "latency_ms": 371,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 699,
+        "latency_ms": 1134,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 978,
+        "latency_ms": 1024,
         "detail": "정상",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1191,
+        "latency_ms": 836,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 13704,
+        "latency_ms": 15150,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20261104)",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 612,
+        "latency_ms": 601,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 67,
+        "latency_ms": 152,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 95,
+        "latency_ms": 146,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 124,
+        "latency_ms": 128,
         "detail": "정상",
         "attempts": 1
       },
@@ -87,10 +87,10 @@
     "github_worker": {
       "status": "running",
       "conclusion": "in_progress",
-      "workflow": "Stock Analysis Pipeline (Quick — Off-hours)",
-      "started_at": "2026-11-05T21:07:06Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/42109668857",
-      "detail": "Stock Analysis Pipeline (Quick — Off-hours): in_progress"
+      "workflow": "Stock Analysis Pipeline (Full & Periodic)",
+      "started_at": "2026-11-05T21:30:05Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/42113194233",
+      "detail": "Stock Analysis Pipeline (Full & Periodic): in_progress"
     },
     "data_recency": {
       "status": "ok",
@@ -98,44 +98,44 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-11-06 06:08",
-          "age_hours": 0.02,
+          "last_updated": "2026-11-06 06:33",
+          "age_hours": 0.03,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-11-06 06:08",
-          "age_hours": 0.02,
+          "last_updated": "2026-11-06 06:33",
+          "age_hours": 0.03,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-11-06 06:08",
-          "age_hours": 0.02,
+          "last_updated": "2026-11-06 06:33",
+          "age_hours": 0.03,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-11-06 06:08",
-          "age_hours": 0.02,
+          "last_updated": "2026-11-06 06:33",
+          "age_hours": 0.03,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-11-06 06:08",
-          "age_hours": 0.02,
+          "last_updated": "2026-11-06 06:33",
+          "age_hours": 0.03,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-11-06 06:08",
+          "last_updated": "2026-11-06 06:33",
           "age_hours": 0.03,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-11-06 06:08",
-          "age_hours": 0.02,
+          "last_updated": "2026-11-06 06:34",
+          "age_hours": 0.01,
           "threshold_hours": 1
         }
       }
@@ -143,16 +143,17 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "dd32666",
-      "remote_message": "🎯 cockpit 2026-11-06T06:06",
-      "remote_date": "2026-11-05T21:06:47Z",
-      "local_sha": "dd32666"
+      "remote_sha": "f5d0329",
+      "remote_message": "📊 macro_snapshot 2026-11-06T06:33",
+      "remote_date": "2026-11-05T21:33:27Z",
+      "local_sha": "678f204",
+      "detail": "cron 자동 갱신 — 📊 macro_snapshot 2026-11-06T06:33"
     },
     "errors": [],
     "warnings": [],
     "overall_status": "ok"
   },
-  "updated_at": "2026-11-06T06:10:00+09:00",
+  "updated_at": "2026-11-06T06:34:52+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
