@@ -31,6 +31,7 @@ INPUTS = (
     "scripts/audit/us_forensics_coverage.py", "requirements.txt",
     ".github/workflows/us_disclosure_feed.yml", ".github/actions/publish-data/action.yml",
     "data/us_universe_combined.json", "data/us_universe_sp1500.json", "data/us_financials/_summary.json",
+    "data/us_stock_report_public.json", "data/universe_search.json",
     "data/portfolio.json", "data/us_insider_trades.json", "data/us_major_holdings.json",
     "data/us_smart_money_13f.json", "data/us_short_interest.json", "data/us_form144.json",
 )

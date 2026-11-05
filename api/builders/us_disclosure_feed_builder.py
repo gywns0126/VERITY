@@ -23,6 +23,8 @@ KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SUMMARY_PATH = os.path.join(_ROOT, "data", "us_financials", "_summary.json")
 COMBINED_PATH = os.path.join(_ROOT, "data", "us_universe_combined.json")
+PUBLIC_REPORT_PATH = os.path.join(_ROOT, "data", "us_stock_report_public.json")
+PUBLIC_UNIVERSE_PATH = os.path.join(_ROOT, "data", "universe_search.json")
 OUTPUT_PATH = os.path.join(_ROOT, "data", "us_disclosure_feed.json")
 
 WINDOW_DAYS = 90        # 8-K 산발적 → 윈도우 넉넉히 (2026-07-17 60→90: 어닝-8-K 주기 ~91일 포괄. 분기초 위치 종목의 직전 8-K 회수 → disclosures 84.7%→~97%. SEC 콜 0 증가=cutoff 필터만)
@@ -62,24 +64,114 @@ def _name_map() -> Dict[str, str]:
                     out[str(tk).upper()] = _title(r.get("entity_name"))
     except (OSError, json.JSONDecodeError):
         pass
+    for ticker, name in _public_us_supplement().items():
+        out.setdefault(ticker, name)
     return out
+
+
+def _public_us_supplement() -> Dict[str, str]:
+    """Exact public report/catalog identities omitted by the CS-only universe.
+
+    Neither private portfolio holdings nor report-supplied CIKs can broaden or
+    redirect requests. Every added ticker still needs the existing SEC CIK map.
+    Missing/malformed public sources leave the original universe unchanged.
+    """
+    sources = []
+    display_names = {}
+    for path in (PUBLIC_REPORT_PATH, PUBLIC_UNIVERSE_PATH):
+        try:
+            with open(path, encoding="utf-8") as f:
+                document = json.load(f)
+        except (OSError, ValueError):
+            return {}
+        rows = document.get("stocks") if isinstance(document, dict) else None
+        if not isinstance(rows, list):
+            return {}
+        names, blocked = {}, set()
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            ticker, name = row.get("ticker"), row.get("name")
+            if not isinstance(ticker, str) or not re.fullmatch(
+                    r"[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,2})?", ticker, re.ASCII):
+                continue
+            if (row.get("market") != "US" or ("id" in row and row["id"] != "US:" + ticker)
+                    or ("etf" in row and row["etf"] is not False)
+                    or ("type" in row and str(row["type"]).casefold() not in
+                        ("cs", "common stock", "adr", "adrc", "adrs", "nyrs"))
+                    or not isinstance(name, str) or not name.strip()
+                    or len(name) > 160 or re.search(r"[<>\x00-\x1f\x7f]", name)):
+                blocked.add(ticker)
+                continue
+            # Legacy public sources omit type/etf. Accept only their paired
+            # stock schemas, never an arbitrary untyped ticker/name record.
+            if "type" not in row:
+                if path == PUBLIC_REPORT_PATH:
+                    stock_schema = (isinstance(row.get("facts"), dict) and bool(row["facts"])
+                                    and isinstance(row.get("business"), str) and bool(row["business"].strip()))
+                else:
+                    stock_schema = (("nv" not in row or row["nv"] == ticker)
+                                    and row.get("kw") == re.sub(r"\s+", "", name)
+                                    and isinstance(row.get("name_ko"), str) and bool(row["name_ko"].strip()))
+                if not stock_schema:
+                    blocked.add(ticker)
+                    continue
+            key = " ".join(name.split()).casefold()
+            if ticker in names and names[ticker] != key:
+                blocked.add(ticker)
+            names[ticker] = key
+            row_name = " ".join(name.split())
+            # Keep the verified display name without trusting report CIKs.
+            if path == PUBLIC_REPORT_PATH:
+                display_names[ticker] = row_name
+        sources.append({ticker: name for ticker, name in names.items() if ticker not in blocked})
+    report, catalog = sources
+    return {ticker: display_names[ticker] for ticker in sorted(report)
+            if catalog.get(ticker) == report[ticker]}
 
 
 def _universe() -> List[str]:
     """전체 US 유니버스(combined, 소형주 포함) — 심화 파이프라인 공유 rotation 재사용(rec 우선+페이지 회전).
     부재 시 summary(S&P1500) fallback."""
+    order = []
     try:
-        from api.builders.us_insider_trades_public_builder import _ordered_universe
-        uni = _ordered_universe()
+        from api.builders import us_insider_trades_public_builder as insider
+        supplement = _public_us_supplement()
+        if supplement:
+            # Apply the existing suspect/rec/page policy to the union BEFORE
+            # rotation. Appending to the already rotated order starves ADRs.
+            uni = [str(t).upper() for t in insider._universe()]
+            # Choose the underlying base before the supplement can make the
+            # union nonempty and accidentally bypass the summary fallback.
+            if not uni:
+                with open(SUMMARY_PATH, encoding="utf-8") as f:
+                    uni = [str(r["ticker"]).upper() for r in ((json.load(f) or {}).get("rows") or []) if r.get("ticker")]
+            uni = list(dict.fromkeys(uni + list(supplement)))
+            rec = insider._rec_us_set()
+            suspect = [t for t in insider._suspect_tickers() if t in set(uni)]
+            sus_set = set(suspect)
+            priority = [t for t in uni if t in rec and t not in sus_set]
+            rest = [t for t in uni if t not in rec and t not in sus_set]
+            if rest:
+                # Round up so a short final page also reaches the budgeted
+                # front during the cycle (floor division strands its tail).
+                page = max(1, (len(rest) + insider._ROTATION_CYCLE_DAYS - 1) // insider._ROTATION_CYCLE_DAYS)
+                start = (insider._now_kst().timetuple().tm_yday % insider._ROTATION_CYCLE_DAYS) * page
+                rest = rest[start:] + rest[:start]
+            uni = suspect + priority + rest
+        else:
+            uni = insider._ordered_universe()
         if uni:
-            return [str(t).upper() for t in uni]
+            order = [str(t).upper() for t in uni]
     except Exception:  # noqa: BLE001
         pass
-    try:
-        with open(SUMMARY_PATH, encoding="utf-8") as f:
-            return [str(r["ticker"]).upper() for r in ((json.load(f) or {}).get("rows") or []) if r.get("ticker")]
-    except (OSError, json.JSONDecodeError, KeyError):
-        return []
+    if not order:
+        try:
+            with open(SUMMARY_PATH, encoding="utf-8") as f:
+                order = [str(r["ticker"]).upper() for r in ((json.load(f) or {}).get("rows") or []) if r.get("ticker")]
+        except (OSError, json.JSONDecodeError, KeyError):
+            pass
+    return list(dict.fromkeys(order + list(_public_us_supplement())))
 
 
 def _disclosures(payload: Any, cik: str, cutoff: str, asof: str) -> List[Dict[str, Any]]:
@@ -279,7 +371,7 @@ def build_feed(window_days: int = WINDOW_DAYS) -> Dict[str, Any]:
             "unavailable_n": len(unavailable),
             "unprocessed_n": len(unprocessed),
             "note": "공시 사실·일정만 — 점수·등급·추천 아님 (RULE 7). 제목은 SEC 원문, 링크는 EDGAR. "
-                    "유니버스=combined(S&P 1500 + Polygon 소형주), 페이지 회전+carry-forward 누적. "
+                    "유니버스=combined(S&P 1500 + Polygon 소형주) + 공개 US 보고서·검색 catalog 동일 식별자, 기존 페이지 회전+carry-forward 누적. "
                     "processed=SEC submissions 정상 파싱, unavailable=원천 응답·파싱 실패, unresolved=CIK 미확인. "
                     "date·filing_date=filingDate, report_date=reportDate, acceptance_datetime=acceptanceDateTime 원문; "
                     "수집 범위=filings.recent만(과거 파일 추가 요청 없음). "
