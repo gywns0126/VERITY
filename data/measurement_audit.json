@@ -1,5 +1,5 @@
 {
- "as_of": "2026-11-06T07:29:08+09:00",
+ "as_of": "2026-11-06T11:51:07+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -14,7 +14,7 @@
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 54,
+   "episodes": 55,
    "phantom_sells": 59,
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
@@ -140,7 +140,7 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 13,
+     "events_scanned": 9,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
@@ -152,7 +152,7 @@
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 4,
+   "holdings_checked": 3,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -244,21 +244,21 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 4,
+   "holdings_checked": 3,
    "coverage": {
     "sector": {
-     "filled": 4,
-     "total": 4,
+     "filled": 3,
+     "total": 3,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 4,
-     "total": 4,
+     "filled": 3,
+     "total": 3,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 4,
-     "total": 4,
+     "filled": 3,
+     "total": 3,
      "guard": "팩터 쏠림 차단"
     }
    },
@@ -272,7 +272,7 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 4,
+   "holdings_checked": 3,
    "no_profit_exit": [],
    "ladder_broken": [
     {
