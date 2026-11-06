@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from copy import deepcopy
 import json
 import logging
@@ -137,13 +138,26 @@ def _valid_fetch_result(bundle):
     return (documents, index_revision) if coverage.get("status") == expected_status else None
 
 
-def _prepare_index(documents, revision, *, base_source_revision=None):
+def _prepare_index(documents, revision, *, base_source_revision=None, prepared_fetcher=None):
     # Common public data only. Neither identity nor the selected window enters
     # the shared preparation cache. The final response remains request-local.
     from api.portfolio_core.portfolio_engine import prepare_public_index
     prepare_public_index(documents, revision,
-                         prepared_business_fetcher=fetch_publisher_prepared_business,
+                         prepared_business_fetcher=prepared_fetcher or fetch_publisher_prepared_business,
                          base_source_revision=base_source_revision)
+
+
+def _initial_index_empty():
+    # Deliberately inspect only the initial empty cache. Never wait for another
+    # request's projection, or predict whether its revision/day will be stale.
+    from api.portfolio_core.portfolio_engine import _PROJECTED_PUBLIC_INDEX
+    cache = _PROJECTED_PUBLIC_INDEX
+    if not cache._lock.acquire(blocking=False):
+        return False
+    try:
+        return cache._index is None
+    finally:
+        cache._lock.release()
 
 
 def _load_prices(positions):
@@ -202,8 +216,18 @@ def analyze_request(request):
     except Exception:
         return 400, response_headers, {"error": "invalid_positions"}
 
+    # The optional worker remains alive until all analysis paths return. A
+    # source failure still drains it before the request exits.
+    with (ThreadPoolExecutor(max_workers=1) if _initial_index_empty() else nullcontext()) as pool:
+        return _analyze_validated(payload, validated_positions, response_headers, pool)
+
+
+def _analyze_validated(payload, validated_positions, response_headers, prefetch_pool):
     started, stage_status = _stage_clock(), "error"
+    prepared_future = None
     try:
+        if prefetch_pool is not None:
+            prepared_future = prefetch_pool.submit(fetch_publisher_prepared_business)
         source_bundle = fetch_public_sources()
         validated_sources = _valid_fetch_result(source_bundle)
         if validated_sources is not None and validated_sources[0]:
@@ -232,7 +256,9 @@ def analyze_request(request):
             changes = pool.submit(_load_changes, [dict(row) for row in price_positions])
             _prepare_index(documents, public_bundle_revision,
                            **({"base_source_revision": source_bundle["base_revision"]}
-                              if source_bundle.get("base_revision") is not None else {}))
+                              if source_bundle.get("base_revision") is not None else {}),
+                           **({"prepared_fetcher": prepared_future.result}
+                              if prepared_future is not None else {}))
             price_documents, change_projection = prices.result(), changes.result()
         result = analyze_portfolio(
             payload["positions"],
