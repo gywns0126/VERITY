@@ -287,7 +287,9 @@ function processChain({ documents, catalog, tickerIndex, sources, events, correc
     denominators.excerptsInput += doc.snippets.length;
     const issuer = resolveTicker(catalog, doc.ticker, /^\d{6}$/.test(doc.ticker) ? 'KR' : undefined);
     if (issuer.status !== 'unique') {
-      increment(rejectionReasons, issuer.status === 'ambiguous' ? 'ambiguous_document_issuer' : 'unknown_document_issuer', doc.snippets.length || 1);
+      // Rejection reasons count excerpts/relations, not document containers.
+      // An empty document has no rejected excerpt to add to this denominator.
+      if (doc.snippets.length) increment(rejectionReasons, issuer.status === 'ambiguous' ? 'ambiguous_document_issuer' : 'unknown_document_issuer', doc.snippets.length);
       denominators.excerptsRejected += doc.snippets.length;
       continue;
     }
@@ -300,9 +302,9 @@ function processChain({ documents, catalog, tickerIndex, sources, events, correc
       };
       seenSources.add(sourceId);
       denominators.documentsAccepted += 1;
-    } else {
-      increment(rejectionReasons, 'duplicate_document_receipt');
     }
+    // A repeated receipt reuses its source; distinct excerpts below remain
+    // eligible. Actual repeated excerpts are counted by duplicate_excerpt_event.
     addUnique(tickerIndex[issuer.key].sourceCandidates, sourceId);
     // A correction title proves only that this receipt is a correction filing. The input
     // does not carry the original receipt identifier, so no supersession lineage is inferred.

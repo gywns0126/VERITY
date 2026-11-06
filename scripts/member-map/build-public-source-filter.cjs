@@ -64,6 +64,13 @@ function validatePublicCatalog(catalog) {
   if (Object.keys(catalog.tickerIndex).length !== catalog.denominators.issuersIndexed) {
     throw Error('Invalid public catalog: full ticker index required');
   }
+  const reasons = catalog.rejectionReasons;
+  const rejected = [catalog.denominators.excerptsRejected, catalog.denominators.relationsRejected];
+  if (!reasons || typeof reasons !== 'object' || Array.isArray(reasons)
+      || [...rejected, ...Object.values(reasons)].some(value => !Number.isSafeInteger(value) || value < 0)
+      || Object.values(reasons).reduce((sum, value) => sum + value, 0) !== rejected[0] + rejected[1]) {
+    throw Error('Invalid public catalog: rejection denominator');
+  }
   const serialized = JSON.stringify(catalog);
   for (const forbidden of ['/Users/', 'registryGroup', 'registryId', 'LOCAL_FILES', 'PRIVATE_FILES', 'data/chain_snippets.json', 'data/group_structure.json', 'data/universe_search.json']) {
     if (serialized.includes(forbidden)) throw Error('Invalid public catalog: private or local metadata');

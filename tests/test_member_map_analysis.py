@@ -7,6 +7,8 @@ import json
 import logging
 import re
 import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import subprocess
 import sys
@@ -254,7 +256,9 @@ def test_base_revision_is_internal_validated_and_forwarded(modules, monkeypatch)
     monkeypatch.setattr(endpoint, "analyze_portfolio", Mock(return_value={"schema": "alphaconsole-portfolio-v1"}))
     assert endpoint.analyze_request(_request("jwt-a", {
         "positions": [{"ticker": "005930", "market": "KR"}]}))[0] == 200
-    prepare.assert_called_once_with(source["documents"], source["revision"], base_source_revision="c" * 64)
+    assert prepare.call_args.args == (source["documents"], source["revision"])
+    assert prepare.call_args.kwargs["base_source_revision"] == "c" * 64
+    assert prepare.call_args.kwargs["prepared_fetcher"]() == (None, None)
     for invalid in ("", "private-selection", "A" * 64, 1, []):
         assert endpoint._valid_fetch_result({**source, "base_revision": invalid}) is None
 
@@ -644,7 +648,7 @@ def test_public_index_preparation_overlaps_independent_reads(modules, monkeypatc
     prepared = []
     positions = [{"ticker": "005930", "market": "KR"}]
 
-    def prepare(documents, revision):
+    def prepare(documents, revision, **_kwargs):
         assert documents is source["documents"] and revision == source["revision"]
         barrier.wait()
         prepared.append(True)
@@ -702,3 +706,138 @@ def test_invalid_input_does_not_fetch_prepared_public_artifact(modules, monkeypa
     endpoint.fetch_publisher_prepared_business.side_effect = AssertionError("prepared read must not run")
     assert endpoint.analyze_request(_request("jwt-a", {"positions": [], "member_id": USER_A}))[0] == 400
     endpoint.fetch_publisher_prepared_business.assert_not_called()
+
+
+def test_initial_prefetch_overlaps_sources_and_preserves_result(modules, monkeypatch):
+    endpoint, _ = modules
+    engine = sys.modules["api.portfolio_core.portfolio_engine"]
+    request = lambda: _request("jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]})
+    monkeypatch.setattr(endpoint, "fetch_public_sources", lambda: _bundle())
+    initial_index_empty = endpoint._initial_index_empty
+    monkeypatch.setattr(endpoint, "_initial_index_empty", lambda: False)
+    baseline = endpoint.analyze_request(request())
+    engine._PROJECTED_PUBLIC_INDEX.clear()
+    monkeypatch.setattr(endpoint, "_initial_index_empty", initial_index_empty)
+    barrier = threading.Barrier(2, timeout=2)
+    def source():
+        barrier.wait()
+        return _bundle()
+    def pair():
+        barrier.wait()
+        return ({"invalid": True}, {"invalid": True})
+    monkeypatch.setattr(endpoint, "fetch_public_sources", source)
+    prefetch = Mock(side_effect=pair)
+    monkeypatch.setattr(endpoint, "fetch_publisher_prepared_business", prefetch)
+    assert endpoint.analyze_request(request()) == baseline
+    prefetch.assert_called_once_with()
+    monkeypatch.setattr(endpoint, "fetch_public_sources", lambda: _bundle())
+    assert endpoint.analyze_request(request()) == baseline
+    prefetch.assert_called_once_with()
+
+
+def test_prefetch_lock_busy_and_source_failure_drains(modules, monkeypatch):
+    endpoint, _ = modules
+    engine = sys.modules["api.portfolio_core.portfolio_engine"]
+    cache = engine._PROJECTED_PUBLIC_INDEX
+    with cache._lock:
+        assert endpoint._initial_index_empty() is False
+    started, release, finished = threading.Event(), threading.Event(), threading.Event()
+    def pair():
+        started.set()
+        assert release.wait(2)
+        finished.set()
+        return None, None
+    def source():
+        assert started.wait(2)
+        release.set()
+        raise ValueError("synthetic failure")
+    monkeypatch.setattr(endpoint, "fetch_publisher_prepared_business", pair)
+    monkeypatch.setattr(endpoint, "fetch_public_sources", source)
+    result = endpoint.analyze_request(_request("jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]}))
+    assert result[0] == 503 and result[2] == {"error": "public_sources_unavailable"}
+    assert finished.is_set()
+
+
+def test_prices_and_changes_start_before_slow_prefetch_finishes(modules, monkeypatch):
+    endpoint, _ = modules
+    pair_started = threading.Event()
+    pair_finished = threading.Event()
+    barrier = threading.Barrier(3, timeout=3)
+    def pair():
+        pair_started.set()
+        barrier.wait()
+        pair_finished.set()
+        return None, None
+    def source():
+        assert pair_started.wait(2)
+        return _bundle()
+    def optional_read(result):
+        assert not pair_finished.is_set()
+        barrier.wait()
+        return result
+    monkeypatch.setattr(endpoint, "fetch_publisher_prepared_business", pair)
+    monkeypatch.setattr(endpoint, "fetch_public_sources", source)
+    monkeypatch.setattr(endpoint, "_load_prices", lambda _positions: optional_read({}))
+    monkeypatch.setattr(endpoint, "_load_changes", lambda _positions: optional_read(None))
+    result = endpoint.analyze_request(_request("jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]}))
+    assert result[0] == 200
+    assert pair_finished.is_set()
+
+
+def test_initial_prefetch_rejected_requests_never_start(modules, monkeypatch):
+    endpoint, _ = modules
+    source = Mock()
+    monkeypatch.setattr(endpoint, "fetch_public_sources", source)
+    for request in (_request(None, {"positions": []}),
+                    _request("jwt-a", {"positions": []}),
+                    _request("jwt-a", {"positions": []}, origin="https://evil.example")):
+        assert endpoint.analyze_request(request)[0] in (400, 401, 403)
+    endpoint.fetch_publisher_prepared_business.assert_not_called()
+    source.assert_not_called()
+
+
+def test_concurrent_initial_prefetch_uses_existing_fetch_singleflight(modules, monkeypatch):
+    endpoint, _ = modules
+    prepared = sys.modules["api.portfolio_core.portfolio_prepared_business"]
+    monkeypatch.setattr(prepared, "_FETCH_CACHE", None)
+    monkeypatch.setattr(prepared, "_FETCH_EXPIRES_AT", 0)
+    reader = Mock(return_value={"synthetic": True})
+    monkeypatch.setattr(prepared, "_read_fixed_public_json", reader)
+    monkeypatch.setattr(endpoint, "fetch_publisher_prepared_business", prepared.fetch_publisher_prepared_business)
+    barrier = threading.Barrier(2, timeout=3)
+    def source():
+        barrier.wait()
+        return _bundle()
+    monkeypatch.setattr(endpoint, "fetch_public_sources", source)
+    def call():
+        return endpoint.analyze_request(_request("jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]}))
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first, second = pool.submit(call), pool.submit(call)
+        assert first.result()[0] == second.result()[0] == 200
+    assert reader.call_count == 2
+
+
+def test_prefetch_synthetic_timing_comparison(modules, monkeypatch):
+    endpoint, _ = modules
+    engine = sys.modules["api.portfolio_core.portfolio_engine"]
+    original = endpoint._initial_index_empty
+    def source():
+        time.sleep(0.08)
+        return _bundle()
+    def pair():
+        time.sleep(0.08)
+        return None, None
+    monkeypatch.setattr(endpoint, "fetch_public_sources", source)
+    monkeypatch.setattr(endpoint, "fetch_publisher_prepared_business", pair)
+    request = lambda: _request("jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]})
+    monkeypatch.setattr(endpoint, "_initial_index_empty", lambda: False)
+    start = time.monotonic()
+    baseline = endpoint.analyze_request(request())
+    old = time.monotonic() - start
+    engine._PROJECTED_PUBLIC_INDEX.clear()
+    monkeypatch.setattr(endpoint, "_initial_index_empty", original)
+    start = time.monotonic()
+    result = endpoint.analyze_request(request())
+    new = time.monotonic() - start
+    assert result == baseline and result[0] == 200
+    print(f"synthetic delayed I/O baseline={old:.3f}s prefetch={new:.3f}s")
