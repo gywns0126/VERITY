@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-06T11:21:22.069684+09:00",
+ "generated_at": "2026-11-06T16:38:34.591513+09:00",
  "source": "DART 5% 대량보유 공시 + data.go.kr 국민연금 대량보유",
  "coverage": "full_5pct",
  "count": 261,
@@ -440,9 +440,9 @@
    "ticker": "012330",
    "name": "현대모비스",
    "pct": 9.51,
-   "qty_change": 612784.0,
-   "date": "2026-04-01",
-   "src": "DART majorstock"
+   "qty_change": null,
+   "date": "2026-01-12",
+   "src": "data.go.kr #15106890 (분기 확정 CSV)"
   },
   {
    "pct": 9.49,
@@ -541,6 +541,14 @@
    "src": "data.go.kr #15106890 (분기 확정 CSV)"
   },
   {
+   "ticker": "004000",
+   "name": "롯데정밀화학",
+   "pct": 8.89,
+   "qty_change": 266234.0,
+   "date": "2025-04-01",
+   "src": "DART majorstock"
+  },
+  {
    "pct": 8.76,
    "qty_change": -126885.0,
    "date": "2026-10-02",
@@ -552,9 +560,9 @@
    "ticker": "018260",
    "name": "삼성에스디에스",
    "pct": 8.7,
-   "qty_change": -825582.0,
-   "date": "2026-04-01",
-   "src": "DART majorstock"
+   "qty_change": null,
+   "date": "2026-03-10",
+   "src": "data.go.kr #15106890 (분기 확정 CSV)"
   },
   {
    "pct": 8.61,
@@ -624,9 +632,9 @@
    "ticker": "001430",
    "name": "세아베스틸지주",
    "pct": 8.41,
-   "qty_change": null,
-   "date": "2026-01-30",
-   "src": "data.go.kr #15106890 (분기 확정 CSV)"
+   "qty_change": 373262.0,
+   "date": "2026-04-01",
+   "src": "DART majorstock"
   },
   {
    "pct": 8.39,
@@ -683,14 +691,6 @@
    "src": "DART majorstock live",
    "ticker": "192080",
    "name": "더블유게임즈"
-  },
-  {
-   "ticker": "028260",
-   "name": "삼성물산",
-   "pct": 8.19,
-   "qty_change": 79363.0,
-   "date": "2025-11-19",
-   "src": "DART majorstock"
   },
   {
    "pct": 8.18,
@@ -1021,14 +1021,6 @@
    "name": "한국항공우주"
   },
   {
-   "ticker": "030200",
-   "name": "KT",
-   "pct": 7.05,
-   "qty_change": -1556640.0,
-   "date": "2026-02-02",
-   "src": "DART majorstock"
-  },
-  {
    "ticker": "047050",
    "name": "포스코인터내셔널",
    "pct": 7.05,
@@ -1197,12 +1189,12 @@
    "name": "두산밥캣"
   },
   {
-   "ticker": "003550",
-   "name": "LG",
    "pct": 6.29,
    "qty_change": -2929643.0,
    "date": "2026-07-01",
-   "src": "DART majorstock"
+   "src": "DART majorstock live",
+   "ticker": "003550",
+   "name": "(주)LG"
   },
   {
    "pct": 6.27,
@@ -2077,12 +2069,20 @@
    "name": "파인엠텍"
   },
   {
+   "ticker": "003160",
+   "name": "디아이",
+   "pct": 3.77,
+   "qty_change": -325722.0,
+   "date": "2025-04-01",
+   "src": "DART majorstock"
+  },
+  {
    "ticker": "166090",
    "name": "하나머티리얼즈",
    "pct": 3.71,
-   "qty_change": null,
-   "date": "2026-05-29",
-   "src": "data.go.kr #15106890"
+   "qty_change": -255162.0,
+   "date": "2026-06-01",
+   "src": "DART majorstock"
   },
   {
    "pct": 3.4,
@@ -10542,7 +10542,7 @@
  "full_n": 1206,
  "detail_history": {
   "schema_version": 1,
-  "generated_at": "2026-11-06T02:21:31.717827+00:00",
+  "generated_at": "2026-11-06T07:38:39.596798+00:00",
   "scope": "annual_domestic_evaluation_top100",
   "selection": {
    "as_of": "2025-12-31",
@@ -12535,7 +12535,7 @@
     "collection": {
      "collected_at": null,
      "last_good_at": null,
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "error",
      "status": "error",
      "missing_reason": "empty_response",
@@ -12578,7 +12578,7 @@
     "collection": {
      "collected_at": null,
      "last_good_at": null,
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "error",
      "status": "error",
      "missing_reason": "no_nps_rows",
@@ -12706,10 +12706,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -12735,14 +12735,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 3,
@@ -12830,10 +12830,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -12859,14 +12859,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 2,
@@ -12989,10 +12989,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -13018,14 +13018,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 3,
@@ -13218,10 +13218,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -13247,14 +13247,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 5,
@@ -13342,10 +13342,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -13371,14 +13371,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 2,
@@ -13431,10 +13431,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -13460,14 +13460,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 1,
@@ -13518,12 +13518,47 @@
       "is_correction": false,
       "conflicting_fields": [],
       "change_label": "보유 수량 감소"
+     },
+     {
+      "rcept_no": "20261102000293",
+      "raw_rows": [
+       {
+        "rcept_no": "20261102000293",
+        "rcept_dt": "2026-11-02",
+        "corp_code": "00302926",
+        "corp_name": "현대로템",
+        "report_tp": "약식",
+        "repror": "국민연금공단",
+        "stkqy": "6,609,724",
+        "stkqy_irds": "-1,110,736",
+        "stkrt": "6.06",
+        "stkrt_irds": "-1.01",
+        "ctr_stkqy": "-",
+        "ctr_stkrt": "-",
+        "report_resn": "단순추가취득/처분"
+       }
+      ],
+      "as_of": null,
+      "trade_date": null,
+      "date_basis": "filing_date",
+      "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261102000293",
+      "correction_of": null,
+      "correction_link_verified": false,
+      "filed_at": "2026-11-02",
+      "qty": 6609724,
+      "pct": 6.06,
+      "qty_change": -1110736,
+      "pct_change_pp": -1.01,
+      "reason": "단순추가취득/처분",
+      "is_correction": false,
+      "conflicting_fields": [],
+      "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -13533,7 +13568,7 @@
       "mode": "all_cached_through_end"
      },
      "date_basis": "filing_date",
-     "observation_n": 1,
+     "observation_n": 2,
      "max": {
       "pct": 7.07,
       "filed_at": "2026-08-03",
@@ -13541,26 +13576,26 @@
       "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260803000433"
      },
      "min": {
-      "pct": 7.07,
-      "filed_at": "2026-08-03",
-      "rcept_no": "20260803000433",
-      "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260803000433"
+      "pct": 6.06,
+      "filed_at": "2026-11-02",
+      "rcept_no": "20261102000293",
+      "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261102000293"
      },
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
-     "raw_n": 1,
-     "unique_raw_n": 1,
+     "raw_n": 2,
+     "unique_raw_n": 2,
      "duplicate_n": 0,
      "conflict_receipt_n": 0
     }
@@ -13644,10 +13679,10 @@
       "change_label": "보유 수량 증가"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -13673,14 +13708,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 2,
@@ -13718,7 +13753,7 @@
     "collection": {
      "collected_at": null,
      "last_good_at": null,
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "error",
      "status": "error",
      "missing_reason": "no_nps_rows",
@@ -13846,10 +13881,10 @@
       "change_label": "보유 수량 증가"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -13875,14 +13910,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 3,
@@ -13935,10 +13970,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -13964,14 +13999,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 1,
@@ -14024,10 +14059,10 @@
       "change_label": "보유 수량 증가"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -14053,14 +14088,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 1,
@@ -14183,10 +14218,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -14212,14 +14247,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 3,
@@ -14307,10 +14342,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -14336,14 +14371,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 2,
@@ -14396,10 +14431,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -14425,14 +14460,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 1,
@@ -14485,10 +14520,10 @@
       "change_label": "보유 수량 증가"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -14514,14 +14549,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 1,
@@ -14574,10 +14609,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -14603,14 +14638,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 1,
@@ -14733,10 +14768,10 @@
       "change_label": "보유 수량 감소"
      }
     ],
-    "status": "stale",
-    "status_label": "이전 공시 이력 유지",
-    "last_success_at": "2026-10-30T01:50:35.015506+00:00",
-    "missing_reason": "maxcalls_reached",
+    "status": "ok",
+    "status_label": "공시 이력 조회됨",
+    "last_success_at": "2026-11-06T07:38:35.331383+00:00",
+    "missing_reason": null,
     "unparsed_rows": [],
     "observed_pct": {
      "period": {
@@ -14762,14 +14797,14 @@
      "correction_links_unverified": false
     },
     "collection": {
-     "collected_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_good_at": "2026-10-30T01:50:35.015506+00:00",
-     "last_attempt_at": "2026-10-30T01:50:35.015506+00:00",
+     "collected_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_good_at": "2026-11-06T07:38:35.331383+00:00",
+     "last_attempt_at": "2026-11-06T07:38:35.331383+00:00",
      "last_status": "ok",
-     "status": "stale",
-     "missing_reason": "maxcalls_reached",
-     "stale": true,
-     "retained_last_good": true
+     "status": "ok",
+     "missing_reason": null,
+     "stale": false,
+     "retained_last_good": false
     },
     "row_coverage": {
      "raw_n": 3,
@@ -23248,8 +23283,8 @@
    "annual_top100_unmatched_n": 0,
    "with_history_count": 83,
    "with_period_history_count": 83,
-   "fresh_count": 65,
-   "stale_count": 18,
+   "fresh_count": 82,
+   "stale_count": 1,
    "missing_or_stale": [
     {
      "ticker": "005930",
@@ -23284,76 +23319,8 @@
      "reason": "no_nps_rows"
     },
     {
-     "ticker": "009150",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "051910",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "005490",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "035720",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "298040",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "010140",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "064350",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "006400",
-     "reason": "maxcalls_reached"
-    },
-    {
      "ticker": "000810",
      "reason": "no_nps_rows"
-    },
-    {
-     "ticker": "010130",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "316140",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "034730",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "086280",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "018260",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "138040",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "033780",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "010120",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "352820",
-     "reason": "maxcalls_reached"
     },
     {
      "ticker": "006260",
@@ -23396,95 +23363,15 @@
   },
   "network_enabled": false,
   "last_collection_run": {
-   "at": "2026-11-06T02:21:22.846433+00:00",
+   "at": "2026-11-06T07:38:35.331383+00:00",
    "annual_as_of": "2025-12-31",
    "target_n": 100,
    "annual_top100_n": 100,
    "annual_top100_unmatched_n": 0,
    "maxcalls": 20,
    "calls": 20,
-   "ttl_skipped_n": 58,
+   "ttl_skipped_n": 78,
    "unattempted": [
-    {
-     "ticker": "009540",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "267260",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "009150",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "051910",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "005490",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "035720",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "298040",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "010140",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "064350",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "006400",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "000810",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "010130",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "316140",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "034730",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "086280",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "018260",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "138040",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "033780",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "010120",
-     "reason": "maxcalls_reached"
-    },
-    {
-     "ticker": "352820",
-     "reason": "maxcalls_reached"
-    },
     {
      "ticker": "005935",
      "reason": "corp_code_missing"
@@ -26291,16 +26178,16 @@
  "as_of_latest": "2026-11-05",
  "source_counts": {
   "DART elestock live": 51,
-  "DART majorstock live": 162,
-  "DART majorstock": 7,
-  "data.go.kr #15106890": 5,
-  "data.go.kr #15106890 (분기 확정 CSV)": 36
+  "DART majorstock live": 163,
+  "data.go.kr #15106890 (분기 확정 CSV)": 37,
+  "data.go.kr #15106890": 4,
+  "DART majorstock": 6
  },
  "dart_refresh": {
   "event_source_ok": true,
-  "event_source_rows": 24034,
+  "event_source_rows": 24259,
   "event_source_invalid_rows": 0,
-  "event_source_latest": "20261105",
+  "event_source_latest": "20261106",
   "event_tickers": 214,
   "candidate_tickers": 1,
   "updated_tickers": 1,
@@ -26311,14 +26198,14 @@
  "note": "국민연금 5% 대량보유 공시 이력의 종목별 최신 신고 기준 — 5% 아래로 내려간 최종 신고 포함 · 전체 보유종목(약 1,200) 아님 · 지분율은 법적 공시 사실, 점수·추천 아님.",
  "dart_check": {
   "event_source_ok": true,
-  "event_source_rows": 24096,
+  "event_source_rows": 24259,
   "event_source_invalid_rows": 0,
   "event_source_latest": "20261106",
   "event_tickers": 214,
-  "candidate_tickers": 0,
-  "updated_tickers": 0,
+  "candidate_tickers": 1,
+  "updated_tickers": 1,
   "retired_tickers": 0,
   "unresolved_tickers": 0,
-  "api_calls": 0
+  "api_calls": 2
  }
 }

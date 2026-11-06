@@ -1,5 +1,5 @@
 {
- "as_of": "2026-11-06T11:51:07+09:00",
+ "as_of": "2026-11-06T17:04:40+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -14,7 +14,7 @@
  "checks": {
   "ledger_integrity": {
    "ok": false,
-   "episodes": 55,
+   "episodes": 56,
    "phantom_sells": 59,
    "phantom_pnl": -1332835.1,
    "window_start": "2026-05-17",
@@ -84,7 +84,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "38/38",
+     "coverage": "72/72",
      "via": [
       "current_price",
       "price"
@@ -95,7 +95,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "29/38",
+     "coverage": "51/72",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -106,7 +106,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "38/38",
+     "coverage": "72/72",
      "via": [
       "fscore_deltas"
      ],
@@ -116,7 +116,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "38/38",
+     "coverage": "71/72",
      "via": [
       "industry"
      ],
@@ -126,7 +126,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "16/38",
+     "coverage": "34/72",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -152,7 +152,7 @@
   },
   "price_scale": {
    "ok": true,
-   "holdings_checked": 3,
+   "holdings_checked": 2,
    "scale_mismatches": [],
    "detail": "스케일 정합"
   },
@@ -174,9 +174,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 31,
-   "days_without_any_cap_pct": 18.8,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.2%). cap 없는 날 31/165일",
+   "days_without_any_cap": 32,
+   "days_without_any_cap_pct": 19.4,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.2%). cap 없는 날 32/165일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -187,7 +187,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 15,
-   "stock_days": 9697,
+   "stock_days": 9716,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -244,27 +244,27 @@
   },
   "guard_inputs": {
    "ok": true,
-   "holdings_checked": 3,
+   "holdings_checked": 2,
    "coverage": {
     "sector": {
-     "filled": 3,
-     "total": 3,
+     "filled": 2,
+     "total": 2,
      "guard": "섹터 35% 상한"
     },
     "beta": {
-     "filled": 3,
-     "total": 3,
+     "filled": 2,
+     "total": 2,
      "guard": "포트폴리오 베타 1.5 상한"
     },
     "quant_factors": {
-     "filled": 3,
-     "total": 3,
+     "filled": 2,
+     "total": 2,
      "guard": "팩터 쏠림 차단"
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 25,
-    "scored": 25,
+    "with_pct": 38,
+    "scored": 38,
     "ok": true
    },
    "dead_guards": [],
@@ -272,19 +272,10 @@
   },
   "exit_paths": {
    "ok": true,
-   "holdings_checked": 3,
+   "holdings_checked": 2,
    "no_profit_exit": [],
-   "ladder_broken": [
-    {
-     "name": "셀트리온",
-     "qty": 3.0,
-     "splittable": {
-      "target_1": 1,
-      "target_2": 0
-     }
-    }
-   ],
-   "detail": "확정 경로 정합 (사다리 불능 1건 — 고가주 잔존분)"
+   "ladder_broken": [],
+   "detail": "확정 경로 정합 (사다리 불능 0건 — 고가주 잔존분)"
   },
   "as_of_staleness": {
    "ok": true,
