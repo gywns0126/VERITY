@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
-const { buildArtifacts, writeArtifacts, usCooperatieLabel, MAX_BYTES } = require('../scripts/member-map/build-live-company-structure.cjs');
+const { buildArtifacts, writeArtifacts, usCooperatieLabel, mappedCik, MAX_BYTES } = require('../scripts/member-map/build-live-company-structure.cjs');
 const { loadArtifacts, publish, main, sanitizeUsSources, BASE, INDEX } = require('../scripts/member-map/publish-company-structure.cjs');
 const at = '2026-10-21T10:00:00Z';
 const parserRevision = /^PARSER_REVISION = "([^"]+)"$/m.exec(fs.readFileSync(path.join(__dirname, '../api/intelligence/company_structure_sec.py'), 'utf8'))[1];
@@ -691,25 +691,50 @@ test('committed US snapshots preserve the 22-document baseline as parsed or expl
   }
   for (const [cik, s] of parsed) {
     assert.equal(safe.issuers[cik].exhibit.url, s.exhibit.url);
+    assert.equal(safe.issuers[cik].exhibit.accession, s.exhibit.accession);
+    assert.equal(safe.issuers[cik].exhibit.documentSha256, s.exhibit.documentSha256);
+    assert.equal(safe.issuers[cik].exhibit.filedDate, s.exhibit.filedDate);
+    assert.equal(safe.issuers[cik].exhibit.periodEnd, s.exhibit.periodEnd);
     assert.equal(safe.issuers[cik].exhibit.status, 'parsed');
     assert.equal(safe.issuers[cik].attemptStatus, s.attemptStatus);
     assert.equal(safe.issuers[cik].lastSuccessAt, s.lastSuccessAt);
   }
   assert.equal(JSON.stringify(original), before); assert.deepEqual(safe.requestBudget, original.requestBudget);
-  const result = buildArtifacts({ universe: committed('universe_search.json'), cikMap: committed('sec_ticker_cik_map.json'),
-    reviewedAliases: committed('member_map_company_structure_aliases.json'),
+  const universe = committed('universe_search.json'), cikMap = committed('sec_ticker_cik_map.json');
+  const reviewedAliases = committed('member_map_company_structure_aliases.json');
+  // Derive targets from committed inputs, independently of builder output.
+  // Match eligible securities and use the exact SEC/reviewed-alias resolver.
+  const rows = Array.isArray(universe) ? universe : universe.stocks || [];
+  const eligibleUsRows = rows.filter(row => {
+    const type = String(row?.type || row?.kind || row?.asset_type || '').toUpperCase();
+    const market = String(row?.market || '').toUpperCase();
+    return row?.market === 'US' && /^[A-Z][A-Z0-9.-]{0,11}$/u.test(row.ticker || '') &&
+      !(type.includes('ETF') || market === 'ETF' || /\bETF\b/u.test(row.name || '')) &&
+      !(type.includes('ETN') || market === 'ETN') &&
+      !(type.includes('INDEX') || market === 'INDEX' || String(row.ticker || '').startsWith('^'));
+  });
+  const currentTickers = new Set(eligibleUsRows.map(row => row.ticker));
+  const targetCiks = new Set(eligibleUsRows.map(row =>
+    mappedCik(row.ticker, cikMap, reviewedAliases, currentTickers, original.generatedAt)).filter(Boolean));
+  const result = buildArtifacts({ universe, cikMap, reviewedAliases,
     generatedAt: original.generatedAt, usSources: safe, strictSources: true });
   // A retained parsed exhibit is historical proof, not a successful latest
-  // refresh. Keep checking every archived CIK; only current successful attempts
-  // belong in checkedCiks (needs-review/source-gap must never become success).
-  const currentParsed = parsed.filter(([, s]) => ['success', 'cached-same-accession'].includes(s.attemptStatus));
+  // refresh. Only eligible target CIKs with current successful attempts belong
+  // in checkedCiks; archive preservation above applies to every parsed source.
+  const currentParsed = parsed.filter(([cik, s]) => targetCiks.has(cik) &&
+    ['success', 'cached-same-accession'].includes(s.attemptStatus));
   const currentCiks = new Set(currentParsed.map(([cik]) => cik)), retainedParsed = [];
+  assert.equal(result.manifest.coverage.US.uniqueCiks, targetCiks.size);
   assert.equal(result.manifest.coverage.US.checkedCiks, currentParsed.length);
   const boundPayloads = new Map([...result.payloads.values()].map(bytes => {
     const payload = JSON.parse(bytes); return [payload.coverage.cik, payload];
   }));
   for (const [cik, source] of parsed) {
     const payload = boundPayloads.get(cik);
+    if (!targetCiks.has(cik)) {
+      assert.equal(payload, undefined, `Out-of-target archive fabricated a payload: ${cik}`);
+      continue;
+    }
     assert.ok(payload, `Original parsed source lost: ${cik}`);
     assert.equal(payload.coverage.sourceChecked, currentCiks.has(cik), `Latest attempt eligibility changed: ${cik}`);
     assert.equal(payload.coverage.documentSha256, source.exhibit.documentSha256);
