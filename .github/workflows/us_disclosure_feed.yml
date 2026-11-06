@@ -63,6 +63,8 @@ jobs:
           git diff --quiet
           git diff --cached --quiet
           echo "source_head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          us_priority_fingerprint=$(python scripts/member-map/us-priority-fingerprint.py)
+          echo "us_priority_fingerprint=$us_priority_fingerprint" >> "$GITHUB_OUTPUT"
           python -m api.builders.us_disclosure_feed_builder
           python -m api.builders.us_disclosure_forensics_builder --merge-feed-only
           python scripts/audit/us_forensics_coverage.py --output data/metadata/us_forensics_coverage.json
@@ -71,6 +73,7 @@ jobs:
         id: durable
         env:
           SOURCE_HEAD: ${{ steps.build.outputs.source_head }}
+          US_PRIORITY_FINGERPRINT: ${{ steps.build.outputs.us_priority_fingerprint }}
         run: |
           set -euo pipefail
           git config user.name "AI Stock Bot"
@@ -86,13 +89,26 @@ jobs:
             api/builders/us_disclosure_feed_builder.py api/builders/us_disclosure_forensics_builder.py
             api/builders/us_insider_trades_public_builder.py api/intelligence/us_financials.py
             scripts/audit/us_forensics_coverage.py requirements.txt
+            scripts/member-map/us-priority-fingerprint.py
             .github/workflows/us_disclosure_feed.yml .github/actions/publish-data
             "data/us_universe_combined.json" "data/us_universe_sp1500.json" "data/us_financials/_summary.json"
             "data/us_stock_report_public.json" "data/universe_search.json"
-            "data/portfolio.json" "data/us_insider_trades.json" "data/us_major_holdings.json"
+            "data/us_insider_trades.json" "data/us_major_holdings.json"
             "data/us_smart_money_13f.json" "data/us_short_interest.json" "data/us_form144.json"
           )
+          # Portfolio market/news fields are not collector inputs. Bind only the
+          # consumer's US recommendation/candidate set to the BUILD-start digest.
+          [[ "$US_PRIORITY_FINGERPRINT" =~ ^[0-9a-f]{64}$ ]]
+          check_us_priority() {
+            local current
+            current=$(python scripts/member-map/us-priority-fingerprint.py "$@")
+            if [ "$current" != "$US_PRIORITY_FINGERPRINT" ]; then
+              echo '::error::US priority inputs changed; publication remains blocked.'
+              exit 1
+            fi
+          }
           git diff --quiet "$SOURCE_HEAD" -- "${input_paths[@]}"
+          check_us_priority
           git add data/us_disclosure_feed.json
           git add data/us_disclosure_forensics.json
           git add data/metadata/us_forensics_coverage.json
@@ -112,12 +128,15 @@ jobs:
             git diff --quiet "$persist_head" -- "${persist_paths[@]}"
             git diff --quiet "$SOURCE_HEAD" HEAD -- "${input_paths[@]}"
             git diff --quiet "$SOURCE_HEAD" -- "${input_paths[@]}"
+            check_us_priority --ref HEAD
+            check_us_priority
             sync_base=$(git rev-parse origin/main)
             if git push origin HEAD:main; then
               git fetch origin main
               git merge-base --is-ancestor HEAD origin/main
               git diff --quiet "$persist_head" origin/main -- "${persist_paths[@]}"
               git diff --quiet "$SOURCE_HEAD" origin/main -- "${input_paths[@]}"
+              check_us_priority --ref origin/main
               persisted=true
               break
             fi
