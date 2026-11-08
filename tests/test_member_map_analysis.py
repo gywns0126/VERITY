@@ -344,6 +344,7 @@ def test_private_or_noncanonical_fields_are_rejected_before_fetch(modules, monke
     assert result["error"] in {"invalid_request", "invalid_positions"}
     fetch.assert_not_called()
     sys.modules["api.portfolio_core.portfolio_price_fetch"].fetch_public_prices.assert_not_called()
+    sys.modules["api.portfolio_core.portfolio_change_facts"].fetch_public_changes.assert_not_called()
 
 
 def test_authentication_and_origin_rejections_happen_before_fetch(modules, monkeypatch):
@@ -361,6 +362,7 @@ def test_authentication_and_origin_rejections_happen_before_fetch(modules, monke
     assert sb.verify_jwt.call_count == 0  # Neither request reaches JWT verification.
     fetch.assert_not_called()
     sys.modules["api.portfolio_core.portfolio_price_fetch"].fetch_public_prices.assert_not_called()
+    sys.modules["api.portfolio_core.portfolio_change_facts"].fetch_public_changes.assert_not_called()
 
 
 def test_origin_uses_tracked_api_helper_import_path(modules):
@@ -402,7 +404,10 @@ def test_all_sources_failed_is_503_not_an_empty_analysis(modules, monkeypatch):
     assert (status, payload) == (503, {"error": "public_sources_unavailable"})
     assert headers["CDN-Cache-Control"] == "no-store"
     assert headers["Vercel-CDN-Cache-Control"] == "no-store"
-    sys.modules["api.portfolio_core.portfolio_price_fetch"].fetch_public_prices.assert_not_called()
+    sys.modules["api.portfolio_core.portfolio_price_fetch"].fetch_public_prices.assert_called_once_with(
+        [{"ticker": "005930", "market": "KR"}])
+    sys.modules["api.portfolio_core.portfolio_change_facts"].fetch_public_changes.assert_called_once_with(
+        [{"ticker": "005930", "market": "KR"}])
 
 
 def test_source_exception_is_not_reflected_or_logged(modules, monkeypatch, caplog):
@@ -565,7 +570,7 @@ def test_stage_timing_is_fixed_metadata_only(modules, monkeypatch, capsys, caplo
     status, headers, _ = endpoint.analyze_request(_request(
         "jwt-a", {"positions": [{"ticker": "005930", "market": "KR"}]}))
     captured = capsys.readouterr()
-    stages = ["public_sources"] if mode in ("public_sources", "empty_sources") else [
+    stages = ["public_sources", "prices", "changes"] if mode in ("public_sources", "empty_sources") else [
         "public_sources", "prices", "changes", "projection"]
     error_stage = {"empty_sources": "public_sources", "bad_prices": "prices",
                    "bad_projection": "projection"}.get(mode, mode)
@@ -609,6 +614,8 @@ def test_early_rejection_never_starts_stage_logging(modules, monkeypatch, capsys
     assert all(record.exc_info is None and record.stack_info is None for record in caplog.records)
     clock.assert_not_called()
     source.assert_not_called()
+    sys.modules["api.portfolio_core.portfolio_price_fetch"].fetch_public_prices.assert_not_called()
+    sys.modules["api.portfolio_core.portfolio_change_facts"].fetch_public_changes.assert_not_called()
     storage.select.assert_not_called()
 
 
@@ -841,3 +848,125 @@ def test_prefetch_synthetic_timing_comparison(modules, monkeypatch):
     new = time.monotonic() - start
     assert result == baseline and result[0] == 200
     print(f"synthetic delayed I/O baseline={old:.3f}s prefetch={new:.3f}s")
+
+
+@pytest.mark.parametrize("cold", [True, False])
+@pytest.mark.parametrize("positions", [
+    [{"ticker": "005930", "market": "KR"}],
+    [{"ticker": "AAPL", "market": "US"}],
+    [{"ticker": "999999", "market": "KR"},
+     {"ticker": "005930", "market": "KR"},
+     {"ticker": "005930", "market": "KR"}],
+])
+def test_optional_reads_overlap_sources_once_and_preserve_response(
+    modules, monkeypatch, cold, positions
+):
+    endpoint, storage = modules
+    engine = sys.modules["api.portfolio_core.portfolio_engine"]
+    source = _bundle()
+    endpoint._prepare_index(source["documents"], source["revision"])
+    expected = endpoint._encode_result((
+        200, endpoint._headers(ALLOWED_ORIGIN),
+        engine.analyze_portfolio(positions, source["documents"],
+                                 public_bundle_revision=source["revision"],
+                                 price_documents={}, change_projection=None),
+    ))
+    if cold:
+        engine._PROJECTED_PUBLIC_INDEX.clear()
+    endpoint.fetch_publisher_prepared_business.reset_mock()
+    selected = [{"ticker": p["ticker"], "market": p["market"]}
+                for p in engine.validate_positions(positions)]
+    barrier = threading.Barrier(3, timeout=3)
+
+    def fetch_sources():
+        barrier.wait()  # Neither optional read may wait for this to return.
+        return source
+
+    def read_optional(value, rows):
+        assert rows == selected
+        barrier.wait()
+        return value
+
+    sources = Mock(side_effect=fetch_sources)
+    price = Mock(side_effect=lambda rows: read_optional({}, rows))
+    changes = Mock(side_effect=lambda rows: read_optional(None, rows))
+    monkeypatch.setattr(endpoint, "fetch_public_sources", sources)
+    monkeypatch.setattr(sys.modules["api.portfolio_core.portfolio_price_fetch"],
+                        "fetch_public_prices", price)
+    monkeypatch.setattr(sys.modules["api.portfolio_core.portfolio_change_facts"],
+                        "fetch_public_changes", changes)
+    actual = endpoint._encode_result(endpoint.analyze_request(
+        _request("jwt-a", {"positions": positions})))
+    assert actual == expected  # Includes exact serialized missing/duplicate semantics.
+    sources.assert_called_once_with()
+    price.assert_called_once_with(selected)
+    changes.assert_called_once_with(selected)
+    assert price.call_args.args[0] is not changes.call_args.args[0]
+    assert endpoint.fetch_publisher_prepared_business.call_count == int(cold)
+    storage.select.assert_not_called()
+
+
+@pytest.mark.parametrize("failure", ["source-exception", "empty", "malformed", "prepare"])
+def test_early_failure_drains_both_optional_reads_without_retry(
+    modules, monkeypatch, failure
+):
+    endpoint, storage = modules
+    barrier = threading.Barrier(3, timeout=3)
+    release_price, release_changes = threading.Event(), threading.Event()
+    price_finished, changes_finished = threading.Event(), threading.Event()
+    failing = threading.Event()
+    positions = [{"ticker": "005930", "market": "KR"}]
+
+    def optional(release, finished, value, rows):
+        assert rows == positions
+        barrier.wait()
+        assert release.wait(3)
+        finished.set()
+        return value
+
+    def sources():
+        barrier.wait()
+        if failure == "prepare":
+            return _bundle()
+        failing.set()
+        if failure == "source-exception":
+            raise ValueError("synthetic source failure")
+        return _bundle({}) if failure == "empty" else {"malformed": True}
+
+    def prepare(*_args, **_kwargs):
+        failing.set()
+        raise ValueError("synthetic preparation failure")
+
+    price = Mock(side_effect=lambda rows: optional(release_price, price_finished, {}, rows))
+    changes = Mock(side_effect=lambda rows: optional(release_changes, changes_finished, None, rows))
+    source = Mock(side_effect=sources)
+    projection = Mock()
+    monkeypatch.setattr(endpoint, "fetch_public_sources", source)
+    monkeypatch.setattr(endpoint, "_prepare_index", prepare)
+    monkeypatch.setattr(endpoint, "analyze_portfolio", projection)
+    monkeypatch.setattr(sys.modules["api.portfolio_core.portfolio_price_fetch"],
+                        "fetch_public_prices", price)
+    monkeypatch.setattr(sys.modules["api.portfolio_core.portfolio_change_facts"],
+                        "fetch_public_changes", changes)
+    with ThreadPoolExecutor(max_workers=1) as caller:
+        response = caller.submit(endpoint.analyze_request,
+                                 _request("jwt-a", {"positions": positions}))
+        try:
+            assert failing.wait(3)
+            assert not response.done()
+            release_price.set()
+            assert price_finished.wait(3)
+            assert not response.done()  # Still draining the other independent read.
+            release_changes.set()
+            error = "analysis_unavailable" if failure == "prepare" else "public_sources_unavailable"
+            assert response.result(timeout=3) == (
+                503, endpoint._headers(ALLOWED_ORIGIN), {"error": error})
+            assert changes_finished.is_set()
+        finally:
+            release_price.set()
+            release_changes.set()
+    source.assert_called_once_with()
+    price.assert_called_once_with(positions)
+    changes.assert_called_once_with(positions)
+    projection.assert_not_called()
+    storage.select.assert_not_called()

@@ -192,12 +192,14 @@ def test_tainted_public_artifacts_are_projected_before_private_response(endpoint
 
 
 def test_unknown_or_tampered_source_contract_never_becomes_an_analysis(endpoint, monkeypatch):
-    analysis, _storage = endpoint
+    analysis, storage = endpoint
     fetch = Mock(return_value=_bundle({
         "universe_search.json": {"stocks": []},
         "member_export.json": {"rows": [{"owner_id": CALLER_B}]},
     }))
     monkeypatch.setattr(analysis, "fetch_public_sources", fetch)
+    projection = Mock(side_effect=AssertionError("tampered source reached analysis"))
+    monkeypatch.setattr(analysis, "analyze_portfolio", projection)
 
     status, _headers, response = analysis.analyze_request(_request(
         "token-a", {"positions": [{"ticker": "005930", "market": "KR"}]}
@@ -206,7 +208,21 @@ def test_unknown_or_tampered_source_contract_never_becomes_an_analysis(endpoint,
     assert (status, response) == (503, {"error": "public_sources_unavailable"})
     assert CALLER_B not in json.dumps(response)
     fetch.assert_called_once_with()
-    sys.modules["api.portfolio_core.portfolio_price_fetch"].fetch_public_prices.assert_not_called()
+    # Overlapped optional reads use only the already-validated request IDs;
+    # the rejected source must never reach analysis or member storage.
+    selected = [{"ticker": "005930", "market": "KR"}]
+    for module, function in (
+        ("api.portfolio_core.portfolio_price_fetch", "fetch_public_prices"),
+        ("api.portfolio_core.portfolio_change_facts", "fetch_public_changes"),
+    ):
+        read = getattr(sys.modules[module], function)
+        read.assert_called_once_with(selected)
+        assert CALLER_A not in repr(read.call_args)
+        assert CALLER_B not in repr(read.call_args)
+        assert "token-a" not in repr(read.call_args)
+    projection.assert_not_called()
+    storage.select.assert_not_called()
+    storage.upsert.assert_not_called()
 
 
 @pytest.mark.parametrize("field", ("owner_id", "user_id", "tenant_id", "member_id"))

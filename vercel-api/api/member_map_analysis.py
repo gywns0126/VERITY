@@ -216,13 +216,20 @@ def analyze_request(request):
     except Exception:
         return 400, response_headers, {"error": "invalid_positions"}
 
-    # The optional worker remains alive until all analysis paths return. A
-    # source failure still drains it before the request exits.
-    with (ThreadPoolExecutor(max_workers=1) if _initial_index_empty() else nullcontext()) as pool:
-        return _analyze_validated(payload, validated_positions, response_headers, pool)
+    price_positions = [
+        {"ticker": position["ticker"], "market": position["market"]}
+        for position in validated_positions
+    ]
+    # These fixed public reads depend only on validated identifiers, not the
+    # source bundle. Both executors drain even when source validation fails.
+    with (ThreadPoolExecutor(max_workers=1) if _initial_index_empty() else nullcontext()) as pool, \
+            ThreadPoolExecutor(max_workers=2) as reads:
+        prices = reads.submit(_load_prices, price_positions)
+        changes = reads.submit(_load_changes, [dict(row) for row in price_positions])
+        return _analyze_validated(payload, response_headers, pool, prices, changes)
 
 
-def _analyze_validated(payload, validated_positions, response_headers, prefetch_pool):
+def _analyze_validated(payload, response_headers, prefetch_pool, prices, changes):
     started, stage_status = _stage_clock(), "error"
     prepared_future = None
     try:
@@ -242,24 +249,16 @@ def _analyze_validated(payload, validated_positions, response_headers, prefetch_
         return 503, response_headers, {"error": "public_sources_unavailable"}
     documents, public_bundle_revision = validated_sources
 
-    price_positions = [
-        {"ticker": position["ticker"], "market": position["market"]}
-        for position in validated_positions
-    ]
     started, stage_status = _stage_clock(), "error"
     try:
-        # Start only after origin/auth/input/source validation. Independent
-        # public I/O overlaps public index preparation; optional failures retain
-        # their previous degradation contract. No worker outlives the request.
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            prices = pool.submit(_load_prices, price_positions)
-            changes = pool.submit(_load_changes, [dict(row) for row in price_positions])
-            _prepare_index(documents, public_bundle_revision,
-                           **({"base_source_revision": source_bundle["base_revision"]}
-                              if source_bundle.get("base_revision") is not None else {}),
-                           **({"prepared_fetcher": prepared_future.result}
-                              if prepared_future is not None else {}))
-            price_documents, change_projection = prices.result(), changes.result()
+        # Join the existing optional reads only after source validation and
+        # index preparation. Their failure fallbacks remain request-local.
+        _prepare_index(documents, public_bundle_revision,
+                       **({"base_source_revision": source_bundle["base_revision"]}
+                          if source_bundle.get("base_revision") is not None else {}),
+                       **({"prepared_fetcher": prepared_future.result}
+                          if prepared_future is not None else {}))
+        price_documents, change_projection = prices.result(), changes.result()
         result = analyze_portfolio(
             payload["positions"],
             documents,
