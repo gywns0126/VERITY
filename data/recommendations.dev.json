@@ -2394,7 +2394,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -2460,7 +2460,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -2469,7 +2469,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -2769,10 +2769,10 @@
         "score": 51,
         "components": {
           "news_sentiment": 52,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 51,
           "fx_sentiment": 41.9,
@@ -2811,13 +2811,13 @@
         "neutral_note": "정확히 50 은 결측 대입일 수도 실제 값일 수도 있다 — 생산자가 구분을 주지 않는다. 이 필드는 그 모호성 자체를 신고한다. 처분 = PREREG_BASELINE_V1_LITERATURE_2026_08_16 §G6."
       },
       "vci": {
-        "vci": 28,
+        "vci": 25,
         "base_vci": 25,
         "signal": "STRONG_CONTRARIAN_BUY",
         "label": "팩트 좋은데 심리 과도 비관 → 역발상 매수",
         "mispricing_z": 2.18,
         "mispricing_signal": "extreme_undervalued",
-        "robust_z": 2.42,
+        "robust_z": 2.18,
         "gap_median": -2.5,
         "robust_sigma": 12.6,
         "cohen_checklist": {
@@ -2831,17 +2831,17 @@
               "passed": false
             },
             {
-              "name": "크립토 디커플링 (상관 -0.20)",
-              "passed": true
+              "name": "크립토 디커플링 (상관 0.50)",
+              "passed": false
             },
             {
               "name": "기관 흡수 신호 (순매수 + 가격 안정)",
               "passed": false
             }
           ],
-          "passed": 1,
+          "passed": 0,
           "total": 4,
-          "bonus": 3
+          "bonus": 0
         }
       },
       "vci_bonus": 5,
@@ -2880,7 +2880,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "KT&G: 브레인 74점 (팩트 76 / 심리 51 / VCI +28) | 팩트 최강 graham_value(87) / 최약 quant_volatility(62) | 퀀트: 퀄리티↑78 | V5: Graham가치↑87 | CANSLIM↑73 | 지분: 최대주주 중소기업은행 8.06% | VCI: 팩트 좋은데 심리 과도 비관 → 역발상 매수 | 매크로 KR 디커플링 (약세): NASDAQ +1.09% vs KOSPI -5.27% (gap +6.36%p) — KR 단독 약세, 외인 회피·디커플링 신호"
+      "reasoning": "KT&G: 브레인 74점 (팩트 76 / 심리 51 / VCI +25) | 팩트 최강 graham_value(87) / 최약 quant_volatility(62) | 퀀트: 퀄리티↑78 | V5: Graham가치↑87 | CANSLIM↑73 | 지분: 최대주주 중소기업은행 8.06% | VCI: 팩트 좋은데 심리 과도 비관 → 역발상 매수 | 매크로 KR 디커플링 (약세): NASDAQ +1.09% vs KOSPI -5.27% (gap +6.36%p) — KR 단독 약세, 외인 회피·디커플링 신호"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 63점 (매수) — 관찰 필요",
@@ -3750,7 +3750,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -3814,7 +3814,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -3823,7 +3823,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -4122,10 +4122,10 @@
         "score": 45,
         "components": {
           "news_sentiment": 41,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 45,
           "fx_sentiment": 41.9,
@@ -4834,40 +4834,40 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 79.9,
-      "prediction_std": 6.3,
+      "up_probability": 80.2,
+      "prediction_std": 5.1,
       "confidence_interval": [
-        1.0,
+        1.4,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.789,
-      "conformal_width_pct": 99.0,
+      "conformal_q_hat": 0.788,
+      "conformal_width_pct": 98.6,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 51.4,
+      "model_accuracy": 51.1,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.7,
+          "wf_accuracy": 51.0,
           "val_accuracy": 45.7,
           "wf_folds": 6,
-          "weight": 0.4967
+          "weight": 0.51
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.0,
-          "val_accuracy": 41.4,
+          "wf_accuracy": 47.0,
+          "val_accuracy": 38.6,
           "wf_folds": 6,
-          "weight": 0.49
+          "weight": 0.47
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.7,
-          "val_accuracy": 42.9,
+          "wf_accuracy": 50.7,
+          "val_accuracy": 44.3,
           "wf_folds": 6,
-          "weight": 0.5167
+          "weight": 0.5067
         },
         "mlp": {
           "architecture": "neural_net",
@@ -4886,11 +4886,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "drawdown_20d": 33.7442,
-        "volatility_20d": 33.2439,
-        "volume_price_trend": 27.4548,
-        "macd_hist": 23.1135,
-        "return_5d": 22.9029
+        "volatility_20d": 33.6808,
+        "drawdown_20d": 27.2932,
+        "volume_price_trend": 26.8787,
+        "return_5d": 24.5457,
+        "macd_hist": 21.1346
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -4911,7 +4911,7 @@
       "reasons": [
         "RSI 27.52 과매도 — 반등 가능",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 79.9% — 강한 매수 신호",
+        "AI 상승확률 80.2% — 강한 매수 신호",
         "외국인·기관 강한 순매수"
       ]
     },
@@ -8064,7 +8064,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -8130,7 +8130,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -8139,7 +8139,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -8195,7 +8195,7 @@
         "components": {
           "multi_factor": 66.0,
           "consensus": 79.0,
-          "prediction": 79.9,
+          "prediction": 80.2,
           "backtest": 67.7,
           "timing": 77.0,
           "commodity_margin": 41.2,
@@ -8439,10 +8439,10 @@
         "score": 50,
         "components": {
           "news_sentiment": 50,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 50,
           "fx_sentiment": 41.9,
@@ -10367,7 +10367,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -10431,7 +10431,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -10440,7 +10440,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -10739,10 +10739,10 @@
         "score": 48,
         "components": {
           "news_sentiment": 46,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 48,
           "fx_sentiment": 41.9,
@@ -12116,7 +12116,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -12182,7 +12182,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -12191,7 +12191,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -12491,10 +12491,10 @@
         "score": 48,
         "components": {
           "news_sentiment": 46,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 48,
           "fx_sentiment": 41.9,
@@ -13548,7 +13548,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -13612,7 +13612,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -13621,7 +13621,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -13919,10 +13919,10 @@
         "score": 48,
         "components": {
           "news_sentiment": 46,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 48,
           "fx_sentiment": 41.9,
@@ -15054,7 +15054,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -15118,7 +15118,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -15127,7 +15127,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -15426,10 +15426,10 @@
         "score": 46,
         "components": {
           "news_sentiment": 42,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 46,
           "fx_sentiment": 41.9,
@@ -17003,7 +17003,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -17069,7 +17069,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -17078,7 +17078,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -17378,10 +17378,10 @@
         "score": 53,
         "components": {
           "news_sentiment": 55,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 53,
           "fx_sentiment": 41.9,
@@ -18354,7 +18354,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -18418,7 +18418,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -18427,7 +18427,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -18725,10 +18725,10 @@
         "score": 54,
         "components": {
           "news_sentiment": 58,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 54,
           "fx_sentiment": 41.9,
@@ -21820,7 +21820,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -21884,7 +21884,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -21893,7 +21893,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -22191,10 +22191,10 @@
         "score": 49,
         "components": {
           "news_sentiment": 48,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 49,
           "fx_sentiment": 41.9,
@@ -23517,7 +23517,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -23571,7 +23571,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -23580,7 +23580,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -23876,10 +23876,10 @@
         "score": 54,
         "components": {
           "news_sentiment": 51,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 61.54,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 52,
           "fx_sentiment": 50.0,
@@ -25160,7 +25160,7 @@
       "credit": {
         "debt_ratio_pct": 16.9
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -25214,7 +25214,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -25223,7 +25223,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -25519,10 +25519,10 @@
         "score": 65,
         "components": {
           "news_sentiment": 55,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 93.33,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 62,
           "fx_sentiment": 50.0,
@@ -26589,19 +26589,19 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8288,
+      "conformal_q_hat": 0.8289,
       "conformal_width_pct": 95.0,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 52.5,
+      "model_accuracy": 52.6,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.7,
+          "wf_accuracy": 52.0,
           "val_accuracy": 43.8,
           "wf_folds": 7,
-          "weight": 0.5171
+          "weight": 0.52
         },
         "lightgbm": {
           "architecture": "gbdt",
@@ -26662,10 +26662,10 @@
         "AI 상승확률 87.9% — 강한 매수 신호"
       ]
     },
-    "low_52w": 69.77818298339844,
+    "low_52w": 69.7781753540039,
     "price_1m": 118.38999938964844,
     "price_3m": 119.96493530273438,
-    "price_6m": 97.9722671508789,
+    "price_6m": 97.97225952148438,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -26791,7 +26791,7 @@
       "credit": {
         "debt_ratio_pct": 58.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -26845,7 +26845,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -26854,7 +26854,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -27150,10 +27150,10 @@
         "score": 55,
         "components": {
           "news_sentiment": 41,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 82.76,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 55,
           "fx_sentiment": 50.0,
@@ -28272,7 +28272,7 @@
         "catboost": {
           "architecture": "gbdt",
           "wf_accuracy": 48.9,
-          "val_accuracy": 41.1,
+          "val_accuracy": 42.5,
           "wf_folds": 7,
           "weight": 0.4886
         },
@@ -28325,7 +28325,7 @@
     "low_52w": 273.1611633300781,
     "price_1m": 351.6600036621094,
     "price_3m": 343.5791320800781,
-    "price_6m": 388.15850830078125,
+    "price_6m": 388.1585388183594,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -28462,7 +28462,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -28516,7 +28516,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -28525,7 +28525,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -28821,10 +28821,10 @@
         "score": 64,
         "components": {
           "news_sentiment": 53,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 93.1,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 60,
           "fx_sentiment": 50.0,
@@ -30084,7 +30084,7 @@
       "credit": {
         "debt_ratio_pct": 40.8
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -30138,7 +30138,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -30147,7 +30147,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -30443,10 +30443,10 @@
         "score": 56,
         "components": {
           "news_sentiment": 53,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 68.57,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 53,
           "fx_sentiment": 50.0,
@@ -31700,7 +31700,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -31754,7 +31754,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -31763,7 +31763,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -32059,10 +32059,10 @@
         "score": 58,
         "components": {
           "news_sentiment": 48,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 81.74,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
@@ -33176,33 +33176,33 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 74.7,
-      "prediction_std": 18.2,
+      "up_probability": 74.9,
+      "prediction_std": 18.3,
       "confidence_interval": [
-        3.6,
+        3.4,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7111,
-      "conformal_width_pct": 96.4,
+      "conformal_q_hat": 0.715,
+      "conformal_width_pct": 96.6,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 49.0,
+      "model_accuracy": 49.4,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 50.3,
+          "wf_accuracy": 50.6,
           "val_accuracy": 68.5,
           "wf_folds": 7,
-          "weight": 0.5029
+          "weight": 0.5057
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.9,
-          "val_accuracy": 63.0,
+          "wf_accuracy": 50.3,
+          "val_accuracy": 60.3,
           "wf_folds": 7,
-          "weight": 0.4886
+          "weight": 0.5029
         },
         "catboost": {
           "architecture": "gbdt",
@@ -33228,11 +33228,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 35.0234,
-        "macd_hist": 33.1867,
-        "drawdown_20d": 26.531,
-        "volume_price_trend": 20.2268,
-        "return_5d": 17.0826
+        "volatility_20d": 32.3567,
+        "macd_hist": 31.8534,
+        "drawdown_20d": 24.1977,
+        "return_5d": 19.7492,
+        "vol_ratio": 19.1261
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -33252,10 +33252,10 @@
       "color": "#86EFAC",
       "reasons": [
         "RSI 36.74 저평가 구간",
-        "AI 상승확률 74.7% — 강한 매수 신호"
+        "AI 상승확률 74.9% — 강한 매수 신호"
       ]
     },
-    "low_52w": 524.8190307617188,
+    "low_52w": 524.8189697265625,
     "price_1m": 718.6699829101562,
     "price_3m": 598.6475219726562,
     "price_6m": 597.8336791992188,
@@ -33379,7 +33379,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -33433,7 +33433,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -33442,7 +33442,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -33496,7 +33496,7 @@
         "components": {
           "multi_factor": 58.0,
           "consensus": 70.0,
-          "prediction": 74.7,
+          "prediction": 74.9,
           "backtest": 47.8,
           "timing": 68.0,
           "commodity_margin": 50.0,
@@ -33738,10 +33738,10 @@
         "score": 66,
         "components": {
           "news_sentiment": 58,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 91.94,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 61,
           "fx_sentiment": 50.0,
@@ -35068,7 +35068,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -35122,7 +35122,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -35131,7 +35131,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -35427,10 +35427,10 @@
         "score": 64,
         "components": {
           "news_sentiment": 53,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 92.28,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 61,
           "fx_sentiment": 50.0,
@@ -36695,7 +36695,7 @@
       "credit": {
         "debt_ratio_pct": 54.3
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -36749,7 +36749,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -36758,7 +36758,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -37054,10 +37054,10 @@
         "score": 57,
         "components": {
           "news_sentiment": 47,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 81.57,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 56,
           "fx_sentiment": 50.0,
@@ -38407,7 +38407,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -38461,7 +38461,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -38470,7 +38470,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -38765,10 +38765,10 @@
         "score": 60,
         "components": {
           "news_sentiment": 53,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 78.4,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
@@ -39927,7 +39927,7 @@
         "수급 비우호적"
       ]
     },
-    "low_52w": 122.94430541992188,
+    "low_52w": 122.9443130493164,
     "price_1m": 175.5,
     "price_3m": 161.7993927001953,
     "price_6m": 235.3748779296875,
@@ -40054,7 +40054,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -40108,7 +40108,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -40117,7 +40117,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -40414,10 +40414,10 @@
         "score": 54,
         "components": {
           "news_sentiment": 48,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 68.65,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 51,
           "fx_sentiment": 50.0,
@@ -41711,7 +41711,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 2,
     "quadrant_info": {
@@ -41765,7 +41765,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -41774,7 +41774,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -42070,10 +42070,10 @@
         "score": 54,
         "components": {
           "news_sentiment": 52,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 61.11,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 52,
           "fx_sentiment": 50.0,
@@ -43140,34 +43140,34 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 40.6,
+      "up_probability": 40.5,
       "prediction_std": 12.4,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6842,
+      "conformal_q_hat": 0.6847,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 48.1,
+      "model_accuracy": 48.3,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.6,
+          "wf_accuracy": 49.1,
           "val_accuracy": 49.3,
           "wf_folds": 7,
-          "weight": 0.4857
+          "weight": 0.4914
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 45.4,
+          "wf_accuracy": 46.0,
           "val_accuracy": 54.8,
           "wf_folds": 7,
-          "weight": 0.4543
+          "weight": 0.46
         },
         "catboost": {
           "architecture": "gbdt",
@@ -43216,7 +43216,7 @@
       "label": "관망",
       "color": "#888",
       "reasons": [
-        "AI 상승확률 40.6%",
+        "AI 상승확률 40.5%",
         "외국인·기관 강한 순매수"
       ]
     },
@@ -43343,7 +43343,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -43398,7 +43398,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -43407,7 +43407,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -43463,7 +43463,7 @@
         "components": {
           "multi_factor": 55.0,
           "consensus": 64.0,
-          "prediction": 40.6,
+          "prediction": 40.5,
           "backtest": 73.4,
           "timing": 53.0,
           "commodity_margin": 50.0,
@@ -43706,10 +43706,10 @@
         "score": 64,
         "components": {
           "news_sentiment": 57,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 87.69,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 61,
           "fx_sentiment": 50.0,
@@ -44588,34 +44588,34 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 44.5,
-      "prediction_std": 18.2,
+      "up_probability": 43.7,
+      "prediction_std": 18.7,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7265,
+      "conformal_q_hat": 0.7312,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 55.9,
+      "model_accuracy": 56.1,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 57.4,
+          "wf_accuracy": 58.0,
           "val_accuracy": 58.9,
           "wf_folds": 7,
-          "weight": 0.5743
+          "weight": 0.58
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 58.6,
+          "wf_accuracy": 58.9,
           "val_accuracy": 58.9,
           "wf_folds": 7,
-          "weight": 0.5857
+          "weight": 0.5886
         },
         "catboost": {
           "architecture": "gbdt",
@@ -44641,11 +44641,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 45.8378,
-        "macd_hist": 28.3155,
-        "vol_ratio": 24.6496,
-        "drawdown_20d": 23.5667,
-        "volume_price_trend": 19.0234
+        "volatility_20d": 46.8378,
+        "macd_hist": 29.6489,
+        "drawdown_20d": 25.9001,
+        "vol_ratio": 25.6496,
+        "volume_price_trend": 20.0234
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -44665,13 +44665,13 @@
       "color": "#888",
       "reasons": [
         "RSI 39.38 저평가 구간",
-        "AI 상승확률 44.5%"
+        "AI 상승확률 43.7%"
       ]
     },
-    "low_52w": 112.2580337524414,
+    "low_52w": 112.25802612304688,
     "price_1m": 168.94000244140625,
     "price_3m": 158.7719268798828,
-    "price_6m": 147.71441650390625,
+    "price_6m": 147.7144317626953,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -44784,7 +44784,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 0,
     "quadrant_info": {
@@ -44840,7 +44840,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -44849,7 +44849,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -44905,7 +44905,7 @@
         "components": {
           "multi_factor": 56.0,
           "consensus": 48.0,
-          "prediction": 44.5,
+          "prediction": 43.7,
           "backtest": 61.4,
           "timing": 53.0,
           "commodity_margin": 49.0,
@@ -45151,10 +45151,10 @@
         "score": 59,
         "components": {
           "news_sentiment": 67,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
@@ -46766,7 +46766,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -46830,7 +46830,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -46839,7 +46839,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -47141,10 +47141,10 @@
         "score": 54,
         "components": {
           "news_sentiment": 57,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 54,
           "fx_sentiment": 41.9,
@@ -47412,7 +47412,7 @@
       519469.0,
       528821.0,
       542790.0,
-      569730.0,
+      569729.0,
       545783.0,
       597667.0,
       675494.0,
@@ -47813,34 +47813,34 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 71.6,
-      "prediction_std": 23.7,
+      "up_probability": 71.0,
+      "prediction_std": 23.1,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.785,
+      "conformal_q_hat": 0.7827,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 48.6,
+      "model_accuracy": 49.1,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 45.0,
+          "wf_accuracy": 45.7,
           "val_accuracy": 45.7,
           "wf_folds": 6,
-          "weight": 0.45
+          "weight": 0.4567
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 45.3,
-          "val_accuracy": 48.6,
+          "wf_accuracy": 47.0,
+          "val_accuracy": 45.7,
           "wf_folds": 6,
-          "weight": 0.4533
+          "weight": 0.47
         },
         "catboost": {
           "architecture": "gbdt",
@@ -47866,11 +47866,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "macd_hist": 33.5522,
-        "volatility_20d": 26.7633,
-        "rsi14": 21.5985,
-        "return_1d": 19.3277,
-        "vol_ratio": 18.715
+        "macd_hist": 33.5516,
+        "volatility_20d": 29.4291,
+        "return_1d": 23.6613,
+        "rsi14": 18.9313,
+        "rsi7": 17.9007
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -47892,7 +47892,7 @@
         "RSI 32.87 저평가 구간",
         "MACD 데드크로스 — 하락전환",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 71.6% — 강한 매수 신호"
+        "AI 상승확률 71.0% — 강한 매수 신호"
       ]
     },
     "low_52w": 517474.5625,
@@ -48917,7 +48917,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -48989,7 +48989,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -48998,7 +48998,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -49052,7 +49052,7 @@
         "components": {
           "multi_factor": 49.0,
           "consensus": 49.0,
-          "prediction": 71.6,
+          "prediction": 71.0,
           "backtest": 69.4,
           "timing": 50.0,
           "commodity_margin": 56.2,
@@ -49300,10 +49300,10 @@
         "score": 46,
         "components": {
           "news_sentiment": 42,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 46,
           "fx_sentiment": 41.9,
@@ -49945,14 +49945,14 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 47.2,
-      "prediction_std": 13.1,
+      "up_probability": 47.7,
+      "prediction_std": 13.0,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7294,
+      "conformal_q_hat": 0.7359,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -49969,10 +49969,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 45.3,
-          "val_accuracy": 50.0,
+          "wf_accuracy": 45.0,
+          "val_accuracy": 52.9,
           "wf_folds": 6,
-          "weight": 0.4533
+          "weight": 0.45
         },
         "catboost": {
           "architecture": "gbdt",
@@ -49998,11 +49998,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "rsi14": 32.88,
-        "volatility_20d": 27.4243,
-        "drawdown_20d": 19.8381,
-        "ma5_ratio": 18.7784,
-        "volume_price_trend": 18.1159
+        "rsi14": 31.5467,
+        "volatility_20d": 28.4243,
+        "drawdown_20d": 20.1715,
+        "ma5_ratio": 20.1118,
+        "return_5d": 19.6288
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -50025,7 +50025,7 @@
         "MACD 상승반전 신호"
       ]
     },
-    "low_52w": 96934.9453125,
+    "low_52w": 96934.9375,
     "price_1m": 104200.0,
     "price_3m": 130300.0,
     "price_6m": 140853.734375,
@@ -50439,7 +50439,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -50505,7 +50505,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -50514,7 +50514,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -50570,7 +50570,7 @@
         "components": {
           "multi_factor": 55.0,
           "consensus": 49.0,
-          "prediction": 47.2,
+          "prediction": 47.7,
           "backtest": 43.5,
           "timing": 53.0,
           "commodity_margin": 57.4,
@@ -50818,10 +50818,10 @@
         "score": 43,
         "components": {
           "news_sentiment": 43,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 46,
           "fx_sentiment": 41.9,
@@ -50859,13 +50859,13 @@
         "neutral_note": "정확히 50 은 결측 대입일 수도 실제 값일 수도 있다 — 생산자가 구분을 주지 않는다. 이 필드는 그 모호성 자체를 신고한다. 처분 = PREREG_BASELINE_V1_LITERATURE_2026_08_16 §G6."
       },
       "vci": {
-        "vci": 28,
+        "vci": 25,
         "base_vci": 25,
         "signal": "STRONG_CONTRARIAN_BUY",
         "label": "팩트 좋은데 심리 과도 비관 → 역발상 매수",
         "mispricing_z": 2.18,
         "mispricing_signal": "extreme_undervalued",
-        "robust_z": 2.42,
+        "robust_z": 2.18,
         "gap_median": -2.5,
         "robust_sigma": 12.6,
         "cohen_checklist": {
@@ -50879,17 +50879,17 @@
               "passed": false
             },
             {
-              "name": "크립토 디커플링 (상관 -0.20)",
-              "passed": true
+              "name": "크립토 디커플링 (상관 0.50)",
+              "passed": false
             },
             {
               "name": "기관 흡수 신호 (순매수 + 가격 안정)",
               "passed": false
             }
           ],
-          "passed": 1,
+          "passed": 0,
           "total": 4,
-          "bonus": 3
+          "bonus": 0
         }
       },
       "vci_bonus": 5,
@@ -50928,7 +50928,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "오리온: 브레인 68점 (팩트 68 / 심리 43 / VCI +28) | 팩트 최강 graham_value(82) / 최약 canslim_growth(53) | 퀀트: 저변동↑79 | V5: Graham가치↑82 | 지분: 최대주주 (주)오리온홀딩스 37.37% | VCI: 팩트 좋은데 심리 과도 비관 → 역발상 매수 | 매크로 KR 디커플링 (약세): NASDAQ +1.09% vs KOSPI -5.27% (gap +6.36%p) — KR 단독 약세, 외인 회피·디커플링 신호"
+      "reasoning": "오리온: 브레인 68점 (팩트 68 / 심리 43 / VCI +25) | 팩트 최강 graham_value(82) / 최약 canslim_growth(53) | 퀀트: 저변동↑79 | V5: Graham가치↑82 | 지분: 최대주주 (주)오리온홀딩스 37.37% | VCI: 팩트 좋은데 심리 과도 비관 → 역발상 매수 | 매크로 KR 디커플링 (약세): NASDAQ +1.09% vs KOSPI -5.27% (gap +6.36%p) — KR 단독 약세, 외인 회피·디커플링 신호"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -51114,7 +51114,7 @@
       523991.0,
       562260.0,
       511235.0,
-      502404.0,
+      502403.0,
       494553.0,
       597585.0,
       610342.0,
@@ -51523,41 +51523,40 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 78.0,
+      "up_probability": 78.1,
       "prediction_std": 8.5,
       "confidence_interval": [
-        0.0,
+        0.4,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7809,
-      "conformal_width_pct": 100.0,
+      "conformal_q_hat": 0.7767,
+      "conformal_width_pct": 99.6,
       "prediction_set": [
-        0,
         1
       ],
-      "model_accuracy": 52.8,
+      "model_accuracy": 53.5,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.7,
+          "wf_accuracy": 55.0,
           "val_accuracy": 38.6,
           "wf_folds": 6,
-          "weight": 0.5167
+          "weight": 0.55
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.3,
-          "val_accuracy": 42.9,
+          "wf_accuracy": 53.0,
+          "val_accuracy": 40.0,
           "wf_folds": 6,
-          "weight": 0.5233
+          "weight": 0.53
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 54.3,
+          "wf_accuracy": 53.7,
           "val_accuracy": 38.6,
           "wf_folds": 6,
-          "weight": 0.5433
+          "weight": 0.5367
         },
         "mlp": {
           "architecture": "neural_net",
@@ -51577,10 +51576,10 @@
       "confidence_level": "medium",
       "top_features": {
         "volatility_20d": 51.2357,
-        "rsi14": 20.5886,
-        "rsi7": 20.0896,
-        "macd_hist": 19.5111,
-        "drawdown_20d": 17.1579
+        "rsi14": 19.922,
+        "rsi7": 19.7563,
+        "drawdown_20d": 17.8245,
+        "vol_ratio": 16.8329
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -51602,7 +51601,7 @@
         "RSI 20.58 과매도 — 반등 가능",
         "MACD 상승반전 신호",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 78.0% — 강한 매수 신호",
+        "AI 상승확률 78.1% — 강한 매수 신호",
         "외국인·기관 강한 순매수"
       ]
     },
@@ -52182,7 +52181,7 @@
       "credit": {
         "ig_spread_pp": 0.7
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -52248,7 +52247,7 @@
         "usdkrw": 1363.65,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "KRW"
       },
       "version": "v1_2026_08_06",
@@ -52257,7 +52256,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -52313,7 +52312,7 @@
         "components": {
           "multi_factor": 58.0,
           "consensus": 74.0,
-          "prediction": 78.0,
+          "prediction": 78.1,
           "backtest": 28.0,
           "timing": 85.0,
           "commodity_margin": 54.6,
@@ -52560,10 +52559,10 @@
         "score": 47,
         "components": {
           "news_sentiment": 44,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 47,
           "fx_sentiment": 41.9,
@@ -53542,20 +53541,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 55.0,
-      "prediction_std": 18.3,
+      "up_probability": 54.7,
+      "prediction_std": 18.9,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7501,
+      "conformal_q_hat": 0.7504,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 48.7,
+      "model_accuracy": 48.3,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -53566,17 +53565,17 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.6,
-          "val_accuracy": 47.9,
+          "wf_accuracy": 52.0,
+          "val_accuracy": 50.7,
           "wf_folds": 7,
-          "weight": 0.5257
+          "weight": 0.52
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 43.4,
-          "val_accuracy": 56.2,
+          "wf_accuracy": 42.3,
+          "val_accuracy": 49.3,
           "wf_folds": 7,
-          "weight": 0.4343
+          "weight": 0.4229
         },
         "mlp": {
           "architecture": "neural_net",
@@ -53595,11 +53594,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 37.3694,
-        "drawdown_20d": 28.3302,
-        "macd_hist": 23.5782,
-        "rsi14": 23.4686,
-        "volume_price_trend": 22.2149
+        "volatility_20d": 38.198,
+        "drawdown_20d": 28.1086,
+        "macd_hist": 24.9534,
+        "volume_price_trend": 22.8086,
+        "rsi14": 22.4891
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -53613,15 +53612,14 @@
       "test_samples": 73
     },
     "timing": {
-      "timing_score": 64,
+      "timing_score": 59,
       "action": "BUY",
       "label": "매수 고려",
       "color": "#86EFAC",
       "reasons": [
         "RSI 63.28 고평가 접근",
         "MACD 상승반전 신호",
-        "이동평균 정배열 — 상승 추세",
-        "AI 상승확률 55.0%"
+        "이동평균 정배열 — 상승 추세"
       ]
     },
     "low_52w": 294.36175537109375,
@@ -53755,7 +53753,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -53809,7 +53807,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -53818,7 +53816,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -53872,9 +53870,9 @@
         "components": {
           "multi_factor": 52.0,
           "consensus": 51.0,
-          "prediction": 55.0,
+          "prediction": 54.7,
           "backtest": 68.0,
-          "timing": 64.0,
+          "timing": 59.0,
           "commodity_margin": 50.0,
           "export_trade": 43.0,
           "moat_quality": 65.0,
@@ -54118,10 +54116,10 @@
         "score": 52,
         "components": {
           "news_sentiment": 51,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 60,
           "fx_sentiment": 50.0,
@@ -54290,7 +54288,7 @@
     "volume": 1468700,
     "trading_value": 687057842,
     "market_cap": 135615217664,
-    "high_52w": 518.8819687131494,
+    "high_52w": 518.8820305114813,
     "drop_from_high_pct": -9.84,
     "per": 27.95,
     "pbr": 6.88,
@@ -55205,7 +55203,7 @@
       "credit": {
         "debt_ratio_pct": 42.0
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -55259,7 +55257,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -55268,7 +55266,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -55568,10 +55566,10 @@
         "score": 51,
         "components": {
           "news_sentiment": 47,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 60,
           "fx_sentiment": 50.0,
@@ -55741,7 +55739,7 @@
     "volume": 10094200,
     "trading_value": 2799727164,
     "market_cap": 253575725056,
-    "high_52w": 330.71428775838376,
+    "high_52w": 330.7142570800805,
     "drop_from_high_pct": -16.13,
     "per": 35.97,
     "pbr": 13.21,
@@ -56479,20 +56477,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 28.6,
-      "prediction_std": 5.1,
+      "up_probability": 28.5,
+      "prediction_std": 5.2,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8473,
+      "conformal_q_hat": 0.8472,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 50.8,
+      "model_accuracy": 50.9,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -56517,10 +56515,10 @@
         },
         "mlp": {
           "architecture": "neural_net",
-          "wf_accuracy": 56.0,
+          "wf_accuracy": 56.3,
           "val_accuracy": 43.8,
           "wf_folds": 7,
-          "weight": 0.56
+          "weight": 0.5629
         },
         "logistic": {
           "architecture": "linear",
@@ -56555,7 +56553,7 @@
       "label": "매도 고려",
       "color": "#FCA5A5",
       "reasons": [
-        "AI 상승확률 28.6% — 강한 하락 신호",
+        "AI 상승확률 28.5% — 강한 하락 신호",
         "수급 우호적"
       ]
     },
@@ -56697,7 +56695,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -56751,7 +56749,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -56760,7 +56758,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -56814,7 +56812,7 @@
         "components": {
           "multi_factor": 51.0,
           "consensus": 62.0,
-          "prediction": 28.6,
+          "prediction": 28.5,
           "backtest": 56.7,
           "timing": 44.0,
           "commodity_margin": 56.5,
@@ -57059,10 +57057,10 @@
         "score": 51,
         "components": {
           "news_sentiment": 51,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 55,
           "fx_sentiment": 50.0,
@@ -58027,20 +58025,20 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7229,
+      "conformal_q_hat": 0.7222,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 50.2,
+      "model_accuracy": 50.0,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 47.4,
+          "wf_accuracy": 46.6,
           "val_accuracy": 52.1,
           "wf_folds": 7,
-          "weight": 0.4743
+          "weight": 0.4657
         },
         "lightgbm": {
           "architecture": "gbdt",
@@ -58232,7 +58230,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -58285,7 +58283,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -58294,7 +58292,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -58595,10 +58593,10 @@
         "score": 55,
         "components": {
           "news_sentiment": 57,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
@@ -59735,7 +59733,7 @@
         "debt_ratio_pct": 160.2,
         "note": "부채비율 160% — 평균 이상"
       },
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -59789,7 +59787,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -59798,7 +59796,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -60097,10 +60095,10 @@
         "score": 52,
         "components": {
           "news_sentiment": 51,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
@@ -61055,13 +61053,13 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7527,
+      "conformal_q_hat": 0.7524,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 51.3,
+      "model_accuracy": 51.4,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -61086,10 +61084,10 @@
         },
         "mlp": {
           "architecture": "neural_net",
-          "wf_accuracy": 49.4,
+          "wf_accuracy": 50.0,
           "val_accuracy": 54.8,
           "wf_folds": 7,
-          "weight": 0.4943
+          "weight": 0.5
         },
         "logistic": {
           "architecture": "linear",
@@ -61266,7 +61264,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -61320,7 +61318,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -61329,7 +61327,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -61628,10 +61626,10 @@
         "score": 58,
         "components": {
           "news_sentiment": 63,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 61,
           "fx_sentiment": 50.0,
@@ -62655,7 +62653,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -62710,7 +62708,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -62719,7 +62717,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -63022,10 +63020,10 @@
         "score": 56,
         "components": {
           "news_sentiment": 61,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
@@ -63866,7 +63864,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-09T01:12:59+09:00"
+      "updated_at": "2026-11-09T02:13:46+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -63919,7 +63917,7 @@
         "usdkrw": null,
         "cape_pct": 98.0,
         "us_10y": 4.84,
-        "us_10y_percentile": 73.7,
+        "us_10y_percentile": 73.8,
         "currency": "USD"
       },
       "version": "v1_2026_08_06",
@@ -63928,7 +63926,7 @@
         "yield": {
           "method": "rolling_snapshot_percentile",
           "window_requested": 252,
-          "window_actual": 186,
+          "window_actual": 187,
           "min_sample": 60,
           "source": "data/history/YYYY-MM-DD.json · macro.us_10y|fred.dgs10",
           "note": "창이 요청치보다 짧으면 백분위는 그 짧은 구간 안에서의 순위다. 사전 고정 사양(White 2000) — 변경은 사전등록 필요"
@@ -64233,10 +64231,10 @@
         "score": 55,
         "components": {
           "news_sentiment": 60,
-          "x_sentiment": 40,
+          "x_sentiment": 41,
           "market_mood": 30,
           "consensus_opinion": 50.0,
-          "crypto_macro": 43,
+          "crypto_macro": 50.0,
           "market_fear_greed": 22.0,
           "social_sentiment": 54,
           "fx_sentiment": 50.0,
