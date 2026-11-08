@@ -185,9 +185,11 @@ check('forward migration preserves every source row, live legacy pending and fun
     assert.equal(dart.dart_checkpoint.pending.next_page,10);
     assert.equal(Object.keys(dart.dart_checkpoint.pending.rows).length,900);
 });
-check('fixture clocks stay on the same KST day at UTC/KST date boundaries without future attempts', () => {
+check('fixture clocks preserve KST dates; SQL rejects 119-second cadence and accepts 120 seconds', async () => {
     for(const clock of ['2026-11-01T01:00:00Z','2026-11-01T14:59:00Z',
-        '2026-11-01T15:00:00Z','2026-11-01T15:05:04Z','2026-11-01T16:00:00Z']) {
+        '2026-11-01T15:00:00Z','2026-11-01T15:03:00Z','2026-11-01T15:05:04Z','2026-11-01T16:00:00Z']) {
+        // These boundary projections test collector dates, not RPC eligibility:
+        // a compressed midnight fixture can legitimately be too recent to claim.
         const sample=loadFixtures(clock);
         for(const steps of [sample.mapped,sample.unmapped,sample.receipt_resume.steps,sample.bootstrap]) {
             let previous=-Infinity;
@@ -202,6 +204,21 @@ check('fixture clocks stay on the same KST day at UTC/KST date boundaries withou
             assert.equal(steps.at(-1).state.cursor.through_date,sample.today,clock);
         }
     }
+    const clock=Number(await value('SELECT extract(epoch FROM clock_timestamp())::float8 v'))*1000;
+    for(const steps of [fixtures.mapped,fixtures.unmapped,fixtures.receipt_resume.steps,fixtures.bootstrap])
+        assert.ok(steps.every(step=>clock-Date.parse(step.state.last_attempt_at)>=120000),'RPC fixtures must be due');
+    for(const age of [119,120]) {
+        const recent=copy(fixtures.mapped[0]);
+        recent.state.last_attempt_at=new Date(clock-age*1000).toISOString();
+        recent.state.health.age_seconds=(Date.parse(recent.state.last_attempt_at)-Date.parse(recent.state.last_success_at))/1000;
+        await owner("UPDATE public.member_map_refresh_checkpoint SET state=$1::jsonb,dart_checkpoint=$2::jsonb WHERE source='DART'",
+            [JSON.stringify(recent.state),JSON.stringify(recent.checkpoint)]);
+        const before=await snapshot(), result=await claim();
+        if(age===119) {
+            assert.deepEqual(result,{status:'not-due',retry_after_seconds:1});
+            assert.deepEqual(await snapshot(),before,'cadence rejection changed state or reservation');
+        } else assert.equal(result.status,'claimed');
+    }
 });
 check('legacy 900-row pending resumes with seven differing receipt prefixes through verify and current date', async () => {
     const fixture=fixtures.receipt_resume;
@@ -212,7 +229,7 @@ check('legacy 900-row pending resumes with seven differing receipt prefixes thro
     for(const [index,step] of fixture.steps.entries()) {
         assert.ok(step.calls.length<=10);assert.ok(step.state.coverage.listing_records<=1000);
         assert.equal(step.state.error,null);
-        const c=await claim();assert.equal((await save(c,step)).status,'saved');
+        const c=await claim();assert.equal(c.status,'claimed');assert.equal((await save(c,step)).status,'saved');
         const stored=await snapshot();assert.deepEqual(stored.state,step.state);assert.deepEqual(stored.dart_checkpoint,step.checkpoint);
         if(index<fixture.steps.length-1) assert.equal(stored.state.last_success_at,fixture.seed.last_success_at);
     }
@@ -502,6 +519,11 @@ check('aggregate 4MiB bound rejects two individually valid components without tr
 
 (async()=>{
     db=new PGlite();
+    // Only this ephemeral, in-memory database has a synthetic clock. Production
+    // SQL is loaded byte-for-byte below; cadence, lease and date guards still run.
+    // Noon KST leaves the full 20-minute fixture window regardless of CI wall time.
+    await db.exec(`CREATE OR REPLACE FUNCTION pg_catalog.clock_timestamp() RETURNS timestamptz
+        LANGUAGE SQL VOLATILE AS $$ SELECT '2026-11-02T03:00:00Z'::timestamptz $$`);
     await db.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS; GRANT USAGE ON SCHEMA public TO anon,authenticated,service_role;');
     await db.exec(baseSQL);await db.exec(catchupSQL);
     const clock=new Date(Number(await value('SELECT extract(epoch FROM clock_timestamp())::float8 v'))*1000).toISOString();
