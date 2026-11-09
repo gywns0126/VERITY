@@ -1,121 +1,120 @@
 {
   "schema_version": "v0.1",
-  "generated_at": "2026-11-02T10:45:20+09:00",
-  "week": "2026-W45",
-  "macro_verdict": "NEUTRAL",
+  "generated_at": "2026-11-09T10:53:22+09:00",
+  "week": "2026-W46",
+  "macro_verdict": "MIXED",
   "themes": [
     {
-      "theme": "Fed Hike Risk",
+      "theme": "Fed hike repricing",
       "category": "policy",
       "direction": "negative",
       "conviction": "high",
-      "evidence": "Citi analysts said the case for additional easing has weakened, while markets continued to price a likely December Fed hike.",
+      "evidence": "Reuters reports markets assign roughly an 80% probability to a December Fed hike, while Fed officials Raphael Bostic and Beth Hammack favor gradual increases to reduce above-target inflation.",
       "sources": [
-        "Citi",
-        "Federal Reserve"
+        "Federal Reserve",
+        "Reuters"
       ]
     },
     {
-      "theme": "Sticky US Inflation",
+      "theme": "Sticky inflation risk",
       "category": "inflation",
       "direction": "negative",
       "conviction": "high",
-      "evidence": "Fed Chair Jerome Powell said 12-month inflation has been moving sideways, while September PCE inflation accelerated to 3.6% year over year.",
+      "evidence": "Fed Governor Christopher Waller said inflation remains the primary concern, while Reuters reported one-year US inflation expectations rose to 4.7% in October.",
       "sources": [
-        "Jerome Powell",
-        "Federal Reserve"
+        "Federal Reserve",
+        "Reuters"
       ]
     },
     {
-      "theme": "Resilient US Growth",
+      "theme": "Resilient US growth",
       "category": "growth",
       "direction": "positive",
       "conviction": "high",
-      "evidence": "US third-quarter GDP grew at a 3.4% annualized rate, above consensus, reinforcing expectations that policy can remain restrictive.",
+      "evidence": "New York Fed President John Williams described US growth as remarkably resilient, and Reuters reported continued solid expansion supported partly by AI-infrastructure investment.",
       "sources": [
-        "Federal Reserve",
-        "WSJ"
+        "John Williams",
+        "Reuters"
       ]
     },
     {
-      "theme": "Firm Labor Market",
+      "theme": "Labor-market reacceleration",
       "category": "labor",
       "direction": "positive",
-      "conviction": "mid",
-      "evidence": "Weekly unemployment claims fell to 194,000 and the employment cost index rose 0.8% in the third quarter, signaling continued labor-market resilience.",
+      "conviction": "high",
+      "evidence": "Reuters reported October job growth surged, unemployment fell to 4.1%, and the data reinforced expectations for a December Fed hike.",
       "sources": [
-        "Federal Reserve",
-        "WSJ"
-      ]
-    },
-    {
-      "theme": "Dollar Support",
-      "category": "fx",
-      "direction": "positive",
-      "conviction": "mid",
-      "evidence": "Zaheer Anwari said the Fed’s cautious stance and market expectations for December tightening continued to support the dollar and Treasury yields.",
-      "sources": [
-        "Zaheer Anwari",
+        "Reuters",
         "Federal Reserve"
       ]
     },
     {
-      "theme": "ECB Tightening Risk",
-      "category": "policy",
-      "direction": "negative",
+      "theme": "Dollar near-term resilience",
+      "category": "fx",
+      "direction": "positive",
       "conviction": "mid",
-      "evidence": "Citi analysts said euro-area activity and renewed core-inflation pressure weakened the case for further easing, while markets priced a meaningful December hike probability.",
+      "evidence": "BofA FX strategist Alex Cohen said strong US growth and stubborn inflation could keep the dollar resilient for longer despite a broader forecast for depreciation.",
       "sources": [
-        "Citi",
-        "European Central Bank"
+        "Alex Cohen",
+        "Bank of America"
       ]
     },
     {
-      "theme": "BOJ Normalization Risk",
+      "theme": "Stagflation concerns",
+      "category": "growth",
+      "direction": "negative",
+      "conviction": "high",
+      "evidence": "Reuters said markets are increasingly focused on slowing growth alongside elevated inflation, raising concerns that central banks may need to tighten further.",
+      "sources": [
+        "Reuters"
+      ]
+    },
+    {
+      "theme": "ECB tightening uncertainty",
       "category": "policy",
       "direction": "negative",
       "conviction": "mid",
-      "evidence": "Markets priced high odds of a December BOJ hike even as the Bank of Japan was expected to hold rates at its current meeting.",
+      "evidence": "Reuters reported markets price roughly a 60% chance of a December ECB hike, down from 75% the prior week, reflecting conflicting growth and inflation signals.",
+      "sources": [
+        "European Central Bank",
+        "Reuters"
+      ]
+    },
+    {
+      "theme": "BOJ hold risk",
+      "category": "policy",
+      "direction": "neutral",
+      "conviction": "mid",
+      "evidence": "Reuters reported traders see a 58% probability that the Bank of Japan leaves rates unchanged next month, versus 42% odds of a hike.",
       "sources": [
         "Bank of Japan",
-        "WSJ"
+        "Reuters"
       ]
     },
     {
-      "theme": "Eurozone Downside Risks",
+      "theme": "Korean downside risks",
       "category": "growth",
       "direction": "negative",
       "conviction": "mid",
-      "evidence": "Chris Turner of ING cited France’s budget crisis, elevated energy costs, tighter lending conditions and weaker loan demand as constraints on the euro-area outlook.",
+      "evidence": "Citi economist Jin-Wook Kim said downside risks to South Korean private consumption appear likely in the fourth quarter, while weaker memory prices and semiconductor exports could force a policy pause.",
       "sources": [
-        "Chris Turner",
-        "ING",
-        "European Central Bank"
-      ]
-    },
-    {
-      "theme": "Reduced Market Fragility",
-      "category": "sector_rotation",
-      "direction": "positive",
-      "conviction": "low",
-      "evidence": "Standard Chartered strategists said the rebound in technology and AI reduced downside financial-market risks after earlier concern about technology-sector credit stress.",
-      "sources": [
-        "Standard Chartered Global Research"
+        "Jin-Wook Kim",
+        "Citi"
       ]
     }
   ],
   "model": "sonar-pro",
   "citations": [
-    "https://www.wsj.com/finance/currencies/singapore-dollar-strengthens-amid-falling-u-s-treasury-yields-b806c8af?mod=RSSMSN",
-    "https://www.wsj.com/finance/commodities-futures/u-s-treasury-yields-fall-as-investors-digest-fed-meet-focus-shifts-to-ecb-d29ffbec",
-    "https://www.wsj.com/finance/banking/ubs-profit-climbs-as-wealth-management-inflows-increase-868e9b5f?mod=RSSMSN",
-    "https://www.wsj.com/finance/jgb-yields-rise-amid-caution-ahead-of-boj-decision-0a68d866",
-    "https://www.wsj.com/economy/week-ahead-for-fx-bonds-u-s-midterms-jobs-data-in-focus-boe-expected-to-raise-rates-aa39e25d?mod=RSSMSN",
-    "https://www.wsj.com/finance/jgb-yields-fall-ahead-of-boj-rate-decision-d2f3d90f?mod=RSSMSN",
-    "https://link.cnbc.com/public/37946808",
-    "https://www.ft.com/content/516063c6-3820-4803-836a-73e24ebee0da?syn-25a6b1a6=1",
-    "https://www.wsj.com/finance/currencies/asian-currencies-consolidate-ahead-of-fed-decision-28baaa62",
-    "https://www.wsj.com/finance/stocks/u-s-stocks-add-to-gains-ahead-of-earnings-fed-statement-d996e176?mod=RSSMSN"
+    "https://www.reuters.com/business/energy/global-markets-stagflation-risks-graphic-pix-2026-11-06/",
+    "https://www.reuters.com/business/us-job-growth-beats-expectations-october-unemployment-rate-falls-41-2026-11-06/",
+    "http://rmb.reuters.com/rmd/rss/item/tag:reuters.com,2026:newsml_KCN3WH056?channel=frL012",
+    "https://www.reuters.com/commentary/reuters-open-interest/global-markets-view-usa-2026-11-06/",
+    "http://rmb.reuters.com/rmd/rss/item/tag:reuters.com,2026:newsml_KCN3WH0HN?channel=frL012",
+    "http://rmb.reuters.com/rmd/rss/item/tag:reuters.com,2026:newsml_KCN3WH14F?channel=FBi345",
+    "https://www.reuters.com/business/retail-consumer/trader-angst-pivots-inflation-growth-tech-rout-deepens-2026-11-06/",
+    "https://www.reuters.com/business/traders-raise-bets-fed-rate-hike-after-jobs-report-2026-11-06/",
+    "https://www.reuters.com/business/feds-hammack-favors-gradual-rate-hike-path-lower-inflation-2026-11-05/",
+    "https://www.reuters.com/business/weaker-dollar-views-stick-running-into-us-midterms-strategists-brace-resilience-2026-11-03/"
   ],
-  "cost_usd": 0.006
+  "cost_usd": 0.0068
 }
