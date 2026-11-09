@@ -9,7 +9,9 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date, datetime, timezone
+import gzip
 import hashlib
+import io
 import json
 import re
 import sys
@@ -19,6 +21,7 @@ from typing import NamedTuple
 from types import MappingProxyType
 import urllib.error
 import urllib.request
+import zlib
 
 from .portfolio_public_sources import (PUBLIC_SOURCE_FILES, PUBLIC_SOURCE_MAX_BYTES,
                                        base_projection_revision)
@@ -63,6 +66,12 @@ class _SourceResponse(NamedTuple):
 
 def _safe_etag(value):
     return value if type(value) is str and _STRONG_ETAG.fullmatch(value) else None
+
+
+def _gzip_etag_key(value):
+    if type(value) is str and value.startswith("W/"):
+        return _safe_etag(value[2:])
+    return None
 
 
 def _read_refresh_states():
@@ -163,14 +172,18 @@ def _read_public_document(url, limit, *, timeout=FETCH_TIMEOUT_SECONDS,
     )
     # Do not inherit urllib's default User-Agent or accept caller-supplied headers.
     opener.addheaders = []
-    request = urllib.request.Request(
-        url, headers={"If-None-Match": _etag} if _with_etag and _safe_etag(_etag) else {},
-        method="GET")
+    headers = {"Accept-Encoding": "gzip"} if _with_etag else {}
+    # Blob's encoded 200 can return a weak variant of the identity ETag. Keep
+    # that exact request validator and require the matching strong tag on 304.
+    expected_tag = (_safe_etag(_etag) or _gzip_etag_key(_etag)) if _with_etag else None
+    if expected_tag is not None:
+        headers["If-None-Match"] = _etag
+    request = urllib.request.Request(url, headers=headers, method="GET")
     try:
         response = opener.open(request, timeout=timeout)
     except urllib.error.HTTPError as error:
-        if (error.code == 304 and _with_etag and _safe_etag(_etag)
-                and error.geturl() == url and _safe_etag(error.headers.get("ETag")) == _etag):
+        if (error.code == 304 and expected_tag is not None and error.geturl() == url
+                and _safe_etag(error.headers.get("ETag")) == expected_tag):
             error.close()
             return None, _etag, True
         raise
@@ -190,7 +203,21 @@ def _read_public_document(url, limit, *, timeout=FETCH_TIMEOUT_SECONDS,
         raw = response.read(limit + 1)
         if len(raw) > limit:
             raise ValueError("public source response rejected")
-        received_etag = _safe_etag(response.headers.get("ETag")) if _with_etag else None
+        encoding = (response.headers.get("Content-Encoding") or "").strip().lower()
+        tag = response.headers.get("ETag") if _with_etag else None
+    received_etag = _safe_etag(tag)
+    if _with_etag and encoding == "gzip":
+        try:
+            with gzip.GzipFile(fileobj=io.BytesIO(raw)) as decoded:
+                raw = decoded.read(limit + 1)
+        except (OSError, EOFError, zlib.error):
+            raise ValueError("public source gzip response rejected") from None
+        if len(raw) > limit:
+            raise ValueError("public source response rejected")
+        if _gzip_etag_key(tag) is not None:
+            received_etag = tag
+    elif _with_etag and encoding not in {"", "identity"}:
+        raise ValueError("public source encoding rejected")
     document = json.loads(
         raw.decode("utf-8"),
         object_pairs_hook=_unique_object,

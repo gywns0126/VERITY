@@ -418,9 +418,13 @@ def test_production_failed_news_overlay_separates_live_cache_and_return(monkeypa
     assert warm["documents"]["portfolio.json"]["headlines"][0]["title"] == "공개 검수 기사"
 
 
-def test_fixed_url_304_reuses_only_prior_validated_document_and_hash(monkeypatch, capsys):
+@pytest.mark.parametrize("encoding", ["identity", "gzip"])
+def test_fixed_url_304_reuses_only_prior_validated_document_and_hash(monkeypatch, capsys, encoding):
+    import gzip
+
     target = "universe_search.json"
     etag = '"' + "a" * 32 + '"'
+    wire_etag = "W/" + etag if encoding == "gzip" else etag
     calls = []
     revision_calls = []
     original_revision = fetch._document_revision
@@ -438,14 +442,20 @@ def test_fixed_url_304_reuses_only_prior_validated_document_and_hash(monkeypatch
         def open(self, request, timeout):
             name = request.full_url.rsplit("/", 1)[-1]
             sent = dict(request.header_items()).get("If-none-match")
+            assert request.get_header("Accept-encoding") == "gzip"
             calls.append((name, sent))
-            if name == target and sent == etag:
+            if name == target and sent == wire_etag:
                 raise urllib.error.HTTPError(request.full_url, 304, "unchanged",
                                              {"ETag": etag}, io.BytesIO())
             body = json.dumps(baseline(name)).encode()
-            return Response(request.full_url, body,
-                            {"Content-Length": str(len(body)),
-                             "ETag": etag if name == target else "invalid\r\netag"})
+            compressed = name == target and encoding == "gzip"
+            if compressed:
+                body = gzip.compress(body)
+            return Response(request.full_url, body, {
+                "Content-Length": str(len(body)),
+                "Content-Encoding": "gzip" if compressed else "identity",
+                "ETag": wire_etag if name == target else "W/" + etag,
+            })
 
     monkeypatch.setattr(fetch.urllib.request, "build_opener", lambda *_: Opener())
     monkeypatch.setattr(fetch, "_REFRESH_STORE", types.SimpleNamespace(read_states=lambda: {}))
@@ -465,7 +475,7 @@ def test_fixed_url_304_reuses_only_prior_validated_document_and_hash(monkeypatch
     assert second["documents"][target] == baseline(target)
     assert len(revision_calls) == 2 * len(fetch.PUBLIC_SOURCE_FILES) - 1
     assert sorted(calls[len(fetch.PUBLIC_SOURCE_FILES):]) == sorted(
-        (name, etag if name == target else None) for name in fetch.PUBLIC_SOURCE_FILES)
+        (name, wire_etag if name == target else None) for name in fetch.PUBLIC_SOURCE_FILES)
     assert fetch._VALIDATED_SOURCES[target][2] is not second["documents"][target]
     lines = [line for line in capsys.readouterr().err.splitlines()
              if line.startswith("member_map_public_fetch ")]
@@ -475,7 +485,7 @@ def test_fixed_url_304_reuses_only_prior_validated_document_and_hash(monkeypatch
     assert all(etag not in line and "http" not in line for line in lines)
 
 
-@pytest.mark.parametrize("mode", ["changed", "wrong-304", "missing-304"])
+@pytest.mark.parametrize("mode", ["changed", "wrong-304", "weak-304", "missing-304"])
 def test_revalidation_never_promotes_unvalidated_or_failed_source(monkeypatch, capsys, mode):
     target = "universe_search.json"
     url = fetch.PUBLIC_SOURCE_URLS[target]
@@ -499,6 +509,8 @@ def test_revalidation_never_promotes_unvalidated_or_failed_source(monkeypatch, c
             sent = dict(request.header_items()).get("If-none-match")
             if phase[0] and mode != "changed":
                 received = revised_etag if mode == "wrong-304" else etag
+                if mode == "weak-304":
+                    received = "W/" + etag
                 if mode == "missing-304":
                     assert sent is None
                 raise urllib.error.HTTPError(url, 304, "unchanged",
@@ -535,8 +547,10 @@ def test_revalidation_never_promotes_unvalidated_or_failed_source(monkeypatch, c
     assert len(lines) == 2 and all("revalidated=0" in line for line in lines)
 
 
-@pytest.mark.parametrize("failure", ["parse", "hash"])
+@pytest.mark.parametrize("failure", ["parse", "hash", "gzip-overflow", "gzip-truncated", "gzip-duplicate"])
 def test_invalid_200_cannot_seed_conditional_reuse(monkeypatch, failure):
+    import gzip
+
     target = "universe_search.json"
     url = fetch.PUBLIC_SOURCE_URLS[target]
     etag = '"' + "a" * 32 + '"'
@@ -544,7 +558,8 @@ def test_invalid_200_cannot_seed_conditional_reuse(monkeypatch, failure):
 
     class Response(io.BytesIO):
         status = 200
-        headers = {"ETag": etag}
+        headers = ({"ETag": "W/" + etag, "Content-Encoding": "gzip"}
+                   if failure.startswith("gzip-") else {"ETag": etag})
         def geturl(self):
             return url
 
@@ -556,10 +571,18 @@ def test_invalid_200_cannot_seed_conditional_reuse(monkeypatch, failure):
             sent.append(dict(request.header_items()).get("If-none-match"))
             if failure == "parse":
                 return Response(b'{"stocks":[],"stocks":[]}')
+            if failure == "gzip-overflow":
+                return Response(gzip.compress(b'{"text":"' + b"x" * 2048 + b'"}'))
+            if failure == "gzip-truncated":
+                return Response(gzip.compress(b'{"stocks":[]}')[:-4])
+            if failure == "gzip-duplicate":
+                return Response(gzip.compress(b'{"stocks":[],"stocks":[]}'))
             return Response(json.dumps(baseline(target)).encode())
 
     monkeypatch.setattr(fetch.urllib.request, "build_opener", lambda *_: Opener())
     monkeypatch.setattr(fetch, "_REFRESH_STORE", types.SimpleNamespace(read_states=lambda: {}))
+    if failure == "gzip-overflow":
+        monkeypatch.setitem(fetch.PUBLIC_SOURCE_MAX_BYTES, target, 1024)
     if failure == "hash":
         monkeypatch.setattr(fetch, "_document_revision", lambda _document: (
             _ for _ in ()).throw(ValueError("synthetic canonical failure")))
