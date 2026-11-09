@@ -1,25 +1,25 @@
 {
  "_meta": {
-  "generated_at": "2026-11-08T20:41:44+09:00",
+  "generated_at": "2026-11-09T22:05:16+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 31,
+  "sessions_scanned": 30,
   "sessions_missed": [
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 754,
-   "companies": 225,
+   "filings": 720,
+   "companies": 219,
    "by_stage": {
-    "신청": 90,
-    "정정(심사중)": 100,
+    "신청": 89,
+    "정정(심사중)": 99,
     "가격확정": 8,
-    "거래소등록": 27
+    "거래소등록": 23
    },
-   "spac_likely": 27,
-   "has_ticker_now": 170,
+   "spac_likely": 26,
+   "has_ticker_now": 164,
    "priced_secondary_excluded": 7,
-   "foreign_issuer": 57,
-   "priced_parse_ok": 6
+   "foreign_issuer": 55,
+   "priced_parse_ok": 5
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
@@ -88,14 +88,14 @@
    "forms": {
     "CERT": 1,
     "8-A12B": 1,
-    "S-1/A": 3
+    "S-1/A": 2
    },
-   "first_filed": "20260924",
+   "first_filed": "20261023",
    "last_filed": "20261105",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
-   "amend_count": 3,
+   "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -480,10 +480,9 @@
     "CERT": 1,
     "S-1MEF": 1,
     "8-A12B": 1,
-    "S-1/A": 1,
-    "S-1": 1
+    "S-1/A": 1
    },
-   "first_filed": "20260924",
+   "first_filed": "20261009",
    "last_filed": "20261016",
    "lineage": true,
    "stage": 4,
@@ -583,70 +582,6 @@
     "gross_usd": 150000000,
     "source_url": "https://www.sec.gov/Archives/edgar/data/1997038/000119312526422865/iambic_inception_424b4.htm",
     "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
-   }
-  },
-  {
-   "cik": "2153598",
-   "name": "Frazier Life Sciences Acquisition Corp. II",
-   "forms": {
-    "424B4": 1,
-    "CERT": 1,
-    "8-A12B": 1,
-    "S-1": 1
-   },
-   "first_filed": "20260924",
-   "last_filed": "20261014",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2153598&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "FLSC",
-    "region": "PALO ALTO, CA",
-    "state_of_inc": "E9"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "주식수 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2153598/000119312526421735/d411729d424b4.htm"
-   }
-  },
-  {
-   "cik": "2148245",
-   "name": "New Iceland Arctic Acquisition Corp.",
-   "forms": {
-    "S-1/A": 2,
-    "S-1": 1,
-    "8-A12B": 1,
-    "CERT": 1
-   },
-   "first_filed": "20260924",
-   "last_filed": "20261014",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2148245&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "NIAA",
-    "region": "GEORGE TOWN",
-    "state_of_inc": "E9"
    }
   },
   {
@@ -787,41 +722,6 @@
    }
   },
   {
-   "cik": "2148436",
-   "name": "Southport Acquisition Corp. II",
-   "forms": {
-    "424B4": 1,
-    "8-A12B": 1,
-    "CERT": 1,
-    "S-1/A": 1
-   },
-   "first_filed": "20260924",
-   "last_filed": "20261002",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2148436&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "PORT",
-    "region": "GREENWICH, CT",
-    "state_of_inc": "E9"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "공모가 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2148436/000118518526004535/southacq2424b4093026.htm"
-   }
-  },
-  {
    "cik": "2113605",
    "name": "Chilwa Minerals Ltd",
    "forms": {
@@ -881,43 +781,6 @@
     "parse_ok": false,
     "reason": "공모가 문구 없음",
     "source_url": "https://www.sec.gov/Archives/edgar/data/2075335/000121390026104150/ea0306875-424b4_roze.htm"
-   }
-  },
-  {
-   "cik": "1802369",
-   "name": "ADARx Pharmaceuticals, Inc.",
-   "forms": {
-    "424B4": 1,
-    "CERT": 1,
-    "S-1MEF": 1
-   },
-   "first_filed": "20260924",
-   "last_filed": "20260928",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1802369&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2834",
-    "sic_desc": "Pharmaceutical Preparations",
-    "is_blank_check": false,
-    "ticker": "ADRX",
-    "region": "SAN DIEGO, CA",
-    "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": true,
-    "shares": 26250000,
-    "price_usd": 17.0,
-    "gross_usd": 446250000,
-    "source_url": "https://www.sec.gov/Archives/edgar/data/1802369/000119312526403094/d903461d424b4.htm",
-    "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
    }
   },
   {
@@ -1752,7 +1615,7 @@
     "sic": "2836",
     "sic_desc": "Biological Products, (No Diagnostic Substances)",
     "is_blank_check": false,
-    "ticker": null,
+    "ticker": "WWB",
     "region": "4052 BASEL",
     "state_of_inc": "V8"
    }
@@ -1825,7 +1688,16 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2108121&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2108121&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2835",
+    "sic_desc": "In Vitro & In Vivo Diagnostic Substances",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "LANSING, MI",
+    "state_of_inc": "DE"
+   }
   },
   {
    "cik": "1879403",
@@ -1843,7 +1715,16 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1879403&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1879403&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6531",
+    "sic_desc": "Real Estate Agents & Managers (For Others)",
+    "is_blank_check": false,
+    "ticker": "SRTM",
+    "region": "CELEBRATION, FL",
+    "state_of_inc": "NV"
+   }
   },
   {
    "cik": "1793497",
@@ -1860,7 +1741,16 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1793497&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1793497&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6221",
+    "sic_desc": "Commodity Contracts Brokers & Dealers",
+    "is_blank_check": false,
+    "ticker": "UVIX",
+    "region": "PALM BEACH GARDENS, FL",
+    "state_of_inc": "DE"
+   }
   },
   {
    "cik": "2016072",
@@ -1875,9 +1765,18 @@
    "stage_ko": "정정(심사중)",
    "amend_count": 2,
    "is_foreign_issuer": false,
-   "is_spac_likely": false,
+   "is_spac_likely": true,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2016072&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2016072&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "VLOS",
+    "region": "NEW YORK, NY",
+    "state_of_inc": "E9"
+   }
   },
   {
    "cik": "1830072",
@@ -1953,14 +1852,14 @@
    "cik": "2070237",
    "name": "Hacker Interstellar Inc.",
    "forms": {
-    "F-1/A": 2
+    "F-1/A": 1
    },
-   "first_filed": "20260924",
+   "first_filed": "20261028",
    "last_filed": "20261028",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -2331,14 +2230,14 @@
    "cik": "2142855",
    "name": "PBT Land & Minerals, Inc.",
    "forms": {
-    "S-1/A": 3
+    "S-1/A": 2
    },
-   "first_filed": "20260924",
+   "first_filed": "20261009",
    "last_filed": "20261021",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 3,
+   "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
@@ -2451,14 +2350,14 @@
    "cik": "2136571",
    "name": "Evmand Corp",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20260924",
+   "first_filed": "20261016",
    "last_filed": "20261016",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
@@ -2568,6 +2467,24 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1506983&type=S-1&dateb=&owner=include&count=20"
   },
   {
+   "cik": "2148245",
+   "name": "New Iceland Arctic Acquisition Corp.",
+   "forms": {
+    "S-1/A": 2,
+    "S-1": 1
+   },
+   "first_filed": "20261005",
+   "last_filed": "20261014",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2148245&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
    "cik": "2138170",
    "name": "Spring Valley Acquisition Corp. V",
    "forms": {
@@ -2605,14 +2522,14 @@
    "cik": "95572",
    "name": "KiNRG, Inc.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20260924",
+   "first_filed": "20261013",
    "last_filed": "20261013",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -2824,24 +2741,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1604191&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "1866226",
-   "name": "Evolution Metals & Technologies Corp.",
-   "forms": {
-    "S-1": 1,
-    "S-1/A": 1
-   },
-   "first_filed": "20260924",
-   "last_filed": "20261005",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1866226&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2034588",
    "name": "Neuro Spectrum Insights, Inc.",
    "forms": {
@@ -2964,10 +2863,9 @@
    "cik": "2087398",
    "name": "Metals Royalty Co Inc.",
    "forms": {
-    "F-1/A": 1,
-    "F-1": 2
+    "F-1/A": 1
    },
-   "first_filed": "20260924",
+   "first_filed": "20260929",
    "last_filed": "20260929",
    "lineage": true,
    "stage": 2,
@@ -3062,23 +2960,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1701756&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1722731",
-   "name": "FDCTECH, INC.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20260924",
-   "last_filed": "20260924",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1722731&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "777917",
@@ -4272,6 +4153,23 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2118192&type=S-1&dateb=&owner=include&count=20"
   },
   {
+   "cik": "1866226",
+   "name": "Evolution Metals & Technologies Corp.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261005",
+   "last_filed": "20261005",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1866226&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
    "cik": "1517681",
    "name": "Propanc Biopharma, Inc.",
    "forms": {
@@ -4576,40 +4474,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2128185&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1643918",
-   "name": "Biodexa Pharmaceuticals Plc",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20260924",
-   "last_filed": "20260924",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1643918&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1611747",
-   "name": "Scinai Immunotherapeutics Ltd.",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20260924",
-   "last_filed": "20260924",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1611747&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "910739",
