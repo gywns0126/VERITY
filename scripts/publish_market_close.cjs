@@ -12,8 +12,13 @@ const INDEX = PREFIX + 'index.json';
 const ID = /^\d{4}-\d{2}-\d{2}-\d{2}$/;
 const SHA = /^[a-f0-9]{64}$/;
 const PERMALINK = /^https:\/\/(?:www\.)?instagram\.com\/(?:reel|p)\/[A-Za-z0-9_-]+\/?$/;
+const PUBLICATION_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 const MARKETS = new Map([['국장 마감', 'KR'], ['미장 마감', 'US']]);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+const validTitle = title => typeof title === 'string' && !!title.trim() &&
+    title.length <= 500 && !/[\u0000-\u001f]|obnw_[A-Za-z0-9_-]{15,}/i.test(title);
+const transientError = error => ['TypeError', 'TimeoutError', 'AbortError'].includes(error.name);
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function checkBlobToken(token) {
     const match = /^vercel_blob_rw_([a-z\d]+)_[^\s]+$/i.exec(token);
@@ -61,7 +66,7 @@ async function readSource(request, endpoint, mime, limit, timeout) {
                 return await readBounded(response, limit);
             }
         } catch (error) {
-            if (attempt || !['TypeError', 'TimeoutError', 'AbortError'].includes(error.name)) throw error;
+            if (attempt || !transientError(error)) throw error;
         }
         await new Promise(resolve => setTimeout(resolve, (retryAfter + 1) * 1000));
     }
@@ -89,7 +94,7 @@ function sessionDate(title, publishedAt) {
     return elapsed >= 0 && elapsed <= 4 * 86400000 && new Date(day).toISOString().slice(0, 10) === day ? day : undefined;
 }
 
-function selectEpisodes(payload, now = Date.now()) {
+function selectEpisodes(payload, now = Date.now(), previous = new Map()) {
     assert(Array.isArray(payload.posts) && payload.posts.length <= 30, 'invalid source list');
     const ordered = payload.posts.filter(post => post.category === 'market' && post.format === 'reel' && MARKETS.has(post.subcategory))
         .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
@@ -100,10 +105,13 @@ function selectEpisodes(payload, now = Date.now()) {
         const title = typeof post.title === 'string' ? post.title.trim() : '';
         const publishedAt = post.publishedAt;
         const age = now - Date.parse(publishedAt);
-        assert(typeof post.id === 'string' && ID.test(post.id) && title && title.length <= 500 && !/[\u0000-\u001f]|obnw_[A-Za-z0-9_-]{15,}/i.test(title) &&
+        assert(typeof post.id === 'string' && ID.test(post.id) && validTitle(title) &&
             typeof post.instagram === 'string' && PERMALINK.test(post.instagram), 'invalid episode');
-        assert(typeof publishedAt === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(publishedAt) &&
-            age >= -60000 && age <= 8 * 86400000, 'invalid publication time');
+        assert(typeof publishedAt === 'string' && PUBLICATION_TIME.test(publishedAt) && age >= -60000, 'invalid publication time');
+        const old = previous.get(market);
+        if (old && Date.parse(publishedAt) < Date.parse(old.publishedAt)) continue;
+        if (old && age > 8 * 86400000) continue;
+        assert(age <= 8 * 86400000, 'invalid publication time');
         const date = sessionDate(title, publishedAt);
         const video = fileFor(post, 'video', 'video/mp4', 40 * 1024 * 1024);
         const poster = fileFor(post, 'cover', 'image/jpeg', 2 * 1024 * 1024);
@@ -112,7 +120,7 @@ function selectEpisodes(payload, now = Date.now()) {
             sourceFingerprint: digest(video.sha256 + poster.sha256), video, poster,
         });
     }
-    assert(selected.size === 2, 'both market episodes are required');
+    assert([...MARKETS.values()].every(market => selected.has(market) || previous.has(market)), 'both market episodes are required');
     return [...selected.values()];
 }
 
@@ -143,6 +151,25 @@ function assetUrl(url, id, role) {
     return typeof url === 'string' && url.startsWith(start) && suffix.test(url.slice(start.length));
 }
 
+function readPrevious(body) {
+    const previous = new Map();
+    if (!body) return previous;
+    const { version, items } = JSON.parse(body);
+    assert(version === 1 && Array.isArray(items) && items.length === 2, 'invalid previous index');
+    for (const { id, market, title, publishedAt, sessionDate, permalink, sourceFingerprint, posterUrl, videoUrl } of items) {
+        assert(typeof id === 'string' && ID.test(id) && (market === 'KR' || market === 'US') &&
+            !previous.has(market) && validTitle(title) && typeof publishedAt === 'string' &&
+            PUBLICATION_TIME.test(publishedAt) && Number.isFinite(Date.parse(publishedAt)) &&
+            typeof permalink === 'string' && PERMALINK.test(permalink) &&
+            typeof sourceFingerprint === 'string' && SHA.test(sourceFingerprint) &&
+            assetUrl(posterUrl, id, 'poster') && assetUrl(videoUrl, id, 'video'), 'invalid previous episode');
+        assert(sessionDate === undefined || (typeof sessionDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(sessionDate) &&
+            Number.isFinite(Date.parse(sessionDate)) && new Date(sessionDate).toISOString().slice(0, 10) === sessionDate), 'invalid previous session date');
+        previous.set(market, { id, market, title, publishedAt, ...(sessionDate ? { sessionDate } : {}), permalink, sourceFingerprint, posterUrl, videoUrl });
+    }
+    return previous;
+}
+
 async function publicResponse(name, bypass = false, method = 'GET') {
     return fetch(BLOB + name + (bypass ? `?readback=${Date.now()}` : ''), {
         method, redirect: 'error', signal: AbortSignal.timeout(30000),
@@ -150,20 +177,34 @@ async function publicResponse(name, bypass = false, method = 'GET') {
 }
 
 async function assetAvailable(url, mime) {
-    const response = await publicResponse(url.slice(BLOB.length), true, 'HEAD');
+    const name = url.slice(BLOB.length);
+    let response;
+    try {
+        response = await publicResponse(name, true, 'HEAD');
+    } catch (error) {
+        if (!transientError(error)) throw error;
+    }
+    if (!response || response.status === 429 || response.status >= 500) {
+        await wait(2000);
+        response = await publicResponse(name, true, 'HEAD');
+    }
     if (response.status === 404) return false;
     assert(response.ok && response.headers.get('content-type')?.split(';')[0] === mime &&
         Number(response.headers.get('content-length')) > 0, 'public asset verification failed');
     return true;
 }
 
-async function readBack(name, expected, limit) {
-    for (let attempt = 0; attempt < 4; attempt++) {
-        if (attempt) await new Promise(resolve => setTimeout(resolve, 2000));
-        const response = await publicResponse(name, true);
-        if (response.ok) {
-            if (expected.equals(await readBounded(response, limit))) return;
-        } else await response.body?.cancel();
+async function readBack(name, expected, limit, delays = [0, 2000, 2000, 2000]) {
+    for (const delay of delays) {
+        if (delay) await wait(delay);
+        try {
+            const response = await publicResponse(name, true);
+            if (response.ok) {
+                if (expected.equals(await readBounded(response, limit))) return;
+            } else await response.body?.cancel();
+        } catch (error) {
+            if (!transientError(error)) throw error;
+        }
     }
     throw Error('public readback mismatch');
 }
@@ -193,17 +234,25 @@ async function main() {
         const sdk = dryRun ? null : require('@vercel/blob');
         stage = 'source-list';
         const payload = JSON.parse(await readSource(request, '/api/media/posts?category=market&format=reel&channel=instagram&limit=30', 'application/json', 500000, 20000));
-        const episodes = selectEpisodes(payload);
         stage = 'previous-index';
         const previous = dryRun ? null : await publicResponse(INDEX, true);
         assert(!previous || previous.ok || previous.status === 404, 'cannot read previous index');
         const before = previous?.ok ? await readBounded(previous, 16000) : null;
-        const existing = before ? JSON.parse(before).items : [];
-        assert(Array.isArray(existing), 'invalid previous index');
+        const existing = readPrevious(before);
+        stage = 'episode-selection';
+        const episodes = selectEpisodes(payload, Date.now(), existing);
         const items = [];
+        for (const old of existing.values()) {
+            if (episodes.some(episode => episode.market === old.market)) continue;
+            stage = 'retained-assets';
+            assert((await Promise.all([
+                assetAvailable(old.posterUrl, 'image/jpeg'), assetAvailable(old.videoUrl, 'video/mp4'),
+            ])).every(Boolean), 'retained episode assets are missing');
+            items.push(old);
+        }
         for (const { video, poster, ...episode } of episodes) {
-            const old = existing.find(row => row.market === episode.market);
-            assert(!old || Date.parse(episode.publishedAt) >= Date.parse(old.publishedAt), 'older episode snapshot');
+            stage = 'existing-assets';
+            const old = existing.get(episode.market);
             const reusable = old?.id === episode.id && old.sourceFingerprint === episode.sourceFingerprint &&
                 assetUrl(old.videoUrl, episode.id, 'video') && assetUrl(old.posterUrl, episode.id, 'poster');
             if (reusable && (await Promise.all([
@@ -223,9 +272,11 @@ async function main() {
             }
             items.push({ ...episode, posterUrl: BLOB + cover.name, videoUrl: BLOB + clip.name });
         }
+        items.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
         const body = Buffer.from(JSON.stringify({ version: 1, items }) + '\n');
+        const retainedMarkets = items.filter(item => !episodes.some(episode => episode.market === item.market)).map(item => item.market);
         if (!sdk || before?.equals(body)) {
-            console.log(JSON.stringify({ status: dryRun ? 'dry-run' : 'unchanged', episodes: items.length, manifestBytes: body.length }));
+            console.log(JSON.stringify({ status: dryRun ? 'dry-run' : 'unchanged', episodes: items.length, retainedMarkets, manifestBytes: body.length }));
             return;
         }
         stage = 'index-publish';
@@ -237,8 +288,9 @@ async function main() {
         });
         assert.equal(result.url, BLOB + INDEX, 'unexpected index store');
         stage = 'index-readback';
-        await readBack(INDEX, body, 16000);
-        console.log(JSON.stringify({ status: 'published', episodes: items.length, manifestBytes: body.length, sha256: digest(body) }));
+        // An overwritten public Blob can take up to a minute to reach CDN reads.
+        await readBack(INDEX, body, 16000, [0, 4000, 8000, 16000, 35000]);
+        console.log(JSON.stringify({ status: 'published', episodes: items.length, retainedMarkets, manifestBytes: body.length, sha256: digest(body) }));
     } catch (error) {
         // Diagnostics must never include request headers, keys or provider bodies.
         console.error(`market-close ${stage} failed (${error.name})`);

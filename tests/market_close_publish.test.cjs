@@ -37,6 +37,14 @@ test('invalid or missing market data fails closed', () => {
     assert.throws(() => selectEpisodes({ posts: [kr, { ...us, files }] }, now), /file URL/);
 });
 
+test('updates one market when the other is missing or older than the saved episode', () => {
+    const previous = new Map([['US', { publishedAt: us.publishedAt }]]);
+    assert.deepEqual(selectEpisodes({ posts: [kr] }, now, previous).map(row => row.id), [kr.id]);
+    const olderUs = { ...us, publishedAt: '2026-11-09T07:30:00+09:00' };
+    assert.deepEqual(selectEpisodes({ posts: [kr, olderUs] }, now, previous).map(row => row.id), [kr.id]);
+    assert.throws(() => selectEpisodes({ posts: [] }, now, previous), /both market/);
+});
+
 test('preflight checks the SDK token store identifier before any public write', () => {
     assert.doesNotThrow(() => checkBlobToken('vercel_blob_rw_rte5GuenhOnW9fzn_fixture'));
     assert.throws(() => checkBlobToken('vercel_blob_rw_wrongstore_fixture'), /wrong Blob store/);

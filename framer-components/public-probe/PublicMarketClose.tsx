@@ -126,7 +126,8 @@ html:not([data-an-theme]) body[data-framer-theme="dark"] .an-market-close {
     cursor:pointer; transition:background-color 160ms;
 }
 .an-market-close .mc-play { min-width:68px }
-.an-market-close a { color:var(--mc-accent); background:transparent }
+.an-market-close .mc-source { gap:4px; color:var(--mc-accent); background:transparent }
+.an-market-close .mc-source svg { flex:none }
 .an-market-close button:disabled { opacity:.55; cursor:default }
 .an-market-close :is(button,a):focus-visible { outline:none; background:var(--mc-focus) }
 @media (hover:hover) {
@@ -377,7 +378,17 @@ export default function PublicMarketClose({ showSource = true, style }: { showSo
                                 </div>
                                 <h3 title={clip.title}>{clip.title}</h3>
                             </div>
-                            {showSource ? <a href={clip.permalink} target="_blank" rel="noopener noreferrer">Instagram 원문</a> : null}
+                            {showSource ? (
+                                <a className="mc-source" href={clip.permalink} target="_blank" rel="noopener noreferrer"
+                                    aria-label="인스타그램 원문 보기 (새 탭)" title="인스타그램 원문">
+                                    <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+                                        <path fillRule="evenodd" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7Zm5 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm5.25-3a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Z" />
+                                    </svg>
+                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+                                        <path d="M5 3h8v8h-1.5V5.56l-7.47 7.47-1.06-1.06L10.44 4.5H5V3Z" />
+                                    </svg>
+                                </a>
+                            ) : null}
                             <div className="mc-controls" role="group" aria-label="영상 재생 제어">
                                 <button type="button" onClick={() => step(-1)} disabled={clipCount < 2} aria-label="이전 영상">이전</button>
                                 <button type="button" className="mc-play" onClick={togglePlayback}>{isPlaying ? "일시정지" : "재생"}</button>
