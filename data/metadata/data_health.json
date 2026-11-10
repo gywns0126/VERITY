@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-11-10T22:13:17.343216+09:00",
+  "generated_at": "2026-11-10T23:13:08.886305+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
@@ -13,7 +13,7 @@
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-11-10T22:13:17.254862+09:00",
+   "generated_at": "2026-11-10T23:13:08.824886+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -21,19 +21,19 @@
   "coverage": {
    "generated_at": "2026-11-10T19:49:33.800134+09:00",
    "max_age_h": 96,
-   "age_h": 2.395,
+   "age_h": 3.393,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-11-10T22:13:03.361805+09:00",
+   "generated_at": "2026-11-10T23:13:00.117708+09:00",
    "max_age_h": 3,
-   "age_h": 0.004,
+   "age_h": 0.002,
    "status": "fresh"
   },
   "annual_backfill": {
    "generated_at": "2026-11-09T20:32:55.721353+00:00",
    "max_age_h": 48,
-   "age_h": 16.673,
+   "age_h": 17.67,
    "status": "fresh"
   }
  },
@@ -42,11 +42,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-11-10T22:13:17.254862+09:00",
+  "generated_at": "2026-11-10T23:13:08.824886+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 72020,
+  "max_cdn_age_s": 50408,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -56,7 +56,7 @@
      "PBR": 95.8
     },
     "total": 2560,
-    "cdn_age_s": 0,
+    "cdn_age_s": 17994,
     "error": null
    },
    {
@@ -67,7 +67,7 @@
      "PBR": 76.7
     },
     "total": 5270,
-    "cdn_age_s": 0,
+    "cdn_age_s": 7210,
     "error": null
    },
    {
@@ -78,7 +78,7 @@
      "PBR": 74.5
     },
     "total": 4001,
-    "cdn_age_s": 72020,
+    "cdn_age_s": 50408,
     "error": null
    },
    {
@@ -107,7 +107,7 @@
   "last_run_at": "2026-11-10T19:49:33.940847+09:00"
  },
  "freshness": {
-  "generated_at": "2026-11-10T22:13:03.361805+09:00",
+  "generated_at": "2026-11-10T23:13:00.117708+09:00",
   "summary": {
    "fresh": 58,
    "stale": 2,
@@ -148,7 +148,7 @@
   "producer_evidence": {
    "news_flash": {
     "status": "bound_query_complete",
-    "completed_at": "2026-11-10T22:02:42.030253+09:00",
+    "completed_at": "2026-11-10T23:02:40.781844+09:00",
     "clock_kind": "source_query_attempt",
     "asset_binding": "verified_sha256",
     "source_freshness_verified": false,
@@ -204,13 +204,13 @@
    {
     "id": "market_warnings",
     "last_ts": "2026-10-24T09:56:25.342429+09:00",
-    "age_eff_min": 17173.1,
+    "age_eff_min": 17233.0,
     "max_age_min": 2880
    },
    {
     "id": "securities_lending",
     "last_ts": "2026-10-31T00:00:00+09:00",
-    "age_eff_min": 9973.1,
+    "age_eff_min": 10033.0,
     "max_age_min": 4320
    }
   ]
