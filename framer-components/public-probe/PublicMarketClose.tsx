@@ -171,7 +171,7 @@ export default function PublicMarketClose({ showSource = true, style }: { showSo
             timeout = window.setTimeout(() => controller.abort(), 8000)
             try {
                 const response = await fetch(INDEX_URL, {
-                    credentials: "omit", redirect: "error", signal: controller.signal,
+                    credentials: "omit", redirect: "error", cache: "no-cache", signal: controller.signal,
                 })
                 if (!response.ok) throw new Error("Manifest unavailable")
                 const items = readClips(await response.json())
