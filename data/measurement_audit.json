@@ -1,5 +1,5 @@
 {
- "as_of": "2026-11-10T17:41:59+09:00",
+ "as_of": "2026-11-11T01:30:47+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -84,7 +84,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "88/88",
+     "coverage": "68/68",
      "via": [
       "current_price",
       "price"
@@ -95,7 +95,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "57/88",
+     "coverage": "39/68",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -106,7 +106,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "88/88",
+     "coverage": "68/68",
      "via": [
       "fscore_deltas"
      ],
@@ -116,7 +116,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "87/88",
+     "coverage": "68/68",
      "via": [
       "industry"
      ],
@@ -126,7 +126,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "34/88",
+     "coverage": "15/68",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -158,7 +158,7 @@
   },
   "rule_discrimination": {
    "ok": false,
-   "snapshots": 168,
+   "snapshots": 169,
    "cap_rules_checked": 8,
    "degenerate_rules": [
     {
@@ -174,9 +174,9 @@
     "never_on_pct": 5.0,
     "watch_pct": 85.0
    },
-   "days_without_any_cap": 32,
-   "days_without_any_cap_pct": 19.0,
-   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.2%). cap 없는 날 32/168일",
+   "days_without_any_cap": 31,
+   "days_without_any_cap_pct": 18.3,
+   "detail": "상시/미발동 등급 규칙 1종 — oil_geopolitical_shock(1.2%). cap 없는 날 31/169일",
    "note": "임계 조정은 사전등록 대상(RULE 7). 본 검사는 판정만 한다.",
    "baseline": {
     "degenerate_rules": 2
@@ -187,7 +187,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 15,
-   "stock_days": 9927,
+   "stock_days": 9995,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -263,8 +263,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 53,
-    "scored": 53,
+    "with_pct": 55,
+    "scored": 55,
     "ok": true
    },
    "dead_guards": [],
