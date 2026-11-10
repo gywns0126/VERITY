@@ -99,17 +99,17 @@ html:not([data-an-theme]) body[data-framer-theme="dark"] .an-market-close {
     --mc-card:#171c23; --mc-stack:#1d242c; --mc-hover:#252c35; --mc-focus:#303945;
     --mc-ink:#e3e7ec; --mc-sub:#9aa4b1; --mc-accent:#a99bff;
 }
-.an-market-close h2 { grid-area:title; margin:0; font-size:20px; line-height:1.4; font-weight:800 }
+.an-market-close h2 { grid-row:1; grid-column:1/-1; margin:0; font-size:20px; line-height:1.4; font-weight:800 }
 .an-market-close .mc-content {
     display:grid; grid-template-columns:min(30%,120px) minmax(0,1fr);
-    grid-template-areas:"title title" "media details"; gap:12px;
+    gap:12px;
 }
 .an-market-close .mc-copy { display:contents }
-.an-market-close .mc-frame { grid-area:media; position:relative; aspect-ratio:9/16; align-self:start; overflow:hidden; border-radius:12px; background:var(--mc-stack) }
+.an-market-close .mc-frame { grid-row:2; grid-column:1; position:relative; aspect-ratio:9/16; align-self:start; overflow:hidden; border-radius:12px; background:var(--mc-stack) }
 .an-market-close .mc-frame :is(img,video) { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:contain }
 .an-market-close .mc-frame img { background:var(--mc-stack) }
 .an-market-close .mc-frame[data-video-frame="true"] img { visibility:hidden }
-.an-market-close .mc-details { grid-area:details; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; min-width:0 }
+.an-market-close .mc-details { grid-row:2; grid-column:2; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; min-width:0 }
 .an-market-close .mc-meta { display:flex; flex-wrap:wrap; gap:2px 8px; color:var(--mc-sub); font-size:12px; line-height:1.5; font-weight:600 }
 .an-market-close .mc-meta span { color:var(--mc-accent); font-weight:700 }
 .an-market-close h3 {
@@ -139,9 +139,10 @@ html:not([data-an-theme]) body[data-framer-theme="dark"] .an-market-close {
 @media (min-width:768px) {
     .an-market-close .mc-content {
         max-width:520px; margin-inline:auto; align-items:center;
-        grid-template-columns:144px minmax(0,1fr); grid-template-areas:"media copy"; gap:24px;
+        grid-template-columns:144px minmax(0,1fr); gap:24px;
     }
-    .an-market-close .mc-copy { display:block; grid-area:copy; min-width:0 }
+    .an-market-close .mc-frame { grid-row:1 }
+    .an-market-close .mc-copy { display:block; grid-row:1; grid-column:2; min-width:0 }
     .an-market-close h2 { margin-bottom:12px }
     .an-market-close h3 { font-size:16px }
     .an-market-close .mc-controls { gap:8px }
