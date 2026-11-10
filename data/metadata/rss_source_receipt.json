@@ -2,52 +2,52 @@
   "schema_version": 1,
   "producer": "RSSScout",
   "clock_kind": "source_query_attempt",
-  "started_at": "2026-11-11T00:02:55.101300+09:00",
-  "finished_at": "2026-11-11T00:07:40.940552+09:00",
-  "run_id": "42839818881",
+  "started_at": "2026-11-11T00:33:00.568774+09:00",
+  "finished_at": "2026-11-11T00:33:00.885974+09:00",
+  "run_id": "42844985754",
   "run_attempt": "1",
-  "input_commit": "0cbb0bda7074fc59bf1052636a312cc8216f32fa",
+  "input_commit": "93e1392ad77cd3ea61bfa7c4d73f6b099961831b",
   "scope": {
     "kind": "configured_rss_feed_query",
     "expected_feeds": 3,
-    "successful_feeds": 2,
+    "successful_feeds": 3,
     "asset_scope": "filtered incremental headlines; retained rows not revalidated"
   },
-  "outcome": "partial_failure",
+  "outcome": "complete",
   "new_rows": 0,
   "feeds": [
     {
       "source": "SEC 공식 발표",
       "url": "https://www.sec.gov/news/pressreleases.rss",
-      "started_at": "2026-11-11T00:02:55.187208+09:00",
-      "outcome": "http_error",
-      "entries": 0,
-      "usable_entries": 0,
+      "started_at": "2026-11-11T00:33:00.662166+09:00",
+      "outcome": "success",
+      "entries": 25,
+      "usable_entries": 25,
       "entries_without_source_date": 0,
-      "http_status": null,
-      "finished_at": "2026-11-11T00:07:40.688007+09:00"
+      "http_status": 200,
+      "finished_at": "2026-11-11T00:33:00.715099+09:00"
     },
     {
       "source": "CNBC",
       "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
-      "started_at": "2026-11-11T00:07:40.688215+09:00",
+      "started_at": "2026-11-11T00:33:00.715460+09:00",
       "outcome": "success",
       "entries": 30,
       "usable_entries": 30,
       "entries_without_source_date": 0,
       "http_status": 200,
-      "finished_at": "2026-11-11T00:07:40.849439+09:00"
+      "finished_at": "2026-11-11T00:33:00.811315+09:00"
     },
     {
       "source": "Fed 공식 발표",
       "url": "https://www.federalreserve.gov/feeds/press_all.xml",
-      "started_at": "2026-11-11T00:07:40.849641+09:00",
+      "started_at": "2026-11-11T00:33:00.811581+09:00",
       "outcome": "success",
       "entries": 20,
       "usable_entries": 20,
       "entries_without_source_date": 0,
       "http_status": 200,
-      "finished_at": "2026-11-11T00:07:40.937515+09:00",
+      "finished_at": "2026-11-11T00:33:00.880693+09:00",
       "warning_type": "CharacterEncodingOverride"
     }
   ],
