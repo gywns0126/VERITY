@@ -1,5 +1,5 @@
 {
- "as_of": "2026-11-10T02:49:12+09:00",
+ "as_of": "2026-11-10T17:41:59+09:00",
  "version": "measurement_audit_v4",
  "status": "FAIL",
  "failing": [
@@ -84,7 +84,7 @@
    "fallback_covered": [
     {
      "key": "close",
-     "coverage": "52/52",
+     "coverage": "88/88",
      "via": [
       "current_price",
       "price"
@@ -95,7 +95,7 @@
     },
     {
      "key": "operating_income",
-     "coverage": "29/52",
+     "coverage": "57/88",
      "via": [
       "revenue + operating_margin",
       "sec_financials.operating_income"
@@ -106,7 +106,7 @@
     },
     {
      "key": "prev_year",
-     "coverage": "52/52",
+     "coverage": "88/88",
      "via": [
       "fscore_deltas"
      ],
@@ -116,7 +116,7 @@
     },
     {
      "key": "sub_sector",
-     "coverage": "52/52",
+     "coverage": "87/88",
      "via": [
       "industry"
      ],
@@ -126,7 +126,7 @@
     },
     {
      "key": "total_debt",
-     "coverage": "15/52",
+     "coverage": "34/88",
      "via": [
       "sec_financials.total_debt",
       "total_assets + debt_ratio"
@@ -140,7 +140,7 @@
     {
      "key": "sec_risk_flags",
      "source": "portfolio.sec_risk_scan.ok",
-     "events_scanned": 18,
+     "events_scanned": 20,
      "detail": "수집·후보 매칭 정상 수행, 현재 후보와 일치한 위험 이벤트 0건",
      "modules": [
       "red_flags.py"
@@ -187,7 +187,7 @@
    "ok": false,
    "rules_defined": 24,
    "rules_fired": 15,
-   "stock_days": 9891,
+   "stock_days": 9927,
    "never_fired": [
     {
      "rule": "공매도 시장 상위 10 종목 (KIS)",
@@ -263,8 +263,8 @@
     }
    },
    "gate_pct_coverage": {
-    "with_pct": 40,
-    "scored": 40,
+    "with_pct": 53,
+    "scored": 53,
     "ok": true
    },
    "dead_guards": [],
