@@ -99,13 +99,17 @@ html:not([data-an-theme]) body[data-framer-theme="dark"] .an-market-close {
     --mc-card:#171c23; --mc-stack:#1d242c; --mc-hover:#252c35; --mc-focus:#303945;
     --mc-ink:#e3e7ec; --mc-sub:#9aa4b1; --mc-accent:#a99bff;
 }
-.an-market-close h2 { margin:0 0 12px; font-size:20px; line-height:1.4; font-weight:800 }
-.an-market-close .mc-content { display:grid; grid-template-columns:min(30%,120px) minmax(0,1fr); gap:12px }
-.an-market-close .mc-frame { position:relative; aspect-ratio:9/16; align-self:start; overflow:hidden; border-radius:12px; background:var(--mc-stack) }
+.an-market-close h2 { grid-area:title; margin:0; font-size:20px; line-height:1.4; font-weight:800 }
+.an-market-close .mc-content {
+    display:grid; grid-template-columns:min(30%,120px) minmax(0,1fr);
+    grid-template-areas:"title title" "media details"; gap:12px;
+}
+.an-market-close .mc-copy { display:contents }
+.an-market-close .mc-frame { grid-area:media; position:relative; aspect-ratio:9/16; align-self:start; overflow:hidden; border-radius:12px; background:var(--mc-stack) }
 .an-market-close .mc-frame :is(img,video) { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:contain }
 .an-market-close .mc-frame img { background:var(--mc-stack) }
 .an-market-close .mc-frame[data-video-frame="true"] img { visibility:hidden }
-.an-market-close .mc-details { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; min-width:0 }
+.an-market-close .mc-details { grid-area:details; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; min-width:0 }
 .an-market-close .mc-meta { display:flex; flex-wrap:wrap; gap:2px 8px; color:var(--mc-sub); font-size:12px; line-height:1.5; font-weight:600 }
 .an-market-close .mc-meta span { color:var(--mc-accent); font-weight:700 }
 .an-market-close h3 {
@@ -132,6 +136,16 @@ html:not([data-an-theme]) body[data-framer-theme="dark"] .an-market-close {
     .an-market-close :is(button,a) { transition:none }
 }
 .an-market-close p { margin:0; color:var(--mc-sub); font-size:13px; line-height:1.6; font-weight:600 }
+@media (min-width:768px) {
+    .an-market-close .mc-content {
+        max-width:520px; margin-inline:auto; align-items:center;
+        grid-template-columns:144px minmax(0,1fr); grid-template-areas:"media copy"; gap:24px;
+    }
+    .an-market-close .mc-copy { display:block; grid-area:copy; min-width:0 }
+    .an-market-close h2 { margin-bottom:12px }
+    .an-market-close h3 { font-size:16px }
+    .an-market-close .mc-controls { gap:8px }
+}
 `
 
 /**
@@ -331,13 +345,11 @@ export default function PublicMarketClose({ showSource = true, style }: { showSo
     return (
         <section className="an-market-close" aria-label="장 마감 브리핑" style={style}>
             <style>{styles}</style>
-            <h2>장 마감 브리핑</h2>
-            {clip ? (
-                <div className="mc-content">
-                    <div className="mc-frame" ref={frameRef} data-video-frame={frameClip === clip}>
+            <div className="mc-content">
+                <div className="mc-frame" ref={frameRef} aria-hidden="true" data-video-frame={!!clip && frameClip === clip}>
+                    {clip ? <>
                         <video
                             ref={videoRef}
-                            aria-hidden="true"
                             preload="none"
                             muted
                             playsInline
@@ -351,31 +363,31 @@ export default function PublicMarketClose({ showSource = true, style }: { showSo
                             }}
                         />
                         <img key={clip.posterUrl} src={clip.posterUrl} alt="" loading="lazy" decoding="async" />
-                    </div>
+                    </> : null}
+                </div>
+                <div className="mc-copy">
+                    <h2>장 마감 브리핑</h2>
                     <div className="mc-details">
-                        <div aria-live="polite" aria-atomic="true">
-                            <div className="mc-meta">
-                                <span>{clip.market === "KR" ? "한국" : "미국"}</span>
-                                <time dateTime={clip.date}>{clip.dateLabel} {clip.date}</time>
+                        {clip ? <>
+                            <div aria-live="polite" aria-atomic="true">
+                                <div className="mc-meta">
+                                    <span>{clip.market === "KR" ? "한국" : "미국"}</span>
+                                    <time dateTime={clip.date}>{clip.dateLabel} {clip.date}</time>
+                                </div>
+                                <h3 title={clip.title}>{clip.title}</h3>
                             </div>
-                            <h3 title={clip.title}>{clip.title}</h3>
-                        </div>
-                        {showSource ? <a href={clip.permalink} target="_blank" rel="noopener noreferrer">Instagram 원문</a> : null}
-                        <div className="mc-controls" role="group" aria-label="영상 재생 제어">
-                            <button type="button" onClick={() => step(-1)} disabled={clipCount < 2} aria-label="이전 영상">이전</button>
-                            <button type="button" className="mc-play" onClick={togglePlayback}>{isPlaying ? "일시정지" : "재생"}</button>
-                            <button type="button" onClick={() => step(1)} disabled={clipCount < 2} aria-label="다음 영상">다음</button>
-                        </div>
+                            {showSource ? <a href={clip.permalink} target="_blank" rel="noopener noreferrer">Instagram 원문</a> : null}
+                            <div className="mc-controls" role="group" aria-label="영상 재생 제어">
+                                <button type="button" onClick={() => step(-1)} disabled={clipCount < 2} aria-label="이전 영상">이전</button>
+                                <button type="button" className="mc-play" onClick={togglePlayback}>{isPlaying ? "일시정지" : "재생"}</button>
+                                <button type="button" onClick={() => step(1)} disabled={clipCount < 2} aria-label="다음 영상">다음</button>
+                            </div>
+                        </> : (
+                            <p role="status">{isStatic ? "미리보기에서 장 마감 브리핑을 확인할 수 있어요." : clips ? "지금 볼 수 있는 브리핑이 없어요." : "브리핑을 불러오는 중이에요."}</p>
+                        )}
                     </div>
                 </div>
-            ) : (
-                <div className="mc-content">
-                    <div className="mc-frame" aria-hidden="true" />
-                    <div className="mc-details">
-                        <p role="status">{isStatic ? "미리보기에서 장 마감 브리핑을 확인할 수 있어요." : clips ? "지금 볼 수 있는 브리핑이 없어요." : "브리핑을 불러오는 중이에요."}</p>
-                    </div>
-                </div>
-            )}
+            </div>
         </section>
     )
 }
