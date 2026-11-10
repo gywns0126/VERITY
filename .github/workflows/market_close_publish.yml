@@ -1,0 +1,48 @@
+name: Publish AlphaNest market close reels
+
+on:
+  workflow_dispatch:
+  schedule:
+    # KST 06:13–20:43. Covers both market closes and delayed clips.
+    - cron: '13,43 21-23 * * 0-5'
+    - cron: '13,43 0-11 * * 1-6'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alphanest-market-close-publish
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            /scripts/publish_market_close.cjs
+            /tests/market_close_publish.test.cjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check market and file selection
+        run: node --test tests/market_close_publish.test.cjs
+      - name: Prepare existing Blob SDK and FFmpeg
+        run: |
+          command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ffmpeg)
+          npm install --prefix "$RUNNER_TEMP/market-close-deps" --no-audit --no-fund @vercel/blob@2.4.1
+      - name: Sync and verify the two current public episodes
+        env:
+          NODE_PATH: ${{ runner.temp }}/market-close-deps/node_modules
+          OBNW_MEDIA_ORIGIN: ${{ secrets.OBNW_MEDIA_ORIGIN }}
+          OBNW_MEDIA_KEY: ${{ secrets.OBNW_MEDIA_KEY }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: node scripts/publish_market_close.cjs
