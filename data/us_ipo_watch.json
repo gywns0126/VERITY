@@ -1,24 +1,24 @@
 {
  "_meta": {
-  "generated_at": "2026-11-09T22:05:16+09:00",
+  "generated_at": "2026-11-10T21:44:47+09:00",
   "lookback_days": 45,
   "sessions_scanned": 30,
   "sessions_missed": [
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 720,
-   "companies": 219,
+   "filings": 724,
+   "companies": 221,
    "by_stage": {
     "신청": 89,
     "정정(심사중)": 99,
     "가격확정": 8,
-    "거래소등록": 23
+    "거래소등록": 25
    },
-   "spac_likely": 26,
-   "has_ticker_now": 164,
+   "spac_likely": 25,
+   "has_ticker_now": 163,
    "priced_secondary_excluded": 7,
-   "foreign_issuer": 55,
+   "foreign_issuer": 54,
    "priced_parse_ok": 5
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
@@ -26,19 +26,101 @@
  },
  "items": [
   {
-   "cik": "2141583",
-   "name": "Rezera Inc.",
+   "cik": "1893645",
+   "name": "Polyrizon Ltd.",
    "forms": {
     "8-A12B": 1,
-    "S-1/A": 1,
-    "S-1": 1
+    "F-1/A": 1
    },
-   "first_filed": "20261021",
-   "last_filed": "20261106",
+   "first_filed": "20260928",
+   "last_filed": "20261109",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
    "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1893645&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3841",
+    "sic_desc": "Surgical & Medical Instruments & Apparatus",
+    "is_blank_check": false,
+    "ticker": "PLRZ",
+    "region": "RA'ANANA",
+    "state_of_inc": "L3"
+   }
+  },
+  {
+   "cik": "2114145",
+   "name": "Tracx Logis Ltd.",
+   "forms": {
+    "8-A12B": 1,
+    "F-1/A": 3
+   },
+   "first_filed": "20261008",
+   "last_filed": "20261109",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 3,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2114145&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "4210",
+    "sic_desc": "Trucking & Courier Services (No Air)",
+    "is_blank_check": false,
+    "ticker": "TRCX",
+    "region": "JURONG EAST",
+    "state_of_inc": "U0"
+   }
+  },
+  {
+   "cik": "2145089",
+   "name": "WINDWARD BIO GROUP AG",
+   "forms": {
+    "8-A12B": 1,
+    "F-1/A": 2,
+    "F-1": 1
+   },
+   "first_filed": "20261023",
+   "last_filed": "20261109",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 2,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2145089&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2836",
+    "sic_desc": "Biological Products, (No Diagnostic Substances)",
+    "is_blank_check": false,
+    "ticker": "WWB",
+    "region": "4052 BASEL",
+    "state_of_inc": "V8"
+   }
+  },
+  {
+   "cik": "2141583",
+   "name": "Rezera Inc.",
+   "forms": {
+    "S-1/A": 2,
+    "8-A12B": 1,
+    "S-1": 1
+   },
+   "first_filed": "20261021",
+   "last_filed": "20261109",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -59,10 +141,9 @@
    "forms": {
     "8-A12B": 1,
     "CERT": 1,
-    "S-1/A": 2,
-    "S-1": 1
+    "S-1/A": 2
    },
-   "first_filed": "20260925",
+   "first_filed": "20261001",
    "last_filed": "20261105",
    "lineage": true,
    "stage": 4,
@@ -509,41 +590,6 @@
     "gross_usd": 199999998,
     "source_url": "https://www.sec.gov/Archives/edgar/data/2143850/000110465926116636/tm2619715-10_424b4.htm",
     "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
-   }
-  },
-  {
-   "cik": "2149916",
-   "name": "TCGX Acquisition Corp. II",
-   "forms": {
-    "424B4": 1,
-    "8-A12B": 1,
-    "CERT": 1,
-    "S-1": 1
-   },
-   "first_filed": "20260925",
-   "last_filed": "20261016",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2149916&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "TCXB",
-    "region": "GRAND CAYMAN",
-    "state_of_inc": "E9"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "주식수 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2149916/000119312526424217/tcgx_ii_424b4.htm"
    }
   },
   {
@@ -1015,6 +1061,85 @@
    "pre_existing_reporter": true
   },
   {
+   "cik": "1828253",
+   "name": "Evaxion A/S",
+   "forms": {
+    "F-1/A": 1
+   },
+   "first_filed": "20261109",
+   "last_filed": "20261109",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1828253&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2836",
+    "sic_desc": "Biological Products, (No Diagnostic Substances)",
+    "is_blank_check": false,
+    "ticker": "EVAX",
+    "region": "HOERSHOLM",
+    "state_of_inc": "G7"
+   }
+  },
+  {
+   "cik": "2123920",
+   "name": "Focus Media Network Ltd",
+   "forms": {
+    "F-1/A": 1,
+    "F-1": 1
+   },
+   "first_filed": "20261028",
+   "last_filed": "20261109",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123920&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7311",
+    "sic_desc": "Services-Advertising Agencies",
+    "is_blank_check": false,
+    "ticker": "FMSN",
+    "region": "SINGAPORE",
+    "state_of_inc": "E9"
+   }
+  },
+  {
+   "cik": "1895249",
+   "name": "ConnectM Technology Solutions, Inc.",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20261109",
+   "last_filed": "20261109",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1895249&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "1700",
+    "sic_desc": "Construction - Special Trade Contractors",
+    "is_blank_check": false,
+    "ticker": "CNTM",
+    "region": "MARLBOROUGH, MA",
+    "state_of_inc": "DE"
+   }
+  },
+  {
    "cik": "1888014",
    "name": "AKANDA CORP.",
    "forms": {
@@ -1413,14 +1538,14 @@
    "cik": "1378140",
    "name": "Ocean Power Technologies, Inc.",
    "forms": {
-    "S-1/A": 3
+    "S-1/A": 2
    },
-   "first_filed": "20260925",
+   "first_filed": "20261029",
    "last_filed": "20261105",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 3,
+   "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -1485,32 +1610,6 @@
     "ticker": "FIT",
     "region": "FO TAN, NEW TERRITORIES",
     "state_of_inc": null
-   }
-  },
-  {
-   "cik": "2114145",
-   "name": "Tracx Logis Ltd.",
-   "forms": {
-    "F-1/A": 3
-   },
-   "first_filed": "20261008",
-   "last_filed": "20261103",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 3,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2114145&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "4210",
-    "sic_desc": "Trucking & Courier Services (No Air)",
-    "is_blank_check": false,
-    "ticker": "TRCX",
-    "region": "JURONG EAST",
-    "state_of_inc": "U0"
    }
   },
   {
@@ -1591,33 +1690,6 @@
     "ticker": "TIWD",
     "region": "CHEUNG SHA WAN, KOWLOON",
     "state_of_inc": "E9"
-   }
-  },
-  {
-   "cik": "2145089",
-   "name": "WINDWARD BIO GROUP AG",
-   "forms": {
-    "F-1/A": 1,
-    "F-1": 1
-   },
-   "first_filed": "20261023",
-   "last_filed": "20261030",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2145089&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2836",
-    "sic_desc": "Biological Products, (No Diagnostic Substances)",
-    "is_blank_check": false,
-    "ticker": "WWB",
-    "region": "4052 BASEL",
-    "state_of_inc": "V8"
    }
   },
   {
@@ -1715,16 +1787,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1879403&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6531",
-    "sic_desc": "Real Estate Agents & Managers (For Others)",
-    "is_blank_check": false,
-    "ticker": "SRTM",
-    "region": "CELEBRATION, FL",
-    "state_of_inc": "NV"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1879403&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1793497",
@@ -1741,16 +1804,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1793497&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6221",
-    "sic_desc": "Commodity Contracts Brokers & Dealers",
-    "is_blank_check": false,
-    "ticker": "UVIX",
-    "region": "PALM BEACH GARDENS, FL",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1793497&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2016072",
@@ -1765,18 +1819,9 @@
    "stage_ko": "정정(심사중)",
    "amend_count": 2,
    "is_foreign_issuer": false,
-   "is_spac_likely": true,
+   "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2016072&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "VLOS",
-    "region": "NEW YORK, NY",
-    "state_of_inc": "E9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2016072&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1830072",
@@ -1973,10 +2018,9 @@
    "cik": "2084031",
    "name": "Regenlab USA Inc.",
    "forms": {
-    "S-1/A": 1,
-    "S-1": 1
+    "S-1/A": 1
    },
-   "first_filed": "20260925",
+   "first_filed": "20261027",
    "last_filed": "20261027",
    "lineage": true,
    "stage": 2,
@@ -2624,14 +2668,14 @@
    "cik": "2131124",
    "name": "Elevation Acquisition Group Inc.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20260925",
+   "first_filed": "20261009",
    "last_filed": "20261009",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -2877,23 +2921,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2087398&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "1893645",
-   "name": "Polyrizon Ltd.",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260928",
-   "last_filed": "20260928",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1893645&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "1838003",
    "name": "Encore Medical, Inc.",
    "forms": {
@@ -2978,6 +3005,57 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=777917&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1938570",
+   "name": "Blue Laser Fusion, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261109",
+   "last_filed": "20261109",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1938570&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2137779",
+   "name": "Research Alliance Corp V",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261109",
+   "last_filed": "20261109",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2137779&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2127714",
+   "name": "ZA Acquisition Corp. I",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261109",
+   "last_filed": "20261109",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2127714&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2136246",
@@ -3352,23 +3430,6 @@
    "is_spac_likely": true,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2152549&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2123920",
-   "name": "Focus Media Network Ltd",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20261028",
-   "last_filed": "20261028",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123920&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2159516",
@@ -4440,40 +4501,6 @@
    "is_spac_likely": true,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2155556&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1498403",
-   "name": "BioLineRx Ltd.",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20260925",
-   "last_filed": "20260925",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1498403&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2128185",
-   "name": "TFP Group Ltd",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20260925",
-   "last_filed": "20260925",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2128185&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "910739",
