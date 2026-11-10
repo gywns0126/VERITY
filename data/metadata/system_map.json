@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-11-11T01:16:49.721778+09:00",
+  "generated_at": "2026-11-11T01:21:52.219932+09:00",
   "generator": "scripts/system_map.py",
   "note": "자동 생성. 손수정 금지 — 값은 레포 실제 스캔 결과 (drift 불가).",
   "scale": {
-    "code_lines_tsx_py": 439868,
+    "code_lines_tsx_py": 440277,
     "python_modules": 1407,
-    "tsx_components": 152,
+    "tsx_components": 153,
     "json_data_files": 2603,
     "json_total_tracked": 2632,
-    "workflows": 82,
-    "scheduled_workflows": 59,
-    "cron_triggers": 69,
-    "git_tracked_files": 9022
+    "workflows": 83,
+    "scheduled_workflows": 60,
+    "cron_triggers": 71,
+    "git_tracked_files": 9026
   },
   "subsystems": {
     "ingest": {
@@ -211,8 +211,8 @@
     },
     "automation": {
       "label": "자동화",
-      "count": 82,
-      "scheduled": 59,
+      "count": 83,
+      "scheduled": 60,
       "workflows": [
         {
           "name": "alphaconsole_public_observations",
@@ -461,6 +461,14 @@
           "name": "macro_themes_brief",
           "crons": [
             "30 22 * * 0"
+          ],
+          "scheduled": true
+        },
+        {
+          "name": "market_close_publish",
+          "crons": [
+            "13,43 21-23 * * 0-5",
+            "13,43 0-11 * * 1-6"
           ],
           "scheduled": true
         },
@@ -756,9 +764,9 @@
     },
     "surface": {
       "label": "출력",
-      "count": 152,
+      "count": 153,
       "by_group": {
-        "framer-components/public-probe": 78,
+        "framer-components/public-probe": 79,
         "operator-web/app/components": 40,
         "admin": 15,
         "framer-components/crypto-public": 7,
