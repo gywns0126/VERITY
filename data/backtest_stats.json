@@ -123,7 +123,7 @@
           "ticker": "000660",
           "role": "evaluation",
           "snapshot_date": "2026-11-13",
-          "snapshot_updated_at": "2026-11-13T00:41:27+09:00",
+          "snapshot_updated_at": "2026-11-13T06:09:52+09:00",
           "market": "KOSPI",
           "currency": "KRW",
           "price_basis": null,
@@ -171,7 +171,7 @@
           "ticker": "080580",
           "role": "evaluation",
           "snapshot_date": "2026-11-13",
-          "snapshot_updated_at": "2026-11-13T00:41:27+09:00",
+          "snapshot_updated_at": "2026-11-13T06:09:52+09:00",
           "market": "KOSDAQ",
           "currency": "KRW",
           "price_basis": null,
@@ -187,7 +187,7 @@
           "ticker": "PARR",
           "role": "evaluation",
           "snapshot_date": "2026-11-13",
-          "snapshot_updated_at": "2026-11-13T00:41:27+09:00",
+          "snapshot_updated_at": "2026-11-13T06:09:52+09:00",
           "market": "NYSE",
           "currency": "USD",
           "price_basis": null,
@@ -219,7 +219,7 @@
           "ticker": "012330",
           "role": "evaluation",
           "snapshot_date": "2026-11-13",
-          "snapshot_updated_at": "2026-11-13T00:41:27+09:00",
+          "snapshot_updated_at": "2026-11-13T06:09:52+09:00",
           "market": "KOSPI",
           "currency": "KRW",
           "price_basis": null,
@@ -236,11 +236,11 @@
       "observed": {
         "hit_rate_gross": 0.0,
         "hit_rate_net": 0.0,
-        "avg_return_gross": -9.35,
-        "avg_return_net": -9.73,
+        "avg_return_gross": -9.26,
+        "avg_return_net": -9.64,
         "max_return": -2.33,
         "min_return": -16.86,
-        "sharpe": -1.46,
+        "sharpe": -1.43,
         "sample": 4,
         "hits_gross": 0,
         "hits_net": 0
@@ -290,9 +290,9 @@
       "name": "Shell plc",
       "rec_date": "2026-10-14",
       "rec_price": 104.31999969482422,
-      "current_price": 98.16999816894531,
-      "return_pct_gross": -5.9,
-      "return_pct_net": -6.63,
+      "current_price": 98.56500244140625,
+      "return_pct_gross": -5.52,
+      "return_pct_net": -6.25,
       "slippage_pct": 0.7,
       "hit_gross": false,
       "hit_net": false,
@@ -300,7 +300,7 @@
       "recommendation": "BUY",
       "brain_score": null,
       "source": "gemini",
-      "return_pct": -5.9,
+      "return_pct": -5.52,
       "hit": false
     },
     {
@@ -340,10 +340,10 @@
       "hit": false
     }
   ],
-  "updated_at": "2026-11-13 01:17:29.928390+09:00",
+  "updated_at": "2026-11-13 07:03:17.687624+09:00",
   "_corrections_meta": {
     "version": "2.0-missing-price-unresolved",
-    "applied_at": "2026-11-13 01:17:29.928404+09:00",
+    "applied_at": "2026-11-13 07:03:17.687639+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": null,
     "missing_price_policy": "unresolved; no synthetic return; incomplete cohort headline metrics null",
@@ -353,7 +353,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "진입 가격 결측은 unresolved에 보존하고 전체 성과 판정을 보류",
-      "fixed_at": "2026-11-13 01:17:29.928407+09:00"
+      "fixed_at": "2026-11-13 07:03:17.687643+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
