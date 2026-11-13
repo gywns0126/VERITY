@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-11-13T10:13:25.965261+09:00",
+  "generated_at": "2026-11-13T11:13:07.534799+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
@@ -13,7 +13,7 @@
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-11-13T10:13:25.887954+09:00",
+   "generated_at": "2026-11-13T11:13:07.459058+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -21,11 +21,11 @@
   "coverage": {
    "generated_at": "2026-11-13T07:18:24.618142+09:00",
    "max_age_h": 96,
-   "age_h": 2.917,
+   "age_h": 3.912,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-11-13T10:13:18.931980+09:00",
+   "generated_at": "2026-11-13T11:12:58.731193+09:00",
    "max_age_h": 3,
    "age_h": 0.002,
    "status": "fresh"
@@ -33,7 +33,7 @@
   "annual_backfill": {
    "generated_at": "2026-11-12T20:32:27.685706+00:00",
    "max_age_h": 48,
-   "age_h": 4.683,
+   "age_h": 5.678,
    "status": "fresh"
   }
  },
@@ -42,11 +42,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-11-13T10:13:25.887954+09:00",
+  "generated_at": "2026-11-13T11:13:07.459058+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 39608,
+  "max_cdn_age_s": 57588,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -56,7 +56,7 @@
      "PBR": 95.8
     },
     "total": 2560,
-    "cdn_age_s": 3612,
+    "cdn_age_s": 9568,
     "error": null
    },
    {
@@ -67,7 +67,7 @@
      "PBR": 76.7
     },
     "total": 5270,
-    "cdn_age_s": 39608,
+    "cdn_age_s": 53990,
     "error": null
    },
    {
@@ -78,7 +78,7 @@
      "PBR": 74.5
     },
     "total": 4001,
-    "cdn_age_s": 3610,
+    "cdn_age_s": 57588,
     "error": null
    },
    {
@@ -107,7 +107,7 @@
   "last_run_at": "2026-11-13T07:18:24.769967+09:00"
  },
  "freshness": {
-  "generated_at": "2026-11-13T10:13:18.931980+09:00",
+  "generated_at": "2026-11-13T11:12:58.731193+09:00",
   "summary": {
    "fresh": 62,
    "stale": 1,
@@ -148,7 +148,7 @@
   "producer_evidence": {
    "news_flash": {
     "status": "bound_query_complete",
-    "completed_at": "2026-11-13T10:02:37.536559+09:00",
+    "completed_at": "2026-11-13T11:02:34.817802+09:00",
     "clock_kind": "source_query_attempt",
     "asset_binding": "verified_sha256",
     "source_freshness_verified": false,
@@ -160,7 +160,7 @@
    },
    "dividends_kr": {
     "status": "bound_query_complete",
-    "completed_at": "2026-11-12T11:20:05+09:00",
+    "completed_at": "2026-11-13T10:53:34+09:00",
     "clock_kind": "bounded_source_query_attempt",
     "asset_binding": "verified_sha256",
     "source_freshness_verified": false,
@@ -171,10 +171,10 @@
      "attempted": 200,
      "successful": 200,
      "total": 1510,
-     "rotation_checked": 800
+     "rotation_checked": 1000
     },
-    "source_report_date_min": "2025-06-18",
-    "source_report_date_max": "2026-09-01",
+    "source_report_date_min": "2025-09-12",
+    "source_report_date_max": "2026-10-06",
     "bounded_scope_completed": false
    },
    "logo_map": {
@@ -203,7 +203,7 @@
    {
     "id": "market_warnings",
     "last_ts": "2026-10-24T09:56:25.342429+09:00",
-    "age_eff_min": 20773.3,
+    "age_eff_min": 20833.0,
     "max_age_min": 2880
    }
   ]
