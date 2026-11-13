@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: alphanest-market-close-publish
+  group: ${{ github.event_name == 'pull_request' && format('alphanest-market-close-validate-{0}', github.event.pull_request.number) || 'alphanest-market-close-publish' }}
   cancel-in-progress: false
 
 env:
