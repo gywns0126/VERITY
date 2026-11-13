@@ -1,13 +1,13 @@
 {
   "version": "v0",
-  "computed_at": "2026-11-13T15:29:40.442474+00:00",
+  "computed_at": "2026-11-13T21:49:37.663908+00:00",
   "status": "active",
   "sample_size": {
     "total": 123,
     "open": 27,
     "closed": 96,
     "with_h5": 104,
-    "with_h14": 85,
+    "with_h14": 87,
     "with_h30": 55,
     "min_for_decompose": 30
   },
@@ -22,11 +22,11 @@
     },
     "h14": {
       "horizon_days": 14,
-      "n": 85,
-      "hit_rate_pct": 61.18,
+      "n": 87,
+      "hit_rate_pct": 60.92,
       "median_return_pct": 2.17,
-      "mean_return_pct": -0.72,
-      "ic": 0.051
+      "mean_return_pct": -0.74,
+      "ic": 0.07
     },
     "h30": {
       "horizon_days": 30,
@@ -39,71 +39,71 @@
   },
   "feature_decomposition": {
     "rsi": {
-      "n": 85,
+      "n": 87,
       "boundaries": [
-        37.58,
+        37.56,
         44.29,
-        45.52
+        45.58
       ],
       "quartile_mean_return_pct": [
         {
           "q": 0,
           "n": 22,
-          "mean_return_pct": -1.81
+          "mean_return_pct": -2.03
         },
         {
           "q": 1,
-          "n": 21,
-          "mean_return_pct": 4.12
+          "n": 22,
+          "mean_return_pct": 3.57
         },
         {
           "q": 2,
-          "n": 21,
-          "mean_return_pct": -7.41
+          "n": 22,
+          "mean_return_pct": -7.03
         },
         {
           "q": 3,
           "n": 21,
-          "mean_return_pct": 2.29
+          "mean_return_pct": 2.68
         }
       ]
     },
     "macd_hist": {
-      "n": 85,
+      "n": 87,
       "boundaries": [
-        -294.02,
+        -326.24,
         -0.99,
-        0.12
+        0.13
       ],
       "quartile_mean_return_pct": [
         {
           "q": 0,
           "n": 22,
-          "mean_return_pct": -5.8
+          "mean_return_pct": -6.67
         },
         {
           "q": 1,
-          "n": 21,
-          "mean_return_pct": -1.91
+          "n": 22,
+          "mean_return_pct": -1.54
         },
         {
           "q": 2,
-          "n": 21,
-          "mean_return_pct": 2.68
+          "n": 22,
+          "mean_return_pct": 2.34
         },
         {
           "q": 3,
           "n": 21,
-          "mean_return_pct": 2.41
+          "mean_return_pct": 3.07
         }
       ]
     },
     "vol_ratio": {
-      "n": 85,
+      "n": 87,
       "boundaries": [
         0.66,
         0.9,
-        1.15
+        1.2
       ],
       "quartile_mean_return_pct": [
         {
@@ -118,20 +118,20 @@
         },
         {
           "q": 2,
-          "n": 20,
-          "mean_return_pct": 0.37
+          "n": 22,
+          "mean_return_pct": 0.83
         },
         {
           "q": 3,
           "n": 21,
-          "mean_return_pct": 0.21
+          "mean_return_pct": -0.48
         }
       ]
     },
     "foreign_5d_sum": {
-      "n": 85,
+      "n": 87,
       "boundaries": [
-        -581.0,
+        -13370.0,
         0.0,
         0.0
       ],
@@ -139,12 +139,12 @@
         {
           "q": 0,
           "n": 22,
-          "mean_return_pct": -2.86
+          "mean_return_pct": -3.58
         },
         {
           "q": 1,
-          "n": 43,
-          "mean_return_pct": 1.23
+          "n": 44,
+          "mean_return_pct": 1.27
         },
         {
           "q": 2,
@@ -153,13 +153,13 @@
         },
         {
           "q": 3,
-          "n": 20,
-          "mean_return_pct": -2.55
+          "n": 21,
+          "mean_return_pct": -2.0
         }
       ]
     },
     "technical_score": {
-      "n": 85,
+      "n": 87,
       "boundaries": [
         42.0,
         47.0,
@@ -168,13 +168,13 @@
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 35,
-          "mean_return_pct": -4.08
+          "n": 36,
+          "mean_return_pct": -4.32
         },
         {
           "q": 1,
-          "n": 16,
-          "mean_return_pct": -1.24
+          "n": 17,
+          "mean_return_pct": -0.64
         },
         {
           "q": 2,
@@ -189,27 +189,27 @@
       ]
     },
     "safety_score": {
-      "n": 50,
+      "n": 51,
       "boundaries": [
         67.0,
-        79.0,
+        78.0,
         79.0
       ],
       "quartile_mean_return_pct": [
         {
           "q": 0,
-          "n": 13,
-          "mean_return_pct": 2.0
+          "n": 14,
+          "mean_return_pct": 2.5
         },
         {
           "q": 1,
-          "n": 26,
-          "mean_return_pct": 1.33
+          "n": 12,
+          "mean_return_pct": -3.46
         },
         {
           "q": 2,
-          "n": 0,
-          "mean_return_pct": null
+          "n": 14,
+          "mean_return_pct": 5.44
         },
         {
           "q": 3,
@@ -219,7 +219,7 @@
       ]
     },
     "flow_score": {
-      "n": 85,
+      "n": 87,
       "boundaries": [
         50.0,
         50.0,
@@ -238,13 +238,13 @@
         },
         {
           "q": 2,
-          "n": 10,
-          "mean_return_pct": -6.61
+          "n": 11,
+          "mean_return_pct": -7.17
         },
         {
           "q": 3,
-          "n": 20,
-          "mean_return_pct": -3.24
+          "n": 21,
+          "mean_return_pct": -2.66
         }
       ]
     }
@@ -261,7 +261,7 @@
       "median_return_pct": -0.47
     },
     "Technology": {
-      "n": 6,
+      "n": 8,
       "hit_rate_pct": 50.0,
       "median_return_pct": -1.93
     },
@@ -295,7 +295,7 @@
     }
   },
   "verdict_strength": {
-    "n": 85,
+    "n": 87,
     "multi_score_boundaries": [
       51.0,
       55.0,
@@ -309,13 +309,13 @@
       },
       {
         "q": 1,
-        "n": 28,
-        "mean_return_pct": -2.27
+        "n": 29,
+        "mean_return_pct": -2.63
       },
       {
         "q": 2,
-        "n": 17,
-        "mean_return_pct": -5.26
+        "n": 18,
+        "mean_return_pct": -4.47
       },
       {
         "q": 3,
@@ -338,8 +338,8 @@
         "median_return_pct": 6.15
       },
       "60d_plus": {
-        "n": 53,
-        "hit_rate_pct": 56.6,
+        "n": 55,
+        "hit_rate_pct": 56.36,
         "median_return_pct": 1.03
       }
     }
