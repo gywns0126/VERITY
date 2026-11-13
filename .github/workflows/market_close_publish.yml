@@ -2,6 +2,11 @@ name: Publish AlphaNest market close reels
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/publish_market_close.cjs
+      - tests/market_close_publish.test.cjs
+      - .github/workflows/market_close_publish.yml
   schedule:
     # KST 06:13–20:43. Covers both market closes and delayed clips.
     - cron: '13,43 21-23 * * 0-5'
@@ -11,13 +16,34 @@ permissions:
   contents: read
 
 concurrency:
-  group: alphanest-market-close-publish
+  group: ${{ github.event_name == 'pull_request' && format('alphanest-market-close-validate-{0}', github.event.pull_request.number) || 'alphanest-market-close-publish' }}
   cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            /scripts/publish_market_close.cjs
+            /tests/market_close_publish.test.cjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare actual media inspection tools
+        run: (command -v ffmpeg && command -v ffprobe) || (sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ffmpeg)
+      - name: Validate native wide source selection and actual FFprobe
+        env:
+          MARKET_CLOSE_REQUIRE_MEDIA_TOOLS: '1'
+        run: node --test tests/market_close_publish.test.cjs
   publish:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -33,16 +59,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Check market and file selection
-        run: node --test tests/market_close_publish.test.cjs
       - name: Prepare existing Blob SDK and FFmpeg
         run: |
-          command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ffmpeg)
+          (command -v ffmpeg && command -v ffprobe) || (sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ffmpeg)
           npm install --prefix "$RUNNER_TEMP/market-close-deps" --no-audit --no-fund @vercel/blob@2.4.1
+      - name: Check market, source binding and actual landscape probe
+        env:
+          MARKET_CLOSE_REQUIRE_MEDIA_TOOLS: '1'
+        run: node --test tests/market_close_publish.test.cjs
       - name: Sync and verify the two current public episodes
         env:
           NODE_PATH: ${{ runner.temp }}/market-close-deps/node_modules
           OBNW_MEDIA_ORIGIN: ${{ secrets.OBNW_MEDIA_ORIGIN }}
           OBNW_MEDIA_KEY: ${{ secrets.OBNW_MEDIA_KEY }}
           BLOB_READ_WRITE_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+          MARKET_CLOSE_RECEIPT_PATH: ${{ runner.temp }}/market-close-safe-summary.json
         run: node scripts/publish_market_close.cjs
+      - name: Preserve public-only acceptance summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-close-safe-summary
+          path: ${{ runner.temp }}/market-close-safe-summary.json
+          if-no-files-found: error
+          retention-days: 7
