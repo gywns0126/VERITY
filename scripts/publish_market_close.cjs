@@ -138,12 +138,12 @@ function selectEpisodes(payload, now = Date.now(), previous = new Map()) {
         assert(typeof post.id === 'string' && ID.test(post.id) && validTitle(title) &&
             typeof post.instagram === 'string' && PERMALINK.test(post.instagram), 'invalid episode');
         assert(typeof publishedAt === 'string' && PUBLICATION_TIME.test(publishedAt) && age >= -60000, 'invalid publication time');
-        const files = wideFiles(post);
-        if (!files) continue; // An unfinished native render must not replace the last published episode.
         const old = previous.get(market);
         if (old && Date.parse(publishedAt) < Date.parse(old.publishedAt)) continue;
         if (old && age > 8 * 86400000) continue;
         assert(age <= 8 * 86400000, 'invalid publication time');
+        const files = wideFiles(post);
+        if (!files) continue; // An unfinished native render must not replace the last published episode.
         const date = sessionDate(title, publishedAt);
         const { video, poster } = files;
         selected.set(market, {

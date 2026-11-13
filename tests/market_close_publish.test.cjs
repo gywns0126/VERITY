@@ -73,6 +73,12 @@ test('pending native renders retain the published market rather than selecting a
     assert.equal(wideFiles(pending), undefined);
 });
 
+test('a malformed stale wide row cannot block a valid update to the other market', () => {
+    const previous = new Map([['US', { publishedAt: us.publishedAt }]]);
+    const staleUs = { ...us, publishedAt: '2026-11-09T07:30:00+09:00', wide: { ...us.wide, sha256: 'c'.repeat(64) } };
+    assert.deepEqual(selectEpisodes({ posts: [kr, staleUs] }, now, previous).map(row => row.id), [kr.id]);
+});
+
 test('native file URLs, roles, ID, bytes and SHA are one source binding', () => {
     assert(wideFiles(kr));
     for (const wide of [null, [], { ...kr.wide, video: us.wide.video }, { ...kr.wide, cover: us.wide.cover },
