@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-11-13T21:31:16+09:00",
+  "generated_at": "2026-11-14T20:48:14+09:00",
   "lookback_days": 45,
   "sessions_scanned": 31,
   "sessions_missed": [
@@ -8,18 +8,18 @@
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 748,
-   "companies": 225,
+   "filings": 750,
+   "companies": 227,
    "by_stage": {
-    "신청": 96,
-    "정정(심사중)": 98,
-    "가격확정": 8,
-    "거래소등록": 23
+    "신청": 100,
+    "정정(심사중)": 96,
+    "가격확정": 9,
+    "거래소등록": 22
    },
-   "spac_likely": 24,
-   "has_ticker_now": 168,
-   "priced_secondary_excluded": 7,
-   "foreign_issuer": 57,
+   "spac_likely": 23,
+   "has_ticker_now": 170,
+   "priced_secondary_excluded": 8,
+   "foreign_issuer": 55,
    "priced_parse_ok": 5
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
@@ -340,14 +340,14 @@
    "name": "Bitari Inc",
    "forms": {
     "8-A12B": 1,
-    "S-1/A": 3
+    "S-1/A": 2
    },
-   "first_filed": "20260929",
+   "first_filed": "20261014",
    "last_filed": "20261030",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
-   "amend_count": 3,
+   "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -737,39 +737,60 @@
    }
   },
   {
-   "cik": "2076561",
-   "name": "Pine Tree Acquisition Corp.",
+   "cik": "2018222",
+   "name": "707 Cayman Holdings Ltd.",
    "forms": {
     "424B4": 1,
-    "8-A12B": 1,
-    "CERT": 1,
-    "S-1/A": 1
+    "F-1/A": 3
    },
-   "first_filed": "20260929",
-   "last_filed": "20261006",
+   "first_filed": "20261008",
+   "last_filed": "20261113",
    "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
+   "stage": 3,
+   "stage_ko": "가격확정",
+   "amend_count": 3,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2076561&type=S-1&dateb=&owner=include&count=20",
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2018222&type=S-1&dateb=&owner=include&count=20",
    "profile": {
     "available": true,
-    "sic": "6770",
-    "sic_desc": "Blank Checks",
-    "is_blank_check": true,
-    "ticker": "PAXG",
-    "region": "CAYMAN ISLAND",
-    "state_of_inc": "E9"
+    "sic": "5600",
+    "sic_desc": "Retail-Apparel & Accessory Stores",
+    "is_blank_check": false,
+    "ticker": "JEM",
+    "region": "HONG KONG, F4",
+    "state_of_inc": "K3"
    },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "주식수 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2076561/000147793226006063/ptree_424b4.htm"
-   }
+   "pre_existing_reporter": true
+  },
+  {
+   "cik": "2023153",
+   "name": "HomesToLife Ltd",
+   "forms": {
+    "424B4": 1,
+    "F-1/A": 4
+   },
+   "first_filed": "20261020",
+   "last_filed": "20261113",
+   "lineage": true,
+   "stage": 3,
+   "stage_ko": "가격확정",
+   "amend_count": 4,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2023153&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "5712",
+    "sic_desc": "Retail-Furniture Stores",
+    "is_blank_check": false,
+    "ticker": "HTLM",
+    "region": "SINGAPORE",
+    "state_of_inc": null
+   },
+   "pre_existing_reporter": true
   },
   {
    "cik": "1826011",
@@ -918,34 +939,6 @@
    }
   },
   {
-   "cik": "2048271",
-   "name": "WeShop Holdings Ltd",
-   "forms": {
-    "424B4": 2,
-    "F-1": 2
-   },
-   "first_filed": "20260929",
-   "last_filed": "20261013",
-   "lineage": true,
-   "stage": 3,
-   "stage_ko": "가격확정",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2048271&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "5900",
-    "sic_desc": "Retail-Miscellaneous Retail",
-    "is_blank_check": false,
-    "ticker": "WSHP",
-    "region": "JERSEY, Y9",
-    "state_of_inc": "D8"
-   },
-   "pre_existing_reporter": true
-  },
-  {
    "cik": "2058584",
    "name": "DarkIris Inc.",
    "forms": {
@@ -1000,6 +993,59 @@
     "state_of_inc": "CO"
    },
    "pre_existing_reporter": true
+  },
+  {
+   "cik": "2153476",
+   "name": "Tattvance Corp",
+   "forms": {
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20261014",
+   "last_filed": "20261113",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2153476&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7371",
+    "sic_desc": "Services-Computer Programming Services",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "SHERIDAN, WY",
+    "state_of_inc": "WY"
+   }
+  },
+  {
+   "cik": "2125056",
+   "name": "Wella Co",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20261113",
+   "last_filed": "20261113",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2125056&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2844",
+    "sic_desc": "Perfumes, Cosmetics & Other Toilet Preparations",
+    "is_blank_check": false,
+    "ticker": "WELA",
+    "region": "NEW YORK, NY",
+    "state_of_inc": "DE"
+   }
   },
   {
    "cik": "2134090",
@@ -1500,32 +1546,6 @@
    }
   },
   {
-   "cik": "2023153",
-   "name": "HomesToLife Ltd",
-   "forms": {
-    "F-1/A": 4
-   },
-   "first_filed": "20261020",
-   "last_filed": "20261106",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 4,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2023153&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "5712",
-    "sic_desc": "Retail-Furniture Stores",
-    "is_blank_check": false,
-    "ticker": "HTLM",
-    "region": "SINGAPORE",
-    "state_of_inc": null
-   }
-  },
-  {
    "cik": "1880995",
    "name": "Alopexx, Inc.",
    "forms": {
@@ -1654,32 +1674,6 @@
     "ticker": "SWA",
     "region": "SUNNYVALE, CA",
     "state_of_inc": "CA"
-   }
-  },
-  {
-   "cik": "2018222",
-   "name": "707 Cayman Holdings Ltd.",
-   "forms": {
-    "F-1/A": 3
-   },
-   "first_filed": "20261008",
-   "last_filed": "20261105",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 3,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2018222&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "5600",
-    "sic_desc": "Retail-Apparel & Accessory Stores",
-    "is_blank_check": false,
-    "ticker": "JEM",
-    "region": "HONG KONG, F4",
-    "state_of_inc": "K3"
    }
   },
   {
@@ -1833,10 +1827,9 @@
    "cik": "1930510",
    "name": "VCI Global Ltd",
    "forms": {
-    "F-1/A": 1,
-    "F-1": 1
+    "F-1/A": 1
    },
-   "first_filed": "20260929",
+   "first_filed": "20261103",
    "last_filed": "20261103",
    "lineage": true,
    "stage": 2,
@@ -1938,14 +1931,14 @@
    "cik": "2016072",
    "name": "Velos Acquisition I Corp.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20260929",
+   "first_filed": "20261030",
    "last_filed": "20261030",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -2402,14 +2395,14 @@
    "cik": "1934387",
    "name": "CGL Logistics Holdings Ltd",
    "forms": {
-    "F-1/A": 2
+    "F-1/A": 1
    },
-   "first_filed": "20260929",
+   "first_filed": "20261016",
    "last_filed": "20261016",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -2894,40 +2887,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2140589&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2095509",
-   "name": "Gold Stone Technical Inc.",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260929",
-   "last_filed": "20260929",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2095509&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2087398",
-   "name": "Metals Royalty Co Inc.",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20260929",
-   "last_filed": "20260929",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2087398&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "777917",
    "name": "PRUCO LIFE INSURANCE CO",
    "forms": {
@@ -2944,6 +2903,108 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=777917&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1967822",
+   "name": "Creative Global Technology Holdings Ltd",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20261113",
+   "last_filed": "20261113",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1967822&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2108686",
+   "name": "CloudDepots Holdings Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261113",
+   "last_filed": "20261113",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2108686&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2158099",
+   "name": "Compute AI Acquisition Corp.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261113",
+   "last_filed": "20261113",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2158099&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2088223",
+   "name": "ELT Design Holdings Ltd",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261113",
+   "last_filed": "20261113",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2088223&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1854963",
+   "name": "SHF Holdings, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261113",
+   "last_filed": "20261113",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1854963&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "839470",
+   "name": "WESTWATER RESOURCES, INC.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261113",
+   "last_filed": "20261113",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=839470&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1849820",
@@ -2993,7 +3054,7 @@
    "amend_count": 0,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
-   "has_ticker_now": false,
+   "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2048740&type=S-1&dateb=&owner=include&count=20"
   },
   {
@@ -3044,7 +3105,7 @@
    "amend_count": 0,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
-   "has_ticker_now": false,
+   "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2162540&type=S-1&dateb=&owner=include&count=20"
   },
   {
@@ -4017,23 +4078,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1926293&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2153476",
-   "name": "Tattvance Corp",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261014",
-   "last_filed": "20261014",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2153476&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "1834868",
    "name": "Alternative Ballistics Corp",
    "forms": {
@@ -4542,23 +4586,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1891856&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2116517",
-   "name": "MNBS Acquisition Corp.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20260929",
-   "last_filed": "20260929",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2116517&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "910739",
