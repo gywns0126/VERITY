@@ -89,8 +89,8 @@ def _refresh_overlay(documents, reader=None):
         if type(states) is not dict or not set(states) <= {"DART", "SEC", "news"}:
             raise ValueError("refresh states rejected")
         validated = {source: validate_state(source, state) for source, state in states.items()}
-        merged = overlay_states(documents, validated)
-        _LIVE_STATES = deepcopy(validated)
+        merged = overlay_states(documents, validated, copy_document=_copy_public_bundle)
+        _LIVE_STATES = _copy_public_bundle(validated)
         _LIVE_CHECKPOINT_STATUS = "available"
         return merged
     except Exception as error:
@@ -102,7 +102,8 @@ def _refresh_overlay(documents, reader=None):
             pass
         try:
             from .member_map_live_refresh import overlay_states
-            return overlay_states(documents, deepcopy(_LIVE_STATES))
+            return overlay_states(documents, _copy_public_bundle(_LIVE_STATES),
+                                  copy_document=_copy_public_bundle)
         except Exception:
             return documents
 
