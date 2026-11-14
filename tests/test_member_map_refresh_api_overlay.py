@@ -401,7 +401,10 @@ def test_production_failed_news_overlay_separates_live_cache_and_return(monkeypa
     monkeypatch.setattr(fetch, "deepcopy", counted_copy)
     monkeypatch.setattr(fetch, "_copy_public_bundle", counted_bundle_copy)
     cold = fetch.fetch_public_sources(_clock=lambda: 0)
-    assert bundle_copies == [True] and state_copies == [True]
+    # The JSON copier now also isolates retained state and the news overlay.
+    # Keep the ownership proof below independent of the inner copy count.
+    cold_copy_count = len(bundle_copies)
+    assert cold_copy_count >= 1 and state_copies == []
     live_row = live_states["news"]["feed"]["headlines"][0]
     cached_row = fetch._CACHE_RESULT["documents"]["portfolio.json"]["headlines"][0]
     returned_row = cold["documents"]["portfolio.json"]["headlines"][0]
@@ -410,7 +413,7 @@ def test_production_failed_news_overlay_separates_live_cache_and_return(monkeypa
     live_row["title"] = "전역 상태의 변이"
     returned_row["title"] = "반환값의 변이"
     warm = fetch.fetch_public_sources(_clock=lambda: 1)
-    assert bundle_copies == [True, True] and state_copies == [True]
+    assert len(bundle_copies) == cold_copy_count + 1 and state_copies == []
     assert warm["documents"]["portfolio.json"]["headlines"][0]["title"] == "공개 검수 기사"
     cached_row["title"] = "캐시의 변이"
     assert live_row["title"] == "전역 상태의 변이"

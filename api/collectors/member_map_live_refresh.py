@@ -135,8 +135,12 @@ def overlay_sources(documents, path):
     return overlay_states(documents, read_state(path))
 
 
-def overlay_states(documents, states):
-    """Add public facts without replacing baseline company coverage or AI state."""
+def overlay_states(documents, states, *, copy_document=deepcopy):
+    """Add public facts without replacing baseline company coverage or AI state.
+
+    The public JSON reader supplies its equivalent isolated JSON copier. Other
+    callers retain deepcopy, including its generic-object behavior.
+    """
     result = documents.copy()
     for source, state in states.items():
         if source not in FILES:
@@ -144,7 +148,7 @@ def overlay_states(documents, states):
         feed = state.get("feed", {})
         filename = FILES[source]
         if source == "news":
-            base = deepcopy(result.get(filename, {}))
+            base = copy_document(result.get(filename, {}))
             for field in NEWS_FIELDS:
                 if feed.get(field):
                     # Keep previous valid rows when a feed is empty/unavailable.
