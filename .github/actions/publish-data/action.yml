@@ -390,6 +390,31 @@ runs:
           echo "::warning::invalid optional business candidate held; core reports/lists continue"
         fi
 
+    - name: Build isolated optional company snapshot candidates
+      id: build_company_snapshots
+      continue-on-error: true
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Candidate files never enter _public_dist or its Git/Blob core publishers.
+        if [ ! -s _public_dist/portfolio_public_business_index.json ] || \
+           [ ! -s _public_dist/portfolio_public_business_release.json ]; then
+          echo "company snapshot parent unavailable; candidate skipped"
+          exit 0
+        fi
+        if [ -z "${RUNNER_TEMP:-}" ] || ! candidate=$(mktemp -d "$RUNNER_TEMP/company-snapshot-candidate.XXXXXX" 2>/dev/null); then
+          echo "::warning::company snapshot temporary directory unavailable; candidate skipped"
+          exit 0
+        fi
+        if python3 scripts/member-map/build-company-snapshots.py \
+            --source-dir _public_dist --output-dir "$candidate" \
+            && node "${{ github.action_path }}/publish_company_snapshots.cjs" --output-dir "$candidate"; then
+          echo "path=$candidate" >> "$GITHUB_OUTPUT"
+        else
+          rm -rf "$candidate"
+          echo "::warning::company snapshot candidate unavailable; existing publication continues"
+        fi
+
     - name: Reserve business receipt for final Blob publication
       id: reserve_business_receipt
       shell: bash
@@ -477,3 +502,43 @@ runs:
           exit 0
         }
         node blob_upload.js "${{ github.workspace }}/_public_dist"
+
+    - name: Publish optional company snapshot candidates after core dual-write
+      id: publish_company_snapshots
+      if: steps.build_company_snapshots.outputs.path != '' && inputs.blob_token != ''
+      continue-on-error: true
+      shell: bash
+      env:
+        BLOB_READ_WRITE_TOKEN: ${{ inputs.blob_token }}
+      run: |
+        set -euo pipefail
+        # Only the explicitly passed new summary file is eligible for upload.
+        if [ -z "${RUNNER_TEMP:-}" ] || ! summary_dir=$(mktemp -d "$RUNNER_TEMP/company-snapshot-summary.XXXXXX" 2>/dev/null); then
+          echo "::warning::company snapshot summary directory unavailable; candidate held"
+          exit 0
+        fi
+        summary_file="$summary_dir/summary.json"
+        cd "${{ github.action_path }}"
+        # Core dual-write already finished with its original SDK and order intact.
+        # Runtime checks the installed exact conditional SDK even if npm fails.
+        if ! npm install --no-save --silent --no-audit --no-fund @vercel/blob@2.4.1 >/dev/null 2>&1; then
+          echo "::warning::company snapshot SDK installation unavailable; runtime guard retained"
+        fi
+        if ! node publish_company_snapshots.cjs --publish \
+            --output-dir "${{ steps.build_company_snapshots.outputs.path }}" \
+            --summary-output "$summary_file"; then
+          echo "::warning::company snapshot publication held; existing map/API unchanged"
+        fi
+        if [ -s "$summary_file" ]; then
+          echo "summary_path=$summary_file" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Upload company snapshot safe summary only
+      if: always() && steps.publish_company_snapshots.outputs.summary_path != ''
+      continue-on-error: true
+      uses: actions/upload-artifact@v4
+      with:
+        name: company-snapshot-safe-summary-${{ github.run_id }}-${{ github.job }}
+        path: ${{ steps.publish_company_snapshots.outputs.summary_path }}
+        retention-days: 5
+        if-no-files-found: error

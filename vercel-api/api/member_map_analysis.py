@@ -142,7 +142,7 @@ def _prepare_index(documents, revision, *, base_source_revision=None, prepared_f
     # Common public data only. Neither identity nor the selected window enters
     # the shared preparation cache. The final response remains request-local.
     from api.portfolio_core.portfolio_engine import prepare_public_index
-    prepare_public_index(documents, revision,
+    return prepare_public_index(documents, revision,
                          prepared_business_fetcher=prepared_fetcher or fetch_publisher_prepared_business,
                          base_source_revision=base_source_revision)
 
@@ -226,10 +226,12 @@ def analyze_request(request):
             ThreadPoolExecutor(max_workers=2) as reads:
         prices = reads.submit(_load_prices, price_positions)
         changes = reads.submit(_load_changes, [dict(row) for row in price_positions])
-        return _analyze_validated(payload, response_headers, pool, prices, changes)
+        include_core_claims = getattr(request, "path", "").partition("?")[2] == "core_claims=1"
+        return _analyze_validated(payload, response_headers, pool, prices, changes,
+                                  include_core_claims=include_core_claims)
 
 
-def _analyze_validated(payload, response_headers, prefetch_pool, prices, changes):
+def _analyze_validated(payload, response_headers, prefetch_pool, prices, changes, *, include_core_claims=False):
     started, stage_status = _stage_clock(), "error"
     prepared_future = None
     try:
@@ -253,7 +255,7 @@ def _analyze_validated(payload, response_headers, prefetch_pool, prices, changes
     try:
         # Join the existing optional reads only after source validation and
         # index preparation. Their failure fallbacks remain request-local.
-        _prepare_index(documents, public_bundle_revision,
+        prepared_index = _prepare_index(documents, public_bundle_revision,
                        **({"base_source_revision": source_bundle["base_revision"]}
                           if source_bundle.get("base_revision") is not None else {}),
                        **({"prepared_fetcher": prepared_future.result}
@@ -268,6 +270,12 @@ def _analyze_validated(payload, response_headers, prefetch_pool, prices, changes
         )
         if type(result) is not dict or result.get("schema") != "alphaconsole-portfolio-v1":
             raise ValueError("invalid analysis result")
+        if include_core_claims and type(prepared_index) is dict and type(prepared_index.get("by_id")) is dict:
+            from api.portfolio_core.portfolio_company_snapshot import core_claims
+            identifiers = [row["market"] + ":" + row["ticker"] for row in payload["positions"]]
+            result.setdefault("_meta", {})["core_claims"] = core_claims([
+                prepared_index["by_id"][identifier] for identifier in identifiers
+                if identifier in prepared_index["by_id"]])
         if "refresh_receipt" in source_bundle:
             from api.portfolio_core.member_map_freshness import validate_collection_receipt
             receipt = source_bundle["refresh_receipt"]
