@@ -18,7 +18,7 @@ function fixture() {
             seen.push({ url, signal: init.signal });
             const payload = await (url.includes('company_snapshot') ? core.promise : full.promise);
             return { ok: true, status: 200, json: async () => payload };
-        } }, legacy: async () => graph([]), merge: (_legacy, actual) => actual });
+        } }, legacy: async () => graph([]), merge: async (_legacy, actual) => { await Promise.resolve(); return actual; } });
     return { core, full, seen, previews, parent, running, response };
 }
 test('core is available before full; same evidence promotes without losing a card', async () => {

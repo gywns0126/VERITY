@@ -763,14 +763,22 @@ test('committed US snapshots preserve the 22-document baseline as parsed or expl
     }
   }
   let retainedCollectorErrors = 0, retainedNeedsReview = 0;
+  const unboundCurrentEntries = new Set();
   for (const [cik, s] of Object.entries(original.issuers).filter(([, s]) => !s.exhibit && s.attemptedAt && s.attemptStatus !== 'success' && s.attemptStatus !== 'not-attempted')) {
     assert.equal(safe.issuers[cik].attemptStatus, s.attemptStatus);
+    assert.equal(safe.issuers[cik].attemptedAt, s.attemptedAt);
     const isHttpError = s.attemptStatus === 'error' || /^HTTP[1-5][0-9]{2}$/u.test(s.attemptStatus);
     if (isHttpError) retainedCollectorErrors++;
     if (s.attemptStatus === 'needs-review') retainedNeedsReview++;
     for (const ticker of s.tickerAliases) {
       const entry = result.manifest.issuers['US:' + ticker];
-      if (entry) {
+      const currentCik = mappedCik(ticker, cikMap, reviewedAliases, currentTickers, original.generatedAt);
+      if (entry && !currentCik) {
+        assert.equal(entry.status, 'not-attempted');
+        assert.equal(Object.hasOwn(entry, 'sha256'), false);
+        unboundCurrentEntries.add(ticker);
+      }
+      if (entry && currentCik === cik) {
         const expectedStatus = ['needs-review', 'source-gap', 'budget-deferred', 'attempting'].includes(s.attemptStatus) ? s.attemptStatus : 'refresh-error';
         assert.equal(entry.status, expectedStatus);
         const payload = JSON.parse(result.payloads.get(entry.sha256));
@@ -788,8 +796,38 @@ test('committed US snapshots preserve the 22-document baseline as parsed or expl
   }
   assert.ok(retainedNeedsReview > 0, 'Committed parser holds must remain needs-review, not transport errors');
   assert.ok(retainedCollectorErrors > 0, 'Committed HTTP/collector errors must remain refresh-error');
+  const reviewControl = Object.entries(original.issuers).find(([, s]) => !s.exhibit && s.attemptedAt &&
+    s.attemptStatus === 'needs-review' && s.reviewExhibit && s.tickerAliases.some(ticker => currentTickers.has(ticker)));
+  assert.ok(reviewControl, 'A real committed parser hold must exercise the bound-publication control');
+  const [reviewCik, reviewSource] = reviewControl;
+  const reviewRow = eligibleUsRows.find(row => reviewSource.tickerAliases.includes(row.ticker));
+  const reviewBefore = JSON.stringify(safe.issuers[reviewCik]);
+  const unboundControl = buildArtifacts({ universe: { stocks: [reviewRow] }, cikMap: {},
+    generatedAt: original.generatedAt, usSources: { ...safe, issuers: { [reviewCik]: safe.issuers[reviewCik] } }, strictSources: true });
+  const unboundEntry = unboundControl.manifest.issuers['US:' + reviewRow.ticker];
+  assert.equal(unboundEntry.status, 'not-attempted');
+  assert.equal(Object.hasOwn(unboundEntry, 'sha256'), false);
+  assert.equal(unboundControl.payloads.size, 0);
+  // Test-only RAM binding exercises the archived hold; it does not verify current SEC identity.
+  const control = buildArtifacts({ universe: { stocks: [reviewRow] }, cikMap: { [reviewRow.ticker]: reviewCik },
+    generatedAt: original.generatedAt, usSources: { ...safe, issuers: { [reviewCik]: safe.issuers[reviewCik] } }, strictSources: true });
+  const controlEntry = control.manifest.issuers['US:' + reviewRow.ticker];
+  assert.equal(controlEntry.status, 'needs-review');
+  const controlPayload = JSON.parse(control.payloads.get(controlEntry.sha256));
+  assert.equal(controlPayload.coverage.cik, reviewCik);
+  assert.equal(controlPayload.coverage.sourceChecked, false);
+  assert.equal(controlPayload.coverage.attemptStatus, 'needs-review');
+  assert.equal(controlPayload.coverage.attemptedAt, reviewSource.attemptedAt);
+  assert.deepEqual(controlPayload.coverage.pendingReview, {
+    filedDate: reviewSource.reviewExhibit.filedDate, periodEnd: reviewSource.reviewExhibit.periodEnd,
+    documentSha256: reviewSource.reviewExhibit.documentSha256,
+    ...(reviewSource.reviewExhibit.reviewReason ? { reason: reviewSource.reviewExhibit.reviewReason } : {}),
+  });
+  assert.equal(JSON.stringify(safe.issuers[reviewCik]), reviewBefore);
+  assert.equal(JSON.stringify(original), before);
   const output = path.join(path.dirname(dir), 'committed-us'); writeArtifacts(result, output);
   assert.equal((await main(['--output-dir', output])).validated, true);
   t.diagnostic(JSON.stringify({ parsedCiks: parsed.length, retainedParsed, quarantinedCiks: quarantined.length, checkedCiks: result.manifest.coverage.US.checkedCiks,
-    checkedSecurities: result.manifest.coverage.US.checked, payloads: result.payloads.size, retainedCollectorErrors, requestsPreserved: safe.requestBudget.requests }));
+    checkedSecurities: result.manifest.coverage.US.checked, payloads: result.payloads.size, retainedCollectorErrors,
+    unboundCurrentEntries: unboundCurrentEntries.size, boundReviewControl: controlEntry.status, requestsPreserved: safe.requestBudget.requests }));
 });

@@ -3,7 +3,7 @@ const { captureAnalysis, compatibleCoreGraph } = require('./company-core-client.
 
 async function loadCompanyFullGraph({ client, positions, options, legacy, merge }) {
     const [full, source] = await Promise.all([captureAnalysis(client, positions, options), legacy()]);
-    return { ...full, graph: merge(source, full.graph) };
+    return { ...full, graph: await merge(source, full.graph) };
 }
 
 async function loadCompanyCoreGraph({ client, positions, options, legacy, merge, preview }) {
@@ -47,16 +47,13 @@ function applyCompanyCoreWorkspace(source) {
     replace('      memberMapLoadDiagnostic(timedOut ? "graph-timeout" : "graph-other", error);',
 `      if (state.partialGraph && state.graph) {
         state = { ...state, phase: "ready", error: "company-core-full-unavailable",
-          graph: { ...state.graph, analysisNotice: "확인된 공시·재무 근거를 유지했어요. 전체 자료 연결을 다시 확인해 주세요." },
           dataRefresh: { ...state.dataRefresh, phase: "error", error: "company-core-full-unavailable" } };
         emit(); return false;
       }
       memberMapLoadDiagnostic(timedOut ? "graph-timeout" : "graph-other", error);`);
     // Reuse the existing user-invoked recheck; preserve the mounted core frame
     // and all private state while only its full public enrichment is retried.
-    replace('    if (!account || !valid(generation) || disposed || explorationLoading || state.phase !== "ready" || !state.graph || state.partialGraph) return Promise.resolve(false);',
-`    if (state.partialGraph && state.error === "company-core-full-unavailable") return retryCompanyCore();
-    if (!account || !valid(generation) || disposed || explorationLoading || state.phase !== "ready" || !state.graph || state.partialGraph) return Promise.resolve(false);`);
+    replace('    refreshData,\n    applyDataUpdate()', '    refreshData,\n    retryCompanyCore,\n    applyDataUpdate()');
     replace('  const refreshData = () => {',
 `  const retryCompanyCore = async () => {
     if (!account || !valid(generation) || disposed || pending || state.phase !== "ready" || !state.graph || !state.partialGraph) return false;
@@ -86,4 +83,12 @@ function applyCompanyCoreWorkspace(source) {
     return source;
 }
 
-module.exports = { loadCompanyFullGraph, loadCompanyCoreGraph, applyCompanyCoreWorkspace };
+function applyCompanyCorePresentation(source) {
+    const button = '    void controller.current?.refreshData();';
+    const phase = 'phase: state.partialGraph ? "initial" : state.dataRefresh?.phase,';
+    if (source.split(button).length !== 2 || source.split(phase).length !== 2) throw Error('company-core-presentation-boundary');
+    return source.replace(button, '    void (state?.partialGraph ? controller.current?.retryCompanyCore() : controller.current?.refreshData());')
+        .replace(phase, 'phase: state.partialGraph ? state.error ? "error" : "initial" : state.dataRefresh?.phase,');
+}
+
+module.exports = { loadCompanyFullGraph, loadCompanyCoreGraph, applyCompanyCoreWorkspace, applyCompanyCorePresentation };
