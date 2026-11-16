@@ -215,7 +215,9 @@ async function readPublic(name, limit, fetcher, { missing = false } = {}) {
 }
 
 async function publishCandidate(data, { put, fetch: fetcher, token }) {
-  if (!/^vercel_blob_rw_rte5guenhonw9fzn_/u.test(token || '')) reject('credential-store');
+  // Blob's public hostname folds store ID case; keep the original token intact.
+  // Match the same fixed store as the established public-source publishers.
+  if (!/^vercel_blob_rw_rte5guenhonw9fzn_/iu.test(token || '')) reject('credential-store');
   const before = await readPublic(RELEASE, RELEASE_MAX, fetcher, { missing: true });
   if (before && (!before.etag || !/^"[\x21\x23-\x7e]{1,126}"$/u.test(before.etag))) reject('release-etag');
   async function parent() {

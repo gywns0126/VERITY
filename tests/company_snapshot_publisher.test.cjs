@@ -39,7 +39,7 @@ function fixture() {
   return { dir, manifest, parentBytes, sourceBodies, saveManifest,
     close: () => fs.rmSync(dir, { recursive: true, force: true }) };
 }
-function transport(f, { existing = false } = {}) {
+function transport(f, { existing = false, expectedToken = TOKEN } = {}) {
   const store = new Map([[PARENT, f.parentBytes], ...Object.entries(f.sourceBodies)]), etags = new Map(), trace = [];
   if (existing) { store.set(RELEASE, json({ old: true })); etags.set(RELEASE, '"initial-etag"'); }
   let beforeGet = () => {}, beforePut = () => {}, version = 0;
@@ -62,13 +62,35 @@ function transport(f, { existing = false } = {}) {
       trace.push(['PUT', name]); beforePut(name, bytes, options);
       if (options.allowOverwrite === false && store.has(name)) throw Error('precondition');
       if (options.ifMatch && etags.get(name) !== options.ifMatch) throw Error('precondition');
-      assert.equal(options.token, TOKEN); assert.equal(options.addRandomSuffix, false);
+      assert.equal(options.token, expectedToken); assert.equal(options.addRandomSuffix, false);
       store.set(name, Buffer.from(bytes)); etags.set(name, '"new-' + (++version) + '"');
       return { url: BASE + name, pathname: name };
     },
   };
 }
 async function run(f, t) { return publisher.publishCandidate(publisher.loadCandidate(f.dir), { ...t, token: TOKEN }); }
+
+test('same store credential accepts mixed-case store ID and passes the token unchanged', async () => {
+  const token = 'vercel_blob_rw_RtE5gUenHonW9fZn_SYNTHETIC_ONLY';
+  const f = fixture(), t = transport(f, { expectedToken: token });
+  try {
+    const result = await publisher.publishCandidate(publisher.loadCandidate(f.dir), { ...t, token });
+    assert.equal(result.release, 'published');
+    assert.equal(t.trace.filter(([method]) => method === 'PUT').length, 3);
+  } finally { f.close(); }
+});
+
+for (const token of ['vercel_blob_rw_rte5guenhonw9fzm_SYNTHETIC_ONLY',
+  'vercel_blob_rw_rte5guenhonw9fznx_SYNTHETIC_ONLY', 'prefix_vercel_blob_rw_rte5guenhonw9fzn_SYNTHETIC_ONLY']) {
+  test('other or malformed store credential is rejected before any request: ' + token, async () => {
+    const f = fixture(), t = transport(f);
+    try {
+      await assert.rejects(publisher.publishCandidate(publisher.loadCandidate(f.dir), { ...t, token }),
+        error => error.code === 'credential-store');
+      assert.deepEqual(t.trace, []);
+    } finally { f.close(); }
+  });
+}
 
 test('closed local candidate validation retains exact original dates and bytes', () => {
   const f = fixture(); try {
