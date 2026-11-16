@@ -1,57 +1,53 @@
 {
-  "updated_at": "2026-11-09T11:58:36.840968+09:00",
+  "updated_at": "2026-11-16T12:06:02.066408+09:00",
   "source": "DART OpenAPI list.json (C001 증권신고서/지분증권, corp_cls=E)",
   "search_window_days": 88,
   "disclaimer": "watch list (후보 신호, 가설 N=0). 추천 아님 — 상장 전은 가격 데이터가 없어 검증 trail 미적용. 상장 후 funnel 편입 시점부터 검증 시작.",
-  "raw_c001_count": 356,
-  "count": 24,
+  "raw_c001_count": 358,
+  "count": 22,
   "watch": [
     {
-      "corp_name": "하나에어로다이내믹스",
-      "corp_code": "01025617",
-      "rcept_no": "20261109000048",
-      "rcept_dt": "20261109",
+      "corp_name": "제논",
+      "corp_code": "01950720",
+      "rcept_no": "20261113001531",
+      "rcept_dt": "20261113",
       "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261109000048",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261113001531",
       "stage": "정정",
       "offering": {
-        "shares": 4400000,
-        "price_planned": 4700,
-        "total_planned": 20680000000,
-        "payment_date": "2026.11.13",
-        "subscribe_start": "2026.11.10",
-        "subscribe_end": "2026.11.11"
+        "shares": 2200000,
+        "price_planned": 9700,
+        "total_planned": 21340000000,
+        "payment_date": "2026.11.27",
+        "subscribe_start": "2026.11.24",
+        "subscribe_end": "2026.11.25"
       },
       "doc_financials": {
         "available": true,
-        "unit": "원",
+        "unit": "미상",
         "periods": [
-          "2026연도 반기 (제20기 반기)",
-          "2025연도 반기 (제19기 반기)",
-          "2025연도 (제19기)",
-          "2024연도 (제18기)",
-          "2023연도 (제17기)"
+          "2026년 7월기(제18기)",
+          "2025년 7월기(제17기)",
+          "2024년 7월기(제16기)",
+          "2023년 7월기(제15기)"
         ],
         "revenue": [
-          20591868272,
-          19635605999,
-          33286338798,
-          32306648802,
-          14554690417
+          1433,
+          1256,
+          1005,
+          1054
         ],
         "operating_income": [
-          4830015490,
-          4393796979,
-          4988489314,
-          2854924813,
-          784138960
+          250,
+          166,
+          73,
+          163
         ],
         "net_income": [
-          -117833618,
-          2641902237,
-          2420372481,
-          1180619578,
-          205192755
+          193,
+          134,
+          49,
+          123
         ]
       },
       "doc_parse_error": null,
@@ -61,21 +57,232 @@
       },
       "profile": {
         "available": true,
-        "induty_code": "31322",
+        "induty_code": "6202",
+        "sector_ko": "IT·기술",
+        "est_dt": "20171129",
+        "ceo_nm": "고석태",
+        "region": "서울특별시 강남구",
+        "hm_url": "genon.ai/"
+      }
+    },
+    {
+      "corp_name": "엔키화이트햇",
+      "corp_code": "01795859",
+      "rcept_no": "20261113000615",
+      "rcept_dt": "20261113",
+      "report_nm": "[첨부정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261103000358",
+      "stage": "정정",
+      "offering": {
+        "shares": 1700000,
+        "price_planned": 13000,
+        "total_planned": 22100000000,
+        "payment_date": "2026.12.04",
+        "subscribe_start": "2026.12.01",
+        "subscribe_end": "2026.12.02"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "백만원",
+        "periods": [
+          "2024년(제9기)",
+          "2025년(제10기)",
+          "2026년(E)(제11기)",
+          "2027년(E)(제 12기)",
+          "2028년(E)(제 13기)",
+          "2029년(E)(제 14기)"
+        ],
+        "revenue": [
+          7946,
+          14176,
+          24205,
+          39209,
+          59698,
+          77895
+        ],
+        "operating_income": [
+          968,
+          3479,
+          5636,
+          11039,
+          17667,
+          23972
+        ],
+        "net_income": [
+          -29,
+          -3211,
+          4034,
+          8229,
+          13378,
+          18201
+        ]
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      },
+      "profile": {
+        "available": true,
+        "induty_code": "58222",
+        "sector_ko": "IT·기술",
+        "est_dt": "20160909",
+        "ceo_nm": "이성권",
+        "region": "서울특별시 송파구",
+        "hm_url": "www.enki.co.kr"
+      }
+    },
+    {
+      "corp_name": "태석광학",
+      "corp_code": "01912128",
+      "rcept_no": "20261112000748",
+      "rcept_dt": "20261112",
+      "report_nm": "증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261112000748",
+      "stage": "최초",
+      "offering": {
+        "shares": 2478000,
+        "price_planned": 17500,
+        "total_planned": 43365000000,
+        "subscribe_start": "2026.12.14",
+        "subscribe_end": "2026.12.15",
+        "payment_date": "2026.12.17"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "백만원",
+        "periods": [
+          "제10기(2024년)",
+          "제11기(2025년)"
+        ],
+        "revenue": [
+          -1864,
+          79804
+        ],
+        "operating_income": [
+          123,
+          14921
+        ],
+        "net_income": [
+          1835,
+          4721
+        ]
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      },
+      "profile": {
+        "available": true,
+        "induty_code": "27195",
+        "sector_ko": "헬스케어",
+        "est_dt": "20151105",
+        "ceo_nm": "권명석",
+        "region": "서울특별시 강서구",
+        "hm_url": "www.taeseokoptical.com/"
+      }
+    },
+    {
+      "corp_name": "KTE",
+      "corp_code": "00208709",
+      "rcept_no": "20261112000690",
+      "rcept_dt": "20261112",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261112000690",
+      "stage": "정정",
+      "offering": {
+        "shares": 2816000,
+        "price_planned": 19000,
+        "total_planned": 53504000000,
+        "payment_date": "2026.12.17",
+        "subscribe_start": "2026.12.14",
+        "subscribe_end": "2026.12.15"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "백만원",
+        "periods": [
+          "2023년(제45기)",
+          "2024년(제46기)",
+          "2025년(제47기)",
+          "2026년 반기(제48기 반기)"
+        ],
+        "revenue": [
+          139688,
+          164213,
+          173901,
+          82935
+        ],
+        "operating_income": [
+          8137,
+          17576,
+          17917,
+          7758
+        ],
+        "net_income": [
+          7757,
+          16666,
+          14243,
+          8261
+        ]
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      },
+      "profile": {
+        "available": true,
+        "induty_code": "28123",
         "sector_ko": "산업재",
-        "est_dt": "20070112",
-        "ceo_nm": "손창환",
-        "region": "경상남도 사천시",
-        "hm_url": null
+        "est_dt": "19790525",
+        "ceo_nm": "구자영,구본승",
+        "region": "부산광역시 강서구",
+        "hm_url": "www.kt-eletric.co.kr"
+      }
+    },
+    {
+      "corp_name": "다비오",
+      "corp_code": "01706509",
+      "rcept_no": "20261111000426",
+      "rcept_dt": "20261111",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261111000426",
+      "stage": "정정",
+      "offering": {
+        "shares": 1000000,
+        "price_planned": 12300,
+        "total_planned": 12300000000,
+        "payment_date": "2026.12.04",
+        "subscribe_start": "2026.12.01",
+        "subscribe_end": "2026.12.02"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      },
+      "profile": {
+        "available": true,
+        "induty_code": "58222",
+        "sector_ko": "IT·기술",
+        "est_dt": "20120227",
+        "ceo_nm": "박주흠",
+        "region": "서울특별시 마포구",
+        "hm_url": "www.dabeeo.com"
       }
     },
     {
       "corp_name": "씨아이에스케미칼",
       "corp_code": "01077540",
-      "rcept_no": "20261105000234",
-      "rcept_dt": "20261105",
+      "rcept_no": "20261111000341",
+      "rcept_dt": "20261111",
       "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261105000234",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261111000341",
       "stage": "정정",
       "offering": {
         "shares": 4000000,
@@ -89,28 +296,28 @@
         "available": true,
         "unit": "백만원",
         "periods": [
-          "2023년(제15기)",
-          "2024년(제16기)",
-          "2025년(제17기)",
-          "2026년 반기말(제18기)"
+          "2026년 반기말(제15기 반기말)",
+          "2025년 (제14기)",
+          "2024년 (제13기)",
+          "2023년 (제12기)"
         ],
         "revenue": [
-          539852,
-          432831,
-          408234,
-          255243
+          9669,
+          15985,
+          19533,
+          14764
         ],
         "operating_income": [
-          43652,
-          13173,
-          5927,
-          6788
+          -3552,
+          -10257,
+          -11433,
+          -1802
         ],
         "net_income": [
-          30936,
-          21959,
-          -5813,
-          8297
+          -4149,
+          -11440,
+          -12671,
+          -2203
         ]
       },
       "doc_parse_error": null,
@@ -126,6 +333,280 @@
         "ceo_nm": "이성오",
         "region": "광주광역시 광산구",
         "hm_url": "www.cisk.co.kr"
+      }
+    },
+    {
+      "corp_name": "인터엑스",
+      "corp_code": "01860700",
+      "rcept_no": "20261111000319",
+      "rcept_dt": "20261111",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261111000319",
+      "stage": "정정",
+      "offering": {
+        "shares": 3000000,
+        "price_planned": 10000,
+        "total_planned": 30000000000,
+        "payment_date": "2026.12.14",
+        "subscribe_start": "2026.12.09",
+        "subscribe_end": "2026.12.09"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "백만원",
+        "periods": [
+          "2026년 반기(제22기 반기)",
+          "2025년(제21기)",
+          "2024년(제20기)",
+          "2023년(제19기)"
+        ],
+        "revenue": [
+          10239,
+          25620,
+          29636,
+          24152
+        ],
+        "operating_income": [
+          -1157,
+          886,
+          -1070,
+          1756
+        ],
+        "net_income": [
+          -822,
+          1631,
+          -143,
+          2499
+        ]
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      },
+      "profile": {
+        "available": true,
+        "induty_code": "58222",
+        "sector_ko": "IT·기술",
+        "est_dt": "20200715",
+        "ceo_nm": "박정윤",
+        "region": "울산광역시 중구",
+        "hm_url": null
+      }
+    },
+    {
+      "corp_name": "아델",
+      "corp_code": "01938746",
+      "rcept_no": "20261111000327",
+      "rcept_dt": "20261111",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261111000327",
+      "stage": "정정",
+      "offering": {
+        "shares": 2170000,
+        "price_planned": 18000,
+        "total_planned": 39060000000,
+        "payment_date": "2026.11.26",
+        "subscribe_start": "2026.11.23",
+        "subscribe_end": "2026.11.24"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "천원",
+        "periods": [
+          "2023연도(제8기)",
+          "2024연도(제9기)",
+          "2025연도(제10기)",
+          "2026연도 반기(제11기)"
+        ],
+        "revenue": [
+          null,
+          null,
+          62057363,
+          null
+        ],
+        "operating_income": [
+          -3577139,
+          -4683184,
+          49418671,
+          -4645722
+        ],
+        "net_income": []
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      },
+      "profile": {
+        "available": true,
+        "induty_code": "70113",
+        "sector_ko": "헬스케어",
+        "est_dt": "20161110",
+        "ceo_nm": "윤승용",
+        "region": "서울특별시 강동구",
+        "hm_url": null
+      }
+    },
+    {
+      "corp_name": "마더스제약",
+      "corp_code": "01136597",
+      "rcept_no": "20261110000330",
+      "rcept_dt": "20261110",
+      "report_nm": "증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261110000330",
+      "stage": "최초",
+      "offering": {
+        "shares": 2400000,
+        "price_planned": 11000,
+        "total_planned": 26400000000,
+        "payment_date": "2026.12.11",
+        "subscribe_start": "2026.12.08",
+        "subscribe_end": "2026.12.09"
+      },
+      "doc_financials": {
+        "available": true,
+        "unit": "백만원",
+        "periods": [
+          "제16기 3분기 (2026년 3분기말)",
+          "제15기 (2025년말)",
+          "제14기 (2024년말)"
+        ],
+        "revenue": [
+          195967,
+          228830,
+          192712
+        ],
+        "operating_income": [
+          19746,
+          13689,
+          8724
+        ],
+        "net_income": [
+          18797,
+          11204,
+          7637
+        ]
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": true,
+        "bsns_year": "2025",
+        "total_assets": 162592615605,
+        "total_liabilities": 105199059378,
+        "equity": 57393556227,
+        "debt_ratio_pct": 183.29
+      },
+      "profile": {
+        "available": true,
+        "induty_code": "21212",
+        "sector_ko": "헬스케어",
+        "est_dt": "20110720",
+        "ceo_nm": "김 좌 진",
+        "region": "서울특별시 동작구",
+        "hm_url": null
+      }
+    },
+    {
+      "corp_name": "엠비디",
+      "corp_code": "01705740",
+      "rcept_no": "20261110000253",
+      "rcept_dt": "20261110",
+      "report_nm": "[발행조건확정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261110000253",
+      "stage": "확정",
+      "offering": {
+        "shares": 2000000,
+        "price_planned": 9600,
+        "total_planned": 19200000000,
+        "payment_date": "2026.11.17",
+        "subscribe_start": "2026.11.12",
+        "subscribe_end": "2026.11.13"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      },
+      "profile": {
+        "available": true,
+        "induty_code": "27213",
+        "sector_ko": "헬스케어",
+        "est_dt": "20150122",
+        "ceo_nm": "구보성",
+        "region": "경기도 수원시",
+        "hm_url": "www.mbdbiotech.com"
+      }
+    },
+    {
+      "corp_name": "이노보테라퓨틱스",
+      "corp_code": "01783687",
+      "rcept_no": "20261109000160",
+      "rcept_dt": "20261109",
+      "report_nm": "[기재정정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261109000160",
+      "stage": "정정",
+      "offering": {
+        "shares": 2200000,
+        "price_planned": 20000,
+        "total_planned": 44000000000,
+        "payment_date": "2026.12.10",
+        "subscribe_start": "2026.12.07",
+        "subscribe_end": "2026.12.07"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      },
+      "profile": {
+        "available": true,
+        "induty_code": "70113",
+        "sector_ko": "헬스케어",
+        "est_dt": "20190318",
+        "ceo_nm": "박희동",
+        "region": "서울특별시 마포구",
+        "hm_url": "innovothera.co.kr"
+      }
+    },
+    {
+      "corp_name": "하나에어로다이내믹스",
+      "corp_code": "01025617",
+      "rcept_no": "20261109000163",
+      "rcept_dt": "20261109",
+      "report_nm": "[발행조건확정]증권신고서(지분증권)",
+      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261109000163",
+      "stage": "확정",
+      "offering": {
+        "shares": 4400000,
+        "price_planned": 4700,
+        "total_planned": 20680000000,
+        "payment_date": "2026.11.13",
+        "subscribe_start": "2026.11.10",
+        "subscribe_end": "2026.11.11"
+      },
+      "doc_financials": {
+        "available": false
+      },
+      "doc_parse_error": null,
+      "financials": {
+        "available": false,
+        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
+      },
+      "profile": {
+        "available": true,
+        "induty_code": "31322",
+        "sector_ko": "산업재",
+        "est_dt": "20070112",
+        "ceo_nm": "손창환",
+        "region": "경상남도 사천시",
+        "hm_url": null
       }
     },
     {
@@ -311,107 +792,6 @@
       }
     },
     {
-      "corp_name": "엔키화이트햇",
-      "corp_code": "01795859",
-      "rcept_no": "20261103000358",
-      "rcept_dt": "20261103",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261103000358",
-      "stage": "정정",
-      "offering": {
-        "shares": 1700000,
-        "price_planned": 13000,
-        "total_planned": 22100000000,
-        "payment_date": "2026.12.04",
-        "subscribe_start": "2026.12.01",
-        "subscribe_end": "2026.12.02"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "백만원",
-        "periods": [
-          "2024년(제9기)",
-          "2025년(제10기)",
-          "2026년(E)(제11기)",
-          "2027년(E)(제 12기)",
-          "2028년(E)(제 13기)",
-          "2029년(E)(제 14기)"
-        ],
-        "revenue": [
-          7946,
-          14176,
-          24205,
-          39209,
-          59698,
-          77895
-        ],
-        "operating_income": [
-          968,
-          3479,
-          5636,
-          11039,
-          17667,
-          23972
-        ],
-        "net_income": [
-          -29,
-          -3211,
-          4034,
-          8229,
-          13378,
-          18201
-        ]
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "58222",
-        "sector_ko": "IT·기술",
-        "est_dt": "20160909",
-        "ceo_nm": "이성권",
-        "region": "서울특별시 송파구",
-        "hm_url": "www.enki.co.kr"
-      }
-    },
-    {
-      "corp_name": "영광와이케이엠씨",
-      "corp_code": "00960234",
-      "rcept_no": "20261103000312",
-      "rcept_dt": "20261103",
-      "report_nm": "[발행조건확정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261103000312",
-      "stage": "확정",
-      "offering": {
-        "shares": 2300000,
-        "price_planned": 9400,
-        "total_planned": 21620000000,
-        "payment_date": "2026.11.09",
-        "subscribe_start": "2026.11.04",
-        "subscribe_end": "2026.11.05"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "25929",
-        "sector_ko": "산업재",
-        "est_dt": "20120401",
-        "ceo_nm": "장관섭",
-        "region": "충청남도 아산시",
-        "hm_url": "www.ykmc.kr"
-      }
-    },
-    {
       "corp_name": "에이엔에이치스트럭쳐",
       "corp_code": "01366675",
       "rcept_no": "20261103000106",
@@ -443,142 +823,6 @@
         "ceo_nm": "안현수",
         "region": "경상남도 진주시",
         "hm_url": "www.anhstructure.com"
-      }
-    },
-    {
-      "corp_name": "다비오",
-      "corp_code": "01706509",
-      "rcept_no": "20261030000682",
-      "rcept_dt": "20261030",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261030000682",
-      "stage": "정정",
-      "offering": {
-        "shares": 1000000,
-        "price_planned": 12300,
-        "total_planned": 12300000000,
-        "payment_date": "2026.11.13",
-        "subscribe_start": "2026.11.10",
-        "subscribe_end": "2026.11.11"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "58222",
-        "sector_ko": "IT·기술",
-        "est_dt": "20120227",
-        "ceo_nm": "박주흠",
-        "region": "서울특별시 마포구",
-        "hm_url": "www.dabeeo.com"
-      }
-    },
-    {
-      "corp_name": "넥스아이",
-      "corp_code": "01863318",
-      "rcept_no": "20261030000467",
-      "rcept_dt": "20261030",
-      "report_nm": "[발행조건확정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261030000467",
-      "stage": "확정",
-      "offering": {
-        "shares": 5000000,
-        "price_planned": 10500,
-        "total_planned": 52500000000,
-        "payment_date": "2026.11.06",
-        "subscribe_start": "2026.11.03",
-        "subscribe_end": "2026.11.03"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "70113",
-        "sector_ko": "헬스케어",
-        "est_dt": "20210412",
-        "ceo_nm": "윤경완",
-        "region": "서울특별시 송파구",
-        "hm_url": "www.nex-i.co.kr"
-      }
-    },
-    {
-      "corp_name": "바로팜",
-      "corp_code": "01835829",
-      "rcept_no": "20261030000396",
-      "rcept_dt": "20261030",
-      "report_nm": "[발행조건확정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261030000396",
-      "stage": "확정",
-      "offering": {
-        "shares": 1780000,
-        "price_planned": 16400,
-        "total_planned": 29192000000,
-        "payment_date": "2026.11.05",
-        "subscribe_start": "2026.11.02",
-        "subscribe_end": "2026.11.03"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "47911",
-        "sector_ko": "경기소비재",
-        "est_dt": "20191122",
-        "ceo_nm": "김슬기",
-        "region": "서울특별시 강남구",
-        "hm_url": "baropharm.com"
-      }
-    },
-    {
-      "corp_name": "동원파츠",
-      "corp_code": "00784184",
-      "rcept_no": "20261030000113",
-      "rcept_dt": "20261030",
-      "report_nm": "[발행조건확정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261030000113",
-      "stage": "확정",
-      "offering": {
-        "shares": 2030000,
-        "price_planned": 23000,
-        "total_planned": 46690000000,
-        "payment_date": "2026.11.05",
-        "subscribe_start": "2026.11.02",
-        "subscribe_end": "2026.11.03"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "29271",
-        "sector_ko": "산업재",
-        "est_dt": "19970615",
-        "ceo_nm": "조덕형",
-        "region": "경기도 시흥시",
-        "hm_url": "dmids.com"
       }
     },
     {
@@ -674,65 +918,6 @@
       }
     },
     {
-      "corp_name": "KTE",
-      "corp_code": "00208709",
-      "rcept_no": "20261028000336",
-      "rcept_dt": "20261028",
-      "report_nm": "증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261028000336",
-      "stage": "최초",
-      "offering": {
-        "shares": 2816000,
-        "price_planned": 19000,
-        "total_planned": 53504000000,
-        "payment_date": "2026.12.17",
-        "subscribe_start": "2026.12.14",
-        "subscribe_end": "2026.12.15"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "백만원",
-        "periods": [
-          "2023년(제45기)",
-          "2024년(제46기)",
-          "2025년(제47기)",
-          "2026년 반기(제48기 반기)"
-        ],
-        "revenue": [
-          139688,
-          164213,
-          173901,
-          82935
-        ],
-        "operating_income": [
-          8137,
-          17576,
-          17917,
-          7758
-        ],
-        "net_income": [
-          7757,
-          16666,
-          14243,
-          8261
-        ]
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "28123",
-        "sector_ko": "산업재",
-        "est_dt": "19790525",
-        "ceo_nm": "구자영,구본승",
-        "region": "부산광역시 강서구",
-        "hm_url": "www.kt-eletric.co.kr"
-      }
-    },
-    {
       "corp_name": "케이엠에프",
       "corp_code": "01880139",
       "rcept_no": "20261027000388",
@@ -763,178 +948,6 @@
         "est_dt": "20020807",
         "ceo_nm": "정용진",
         "region": "대구광역시 동구",
-        "hm_url": null
-      }
-    },
-    {
-      "corp_name": "아델",
-      "corp_code": "01938746",
-      "rcept_no": "20261027000312",
-      "rcept_dt": "20261027",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261027000312",
-      "stage": "정정",
-      "offering": {
-        "shares": 2170000,
-        "price_planned": 18000,
-        "total_planned": 39060000000,
-        "payment_date": "2026.11.26",
-        "subscribe_start": "2026.11.23",
-        "subscribe_end": "2026.11.24"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "천원",
-        "periods": [
-          "2023연도(제8기)",
-          "2024연도(제9기)",
-          "2025연도(제10기)",
-          "2026연도 반기(제11기)"
-        ],
-        "revenue": [
-          null,
-          null,
-          62057363,
-          null
-        ],
-        "operating_income": [
-          -3577139,
-          -4683184,
-          49418671,
-          -4645722
-        ],
-        "net_income": []
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "70113",
-        "sector_ko": "헬스케어",
-        "est_dt": "20161110",
-        "ceo_nm": "윤승용",
-        "region": "서울특별시 강동구",
-        "hm_url": null
-      }
-    },
-    {
-      "corp_name": "제논",
-      "corp_code": "01950720",
-      "rcept_no": "20261026000367",
-      "rcept_dt": "20261026",
-      "report_nm": "[첨부정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261026000001",
-      "stage": "정정",
-      "offering": {
-        "shares": 2200000,
-        "price_planned": 9700,
-        "total_planned": 21340000000,
-        "payment_date": "2026.11.09",
-        "subscribe_start": "2026.11.04",
-        "subscribe_end": "2026.11.05"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "미상",
-        "periods": [
-          "2026년 7월기(제18기)",
-          "2025년 7월기(제17기)",
-          "2024년 7월기(제16기)",
-          "2023년 7월기(제15기)"
-        ],
-        "revenue": [
-          1433,
-          1256,
-          1005,
-          1054
-        ],
-        "operating_income": [
-          250,
-          166,
-          73,
-          163
-        ],
-        "net_income": [
-          193,
-          134,
-          49,
-          123
-        ]
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "6202",
-        "sector_ko": "IT·기술",
-        "est_dt": "20171129",
-        "ceo_nm": "고석태",
-        "region": "서울특별시 강남구",
-        "hm_url": "genon.ai/"
-      }
-    },
-    {
-      "corp_name": "인터엑스",
-      "corp_code": "01860700",
-      "rcept_no": "20261022000478",
-      "rcept_dt": "20261022",
-      "report_nm": "증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261022000478",
-      "stage": "최초",
-      "offering": {
-        "shares": 3000000,
-        "price_planned": 10000,
-        "total_planned": 30000000000,
-        "payment_date": "2026.12.14",
-        "subscribe_start": "2026.12.09",
-        "subscribe_end": "2026.12.09"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "백만원",
-        "periods": [
-          "2026년 반기(제22기 반기)",
-          "2025년(제21기)",
-          "2024년(제20기)",
-          "2023년(제19기)"
-        ],
-        "revenue": [
-          10239,
-          25620,
-          29636,
-          24152
-        ],
-        "operating_income": [
-          -1157,
-          886,
-          -1070,
-          1756
-        ],
-        "net_income": [
-          -822,
-          1631,
-          -143,
-          2499
-        ]
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "58222",
-        "sector_ko": "IT·기술",
-        "est_dt": "20200715",
-        "ceo_nm": "박정윤",
-        "region": "울산광역시 중구",
         "hm_url": null
       }
     },
@@ -990,103 +1003,6 @@
         "ceo_nm": "김재형",
         "region": "경기도 성남시",
         "hm_url": "www.eu-cast.com"
-      }
-    },
-    {
-      "corp_name": "이노보테라퓨틱스",
-      "corp_code": "01783687",
-      "rcept_no": "20261021000153",
-      "rcept_dt": "20261021",
-      "report_nm": "증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261021000153",
-      "stage": "최초",
-      "offering": {
-        "shares": 2200000,
-        "price_planned": 20000,
-        "total_planned": 44000000000,
-        "payment_date": "2026.12.10",
-        "subscribe_start": "2026.12.07",
-        "subscribe_end": "2026.12.07"
-      },
-      "doc_financials": {
-        "available": false
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "70113",
-        "sector_ko": "헬스케어",
-        "est_dt": "20190318",
-        "ceo_nm": "박희동",
-        "region": "서울특별시 마포구",
-        "hm_url": "innovothera.co.kr"
-      }
-    },
-    {
-      "corp_name": "엠비디",
-      "corp_code": "01705740",
-      "rcept_no": "20261015000329",
-      "rcept_dt": "20261015",
-      "report_nm": "[기재정정]증권신고서(지분증권)",
-      "dart_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261015000329",
-      "stage": "정정",
-      "offering": {
-        "shares": 2000000,
-        "price_planned": 9600,
-        "total_planned": 19200000000,
-        "payment_date": "2026.11.02",
-        "subscribe_start": "2026.10.28",
-        "subscribe_end": "2026.10.29"
-      },
-      "doc_financials": {
-        "available": true,
-        "unit": "백만원",
-        "periods": [
-          "2026(E)(제12기)",
-          "2027(E)(제13기)",
-          "2028(E)제14기",
-          "2029(E)제15기",
-          "2030(E)제16기"
-        ],
-        "revenue": [
-          4535,
-          11858,
-          22800,
-          40324,
-          65090
-        ],
-        "operating_income": [
-          -4880,
-          -766,
-          6008,
-          18093,
-          35579
-        ],
-        "net_income": [
-          -4941,
-          -828,
-          5945,
-          18028,
-          31951
-        ]
-      },
-      "doc_parse_error": null,
-      "financials": {
-        "available": false,
-        "reason": "정기공시 미제출(상장 전) 또는 재무 데이터 없음"
-      },
-      "profile": {
-        "available": true,
-        "induty_code": "27213",
-        "sector_ko": "헬스케어",
-        "est_dt": "20150122",
-        "ceo_nm": "구보성",
-        "region": "경기도 수원시",
-        "hm_url": "www.mbdbiotech.com"
       }
     },
     {
