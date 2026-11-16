@@ -2,53 +2,52 @@
   "schema_version": 1,
   "producer": "RSSScout",
   "clock_kind": "source_query_attempt",
-  "started_at": "2026-11-17T04:02:40.070212+09:00",
-  "finished_at": "2026-11-17T04:02:40.458646+09:00",
-  "run_id": "43934697220",
+  "started_at": "2026-11-17T04:32:50.261698+09:00",
+  "finished_at": "2026-11-17T04:32:50.707888+09:00",
+  "run_id": "43939966665",
   "run_attempt": "1",
-  "input_commit": "1b1d8bc06d89461c9ebd1984d1bfb6b33af772e0",
+  "input_commit": "6dc5c732bcfeebdfba243570d47685ada59e78fa",
   "scope": {
     "kind": "configured_rss_feed_query",
     "expected_feeds": 3,
-    "successful_feeds": 3,
+    "successful_feeds": 2,
     "asset_scope": "filtered incremental headlines; retained rows not revalidated"
   },
-  "outcome": "complete",
+  "outcome": "partial_failure",
   "new_rows": 0,
   "feeds": [
     {
       "source": "SEC 공식 발표",
       "url": "https://www.sec.gov/news/pressreleases.rss",
-      "started_at": "2026-11-17T04:02:40.124435+09:00",
+      "started_at": "2026-11-17T04:32:50.326388+09:00",
       "outcome": "success",
       "entries": 25,
       "usable_entries": 25,
       "entries_without_source_date": 0,
       "http_status": 200,
-      "finished_at": "2026-11-17T04:02:40.302824+09:00"
+      "finished_at": "2026-11-17T04:32:50.437812+09:00"
     },
     {
       "source": "CNBC",
       "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
-      "started_at": "2026-11-17T04:02:40.303096+09:00",
+      "started_at": "2026-11-17T04:32:50.438145+09:00",
       "outcome": "success",
       "entries": 30,
       "usable_entries": 30,
       "entries_without_source_date": 0,
       "http_status": 200,
-      "finished_at": "2026-11-17T04:02:40.380438+09:00"
+      "finished_at": "2026-11-17T04:32:50.547517+09:00"
     },
     {
       "source": "Fed 공식 발표",
       "url": "https://www.federalreserve.gov/feeds/press_all.xml",
-      "started_at": "2026-11-17T04:02:40.380628+09:00",
-      "outcome": "success",
-      "entries": 20,
-      "usable_entries": 20,
+      "started_at": "2026-11-17T04:32:50.547727+09:00",
+      "outcome": "http_error",
+      "entries": 0,
+      "usable_entries": 0,
       "entries_without_source_date": 0,
-      "http_status": 200,
-      "finished_at": "2026-11-17T04:02:40.454606+09:00",
-      "warning_type": "CharacterEncodingOverride"
+      "http_status": 404,
+      "finished_at": "2026-11-17T04:32:50.703993+09:00"
     }
   ],
   "new_rows_scope": "selected before retention limit; not a full-file refresh",
