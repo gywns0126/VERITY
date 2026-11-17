@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-11-16T22:04:55+09:00",
+  "generated_at": "2026-11-17T22:25:50+09:00",
   "lookback_days": 45,
   "sessions_scanned": 29,
   "sessions_missed": [
@@ -8,18 +8,18 @@
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 695,
-   "companies": 215,
+   "filings": 714,
+   "companies": 212,
    "by_stage": {
-    "신청": 93,
+    "신청": 90,
     "정정(심사중)": 94,
     "가격확정": 7,
     "거래소등록": 21
    },
-   "spac_likely": 22,
-   "has_ticker_now": 159,
+   "spac_likely": 21,
+   "has_ticker_now": 157,
    "priced_secondary_excluded": 6,
-   "foreign_issuer": 49,
+   "foreign_issuer": 50,
    "priced_parse_ok": 5
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
@@ -27,45 +27,17 @@
  },
  "items": [
   {
-   "cik": "1907709",
-   "name": "vVARDIS Holding AG",
-   "forms": {
-    "8-A12B": 1,
-    "CERT": 1,
-    "F-1/A": 2,
-    "F-1": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261112",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 2,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1907709&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "3841",
-    "sic_desc": "Surgical & Medical Instruments & Apparatus",
-    "is_blank_check": false,
-    "ticker": "VVVV",
-    "region": "ZUG",
-    "state_of_inc": "V8"
-   }
-  },
-  {
    "cik": "2145089",
    "name": "WINDWARD BIO GROUP AG",
    "forms": {
+    "424B4": 1,
     "CERT": 1,
     "8-A12B": 1,
     "F-1/A": 2,
     "F-1": 1
    },
    "first_filed": "20261023",
-   "last_filed": "20261112",
+   "last_filed": "20261116",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
@@ -82,6 +54,48 @@
     "ticker": "WWB",
     "region": "4052 BASEL",
     "state_of_inc": "V8"
+   },
+   "pre_existing_reporter": false,
+   "pricing": {
+    "parse_ok": false,
+    "reason": "주식수 문구 없음",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/2145089/000119312526461203/d111653d424b4.htm"
+   }
+  },
+  {
+   "cik": "1907709",
+   "name": "vVARDIS Holding AG",
+   "forms": {
+    "424B4": 1,
+    "8-A12B": 1,
+    "CERT": 1,
+    "F-1/A": 2,
+    "F-1": 1
+   },
+   "first_filed": "20261009",
+   "last_filed": "20261116",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 2,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1907709&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3841",
+    "sic_desc": "Surgical & Medical Instruments & Apparatus",
+    "is_blank_check": false,
+    "ticker": "VVVV",
+    "region": "ZUG",
+    "state_of_inc": "V8"
+   },
+   "pre_existing_reporter": false,
+   "pricing": {
+    "parse_ok": false,
+    "reason": "주식수 문구 없음",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/1907709/000114036126043938/ny20076472x18_424b4.htm"
    }
   },
   {
@@ -396,10 +410,9 @@
     "424B4": 1,
     "CERT": 1,
     "S-1/A": 3,
-    "8-A12B": 1,
-    "S-1": 1
+    "8-A12B": 1
    },
-   "first_filed": "20261002",
+   "first_filed": "20261014",
    "last_filed": "20261029",
    "lineage": true,
    "stage": 4,
@@ -708,6 +721,34 @@
    }
   },
   {
+   "cik": "1378140",
+   "name": "Ocean Power Technologies, Inc.",
+   "forms": {
+    "424B4": 1,
+    "S-1/A": 2
+   },
+   "first_filed": "20261029",
+   "last_filed": "20261116",
+   "lineage": true,
+   "stage": 3,
+   "stage_ko": "가격확정",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1378140&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "4911",
+    "sic_desc": "Electric Services",
+    "is_blank_check": false,
+    "ticker": "OPTT",
+    "region": "MONROE TOWNSHIP, NJ",
+    "state_of_inc": "NJ"
+   },
+   "pre_existing_reporter": true
+  },
+  {
    "cik": "2018222",
    "name": "707 Cayman Holdings Ltd.",
    "forms": {
@@ -882,32 +923,83 @@
    }
   },
   {
-   "cik": "1402328",
-   "name": "Sunshine Biopharma Inc.",
+   "cik": "2095509",
+   "name": "Gold Stone Technical Inc.",
    "forms": {
-    "424B4": 1,
-    "S-1": 1
+    "F-1/A": 1
    },
-   "first_filed": "20261002",
-   "last_filed": "20261009",
+   "first_filed": "20261116",
+   "last_filed": "20261116",
    "lineage": true,
-   "stage": 3,
-   "stage_ko": "가격확정",
-   "amend_count": 0,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2095509&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7370",
+    "sic_desc": "Services-Computer Programming, Data Processing, Etc.",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "KOWLOON",
+    "state_of_inc": "E9"
+   }
+  },
+  {
+   "cik": "2074973",
+   "name": "Agility Robotics, Inc.",
+   "forms": {
+    "S-1/A": 2,
+    "S-1": 2
+   },
+   "first_filed": "20261110",
+   "last_filed": "20261116",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1402328&type=S-1&dateb=&owner=include&count=20",
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2074973&type=S-1&dateb=&owner=include&count=20",
    "profile": {
     "available": true,
-    "sic": "2834",
-    "sic_desc": "Pharmaceutical Preparations",
+    "sic": "3569",
+    "sic_desc": "General Industrial Machinery & Equipment, NEC",
     "is_blank_check": false,
-    "ticker": "SBFM",
-    "region": "FORT LAUDERDALE, FL",
-    "state_of_inc": "CO"
+    "ticker": "AGLT",
+    "region": "SALEM, OR",
+    "state_of_inc": "DE"
+   }
+  },
+  {
+   "cik": "1838003",
+   "name": "Encore Medical, Inc.",
+   "forms": {
+    "S-1/A": 1
    },
-   "pre_existing_reporter": true
+   "first_filed": "20261116",
+   "last_filed": "20261116",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1838003&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3841",
+    "sic_desc": "Surgical & Medical Instruments & Apparatus",
+    "is_blank_check": false,
+    "ticker": "EMI",
+    "region": "EAGAN, MN",
+    "state_of_inc": "MN"
+   }
   },
   {
    "cik": "2153476",
@@ -1684,42 +1776,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=720762&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "3760",
-    "sic_desc": "Guided Missiles & Space Vehicles & Parts",
-    "is_blank_check": false,
-    "ticker": "NIMU",
-    "region": "MIAMI BEACH, FL",
-    "state_of_inc": "FL"
-   }
-  },
-  {
-   "cik": "1378140",
-   "name": "Ocean Power Technologies, Inc.",
-   "forms": {
-    "S-1/A": 2
-   },
-   "first_filed": "20261029",
-   "last_filed": "20261105",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1378140&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "4911",
-    "sic_desc": "Electric Services",
-    "is_blank_check": false,
-    "ticker": "OPTT",
-    "region": "MONROE TOWNSHIP, NJ",
-    "state_of_inc": "NJ"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=720762&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1425627",
@@ -1736,16 +1793,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1425627&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2721",
-    "sic_desc": "Periodicals: Publishing or  Publishing & Printing",
-    "is_blank_check": false,
-    "ticker": "SOBR",
-    "region": "GREENWOOD VILLAGE, CO",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1425627&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2065232",
@@ -2216,14 +2264,14 @@
    "name": "T3 Defense Inc.",
    "forms": {
     "S-1MEF": 1,
-    "S-1/A": 4
+    "S-1/A": 2
    },
-   "first_filed": "20261002",
+   "first_filed": "20261020",
    "last_filed": "20261022",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 4,
+   "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -2593,14 +2641,14 @@
    "cik": "2141983",
    "name": "Allarity Acquisition Corp.",
    "forms": {
-    "S-1/A": 3
+    "S-1/A": 2
    },
-   "first_filed": "20261002",
+   "first_filed": "20261006",
    "last_filed": "20261009",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 3,
+   "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": true,
    "has_ticker_now": true,
@@ -2760,40 +2808,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2034588&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2109686",
-   "name": "Canary PEPE ETF",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20261002",
-   "last_filed": "20261002",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2109686&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2137360",
-   "name": "Youmi Inc.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20261002",
-   "last_filed": "20261002",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2137360&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "777917",
    "name": "PRUCO LIFE INSURANCE CO",
    "forms": {
@@ -2810,6 +2824,57 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=777917&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2156248",
+   "name": "B & T Global Holding Ltd.",
+   "forms": {
+    "F-1": 1
+   },
+   "first_filed": "20261116",
+   "last_filed": "20261116",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2156248&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1834261",
+   "name": "Core Specialty Insurance Holdings, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261116",
+   "last_filed": "20261116",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1834261&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2046386",
+   "name": "Medline Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261116",
+   "last_filed": "20261116",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2046386&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1967822",
@@ -2980,23 +3045,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2024114&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2074973",
-   "name": "Agility Robotics, Inc.",
-   "forms": {
-    "S-1": 2
-   },
-   "first_filed": "20261110",
-   "last_filed": "20261110",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2074973&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2162540",
@@ -4289,91 +4337,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1517681&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "715837",
-   "name": "LPC LTD",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20261002",
-   "last_filed": "20261002",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=715837&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2139831",
-   "name": "Arca Nova Acquisition Corp",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261002",
-   "last_filed": "20261002",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2139831&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1658678",
-   "name": "BioStem Technologies, Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261002",
-   "last_filed": "20261002",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1658678&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1828673",
-   "name": "HCW Biologics Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261002",
-   "last_filed": "20261002",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1828673&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2033264",
-   "name": "Vertical Data Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261002",
-   "last_filed": "20261002",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2033264&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "910739",
