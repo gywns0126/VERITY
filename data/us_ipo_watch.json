@@ -1,23 +1,23 @@
 {
  "_meta": {
-  "generated_at": "2026-11-17T22:25:50+09:00",
+  "generated_at": "2026-11-18T22:18:53+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 29,
+  "sessions_scanned": 30,
   "sessions_missed": [
    "2026-11-11(HTTPError)",
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 714,
-   "companies": 212,
+   "filings": 743,
+   "companies": 214,
    "by_stage": {
-    "신청": 90,
+    "신청": 91,
     "정정(심사중)": 94,
     "가격확정": 7,
-    "거래소등록": 21
+    "거래소등록": 22
    },
    "spac_likely": 21,
-   "has_ticker_now": 157,
+   "has_ticker_now": 161,
    "priced_secondary_excluded": 6,
    "foreign_issuer": 50,
    "priced_parse_ok": 5
@@ -26,6 +26,34 @@
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
  },
  "items": [
+  {
+   "cik": "2130357",
+   "name": "Anthropic, PBC",
+   "forms": {
+    "8-A12B": 1,
+    "S-1/A": 3,
+    "S-1": 1
+   },
+   "first_filed": "20261026",
+   "last_filed": "20261117",
+   "lineage": true,
+   "stage": 4,
+   "stage_ko": "거래소등록",
+   "amend_count": 3,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2130357&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7372",
+    "sic_desc": "Services-Prepackaged Software",
+    "is_blank_check": false,
+    "ticker": "ANT",
+    "region": "SAN FRANCISCO, CA",
+    "state_of_inc": "DE"
+   }
+  },
   {
    "cik": "2145089",
    "name": "WINDWARD BIO GROUP AG",
@@ -923,6 +951,85 @@
    }
   },
   {
+   "cik": "1624512",
+   "name": "Boxlight Corp",
+   "forms": {
+    "S-1/A": 3
+   },
+   "first_filed": "20261023",
+   "last_filed": "20261117",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 3,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1624512&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "8200",
+    "sic_desc": "Services-Educational Services",
+    "is_blank_check": false,
+    "ticker": "BOXL",
+    "region": "DULUTH, GA",
+    "state_of_inc": "NV"
+   }
+  },
+  {
+   "cik": "1620704",
+   "name": "MED-X, INC.",
+   "forms": {
+    "S-1/A": 4
+   },
+   "first_filed": "20261015",
+   "last_filed": "20261117",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 4,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1620704&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2870",
+    "sic_desc": "Agricultural Chemicals",
+    "is_blank_check": false,
+    "ticker": "MXRX",
+    "region": "CANOGA PARK, CA",
+    "state_of_inc": "NV"
+   }
+  },
+  {
+   "cik": "2147831",
+   "name": "UCSB Acquisition Corp.",
+   "forms": {
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20261030",
+   "last_filed": "20261117",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2147831&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "UCSB",
+    "region": "GARDEN GROVE, CA",
+    "state_of_inc": "D8"
+   }
+  },
+  {
    "cik": "2095509",
    "name": "Gold Stone Technical Inc.",
    "forms": {
@@ -1225,7 +1332,7 @@
    "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
-   "has_ticker_now": false,
+   "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2110365&type=S-1&dateb=&owner=include&count=20",
    "profile": {
     "available": true,
@@ -1251,7 +1358,7 @@
    "amend_count": 2,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
-   "has_ticker_now": false,
+   "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2108671&type=S-1&dateb=&owner=include&count=20",
    "profile": {
     "available": true,
@@ -1261,59 +1368,6 @@
     "ticker": null,
     "region": "WEBSTER, TX",
     "state_of_inc": "TX"
-   }
-  },
-  {
-   "cik": "2130357",
-   "name": "Anthropic, PBC",
-   "forms": {
-    "S-1/A": 2,
-    "S-1": 1
-   },
-   "first_filed": "20261026",
-   "last_filed": "20261110",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2130357&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7372",
-    "sic_desc": "Services-Prepackaged Software",
-    "is_blank_check": false,
-    "ticker": "ANT",
-    "region": "SAN FRANCISCO, CA",
-    "state_of_inc": "DE"
-   }
-  },
-  {
-   "cik": "1624512",
-   "name": "Boxlight Corp",
-   "forms": {
-    "S-1/A": 2
-   },
-   "first_filed": "20261023",
-   "last_filed": "20261110",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 2,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1624512&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "8200",
-    "sic_desc": "Services-Educational Services",
-    "is_blank_check": false,
-    "ticker": "BOXL",
-    "region": "DULUTH, GA",
-    "state_of_inc": "NV"
    }
   },
   {
@@ -1724,42 +1778,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1973276&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2810",
-    "sic_desc": "Industrial Inorganic Chemicals",
-    "is_blank_check": false,
-    "ticker": "LIS",
-    "region": "NEW YORK, NY",
-    "state_of_inc": "NV"
-   }
-  },
-  {
-   "cik": "1620704",
-   "name": "MED-X, INC.",
-   "forms": {
-    "S-1/A": 3
-   },
-   "first_filed": "20261015",
-   "last_filed": "20261105",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 3,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1620704&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2870",
-    "sic_desc": "Agricultural Chemicals",
-    "is_blank_check": false,
-    "ticker": "MXRX",
-    "region": "CANOGA PARK, CA",
-    "state_of_inc": "NV"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1973276&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "720762",
@@ -2826,6 +2845,40 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=777917&type=S-1&dateb=&owner=include&count=20"
   },
   {
+   "cik": "2152975",
+   "name": "Bitwise Zcash ETF",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261117",
+   "last_filed": "20261117",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2152975&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1894954",
+   "name": "Expion Energy, Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261117",
+   "last_filed": "20261117",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1894954&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
    "cik": "2156248",
    "name": "B & T Global Holding Ltd.",
    "forms": {
@@ -2924,7 +2977,7 @@
    "amend_count": 0,
    "is_foreign_issuer": false,
    "is_spac_likely": true,
-   "has_ticker_now": false,
+   "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2158099&type=S-1&dateb=&owner=include&count=20"
   },
   {
@@ -3487,23 +3540,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1855467&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2147831",
-   "name": "UCSB Acquisition Corp.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261030",
-   "last_filed": "20261030",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2147831&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2142104",
