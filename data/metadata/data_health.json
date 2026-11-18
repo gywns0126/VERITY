@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-11-18T08:13:05.714741+09:00",
+  "generated_at": "2026-11-18T09:13:23.784617+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
@@ -13,7 +13,7 @@
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-11-18T08:13:05.649755+09:00",
+   "generated_at": "2026-11-18T09:13:23.704063+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -21,11 +21,11 @@
   "coverage": {
    "generated_at": "2026-11-18T07:02:08.701290+09:00",
    "max_age_h": 96,
-   "age_h": 1.183,
+   "age_h": 2.188,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-11-18T08:12:53.842304+09:00",
+   "generated_at": "2026-11-18T09:13:11.328287+09:00",
    "max_age_h": 3,
    "age_h": 0.003,
    "status": "fresh"
@@ -33,7 +33,7 @@
   "annual_backfill": {
    "generated_at": "2026-11-17T20:32:45.752184+00:00",
    "max_age_h": 48,
-   "age_h": 2.672,
+   "age_h": 3.677,
    "status": "fresh"
   }
  },
@@ -42,11 +42,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-11-18T08:13:05.649755+09:00",
+  "generated_at": "2026-11-18T09:13:23.704063+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 39587,
+  "max_cdn_age_s": 45261,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -56,7 +56,7 @@
      "PBR": 95.7
     },
     "total": 2561,
-    "cdn_age_s": 0,
+    "cdn_age_s": 2333,
     "error": null
    },
    {
@@ -67,7 +67,7 @@
      "PBR": 76.7
     },
     "total": 5269,
-    "cdn_age_s": 39587,
+    "cdn_age_s": 45261,
     "error": null
    },
    {
@@ -78,7 +78,7 @@
      "PBR": 74.5
     },
     "total": 4001,
-    "cdn_age_s": 28800,
+    "cdn_age_s": 0,
     "error": null
    },
    {
@@ -107,18 +107,18 @@
   "last_run_at": "2026-11-18T07:02:08.853440+09:00"
  },
  "freshness": {
-  "generated_at": "2026-11-18T08:12:53.842304+09:00",
+  "generated_at": "2026-11-18T09:13:11.328287+09:00",
   "summary": {
-   "fresh": 59,
+   "fresh": 62,
    "stale": 1,
-   "closed": 3,
+   "closed": 0,
    "discontinued": 3,
    "unmeasured": 1,
    "p0": {
     "total": 8,
-    "fresh": 5,
-    "closed": 3,
-    "active": 5,
+    "fresh": 8,
+    "closed": 0,
+    "active": 8,
     "unmeasured": 0
    },
    "p1": {
@@ -148,7 +148,7 @@
   "producer_evidence": {
    "news_flash": {
     "status": "bound_query_complete",
-    "completed_at": "2026-11-18T08:02:32.627810+09:00",
+    "completed_at": "2026-11-18T09:02:51.901766+09:00",
     "clock_kind": "source_query_attempt",
     "asset_binding": "verified_sha256",
     "source_freshness_verified": false,
@@ -203,7 +203,7 @@
    {
     "id": "market_warnings",
     "last_ts": "2026-10-24T09:56:25.342429+09:00",
-    "age_eff_min": 24972.9,
+    "age_eff_min": 25033.2,
     "max_age_min": 2880
    }
   ]
