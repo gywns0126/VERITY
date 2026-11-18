@@ -191,7 +191,10 @@ async function readPublic(name, limit, fetcher, { missing = false } = {}) {
       !(name.startsWith(PREFIX) && HASH.test(name.slice(PREFIX.length, -5)) && name.endsWith('.json'))) reject('remote-path');
   const url = BASE + name;
   const response = await fetcher(url, { method: 'GET', redirect: 'error', cache: 'no-store',
-    headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' }, signal: AbortSignal.timeout(30000) });
+    // Compression can replace the mutable root's strong ETag with a weak one.
+    // Bind CAS to identity bytes; leave large sources and immutable buckets compressed.
+    headers: { Accept: 'application/json', 'Cache-Control': 'no-cache',
+      ...(name === RELEASE ? { 'Accept-Encoding': 'identity' } : {}) }, signal: AbortSignal.timeout(30000) });
   if (response.redirected || response.url !== url) reject('remote-destination');
   if (response.status === 404 && missing) { await response.body?.cancel(); return null; }
   if (response.status !== 200 || !response.body) reject('remote-status');

@@ -80,3 +80,36 @@ def test_internal_scoring_keys_still_stripped():
     for k in ("verity_brain", "overrides_applied", "multi_factor", "score_breakdown",
               "rec_price", "trade_plan", "consensus"):
         assert _is_stripped(k, keys, pat), f"{k} 가 strip 대상에서 빠졌다"
+
+
+@pytest.mark.parametrize("shape", ["list", "portfolio", "ticker-keyed"])
+def test_turnaround_diagnostic_is_removed_only_from_public_copy(tmp_path, shape):
+    import copy
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("public_rec_sanitizer", SAN)
+    sanitizer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sanitizer)
+    row = {"ticker": "SYNTH", "recommendation": "WATCH", "_from_watchlist": True,
+           "_turnaround": True, "financials": {"revenue": 123}}
+    source = copy.deepcopy(row)
+    doc = ([row] if shape == "list" else {"recommendations": [row]} if shape == "portfolio"
+           else {"SYNTH": row})
+    public_copy = tmp_path / "public.json"
+    public_copy.write_text(json.dumps(doc), encoding="utf-8")
+    assert sanitizer.main(str(public_copy)) == 0
+    result = json.loads(public_copy.read_text(encoding="utf-8"))
+    published = (result[0] if shape == "list" else result["recommendations"][0]
+                 if shape == "portfolio" else result["SYNTH"])
+    assert published == {key: value for key, value in source.items() if key != "_turnaround"}
+    assert row == source
+
+
+def test_underscore_class_guard_with_synthetic_turnaround_input(tmp_path, monkeypatch):
+    # Exercise the existing guard without reading operator or member records.
+    data = tmp_path / "data"
+    data.mkdir(exist_ok=True)
+    (data / "recommendations.json").write_text(
+        json.dumps([{"ticker": "SYNTH", "_turnaround": True}]), encoding="utf-8")
+    monkeypatch.setitem(test_no_new_underscore_keys_leak_to_public.__globals__, "ROOT", tmp_path)
+    test_no_new_underscore_keys_leak_to_public()

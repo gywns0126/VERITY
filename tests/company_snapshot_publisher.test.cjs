@@ -70,6 +70,40 @@ function transport(f, { existing = false, expectedToken = TOKEN } = {}) {
 }
 async function run(f, t) { return publisher.publishCandidate(publisher.loadCandidate(f.dir), { ...t, token: TOKEN }); }
 
+test('mutable root uses identity bytes for a strong first-GET ETag without disabling source compression', async () => {
+  const f = fixture(), t = transport(f, { existing: true });
+  let rootReads = 0;
+  try {
+    const fetch = async (url, options) => {
+      const response = await t.fetch(url, options);
+      if (url === BASE + RELEASE) {
+        rootReads++;
+        if (options.headers['Accept-Encoding'] !== 'identity') {
+          response.headers.set('etag', 'W/' + response.headers.get('etag'));
+        }
+      } else assert.equal(options.headers['Accept-Encoding'], undefined);
+      return response;
+    };
+    t.beforePut = (name, _bytes, options) => {
+      if (name === RELEASE) assert.equal(options.ifMatch, '"initial-etag"');
+    };
+    const result = await publisher.publishCandidate(publisher.loadCandidate(f.dir), { ...t, fetch, token: TOKEN });
+    assert.equal(result.release, 'published');
+    assert.equal(rootReads, 3);
+  } finally { f.close(); }
+});
+
+for (const etag of ['W/"still-weak"', 'unquoted']) {
+  test('identity request still rejects an invalid original ETag without writes: ' + etag, async () => {
+    const f = fixture(), t = transport(f, { existing: true });
+    try {
+      t.etags.set(RELEASE, etag);
+      await assert.rejects(run(f, t), error => error.code === 'release-etag');
+      assert.deepEqual(t.trace, [['GET', RELEASE]]);
+    } finally { f.close(); }
+  });
+}
+
 test('same store credential accepts mixed-case store ID and passes the token unchanged', async () => {
   const token = 'vercel_blob_rw_RtE5gUenHonW9fZn_SYNTHETIC_ONLY';
   const f = fixture(), t = transport(f, { expectedToken: token });
