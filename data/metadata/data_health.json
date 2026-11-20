@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-11-20T23:12:54.330708+09:00",
+  "generated_at": "2026-11-21T00:13:07.537736+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "amber",
@@ -8,12 +8,11 @@
   "연간 재무 수집 실패 5/55칸",
   "연간 재무 미해결 수집 오류 5칸",
   "연간 재무 원천 기간 공란 1칸",
-  "신선도 감시 대상 누락·미측정",
-  "비P0 stale 1건"
+  "신선도 감시 대상 누락·미측정"
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-11-20T23:12:54.272561+09:00",
+   "generated_at": "2026-11-21T00:13:07.450685+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -21,19 +20,19 @@
   "coverage": {
    "generated_at": "2026-11-20T17:12:48.600628+09:00",
    "max_age_h": 96,
-   "age_h": 6.002,
+   "age_h": 7.005,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-11-20T23:12:46.900954+09:00",
+   "generated_at": "2026-11-21T00:12:57.284406+09:00",
    "max_age_h": 3,
-   "age_h": 0.002,
+   "age_h": 0.003,
    "status": "fresh"
   },
   "annual_backfill": {
    "generated_at": "2026-11-19T20:32:43.763285+00:00",
    "max_age_h": 48,
-   "age_h": 17.67,
+   "age_h": 18.673,
    "status": "fresh"
   }
  },
@@ -42,11 +41,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-11-20T23:12:54.272561+09:00",
+  "generated_at": "2026-11-21T00:13:07.450685+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 97771,
+  "max_cdn_age_s": 101383,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -56,7 +55,7 @@
      "PBR": 95.7
     },
     "total": 2561,
-    "cdn_age_s": 20672,
+    "cdn_age_s": 24284,
     "error": null
    },
    {
@@ -67,7 +66,7 @@
      "PBR": 76.7
     },
     "total": 5269,
-    "cdn_age_s": 97771,
+    "cdn_age_s": 101383,
     "error": null
    },
    {
@@ -78,7 +77,7 @@
      "PBR": 74.5
     },
     "total": 4001,
-    "cdn_age_s": 57584,
+    "cdn_age_s": 61197,
     "error": null
    },
    {
@@ -107,32 +106,32 @@
   "last_run_at": "2026-11-20T17:12:48.686318+09:00"
  },
  "freshness": {
-  "generated_at": "2026-11-20T23:12:46.900954+09:00",
+  "generated_at": "2026-11-21T00:12:57.284406+09:00",
   "summary": {
-   "fresh": 59,
-   "stale": 1,
-   "closed": 3,
+   "fresh": 30,
+   "stale": 0,
+   "closed": 33,
    "discontinued": 3,
    "unmeasured": 1,
    "p0": {
     "total": 8,
-    "fresh": 5,
-    "closed": 3,
-    "active": 5,
+    "fresh": 2,
+    "closed": 6,
+    "active": 2,
     "unmeasured": 0
    },
    "p1": {
     "total": 22,
-    "fresh": 20,
-    "closed": 0,
-    "active": 20,
+    "fresh": 8,
+    "closed": 12,
+    "active": 8,
     "unmeasured": 0
    },
    "p2": {
     "total": 37,
-    "fresh": 34,
-    "closed": 0,
-    "active": 36,
+    "fresh": 20,
+    "closed": 15,
+    "active": 21,
     "unmeasured": 1
    }
   },
@@ -148,7 +147,7 @@
   "producer_evidence": {
    "news_flash": {
     "status": "bound_query_complete",
-    "completed_at": "2026-11-20T23:02:19.878444+09:00",
+    "completed_at": "2026-11-21T00:02:50.040985+09:00",
     "clock_kind": "source_query_attempt",
     "asset_binding": "verified_sha256",
     "source_freshness_verified": false,
@@ -196,17 +195,8 @@
    }
   },
   "stale_p0": [],
-  "stale_other": [
-   "market_warnings"
-  ],
-  "stale_other_details": [
-   {
-    "id": "market_warnings",
-    "last_ts": "2026-10-24T09:56:25.342429+09:00",
-    "age_eff_min": 28752.8,
-    "max_age_min": 2880
-   }
-  ]
+  "stale_other": [],
+  "stale_other_details": []
  },
  "annual_backfill": {
   "generated_at": "2026-11-19T20:32:43.763285+00:00",
