@@ -1,76 +1,80 @@
 {
- "as_of": "2026-11-14T15:36:17+09:00",
+ "as_of": "2026-11-21T02:00:10+09:00",
  "version": "v0 (PREREG_POOL_ROTATION_2026_08_04 — 보고서만, 집행 없음)",
  "evidence_days": 40,
  "evidence_note": "display_verdict 가동(2026-08-03~) 이후 스냅샷 일 기준 — 퇴출 임계(20d/10d) 대비 증거 40일. 미달 임계는 발동하지 않음",
  "pool": {
-  "size": 36,
+  "size": 52,
   "kr": 13,
   "kr_floor": 20,
   "kr_deficit": 7,
-  "size_note": "정원 미달 36 < 55",
+  "size_note": "정원 미달 52 < 55",
   "sector_over_cap": {
-   "Technology": 33.3
+   "Healthcare": 28.8
   }
  },
  "r1_held": [
+  "005930",
   "145020",
-  "329180"
+  "257720",
+  "DIS"
  ],
  "r1_held_out_of_pool": [],
- "exits": [],
+ "exits": [
+  {
+   "ticker": "ADBE",
+   "reason": "R2a 배지 AVOID 22일 연속",
+   "avoid_streak": 22,
+   "pollution_streak": 0,
+   "lowliq_streak": 0,
+   "evidence_days": 33
+  }
+ ],
  "entries": [
   {
    "ticker": "317850",
    "name": "대모",
    "source": "smallcap",
-   "trading_value": 3018583249
-  },
-  {
-   "ticker": "126640",
-   "name": "화신정공",
-   "source": "smallcap",
-   "trading_value": 1247070889
+   "trading_value": 3195294593
   },
   {
    "ticker": "079650",
    "name": "서산",
    "source": "smallcap",
-   "trading_value": 32171733817
+   "trading_value": 22178467721
   },
   {
    "ticker": "004430",
    "name": "송원산업",
    "source": "smallcap",
-   "trading_value": 1311537876
+   "trading_value": 1274345911
   },
   {
-   "ticker": "170920",
-   "name": "엘티씨",
+   "ticker": "042940",
+   "name": "상지건설",
    "source": "smallcap",
-   "trading_value": 8606603980
+   "trading_value": 3868474846
+  },
+  {
+   "ticker": "250030",
+   "name": "진코스텍",
+   "source": "smallcap",
+   "trading_value": 8943891776
   }
  ],
  "watch_streaks": [
   {
-   "ticker": "ADBE",
-   "avoid_streak": 16,
+   "ticker": "HD",
+   "avoid_streak": 6,
    "pollution_streak": 0,
    "lowliq_streak": 0,
-   "evidence_days": 33
-  },
-  {
-   "ticker": "SPGI",
-   "avoid_streak": 16,
-   "pollution_streak": 0,
-   "lowliq_streak": 0,
-   "evidence_days": 40
+   "evidence_days": 6
   }
  ],
  "candidate_supply": {
   "funnel_total": 25,
   "funnel_kr_out_of_pool": 0,
-  "smallcap_total": 1443,
+  "smallcap_total": 1452,
   "smallcap_liquidity_field_missing": false
  },
  "swap_cap": 5,
