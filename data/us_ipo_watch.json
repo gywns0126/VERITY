@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-11-19T22:08:35+09:00",
+  "generated_at": "2026-11-20T22:08:27+09:00",
   "lookback_days": 45,
   "sessions_scanned": 31,
   "sessions_missed": [
@@ -8,18 +8,18 @@
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 768,
-   "companies": 218,
+   "filings": 761,
+   "companies": 220,
    "by_stage": {
-    "신청": 91,
-    "정정(심사중)": 97,
-    "가격확정": 8,
-    "거래소등록": 22
+    "신청": 89,
+    "정정(심사중)": 100,
+    "가격확정": 10,
+    "거래소등록": 21
    },
-   "spac_likely": 21,
-   "has_ticker_now": 164,
-   "priced_secondary_excluded": 7,
-   "foreign_issuer": 52,
+   "spac_likely": 22,
+   "has_ticker_now": 165,
+   "priced_secondary_excluded": 9,
+   "foreign_issuer": 53,
    "priced_parse_ok": 5
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
@@ -30,6 +30,7 @@
    "cik": "2130357",
    "name": "Anthropic, PBC",
    "forms": {
+    "424B4": 1,
     "CERT": 1,
     "S-1MEF": 1,
     "8-A12B": 1,
@@ -37,7 +38,7 @@
     "S-1": 1
    },
    "first_filed": "20261026",
-   "last_filed": "20261118",
+   "last_filed": "20261119",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
@@ -54,6 +55,12 @@
     "ticker": "ANT",
     "region": "SAN FRANCISCO, CA",
     "state_of_inc": "DE"
+   },
+   "pre_existing_reporter": false,
+   "pricing": {
+    "parse_ok": false,
+    "reason": "주식수 문구 없음",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/2130357/000162828026074944/anthropicpbc-424b4.htm"
    }
   },
   {
@@ -567,10 +574,9 @@
     "CERT": 1,
     "S-1MEF": 1,
     "8-A12B": 1,
-    "S-1/A": 1,
-    "S-1": 1
+    "S-1/A": 1
    },
-   "first_filed": "20261005",
+   "first_filed": "20261020",
    "last_filed": "20261023",
    "lineage": true,
    "stage": 4,
@@ -684,14 +690,14 @@
     "8-A12B": 1,
     "CERT": 1,
     "S-1MEF": 1,
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20261005",
+   "first_filed": "20261007",
    "last_filed": "20261009",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -716,39 +722,60 @@
    }
   },
   {
-   "cik": "2139097",
-   "name": "TRex Bio, Inc.",
+   "cik": "2013320",
+   "name": "Eastern International Ltd.",
    "forms": {
     "424B4": 1,
-    "CERT": 1,
-    "8-A12B": 1,
-    "S-1/A": 1
+    "F-1": 1
    },
-   "first_filed": "20261005",
-   "last_filed": "20261009",
+   "first_filed": "20261102",
+   "last_filed": "20261119",
    "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 1,
+   "stage": 3,
+   "stage_ko": "가격확정",
+   "amend_count": 0,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2013320&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "4731",
+    "sic_desc": "Arrangement of  Transportation of  Freight & Cargo",
+    "is_blank_check": false,
+    "ticker": "ELOG",
+    "region": "HANGZHOU, ZHEJIANG PROVINCE, F4",
+    "state_of_inc": "E9"
+   },
+   "pre_existing_reporter": true
+  },
+  {
+   "cik": "2046386",
+   "name": "Medline Inc.",
+   "forms": {
+    "424B4": 1,
+    "S-1": 1
+   },
+   "first_filed": "20261116",
+   "last_filed": "20261119",
+   "lineage": true,
+   "stage": 3,
+   "stage_ko": "가격확정",
+   "amend_count": 0,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2139097&type=S-1&dateb=&owner=include&count=20",
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2046386&type=S-1&dateb=&owner=include&count=20",
    "profile": {
     "available": true,
-    "sic": "2836",
-    "sic_desc": "Biological Products, (No Diagnostic Substances)",
+    "sic": "3841",
+    "sic_desc": "Surgical & Medical Instruments & Apparatus",
     "is_blank_check": false,
-    "ticker": "TRXB",
-    "region": "SOUTH SAN FRANCISCO, CA",
+    "ticker": "MDLN",
+    "region": "NORTHFIELD, IL",
     "state_of_inc": "DE"
    },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "주식수 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2139097/000119312526419203/project_dino_-_424b4.htm"
-   }
+   "pre_existing_reporter": true
   },
   {
    "cik": "1402328",
@@ -981,6 +1008,162 @@
    }
   },
   {
+   "cik": "2049323",
+   "name": "AM PM Group Ltd",
+   "forms": {
+    "F-1/A": 1
+   },
+   "first_filed": "20261119",
+   "last_filed": "20261119",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2049323&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7900",
+    "sic_desc": "Services-Amusement & Recreation Services",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "KOWLOON BAY, K3",
+    "state_of_inc": null
+   }
+  },
+  {
+   "cik": "2128185",
+   "name": "TFP Group Ltd",
+   "forms": {
+    "F-1/A": 1
+   },
+   "first_filed": "20261119",
+   "last_filed": "20261119",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": true,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2128185&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6411",
+    "sic_desc": "Insurance Agents, Brokers & Service",
+    "is_blank_check": false,
+    "ticker": "TFP",
+    "region": "LONDON",
+    "state_of_inc": "D0"
+   }
+  },
+  {
+   "cik": "1670747",
+   "name": "BirchBioMed Inc.",
+   "forms": {
+    "S-1/A": 2
+   },
+   "first_filed": "20261009",
+   "last_filed": "20261119",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 2,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1670747&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2834",
+    "sic_desc": "Pharmaceutical Preparations",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "KING CITY, A6",
+    "state_of_inc": "A1"
+   }
+  },
+  {
+   "cik": "2136449",
+   "name": "Crestone Strategic Capital Acquisition Corp",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20261119",
+   "last_filed": "20261119",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2136449&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": null,
+    "region": "NEW YORK, NY",
+    "state_of_inc": "E9"
+   }
+  },
+  {
+   "cik": "1620704",
+   "name": "MED-X, INC.",
+   "forms": {
+    "S-1/A": 5
+   },
+   "first_filed": "20261015",
+   "last_filed": "20261119",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 5,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1620704&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "2870",
+    "sic_desc": "Agricultural Chemicals",
+    "is_blank_check": false,
+    "ticker": "MXRX",
+    "region": "CANOGA PARK, CA",
+    "state_of_inc": "NV"
+   }
+  },
+  {
+   "cik": "2133037",
+   "name": "SB Energy, Inc.",
+   "forms": {
+    "S-1/A": 1
+   },
+   "first_filed": "20261119",
+   "last_filed": "20261119",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2133037&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "4911",
+    "sic_desc": "Electric Services",
+    "is_blank_check": false,
+    "ticker": "SBE",
+    "region": "REDWOOD CITY, CA",
+    "state_of_inc": "DE"
+   }
+  },
+  {
    "cik": "2049203",
    "name": "Aiways Automobile Europe GmbH",
    "forms": {
@@ -1136,32 +1319,6 @@
     "is_blank_check": false,
     "ticker": "BOXL",
     "region": "DULUTH, GA",
-    "state_of_inc": "NV"
-   }
-  },
-  {
-   "cik": "1620704",
-   "name": "MED-X, INC.",
-   "forms": {
-    "S-1/A": 4
-   },
-   "first_filed": "20261015",
-   "last_filed": "20261117",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 4,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1620704&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2870",
-    "sic_desc": "Agricultural Chemicals",
-    "is_blank_check": false,
-    "ticker": "MXRX",
-    "region": "CANOGA PARK, CA",
     "state_of_inc": "NV"
    }
   },
@@ -1511,14 +1668,14 @@
    "cik": "2108671",
    "name": "Rothe Development, Inc.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20261005",
+   "first_filed": "20261112",
    "last_filed": "20261112",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -1626,16 +1783,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2113640&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "3533",
-    "sic_desc": "Oil & Gas Field Machinery & Equipment",
-    "is_blank_check": false,
-    "ticker": null,
-    "region": "TYLER, TX",
-    "state_of_inc": "TX"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2113640&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1828253",
@@ -1652,16 +1800,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1828253&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2836",
-    "sic_desc": "Biological Products, (No Diagnostic Substances)",
-    "is_blank_check": false,
-    "ticker": "EVAX",
-    "region": "HOERSHOLM",
-    "state_of_inc": "G7"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1828253&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2123920",
@@ -1679,16 +1818,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123920&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "7311",
-    "sic_desc": "Services-Advertising Agencies",
-    "is_blank_check": false,
-    "ticker": "FMSN",
-    "region": "SINGAPORE",
-    "state_of_inc": "E9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123920&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1895249",
@@ -1705,16 +1835,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1895249&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "1700",
-    "sic_desc": "Construction - Special Trade Contractors",
-    "is_blank_check": false,
-    "ticker": "CNTM",
-    "region": "MARLBOROUGH, MA",
-    "state_of_inc": "DE"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1895249&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1888014",
@@ -1731,16 +1852,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1888014&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "4899",
-    "sic_desc": "Communications Services, NEC",
-    "is_blank_check": false,
-    "ticker": "AKAN",
-    "region": "NEW ROMNEY, X0",
-    "state_of_inc": "A6"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1888014&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2113733",
@@ -1757,16 +1869,7 @@
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2113733&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6029",
-    "sic_desc": "Commercial Banks, NEC",
-    "is_blank_check": false,
-    "ticker": "BOGD",
-    "region": "ULAANBAATAR",
-    "state_of_inc": "E9"
-   }
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2113733&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1880995",
@@ -2648,15 +2751,14 @@
    "cik": "2148245",
    "name": "New Iceland Arctic Acquisition Corp.",
    "forms": {
-    "S-1/A": 2,
-    "S-1": 1
+    "S-1/A": 1
    },
-   "first_filed": "20261005",
+   "first_filed": "20261014",
    "last_filed": "20261014",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": true,
    "has_ticker_now": true,
@@ -2746,23 +2848,6 @@
    "is_spac_likely": true,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2141983&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1670747",
-   "name": "BirchBioMed Inc.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261009",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1670747&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2131124",
@@ -2884,23 +2969,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1604191&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2034588",
-   "name": "Neuro Spectrum Insights, Inc.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20261005",
-   "last_filed": "20261005",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2034588&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "777917",
    "name": "PRUCO LIFE INSURANCE CO",
    "forms": {
@@ -2917,6 +2985,57 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=777917&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2066836",
+   "name": "Conexeu Sciences Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261119",
+   "last_filed": "20261119",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2066836&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "351998",
+   "name": "DATA I/O CORP",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261119",
+   "last_filed": "20261119",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=351998&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2136881",
+   "name": "Zeno42 Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261119",
+   "last_filed": "20261119",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2136881&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1873454",
@@ -3019,23 +3138,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1834261&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2046386",
-   "name": "Medline Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261116",
-   "last_filed": "20261116",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2046386&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1967822",
@@ -3495,23 +3597,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2020228&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2013320",
-   "name": "Eastern International Ltd.",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20261102",
-   "last_filed": "20261102",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2013320&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2158764",
@@ -4396,57 +4481,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2158471&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2118192",
-   "name": "DayOne Data Centers Ltd",
-   "forms": {
-    "F-1": 1
-   },
-   "first_filed": "20261005",
-   "last_filed": "20261005",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2118192&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1866226",
-   "name": "Evolution Metals & Technologies Corp.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261005",
-   "last_filed": "20261005",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1866226&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1517681",
-   "name": "Propanc Biopharma, Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261005",
-   "last_filed": "20261005",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1517681&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "910739",
