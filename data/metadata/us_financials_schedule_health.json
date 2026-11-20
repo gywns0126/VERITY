@@ -1,38 +1,38 @@
 {
-  "checked_at": "2026-11-20T10:14:01.877208Z",
-  "slot": "2026-11-19T10:30:00Z",
-  "status": "delivered",
-  "severity": "PASS",
+  "checked_at": "2026-11-20T11:14:00.191141Z",
+  "slot": "2026-11-20T10:30:00Z",
+  "status": "attempt_limit",
+  "severity": "FAIL",
   "acceptance_scope": "workflow_delivery_only",
   "inspected_runs": [
     {
-      "id": 44594861664,
-      "event": "schedule",
-      "status": "completed",
-      "conclusion": "success",
-      "head_sha": "fecafa3e15fc1552992059eb50a1832c8b0cfa1c",
-      "created_at": "2026-11-19T19:06:35Z",
-      "duplicate_noop": true
-    },
-    {
-      "id": 44506231430,
+      "id": 44721850405,
       "event": "repository_dispatch",
       "status": "completed",
-      "conclusion": "success",
-      "head_sha": "361cd498787c11b1bb23d0d191cf2e0c59bc3f7e",
-      "created_at": "2026-11-19T10:30:06Z"
+      "conclusion": "failure",
+      "head_sha": "f212ad9189f490d80c07c9f7512ea2c223c9bc66",
+      "created_at": "2026-11-20T10:45:04Z"
+    },
+    {
+      "id": 44719750165,
+      "event": "repository_dispatch",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "93fb0f4f58c0cb13a66131ca9c32c214c31ac545",
+      "created_at": "2026-11-20T10:30:06Z"
     }
   ],
-  "attempt_count": 1,
-  "delivery_run_id": 44506231430,
+  "attempt_count": 2,
+  "delivery_run_id": null,
   "expected_slot_count": 1,
   "inspected_run_count": 2,
-  "reason": "required_workflow_steps_delivered",
+  "reason": "attempt_limit",
   "alert_state": {
     "2026-10-19T10:30:00Z|unknown": "2026-10-19T20:14:04.764398Z",
     "2026-10-28T10:30:00Z|attempt_limit": "2026-10-28T11:14:25.868611Z",
     "2026-11-03T10:30:00Z|attempt_limit": "2026-11-03T11:14:08.273436Z",
-    "2026-11-09T10:30:00Z|failed": "2026-11-09T10:42:29.744567Z"
+    "2026-11-09T10:30:00Z|failed": "2026-11-09T10:42:29.744567Z",
+    "2026-11-20T10:30:00Z|attempt_limit": "2026-11-20T11:14:00.191141Z"
   },
-  "alert_outcome": "not_incident"
+  "alert_outcome": "sent"
 }
