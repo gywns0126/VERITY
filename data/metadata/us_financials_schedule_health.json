@@ -1,41 +1,24 @@
 {
-  "checked_at": "2026-11-23T10:14:10.772327Z",
-  "slot": "2026-11-20T10:30:00Z",
-  "status": "attempt_limit",
-  "severity": "FAIL",
+  "checked_at": "2026-11-23T11:13:55.449383Z",
+  "slot": "2026-11-23T10:30:00Z",
+  "status": "delivered",
+  "severity": "PASS",
   "acceptance_scope": "workflow_delivery_only",
   "inspected_runs": [
     {
-      "id": 44795543200,
-      "event": "schedule",
+      "id": 45158927245,
+      "event": "repository_dispatch",
       "status": "completed",
       "conclusion": "success",
-      "head_sha": "865a56b6d21c8e6bdf8fc71b786b9413a71b95f0",
-      "created_at": "2026-11-20T18:44:04Z",
-      "duplicate_noop": true
-    },
-    {
-      "id": 44721850405,
-      "event": "repository_dispatch",
-      "status": "completed",
-      "conclusion": "failure",
-      "head_sha": "f212ad9189f490d80c07c9f7512ea2c223c9bc66",
-      "created_at": "2026-11-20T10:45:04Z"
-    },
-    {
-      "id": 44719750165,
-      "event": "repository_dispatch",
-      "status": "completed",
-      "conclusion": "failure",
-      "head_sha": "93fb0f4f58c0cb13a66131ca9c32c214c31ac545",
-      "created_at": "2026-11-20T10:30:06Z"
+      "head_sha": "c2d98d7014eeca9c603fd8429199b6fc39cd6ecd",
+      "created_at": "2026-11-23T10:45:05Z"
     }
   ],
-  "attempt_count": 2,
-  "delivery_run_id": null,
+  "attempt_count": 1,
+  "delivery_run_id": 45158927245,
   "expected_slot_count": 1,
-  "inspected_run_count": 3,
-  "reason": "attempt_limit",
+  "inspected_run_count": 1,
+  "reason": "required_workflow_steps_delivered",
   "alert_state": {
     "2026-10-19T10:30:00Z|unknown": "2026-10-19T20:14:04.764398Z",
     "2026-10-28T10:30:00Z|attempt_limit": "2026-10-28T11:14:25.868611Z",
@@ -43,5 +26,5 @@
     "2026-11-09T10:30:00Z|failed": "2026-11-09T10:42:29.744567Z",
     "2026-11-20T10:30:00Z|attempt_limit": "2026-11-20T11:14:00.191141Z"
   },
-  "alert_outcome": "already_sent"
+  "alert_outcome": "not_incident"
 }
