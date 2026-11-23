@@ -1,26 +1,26 @@
 {
  "_meta": {
-  "generated_at": "2026-11-22T21:53:57+09:00",
+  "generated_at": "2026-11-23T23:40:39+09:00",
   "lookback_days": 45,
-  "sessions_scanned": 30,
+  "sessions_scanned": 29,
   "sessions_missed": [
    "2026-11-11(HTTPError)",
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 764,
-   "companies": 222,
+   "filings": 743,
+   "companies": 215,
    "by_stage": {
-    "신청": 92,
-    "정정(심사중)": 97,
-    "가격확정": 11,
-    "거래소등록": 22
+    "신청": 91,
+    "정정(심사중)": 94,
+    "가격확정": 10,
+    "거래소등록": 20
    },
-   "spac_likely": 22,
-   "has_ticker_now": 169,
+   "spac_likely": 20,
+   "has_ticker_now": 162,
    "priced_secondary_excluded": 10,
    "foreign_issuer": 55,
-   "priced_parse_ok": 5
+   "priced_parse_ok": 3
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
   "basis": "상장 전 파이프라인 관측. 단계 = 신청(S-1/F-1) → 정정 → 가격확정(424B4) → 거래소등록(8-A12B/CERT). 🚨 424B4 는 계보(S-1/F-1)가 있을 때만 가격확정으로 인정한다 — 선반 인출·채권 발행이 같은 폼을 쓴다. 🚨 2차 발행 배제는 **시점 기준**이다 — pre_existing_reporter=true(등록 이전에 이미 10-K/10-Q 를 내던 회사)면 IPO 가 아니다. '지금 티커 보유' 로 거르면 방금 상장한 진짜 IPO 가 전부 탈락한다(2026-08-17 자가 오류). SPAC 표시는 회사명 휴리스틱이지 공시 본문 판정이 아니다. watch list = 후보 신호(가설 N=0), 추천 아님 (RULE 7)."
@@ -196,14 +196,14 @@
    "name": "Tracx Logis Ltd.",
    "forms": {
     "8-A12B": 1,
-    "F-1/A": 3
+    "F-1/A": 2
    },
-   "first_filed": "20261008",
+   "first_filed": "20261029",
    "last_filed": "20261109",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
-   "amend_count": 3,
+   "amend_count": 2,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -673,82 +673,6 @@
    }
   },
   {
-   "cik": "1997038",
-   "name": "Iambic Therapeutics, Inc.",
-   "forms": {
-    "424B4": 1,
-    "CERT": 1,
-    "8-A12B": 1,
-    "S-1/A": 1
-   },
-   "first_filed": "20261008",
-   "last_filed": "20261015",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1997038&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2836",
-    "sic_desc": "Biological Products, (No Diagnostic Substances)",
-    "is_blank_check": false,
-    "ticker": "IAM",
-    "region": "SAN DIEGO, CA",
-    "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": true,
-    "shares": 9375000,
-    "price_usd": 16.0,
-    "gross_usd": 150000000,
-    "source_url": "https://www.sec.gov/Archives/edgar/data/1997038/000119312526422865/iambic_inception_424b4.htm",
-    "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
-   }
-  },
-  {
-   "cik": "2002988",
-   "name": "Retension Pharmaceuticals, Inc.",
-   "forms": {
-    "424B4": 1,
-    "8-A12B": 1,
-    "CERT": 1,
-    "S-1MEF": 1
-   },
-   "first_filed": "20261008",
-   "last_filed": "20261009",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2002988&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2834",
-    "sic_desc": "Pharmaceutical Preparations",
-    "is_blank_check": false,
-    "ticker": "RTSN",
-    "region": "MCLEAN, VA",
-    "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": true,
-    "shares": 3750000,
-    "price_usd": 12.0,
-    "gross_usd": 45000000,
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2002988/000121390026108587/ea0276911-10.htm",
-    "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
-   }
-  },
-  {
    "cik": "2023796",
    "name": "Fitness Champs Holdings Ltd",
    "forms": {
@@ -893,14 +817,14 @@
    "name": "707 Cayman Holdings Ltd.",
    "forms": {
     "424B4": 1,
-    "F-1/A": 3
+    "F-1/A": 2
    },
-   "first_filed": "20261008",
+   "first_filed": "20261028",
    "last_filed": "20261113",
    "lineage": true,
    "stage": 3,
    "stage_ko": "가격확정",
-   "amend_count": 3,
+   "amend_count": 2,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -1028,39 +952,6 @@
     "state_of_inc": null
    },
    "pre_existing_reporter": true
-  },
-  {
-   "cik": "2141616",
-   "name": "Amaero Inc.",
-   "forms": {
-    "424B4": 1,
-    "S-1/A": 1
-   },
-   "first_filed": "20261008",
-   "last_filed": "20261015",
-   "lineage": true,
-   "stage": 3,
-   "stage_ko": "가격확정",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2141616&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "3390",
-    "sic_desc": "Miscellaneous Primary Metal Products",
-    "is_blank_check": false,
-    "ticker": "AMRO",
-    "region": "MCDONALD, TN",
-    "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": false,
-   "pricing": {
-    "parse_ok": false,
-    "reason": "주식수 문구 없음",
-    "source_url": "https://www.sec.gov/Archives/edgar/data/2141616/000119312526422334/project_alchemy_-_424b4.htm"
-   }
   },
   {
    "cik": "1888014",
@@ -1786,7 +1677,16 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2110365&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2110365&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "7372",
+    "sic_desc": "Services-Prepackaged Software",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "LONDON",
+    "state_of_inc": "X0"
+   }
   },
   {
    "cik": "2108671",
@@ -1803,7 +1703,16 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2108671&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2108671&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "3760",
+    "sic_desc": "Guided Missiles & Space Vehicles & Parts",
+    "is_blank_check": false,
+    "ticker": null,
+    "region": "WEBSTER, TX",
+    "state_of_inc": "TX"
+   }
   },
   {
    "cik": "2115027",
@@ -1820,7 +1729,16 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2115027&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2115027&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6221",
+    "sic_desc": "Commodity Contracts Brokers & Dealers",
+    "is_blank_check": false,
+    "ticker": "BAGZ",
+    "region": "SHERIDAN, WY",
+    "state_of_inc": "DE"
+   }
   },
   {
    "cik": "2030763",
@@ -2581,14 +2499,14 @@
    "cik": "2143060",
    "name": "Essential Minerals Acquisition Corp",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20261008",
+   "first_filed": "20261020",
    "last_filed": "20261020",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": true,
    "has_ticker_now": true,
@@ -2899,57 +2817,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2131124&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2154056",
-   "name": "Calm Seas Acquisition Corp.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20261008",
-   "last_filed": "20261008",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2154056&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2123380",
-   "name": "Gravity Acquisition Corp.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20261008",
-   "last_filed": "20261008",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2123380&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1527352",
-   "name": "Nexalin Technology, Inc.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20261008",
-   "last_filed": "20261008",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1527352&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "777917",
@@ -4498,23 +4365,6 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1840102&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2032341",
-   "name": "CYABRA, INC.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261008",
-   "last_filed": "20261008",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2032341&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "910739",
