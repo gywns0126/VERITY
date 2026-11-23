@@ -10,32 +10,38 @@
   },
   "funding_rate": {
     "ok": true,
-    "rate": 1.11569346914e-05,
-    "rate_pct": 0.0011,
+    "rate": 1.24230302242e-05,
+    "rate_pct": 0.0012,
     "prev_rate_pct": null,
     "signal": "neutral",
     "timestamp": "1795420800000",
     "source": "okx"
   },
   "kimchi_premium": {
-    "ok": false,
-    "error": "HTTPSConnectionPool(host='api.upbit.com', port=443): Max retries exceeded with url: /v1/ticker?markets=KRW-BTC (Caused b"
+    "ok": true,
+    "premium_pct": 1.31,
+    "upbit_krw": 83100000.0,
+    "global_usd": 60893.3,
+    "binance_usd": 60893.3,
+    "usdt_krw": 1347.0799560546875,
+    "signal": "normal",
+    "source": "upbit+bybit/okx"
   },
   "btc_nasdaq_corr": {
     "ok": true,
-    "correlation": -0.222,
+    "correlation": -0.202,
     "period_days": 30,
     "signal": "decoupled",
-    "btc_last_price": 61219.8
+    "btc_last_price": 60893.4
   },
   "stablecoin_mcap": {
     "ok": true,
-    "total_mcap_usd": 242966834159.10934,
+    "total_mcap_usd": 242984581660.86075,
     "total_mcap_b": 243.0,
     "usdt_mcap_b": 174.6,
     "usdc_mcap_b": 68.4
   },
-  "ok_count": 4,
+  "ok_count": 5,
   "total": 5,
   "composite": {
     "score": 38,
@@ -45,10 +51,10 @@
       "크립토 극단적 공포"
     ]
   },
-  "collected_at": "2026-11-23T10:32:59+09:00",
+  "collected_at": "2026-11-23T11:02:57+09:00",
   "schema_version": "v0",
   "diagnostics": {
-    "ok_count": 4,
+    "ok_count": 5,
     "used_prev_snapshot": false
   }
 }
