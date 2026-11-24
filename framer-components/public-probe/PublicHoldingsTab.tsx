@@ -9,6 +9,7 @@ import {
 } from "react"
 
 /**
+ * 되돌리지 말 것 (2026-09-14): HTTP 성공 확인, 계정별 응답 격리, 입력 오류 표시, 시세 결손 세금 보류.
  * 내 보유종목 — VERITY 공개 터미널 (AlphaNest) 탭. [보유종목 | 분산 | 예상 세금] 3-탭.
  * 🚨 분산 탭(2026-07-04) = 사실 계산기(추천 아님): 지역 비중·집중도(사실 산술) + 목표 갭(100% 사용자 설정) + 보유 자산군 ETF 자금(etf_flow 사실). 조합 추천·점수 0 (RULE 6/7·유사투자자문 회피).
  *
@@ -25,7 +26,7 @@ import {
  * 🚩 국기 = circle-flags SVG(Logo/FlagIcon) — 이모지 금지(싸구려). 데모 = 단순 CTA(3D목업 X).
  *
  * 예상 세금 탭: 보유(같은 데이터) → 매도 가정 비용 추정.
- *   세금(법정·증권사 무관) = KR 양도세 0%(비과세 ~2029)+증권거래세 0.20% / US 양도세 22%·27.5%·250만 공제(누진) / 대주주 50억 경고(직전 사업연도말 종가 기준).
+ *   세금(법정·증권사 무관) = KR 양도세 0%(대주주 제외)+증권거래세 0.20% / 일반 국외주식 양도세 22%·250만 공제 / 대주주 50억 경고(직전 사업연도말 종가 기준).
  *   수수료(증권사별) = broker_guide.json domestic_fee/overseas_fee × 매도금액.
  *   세제 SoT = api/trading/account_profile.py (변경 시 TAX 상수 동기화). RULE 7 사실+세무사 면책, RULE 6 LLM 0.
  */
@@ -82,24 +83,40 @@ const DARK = {
 //   그러면 컴포넌트가 흰 판을 깔거나 글자가 배경색에 묻힌다(2026-08-01 리포트 / 08-03 둥지).
 //   CSS 변수는 body[data-framer-theme] 에 직접 걸려 Framer 가 테마를 바꾸는 순간 같이 바뀐다.
 const _ANP = "hld"
+// SVG images cannot inherit page CSS variables; encode each resolved theme color.
+const selectChevronUrl = (color: string) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${color}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
 const AN_PALETTE =
     "body{" +
     Object.keys(LIGHT)
         .map((k) => "--an-" + _ANP + "-" + k + ":" + (LIGHT as any)[k])
         .join(";") +
+    ";--an-hld-select-chevron:" + selectChevronUrl(LIGHT.faint) +
     "}" +
     'body[data-framer-theme="dark"]{' +
     Object.keys(DARK)
         .map((k) => "--an-" + _ANP + "-" + k + ":" + (DARK as any)[k])
         .join(";") +
+    ";--an-hld-select-chevron:" + selectChevronUrl(DARK.faint) +
     "}"
+
+const NEST_NAV_CSS = `
+.an-hld-simple{--nest-stack:#f8f9fb;--nest-hover:#f1f3f5;--nest-focus:#e9edf2;--nest-card:#ffffff;--nest-sub:#6b7684;--nest-accent:#6c5ce7}
+.an-hld-simple[data-nest-dark="true"],html:not([data-an-theme="light"]) body[data-framer-theme="dark"] .an-hld-simple:not([data-nest-canvas="true"]),html[data-an-theme="dark"] .an-hld-simple:not([data-nest-canvas="true"]){--nest-stack:#1d242c;--nest-hover:#252c35;--nest-focus:#303945;--nest-card:#171c23;--nest-sub:#9aa4b1;--nest-accent:#a99bff}
+html[data-an-theme="light"] .an-hld-simple:not([data-nest-canvas="true"]){--nest-stack:#f8f9fb;--nest-hover:#f1f3f5;--nest-focus:#e9edf2;--nest-card:#ffffff;--nest-sub:#6b7684;--nest-accent:#6c5ce7}
+.an-hld-simple .an-hld-nav-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;min-width:0;min-height:44px;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:var(--nest-sub);font:700 13px/1.4 Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;cursor:pointer;text-decoration:none;transition:background-color 160ms ease,color 160ms ease}
+.an-hld-simple .an-hld-nav-button[aria-pressed="true"]{background:var(--nest-card);color:var(--nest-accent)}
+@media(hover:hover){.an-hld-simple .an-hld-nav-button:not(:focus-visible):hover{background:var(--nest-hover)}}
+.an-hld-simple .an-hld-nav-button:focus-visible{background:var(--nest-focus);outline:none;box-shadow:none}
+@media(prefers-reduced-motion:reduce){.an-hld-simple .an-hld-nav-button{transition:none}}
+`
+
 const CVAR: Record<string, string> = {}
 for (const _k of Object.keys(LIGHT))
     CVAR[_k] = "var(--an-" + _ANP + "-" + _k + ")"
 
 const FONT =
     "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
-const FX_FALLBACK = 1380 // 스냅샷 실패 시에만 — 평상시엔 실환율(useAnFx)
+const FX_FALLBACK = 1380 // 캔버스/비로그인 예시에만 사용. 실제 평가·세금에는 사용하지 않는다.
 
 /* ── 환율·통화 (2026-07-30) ────────────────────────────────────────────────
    🚨 옛 코드는 FX 를 1380 으로 **하드코딩**해 두고 화면에도 "환율 1380원/$ 가정" 이라 적었다.
@@ -109,6 +126,91 @@ const FX_FALLBACK = 1380 // 스냅샷 실패 시에만 — 평상시엔 실환�
    Framer 코드 컴포넌트는 서로 import 할 수 없어 이 블록은 각 파일에 같은 모양으로 둔다. */
 const AN_FX_URL =
     "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/macro_snapshot.json"
+const CLOSE_URL =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_close_latest.json"
+const EXPOSURE_MAP_URL =
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio_exposure_map.json"
+const CLOSE_REFRESH_THROTTLE_MS = 2 * 60 * 1000
+const CLOSE_VISIBLE_POLL_MS = 5 * 60 * 1000
+const CLOSE_REQUEST_TIMEOUT_MS = 15 * 1000
+
+type CloseSnapshot = {
+    prices: Record<string, number>
+    asOf: string
+    generatedAt: string
+    source: string
+    count: number
+}
+
+function kstDateKey(now: number): string {
+    return new Date(now + 9 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, "")
+}
+
+function closeDateUtc(asOf: string): number {
+    if (!/^\d{8}$/.test(asOf)) return NaN
+    const y = Number(asOf.slice(0, 4))
+    const m = Number(asOf.slice(4, 6))
+    const d = Number(asOf.slice(6, 8))
+    const value = Date.UTC(y, m - 1, d)
+    const roundTrip = new Date(value).toISOString().slice(0, 10).replace(/-/g, "")
+    return roundTrip === asOf ? value : NaN
+}
+
+function normalizeCloseSnapshot(raw: any, now: number = Date.now()): CloseSnapshot {
+    const meta = raw && raw._meta
+    const source = String((meta && meta.source) || "")
+    const asOf = String((meta && meta.as_of) || "")
+    const generatedAt = String((meta && meta.generated_at) || "")
+    const asOfTime = closeDateUtc(asOf)
+    const generatedTime = Date.parse(generatedAt)
+    if (!raw || typeof raw !== "object" || !meta || typeof meta !== "object")
+        throw new Error("종가 응답 메타데이터를 확인할 수 없어요.")
+    if (!source.includes("금융위원회"))
+        throw new Error("종가 출처를 확인할 수 없어요.")
+    if (!isFinite(asOfTime) || asOf > kstDateKey(now))
+        throw new Error("종가 기준일을 확인할 수 없어요.")
+    if (!isFinite(generatedTime) || generatedTime > now + 60 * 60 * 1000)
+        throw new Error("종가 생성 시각을 확인할 수 없어요.")
+    const input = raw.prices
+    if (!input || typeof input !== "object" || Array.isArray(input))
+        throw new Error("종가 목록 형식을 확인할 수 없어요.")
+    const prices: Record<string, number> = {}
+    for (const ticker of Object.keys(input)) {
+        const value = Number(input[ticker])
+        if (!ticker || !(value > 0) || !isFinite(value))
+            throw new Error("종가 목록에 잘못된 값이 있어요.")
+        prices[ticker] = value
+    }
+    const count = Object.keys(prices).length
+    if (count < 500 || Number(meta.count) !== count)
+        throw new Error("종가 목록 수량을 확인할 수 없어요.")
+    return { prices, asOf, generatedAt, source, count }
+}
+
+function closeBusinessLag(asOf: string, now: number = Date.now()): number {
+    const start = closeDateUtc(asOf)
+    if (!isFinite(start)) return Infinity
+    const todayKey = kstDateKey(now)
+    const end = closeDateUtc(todayKey)
+    let days = 0
+    for (let cursor = start + 86400000; cursor <= end; cursor += 86400000) {
+        const day = new Date(cursor).getUTCDay()
+        if (day >= 1 && day <= 5) days += 1
+    }
+    return days
+}
+
+function describeCloseFreshness(snapshot: CloseSnapshot, now: number = Date.now()) {
+    const businessLag = closeBusinessLag(snapshot.asOf, now)
+    const generatedAgeHours = Math.max(0, (now - Date.parse(snapshot.generatedAt)) / 3600000)
+    const delayed = businessLag > 1 || generatedAgeHours > 96
+    return {
+        businessLag,
+        generatedAgeHours,
+        delayed,
+        label: delayed ? "업데이트 지연 가능" : "공개 종가 확인",
+    }
+}
 const AN_CCY_KEY = "an_ccy"
 const AN_CCY_EVENT = "an-ccy-change"
 function anReadCcy(): string {
@@ -137,6 +239,7 @@ function useAnCcy(onCanvas: boolean): [string, (v: string) => void] {
         ccy,
         (v: string) => {
             setCcy(v)
+            if (onCanvas) return
             try {
                 window.localStorage.setItem(AN_CCY_KEY, v)
                 window.dispatchEvent(new CustomEvent(AN_CCY_EVENT))
@@ -153,13 +256,17 @@ function useAnFx(onCanvas: boolean): {
 } {
     const [fx, setFx] = useState<any>(null)
     useEffect(() => {
-        if (onCanvas || fx) return
+        if (onCanvas) return
         let alive = true
         try {
             const c = sessionStorage.getItem("an_fx")
             if (c) {
                 const j = JSON.parse(c)
-                if (j && j.rate > 0) {
+                if (
+                    j &&
+                    j.rate > 0 &&
+                    Date.now() - Number(j.cachedAt) < 30 * 60 * 1000
+                ) {
                     setFx(j)
                     return
                 }
@@ -173,7 +280,11 @@ function useAnFx(onCanvas: boolean): {
                 const u = d && d.macro && d.macro.usd_krw
                 const rate = Number(u && u.value)
                 if (!alive || !(rate > 0)) return
-                const j = { rate, asOf: String((u && u.as_of) || "") }
+                const j = {
+                    rate,
+                    asOf: String((u && u.as_of) || ""),
+                    cachedAt: Date.now(),
+                }
                 setFx(j)
                 try {
                     sessionStorage.setItem("an_fx", JSON.stringify(j))
@@ -185,8 +296,10 @@ function useAnFx(onCanvas: boolean): {
         return () => {
             alive = false
         }
-    }, [onCanvas, fx])
-    return fx && fx.rate > 0
+    }, [onCanvas])
+    return fx &&
+        fx.rate > 0 &&
+        Date.now() - Date.parse(fx.asOf) < 96 * 3600 * 1000
         ? { rate: fx.rate, asOf: fx.asOf, ok: true }
         : { rate: FX_FALLBACK, asOf: "", ok: false }
 }
@@ -215,9 +328,10 @@ function fetchBfMap(): Promise<Record<string, string>> {
             .catch(() => ({}) as Record<string, string>)
     return __bfP
 }
-function useBfLogoMap(): Record<string, string> | null {
+function useBfLogoMap(offline = false): Record<string, string> | null {
     const [m, setM] = useState<Record<string, string> | null>(__bfMap)
     useEffect(() => {
+        if (offline) return
         let al = true
         fetchBfMap().then((mm) => {
             if (al) setM(mm)
@@ -225,7 +339,7 @@ function useBfLogoMap(): Record<string, string> | null {
         return () => {
             al = false
         }
-    }, [])
+    }, [offline])
     return m
 }
 function bfLogoPad(ticker: any): string {
@@ -332,8 +446,8 @@ const TAX = {
     //   실제는 채택 안 됨, 현행 50억 유지(기재부·정책브리핑·국회예산정책처·KDI 4출처).
     //   SoT = api/trading/account_profile.py · 동기 가드 = tests/test_tax_constants_sync.py
     KR_MAJOR_AMT: 5_000_000_000, // 대주주 종목당 보유 평가액 기준 = 50억 (양도세 과세)
-    US_CGT: 0.22, // 해외주식 양도세 (과표 3억 이하)
-    US_CGT_HIGH: 0.275, // 과표 3억 초과분
+    US_CGT: 0.22, // 일반 국외주식 양도세 (소득세 20% + 지방세 2%)
+    US_CGT_HIGH: 0.22, // 호환용: 국내 대주주 누진 구간을 국외주식에 적용하지 않음
     US_DEDUCT: 2_500_000, // 해외 양도소득 기본공제 (연, 합산)
     US_BRACKET: 300_000_000, // 과표 3억 분기점
 }
@@ -344,6 +458,9 @@ interface Props {
     stockPath: string
     usStockPath: string
     dark: boolean
+    showReadingGuide?: boolean
+    previewOnly?: boolean
+    demoPath?: string
 }
 const DEFAULT_API = "https://project-yw131.vercel.app"
 
@@ -381,6 +498,12 @@ const SAMPLE = [
         market: "us",
     },
 ]
+const SAMPLE_SECTORS: Record<string, string> = {
+    "005930": "반도체",
+    "000660": "반도체",
+    NVDA: "반도체",
+    AAPL: "IT 하드웨어",
+}
 
 // 거래 기록(실현손익) 데모 — 미로그인/캔버스 미리보기. 실제 데이터는 /api/trades 가 서버 이동평균 요약 반환.
 const SAMPLE_TRADES = [
@@ -434,6 +557,48 @@ const SAMPLE_TRADE_SUMMARY = {
     total_realized_pnl: 528000,
 }
 
+
+// Example-only fixtures. Prices, dates, FX and fees are illustrative fixed values.
+const NEST_DEMO_AS_OF = "20260618"
+const NEST_DEMO_CATALOG = [...SAMPLE, { ticker: "MSFT", name: "Microsoft", market: "us", price: 100 }]
+const NEST_DEMO_FX = { rate: FX_FALLBACK, asOf: "2026-06-18T15:30:00+09:00", ok: true }
+const NEST_DEMO_BROKERS = [{ name: "예시 증권사 · 학습용 수수료", domestic_fee: "0.015%", overseas_fee: "0.25%" }]
+const nestDemoRows = () => SAMPLE.map((row, index) => ({ ...row, id: "demo-h-" + index }))
+const nestDemoTrades = () => SAMPLE_TRADES.map((row, index) => ({ ...row, id: "demo-t-" + index }))
+
+// Same moving-average rule as /api/trades; no request or account data is used.
+function nestDemoTradeData(input: any[]) {
+    const trades = input.map((trade) => ({ ...trade }))
+    const groups = new Map<string, any[]>()
+    for (const trade of trades) groups.set(trade.ticker, [...(groups.get(trade.ticker) || []), trade])
+    let unmatched = 0
+    const by_ticker = Array.from(groups, ([ticker, records]) => {
+        let quantity = 0, cost = 0, realized = 0, name = "", market = "kr"
+        records.sort((a, b) => String(a.traded_at || "").localeCompare(String(b.traded_at || "")) || String(a.created_at || "").localeCompare(String(b.created_at || "")))
+        for (const trade of records) {
+            const shares = Number(trade.shares), price = Number(trade.price)
+            name = trade.name || name
+            market = trade.market || market
+            if (!(shares > 0) || !(price > 0)) continue
+            if (trade.side === "buy") {
+                quantity += shares
+                cost += shares * price
+            } else {
+                unmatched += Math.max(0, shares - quantity)
+                if (!(quantity > 0)) continue
+                const average = cost / quantity
+                const sold = Math.min(shares, quantity)
+                realized += (price - average) * sold
+                quantity -= sold
+                cost = average * quantity
+            }
+        }
+        return { ticker, name, market, realized_pnl: Number(realized.toFixed(2)), open_shares: Number(quantity.toFixed(6)), open_avg_cost: quantity > 0 ? Number((cost / quantity).toFixed(4)) : 0 }
+    }).sort((a, b) => b.realized_pnl - a.realized_pnl)
+    const total = (market: string) => Number(by_ticker.filter((row) => row.market === market).reduce((sum, row) => sum + row.realized_pnl, 0).toFixed(2))
+    return { trades, summary: { by_ticker, total_realized_pnl: new Set(by_ticker.map((row) => row.market)).size > 1 ? null : total(by_ticker[0]?.market || "kr"), realized_by_currency: { KRW: total("kr"), USD: total("us") }, unmatched_sell_shares: Number(unmatched.toFixed(6)) } }
+}
+
 function getToken(): string {
     if (typeof window === "undefined") return ""
     try {
@@ -445,12 +610,62 @@ function getToken(): string {
         return ""
     }
 }
+// Presentation identity only; authentication is always verified by the API.
+function accountKey(): string {
+    try {
+        const s = JSON.parse(
+            localStorage.getItem("verity_supabase_session") || "null"
+        )
+        return s?.user?.id || s?.access_token || ""
+    } catch {
+        return ""
+    }
+}
+function supportedAsset(x: any): boolean {
+    const market = String(x.market || "").toLowerCase()
+    return (
+        !String(x.ticker || "")
+            .toUpperCase()
+            .startsWith("CMD_") &&
+        x.type !== "commodity" &&
+        ["kr", "us"].includes(market)
+    )
+}
+async function nestRequest(url: string, init: RequestInit = {}): Promise<any> {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 28000)
+    try {
+        const r = await fetch(url, {
+            ...init,
+            signal: controller.signal,
+            cache: init.headers ? "no-store" : "default",
+        })
+        const data = await r.json().catch(() => null)
+        if (!r.ok)
+            throw new Error(
+                r.status === 401
+                    ? "로그인 시간이 만료됐어요. 잠시 후 다시 시도하거나 다시 로그인해 주세요."
+                    : (data?.error || "요청 실패") + " (HTTP " + r.status + ")"
+            )
+        if (!data) throw new Error("서버 응답을 확인할 수 없어요.")
+        return data
+    } catch (error: any) {
+        if (error?.name === "AbortError" || error instanceof TypeError)
+            throw new Error(
+                "응답을 확인하지 못했어요. 저장·삭제 여부는 목록을 다시 확인해 주세요. 입력 내용은 유지됩니다."
+            )
+        throw error
+    } finally {
+        clearTimeout(timer)
+    }
+}
 function money(v: number): string {
     if (!isFinite(v)) return "—"
     return Math.round(v).toLocaleString("en-US") + "원"
 }
 const won = money
 function wonCompact(v: number): string {
+    if (!isFinite(v)) return "—"
     const a = Math.abs(Math.round(v))
     const sign = v < 0 ? "-" : ""
     if (a >= 1e8) return sign + (a / 1e8).toFixed(a >= 1e9 ? 0 : 1) + "억원"
@@ -459,8 +674,10 @@ function wonCompact(v: number): string {
     return sign + a.toLocaleString("en-US") + "원"
 }
 function parseFee(s: any): number {
-    const n = parseFloat(String(s || "").replace(/[%\s]/g, ""))
-    return isFinite(n) ? n / 100 : 0
+    const match = String(s || "")
+        .trim()
+        .match(/^(\d+(?:\.\d+)?)\s*%$/)
+    return match ? Number(match[1]) / 100 : NaN
 }
 // 통화 표기 — US=$, KR=원 (거래 원장·종목별 실현손익은 네이티브 통화. 합계만 FX 환산=holdings 관행).
 function px(v: number, us: boolean, ccy?: string, fx?: number): string {
@@ -491,6 +708,23 @@ function fmtAsOf(s: string): string {
     return Number(t.slice(4, 6)) + "/" + Number(t.slice(6, 8))
 }
 
+function fmtCloseGeneratedAt(s: string): string {
+    const t = Date.parse(String(s || ""))
+    if (!isFinite(t)) return "생성 시각 미확인"
+    try {
+        return new Intl.DateTimeFormat("ko-KR", {
+            month: "numeric",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "Asia/Seoul",
+        }).format(new Date(t))
+    } catch {
+        return String(s)
+    }
+}
+
 // ETF 누적 순흐름(Δ상장좌수 × NAV, 가격효과 제거) — /etf 페이지 cumFlow 와 동일 로직. 자산군 자금 방향(사실) 참조용.
 const ETF_WINDOW = 20
 function etfCumFlow(series: any[]): number | null {
@@ -512,6 +746,86 @@ function fmtFlow(v: number): string {
     if (a >= 1e12) return s + (a / 1e12).toFixed(2) + "조"
     if (a >= 1e8) return s + Math.round(a / 1e8).toLocaleString("en-US") + "억"
     return s + Math.round(a / 1e4).toLocaleString("en-US") + "만"
+}
+function groupExposure(rows: any[], key: (row: any) => string): any[] {
+    const sums = new Map<string, number>()
+    for (const row of rows)
+        sums.set(key(row), (sums.get(key(row)) || 0) + row.value)
+    const total = rows.reduce((sum, row) => sum + row.value, 0)
+    return Array.from(sums, ([name, value]) => ({
+        name,
+        value,
+        weight: total > 0 ? (value / total) * 100 : 0,
+    })).sort((a, b) => b.value - a.value)
+}
+function ExposureRows(props: { rows: any[]; C: any; limit?: number }) {
+    const { rows, C } = props
+    const limit = props.limit || 8
+    if (!rows.length)
+        return (
+            <div style={{ color: C.faint, fontSize: 11.5, fontWeight: 600 }}>
+                계산 가능한 보유종목 없음
+            </div>
+        )
+    return (
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", minWidth: 0, gap: 9 }}>
+            {rows.slice(0, limit).map((row: any) => (
+                <div key={row.name} style={{ minWidth: 0 }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            gap: 10,
+                            fontSize: 11.5,
+                        }}
+                    >
+                        <span
+                            title={row.name}
+                            style={{
+                                minWidth: 0,
+                                flex: 1,
+                                color: C.sub,
+                                fontWeight: 700,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                            }}
+                        >
+                            {row.name}
+                        </span>
+                        <span
+                            style={{
+                                flexShrink: 0,
+                                color: C.ink,
+                                fontWeight: 800,
+                            }}
+                        >
+                            {row.weight.toFixed(1)}% · {wonCompact(row.value)}
+                        </span>
+                    </div>
+                    <div
+                        aria-hidden
+                        style={{
+                            marginTop: 5,
+                            height: 6,
+                            borderRadius: 999,
+                            background: C.line,
+                            overflow: "hidden",
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: `${Math.max(1, Math.min(100, row.weight))}%`,
+                                height: "100%",
+                                borderRadius: 999,
+                                background: C.vg,
+                            }}
+                        />
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
 }
 function flagCode(market: any): string {
     const m = String(market || "").toUpperCase()
@@ -586,12 +900,13 @@ function Logo(props: {
     market: string
     C: any
     size?: number
+    offline?: boolean
 }) {
     const { ticker, name, market, C } = props
     const size = props.size || 32
     const [err, setErr] = useState(false)
-    const lm = useBfLogoMap()
-    const bfSrc = bfLogoSrc(ticker, lm, size)
+    const lm = useBfLogoMap(!!props.offline)
+    const bfSrc = props.offline ? "" : bfLogoSrc(ticker, lm, size)
     const ch =
         String(name || "?")
             .trim()
@@ -729,7 +1044,7 @@ function NestBadges(props: {
     if (!tk) return null
     const ent = nestIdx ? nestIdx[tk] : null
     const evs: any[] = ent && Array.isArray(ent.ev) ? ent.ev : []
-    const pct = npsMap ? npsMap[tk] : undefined
+    const pct = Number(npsMap && npsMap[tk]) || 0
     if (!evs.length && !(pct > 0)) return null
     // 🚨 2026-08-22 PM — "세로로 배치하지 말고 스택 높이 변화 없이 표시".
     //   종전 flexWrap:"wrap" + marginTop 이라 칩이 줄바꿈되며 **행 높이가 늘었다**
@@ -793,12 +1108,18 @@ function NestBadges(props: {
 }
 
 export default function PublicHoldingsTab(props: Props) {
-    const { apiBase, loginUrl, stockPath, usStockPath, dark } = props
+    return <HoldingsWorkspace key={props.previewOnly ? "example" : "account"} {...props} />
+}
+
+function HoldingsWorkspace(props: Props) {
+    const { apiBase, loginUrl, stockPath, usStockPath, dark, showReadingGuide = true, previewOnly = false, demoPath = "/nest-demo" } = props
     const onCanvas = RenderTarget.current() === RenderTarget.canvas
+    const demoMode = !!previewOnly
+    const isolated = onCanvas || demoMode
     // 실환율 — 하드코딩 1380 대체. 스냅샷 실패 시에만 폴백값이 쓰이고 라벨로 구분된다.
-    const fxInfo = useAnFx(onCanvas)
-    const FX = fxInfo.rate
-    const [ccy, setCcy] = useAnCcy(onCanvas)
+    const liveFxInfo = useAnFx(isolated)
+    const fxInfo = demoMode ? NEST_DEMO_FX : liveFxInfo
+    const [ccy, setCcy] = useAnCcy(isolated)
 
     const rootRef = useRef<HTMLDivElement>(null)
     const [w, setW] = useState(0)
@@ -807,29 +1128,44 @@ export default function PublicHoldingsTab(props: Props) {
     //   캔버스 프리뷰는 마운트 후 useEffect 로만 주입 → 첫 페인트는 어떤 렌더타깃에서도 목업 0.
     const [rows, setRows] = useState<any[]>([])
     const [closes, setCloses] = useState<Record<string, number>>({}) // KR 종가(kr_close_latest) — 실시간 아님
+    const [closeMeta, setCloseMeta] = useState<CloseSnapshot | null>(null)
+    const [closeStatus, setCloseStatus] = useState<
+        "idle" | "loading" | "ready" | "same" | "error"
+    >("idle")
+    const [closeError, setCloseError] = useState("")
+    const [closeCheckedAt, setCloseCheckedAt] = useState(0)
     // 🚨 대주주 판정 **전용** 기준가 — 직전 사업연도 종료일 종가(소득세법 시행령 §157⑥).
     //   손익·평가액은 현재가를 쓴다. 이 둘을 섞으면 안 된다.
     const [basisPx, setBasisPx] = useState<Record<string, number>>({})
     const [basisAsOf, setBasisAsOf] = useState<string>("")
-    const [closeAsOf, setCloseAsOf] = useState<string>("") // YYYYMMDD — 화면에 기준일 명시
-    const [isDemo, setIsDemo] = useState(true)
+    const [closeAsOf, setCloseAsOf] = useState<string>(() => demoMode ? NEST_DEMO_AS_OF : "") // YYYYMMDD — 화면에 기준일 명시
+    const [isDemo, setIsDemo] = useState(!demoMode)
+    const FX = fxInfo.ok || isDemo || isolated ? fxInfo.rate : 0
     const [loading, setLoading] = useState<boolean>(() =>
-        onCanvas ? false : !!getToken()
+        isolated ? false : !!getToken()
     )
     const [showAdd, setShowAdd] = useState(false)
     const [nestGuideOpen, setNestGuideOpen] = useState(false)
     const [busy, setBusy] = useState(false)
     const [themeDark, setThemeDark] = useState<boolean>(() =>
-        RenderTarget.current() === RenderTarget.canvas ? !!dark : readBodyDark()
+        isolated ? !!dark : readBodyDark()
     )
     const [view, setView] = useState<"holdings" | "mix" | "tax" | "trades">(
         "holdings"
     )
-    const [brokers, setBrokers] = useState<any[]>([])
+    const [toolsOpen, setToolsOpen] = useState(false)
+    const [brokers, setBrokers] = useState<any[]>(() => demoMode ? NEST_DEMO_BROKERS.map((broker) => ({ ...broker })) : [])
     const [brokerIdx, setBrokerIdx] = useState(0)
     const [catFlow, setCatFlow] = useState<Record<string, number>>({}) // etf_flow 자산군 누적 흐름(사실, 분산 탭)
     const [targetKr, setTargetKr] = useState<number | null>(null) // 목표 국내 비중 %(사용자 설정, null=현재값)
-    const [universe, setUniverse] = useState<any[]>([]) // 검색 유니버스(universe_search, KR+US)
+    // 원가 기준 시장·업종·종목 노출. 보유·환율은 이 컴포넌트의 기존 상태를 재사용한다.
+    const [sectorMap, setSectorMap] = useState<Record<string, string>>(() =>
+        demoMode ? { ...SAMPLE_SECTORS, MSFT: "소프트웨어" } : isolated ? SAMPLE_SECTORS : {}
+    )
+    const [exposureMeta, setExposureMeta] = useState<any>(() =>
+        isolated ? { count: 4, sector_mapped: 4 } : null
+    )
+    const [universe, setUniverse] = useState<any[]>(() => demoMode ? NEST_DEMO_CATALOG.map((row) => ({ ...row, type: "stock" })) : []) // 검색 유니버스(universe_search, KR+US)
     // 🚨 2026-08-21 — 둥지 브리핑. 보유 종목의 최근 공시 + 국민연금 대량보유.
     //   회원별 서버 발행이 아니라 **전역 색인 1개**를 받아 브라우저가 본인 티커만 고른다
     //   (회원 수와 무관하게 blob 캐시 1개). 인증·보유목록은 이미 위 /api/holdings 배선 재사용.
@@ -850,14 +1186,44 @@ export default function PublicHoldingsTab(props: Props) {
     // 캔버스 전용 목업 주입 — 마운트 후라 정적 HTML 에는 절대 포함되지 않음.
     //   라이브 미로그인 목업은 loadHoldings 의 토큰 부재 분기가 담당(로그아웃 전환도 그쪽이 처리).
     useEffect(() => {
-        if (!onCanvas) return
-        setRows(SAMPLE)
-        setTradeData({ trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY })
-    }, [onCanvas])
+        if (!isolated) return
+        setRows(demoMode ? nestDemoRows() : SAMPLE)
+        setTradeData(demoMode ? nestDemoTradeData(nestDemoTrades()) : { trades: SAMPLE_TRADES, summary: SAMPLE_TRADE_SUMMARY })
+    }, [isolated])
     const [showTAdd, setShowTAdd] = useState(false) // 거래 추가 검색 패널
     const [tq, setTq] = useState("") // 거래 추가 종목 검색어
     const [tPop, setTPop] = useState<any>(null) // 거래 팝업 {id?, ticker, name, market, side, shares, price, traded_at}
     const [tBusy, setTBusy] = useState(false)
+    const [tPopErr, setTPopErr] = useState("")
+    const [loadErr, setLoadErr] = useState("")
+    const [tradeErr, setTradeErr] = useState("")
+    const [actionErr, setActionErr] = useState("")
+    const [searchErr, setSearchErr] = useState("")
+    const [searchRetry, setSearchRetry] = useState(0)
+    const holdingSeq = useRef(0)
+    const tradeSeq = useRef(0)
+    const closeSeq = useRef(0)
+    const closeLastAttempt = useRef(0)
+    const closeMetaRef = useRef<CloseSnapshot | null>(null)
+    const closeRequestRef = useRef<{
+        controller: AbortController
+        promise: Promise<void>
+    } | null>(null)
+    const mutationRef = useRef<string | null>(null)
+    const currentAccount = useRef("")
+    const [authRevision, setAuthRevision] = useState(0)
+
+    const demoSequence = useRef(100)
+    const resetDemo = () => {
+        if (!demoMode) return
+        demoSequence.current = 100
+        setRows(nestDemoRows())
+        setTradeData(nestDemoTradeData(nestDemoTrades()))
+        setPop(null); setTPop(null); setShowAdd(false); setShowTAdd(false)
+        setQ(""); setTq(""); setTargetKr(null); setBrokerIdx(0)
+        setPopErr(""); setTPopErr(""); setActionErr(""); setTradeErr("")
+        setView("holdings"); setToolsOpen(false); setCcy("USD")
+    }
 
     // 🚨 라이브/프리뷰 = CSS 변수(Framer body[data-framer-theme] 직결).
     //   캔버스만 dark prop 정적 선택 — 캔버스는 Framer 가 body 속성을 안 줘 변수 해석이 안 된다.
@@ -866,7 +1232,7 @@ export default function PublicHoldingsTab(props: Props) {
     const base = (apiBase || DEFAULT_API).replace(/\/+$/, "")
 
     useEffect(() => {
-        if (onCanvas) return
+        if (isolated) return
         const read = () => setThemeDark(readBodyDark())
         read()
         if (
@@ -881,21 +1247,29 @@ export default function PublicHoldingsTab(props: Props) {
             attributeFilter: ["data-framer-theme"],
         })
         return () => obs.disconnect()
-    }, [onCanvas])
+    }, [isolated])
 
     useEffect(() => {
         const el = rootRef.current
         if (!el || typeof ResizeObserver === "undefined") return
         const ro = new ResizeObserver((entries) => {
-            for (const e of entries) setW(e.contentRect.width)
+            for (const e of entries)
+                setW(
+                    e.borderBoxSize?.[0]?.inlineSize ||
+                        el.getBoundingClientRect().width
+                )
         })
-        ro.observe(el)
+        try {
+            ro.observe(el, { box: "border-box" })
+        } catch {
+            ro.observe(el)
+        }
         return () => ro.disconnect()
     }, [])
 
-    // 증권사 수수료 (broker_guide) — 예상 세금 탭의 매도 수수료 산정용. 실패해도 무해(수수료 0).
+    // 증권사 수수료가 결손이면 0으로 대신하지 않고 예상 비용 계산을 보류한다.
     useEffect(() => {
-        if (onCanvas) return
+        if (isolated) return
         let alive = true
         fetch(BROKER_URL)
             .then((r) => (r.ok ? r.json() : null))
@@ -907,11 +1281,11 @@ export default function PublicHoldingsTab(props: Props) {
         return () => {
             alive = false
         }
-    }, [onCanvas])
+    }, [isolated])
 
     // ETF 자산군 자금흐름 (분산 탭 — 보유 자산군에 패시브 자금 유입/유출 사실. /etf 와 동일 cumFlow).
     useEffect(() => {
-        if (onCanvas) return
+        if (isolated) return
         let alive = true
         fetch(
             "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/etf_flow.json"
@@ -931,71 +1305,115 @@ export default function PublicHoldingsTab(props: Props) {
         return () => {
             alive = false
         }
-    }, [onCanvas])
+    }, [isolated])
 
     const loadHoldings = useCallback(() => {
-        if (onCanvas) return
+        if (isolated) return
+        const seq = ++holdingSeq.current
         const token = getToken()
+        setLoadErr("")
         if (!token) {
-            /* 🚨 로그인 전 미리보기 = SAMPLE 목업(브라우저 창 + "예시" 배지, pointerEvents none).
-               되돌리지 말 것 — 여기서 setRows([]) 로 비우면 로그인 전 화면이 CTA 만 남는다
-               (2026-07-27 깜빡임 수정의 부작용, PM 지적 2026-08-01).
-               깜빡임 안전: 이 경로는 useEffect(마운트 후) 에서만 호출되어 정적 HTML 에 목업이
-               구워지지 않고, 토큰이 있으면 아래 분기로 빠져 SAMPLE 이 주입될 경로 자체가 없다. */
             setIsDemo(true)
             setRows(SAMPLE)
-            setTradeData({
-                trades: SAMPLE_TRADES,
-                summary: SAMPLE_TRADE_SUMMARY,
-            })
             setLoading(false)
             return
         }
-        // 🚨 토큰 있으면 즉시 로그인 화면 전환 (API 응답 기다리지 않음 — 로그인했는데 CTA 뜨는 사고 방지, 2026-07-13)
         setIsDemo(false)
         setLoading(true)
-        fetch(base + "/api/holdings", {
+        const current = () => seq === holdingSeq.current && token === getToken()
+        nestRequest(base + "/api/holdings", {
             headers: { Authorization: "Bearer " + token },
         })
-            .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                if (Array.isArray(d)) setRows(d)
-                else if (d && Array.isArray(d.holdings)) setRows(d.holdings)
+                const items = Array.isArray(d) ? d : d?.holdings
+                if (!Array.isArray(items))
+                    throw new Error("보유 목록 응답 형식을 확인할 수 없어요.")
+                if (current()) setRows(items)
             })
-            .catch(() => {})
-            .finally(() => setLoading(false))
-    }, [base, onCanvas])
+            .catch((e) => {
+                if (current()) setLoadErr(e.message)
+            })
+            .finally(() => {
+                if (current()) setLoading(false)
+            })
+    }, [base, isolated])
 
-    // 마운트 + 로그인/로그아웃(verity_auth_change·다른 탭 storage) 시 재평가 → 로그인 상태 자동 전환.
+    // Account changes invalidate pending reads and clear private UI immediately.
+    // Same-account token refresh keeps the draft, but reloads BOTH datasets.
     useEffect(() => {
-        loadHoldings()
-        if (onCanvas || typeof window === "undefined") return
-        const onAuth = () => loadHoldings()
+        if (isolated || typeof window === "undefined") return
+        const onAuth = (event?: Event) => {
+            if (
+                event?.type === "storage" &&
+                (event as StorageEvent).key &&
+                (event as StorageEvent).key !== "verity_supabase_session"
+            )
+                return
+            holdingSeq.current += 1
+            tradeSeq.current += 1
+            const key = accountKey()
+            if (key !== currentAccount.current) {
+                currentAccount.current = key
+                setRows([])
+                setTradeData({
+                    trades: [],
+                    summary: { by_ticker: [], total_realized_pnl: 0 },
+                })
+                setPop(null)
+                setTPop(null)
+                setShowAdd(false)
+                setShowTAdd(false)
+                setQ("")
+                setTq("")
+                setTargetKr(null)
+                setPopErr("")
+                setTPopErr("")
+                setActionErr("")
+                setTradeErr("")
+                mutationRef.current = null
+                setBusy(false)
+                setTBusy(false)
+            }
+            setAuthRevision((n) => n + 1)
+            loadHoldings()
+        }
+        onAuth()
         window.addEventListener("verity_auth_change", onAuth)
         window.addEventListener("storage", onAuth)
         return () => {
+            holdingSeq.current += 1
+            tradeSeq.current += 1
             window.removeEventListener("verity_auth_change", onAuth)
             window.removeEventListener("storage", onAuth)
         }
-    }, [loadHoldings])
+    }, [loadHoldings, isolated])
 
     // 검색 유니버스(KR+US ~8.9천, universe_search) — 보유/거래 추가 패널 열 때 1회 lazy 로드.
     useEffect(() => {
-        if (onCanvas || (!showAdd && !showTAdd) || universe.length) return
+        if (
+            isolated ||
+            (!showAdd && !showTAdd && view !== "tax") ||
+            universe.length
+        )
+            return
         let alive = true
-        fetch(
+        setSearchErr("")
+        nestRequest(
             "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/universe_search.json"
         )
-            .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                const a = d && (Array.isArray(d) ? d : d.stocks)
-                if (alive && Array.isArray(a)) setUniverse(a)
+                const a = Array.isArray(d) ? d : d?.stocks
+                if (!Array.isArray(a) || !a.length)
+                    throw new Error("검색 목록을 확인할 수 없어요.")
+                if (alive) setUniverse(a)
             })
-            .catch(() => {})
+            .catch((e) => {
+                if (alive) setSearchErr(e.message)
+            })
         return () => {
             alive = false
         }
-    }, [onCanvas, showAdd, showTAdd, universe.length])
+    }, [isolated, showAdd, showTAdd, view, universe.length, searchRetry])
 
     // 둥지 브리핑 재료 — 티커 색인(공시) + 국민연금 대량보유. 각 1회.
     // 🚨 기존 피드를 직접 받지 않는 이유 = 크기. us_disclosure_feed 4.1MB + KR 862KB 를
@@ -1003,7 +1421,7 @@ export default function PublicHoldingsTab(props: Props) {
     // 🚨 국민연금은 **5% 이상 대량보유 공시**가 원천이다. 색인에 없다 = "미보유"가 아니라
     //    "5% 미만"이다. 아래 렌더에서 그렇게 표기한다 — 오독 방지.
     useEffect(() => {
-        if (onCanvas || isDemo) return
+        if (isolated || isDemo) return
         let alive = true
         fetch(
             "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/nest_briefing_index.json"
@@ -1033,7 +1451,161 @@ export default function PublicHoldingsTab(props: Props) {
         return () => {
             alive = false
         }
-    }, [onCanvas, isDemo])
+    }, [isolated, isDemo])
+
+    // 분산 탭 최초 진입 때 업종 분류 맵만 1회 로드한다. 별도 보유 API·환율 호출 금지.
+    useEffect(() => {
+        if (isolated || isDemo || view !== "mix" || exposureMeta) return
+        let alive = true
+        nestRequest(EXPOSURE_MAP_URL)
+            .then((d) => {
+                if (!alive) return
+                const m: Record<string, string> = {}
+                const stocks = d && d.stocks
+                if (
+                    !stocks ||
+                    typeof stocks !== "object" ||
+                    !Object.keys(stocks).length
+                )
+                    throw new Error("업종 분류 응답 오류")
+                if (stocks && typeof stocks === "object") {
+                    for (const key of Object.keys(stocks)) {
+                        const item = stocks[key] || {}
+                        const ticker = String(
+                            key || item.ticker || ""
+                        ).toUpperCase()
+                        const sector = String(item.sector || "").trim()
+                        if (ticker && sector) m[ticker] = sector
+                    }
+                }
+                setSectorMap(m)
+                setExposureMeta(
+                    (d && d._meta) || { count: 0, sector_mapped: 0 }
+                )
+            })
+            .catch(() => {
+                if (alive)
+                    setExposureMeta({ count: 0, sector_mapped: 0, error: true })
+            })
+        return () => {
+            alive = false
+        }
+    }, [exposureMeta, isDemo, isolated, view])
+
+    const refreshCloses = useCallback(
+        (reason: "login" | "focus" | "visible" | "poll" | "manual", force = false): Promise<void> => {
+            if (isolated || isDemo) return Promise.resolve()
+            if (closeRequestRef.current) return closeRequestRef.current.promise
+            const now = Date.now()
+            if (!force && now - closeLastAttempt.current < CLOSE_REFRESH_THROTTLE_MS)
+                return Promise.resolve()
+            closeLastAttempt.current = now
+            const seq = ++closeSeq.current
+            const controller = new AbortController()
+            let timedOut = false
+            const timer = setTimeout(() => {
+                timedOut = true
+                controller.abort()
+            }, CLOSE_REQUEST_TIMEOUT_MS)
+            setCloseStatus("loading")
+            setCloseError("")
+            const promise = fetch(CLOSE_URL, {
+                signal: controller.signal,
+                cache: "no-store",
+                headers: { Accept: "application/json" },
+            })
+                .then(async (response) => {
+                    if (!response.ok)
+                        throw new Error("종가 요청 실패 (HTTP " + response.status + ")")
+                    const contentType = response.headers?.get?.("content-type") || ""
+                    if (contentType && !contentType.toLowerCase().includes("json"))
+                        throw new Error("종가 응답 형식을 확인할 수 없어요.")
+                    return response.json()
+                })
+                .then((raw) => normalizeCloseSnapshot(raw, Date.now()))
+                .then((snapshot) => {
+                    if (seq !== closeSeq.current || controller.signal.aborted) return
+                    const previous = closeMetaRef.current
+                    if (
+                        previous &&
+                        (snapshot.asOf < previous.asOf ||
+                            (snapshot.asOf === previous.asOf &&
+                                Date.parse(snapshot.generatedAt) <
+                                    Date.parse(previous.generatedAt)))
+                    )
+                        throw new Error(
+                            "이전보다 오래된 종가 자료가 도착해 기존 값을 유지합니다."
+                        )
+                    const unchanged =
+                        !!previous &&
+                        previous.asOf === snapshot.asOf &&
+                        previous.generatedAt === snapshot.generatedAt &&
+                        previous.count === snapshot.count
+                    setCloses(snapshot.prices)
+                    closeMetaRef.current = snapshot
+                    setCloseMeta(snapshot)
+                    setCloseAsOf(snapshot.asOf)
+                    setCloseCheckedAt(Date.now())
+                    setCloseStatus(unchanged ? "same" : "ready")
+                })
+                .catch((error: any) => {
+                    if (seq !== closeSeq.current) return
+                    setCloseStatus("error")
+                    setCloseCheckedAt(Date.now())
+                    setCloseError(
+                        timedOut
+                            ? "종가 요청 시간이 초과됐어요."
+                            : (error && error.message) ||
+                            "종가 자료를 다시 확인하지 못했어요."
+                    )
+                })
+                .finally(() => {
+                    clearTimeout(timer)
+                    if (closeRequestRef.current?.controller === controller)
+                        closeRequestRef.current = null
+                })
+            closeRequestRef.current = { controller, promise }
+            return promise
+        },
+        [isDemo, isolated]
+    )
+
+    useEffect(() => {
+        if (isolated || isDemo) return
+        void refreshCloses("login")
+        const onFocus = () => void refreshCloses("focus")
+        const onVisible = () => {
+            if (document.visibilityState === "visible")
+                void refreshCloses("visible")
+        }
+        const poll = window.setInterval(() => {
+            if (document.visibilityState === "visible")
+                void refreshCloses("poll")
+        }, CLOSE_VISIBLE_POLL_MS)
+        window.addEventListener("focus", onFocus)
+        document.addEventListener("visibilitychange", onVisible)
+        return () => {
+            window.clearInterval(poll)
+            window.removeEventListener("focus", onFocus)
+            document.removeEventListener("visibilitychange", onVisible)
+        }
+    }, [authRevision, isDemo, isolated, refreshCloses])
+
+    useEffect(() => {
+        if (!isolated && !isDemo) return
+        closeSeq.current += 1
+        closeRequestRef.current?.controller.abort()
+        closeRequestRef.current = null
+    }, [isDemo, isolated])
+
+    useEffect(
+        () => () => {
+            closeSeq.current += 1
+            closeRequestRef.current?.controller.abort()
+            closeRequestRef.current = null
+        },
+        []
+    )
 
     /* 평가 기준가 — kr_close_latest.json (금융위 공공데이터 직전 거래일 종가, 전 종목 동일 기준일).
        🚨 되돌리지 말 것 (2026-07-31 수익률 부호 역전 사고) — 옛 소스 = stock_flow_5d.json 의
@@ -1042,24 +1614,8 @@ export default function PublicHoldingsTab(props: Props) {
        → 하락 종목이 플러스로 표시됐다. flow_5d 로 되돌리면 같은 사고가 재발한다.
        커버리지 밖(미국·ETF·거래정지) = 값을 지어내지 않고 "시세 없음" 표기 + 손익 합계 제외. */
     useEffect(() => {
-        if (onCanvas || isDemo) return
+        if (isolated || isDemo) return
         let alive = true
-        fetch(
-            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_close_latest.json"
-        )
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const pm = d && d.prices
-                if (!alive || !pm || typeof pm !== "object") return
-                const m: Record<string, number> = {}
-                for (const tk of Object.keys(pm)) {
-                    const c = Number(pm[tk])
-                    if (c > 0 && isFinite(c)) m[tk] = c
-                }
-                setCloses(m)
-                setCloseAsOf(String((d._meta && d._meta.as_of) || ""))
-            })
-            .catch(() => {})
         // 대주주 판정 기준가 — 실패해도 손익 표시는 멀쩡하다(판정만 보류)
         fetch(
             "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/kr_prior_fy_close.json"
@@ -1080,7 +1636,7 @@ export default function PublicHoldingsTab(props: Props) {
         return () => {
             alive = false
         }
-    }, [isDemo, onCanvas])
+    }, [isDemo, isolated])
 
     const goStock = useCallback(
         (h: any) => {
@@ -1122,7 +1678,9 @@ export default function PublicHoldingsTab(props: Props) {
                     String(x.name || "")
                         .toLowerCase()
                         .includes(s) ||
-                    String(x.name_ko || "").includes(q.trim())
+                    String(x.name_ko || "")
+                        .toLowerCase()
+                        .includes(s)
             )
             .sort((a: any, b: any) => rk(a) - rk(b))
             .slice(0, 8)
@@ -1131,6 +1689,14 @@ export default function PublicHoldingsTab(props: Props) {
 
     // ★ 클릭 = 추가 팝업(수량·평단 수동 입력) / 리스트 수정 = 기존값 프리필 팝업
     const openAdd = (x: any) => {
+        setPopErr("")
+        setActionErr("")
+        if (!supportedAsset(x)) {
+            setActionErr(
+                "직접 원자재는 계약 단위가 달라 둥지 기록을 아직 지원하지 않아요. 주식·ETF·ADR을 선택해 주세요."
+            )
+            return
+        }
         setPop({
             ticker: String(x.ticker),
             name: x.name || "",
@@ -1141,6 +1707,8 @@ export default function PublicHoldingsTab(props: Props) {
         setQ("")
     }
     const openEdit = (h: any) => {
+        setPopErr("")
+        setActionErr("")
         setPop({
             id: h.id,
             ticker: h.ticker,
@@ -1166,15 +1734,24 @@ export default function PublicHoldingsTab(props: Props) {
         return isFinite(n) && n >= 0 ? n : null
     }
     const savePop = useCallback(() => {
-        const token = getToken()
-        if (!token || !pop) return
+        const token = demoMode ? "" : getToken()
+        if ((!demoMode && !token) || !pop || mutationRef.current) return
         const sh = parseNum(pop.shares)
         const av = parseNum(pop.avg_cost)
         if (sh === null || av === null || sh <= 0 || av <= 0) {
-            setPopErr("수량과 평단을 숫자로 입력해 주세요 (쉼표·단위 없이)")
+            setPopErr(
+                "수량과 평단을 0보다 큰 숫자로 입력해 주세요. 쉼표는 사용할 수 있어요."
+            )
             return
         }
         setPopErr("")
+        if (demoMode) {
+            const item = { ...pop, id: pop.id || "demo-h-" + ++demoSequence.current, shares: sh, avg_cost: av, price: NEST_DEMO_CATALOG.find((row) => row.ticker === pop.ticker)?.price || 0 }
+            setRows((current) => pop.id ? current.map((row) => row.id === pop.id ? item : row) : [...current, item])
+            setPop(null)
+            return
+        }
+        mutationRef.current = token
         setBusy(true)
         const isEdit = !!pop.id
         const body = isEdit
@@ -1190,7 +1767,7 @@ export default function PublicHoldingsTab(props: Props) {
                   shares: sh,
                   avg_cost: av,
               }
-        fetch(base + "/api/holdings", {
+        nestRequest(base + "/api/holdings", {
             method: isEdit ? "PATCH" : "POST",
             headers: {
                 Authorization: "Bearer " + token,
@@ -1198,20 +1775,39 @@ export default function PublicHoldingsTab(props: Props) {
             },
             body: JSON.stringify(body),
         })
-            .then((r) => r.json().catch(() => ({})))
             .then(() => {
+                if (token !== getToken()) return
                 setPop(null)
                 loadHoldings()
             })
-            .catch(() => {})
-            .finally(() => setBusy(false))
-    }, [pop, base, loadHoldings])
+            .catch((e) => {
+                if (token === getToken()) setPopErr(e.message)
+            })
+            .finally(() => {
+                if (mutationRef.current === token) {
+                    mutationRef.current = null
+                    setBusy(false)
+                }
+            })
+    }, [pop, base, loadHoldings, demoMode])
 
     const delHolding = useCallback(
         (id: string) => {
-            const token = getToken()
-            if (!token || !id) return
-            fetch(base + "/api/holdings", {
+            const token = demoMode ? "" : getToken()
+            if ((!demoMode && !token) || !id || mutationRef.current) return
+            if (
+                !window.confirm(
+                    "이 보유종목을 삭제할까요? 거래 기록은 유지됩니다."
+                )
+            )
+                return
+            if (demoMode) {
+                setRows((current) => current.filter((row) => row.id !== id))
+                return
+            }
+            mutationRef.current = token
+            setActionErr("")
+            nestRequest(base + "/api/holdings", {
                 method: "DELETE",
                 headers: {
                     Authorization: "Bearer " + token,
@@ -1219,18 +1815,26 @@ export default function PublicHoldingsTab(props: Props) {
                 },
                 body: JSON.stringify({ id }),
             })
-                .then(() => loadHoldings())
-                .catch(() => {})
+                .then(() => {
+                    if (token === getToken()) loadHoldings()
+                })
+                .catch((e) => {
+                    if (token === getToken()) setActionErr(e.message)
+                })
+                .finally(() => {
+                    if (mutationRef.current === token)
+                        mutationRef.current = null
+                })
         },
-        [base, loadHoldings]
+        [base, loadHoldings, demoMode]
     )
 
-    // ── 거래 기록 로드 — 미로그인/캔버스 = 샘플. 서버가 이동평균 실현손익 요약(summary) 동봉. ──
     const loadTrades = useCallback(() => {
-        if (onCanvas) return
+        if (isolated) return
+        const seq = ++tradeSeq.current
         const token = getToken()
+        setTradeErr("")
         if (!token) {
-            // 미로그인 = 거래 기록도 SAMPLE 미리보기 유지 (loadHoldings 토큰 부재 분기와 동일 규율)
             setTradesLoading(false)
             setTradeData({
                 trades: SAMPLE_TRADES,
@@ -1239,28 +1843,31 @@ export default function PublicHoldingsTab(props: Props) {
             return
         }
         setTradesLoading(true)
-        fetch(base + "/api/trades", {
+        const current = () => seq === tradeSeq.current && token === getToken()
+        nestRequest(base + "/api/trades", {
             headers: { Authorization: "Bearer " + token },
         })
-            .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                if (d && Array.isArray(d.trades))
-                    setTradeData({
-                        trades: d.trades,
-                        summary: d.summary || {
-                            by_ticker: [],
-                            total_realized_pnl: 0,
-                        },
-                    })
+                if (
+                    !Array.isArray(d?.trades) ||
+                    !Array.isArray(d?.summary?.by_ticker)
+                )
+                    throw new Error("거래 목록 응답 형식을 확인할 수 없어요.")
+                if (current())
+                    setTradeData({ trades: d.trades, summary: d.summary })
             })
-            .catch(() => {})
-            .finally(() => setTradesLoading(false))
-    }, [base, onCanvas])
+            .catch((e) => {
+                if (current()) setTradeErr(e.message)
+            })
+            .finally(() => {
+                if (current()) setTradesLoading(false)
+            })
+    }, [base, isolated])
 
-    // 거래 탭 최초 진입 시 lazy 로드(안 여는 사용자 API 호출 절약).
     useEffect(() => {
-        if (view === "trades") loadTrades()
-    }, [view, loadTrades])
+        if (isolated) return
+        if (view === "trades" || !getToken()) loadTrades()
+    }, [view, loadTrades, authRevision, isolated])
 
     // 거래 추가 검색 — universe_search 필터(보유 여부 표시 불필요). 상위 8개.
     const tMatches = useMemo(() => {
@@ -1287,26 +1894,42 @@ export default function PublicHoldingsTab(props: Props) {
                     String(x.name || "")
                         .toLowerCase()
                         .includes(s) ||
-                    String(x.name_ko || "").includes(tq.trim())
+                    String(x.name_ko || "")
+                        .toLowerCase()
+                        .includes(s)
             )
             .sort((a: any, b: any) => rk(a) - rk(b))
             .slice(0, 8)
     }, [tq, universe])
 
     const openTAdd = (x: any) => {
+        setTPopErr("")
+        setActionErr("")
+        if (!supportedAsset(x)) {
+            setActionErr(
+                "직접 원자재 거래는 아직 지원하지 않아요. 주식·ETF·ADR을 선택해 주세요."
+            )
+            return
+        }
         setTPop({
+            request_id:
+                typeof crypto !== "undefined" && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : undefined,
             ticker: String(x.ticker),
             name: x.name || "",
             market: String(x.market || "kr").toLowerCase(),
             side: "buy",
             shares: "",
             price: "",
-            traded_at: todayISO(),
+            traded_at: demoMode ? "2026-06-18" : todayISO(),
         })
         setTq("")
         setShowTAdd(false)
     }
     const openTEdit = (t: any) => {
+        setTPopErr("")
+        setActionErr("")
         setTPop({
             id: t.id,
             ticker: t.ticker,
@@ -1315,15 +1938,37 @@ export default function PublicHoldingsTab(props: Props) {
             side: t.side || "buy",
             shares: String(t.shares ?? ""),
             price: String(t.price ?? ""),
-            traded_at: t.traded_at || todayISO(),
+            traded_at: t.traded_at || (demoMode ? "2026-06-18" : todayISO()),
         })
     }
     const saveTPop = useCallback(() => {
-        const token = getToken()
-        if (!token || !tPop) return
-        const sh = Number(tPop.shares) || 0
-        const pr = Number(tPop.price)
-        if (sh <= 0 || !isFinite(pr) || pr < 0) return
+        const token = demoMode ? "" : getToken()
+        if ((!demoMode && !token) || !tPop || mutationRef.current) return
+        const sh = parseNum(tPop.shares)
+        const pr = parseNum(tPop.price)
+        if (sh === null || pr === null || sh <= 0 || pr <= 0) {
+            setTPopErr(
+                "수량과 체결가를 0보다 큰 숫자로 입력해 주세요. 쉼표는 사용할 수 있어요."
+            )
+            return
+        }
+        if (
+            !/^\d{4}-\d{2}-\d{2}$/.test(tPop.traded_at || "") ||
+            !Number.isFinite(Date.parse(tPop.traded_at)) ||
+            new Date(tPop.traded_at).toISOString().slice(0, 10) !==
+                tPop.traded_at
+        ) {
+            setTPopErr("거래 날짜를 확인해 주세요.")
+            return
+        }
+        setTPopErr("")
+        if (demoMode) {
+            const item = { ...tPop, id: tPop.id || "demo-t-" + ++demoSequence.current, shares: sh, price: pr }
+            setTradeData((current) => nestDemoTradeData(tPop.id ? current.trades.map((trade) => trade.id === tPop.id ? item : trade) : [...current.trades, item]))
+            setTPop(null)
+            return
+        }
+        mutationRef.current = token
         setTBusy(true)
         const isEdit = !!tPop.id
         const body = isEdit
@@ -1335,6 +1980,7 @@ export default function PublicHoldingsTab(props: Props) {
                   traded_at: tPop.traded_at,
               }
             : {
+                  request_id: tPop.request_id,
                   ticker: String(tPop.ticker).trim(),
                   name: String(tPop.name).trim(),
                   market: tPop.market,
@@ -1343,7 +1989,7 @@ export default function PublicHoldingsTab(props: Props) {
                   price: pr,
                   traded_at: tPop.traded_at,
               }
-        fetch(base + "/api/trades", {
+        nestRequest(base + "/api/trades", {
             method: isEdit ? "PATCH" : "POST",
             headers: {
                 Authorization: "Bearer " + token,
@@ -1351,19 +1997,38 @@ export default function PublicHoldingsTab(props: Props) {
             },
             body: JSON.stringify(body),
         })
-            .then((r) => r.json().catch(() => ({})))
             .then(() => {
+                if (token !== getToken()) return
                 setTPop(null)
                 loadTrades()
             })
-            .catch(() => {})
-            .finally(() => setTBusy(false))
-    }, [tPop, base, loadTrades])
+            .catch((e) => {
+                if (token === getToken()) setTPopErr(e.message)
+            })
+            .finally(() => {
+                if (mutationRef.current === token) {
+                    mutationRef.current = null
+                    setTBusy(false)
+                }
+            })
+    }, [tPop, base, loadTrades, demoMode])
     const delTrade = useCallback(
         (id: string) => {
-            const token = getToken()
-            if (!token || !id) return
-            fetch(base + "/api/trades", {
+            const token = demoMode ? "" : getToken()
+            if ((!demoMode && !token) || !id || mutationRef.current) return
+            if (
+                !window.confirm(
+                    "이 거래 기록을 삭제할까요? 실현손익이 다시 계산되며 보유목록은 바뀌지 않습니다."
+                )
+            )
+                return
+            if (demoMode) {
+                setTradeData((current) => nestDemoTradeData(current.trades.filter((trade) => trade.id !== id)))
+                return
+            }
+            mutationRef.current = token
+            setActionErr("")
+            nestRequest(base + "/api/trades", {
                 method: "DELETE",
                 headers: {
                     Authorization: "Bearer " + token,
@@ -1371,10 +2036,18 @@ export default function PublicHoldingsTab(props: Props) {
                 },
                 body: JSON.stringify({ id }),
             })
-                .then(() => loadTrades())
-                .catch(() => {})
+                .then(() => {
+                    if (token === getToken()) loadTrades()
+                })
+                .catch((e) => {
+                    if (token === getToken()) setActionErr(e.message)
+                })
+                .finally(() => {
+                    if (mutationRef.current === token)
+                        mutationRef.current = null
+                })
         },
-        [base, loadTrades]
+        [base, loadTrades, demoMode]
     )
 
     const narrow = w > 0 && w < 560
@@ -1384,12 +2057,24 @@ export default function PublicHoldingsTab(props: Props) {
        으로 오독한다. 지금은 손익 "—" + 합계 제외, 평가금액만 매입가 기준으로 잡아 비중을 유지. */
     const evald = rows.map((h) => {
         const us = h.market === "us" || h.currency === "USD"
-        const fx = us ? FX : 1
+        const supported = supportedAsset(h)
+        const fx = !supported
+            ? 0
+            : us
+              ? fxInfo.ok || isDemo || isolated
+                  ? FX
+                  : 0
+              : 1
         const shares = Number(h.shares) || 0
         const px = Number(closes[String(h.ticker)]) || 0
         const seeded = Number(h.price) || 0 // SAMPLE 미리보기 전용 시세
         const cur = px > 0 ? px : seeded > 0 ? seeded : Number(h.avg_cost) || 0
-        const priced = px > 0 || seeded > 0
+        const priced =
+            supported &&
+            shares > 0 &&
+            Number(h.avg_cost) > 0 &&
+            fx > 0 &&
+            (px > 0 || ((isDemo || isolated) && seeded > 0))
         const val = shares * cur * fx
         const cost = shares * (Number(h.avg_cost) || 0) * fx
         const pl = priced ? val - cost : 0
@@ -1397,6 +2082,7 @@ export default function PublicHoldingsTab(props: Props) {
         return {
             ...h,
             _us: us,
+            _supported: supported,
             _priced: priced,
             _val: val,
             _cost: cost,
@@ -1409,7 +2095,7 @@ export default function PublicHoldingsTab(props: Props) {
     const unpricedN = evald.length - pricedRows.length
     const totalCost = pricedRows.reduce((a, b) => a + b._cost, 0)
     const totalPl = pricedRows.reduce((a, b) => a + b._pl, 0)
-    const totalPlPct = totalCost > 0 ? (totalPl / totalCost) * 100 : 0
+    const totalPlPct = totalCost > 0 ? (totalPl / totalCost) * 100 : NaN
     const withWeight = evald
         .map((h) => ({
             ...h,
@@ -1420,7 +2106,7 @@ export default function PublicHoldingsTab(props: Props) {
 
     // ── 예상 세금 + 수수료 (🚨 **전량 매도** 가정) ──
     //   2026-08-22 검증: 손계산 대조 통과(US 1,000만 → (1,000만−250만)×22% = 165만 ·
-    //   4억 → 3억×22%+9,750만×27.5% = 9,281만 · 손실 시 과세표준 0).
+    //   4억 이익 → 공제 후 과세표준 × 22% · 손실 시 과세표준 0).
     //   🚨 다만 usGainSum 은 **보유 전 종목 손익의 단순 합**이다. 실제 양도세는 그 해에
     //   **실현한 것만** 통산하므로, 일부만 팔면 미실현 손실이 차감되지 않아 실제 세금이
     //   더 크다. 계산을 바꾸지 않고 **전제를 화면에 명시**한다(헤더 "전량 매도" + 하단 설명).
@@ -1432,14 +2118,14 @@ export default function PublicHoldingsTab(props: Props) {
     const krTxnTax = krProceeds * TAX.KR_TXN
     const usGainSum = usRows.reduce((a, b) => a + b._pl, 0)
     const usTaxable = Math.max(0, usGainSum - TAX.US_DEDUCT)
-    const usCgt =
-        usTaxable <= TAX.US_BRACKET
-            ? usTaxable * TAX.US_CGT
-            : TAX.US_BRACKET * TAX.US_CGT +
-              (usTaxable - TAX.US_BRACKET) * TAX.US_CGT_HIGH
+    const usCgt = usTaxable * TAX.US_CGT
     const broker = brokers[brokerIdx] || null
-    const krCommission = krProceeds * parseFee(broker && broker.domestic_fee)
-    const usCommission = usProceeds * parseFee(broker && broker.overseas_fee)
+    const krCommission = krRows.length
+        ? krProceeds * parseFee(broker && broker.domestic_fee)
+        : 0
+    const usCommission = usRows.length
+        ? usProceeds * parseFee(broker && broker.overseas_fee)
+        : 0
     const totalTax = krTxnTax + usCgt
     const totalCommission = krCommission + usCommission
     // 🚨 대주주 판정은 **현재가가 아니라 직전 사업연도 종료일 종가**로 한다
@@ -1447,31 +2133,49 @@ export default function PublicHoldingsTab(props: Props) {
     //   실측 2026-08-22 삼성전자 기준가 119,900 vs 현재 271,000(+126%)로 2배 넘게 부풀어
     //   실제 기준의 절반 이하 보유액에서도 대주주로 표시됐다.
     //   🚨 기준가를 못 받았으면 **판정하지 않는다**(현재가로 대체 금지 — 그게 원래 결함이다).
-    /* 대주주 판정 — 경로가 둘이다(소득세법 시행령 §157).
-       ① 기준일 판정  직전 사업연도 종료일 종가 × 보유수 (§157⑥)
-       ② 연중 취득    "직전 사업연도 종료일에 미달했더라도 그 후 취득으로 기준을 충족하게 되면
-                      **그 취득일 이후부터** 대주주로 본다" → 취득 평가액(평단 × 보유수)으로 판정
-       🚨 ②는 신규 상장 전용이 아니다. 기준일에 미달했다가 연중 매수로 넘어선 경우도 포함된다.
-          그래서 ①이 미달이어도 ②를 반드시 본다 — ①만 보면 연중에 넘어선 보유가 통째로 빠진다.
-       🚨 우리가 가진 것은 **현재 보유수**뿐이라 ①은 근사다(기준일 보유수는 모른다).
-          그 한계를 화면에 적는다 — 숨기면 정확한 판정으로 오독된다. */
-    const majorPath = (h: any): "" | "basis" | "acq" => {
+    // Current quantity times prior-FY close is a screening approximation only.
+    // Midyear acquisition concerns the ownership-ratio test; average cost is not a tax basis test.
+    // Source: NTS nttSn=1353905 (2026); historical quantity/related parties are not collected here.
+    const majorPath = (h: any): "" | "basis" => {
         const shares = Number(h.shares) || 0
-        if (shares <= 0) return ""
         const b = Number(basisPx[String(h.ticker)]) || 0
-        if (b > 0 && shares * b >= TAX.KR_MAJOR_AMT) return "basis"
-        const cost = Number(h.avg_cost) || 0
-        if (cost > 0 && shares * cost >= TAX.KR_MAJOR_AMT) return "acq"
-        return ""
+        return shares > 0 && b > 0 && shares * b >= TAX.KR_MAJOR_AMT
+            ? "basis"
+            : ""
     }
     const krMajorRows = krRows.filter((h) => majorPath(h) !== "")
-    const krMajorAcqOnly = krRows.filter((h) => majorPath(h) === "acq").length
-    // 기준가도 평단도 없어 어느 경로로도 판정 못 하는 종목 = 보류(현재가로 대체 금지)
     const krMajorUnknown = krRows.filter(
-        (h) =>
-            !(Number(basisPx[String(h.ticker)]) > 0) &&
-            !(Number(h.avg_cost) > 0)
+        (h) => !(Number(basisPx[String(h.ticker)]) > 0)
     ).length
+    const universeByTicker = new Map(
+        universe.map((x) => [String(x.ticker).toUpperCase(), x])
+    )
+    const taxExcluded = evald.filter((h) => {
+        if (isDemo || isolated) return !h._supported
+        const meta = universeByTicker.get(String(h.ticker).toUpperCase())
+        // Fund/ETN tax needs product classification and tax-base NAV, not the stock formula.
+        return (
+            !h._supported ||
+            !meta ||
+            ["etf", "etn", "fund", "commodity"].includes(
+                String(meta.type || "").toLowerCase()
+            )
+        )
+    })
+    const taxBlocked =
+        !!loadErr ||
+        loading ||
+        !evald.length ||
+        unpricedN > 0 ||
+        taxExcluded.length > 0 ||
+        krMajorRows.length > 0 ||
+        (!isDemo && !isolated && usRows.length > 0 && !fxInfo.ok) ||
+        !broker ||
+        (krRows.length > 0 && !isFinite(parseFee(broker?.domestic_fee))) ||
+        (usRows.length > 0 && !isFinite(parseFee(broker?.overseas_fee)))
+    const closeFreshness = closeMeta
+        ? describeCloseFreshness(closeMeta, closeCheckedAt || Date.now())
+        : null
 
     // ── 분산(조합) 사실 계산 — 비중·집중도·목표갭 ──
     const krVal = krRows.reduce((a, b) => a + b._val, 0)
@@ -1491,18 +2195,87 @@ export default function PublicHoldingsTab(props: Props) {
     const tgtKr = targetKr == null ? Math.round(krPct) : targetKr
     const gapKr = Math.round(krPct - tgtKr)
 
+    // 입력 원가 기준 노출 — 현재가·목표 비중을 섞지 않는다.
+    const exposureModel = useMemo(() => {
+        const valued: any[] = []
+        const excluded: string[] = []
+        let sectorMapped = 0
+        for (const holding of rows) {
+            const ticker = String(
+                holding && holding.ticker ? holding.ticker : ""
+            )
+                .trim()
+                .toUpperCase()
+            const shares = Number(holding && holding.shares)
+            const avgCost = Number(holding && holding.avg_cost)
+            const market = String(
+                (holding && holding.market) || ""
+            ).toLowerCase()
+            const us =
+                market === "us" ||
+                String((holding && holding.currency) || "").toUpperCase() ===
+                    "USD" ||
+                /^[A-Z.-]+$/.test(ticker)
+            const factor = us ? (isolated || fxInfo.ok ? FX : 0) : 1
+            const sector = sectorMap[ticker] || ""
+            if (sector) sectorMapped += 1
+            if (
+                !supportedAsset(holding) ||
+                !(shares > 0) ||
+                !(avgCost > 0) ||
+                !(factor > 0)
+            ) {
+                excluded.push(
+                    String((holding && holding.name) || ticker || "이름 없음")
+                )
+                continue
+            }
+            valued.push({
+                ...holding,
+                ticker,
+                marketLabel: us ? "미국" : "한국",
+                sector: sector || "업종 미분류",
+                value: shares * avgCost * factor,
+            })
+        }
+        return {
+            valued,
+            excluded,
+            total: valued.reduce((sum, row) => sum + row.value, 0),
+            markets: groupExposure(valued, (row) => row.marketLabel),
+            sectors: groupExposure(valued, (row) => row.sector),
+            tickers: groupExposure(
+                valued,
+                (row) => `${row.name || row.ticker} · ${row.ticker}`
+            ),
+            sectorMapped,
+        }
+    }, [FX, fxInfo.ok, isolated, rows, sectorMap])
+
     // ── 거래 기록(실현손익) 파생 — 종목별 실현손익은 네이티브 통화, 합계만 FX 환산(holdings 관행). ──
+    const tradeInputsValid = (tradeData.trades || []).every(
+        (t) => Number(t.shares) > 0 && Number(t.price) > 0 && supportedAsset(t)
+    )
     const tByTicker: any[] =
-        tradeData.summary && Array.isArray(tradeData.summary.by_ticker)
+        tradeInputsValid &&
+        tradeData.summary &&
+        Array.isArray(tradeData.summary.by_ticker)
             ? tradeData.summary.by_ticker
             : []
-    const realizedKrw = tByTicker.reduce(
-        (a, b) =>
-            a +
-            (Number(b.realized_pnl) || 0) *
-                (String(b.market) === "us" ? FX : 1),
-        0
-    )
+    const realizedKrw =
+        !tradeInputsValid ||
+        (!isolated &&
+            !isDemo &&
+            !fxInfo.ok &&
+            tByTicker.some((t) => t.market === "us"))
+            ? NaN
+            : tByTicker.reduce(
+                  (a, b) =>
+                      a +
+                      (Number(b.realized_pnl) || 0) *
+                          (String(b.market) === "us" ? FX : 1),
+                  0
+              )
     const tLedger = [...(tradeData.trades || [])].reverse() // 최신 거래 먼저
     const tHasUs = (tradeData.trades || []).some(
         (t: any) => String(t.market) === "us"
@@ -1519,9 +2292,8 @@ export default function PublicHoldingsTab(props: Props) {
         outline: "none",
         minWidth: 0,
     }
-    // 커스텀 chevron — OS 기본 화살표 제거(appearance none), 브랜드 드롭다운 룩. 색=테마 faint.
-    // data URI 전체 encodeURIComponent + viewBox + backgroundSize/no-repeat 로 타일링 차단 — 부분인코딩/viewBox누락 시 Safari·Framer 퍼블리시에서 chevron 이 버튼 전체로 반복(지그재그)됨.
-    const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='${C.faint}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`
+    // Theme-specific SVG URLs preserve the rounded chevron without JS theme detection.
+    // Keep full URI encoding and no-repeat sizing to avoid Safari tiling.
     const selStyle: CSSProperties = {
         ...inputStyle,
         cursor: "pointer",
@@ -1530,7 +2302,7 @@ export default function PublicHoldingsTab(props: Props) {
         appearance: "none",
         WebkitAppearance: "none",
         MozAppearance: "none",
-        backgroundImage: chevronUrl,
+        backgroundImage: "var(--an-hld-select-chevron)",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "right 11px center",
         backgroundSize: "10px 6px",
@@ -1641,67 +2413,264 @@ export default function PublicHoldingsTab(props: Props) {
                 ))}
             </div>
             <span style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>
-                미국 종목 표기 · 환율 {Math.round(FX).toLocaleString()}원/$
+                미국 종목 표기 · {demoMode ? "예시 환율" : "환율"} {Math.round(FX).toLocaleString()}원/$
                 {fxInfo.ok
                     ? fxInfo.asOf
                         ? " (" +
                           String(fxInfo.asOf).slice(5, 16).replace("T", " ") +
                           " 기준)"
                         : ""
-                    : " (기본값 — 환율 불러오는 중)"}
+                    : " (환율 미확인 — 실제 원화 계산 제외)"}
             </span>
         </div>
     )
 
     const Tabs = (
-        <div
-            style={{
-                display: "flex",
-                gap: 4,
-                background: C.bg,
-                borderRadius: 11,
-                padding: 3,
-                marginTop: 12,
-            }}
-        >
-            {(
-                [
-                    ["holdings", "보유종목"],
-                    ["mix", "분산"],
-                    ["trades", "거래 기록"],
-                    ["tax", "예상 세금"],
-                ] as const
-            ).map(([k, label]) => (
-                <div
-                    key={k}
-                    onClick={() => setView(k)}
-                    style={{
-                        flex: 1,
-                        textAlign: "center",
-                        cursor: "pointer",
-                        fontSize: 13,
-                        fontWeight: 800,
-                        padding: "8px 0",
-                        borderRadius: 8,
-                        background: view === k ? C.card : "transparent",
-                        color: view === k ? C.ink : C.faint,
-                        boxShadow:
-                            view === k ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
-                    }}
+        <div style={{ marginTop: 12 }}>
+            <div
+                role="group"
+                aria-label="둥지 보기"
+                style={{ display: "flex", gap: 4, padding: 4, borderRadius: 14, background: "var(--nest-stack)" }}
+            >
+                <button
+                    type="button"
+                    className="an-hld-nav-button"
+                    aria-pressed={view === "holdings"}
+                    onClick={() => setView("holdings")}
+                    style={{ flex: 1 }}
                 >
-                    {label}
+                    보유종목
+                </button>
+                <a
+                    className="an-hld-nav-button"
+                    href="/mindmap"
+                    aria-label="마인드맵 베타 (새 탭에서 열림)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ flex: 1 }}
+                >
+                    마인드맵 베타
+                </a>
+                <button
+                    type="button"
+                    className="an-hld-nav-button"
+                    aria-expanded={toolsOpen}
+                    aria-controls="nest-secondary-tools"
+                    onClick={() => setToolsOpen((value) => !value)}
+                    style={{ flex: 1 }}
+                >
+                    <span>
+                        보조 도구{view !== "holdings" ? " · " + ({ mix: "분산", trades: "거래 기록", tax: "예상 세금" } as const)[view] : ""}
+                    </span>
+                    <span aria-hidden="true" style={{ fontSize: 11, fontWeight: 700 }}>
+                        {toolsOpen ? "접기" : "펼치기"}
+                    </span>
+                </button>
+            </div>
+            <div id="nest-secondary-tools" role="group" aria-label="보조 도구 선택" hidden={!toolsOpen}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 4, marginTop: 6, padding: 4, borderRadius: 14, background: "var(--nest-stack)" }}>
+                    {([
+                        ["mix", "분산"],
+                        ["trades", "거래 기록"],
+                        ["tax", "예상 세금"],
+                    ] as const).map(([key, label]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            className="an-hld-nav-button"
+                            aria-pressed={view === key}
+                            onClick={() => setView(key)}
+                        >
+                            {label}
+                        </button>
+                    ))}
                 </div>
-            ))}
+            </div>
         </div>
     )
 
     return (
-        <div ref={rootRef} style={wrap}>
-            <style>{AN_PALETTE}</style>
+        <div className="an-hld-simple" data-nest-dark={isDark} data-nest-canvas={onCanvas} ref={rootRef} style={wrap}>
+            <style>{AN_PALETTE + NEST_NAV_CSS}</style>
+            {demoMode ? (
+                <section aria-label="둥지 예시 체험" style={{ ...cardS, background: "var(--nest-stack)", marginTop: 0, marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: C.vg }}>예시로 체험 중</div>
+                    <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.6, color: C.sub, margin: "6px 0 0" }}>
+                        수량·평단을 바꾸고 거래를 추가해 보세요. 이 화면의 종목·가격·기준일·환율·수수료는 설명용 고정 예시이며 실제 보유자료·최신 시세가 아닙니다. 변경은 이 화면에서만 유지되고 새로고침하면 초기화돼요.
+                    </p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                        <a className="an-hld-nav-button" href="/nest">내 둥지로 돌아가기</a>
+                        <button type="button" className="an-hld-nav-button" onClick={resetDemo}>예시 초기화</button>
+                    </div>
+                </section>
+            ) : (
+                <a className="an-hld-nav-button" href={demoPath || "/nest-demo"} style={{ marginBottom: 8 }}>예시로 체험하기</a>
+            )}
+            {(loadErr || tradeErr || actionErr || searchErr) && (
+                <div
+                    role="alert"
+                    style={{
+                        ...cardS,
+                        color: C.danger,
+                        fontWeight: 600,
+                        lineHeight: 1.6,
+                    }}
+                >
+                    {loadErr || tradeErr || actionErr || searchErr}
+                    {(loadErr || tradeErr) && (
+                        <div>
+                            조회 실패는 보유·거래가 0건이라는 뜻이 아니에요.
+                            아래 값은 최신으로 확인되지 않았습니다.
+                        </div>
+                    )}
+                    <button
+                        style={{
+                            ...inputStyle,
+                            border: "none",
+                            fontWeight: 700,
+                            marginTop: 8,
+                        }}
+                        onClick={() => {
+                            setActionErr("")
+                            loadHoldings()
+                            loadTrades()
+                            setSearchRetry((n) => n + 1)
+                        }}
+                    >
+                        다시 확인
+                    </button>
+                    {(loadErr || tradeErr) && (
+                        <a
+                            href={loginUrl || "/login?next=/nest"}
+                            style={{ marginLeft: 12, color: C.vg }}
+                        >
+                            다시 로그인
+                        </a>
+                    )}
+                </div>
+            )}
+            {!isDemo && !isolated && (
+                <div
+                    role="status"
+                    aria-live="polite"
+                    aria-busy={closeStatus === "loading"}
+                    style={{
+                        ...cardS,
+                        marginBottom: 24,
+                        color:
+                            closeError || closeFreshness?.delayed
+                                ? C.warn
+                                : C.sub,
+                        fontWeight: 600,
+                        lineHeight: 1.55,
+                    }}
+                >
+                    <div style={{ color: C.ink, fontWeight: 700 }}>
+                        가격 출처 · 금융위원회 주식시세정보 · 일별 종가
+                    </div>
+                    <div>
+                        {closeMeta
+                            ? `기준일 ${fmtAsOf(closeMeta.asOf)} · 생성 ${fmtCloseGeneratedAt(closeMeta.generatedAt)} · ${closeFreshness?.label} · 실시간 아님`
+                            : closeStatus === "loading"
+                              ? "기준일과 생성 시각을 확인하고 있어요."
+                              : "확인된 종가 자료가 없어 손익 계산을 보류합니다."}
+                    </div>
+                    {closeCheckedAt > 0 && (
+                        <div>
+                            브라우저 확인 {fmtCloseGeneratedAt(new Date(closeCheckedAt).toISOString())}
+                            {closeStatus === "same"
+                                ? " · 같은 기준일의 자료를 다시 확인했어요."
+                                : ""}
+                        </div>
+                    )}
+                    {closeError && (
+                        <div role="alert">
+                            {closeError}{" "}
+                            {closeMeta
+                                ? `기존 ${fmtAsOf(closeMeta.asOf)} 종가를 유지합니다.`
+                                : "없는 값을 0으로 계산하지 않습니다."}
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        disabled={closeStatus === "loading"}
+                        onClick={() => void refreshCloses("manual", true)}
+                        style={{
+                            ...inputStyle,
+                            border: "none",
+                            fontWeight: 700,
+                            marginTop: 8,
+                            opacity: closeStatus === "loading" ? 0.65 : 1,
+                            cursor:
+                                closeStatus === "loading" ? "wait" : "pointer",
+                        }}
+                    >
+                        {closeStatus === "loading"
+                            ? "종가 확인 중"
+                            : "종가 새로고침"}
+                    </button>
+                </div>
+            )}
+            {view === "trades" && (
+                <div
+                    style={{
+                        ...cardS,
+                        marginBottom: 24,
+                        fontWeight: 600,
+                        color: C.sub,
+                        lineHeight: 1.6,
+                    }}
+                >
+                    거래 기록과 보유목록은 별도로 저장돼요. 매수·매도를 기록해도
+                    보유 수량은 자동으로 바뀌지 않아요.
+                    {!tradeInputsValid && (
+                        <div role="alert" style={{ color: C.warn }}>
+                            이전 기록에 체결가·수량이 0이거나 지원하지 않는
+                            자산이 있어 손익 합산을 보류했어요. 아래 기록을
+                            수정해 주세요.
+                        </div>
+                    )}
+                    {tradeData.summary?.unmatched_sell_shares > 0 && (
+                        <div role="status" style={{ color: C.warn }}>
+                            매수 기록보다 많은 매도가 있어 손익 일부를 계산하지
+                            못했어요. 이전 매수 기록을 확인해 주세요.
+                        </div>
+                    )}
+                </div>
+            )}
+            {view === "mix" && exposureMeta?.error && (
+                <div role="alert" style={{ ...cardS, color: C.sub }}>
+                    업종 분류를 불러오지 못했어요. 보유목록은 유지됩니다.{" "}
+                    <button
+                        style={{
+                            ...inputStyle,
+                            border: "none",
+                            fontWeight: 700,
+                        }}
+                        onClick={() => setExposureMeta(null)}
+                    >
+                        다시 불러오기
+                    </button>
+                </div>
+            )}
+            {evald.some((h) => !h._supported) && (
+                <div role="status" style={{ ...cardS, color: C.warn }}>
+                    직접 원자재 등 지원하지 않는 자산은 평가·분산·세금 합계에서
+                    제외했어요. 기존 기록은 보존되며 삭제할 수 있습니다.
+                </div>
+            )}
+            {!fxInfo.ok && !isDemo && !isolated && usRows.length > 0 && (
+                <div role="status" style={{ ...cardS, color: C.warn }}>
+                    환율을 확인하지 못해 해외 자산의 원화 평가와 세금 계산을
+                    보류했어요.
+                </div>
+            )}
             {/* 추가/수정 팝업 — ★(추가) 또는 행 '수정' 클릭 시. 수량·평단 수동 입력 → POST(신규)/PATCH(수정). */}
             {pop && (
                 <div
-                    onClick={() => setPop(null)}
+                    onClick={() => {
+                        if (!mutationRef.current) setPop(null)
+                    }}
                     style={{
                         position: "fixed",
                         inset: 0,
@@ -1718,6 +2687,8 @@ export default function PublicHoldingsTab(props: Props) {
                         style={{
                             width: "100%",
                             maxWidth: 320,
+                            maxHeight: "85dvh",
+                            overflowY: "auto",
                             background: C.card,
                             borderRadius: 18,
                             padding: "18px 18px 16px",
@@ -1734,7 +2705,7 @@ export default function PublicHoldingsTab(props: Props) {
                                 marginBottom: 14,
                             }}
                         >
-                            <Logo
+                            <Logo offline={demoMode}
                                 ticker={pop.ticker}
                                 name={pop.name}
                                 market={pop.market}
@@ -1839,9 +2810,24 @@ export default function PublicHoldingsTab(props: Props) {
                                 />
                             </div>
                         </div>
+                        {popErr && (
+                            <div
+                                role="alert"
+                                style={{
+                                    color: C.danger,
+                                    fontWeight: 600,
+                                    fontSize: 13,
+                                    marginTop: 10,
+                                }}
+                            >
+                                {popErr}
+                            </div>
+                        )}
                         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
                             <button
-                                onClick={() => setPop(null)}
+                                onClick={() => {
+                                    if (!mutationRef.current) setPop(null)
+                                }}
                                 style={{
                                     flex: 1,
                                     border: `1px solid ${C.line}`,
@@ -1883,7 +2869,9 @@ export default function PublicHoldingsTab(props: Props) {
             {/* 거래 기록 팝업 — 매수/매도 · 수량 · 체결가 · 거래일 → POST/PATCH /api/trades. 실현손익 서버 이동평균 재계산. */}
             {tPop && (
                 <div
-                    onClick={() => setTPop(null)}
+                    onClick={() => {
+                        if (!mutationRef.current) setTPop(null)
+                    }}
                     style={{
                         position: "fixed",
                         inset: 0,
@@ -1900,6 +2888,8 @@ export default function PublicHoldingsTab(props: Props) {
                         style={{
                             width: "100%",
                             maxWidth: 320,
+                            maxHeight: "85dvh",
+                            overflowY: "auto",
                             background: C.card,
                             borderRadius: 18,
                             padding: "18px 18px 16px",
@@ -1916,7 +2906,7 @@ export default function PublicHoldingsTab(props: Props) {
                                 marginBottom: 14,
                             }}
                         >
-                            <Logo
+                            <Logo offline={demoMode}
                                 ticker={tPop.ticker}
                                 name={tPop.name}
                                 market={tPop.market}
@@ -2088,9 +3078,24 @@ export default function PublicHoldingsTab(props: Props) {
                                 />
                             </div>
                         </div>
+                        {tPopErr && (
+                            <div
+                                role="alert"
+                                style={{
+                                    color: C.danger,
+                                    fontWeight: 600,
+                                    fontSize: 13,
+                                    marginTop: 10,
+                                }}
+                            >
+                                {tPopErr}
+                            </div>
+                        )}
                         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
                             <button
-                                onClick={() => setTPop(null)}
+                                onClick={() => {
+                                    if (!mutationRef.current) setTPop(null)
+                                }}
                                 style={{
                                     flex: 1,
                                     border: `1px solid ${C.line}`,
@@ -2207,6 +3212,7 @@ export default function PublicHoldingsTab(props: Props) {
                 )}
             </div>
 
+            {showReadingGuide ? (
             <section
                 style={{
                     background: C.card,
@@ -2237,36 +3243,149 @@ export default function PublicHoldingsTab(props: Props) {
                     }}
                 >
                     <span style={{ minWidth: 0 }}>
-                        <span style={{ display: "block", color: C.vg, fontSize: 10.5, fontWeight: 800 }}>보유 맥락 읽기</span>
-                        <span style={{ display: "block", marginTop: 3, fontSize: 15, fontWeight: 800 }}>자본 규모보다 먼저 확인할 순서</span>
+                        <span
+                            style={{
+                                display: "block",
+                                color: C.vg,
+                                fontSize: 10.5,
+                                fontWeight: 800,
+                            }}
+                        >
+                            보유 맥락 읽기
+                        </span>
+                        <span
+                            style={{
+                                display: "block",
+                                marginTop: 3,
+                                fontSize: 15,
+                                fontWeight: 800,
+                            }}
+                        >
+                            자본 규모보다 먼저 확인할 순서
+                        </span>
                     </span>
-                    <span style={{ flexShrink: 0, color: C.vg, background: C.vgS, borderRadius: 999, padding: "6px 9px", fontSize: 10.5, fontWeight: 800 }}>
+                    <span
+                        style={{
+                            flexShrink: 0,
+                            color: C.vg,
+                            background: C.vgS,
+                            borderRadius: 999,
+                            padding: "6px 9px",
+                            fontSize: 10.5,
+                            fontWeight: 800,
+                        }}
+                    >
                         {nestGuideOpen ? "접기" : "처음이라면 · 펼치기"}
                     </span>
                 </button>
                 {nestGuideOpen ? (
                     <div id="nest-reading-guide">
-                        <p style={{ margin: "12px 0 0", color: C.sub, fontSize: 11.5, lineHeight: 1.65 }}>
-                            자본 규모는 무엇을 살지보다 확인 순서를 바꿉니다. 경험이 적을수록 평가손익보다 입력값·기준일·분모를 먼저 확인하세요.
+                        <p
+                            style={{
+                                margin: "12px 0 0",
+                                color: C.sub,
+                                fontSize: 11.5,
+                                lineHeight: 1.65,
+                            }}
+                        >
+                            자본 규모는 무엇을 살지보다 확인 순서를 바꿉니다.
+                            경험이 적을수록 평가손익보다 입력값·기준일·분모를
+                            먼저 확인하세요.
                         </p>
-                        <ol style={{ margin: "12px 0 0", paddingLeft: 20, display: "grid", gap: 9, color: C.sub, fontSize: 11.5, lineHeight: 1.55 }}>
-                            <li><b style={{ color: C.ink }}>입력값</b> — 수량·평균단가·통화가 실제 계좌와 맞는지 확인합니다.</li>
-                            <li><b style={{ color: C.ink }}>집중도</b> — 자본이 클수록 단일 종목·업종·지역 집중과 현금화 가능성을 먼저 확인합니다.</li>
-                            <li><b style={{ color: C.ink }}>평가손익</b> — 현재가 기준일과 환율 기준일을 확인한 뒤 읽습니다.</li>
-                            <li><b style={{ color: C.ink }}>공시·세금 사실</b> — 보유 종목 공시와 세금 기준일을 예상 수익과 섞지 않습니다.</li>
+                        <ol
+                            style={{
+                                margin: "12px 0 0",
+                                paddingLeft: 20,
+                                display: "grid",
+                                gap: 9,
+                                color: C.sub,
+                                fontSize: 11.5,
+                                lineHeight: 1.55,
+                            }}
+                        >
+                            <li>
+                                <b style={{ color: C.ink }}>입력값</b> —
+                                수량·평균단가·통화가 실제 계좌와 맞는지
+                                확인합니다.
+                            </li>
+                            <li>
+                                <b style={{ color: C.ink }}>집중도</b> — 자본이
+                                클수록 단일 종목·업종·지역 집중과 현금화
+                                가능성을 먼저 확인합니다.
+                            </li>
+                            <li>
+                                <b style={{ color: C.ink }}>평가손익</b> — 최근
+                                공식 종가 기준일과 환율 기준일을 확인한 뒤
+                                읽습니다. 실시간 가격이 아닙니다.
+                            </li>
+                            <li>
+                                <b style={{ color: C.ink }}>공시·세금 사실</b> —
+                                보유 종목 공시와 세금 기준일을 예상 수익과 섞지
+                                않습니다.
+                            </li>
                         </ol>
-                        <div style={{ marginTop: 12, padding: "9px 10px", borderRadius: 10, background: C.bg, color: C.faint, fontSize: 10.5, lineHeight: 1.55 }}>
-                            함께 볼 것: 원가 분모 + 가격·환율 기준일 + 집중도. 자본 규모나 경험 수준만으로 위험성향과 적합 자산을 판정하지 않습니다.
+                        <div
+                            style={{
+                                marginTop: 12,
+                                padding: "9px 10px",
+                                borderRadius: 10,
+                                background: C.bg,
+                                color: C.faint,
+                                fontSize: 10.5,
+                                lineHeight: 1.55,
+                            }}
+                        >
+                            함께 볼 것: 원가 분모 + 가격·환율 기준일 + 집중도.
+                            자본 규모나 경험 수준만으로 위험성향과 적합 자산을
+                            판정하지 않습니다.
                         </div>
-                        <nav aria-label="다음으로 볼 페이지" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-                            <span style={{ color: C.faint, fontSize: 10.5, fontWeight: 800 }}>다음으로 볼 곳</span>
-                            {([["종목 확인", "/stock"], ["보유 종목 공시", "/disclosure"], ["시장 환경", "/market"]] as const).map(([label, path]) => (
-                                <a key={path} href={path} style={{ color: C.vg, background: C.vgS, borderRadius: 999, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, textDecoration: "none" }}>{label}</a>
+                        <nav
+                            aria-label="다음으로 볼 페이지"
+                            style={{
+                                marginTop: 12,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 7,
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            <span
+                                style={{
+                                    color: C.faint,
+                                    fontSize: 10.5,
+                                    fontWeight: 800,
+                                }}
+                            >
+                                다음으로 볼 곳
+                            </span>
+                            {(
+                                [
+                                    ["종목 확인", "/stock"],
+                                    ["보유 종목 공시", "/disclosure"],
+                                    ["시장 환경", "/market"],
+                                ] as const
+                            ).map(([label, path]) => (
+                                <a
+                                    key={path}
+                                    href={path}
+                                    style={{
+                                        color: C.vg,
+                                        background: C.vgS,
+                                        borderRadius: 999,
+                                        padding: "5px 9px",
+                                        fontSize: 10.5,
+                                        fontWeight: 800,
+                                        textDecoration: "none",
+                                    }}
+                                >
+                                    {label}
+                                </a>
                             ))}
                         </nav>
                     </div>
                 ) : null}
             </section>
+            ) : null}
 
             {loading ? (
                 <>
@@ -2385,8 +3504,8 @@ export default function PublicHoldingsTab(props: Props) {
                         </div>
                     )}
 
-                    {(onCanvas || !isDemo) && CcyToggle}
-                    {(onCanvas || !isDemo) && Tabs}
+                    {(isolated || !isDemo) && CcyToggle}
+                    {(isolated || !isDemo) && Tabs}
 
                     {(() => {
                         const content =
@@ -2409,7 +3528,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                     width: "100%",
                                                     boxSizing: "border-box",
                                                 }}
-                                                placeholder="종목 검색 (이름·코드)"
+                                                placeholder={demoMode ? "예시만 검색 · 예: Microsoft / MSFT" : "종목 검색 (이름·코드)"}
                                                 value={q}
                                                 onChange={(e) =>
                                                     setQ(e.target.value)
@@ -2437,7 +3556,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                                 borderRadius: 10,
                                                             }}
                                                         >
-                                                            <Logo
+                                                            <Logo offline={demoMode}
                                                                 ticker={
                                                                     m.ticker
                                                                 }
@@ -2581,7 +3700,9 @@ export default function PublicHoldingsTab(props: Props) {
                                                 fontWeight: 700,
                                             }}
                                         >
-                                            총 평가금액
+                                            {unpricedN > 0
+                                                ? "참고금액 · 시세 없는 종목은 원가"
+                                                : "총 평가금액"}
                                         </div>
                                         <div
                                             style={{
@@ -2591,7 +3712,9 @@ export default function PublicHoldingsTab(props: Props) {
                                                 margin: "3px 0",
                                             }}
                                         >
-                                            {money(totalVal)}
+                                            {loading || loadErr
+                                                ? "확인 중"
+                                                : money(totalVal)}
                                         </div>
                                         <div
                                             style={{
@@ -2600,12 +3723,16 @@ export default function PublicHoldingsTab(props: Props) {
                                                 color: plColor(totalPl),
                                             }}
                                         >
-                                            {(totalPl > 0 ? "+" : "") +
-                                                money(totalPl)}{" "}
-                                            ·{" "}
-                                            {(totalPlPct > 0 ? "+" : "") +
-                                                totalPlPct.toFixed(1)}
-                                            %
+                                            {pricedRows.length &&
+                                            !loading &&
+                                            !loadErr
+                                                ? (totalPl > 0 ? "+" : "") +
+                                                  money(totalPl) +
+                                                  " · " +
+                                                  (totalPlPct > 0 ? "+" : "") +
+                                                  totalPlPct.toFixed(1) +
+                                                  "%"
+                                                : "손익 계산 보류"}
                                         </div>
                                         <div
                                             style={{
@@ -2615,8 +3742,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                 marginTop: 6,
                                             }}
                                         >
-                                            보유 {rows.length}종목 · 평단 입력
-                                            기준(사실)
+                                            보유 {rows.length}종목 · {demoMode ? "예시 입력값 기준" : "평단 입력 기준(사실)"}
                                             {closeAsOf
                                                 ? ` · ${fmtAsOf(closeAsOf)} 종가 기준`
                                                 : ""}
@@ -2643,6 +3769,14 @@ export default function PublicHoldingsTab(props: Props) {
                                                 onClick={() => goStock(h)}
                                                 role="link"
                                                 tabIndex={0}
+                                                onKeyDown={(e) => {
+                                                    if (
+                                                        e.target ===
+                                                            e.currentTarget &&
+                                                        e.key === "Enter"
+                                                    )
+                                                        goStock(h)
+                                                }}
                                                 style={{
                                                     display: "flex",
                                                     alignItems: "center",
@@ -2655,7 +3789,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                     cursor: "pointer",
                                                 }}
                                             >
-                                                <Logo
+                                                <Logo offline={demoMode}
                                                     ticker={h.ticker}
                                                     name={h.name}
                                                     market={h.market}
@@ -2787,7 +3921,11 @@ export default function PublicHoldingsTab(props: Props) {
                                                     >
                                                         {h._priced
                                                             ? money(h._val)
-                                                            : "시세 없음"}
+                                                            : Number(
+                                                                    h.avg_cost
+                                                                ) > 0
+                                                              ? "시세·통화 확인 필요"
+                                                              : "입력 평단 확인 필요"}
                                                     </div>
                                                 </div>
                                                 <span
@@ -2859,6 +3997,8 @@ export default function PublicHoldingsTab(props: Props) {
                                             lineHeight: 1.5,
                                         }}
                                     >
+                                        {demoMode ? "평가손익 = 설명용 고정 예시 가격 × 보유수량 − 입력 평단 · 실제 시세 아님" : (<>
+
                                         종목 누르면 상세 리포트 · 평가손익 ={" "}
                                         {closeAsOf
                                             ? `${fmtAsOf(closeAsOf)} 종가`
@@ -2866,7 +4006,8 @@ export default function PublicHoldingsTab(props: Props) {
                                         × 보유수량 − 입력 평단 (단순 계산·사실)
                                         · 종가 = 금융위 공공데이터(T+1) · 실시간
                                         시세는 리포트에서
-                                    </div>
+                                                                            </>)}
+</div>
                                 </>
                             ) : view === "mix" ? (
                                 <>
@@ -2992,6 +4133,188 @@ export default function PublicHoldingsTab(props: Props) {
                                                     표시일 뿐).
                                                 </div>
                                             )}
+                                        </div>
+                                    </div>
+
+                                    {/* 입력 원가 기준 시장·업종·종목 노출 — 별도 컴포넌트 기능을 분산 탭에 흡수. */}
+                                    <div style={cardS}>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "flex-start",
+                                                justifyContent: "space-between",
+                                                gap: 12,
+                                                flexWrap: "wrap",
+                                                marginBottom: 12,
+                                            }}
+                                        >
+                                            <div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 12,
+                                                        color: C.vg,
+                                                        fontWeight: 800,
+                                                    }}
+                                                >
+                                                    내 원가 기준 사실 지도
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 16,
+                                                        fontWeight: 800,
+                                                        marginTop: 3,
+                                                    }}
+                                                >
+                                                    포트폴리오 노출
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 11,
+                                                        color: C.faint,
+                                                        fontWeight: 600,
+                                                        marginTop: 4,
+                                                    }}
+                                                >
+                                                    현재가·수익률·목표 배분 없이
+                                                    입력한 수량×평단만 사용
+                                                </div>
+                                            </div>
+                                            <div
+                                                style={{
+                                                    textAlign: "right",
+                                                    flexShrink: 0,
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        fontSize: 16,
+                                                        fontWeight: 800,
+                                                    }}
+                                                >
+                                                    {wonCompact(
+                                                        exposureModel.total
+                                                    )}
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 10.5,
+                                                        color: C.faint,
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    환산 원가 합계
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            style={{
+                                                display: "grid",
+                                                gridTemplateColumns: narrow
+                                                    ? "1fr"
+                                                    : "repeat(3,minmax(0,1fr))",
+                                                gap: 10,
+                                            }}
+                                        >
+                                            {[
+                                                [
+                                                    "시장 노출",
+                                                    exposureModel.markets,
+                                                ],
+                                                [
+                                                    "업종 노출",
+                                                    exposureModel.sectors,
+                                                ],
+                                                [
+                                                    "종목 노출",
+                                                    exposureModel.tickers,
+                                                ],
+                                            ].map(([label, data]: any) => (
+                                                <div
+                                                    key={label}
+                                                    style={{
+                                                        minWidth: 0,
+                                                        padding: 12,
+                                                        borderRadius: 12,
+                                                        background: C.bg,
+                                                    }}
+                                                >
+                                                    <div
+                                                        style={{
+                                                            fontSize: 13,
+                                                            fontWeight: 800,
+                                                            marginBottom: 10,
+                                                        }}
+                                                    >
+                                                        {label}
+                                                    </div>
+                                                    <ExposureRows
+                                                        rows={data}
+                                                        C={C}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div
+                                            style={{
+                                                fontSize: 10.5,
+                                                color: C.faint,
+                                                fontWeight: 600,
+                                                lineHeight: 1.5,
+                                                marginTop: 11,
+                                            }}
+                                        >
+                                            원가 계산{" "}
+                                            {exposureModel.valued.length}/
+                                            {rows.length}종목 · 업종 연결{" "}
+                                            {exposureModel.sectorMapped}/
+                                            {rows.length}종목
+                                        </div>
+                                        {exposureModel.excluded.length > 0 && (
+                                            <div
+                                                role="status"
+                                                style={{
+                                                    fontSize: 10.5,
+                                                    color: C.faint,
+                                                    fontWeight: 600,
+                                                    lineHeight: 1.5,
+                                                    marginTop: 4,
+                                                }}
+                                            >
+                                                원가 계산 제외:{" "}
+                                                {exposureModel.excluded.join(
+                                                    ", "
+                                                )}{" "}
+                                                · 수량·평단 또는 미국 종목 환율
+                                                결손
+                                            </div>
+                                        )}
+                                        <div
+                                            style={{
+                                                fontSize: 10.5,
+                                                color: C.faint,
+                                                fontWeight: 600,
+                                                lineHeight: 1.5,
+                                                marginTop: 4,
+                                            }}
+                                        >
+                                            USD/KRW{" "}
+                                            {fxInfo.ok
+                                                ? Number(FX).toLocaleString(
+                                                      "ko-KR",
+                                                      {
+                                                          maximumFractionDigits: 2,
+                                                      }
+                                                  )
+                                                : "결손"}
+                                            {" · 기준 "}
+                                            {fxInfo.asOf
+                                                ? String(fxInfo.asOf)
+                                                      .replace("T", " ")
+                                                      .slice(0, 19)
+                                                : "—"}
+                                            {exposureMeta && exposureMeta.error
+                                                ? " · 업종 분류 결손"
+                                                : ""}
                                         </div>
                                     </div>
 
@@ -3225,440 +4548,622 @@ export default function PublicHoldingsTab(props: Props) {
                                             lineHeight: 1.5,
                                         }}
                                     >
+                                        {demoMode ? "예시 가격 기준 비중·집중도 계산 · 목표는 직접 설정 · 실제 자료 아님" : (<>
+
                                         비중·집중도 = 평가금액 기준 사실 산술 ·
                                         목표는 직접 설정 · 자산군 자금은 KRX ETF
                                         사실 · 투자자문·추천 아님
-                                    </div>
+                                                                            </>)}
+</div>
                                 </>
                             ) : view === "tax" ? (
-                                <>
+                                taxBlocked ? (
                                     <div
+                                        role="status"
                                         style={{
                                             ...cardS,
-                                            padding: "18px 18px",
+                                            fontWeight: 600,
+                                            lineHeight: 1.7,
                                         }}
                                     >
                                         <div
                                             style={{
-                                                fontSize: 12,
-                                                color: C.faint,
-                                                fontWeight: 700,
-                                            }}
-                                        >
-                                            <b>전량 매도</b> 가정 시 예상 비용
-                                            (세금 + 수수료)
-                                        </div>
-                                        <div
-                                            style={{
-                                                fontSize: 27,
+                                                fontSize: 20,
                                                 fontWeight: 800,
-                                                letterSpacing: "-1px",
-                                                margin: "3px 0",
+                                                color: C.ink,
                                             }}
                                         >
-                                            {won(totalTax + totalCommission)}
+                                            예상 비용 계산 보류
                                         </div>
-                                        <div
-                                            style={{
-                                                fontSize: 12.5,
-                                                color: C.sub,
-                                                fontWeight: 600,
-                                            }}
-                                        >
-                                            세금 {wonCompact(totalTax)} + 수수료{" "}
-                                            {wonCompact(totalCommission)} ·
-                                            평가손익 {totalPl >= 0 ? "+" : ""}
-                                            {wonCompact(totalPl)} 기준
-                                        </div>
-                                    </div>
-
-                                    {brokers.length > 0 && (
-                                        <div
-                                            style={{
-                                                ...cardS,
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "space-between",
-                                                gap: 10,
-                                                flexWrap: "wrap",
-                                            }}
-                                        >
-                                            <span
+                                        필요한 자료가 없는 값을 0원으로 표시하지
+                                        않아요.
+                                        <ul>
+                                            {!evald.length && (
+                                                <li>
+                                                    먼저 보유종목을 입력해
+                                                    주세요.
+                                                </li>
+                                            )}
+                                            {unpricedN > 0 && (
+                                                <li>
+                                                    평가 시세·환율 미확인{" "}
+                                                    {unpricedN}/{evald.length}
+                                                    종목:{" "}
+                                                    {evald
+                                                        .filter(
+                                                            (h) => !h._priced
+                                                        )
+                                                        .map(
+                                                            (h) =>
+                                                                h.name ||
+                                                                h.ticker
+                                                        )
+                                                        .join(", ")}
+                                                </li>
+                                            )}
+                                            {taxExcluded.length > 0 && (
+                                                <li>
+                                                    자산 유형 미확인 또는 별도
+                                                    세제 확인 필요:{" "}
+                                                    {taxExcluded
+                                                        .map(
+                                                            (h) =>
+                                                                h.name ||
+                                                                h.ticker
+                                                        )
+                                                        .join(", ")}
+                                                    . ETF·ETN·직접 원자재에는
+                                                    일반 주식 산식을 적용하지
+                                                    않아요.
+                                                </li>
+                                            )}
+                                            {krMajorRows.length > 0 && (
+                                                <li>
+                                                    대주주 요건 검토가 필요해요.
+                                                    현재 수량과 직전 연말
+                                                    가격만으로는 확정할 수
+                                                    없어요.
+                                                </li>
+                                            )}
+                                            {(!broker ||
+                                                (krRows.length > 0 &&
+                                                    !isFinite(
+                                                        parseFee(
+                                                            broker?.domestic_fee
+                                                        )
+                                                    )) ||
+                                                (usRows.length > 0 &&
+                                                    !isFinite(
+                                                        parseFee(
+                                                            broker?.overseas_fee
+                                                        )
+                                                    ))) && (
+                                                <li>
+                                                    적용할 증권사 수수료를
+                                                    확인하지 못했어요.
+                                                </li>
+                                            )}
+                                        </ul>
+                                        {brokers.length > 0 && (
+                                            <label
                                                 style={{
-                                                    fontSize: 12.5,
-                                                    color: C.sub,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent:
+                                                        "space-between",
+                                                    gap: 10,
+                                                    flexWrap: "wrap",
+                                                    marginBottom: 12,
                                                     fontWeight: 700,
                                                 }}
                                             >
                                                 증권사 (매도 수수료)
-                                            </span>
-                                            <select
-                                                value={brokerIdx}
-                                                onChange={(e) =>
-                                                    setBrokerIdx(
-                                                        Number(e.target.value)
-                                                    )
-                                                }
-                                                style={{
-                                                    ...selStyle,
-                                                    fontWeight: 700,
-                                                    maxWidth: "60%",
-                                                }}
-                                            >
-                                                {brokers.map((b, i) => (
-                                                    <option key={i} value={i}>
-                                                        {b.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    )}
-
-                                    <div style={cardS}>
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "space-between",
-                                                marginBottom: 6,
-                                            }}
-                                        >
-                                            <span
-                                                style={{
-                                                    fontSize: 15,
-                                                    fontWeight: 800,
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: 7,
-                                                }}
-                                            >
-                                                <FlagIcon code="kr" /> 국내 주식
-                                            </span>
-                                            <span
-                                                style={{
-                                                    fontSize: 11.5,
-                                                    fontWeight: 800,
-                                                    color: C.vg,
-                                                    background: C.vgS,
-                                                    padding: "3px 9px",
-                                                    borderRadius: 8,
-                                                }}
-                                            >
-                                                양도세 0% · 비과세
-                                            </span>
-                                        </div>
-                                        {kv(
-                                            "양도소득세",
-                                            "0원 (비과세, ~2029)",
-                                            C.vg
-                                        )}
-                                        {kv("증권거래세 0.20%", won(krTxnTax))}
-                                        {broker
-                                            ? kv(
-                                                  "매도 수수료 (" +
-                                                      (broker.domestic_fee ||
-                                                          "—") +
-                                                      ")",
-                                                  won(krCommission)
-                                              )
-                                            : null}
-                                        {kv(
-                                            "매도금액 합계",
-                                            wonCompact(krProceeds)
-                                        )}
-                                        {krMajorRows.length > 0 && (
-                                            <div
-                                                style={{
-                                                    background: C.warnS,
-                                                    color: C.warn,
-                                                    borderRadius: 10,
-                                                    padding: "9px 11px",
-                                                    fontSize: 11.5,
-                                                    fontWeight: 700,
-                                                    lineHeight: 1.5,
-                                                    marginTop: 8,
-                                                }}
-                                            >
-                                                대주주 검토 —{" "}
-                                                {krMajorRows
-                                                    .map(
-                                                        (h) =>
-                                                            h.name || h.ticker
-                                                    )
-                                                    .join(", ")}{" "}
-                                                (종목당 50억+ 보유 시 양도세
-                                                과세 대상). 판정 기준 ={" "}
-                                                {basisAsOf
-                                                    ? `${basisAsOf.slice(0, 4)}-${basisAsOf.slice(4, 6)}-${basisAsOf.slice(6, 8)} 종가`
-                                                    : "직전 사업연도 종료일 종가"}{" "}
-                                                — 현재가 아님.
-                                                {krMajorAcqOnly > 0
-                                                    ? ` 그중 ${krMajorAcqOnly}종목은 연중 취득 기준(평단×보유수) 적용 — 기준일에 미달했거나 상장 전이었습니다.`
-                                                    : ""}{" "}
-                                                지분율(코스피 1%·코스닥 2%) 요건은
-                                                별도. 기준일 보유수는 알 수 없어
-                                                현재 보유수로 근사했습니다 — 정확
-                                                판정은 세무사 확인.
-                                            </div>
-                                        )}
-                                        {krMajorUnknown > 0 && (
-                                            <div
-                                                style={{
-                                                    color: C.sub,
-                                                    fontSize: 11,
-                                                    lineHeight: 1.5,
-                                                    marginTop: 6,
-                                                }}
-                                            >
-                                                판정 보류 {krMajorUnknown}종목 —
-                                                기준일 종가·평단 모두 미보유.
-                                                현재가로 대체하지 않습니다.
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div style={cardS}>
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "space-between",
-                                                marginBottom: 6,
-                                            }}
-                                        >
-                                            <span
-                                                style={{
-                                                    fontSize: 15,
-                                                    fontWeight: 800,
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: 7,
-                                                }}
-                                            >
-                                                <FlagIcon code="us" /> 해외 주식
-                                            </span>
-                                            <span
-                                                style={{
-                                                    fontSize: 11.5,
-                                                    fontWeight: 800,
-                                                    color: C.warn,
-                                                    background: C.warnS,
-                                                    padding: "3px 9px",
-                                                    borderRadius: 8,
-                                                }}
-                                            >
-                                                양도세 22%
-                                            </span>
-                                        </div>
-                                        {kv(
-                                            "양도소득 합계",
-                                            (usGainSum >= 0 ? "+" : "") +
-                                                wonCompact(usGainSum),
-                                            usGainSum >= 0 ? C.up : C.down
-                                        )}
-                                        {kv(
-                                            "기본공제 (연)",
-                                            "−" + wonCompact(TAX.US_DEDUCT)
-                                        )}
-                                        {kv("과세표준", wonCompact(usTaxable))}
-                                        {kv(
-                                            "예상 양도세",
-                                            won(usCgt),
-                                            usCgt > 0 ? C.ink : C.vg
-                                        )}
-                                        {broker
-                                            ? kv(
-                                                  "매도 수수료 (" +
-                                                      (broker.overseas_fee ||
-                                                          "—") +
-                                                      ")",
-                                                  won(usCommission)
-                                              )
-                                            : null}
-                                        <div
-                                            style={{
-                                                fontSize: 11,
-                                                color: C.faint,
-                                                fontWeight: 600,
-                                                marginTop: 6,
-                                                lineHeight: 1.5,
-                                            }}
-                                        >
-                                            22%(과표 3억↓)·27.5%(초과) · 손실
-                                            연내통산(이월 없음) · 환율{" "}
-                                            {Math.round(FX).toLocaleString()}
-                                            원/$
-                                            {fxInfo.ok ? "" : " (기본값)"}
-                                            가정
-                                        </div>
-                                    </div>
-
-                                    <div style={cardS}>
-                                        <div
-                                            style={{
-                                                fontSize: 12.5,
-                                                fontWeight: 800,
-                                                marginBottom: 4,
-                                            }}
-                                        >
-                                            종목별 평가손익
-                                        </div>
-                                        {[...evald]
-                                            .sort(
-                                                (a, b) =>
-                                                    Math.abs(b._pl) -
-                                                    Math.abs(a._pl)
-                                            )
-                                            .map((h, i) => (
-                                                <div
-                                                    key={h.id || h.ticker}
+                                                <select
+                                                    aria-label="증권사 (매도 수수료)"
+                                                    value={brokerIdx}
+                                                    onChange={(e) =>
+                                                        setBrokerIdx(
+                                                            Number(
+                                                                e.target.value
+                                                            )
+                                                        )
+                                                    }
                                                     style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        justifyContent:
-                                                            "space-between",
-                                                        padding: "9px 0",
-                                                        borderTop:
-                                                            i === 0
-                                                                ? "none"
-                                                                : "1px solid " +
-                                                                  C.line,
-                                                        gap: 10,
+                                                        ...selStyle,
+                                                        fontWeight: 700,
+                                                        maxWidth: "100%",
                                                     }}
                                                 >
-                                                    <div
-                                                        style={{ minWidth: 0 }}
-                                                    >
-                                                        <div
-                                                            style={{
-                                                                fontSize: 13.5,
-                                                                fontWeight: 700,
-                                                                whiteSpace:
-                                                                    "nowrap",
-                                                                overflow:
-                                                                    "hidden",
-                                                                textOverflow:
-                                                                    "ellipsis",
-                                                                display: "flex",
-                                                                alignItems:
-                                                                    "center",
-                                                                gap: 6,
-                                                            }}
+                                                    {brokers.map((b, i) => (
+                                                        <option
+                                                            key={i}
+                                                            value={i}
                                                         >
-                                                            <FlagIcon
-                                                                code={
-                                                                    h._us
-                                                                        ? "us"
-                                                                        : "kr"
-                                                                }
-                                                            />
-                                                            {h.name || h.ticker}
-                                                        </div>
-                                                        <div
-                                                            style={{
-                                                                fontSize: 11,
-                                                                color: C.faint,
-                                                                fontWeight: 600,
-                                                                marginTop: 2,
-                                                            }}
-                                                        >
-                                                            {!h._priced
-                                                                ? "시세 없음 · 손익 계산 제외"
-                                                                : h._us
-                                                                  ? "양도세 22% 대상"
-                                                                  : h._val >=
-                                                                      TAX.KR_MAJOR_AMT
-                                                                    ? "대주주 과세 검토"
-                                                                    : "비과세 · 거래세만"}
-                                                        </div>
-                                                    </div>
-                                                    <div
-                                                        style={{
-                                                            fontSize: 13.5,
-                                                            fontWeight: 800,
-                                                            color: h._priced
-                                                                ? plColor(h._pl)
-                                                                : C.faint,
-                                                            fontVariantNumeric:
-                                                                "tabular-nums",
-                                                            flexShrink: 0,
-                                                        }}
-                                                    >
-                                                        {h._priced
-                                                            ? (h._pl >= 0
-                                                                  ? "+"
-                                                                  : "") +
-                                                              wonCompact(h._pl)
-                                                            : "—"}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                            {b.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                        )}
+                                        일반계좌·국내 소액주주의 장내 매도를
+                                        가정한 학습용 계산이며,
+                                        ISA·연금·대주주·장외거래는 별도 확인이
+                                        필요해요.
                                     </div>
-
-                                    <div
-                                        style={{ ...cardS, background: C.vgS }}
-                                    >
+                                ) : (
+                                    <>
                                         <div
                                             style={{
-                                                fontSize: 12.5,
-                                                fontWeight: 800,
-                                                marginBottom: 7,
+                                                ...cardS,
+                                                padding: "18px 18px",
                                             }}
                                         >
-                                            알아두기
-                                        </div>
-                                        {[
-                                            "국내 상장주식 양도세 = 비과세 (금투세 폐지 2024-12-10, 2029년까지 유지 기조)",
-                                            "대주주(종목당 보유 50억+, 직전 사업연도 종료일 종가 기준) 는 국내도 양도세 과세 — 지분율 요건 별도",
-                                            "해외주식 양도세 = 22% (과표 3억↓), 연 250만 기본공제(국가 합산), 손익 연내통산",
-                                            "수수료는 증권사별로 다름 — 세금(양도세·거래세)은 법정으로 증권사 무관",
-                                            "가상자산 양도세 = 2027-01-01~ 22% (연 250만 공제) — 본 추적기는 주식만 계산",
-                                        ].map((t, i) => (
                                             <div
-                                                key={i}
                                                 style={{
-                                                    fontSize: 11.5,
+                                                    fontSize: 12,
+                                                    color: C.faint,
+                                                    fontWeight: 700,
+                                                }}
+                                            >
+                                                일반계좌·소액주주{" "}
+                                                <b>전량 매도</b> 가정 시 예상
+                                                비용 (세금 + 수수료)
+                                            </div>
+                                            <div
+                                                style={{
+                                                    fontSize: 27,
+                                                    fontWeight: 800,
+                                                    letterSpacing: "-1px",
+                                                    margin: "3px 0",
+                                                }}
+                                            >
+                                                {won(
+                                                    totalTax + totalCommission
+                                                )}
+                                            </div>
+                                            <div
+                                                style={{
+                                                    fontSize: 12.5,
                                                     color: C.sub,
                                                     fontWeight: 600,
-                                                    lineHeight: 1.55,
-                                                    paddingLeft: 12,
-                                                    position: "relative",
-                                                    marginBottom: 4,
+                                                }}
+                                            >
+                                                세금 {wonCompact(totalTax)} +
+                                                수수료{" "}
+                                                {wonCompact(totalCommission)} ·
+                                                평가손익{" "}
+                                                {totalPl >= 0 ? "+" : ""}
+                                                {wonCompact(totalPl)} 기준
+                                            </div>
+                                        </div>
+
+                                        {brokers.length > 0 && (
+                                            <div
+                                                style={{
+                                                    ...cardS,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent:
+                                                        "space-between",
+                                                    gap: 10,
+                                                    flexWrap: "wrap",
                                                 }}
                                             >
                                                 <span
                                                     style={{
-                                                        position: "absolute",
-                                                        left: 0,
-                                                        color: C.vg,
+                                                        fontSize: 12.5,
+                                                        color: C.sub,
+                                                        fontWeight: 700,
                                                     }}
                                                 >
-                                                    ·
+                                                    증권사 (매도 수수료)
                                                 </span>
-                                                {t}
+                                                <select
+                                                    value={brokerIdx}
+                                                    onChange={(e) =>
+                                                        setBrokerIdx(
+                                                            Number(
+                                                                e.target.value
+                                                            )
+                                                        )
+                                                    }
+                                                    style={{
+                                                        ...selStyle,
+                                                        fontWeight: 700,
+                                                        maxWidth: "60%",
+                                                    }}
+                                                >
+                                                    {brokers.map((b, i) => (
+                                                        <option
+                                                            key={i}
+                                                            value={i}
+                                                        >
+                                                            {b.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             </div>
-                                        ))}
-                                    </div>
+                                        )}
 
-                                    <div
-                                        style={{
-                                            textAlign: "center",
-                                            fontSize: 11,
-                                            color: C.faint,
-                                            fontWeight: 600,
-                                            marginTop: 13,
-                                            lineHeight: 1.5,
-                                        }}
-                                    >
-                                        세율·공제는 2026 시행값(사실). 🚨 해외
-                                        양도세는 <b>보유 전량을 같은 해에 판다고
-                                        가정</b>해 이익·손실을 통산한 값이에요 —
-                                        일부만 팔면 손실 종목이 차감되지 않아
-                                        실제 세금은 더 클 수 있어요. 추정·관측
-                                        보조용 — 실제 납세 판단은 세무사 확인.
-                                        절세 자문 아님.
-                                    </div>
-                                </>
+                                        <div style={cardS}>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent:
+                                                        "space-between",
+                                                    marginBottom: 6,
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        fontSize: 15,
+                                                        fontWeight: 800,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 7,
+                                                    }}
+                                                >
+                                                    <FlagIcon code="kr" /> 국내
+                                                    주식
+                                                </span>
+                                                <span
+                                                    style={{
+                                                        fontSize: 11.5,
+                                                        fontWeight: 800,
+                                                        color: C.vg,
+                                                        background: C.vgS,
+                                                        padding: "3px 9px",
+                                                        borderRadius: 8,
+                                                    }}
+                                                >
+                                                    장내 소액주주 가정
+                                                </span>
+                                            </div>
+                                            {kv(
+                                                "양도소득세",
+                                                "0원 (소액주주 장내 매도 가정)",
+                                                C.vg
+                                            )}
+                                            {kv(
+                                                "증권거래세 0.20%",
+                                                won(krTxnTax)
+                                            )}
+                                            {broker
+                                                ? kv(
+                                                      "매도 수수료 (" +
+                                                          (broker.domestic_fee ||
+                                                              "—") +
+                                                          ")",
+                                                      won(krCommission)
+                                                  )
+                                                : null}
+                                            {kv(
+                                                "매도금액 합계",
+                                                wonCompact(krProceeds)
+                                            )}
+                                            {krMajorRows.length > 0 && (
+                                                <div
+                                                    style={{
+                                                        background: C.warnS,
+                                                        color: C.warn,
+                                                        borderRadius: 10,
+                                                        padding: "9px 11px",
+                                                        fontSize: 11.5,
+                                                        fontWeight: 700,
+                                                        lineHeight: 1.5,
+                                                        marginTop: 8,
+                                                    }}
+                                                >
+                                                    대주주 검토 —{" "}
+                                                    {krMajorRows
+                                                        .map(
+                                                            (h) =>
+                                                                h.name ||
+                                                                h.ticker
+                                                        )
+                                                        .join(", ")}{" "}
+                                                    (종목당 50억+ 보유 시 양도세
+                                                    과세 대상). 판정 기준 ={" "}
+                                                    {basisAsOf
+                                                        ? `${basisAsOf.slice(0, 4)}-${basisAsOf.slice(4, 6)}-${basisAsOf.slice(6, 8)} 종가`
+                                                        : "직전 사업연도 종료일 종가"}{" "}
+                                                    — 현재가 아님. 지분율(코스피
+                                                    1%·코스닥 2%) 요건은 별도.
+                                                    기준일 보유수는 알 수 없어
+                                                    현재 보유수로 근사했습니다 —
+                                                    정확 판정은 세무사 확인.
+                                                </div>
+                                            )}
+                                            {krMajorUnknown > 0 && (
+                                                <div
+                                                    style={{
+                                                        color: C.sub,
+                                                        fontSize: 11,
+                                                        lineHeight: 1.5,
+                                                        marginTop: 6,
+                                                    }}
+                                                >
+                                                    판정 보류 {krMajorUnknown}
+                                                    종목 — 직전 연말 종가
+                                                    미확인. 현재가로 대체하지
+                                                    않습니다.
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div style={cardS}>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent:
+                                                        "space-between",
+                                                    marginBottom: 6,
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        fontSize: 15,
+                                                        fontWeight: 800,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 7,
+                                                    }}
+                                                >
+                                                    <FlagIcon code="us" /> 해외
+                                                    주식
+                                                </span>
+                                                <span
+                                                    style={{
+                                                        fontSize: 11.5,
+                                                        fontWeight: 800,
+                                                        color: C.warn,
+                                                        background: C.warnS,
+                                                        padding: "3px 9px",
+                                                        borderRadius: 8,
+                                                    }}
+                                                >
+                                                    양도세 22%
+                                                </span>
+                                            </div>
+                                            {kv(
+                                                "양도소득 합계",
+                                                (usGainSum >= 0 ? "+" : "") +
+                                                    wonCompact(usGainSum),
+                                                usGainSum >= 0 ? C.up : C.down
+                                            )}
+                                            {kv(
+                                                "기본공제 (연)",
+                                                "−" + wonCompact(TAX.US_DEDUCT)
+                                            )}
+                                            {kv(
+                                                "과세표준",
+                                                wonCompact(usTaxable)
+                                            )}
+                                            {kv(
+                                                "예상 양도세",
+                                                won(usCgt),
+                                                usCgt > 0 ? C.ink : C.vg
+                                            )}
+                                            {broker
+                                                ? kv(
+                                                      "매도 수수료 (" +
+                                                          (broker.overseas_fee ||
+                                                              "—") +
+                                                          ")",
+                                                      won(usCommission)
+                                                  )
+                                                : null}
+                                            <div
+                                                style={{
+                                                    fontSize: 11,
+                                                    color: C.faint,
+                                                    fontWeight: 600,
+                                                    marginTop: 6,
+                                                    lineHeight: 1.5,
+                                                }}
+                                            >
+                                                22%(일반 외국법인 주식) · 손실
+                                                연내통산(이월 없음) · 환율{" "}
+                                                {Math.round(
+                                                    FX
+                                                ).toLocaleString()}
+                                                원/$
+                                                {fxInfo.ok ? "" : " (기본값)"}
+                                                가정
+                                            </div>
+                                        </div>
+
+                                        <div style={cardS}>
+                                            <div
+                                                style={{
+                                                    fontSize: 12.5,
+                                                    fontWeight: 800,
+                                                    marginBottom: 4,
+                                                }}
+                                            >
+                                                종목별 평가손익
+                                            </div>
+                                            {[...evald]
+                                                .sort(
+                                                    (a, b) =>
+                                                        Math.abs(b._pl) -
+                                                        Math.abs(a._pl)
+                                                )
+                                                .map((h, i) => (
+                                                    <div
+                                                        key={h.id || h.ticker}
+                                                        style={{
+                                                            display: "flex",
+                                                            alignItems:
+                                                                "center",
+                                                            justifyContent:
+                                                                "space-between",
+                                                            padding: "9px 0",
+                                                            borderTop:
+                                                                i === 0
+                                                                    ? "none"
+                                                                    : "1px solid " +
+                                                                      C.line,
+                                                            gap: 10,
+                                                        }}
+                                                    >
+                                                        <div
+                                                            style={{
+                                                                minWidth: 0,
+                                                            }}
+                                                        >
+                                                            <div
+                                                                style={{
+                                                                    fontSize: 13.5,
+                                                                    fontWeight: 700,
+                                                                    whiteSpace:
+                                                                        "nowrap",
+                                                                    overflow:
+                                                                        "hidden",
+                                                                    textOverflow:
+                                                                        "ellipsis",
+                                                                    display:
+                                                                        "flex",
+                                                                    alignItems:
+                                                                        "center",
+                                                                    gap: 6,
+                                                                }}
+                                                            >
+                                                                <FlagIcon
+                                                                    code={
+                                                                        h._us
+                                                                            ? "us"
+                                                                            : "kr"
+                                                                    }
+                                                                />
+                                                                {h.name ||
+                                                                    h.ticker}
+                                                            </div>
+                                                            <div
+                                                                style={{
+                                                                    fontSize: 11,
+                                                                    color: C.faint,
+                                                                    fontWeight: 600,
+                                                                    marginTop: 2,
+                                                                }}
+                                                            >
+                                                                {!h._priced
+                                                                    ? "시세 없음 · 손익 계산 제외"
+                                                                    : h._us
+                                                                      ? "양도세 22% 대상"
+                                                                      : majorPath(
+                                                                              h
+                                                                          ) !==
+                                                                          ""
+                                                                        ? "대주주 과세 검토"
+                                                                        : "소액주주 장내 매도 가정"}
+                                                            </div>
+                                                        </div>
+                                                        <div
+                                                            style={{
+                                                                fontSize: 13.5,
+                                                                fontWeight: 800,
+                                                                color: h._priced
+                                                                    ? plColor(
+                                                                          h._pl
+                                                                      )
+                                                                    : C.faint,
+                                                                fontVariantNumeric:
+                                                                    "tabular-nums",
+                                                                flexShrink: 0,
+                                                            }}
+                                                        >
+                                                            {h._priced
+                                                                ? (h._pl >= 0
+                                                                      ? "+"
+                                                                      : "") +
+                                                                  wonCompact(
+                                                                      h._pl
+                                                                  )
+                                                                : "—"}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+
+                                        <div
+                                            style={{
+                                                ...cardS,
+                                                background: C.vgS,
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    fontSize: 12.5,
+                                                    fontWeight: 800,
+                                                    marginBottom: 7,
+                                                }}
+                                            >
+                                                알아두기
+                                            </div>
+                                            {[
+                                                "국내 상장주식은 소액주주의 장내 매도를 가정합니다. 대주주·장외거래·절세계좌는 별도 확인이 필요해요.",
+                                                "대주주(종목당 보유 50억+, 직전 사업연도 종료일 종가 기준) 는 국내도 양도세 과세 — 지분율 요건 별도",
+                                                "국외주식 양도세 = 22%, 연 250만 기본공제(국가 합산), 실현손익 연내통산",
+                                                "수수료는 증권사별로 다름 — 세금(양도세·거래세)은 법정으로 증권사 무관",
+                                                "해외 세금은 매입·매도 당시 환율과 연간 실현손익이 필요합니다. 현재 환율을 함께 적용한 여기의 시나리오는 실제 신고세액이 아닙니다.",
+                                            ].map((t, i) => (
+                                                <div
+                                                    key={i}
+                                                    style={{
+                                                        fontSize: 11.5,
+                                                        color: C.sub,
+                                                        fontWeight: 600,
+                                                        lineHeight: 1.55,
+                                                        paddingLeft: 12,
+                                                        position: "relative",
+                                                        marginBottom: 4,
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            position:
+                                                                "absolute",
+                                                            left: 0,
+                                                            color: C.vg,
+                                                        }}
+                                                    >
+                                                        ·
+                                                    </span>
+                                                    {t}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div
+                                            style={{
+                                                textAlign: "center",
+                                                fontSize: 11,
+                                                color: C.faint,
+                                                fontWeight: 600,
+                                                marginTop: 13,
+                                                lineHeight: 1.5,
+                                            }}
+                                        >
+                                        {demoMode ? "일반계좌 전량 매도 학습용 예시 · 설명용 고정 가격·환율·수수료를 적용하므로 실제 세액이 아닙니다." : (<>
+
+                                            세율·공제는 2026 시행값(사실). 🚨
+                                            해외 양도세는{" "}
+                                            <b>
+                                                보유 전량을 같은 해에 판다고
+                                                가정
+                                            </b>
+                                            해 이익·손실을 통산한 값이에요 —
+                                            일부만 팔면 손실 종목이 차감되지
+                                            않아 실제 세금은 더 클 수 있어요.
+                                            추정·관측 보조용 — 실제 납세 판단은
+                                            세무사 확인. 절세 자문 아님.
+                                                                                </>)}
+</div>
+                                    </>
+                                )
                             ) : (
                                 <>
                                     {/* 거래 검색/추가 패널 (매수·매도 기록) */}
@@ -3679,7 +5184,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                     width: "100%",
                                                     boxSizing: "border-box",
                                                 }}
-                                                placeholder="종목 검색 (이름·코드)"
+                                                placeholder={demoMode ? "예시만 검색 · 예: Microsoft / MSFT" : "종목 검색 (이름·코드)"}
                                                 value={tq}
                                                 onChange={(e) =>
                                                     setTq(e.target.value)
@@ -3719,7 +5224,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                                         cursor: "pointer",
                                                                     }}
                                                                 >
-                                                                    <Logo
+                                                                    <Logo offline={demoMode}
                                                                         ticker={
                                                                             m.ticker
                                                                         }
@@ -3992,6 +5497,19 @@ export default function PublicHoldingsTab(props: Props) {
                                                                 }
                                                                 role="link"
                                                                 tabIndex={0}
+                                                                onKeyDown={(
+                                                                    e
+                                                                ) => {
+                                                                    if (
+                                                                        e.target ===
+                                                                            e.currentTarget &&
+                                                                        e.key ===
+                                                                            "Enter"
+                                                                    )
+                                                                        goStock(
+                                                                            s
+                                                                        )
+                                                                }}
                                                                 style={{
                                                                     display:
                                                                         "flex",
@@ -4008,7 +5526,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                                     cursor: "pointer",
                                                                 }}
                                                             >
-                                                                <Logo
+                                                                <Logo offline={demoMode}
                                                                     ticker={
                                                                         s.ticker
                                                                     }
@@ -4173,7 +5691,7 @@ export default function PublicHoldingsTab(props: Props) {
                                                                                   C.line,
                                                                     }}
                                                                 >
-                                                                    <Logo
+                                                                    <Logo offline={demoMode}
                                                                         ticker={
                                                                             t.ticker
                                                                         }
@@ -4366,11 +5884,14 @@ export default function PublicHoldingsTab(props: Props) {
                                                     lineHeight: 1.5,
                                                 }}
                                             >
+                                        {demoMode ? "예시 거래의 이동평균 매입가 기준 계산 · 실제 보유·거래와 분리 · 이 화면에서만 유지" : (<>
+
                                                 실현손익 = 매도가 − 이동평균
                                                 매입가 (단순 계산·사실) · 본인
                                                 기록용 · 순위·배지·공개 없음 ·
                                                 투자자문 아님
-                                            </div>
+                                                                                    </>)}
+</div>
                                         </>
                                     )}
                                 </>
@@ -4504,6 +6025,23 @@ addPropertyControls(PublicHoldingsTab, {
         type: ControlType.String,
         title: "Stock Path (US)",
         defaultValue: "/stock",
+    },
+    previewOnly: {
+        type: ControlType.Boolean,
+        title: "Example Only",
+        defaultValue: false,
+    },
+    demoPath: {
+        type: ControlType.String,
+        title: "Example Path",
+        defaultValue: "/nest-demo",
+    },
+    showReadingGuide: {
+        type: ControlType.Boolean,
+        title: "Reading Guide",
+        defaultValue: true,
+        enabledTitle: "Show",
+        disabledTitle: "Hide",
     },
     dark: {
         type: ControlType.Boolean,
