@@ -394,12 +394,12 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6984,
+      "conformal_q_hat": 0.6982,
       "conformal_width_pct": 86.0,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 49.7,
+      "model_accuracy": 49.6,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -410,10 +410,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 50.0,
+          "wf_accuracy": 49.7,
           "val_accuracy": 50.0,
           "wf_folds": 6,
-          "weight": 0.5
+          "weight": 0.4967
         },
         "catboost": {
           "architecture": "gbdt",
@@ -778,7 +778,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -839,7 +839,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -1155,13 +1155,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -1241,7 +1241,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "에스피지: 브레인 46점 (팩트 44 / 심리 50 / VCI -6) | 팩트 최강 quant_quality(66) / 최약 quant_volatility(9) | 퀀트: 고변동↓9 | 지분: 최대주주 이준호 19.84% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "에스피지: 브레인 46점 (팩트 44 / 심리 50 / VCI -6) | 팩트 최강 quant_quality(66) / 최약 quant_volatility(9) | 퀀트: 고변동↓9 | 지분: 최대주주 이준호 19.84% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
@@ -1739,19 +1739,19 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 35.5,
-      "prediction_std": 21.9,
+      "up_probability": 35.4,
+      "prediction_std": 22.1,
       "confidence_interval": [
         0.0,
-        99.3
+        99.1
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6376,
-      "conformal_width_pct": 99.3,
+      "conformal_q_hat": 0.6371,
+      "conformal_width_pct": 99.1,
       "prediction_set": [
         0
       ],
-      "model_accuracy": 48.9,
+      "model_accuracy": 48.8,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -1762,10 +1762,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 46.3,
-          "val_accuracy": 40.0,
+          "wf_accuracy": 46.0,
+          "val_accuracy": 38.6,
           "wf_folds": 6,
-          "weight": 0.4633
+          "weight": 0.46
         },
         "catboost": {
           "architecture": "gbdt",
@@ -1791,11 +1791,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 48.2201,
-        "rsi14": 34.3846,
-        "macd_hist": 21.9069,
-        "ma20_ratio": 21.3329,
-        "bb_position": 19.2576
+        "volatility_20d": 45.2201,
+        "rsi14": 30.3846,
+        "macd_hist": 22.2403,
+        "ma5_ratio": 22.2084,
+        "bb_position": 21.2576
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -1816,7 +1816,7 @@
       "reasons": [
         "MACD 상승반전 신호",
         "거래량 폭증 + 상승 — 매집 신호",
-        "AI 상승확률 35.5%"
+        "AI 상승확률 35.4%"
       ]
     },
     "low_52w": 5679.916015625,
@@ -2090,7 +2090,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -2151,7 +2151,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -2217,7 +2217,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 55.0,
-          "prediction": 35.5,
+          "prediction": 35.4,
           "backtest": 28.2,
           "timing": 61.0,
           "commodity_margin": 33.7,
@@ -2467,13 +2467,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -2553,7 +2553,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "액트로: 브레인 56점 (팩트 58 / 심리 50 / VCI +8) | 팩트 최강 graham_value(87) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓25 | 고변동↓9 | V5: Graham가치↑87 | 지분: 최대주주 장문용 11.13% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "액트로: 브레인 56점 (팩트 58 / 심리 50 / VCI +8) | 팩트 최강 graham_value(87) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓25 | 고변동↓9 | V5: Graham가치↑87 | 지분: 최대주주 장문용 11.13% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -3638,7 +3638,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -3699,7 +3699,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -4015,13 +4015,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -4101,7 +4101,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "애니플러스: 브레인 55점 (팩트 56 / 심리 50 / VCI +6) | 팩트 최강 quant_volatility(79) / 최약 graham_value(42) | 퀀트: 저변동↑79 | 지분: 최대주주 (주)제이제이미디어웍스 20.12% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "애니플러스: 브레인 55점 (팩트 56 / 심리 50 / VCI +6) | 팩트 최강 quant_volatility(79) / 최약 graham_value(42) | 퀀트: 저변동↑79 | 지분: 최대주주 (주)제이제이미디어웍스 20.12% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -4927,7 +4927,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -4988,7 +4988,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -5304,13 +5304,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -5400,7 +5400,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "클로봇: 브레인 41점 (팩트 37 / 심리 50 / VCI -13) | 팩트 최강 canslim_growth(50) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓21 | 고변동↓9 | 지분: 최대주주 김창구 15.54% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "클로봇: 브레인 41점 (팩트 37 / 심리 50 / VCI -13) | 팩트 최강 canslim_growth(50) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓21 | 고변동↓9 | 지분: 최대주주 김창구 15.54% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 45점 (관망) — 관찰 필요",
@@ -6176,7 +6176,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -6237,7 +6237,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -6553,13 +6553,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -6639,7 +6639,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "도우인시스: 브레인 54점 (팩트 54 / 심리 50 / VCI +4) | 팩트 최강 quant_quality(84) / 최약 quant_volatility(24) | 퀀트: 퀄리티↑84 | 고변동↓24 | 지분: 최대주주 ㈜뉴파워프라즈마 22.82% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "도우인시스: 브레인 54점 (팩트 54 / 심리 50 / VCI +4) | 팩트 최강 quant_quality(84) / 최약 quant_volatility(24) | 퀀트: 퀄리티↑84 | 고변동↓24 | 지분: 최대주주 ㈜뉴파워프라즈마 22.82% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -7517,7 +7517,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -7578,7 +7578,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -7894,13 +7894,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -7998,7 +7998,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "세미파이브: 브레인 28점 (팩트 33 / 심리 50 / VCI -17) | 팩트 최강 canslim_growth(45) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓19 | 고변동↓15 | 지분: 최대주주 SiFive, Inc. 14.77% | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "세미파이브: 브레인 28점 (팩트 33 / 심리 50 / VCI -17) | 팩트 최강 canslim_growth(45) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓19 | 고변동↓15 | 지분: 최대주주 SiFive, Inc. 14.77% | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 39점 (주의) — 리스크 주의",
@@ -8478,14 +8478,14 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 47.7,
-      "prediction_std": 2.8,
+      "up_probability": 46.2,
+      "prediction_std": 4.3,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7319,
+      "conformal_q_hat": 0.7327,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -8503,7 +8503,7 @@
         "lightgbm": {
           "architecture": "gbdt",
           "wf_accuracy": 44.7,
-          "val_accuracy": 40.0,
+          "val_accuracy": 41.4,
           "wf_folds": 6,
           "weight": 0.4467
         },
@@ -8531,11 +8531,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "rsi7": 27.0301,
-        "rsi14": 25.8146,
-        "volatility_20d": 25.0111,
-        "volume_price_trend": 24.8986,
-        "ma20_ratio": 22.371
+        "rsi7": 30.6968,
+        "volatility_20d": 25.6778,
+        "vol_ratio": 24.7338,
+        "macd_hist": 22.6715,
+        "rsi14": 22.1479
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -8864,7 +8864,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -8925,7 +8925,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -8991,7 +8991,7 @@
         "components": {
           "multi_factor": 46.0,
           "consensus": 50.0,
-          "prediction": 47.7,
+          "prediction": 46.2,
           "backtest": 34.9,
           "timing": 52.0,
           "commodity_margin": 29.0,
@@ -9240,13 +9240,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -9336,7 +9336,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "삼천당제약: 브레인 51점 (팩트 49 / 심리 50 / VCI -1) | 팩트 최강 quant_quality(66) / 최약 quant_volatility(30) | 퀀트: 모멘텀↓20 | 지분: 최대주주 (주)소화 30.7% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "삼천당제약: 브레인 51점 (팩트 49 / 심리 50 / VCI -1) | 팩트 최강 quant_quality(66) / 최약 quant_volatility(30) | 퀀트: 모멘텀↓20 | 지분: 최대주주 (주)소화 30.7% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 46점 (관망) — 관찰 필요",
@@ -9864,20 +9864,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 73.2,
-      "prediction_std": 13.0,
+      "up_probability": 74.4,
+      "prediction_std": 14.7,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7729,
+      "conformal_q_hat": 0.7732,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 47.1,
+      "model_accuracy": 47.4,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -9888,10 +9888,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 44.7,
+          "wf_accuracy": 46.0,
           "val_accuracy": 41.4,
           "wf_folds": 6,
-          "weight": 0.4467
+          "weight": 0.46
         },
         "catboost": {
           "architecture": "gbdt",
@@ -9917,11 +9917,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 43.0339,
-        "macd_hist": 31.7482,
-        "rsi14": 25.425,
-        "vol_ratio": 22.8897,
-        "return_5d": 22.2653
+        "volatility_20d": 38.0339,
+        "macd_hist": 32.4148,
+        "rsi14": 24.7583,
+        "return_5d": 24.2653,
+        "vol_ratio": 21.8897
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -9942,7 +9942,7 @@
       "reasons": [
         "RSI 27.15 과매도 — 반등 가능",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 73.2% — 강한 매수 신호"
+        "AI 상승확률 74.4% — 강한 매수 신호"
       ]
     },
     "low_52w": 24250.0,
@@ -10532,7 +10532,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -10607,7 +10607,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -10673,7 +10673,7 @@
         "components": {
           "multi_factor": 47.0,
           "consensus": 47.0,
-          "prediction": 73.2,
+          "prediction": 74.4,
           "backtest": 19.4,
           "timing": 69.0,
           "commodity_margin": 18.4,
@@ -10922,13 +10922,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -11018,7 +11018,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "영풍: 브레인 51점 (팩트 52 / 심리 50 / VCI +2) | 팩트 최강 quant_volatility(56) / 최약 canslim_growth(45) | 퀀트: 모멘텀↓21 | 지분: 최대주주 장 세 준 17.9% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "영풍: 브레인 51점 (팩트 52 / 심리 50 / VCI +2) | 팩트 최강 quant_volatility(56) / 최약 canslim_growth(45) | 퀀트: 모멘텀↓21 | 지분: 최대주주 장 세 준 17.9% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -13663,7 +13663,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -13724,7 +13724,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -14039,13 +14039,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -14135,7 +14135,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "현대건설: 브레인 43점 (팩트 38 / 심리 50 / VCI -12) | 팩트 최강 graham_value(67) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓22 | 고변동↓9 | 지분: 최대주주 현대자동차 20.95% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "현대건설: 브레인 43점 (팩트 38 / 심리 50 / VCI -12) | 팩트 최강 graham_value(67) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓22 | 고변동↓9 | 지분: 최대주주 현대자동차 20.95% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -15393,7 +15393,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -15454,7 +15454,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -15769,13 +15769,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -15855,7 +15855,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "DB하이텍: 브레인 56점 (팩트 59 / 심리 50 / VCI +9) | 팩트 최강 graham_value(87) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓19 | 고변동↓15 | V5: Graham가치↑87 | 지분: 최대주주 (주)DB Inc. 19.52% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "DB하이텍: 브레인 56점 (팩트 59 / 심리 50 / VCI +9) | 팩트 최강 graham_value(87) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓19 | 고변동↓15 | V5: Graham가치↑87 | 지분: 최대주주 (주)DB Inc. 19.52% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 61점 (매수) — 관찰 필요",
@@ -16760,19 +16760,19 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 88.9,
+      "up_probability": 88.8,
       "prediction_std": 8.7,
       "confidence_interval": [
         16.6,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7223,
+      "conformal_q_hat": 0.7224,
       "conformal_width_pct": 83.4,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 53.7,
+      "model_accuracy": 53.8,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -16790,10 +16790,10 @@
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 58.3,
+          "wf_accuracy": 58.9,
           "val_accuracy": 55.6,
           "wf_folds": 7,
-          "weight": 0.5829
+          "weight": 0.5886
         },
         "mlp": {
           "architecture": "neural_net",
@@ -16838,14 +16838,14 @@
         "RSI 25.81 과매도 — 반등 가능",
         "이동평균 역배열 — 하락 추세",
         "거래량 폭증 + 하락 — 투매 경고",
-        "AI 상승확률 88.9% — 강한 매수 신호",
+        "AI 상승확률 88.8% — 강한 매수 신호",
         "수급 우호적"
       ]
     },
     "low_52w": 258.07000732421875,
     "price_1m": 333.4599914550781,
     "price_3m": 368.80792236328125,
-    "price_6m": 404.82012939453125,
+    "price_6m": 404.8200988769531,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -16971,7 +16971,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -17088,7 +17088,7 @@
         "components": {
           "multi_factor": 54.0,
           "consensus": 68.0,
-          "prediction": 88.9,
+          "prediction": 88.8,
           "backtest": 37.2,
           "timing": 65.0,
           "commodity_margin": 56.5,
@@ -17337,13 +17337,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 53,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -17424,7 +17424,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "TPL: 브레인 53점 (팩트 52 / 심리 55 / VCI -3) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(21) | 퀀트: 모멘텀↓24 | 고변동↓21 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "TPL: 브레인 53점 (팩트 52 / 심리 55 / VCI -3) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(21) | 퀀트: 모멘텀↓24 | 고변동↓21 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -18273,7 +18273,7 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7079,
+      "conformal_q_hat": 0.7075,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -18290,17 +18290,17 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.6,
+          "wf_accuracy": 48.0,
           "val_accuracy": 45.8,
           "wf_folds": 7,
-          "weight": 0.4857
+          "weight": 0.48
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 47.7,
+          "wf_accuracy": 48.3,
           "val_accuracy": 51.4,
           "wf_folds": 7,
-          "weight": 0.4771
+          "weight": 0.4829
         },
         "mlp": {
           "architecture": "neural_net",
@@ -18346,7 +18346,7 @@
     "low_52w": 155.99517822265625,
     "price_1m": 196.19000244140625,
     "price_3m": 187.3677520751953,
-    "price_6m": 170.57623291015625,
+    "price_6m": 170.5762176513672,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -18468,7 +18468,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -18839,13 +18839,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 53,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -18926,7 +18926,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "VRSK: 브레인 47점 (팩트 47 / 심리 46 / VCI +1) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(41) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "VRSK: 브레인 47점 (팩트 47 / 심리 46 / VCI +1) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(41) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -19910,7 +19910,7 @@
       "credit": {
         "debt_ratio_pct": 21.5
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -20276,13 +20276,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 60,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -20363,7 +20363,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "AME: 브레인 47점 (팩트 43 / 심리 56 / VCI -13) | 팩트 최강 quant_quality(66) / 최약 graham_value(24) | V5: Graham가치↓24 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "AME: 브레인 47점 (팩트 43 / 심리 56 / VCI -13) | 팩트 최강 quant_quality(66) / 최약 graham_value(24) | V5: Graham가치↓24 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
@@ -21331,7 +21331,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 9,
     "quadrant_info": {
@@ -21697,13 +21697,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -21794,7 +21794,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "AWI: 브레인 47점 (팩트 45 / 심리 52 / VCI -7) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(27) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 3.1 (Lynch 절대 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "AWI: 브레인 47점 (팩트 45 / 심리 52 / VCI -7) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(27) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 3.1 (Lynch 절대 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "AVOID",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -22815,7 +22815,7 @@
       "credit": {
         "debt_ratio_pct": 75.5
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -23181,13 +23181,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -23268,7 +23268,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "BDX: 브레인 60점 (팩트 61 / 심리 56 / VCI +5) | 팩트 최강 canslim_growth(73) / 최약 graham_value(42) | 퀀트: 모멘텀↑80 | V5: CANSLIM↑73 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "BDX: 브레인 60점 (팩트 61 / 심리 56 / VCI +5) | 팩트 최강 canslim_growth(73) / 최약 graham_value(42) | 퀀트: 모멘텀↑80 | V5: CANSLIM↑73 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -24106,20 +24106,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 70.3,
+      "up_probability": 70.2,
       "prediction_std": 15.4,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7509,
+      "conformal_q_hat": 0.7494,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 47.1,
+      "model_accuracy": 46.8,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -24130,10 +24130,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 44.6,
+          "wf_accuracy": 42.9,
           "val_accuracy": 45.8,
           "wf_folds": 7,
-          "weight": 0.4457
+          "weight": 0.4286
         },
         "catboost": {
           "architecture": "gbdt",
@@ -24184,7 +24184,7 @@
       "reasons": [
         "RSI 34.56 저평가 구간",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 70.3% — 강한 매수 신호"
+        "AI 상승확률 70.2% — 강한 매수 신호"
       ]
     },
     "low_52w": 403.6099853515625,
@@ -24315,7 +24315,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -24432,7 +24432,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 49.0,
-          "prediction": 70.3,
+          "prediction": 70.2,
           "backtest": 36.5,
           "timing": 62.0,
           "commodity_margin": 57.1,
@@ -24681,13 +24681,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -24768,7 +24768,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CMI: 브레인 55점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CMI: 브레인 55점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -25744,7 +25744,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -26110,13 +26110,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 60,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -26206,7 +26206,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "COCO: 브레인 50점 (팩트 54 / 심리 56 / VCI -2) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(30) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -46.39 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "COCO: 브레인 50점 (팩트 54 / 심리 56 / VCI -2) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(30) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -46.39 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -27255,7 +27255,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -27621,13 +27621,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 63,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -27725,7 +27725,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "COHR: 브레인 26점 (팩트 41 / 심리 58 / VCI -17) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓23 | 고변동↓9 | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | US 미수집: 옵션플로우 | 하향조정: FCF $-1,023M (음수); 내부자 MSPR -58.97 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "COHR: 브레인 26점 (팩트 41 / 심리 58 / VCI -17) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓23 | 고변동↓9 | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | US 미수집: 옵션플로우 | 하향조정: FCF $-1,023M (음수); 내부자 MSPR -58.97 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 44점 (주의) — 리스크 주의",
@@ -28789,7 +28789,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -29155,13 +29155,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -29209,11 +29209,11 @@
               "passed": false
             },
             {
-              "name": "VIX 역사적 극단 (29.01)",
+              "name": "VIX 역사적 극단 (29.49)",
               "passed": false
             },
             {
-              "name": "크립토 디커플링 (상관 -0.41)",
+              "name": "크립토 디커플링 (상관 -0.39)",
               "passed": true
             },
             {
@@ -29265,7 +29265,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "COP: 브레인 72점 (팩트 72 / 심리 54 / VCI +21) | 팩트 최강 graham_value(87) / 최약 quant_volatility(59) | V5: Graham가치↑87 | VCI: 팩트 좋은데 심리 과도 비관 → 역발상 매수 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "COP: 브레인 72점 (팩트 72 / 심리 54 / VCI +21) | 팩트 최강 graham_value(87) / 최약 quant_volatility(59) | V5: Graham가치↑87 | VCI: 팩트 좋은데 심리 과도 비관 → 역발상 매수 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 63점 (매수) — 관찰 필요",
@@ -30265,7 +30265,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -30631,13 +30631,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 55,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -30719,7 +30719,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CPRT: 브레인 56점 (팩트 58 / 심리 51 / VCI +7) | 팩트 최강 quant_quality(70) / 최약 canslim_growth(42) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CPRT: 브레인 56점 (팩트 58 / 심리 51 / VCI +7) | 팩트 최강 quant_quality(70) / 최약 canslim_growth(42) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -31609,7 +31609,7 @@
       "credit": {
         "debt_ratio_pct": 73.5
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -31975,13 +31975,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 55,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -32069,7 +32069,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CRH: 브레인 47점 (팩트 49 / 심리 43 / VCI +6) | 팩트 최강 quant_quality(66) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CRH: 브레인 47점 (팩트 49 / 심리 43 / VCI +6) | 팩트 최강 quant_quality(66) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -32991,7 +32991,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -33357,13 +33357,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 51,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -33460,7 +33460,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CRUS: 브레인 50점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 graham_value(77) / 최약 quant_volatility(33) | V5: Graham가치↑77 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -42.87 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CRUS: 브레인 50점 (팩트 57 / 심리 51 / VCI +6) | 팩트 최강 graham_value(77) / 최약 quant_volatility(33) | V5: Graham가치↑77 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -42.87 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -34158,14 +34158,14 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 68.0,
-      "prediction_std": 8.4,
+      "up_probability": 69.1,
+      "prediction_std": 9.2,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8411,
+      "conformal_q_hat": 0.8426,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -34175,17 +34175,17 @@
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.9,
+          "wf_accuracy": 53.1,
           "val_accuracy": 45.8,
           "wf_folds": 7,
-          "weight": 0.5286
+          "weight": 0.5314
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.4,
-          "val_accuracy": 45.8,
+          "wf_accuracy": 51.1,
+          "val_accuracy": 44.4,
           "wf_folds": 7,
-          "weight": 0.5143
+          "weight": 0.5114
         },
         "catboost": {
           "architecture": "gbdt",
@@ -34211,11 +34211,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "ma5_ratio": 29.1352,
-        "macd_hist": 26.3938,
-        "vol_ratio": 25.9343,
-        "volatility_20d": 23.6412,
-        "return_1d": 23.2024
+        "volatility_20d": 30.9745,
+        "ma5_ratio": 26.8014,
+        "vol_ratio": 25.6028,
+        "macd_hist": 23.7277,
+        "volume_price_trend": 20.3443
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -34235,7 +34235,7 @@
       "color": "#86EFAC",
       "reasons": [
         "이동평균 정배열 — 상승 추세",
-        "AI 상승확률 68.0% — 강한 매수 신호"
+        "AI 상승확률 69.1% — 강한 매수 신호"
       ]
     },
     "low_52w": 34.52000427246094,
@@ -34352,7 +34352,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -34469,7 +34469,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 58.0,
-          "prediction": 68.0,
+          "prediction": 69.1,
           "backtest": 61.1,
           "timing": 66.0,
           "commodity_margin": 56.5,
@@ -34720,13 +34720,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 62,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -34814,7 +34814,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CTRE: 브레인 52점 (팩트 50 / 심리 58 / VCI -8) | 팩트 최강 canslim_growth(56) / 최약 quant_quality(40) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CTRE: 브레인 52점 (팩트 50 / 심리 58 / VCI -8) | 팩트 최강 canslim_growth(56) / 최약 quant_quality(40) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -35702,7 +35702,7 @@
       "credit": {
         "debt_ratio_pct": 3.8
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -36068,13 +36068,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -36152,7 +36152,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CTSH: 브레인 66점 (팩트 70 / 심리 55 / VCI +15) | 팩트 최강 graham_value(100) / 최약 quant_volatility(41) | V5: Graham가치↑100 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CTSH: 브레인 66점 (팩트 70 / 심리 55 / VCI +15) | 팩트 최강 graham_value(100) / 최약 quant_volatility(41) | V5: Graham가치↑100 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
@@ -36956,7 +36956,7 @@
         "AI 상승확률 69.9% — 강한 매수 신호"
       ]
     },
-    "low_52w": 68.55149841308594,
+    "low_52w": 68.5514907836914,
     "price_1m": 92.52999877929688,
     "price_3m": 93.64881134033203,
     "price_6m": 90.85236358642578,
@@ -37082,7 +37082,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -37449,13 +37449,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 63,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -37533,7 +37533,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CVS: 브레인 52점 (팩트 50 / 심리 57 / VCI -7) | 팩트 최강 graham_value(67) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CVS: 브레인 52점 (팩트 50 / 심리 57 / VCI -7) | 팩트 최강 graham_value(67) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -39552,7 +39552,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -39613,7 +39613,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -39931,13 +39931,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -40017,7 +40017,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "신영증권: 브레인 41점 (팩트 40 / 심리 50 / VCI -10) | 팩트 최강 graham_value(55) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | 지분: 최대주주 원국희 10.42% | NAV +58.8% 할증 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "신영증권: 브레인 41점 (팩트 40 / 심리 50 / VCI -10) | 팩트 최강 graham_value(55) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | 지분: 최대주주 원국희 10.42% | NAV +58.8% 할증 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 43점 (주의) — 리스크 주의",
@@ -40991,7 +40991,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -41052,7 +41052,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -41367,13 +41367,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -41453,7 +41453,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "파라다이스: 브레인 47점 (팩트 46 / 심리 50 / VCI -4) | 팩트 최강 graham_value(70) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | V5: Graham가치↑70 | 지분: 최대주주 (주)파라다이스글로벌 37.62% | NAV +69.3% 할증 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "파라다이스: 브레인 47점 (팩트 46 / 심리 50 / VCI -4) | 팩트 최강 graham_value(70) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | V5: Graham가치↑70 | 지분: 최대주주 (주)파라다이스글로벌 37.62% | NAV +69.3% 할증 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 45점 (관망) — 관찰 필요",
@@ -42330,7 +42330,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -42391,7 +42391,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -42706,13 +42706,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -42792,7 +42792,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "브이엠: 브레인 60점 (팩트 64 / 심리 50 / VCI +14) | 팩트 최강 quant_quality(91) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓24 | 퀄리티↑91 | 고변동↓15 | V5: Graham가치↑82 | 지분: 최대주주 최우형 9.14% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "브이엠: 브레인 60점 (팩트 64 / 심리 50 / VCI +14) | 팩트 최강 quant_quality(91) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓24 | 퀄리티↑91 | 고변동↓15 | V5: Graham가치↑82 | 지분: 최대주주 최우형 9.14% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
@@ -44201,7 +44201,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -44262,7 +44262,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -44578,13 +44578,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -44664,7 +44664,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "SK이터닉스: 브레인 43점 (팩트 37 / 심리 50 / VCI -13) | 팩트 최강 quant_quality(46) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | 지분: 최대주주 SK디스커버리㈜ 30.98% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "SK이터닉스: 브레인 43점 (팩트 37 / 심리 50 / VCI -13) | 팩트 최강 quant_quality(46) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | 지분: 최대주주 SK디스커버리㈜ 30.98% | VCI: 심리 과열 — 팩트 대비 고평가 주의 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 45점 (관망) — 관찰 필요",
@@ -45598,7 +45598,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -45659,7 +45659,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -45974,13 +45974,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -46060,7 +46060,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "스피어: 브레인 28점 (팩트 32 / 심리 50 / VCI -18) | 팩트 최강 canslim_growth(45) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓21 | 고변동↓15 | V5: Graham가치↓34 | 지분: 최대주주 최광수 29.98% | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "스피어: 브레인 28점 (팩트 32 / 심리 50 / VCI -18) | 팩트 최강 canslim_growth(45) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓21 | 고변동↓15 | V5: Graham가치↓34 | 지분: 최대주주 최광수 29.98% | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -47380,7 +47380,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -47449,7 +47449,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -47764,13 +47764,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -47850,7 +47850,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "HJ중공업: 브레인 50점 (팩트 47 / 심리 50 / VCI -3) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(33) | 퀀트: 모멘텀↓22 | 지분: 최대주주 에코프라임\n마린퍼시픽 유한회사 48.89% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "HJ중공업: 브레인 50점 (팩트 47 / 심리 50 / VCI -3) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(33) | 퀀트: 모멘텀↓22 | 지분: 최대주주 에코프라임\n마린퍼시픽 유한회사 48.89% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -48813,7 +48813,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -48874,7 +48874,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -49189,13 +49189,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -49275,7 +49275,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "후성: 브레인 50점 (팩트 49 / 심리 50 / VCI -1) | 팩트 최강 quant_quality(76) / 최약 quant_volatility(15) | 퀀트: 퀄리티↑76 | 고변동↓15 | 지분: 최대주주 김용민 20.85% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "후성: 브레인 50점 (팩트 49 / 심리 50 / VCI -1) | 팩트 최강 quant_quality(76) / 최약 quant_volatility(15) | 퀀트: 퀄리티↑76 | 고변동↓15 | 지분: 최대주주 김용민 20.85% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -50312,7 +50312,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -50373,7 +50373,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -50688,13 +50688,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -50774,7 +50774,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "디아이: 브레인 58점 (팩트 61 / 심리 50 / VCI +11) | 팩트 최강 graham_value(87) / 최약 quant_volatility(9) | 퀀트: 퀄리티↑81 | 고변동↓9 | V5: Graham가치↑87 | 지분: 최대주주 박원호 15.01% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "디아이: 브레인 58점 (팩트 61 / 심리 50 / VCI +11) | 팩트 최강 graham_value(87) / 최약 quant_volatility(9) | 퀀트: 퀄리티↑81 | 고변동↓9 | V5: Graham가치↑87 | 지분: 최대주주 박원호 15.01% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -51641,7 +51641,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -51702,7 +51702,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -52017,13 +52017,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -52103,7 +52103,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "에스에이엠티: 브레인 48점 (팩트 45 / 심리 50 / VCI -5) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓22 | 고변동↓9 | 지분: 최대주주 삼지전자 주식회사 49.84% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "에스에이엠티: 브레인 48점 (팩트 45 / 심리 50 / VCI -5) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓22 | 고변동↓9 | 지분: 최대주주 삼지전자 주식회사 49.84% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
@@ -52624,7 +52624,7 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8185,
+      "conformal_q_hat": 0.8186,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -52634,17 +52634,17 @@
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.0,
+          "wf_accuracy": 51.3,
           "val_accuracy": 57.1,
           "wf_folds": 6,
-          "weight": 0.51
+          "weight": 0.5133
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.3,
+          "wf_accuracy": 48.0,
           "val_accuracy": 54.3,
           "wf_folds": 6,
-          "weight": 0.4833
+          "weight": 0.48
         },
         "catboost": {
           "architecture": "gbdt",
@@ -53037,7 +53037,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -53098,7 +53098,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -53413,13 +53413,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -53499,7 +53499,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "미원에스씨: 브레인 60점 (팩트 62 / 심리 50 / VCI +12) | 팩트 최강 quant_quality(86) / 최약 quant_volatility(33) | 퀀트: 퀄리티↑86 | 지분: 최대주주 미원홀딩스주식회사 33.94% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "미원에스씨: 브레인 60점 (팩트 62 / 심리 50 / VCI +12) | 팩트 최강 quant_quality(86) / 최약 quant_volatility(33) | 퀀트: 퀄리티↑86 | 지분: 최대주주 미원홀딩스주식회사 33.94% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -54486,7 +54486,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -54547,7 +54547,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -54862,13 +54862,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -54948,7 +54948,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "레이크머티리얼즈: 브레인 49점 (팩트 47 / 심리 50 / VCI -3) | 팩트 최강 quant_quality(65) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓23 | 고변동↓15 | 지분: 최대주주 김진동 27.92% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "레이크머티리얼즈: 브레인 49점 (팩트 47 / 심리 50 / VCI -3) | 팩트 최강 quant_quality(65) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓23 | 고변동↓15 | 지분: 최대주주 김진동 27.92% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
@@ -55828,7 +55828,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -55889,7 +55889,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -56204,13 +56204,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -56290,7 +56290,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "씨어스: 브레인 59점 (팩트 62 / 심리 50 / VCI +12) | 팩트 최강 graham_value(87) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓20 | 퀄리티↑87 | 고변동↓9 | V5: Graham가치↑87 | 지분: 최대주주 이영신 26.74% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "씨어스: 브레인 59점 (팩트 62 / 심리 50 / VCI +12) | 팩트 최강 graham_value(87) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓20 | 퀄리티↑87 | 고변동↓9 | V5: Graham가치↑87 | 지분: 최대주주 이영신 26.74% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -56814,20 +56814,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 40.7,
+      "up_probability": 40.8,
       "prediction_std": 25.8,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7298,
+      "conformal_q_hat": 0.7296,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 50.9,
+      "model_accuracy": 51.2,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -56838,17 +56838,17 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 47.3,
+          "wf_accuracy": 48.0,
           "val_accuracy": 58.6,
           "wf_folds": 6,
-          "weight": 0.4733
+          "weight": 0.48
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 50.0,
+          "wf_accuracy": 50.7,
           "val_accuracy": 55.7,
           "wf_folds": 6,
-          "weight": 0.5
+          "weight": 0.5067
         },
         "mlp": {
           "architecture": "neural_net",
@@ -56890,7 +56890,7 @@
       "label": "관망",
       "color": "#888",
       "reasons": [
-        "AI 상승확률 40.7%"
+        "AI 상승확률 40.8%"
       ]
     },
     "low_52w": 4713.8759765625,
@@ -57385,7 +57385,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -57446,7 +57446,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -57512,7 +57512,7 @@
         "components": {
           "multi_factor": 51.0,
           "consensus": 50.0,
-          "prediction": 40.7,
+          "prediction": 40.8,
           "backtest": 78.2,
           "timing": 45.0,
           "commodity_margin": 42.1,
@@ -57761,13 +57761,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -57847,7 +57847,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "뉴파워프라즈마: 브레인 58점 (팩트 60 / 심리 50 / VCI +10) | 팩트 최강 quant_quality(84) / 최약 quant_volatility(9) | 퀀트: 퀄리티↑84 | 고변동↓9 | V5: Graham가치↑77 | 지분: 최대주주 최대규 21.16% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "뉴파워프라즈마: 브레인 58점 (팩트 60 / 심리 50 / VCI +10) | 팩트 최강 quant_quality(84) / 최약 quant_volatility(9) | 퀀트: 퀄리티↑84 | 고변동↓9 | V5: Graham가치↑77 | 지분: 최대주주 최대규 21.16% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -58936,7 +58936,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -58997,7 +58997,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -59313,13 +59313,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -59399,7 +59399,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "예스티: 브레인 52점 (팩트 51 / 심리 50 / VCI +1) | 팩트 최강 quant_quality(73) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | 지분: 최대주주 장동복 21.24% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "예스티: 브레인 52점 (팩트 51 / 심리 50 / VCI +1) | 팩트 최강 quant_quality(73) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | 지분: 최대주주 장동복 21.24% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 57점 (관망) — 관찰 필요",
@@ -60244,7 +60244,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -60305,7 +60305,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -60620,13 +60620,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -60706,7 +60706,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "RF머트리얼즈: 브레인 54점 (팩트 53 / 심리 50 / VCI +3) | 팩트 최강 quant_quality(74) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | 지분: 최대주주 알에프에이치아이씨㈜ 41.85% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "RF머트리얼즈: 브레인 54점 (팩트 53 / 심리 50 / VCI +3) | 팩트 최강 quant_quality(74) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | 지분: 최대주주 알에프에이치아이씨㈜ 41.85% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -61572,7 +61572,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -61633,7 +61633,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -61948,13 +61948,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -62034,7 +62034,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "GS피앤엘: 브레인 53점 (팩트 52 / 심리 50 / VCI +2) | 팩트 최강 graham_value(82) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓23 | 고변동↓15 | V5: Graham가치↑82 | 지분: 최대주주 ㈜GS 58.62% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "GS피앤엘: 브레인 53점 (팩트 52 / 심리 50 / VCI +2) | 팩트 최강 graham_value(82) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓23 | 고변동↓15 | V5: Graham가치↑82 | 지분: 최대주주 ㈜GS 58.62% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 46점 (관망) — 관찰 필요",
@@ -63530,7 +63530,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -63591,7 +63591,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -63906,13 +63906,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -63992,7 +63992,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "케이씨: 브레인 59점 (팩트 62 / 심리 50 / VCI +12) | 팩트 최강 graham_value(82) / 최약 quant_volatility(15) | 퀀트: 모멘텀↑80 | 고변동↓15 | V5: Graham가치↑82 | CANSLIM↑80 | 지분: 최대주주 고상걸 27.01% | NAV +44.1% 할증 | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "케이씨: 브레인 59점 (팩트 62 / 심리 50 / VCI +12) | 팩트 최강 graham_value(82) / 최약 quant_volatility(15) | 퀀트: 모멘텀↑80 | 고변동↓15 | V5: Graham가치↑82 | CANSLIM↑80 | 지분: 최대주주 고상걸 27.01% | NAV +44.1% 할증 | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -65037,7 +65037,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -65098,7 +65098,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -65413,13 +65413,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -65499,7 +65499,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "덕산네오룩스: 브레인 60점 (팩트 61 / 심리 50 / VCI +11) | 팩트 최강 graham_value(87) / 최약 quant_volatility(21) | 퀀트: 모멘텀↓20 | 고변동↓21 | V5: Graham가치↑87 | 지분: 최대주주 덕산하이메탈(주) 36.67% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "덕산네오룩스: 브레인 60점 (팩트 61 / 심리 50 / VCI +11) | 팩트 최강 graham_value(87) / 최약 quant_volatility(21) | 퀀트: 모멘텀↓20 | 고변동↓21 | V5: Graham가치↑87 | 지분: 최대주주 덕산하이메탈(주) 36.67% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -66055,10 +66055,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.7,
+          "wf_accuracy": 49.0,
           "val_accuracy": 32.9,
           "wf_folds": 6,
-          "weight": 0.4867
+          "weight": 0.49
         },
         "catboost": {
           "architecture": "gbdt",
@@ -66599,7 +66599,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -66660,7 +66660,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -66975,13 +66975,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -67061,7 +67061,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "대덕: 브레인 51점 (팩트 50 / 심리 50 / VCI +0) | 팩트 최강 quant_quality(68) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓24 | 고변동↓15 | 지분: 최대주주 김영재 21.74% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "대덕: 브레인 51점 (팩트 50 / 심리 50 / VCI +0) | 팩트 최강 quant_quality(68) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓24 | 고변동↓15 | 지분: 최대주주 김영재 21.74% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
@@ -68412,7 +68412,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -68473,7 +68473,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -68788,13 +68788,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -68874,7 +68874,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "슈프리마: 브레인 60점 (팩트 63 / 심리 50 / VCI +13) | 팩트 최강 graham_value(87) / 최약 quant_volatility(15) | 퀀트: 퀄리티↑82 | 고변동↓15 | V5: Graham가치↑87 | 지분: 최대주주 (주)슈프리마에이치큐 28.08% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "슈프리마: 브레인 60점 (팩트 63 / 심리 50 / VCI +13) | 팩트 최강 graham_value(87) / 최약 quant_volatility(15) | 퀀트: 퀄리티↑82 | 고변동↓15 | V5: Graham가치↑87 | 지분: 최대주주 (주)슈프리마에이치큐 28.08% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
@@ -70334,7 +70334,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -70395,7 +70395,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -70713,13 +70713,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -70799,7 +70799,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "한온시스템: 브레인 48점 (팩트 45 / 심리 50 / VCI -5) | 팩트 최강 quant_quality(59) / 최약 quant_volatility(21) | 퀀트: 고변동↓21 | 지분: 최대주주 한국타이어앤테크놀로지(주) 51.07% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "한온시스템: 브레인 48점 (팩트 45 / 심리 50 / VCI -5) | 팩트 최강 quant_quality(59) / 최약 quant_volatility(21) | 퀀트: 고변동↓21 | 지분: 최대주주 한국타이어앤테크놀로지(주) 51.07% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
@@ -71953,7 +71953,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -72014,7 +72014,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -72332,13 +72332,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -72418,7 +72418,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "휴젤: 브레인 54점 (팩트 53 / 심리 50 / VCI +3) | 팩트 최강 graham_value(67) / 최약 quant_volatility(41) | 지분: 최대주주 Aphrodite Acquisition\nHoldings LLC 43.53% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "휴젤: 브레인 54점 (팩트 53 / 심리 50 / VCI +3) | 팩트 최강 graham_value(67) / 최약 quant_volatility(41) | 지분: 최대주주 Aphrodite Acquisition\nHoldings LLC 43.53% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -73343,7 +73343,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -73709,13 +73709,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -73803,7 +73803,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Walt Disney: 브레인 59점 (팩트 62 / 심리 53 / VCI +9) | 팩트 최강 canslim_growth(78) / 최약 quant_volatility(50) | V5: CANSLIM↑78 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Walt Disney: 브레인 59점 (팩트 62 / 심리 53 / VCI +9) | 팩트 최강 canslim_growth(78) / 최약 quant_volatility(50) | V5: CANSLIM↑78 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -75142,7 +75142,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -75203,7 +75203,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -75521,13 +75521,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -75607,7 +75607,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "실리콘투: 브레인 49점 (팩트 47 / 심리 50 / VCI -3) | 팩트 최강 graham_value(67) / 최약 quant_volatility(21) | 퀀트: 고변동↓21 | 지분: 최대주주 김성운 29.09% | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "실리콘투: 브레인 49점 (팩트 47 / 심리 50 / VCI -3) | 팩트 최강 graham_value(67) / 최약 quant_volatility(21) | 퀀트: 고변동↓21 | 지분: 최대주주 김성운 29.09% | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
@@ -76103,19 +76103,19 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 77.1,
-      "prediction_std": 24.1,
+      "up_probability": 77.2,
+      "prediction_std": 23.9,
       "confidence_interval": [
-        2.2,
+        2.5,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7491,
-      "conformal_width_pct": 97.8,
+      "conformal_q_hat": 0.7464,
+      "conformal_width_pct": 97.5,
       "prediction_set": [
         1
       ],
-      "model_accuracy": 53.3,
+      "model_accuracy": 53.8,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -76126,17 +76126,17 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 52.0,
-          "val_accuracy": 40.0,
+          "wf_accuracy": 55.3,
+          "val_accuracy": 37.1,
           "wf_folds": 6,
-          "weight": 0.52
+          "weight": 0.5533
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 54.7,
+          "wf_accuracy": 53.7,
           "val_accuracy": 37.1,
           "wf_folds": 6,
-          "weight": 0.5467
+          "weight": 0.5367
         },
         "mlp": {
           "architecture": "neural_net",
@@ -76155,11 +76155,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 32.2341,
-        "bb_position": 27.3024,
-        "macd_hist": 26.5527,
-        "rsi14": 20.4827,
-        "vol_ratio": 18.7723
+        "volatility_20d": 31.5674,
+        "macd_hist": 31.2193,
+        "bb_position": 25.9691,
+        "vol_ratio": 20.439,
+        "return_1d": 19.7515
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -76179,7 +76179,7 @@
       "color": "#86EFAC",
       "reasons": [
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 77.1% — 강한 매수 신호",
+        "AI 상승확률 77.2% — 강한 매수 신호",
         "외국인·기관 강한 순매수"
       ]
     },
@@ -78874,7 +78874,7 @@
       "credit": {
         "ig_spread_pp": 0.68
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "value_guards": {
       "version": "f2f3_v0",
@@ -78935,7 +78935,7 @@
       "yield_penalty": 0.0,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1343.19,
+        "usdkrw": 1343.4,
         "cape_pct": 97.0,
         "us_10y": 4.92,
         "us_10y_percentile": 72.5,
@@ -79001,7 +79001,7 @@
         "components": {
           "multi_factor": 52.0,
           "consensus": 74.0,
-          "prediction": 77.1,
+          "prediction": 77.2,
           "backtest": 58.9,
           "timing": 62.0,
           "commodity_margin": 54.9,
@@ -79253,13 +79253,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 50,
-          "fx_sentiment": 48.8,
-          "commodity_sentiment": 47.24,
+          "fx_sentiment": 48.95,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 89.2,
           "geopolitical_score": 30.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -79338,7 +79338,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "삼성전자: 브레인 56점 (팩트 60 / 심리 47 / VCI +13) | 팩트 최강 graham_value(87) / 최약 quant_volatility(21) | 퀀트: 모멘텀↓25 | 고변동↓21 | V5: Graham가치↑87 | 지분: 최대주주 삼성생명보험㈜ 8.51% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "삼성전자: 브레인 56점 (팩트 60 / 심리 47 / VCI +13) | 팩트 최강 graham_value(87) / 최약 quant_volatility(21) | 퀀트: 모멘텀↓25 | 고변동↓21 | V5: Graham가치↑87 | 지분: 최대주주 삼성생명보험㈜ 8.51% | VCI: 팩트 우위 — 시장이 아직 미반영 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
@@ -80236,7 +80236,7 @@
       "credit": {
         "debt_ratio_pct": 81.4
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 1,
     "quadrant_info": {
@@ -80602,13 +80602,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -80696,7 +80696,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "ManpowerGroup Inc.: 브레인 64점 (팩트 66 / 심리 60 / VCI +6) | 팩트 최강 graham_value(80) / 최약 quant_volatility(55) | V5: Graham가치↑80 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "ManpowerGroup Inc.: 브레인 64점 (팩트 66 / 심리 60 / VCI +6) | 팩트 최강 graham_value(80) / 최약 quant_volatility(55) | V5: Graham가치↑80 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
@@ -81498,7 +81498,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 0,
     "quadrant_info": {
@@ -81867,13 +81867,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 63,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -81961,7 +81961,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Space Exploration Technologies Corp.: 브레인 33점 (팩트 36 / 심리 58 / VCI -22) | 팩트 최강 canslim_growth(45) / 최약 quant_volatility(21) | 퀀트: 고변동↓21 | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Space Exploration Technologies Corp.: 브레인 33점 (팩트 36 / 심리 58 / VCI -22) | 팩트 최강 canslim_growth(45) / 최약 quant_volatility(21) | 퀀트: 고변동↓21 | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 45점 (관망) — 관찰 필요",
@@ -82843,7 +82843,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -83210,13 +83210,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 63,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -83314,7 +83314,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Insmed Incorporated: 브레인 27점 (팩트 28 / 심리 57 / VCI -29) | 팩트 최강 canslim_growth(50) / 최약 quant_volatility(9) | 퀀트: 고변동↓9 | V5: Graham가치↓23 | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): FCF $-968M + 부채 101% (섹터 임계 100%) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Insmed Incorporated: 브레인 27점 (팩트 28 / 심리 57 / VCI -29) | 팩트 최강 canslim_growth(50) / 최약 quant_volatility(9) | 퀀트: 고변동↓9 | V5: Graham가치↓23 | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): FCF $-968M + 부채 101% (섹터 임계 100%) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "AVOID",
     "ai_verdict": "멀티팩터 41점 (주의) — 리스크 주의",
@@ -84074,7 +84074,7 @@
         "AI 상승확률 57.6%"
       ]
     },
-    "low_52w": 21.06839370727539,
+    "low_52w": 21.068391799926758,
     "price_1m": 23.43000030517578,
     "price_3m": 24.401304244995117,
     "price_6m": 23.87034797668457,
@@ -84191,7 +84191,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -84559,13 +84559,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 54,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -84643,7 +84643,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "First Horizon Corporation: 브레인 54점 (팩트 56 / 심리 50 / VCI +6) | 팩트 최강 graham_value(70) / 최약 quant_quality(40) | V5: Graham가치↑70 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "First Horizon Corporation: 브레인 54점 (팩트 56 / 심리 50 / VCI +6) | 팩트 최강 graham_value(70) / 최약 quant_quality(40) | V5: Graham가치↑70 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -84823,7 +84823,7 @@
       337.87,
       322.47,
       305.42,
-      314.28,
+      314.29,
       310.82,
       297.72,
       301.08,
@@ -85351,13 +85351,13 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7359,
+      "conformal_q_hat": 0.7365,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 45.5,
+      "model_accuracy": 45.3,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -85375,17 +85375,17 @@
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 44.6,
+          "wf_accuracy": 44.0,
           "val_accuracy": 43.1,
           "wf_folds": 7,
-          "weight": 0.4457
+          "weight": 0.44
         },
         "mlp": {
           "architecture": "neural_net",
-          "wf_accuracy": 50.6,
+          "wf_accuracy": 50.0,
           "val_accuracy": 51.4,
           "wf_folds": 7,
-          "weight": 0.5057
+          "weight": 0.5
         },
         "logistic": {
           "architecture": "linear",
@@ -85553,7 +85553,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -85919,13 +85919,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 56,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -86013,7 +86013,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Alphabet Inc.: 브레인 50점 (팩트 51 / 심리 47 / VCI +4) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Alphabet Inc.: 브레인 50점 (팩트 51 / 심리 47 / VCI +4) | 팩트 최강 quant_quality(70) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -86721,14 +86721,14 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 60.4,
-      "prediction_std": 14.2,
+      "up_probability": 61.4,
+      "prediction_std": 13.6,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7056,
+      "conformal_q_hat": 0.7132,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -86746,7 +86746,7 @@
         "lightgbm": {
           "architecture": "gbdt",
           "wf_accuracy": 49.7,
-          "val_accuracy": 37.5,
+          "val_accuracy": 34.7,
           "wf_folds": 7,
           "weight": 0.4971
         },
@@ -86774,11 +86774,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 40.3149,
-        "drawdown_20d": 28.5474,
-        "macd_hist": 26.4987,
-        "rsi14": 22.9864,
-        "volume_price_trend": 22.9187
+        "volatility_20d": 41.3149,
+        "drawdown_20d": 29.8807,
+        "macd_hist": 27.1653,
+        "rsi14": 24.6531,
+        "volume_price_trend": 21.2521
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -86797,13 +86797,13 @@
       "label": "매수 고려",
       "color": "#86EFAC",
       "reasons": [
-        "AI 상승확률 60.4%"
+        "AI 상승확률 61.4%"
       ]
     },
     "low_52w": 293.81787109375,
     "price_1m": 403.41326904296875,
     "price_3m": 383.1907043457031,
-    "price_6m": 326.3983154296875,
+    "price_6m": 326.3983459472656,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -86930,7 +86930,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -87047,7 +87047,7 @@
         "components": {
           "multi_factor": 49.0,
           "consensus": 48.0,
-          "prediction": 60.4,
+          "prediction": 61.4,
           "backtest": 70.2,
           "timing": 55.0,
           "commodity_margin": 50.0,
@@ -87297,13 +87297,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -87400,7 +87400,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Visa: 브레인 44점 (팩트 47 / 심리 51 / VCI -4) | 팩트 최강 canslim_growth(56) / 최약 graham_value(39) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -43.29 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Visa: 브레인 44점 (팩트 47 / 심리 51 / VCI -4) | 팩트 최강 canslim_growth(56) / 최약 graham_value(39) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -43.29 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -88275,7 +88275,7 @@
         "debt_ratio_pct": 160.2,
         "note": "부채비율 160% — 평균 이상"
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -88641,13 +88641,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -88735,7 +88735,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Eli Lilly: 브레인 47점 (팩트 44 / 심리 51 / VCI -7) | 팩트 최강 quant_quality(70) / 최약 graham_value(16) | V5: Graham가치↓16 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Eli Lilly: 브레인 47점 (팩트 44 / 심리 51 / VCI -7) | 팩트 최강 quant_quality(70) / 최약 graham_value(16) | V5: Graham가치↓16 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -88841,7 +88841,7 @@
     "volume": 5747100,
     "trading_value": 1988841411,
     "market_cap": 345316753408,
-    "high_52w": 389.1807090748937,
+    "high_52w": 389.18067797780816,
     "drop_from_high_pct": -11.08,
     "per": 24.03,
     "pbr": 19.05,
@@ -89448,41 +89448,41 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 66.1,
+      "up_probability": 66.2,
       "prediction_std": 10.1,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6984,
+      "conformal_q_hat": 0.6998,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 51.4,
+      "model_accuracy": 51.7,
       "individual_models": {
         "xgboost": {
-          "architecture": "gbdt",
-          "wf_accuracy": 49.7,
-          "val_accuracy": 62.5,
-          "wf_folds": 7,
-          "weight": 0.4971
-        },
-        "lightgbm": {
           "architecture": "gbdt",
           "wf_accuracy": 50.0,
           "val_accuracy": 62.5,
           "wf_folds": 7,
           "weight": 0.5
         },
+        "lightgbm": {
+          "architecture": "gbdt",
+          "wf_accuracy": 51.7,
+          "val_accuracy": 62.5,
+          "wf_folds": 7,
+          "weight": 0.5171
+        },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.4,
+          "wf_accuracy": 51.1,
           "val_accuracy": 68.1,
           "wf_folds": 7,
-          "weight": 0.5143
+          "weight": 0.5114
         },
         "mlp": {
           "architecture": "neural_net",
@@ -89527,13 +89527,13 @@
         "RSI 60.08 고평가 접근",
         "MACD 데드크로스 — 하락전환",
         "이동평균 정배열 — 상승 추세",
-        "AI 상승확률 66.1% — 강한 매수 신호"
+        "AI 상승확률 66.2% — 강한 매수 신호"
       ]
     },
     "low_52w": 281.1499938964844,
     "price_1m": 319.3800048828125,
     "price_3m": 332.40045166015625,
-    "price_6m": 313.1758117675781,
+    "price_6m": 313.17578125,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -89655,7 +89655,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -89772,7 +89772,7 @@
         "components": {
           "multi_factor": 52.0,
           "consensus": 49.0,
-          "prediction": 66.1,
+          "prediction": 66.2,
           "backtest": 49.4,
           "timing": 49.0,
           "commodity_margin": 41.4,
@@ -90021,13 +90021,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 55,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -90125,7 +90125,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Home Depot: 브레인 47점 (팩트 46 / 심리 50 / VCI -4) | 팩트 최강 quant_quality(70) / 최약 graham_value(24) | V5: Graham가치↓24 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.2 (Lynch 절대 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Home Depot: 브레인 47점 (팩트 46 / 심리 50 / VCI -4) | 팩트 최강 quant_quality(70) / 최약 graham_value(24) | V5: Graham가치↓24 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.2 (Lynch 절대 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "AVOID",
     "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
@@ -90797,27 +90797,27 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 63.3,
-      "prediction_std": 13.3,
+      "up_probability": 62.0,
+      "prediction_std": 12.9,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6971,
+      "conformal_q_hat": 0.6949,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 47.7,
+      "model_accuracy": 47.9,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 46.0,
-          "val_accuracy": 52.8,
+          "wf_accuracy": 46.6,
+          "val_accuracy": 54.2,
           "wf_folds": 7,
-          "weight": 0.46
+          "weight": 0.4657
         },
         "lightgbm": {
           "architecture": "gbdt",
@@ -90828,10 +90828,10 @@
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.3,
+          "wf_accuracy": 48.6,
           "val_accuracy": 54.2,
           "wf_folds": 7,
-          "weight": 0.4829
+          "weight": 0.4857
         },
         "mlp": {
           "architecture": "neural_net",
@@ -90850,11 +90850,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "macd_hist": 36.8639,
-        "volatility_20d": 35.0705,
-        "vol_ratio": 23.8577,
-        "ma5_ratio": 21.48,
-        "ma20_ratio": 17.1306
+        "macd_hist": 36.8622,
+        "volatility_20d": 35.0684,
+        "vol_ratio": 23.8563,
+        "ma5_ratio": 21.4802,
+        "ma20_ratio": 17.1311
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -90874,7 +90874,7 @@
       "color": "#86EFAC",
       "reasons": [
         "MACD 상승반전 신호",
-        "AI 상승확률 63.3%"
+        "AI 상승확률 62.0%"
       ]
     },
     "low_52w": 67.84535217285156,
@@ -91001,7 +91001,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -91118,7 +91118,7 @@
         "components": {
           "multi_factor": 52.0,
           "consensus": 55.0,
-          "prediction": 63.3,
+          "prediction": 62.0,
           "backtest": 53.1,
           "timing": 63.0,
           "commodity_margin": 41.0,
@@ -91367,13 +91367,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -91461,7 +91461,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Sysco Corporation: 브레인 48점 (팩트 46 / 심리 54 / VCI -8) | 팩트 최강 quant_quality(64) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Sysco Corporation: 브레인 48점 (팩트 46 / 심리 54 / VCI -8) | 팩트 최강 quant_quality(64) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
@@ -92178,19 +92178,19 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 24.7,
-      "prediction_std": 23.2,
+      "up_probability": 24.8,
+      "prediction_std": 23.0,
       "confidence_interval": [
         0.0,
-        91.7
+        92.8
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6699,
-      "conformal_width_pct": 91.7,
+      "conformal_q_hat": 0.68,
+      "conformal_width_pct": 92.8,
       "prediction_set": [
         0
       ],
-      "model_accuracy": 50.2,
+      "model_accuracy": 50.7,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -92201,17 +92201,17 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 47.7,
-          "val_accuracy": 47.2,
+          "wf_accuracy": 49.1,
+          "val_accuracy": 52.8,
           "wf_folds": 7,
-          "weight": 0.4771
+          "weight": 0.4914
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.6,
-          "val_accuracy": 47.2,
+          "wf_accuracy": 49.7,
+          "val_accuracy": 50.0,
           "wf_folds": 7,
-          "weight": 0.4857
+          "weight": 0.4971
         },
         "mlp": {
           "architecture": "neural_net",
@@ -92230,11 +92230,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 36.3988,
-        "drawdown_20d": 26.1751,
-        "return_1d": 23.1184,
-        "return_5d": 22.0435,
-        "bb_position": 20.3372
+        "volatility_20d": 37.9304,
+        "drawdown_20d": 26.7966,
+        "return_1d": 25.3819,
+        "return_5d": 21.3695,
+        "macd_hist": 20.57
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -92255,10 +92255,10 @@
       "reasons": [
         "RSI 37.78 저평가 구간",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 24.7% — 강한 하락 신호"
+        "AI 상승확률 24.8% — 강한 하락 신호"
       ]
     },
-    "low_52w": 774.9822387695312,
+    "low_52w": 774.982177734375,
     "price_1m": 893.280029296875,
     "price_3m": 1035.3890380859375,
     "price_6m": 987.2623291015625,
@@ -92374,7 +92374,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -92490,7 +92490,7 @@
         "components": {
           "multi_factor": 47.0,
           "consensus": 49.0,
-          "prediction": 24.7,
+          "prediction": 24.8,
           "backtest": 38.6,
           "timing": 42.0,
           "commodity_margin": 50.0,
@@ -92742,13 +92742,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -92853,7 +92853,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "GS: 브레인 44점 (팩트 53 / 심리 56 / VCI -3) | 팩트 최강 graham_value(82) / 최약 quant_volatility(27) | V5: Graham가치↑82 | US 미수집: 옵션플로우 | 하향조정: FCF $-47,218M (음수); 내부자 MSPR -68.37 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "GS: 브레인 44점 (팩트 53 / 심리 56 / VCI -3) | 팩트 최강 graham_value(82) / 최약 quant_volatility(27) | V5: Graham가치↑82 | US 미수집: 옵션플로우 | 하향조정: FCF $-47,218M (음수); 내부자 MSPR -68.37 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -93496,14 +93496,14 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 72.1,
-      "prediction_std": 19.0,
+      "up_probability": 72.0,
+      "prediction_std": 18.9,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7606,
+      "conformal_q_hat": 0.76,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
@@ -93549,11 +93549,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 49.2477,
-        "macd_hist": 31.3856,
-        "drawdown_20d": 24.6863,
+        "volatility_20d": 48.581,
+        "macd_hist": 32.0523,
+        "drawdown_20d": 25.3529,
         "vol_ratio": 24.3028,
-        "volume_price_trend": 20.7841
+        "volume_price_trend": 19.7841
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -93573,10 +93573,10 @@
       "color": "#86EFAC",
       "reasons": [
         "RSI 33.71 저평가 구간",
-        "AI 상승확률 72.1% — 강한 매수 신호"
+        "AI 상승확률 72.0% — 강한 매수 신호"
       ]
     },
-    "low_52w": 111.55390930175781,
+    "low_52w": 111.55390167236328,
     "price_1m": 183.3824920654297,
     "price_3m": 157.19776916503906,
     "price_6m": 146.02676391601562,
@@ -93693,7 +93693,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 0,
     "quadrant_info": {
@@ -93810,7 +93810,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 45.0,
-          "prediction": 72.1,
+          "prediction": 72.0,
           "backtest": 63.7,
           "timing": 68.0,
           "commodity_margin": 42.9,
@@ -94060,13 +94060,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -94154,7 +94154,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "ExxonMobil: 브레인 62점 (팩트 64 / 심리 57 / VCI +7) | 팩트 최강 graham_value(80) / 최약 quant_volatility(50) | V5: Graham가치↑80 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "ExxonMobil: 브레인 62점 (팩트 64 / 심리 57 / VCI +7) | 팩트 최강 graham_value(80) / 최약 quant_volatility(50) | V5: Graham가치↑80 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -95339,7 +95339,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -95702,13 +95702,13 @@
           "market_mood": 30,
           "consensus_opinion": 60.51,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 52,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -95798,7 +95798,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Adobe: 브레인 54점 (팩트 54 / 심리 54 / VCI +0) | 팩트 최강 quant_volatility(67) / 최약 graham_value(39) | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.0 (Lynch 절대 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Adobe: 브레인 54점 (팩트 54 / 심리 54 / VCI +0) | 팩트 최강 quant_volatility(67) / 최약 graham_value(39) | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.0 (Lynch 절대 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "AVOID",
     "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
@@ -95854,7 +95854,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -96922,7 +96922,7 @@
       "credit": {
         "debt_ratio_pct": 16.9
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -97285,13 +97285,13 @@
           "market_mood": 30,
           "consensus_opinion": 93.55,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 60,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -97381,7 +97381,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Amazon: 브레인 50점 (팩트 47 / 심리 62 / VCI -15) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(27) | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -52.45 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Amazon: 브레인 50점 (팩트 47 / 심리 62 / VCI -15) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(27) | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -52.45 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -97437,7 +97437,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -98499,7 +98499,7 @@
       "credit": {
         "debt_ratio_pct": 51.8
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -98863,13 +98863,13 @@
           "market_mood": 30,
           "consensus_opinion": 80.54,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -98949,7 +98949,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Coinbase: 브레인 37점 (팩트 41 / 심리 62 / VCI -21) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(30) | 퀀트: 모멘텀↓21 | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Coinbase: 브레인 37점 (팩트 41 / 심리 62 / VCI -21) | 팩트 최강 canslim_growth(60) / 최약 quant_volatility(30) | 퀀트: 모멘텀↓21 | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 43점 (주의) — 리스크 주의",
@@ -99005,7 +99005,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -100064,7 +100064,7 @@
       "credit": {
         "debt_ratio_pct": 58.7
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -100427,13 +100427,13 @@
           "market_mood": 30,
           "consensus_opinion": 84.29,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 60,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -100522,7 +100522,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Cisco: 브레인 48점 (팩트 49 / 심리 64 / VCI -15) | 팩트 최강 canslim_growth(65) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -58.06 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Cisco: 브레인 48점 (팩트 49 / 심리 64 / VCI -15) | 팩트 최강 canslim_growth(65) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -58.06 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 46점 (관망) — 관찰 필요",
@@ -100578,7 +100578,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -101521,7 +101521,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -101887,13 +101887,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -101974,7 +101974,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Alphabet: 브레인 51점 (팩트 48 / 심리 48 / VCI +0) | 팩트 최강 graham_value(69) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Alphabet: 브레인 51점 (팩트 48 / 심리 48 / VCI +0) | 팩트 최강 graham_value(69) / 최약 quant_volatility(15) | 퀀트: 고변동↓15 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -102064,7 +102064,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -102899,7 +102899,7 @@
       "credit": {
         "debt_ratio_pct": 40.8
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -103265,13 +103265,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 52,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -103361,7 +103361,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Intel: 브레인 23점 (팩트 32 / 심리 49 / VCI -17) | 팩트 최강 quant_quality(50) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓19 | 고변동↓9 | V5: Graham가치↓31 | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | US 미수집: 옵션플로우 | 하향조정: FCF $-4,949M (음수) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Intel: 브레인 23점 (팩트 32 / 심리 49 / VCI -17) | 팩트 최강 quant_quality(50) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓19 | 고변동↓9 | V5: Graham가치↓31 | VCI: 심리만 좋고 팩트 나쁨 → 버블 경계 | US 미수집: 옵션플로우 | 하향조정: FCF $-4,949M (음수) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 43점 (주의) — 리스크 주의",
@@ -103417,7 +103417,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -104307,7 +104307,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -104673,13 +104673,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 60,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -104760,7 +104760,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Johnson & Johnson: 브레인 54점 (팩트 54 / 심리 55 / VCI -1) | 팩트 최강 quant_volatility(70) / 최약 graham_value(39) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Johnson & Johnson: 브레인 54점 (팩트 54 / 심리 55 / VCI -1) | 팩트 최강 quant_volatility(70) / 최약 graham_value(39) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -104850,7 +104850,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -105776,7 +105776,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -106142,13 +106142,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 61,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -106238,7 +106238,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Meta Platforms: 브레인 53점 (팩트 58 / 심리 54 / VCI +4) | 팩트 최강 graham_value(67) / 최약 quant_volatility(41) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -45.66 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Meta Platforms: 브레인 53점 (팩트 58 / 심리 54 / VCI +4) | 팩트 최강 graham_value(67) / 최약 quant_volatility(41) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -45.66 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
@@ -106294,7 +106294,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -107193,7 +107193,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -107559,13 +107559,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 61,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -107655,7 +107655,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Microsoft: 브레인 50점 (팩트 52 / 심리 53 / VCI -1) | 팩트 최강 canslim_growth(63) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -51.89 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Microsoft: 브레인 50점 (팩트 52 / 심리 53 / VCI -1) | 팩트 최강 canslim_growth(63) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -51.89 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -107711,7 +107711,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -108290,7 +108290,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -108657,13 +108657,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -108751,7 +108751,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Netflix: 브레인 58점 (팩트 61 / 심리 52 / VCI +9) | 팩트 최강 graham_value(67) / 최약 canslim_growth(55) | 퀀트: 모멘텀↓23 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Netflix: 브레인 58점 (팩트 61 / 심리 52 / VCI +9) | 팩트 최강 graham_value(67) / 최약 canslim_growth(55) | 퀀트: 모멘텀↓23 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
@@ -108841,7 +108841,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -109413,7 +109413,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -109780,13 +109780,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 52,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -109875,7 +109875,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Qualcomm: 브레인 46점 (팩트 45 / 심리 50 / VCI -5) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(9) | 퀀트: 고변동↓9 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Qualcomm: 브레인 46점 (팩트 45 / 심리 50 / VCI -5) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(9) | 퀀트: 고변동↓9 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
@@ -109965,7 +109965,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -110545,7 +110545,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 2,
     "quadrant_info": {
@@ -110912,13 +110912,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 53,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -110996,7 +110996,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "Super Micro Computer: 브레인 52점 (팩트 52 / 심리 53 / VCI -1) | 팩트 최강 graham_value(92) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓23 | 고변동↓15 | V5: Graham가치↑92 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "Super Micro Computer: 브레인 52점 (팩트 52 / 심리 53 / VCI -1) | 팩트 최강 graham_value(92) / 최약 quant_volatility(15) | 퀀트: 모멘텀↓23 | 고변동↓15 | V5: Graham가치↑92 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 46점 (관망) — 관찰 필요",
@@ -111086,7 +111086,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -111663,7 +111663,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -112030,13 +112030,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 64,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -112124,7 +112124,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "UnitedHealth: 브레인 55점 (팩트 54 / 심리 58 / VCI -4) | 팩트 최강 graham_value(67) / 최약 quant_volatility(27) | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "UnitedHealth: 브레인 55점 (팩트 54 / 심리 58 / VCI -4) | 팩트 최강 graham_value(67) / 최약 quant_volatility(27) | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 50점 (관망) — 관찰 필요",
@@ -112214,7 +112214,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -113105,7 +113105,7 @@
       "credit": {
         "debt_ratio_pct": 35.3
       },
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -113471,13 +113471,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 58,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -113567,7 +113567,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "LITE: 브레인 43점 (팩트 46 / 심리 52 / VCI -6) | 팩트 최강 graham_value(66) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓22 | 고변동↓9 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -50.03 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "LITE: 브레인 43점 (팩트 46 / 심리 52 / VCI -6) | 팩트 최강 graham_value(66) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓22 | 고변동↓9 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -50.03 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 46점 (관망) — 관찰 필요",
@@ -113623,7 +113623,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -114465,7 +114465,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -114833,13 +114833,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 51,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -114929,7 +114929,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "PJT: 브레인 40점 (팩트 44 / 심리 49 / VCI -5) | 팩트 최강 graham_value(52) / 최약 quant_volatility(33) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -45.16 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "PJT: 브레인 40점 (팩트 44 / 심리 49 / VCI -5) | 팩트 최강 graham_value(52) / 최약 quant_volatility(33) | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -45.16 (대량 매도) | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "CAUTION",
     "ai_verdict": "멀티팩터 46점 (관망) — 관찰 필요",
@@ -114985,7 +114985,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -115901,7 +115901,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -116267,13 +116267,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -116354,7 +116354,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "ROST: 브레인 49점 (팩트 48 / 심리 52 / VCI -4) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "ROST: 브레인 49점 (팩트 48 / 심리 52 / VCI -4) | 팩트 최강 quant_quality(60) / 최약 quant_volatility(27) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -116444,7 +116444,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -117306,7 +117306,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -117672,13 +117672,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 46,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -117749,7 +117749,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "GHC: 브레인 59점 (팩트 61 / 심리 55 / VCI +6) | 팩트 최강 graham_value(77) / 최약 quant_volatility(50) | V5: Graham가치↑77 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "GHC: 브레인 59점 (팩트 61 / 심리 55 / VCI +6) | 팩트 최강 graham_value(77) / 최약 quant_volatility(50) | V5: Graham가치↑77 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 62점 (매수) — 관찰 필요",
@@ -117839,7 +117839,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -118753,7 +118753,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -119124,13 +119124,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -119211,7 +119211,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "TDG: 브레인 46점 (팩트 42 / 심리 56 / VCI -14) | 팩트 최강 quant_quality(50) / 최약 quant_volatility(27) | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "TDG: 브레인 46점 (팩트 42 / 심리 56 / VCI -14) | 팩트 최강 quant_quality(50) / 최약 quant_volatility(27) | VCI: 심리 과열 — 팩트 대비 고평가 주의 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 46점 (관망) — 관찰 필요",
@@ -119301,7 +119301,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -120114,7 +120114,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -120484,13 +120484,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 56,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -120571,7 +120571,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "WTS: 브레인 58점 (팩트 59 / 심리 54 / VCI +5) | 팩트 최강 graham_value(72) / 최약 quant_volatility(38) | V5: Graham가치↑72 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "WTS: 브레인 58점 (팩트 59 / 심리 54 / VCI +5) | 팩트 최강 graham_value(72) / 최약 quant_volatility(38) | V5: Graham가치↑72 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -120661,7 +120661,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -121578,7 +121578,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 8,
     "quadrant_info": {
@@ -121948,13 +121948,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 64,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -122002,11 +122002,11 @@
               "passed": false
             },
             {
-              "name": "VIX 역사적 극단 (29.01)",
+              "name": "VIX 역사적 극단 (29.49)",
               "passed": false
             },
             {
-              "name": "크립토 디커플링 (상관 -0.41)",
+              "name": "크립토 디커플링 (상관 -0.39)",
               "passed": true
             },
             {
@@ -122048,7 +122048,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "MMS: 브레인 65점 (팩트 65 / 심리 48 / VCI +20) | 팩트 최강 graham_value(97) / 최약 quant_volatility(33) | V5: Graham가치↑97 | VCI: 팩트 좋은데 심리 과도 비관 → 역발상 매수 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "MMS: 브레인 65점 (팩트 65 / 심리 48 / VCI +20) | 팩트 최강 graham_value(97) / 최약 quant_volatility(33) | V5: Graham가치↑97 | VCI: 팩트 좋은데 심리 과도 비관 → 역발상 매수 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -122146,7 +122146,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -122955,7 +122955,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -123321,13 +123321,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 55,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -123408,7 +123408,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "SPSC: 브레인 55점 (팩트 55 / 심리 54 / VCI +1) | 팩트 최강 quant_volatility(67) / 최약 graham_value(44) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "SPSC: 브레인 55점 (팩트 55 / 심리 54 / VCI +1) | 팩트 최강 quant_volatility(67) / 최약 graham_value(44) | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -123498,7 +123498,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -124313,7 +124313,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -124683,13 +124683,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 59,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -124760,7 +124760,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CENX: 브레인 57점 (팩트 58 / 심리 54 / VCI +4) | 팩트 최강 graham_value(97) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓20 | 고변동↓9 | V5: Graham가치↑97 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CENX: 브레인 57점 (팩트 58 / 심리 54 / VCI +4) | 팩트 최강 graham_value(97) / 최약 quant_volatility(9) | 퀀트: 모멘텀↓20 | 고변동↓9 | V5: Graham가치↑97 | US 미수집: 옵션플로우 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -124850,7 +124850,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -125423,7 +125423,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -125790,13 +125790,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 55,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -125884,7 +125884,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CHD: 브레인 56점 (팩트 57 / 심리 53 / VCI +4) | 팩트 최강 quant_volatility(70) / 최약 graham_value(39) | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CHD: 브레인 56점 (팩트 57 / 심리 53 / VCI +4) | 팩트 최강 quant_volatility(70) / 최약 graham_value(39) | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -125974,7 +125974,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -126548,7 +126548,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -126919,13 +126919,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 63,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -127003,7 +127003,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CHRD: 브레인 60점 (팩트 61 / 심리 58 / VCI +3) | 팩트 최강 graham_value(92) / 최약 quant_volatility(33) | V5: Graham가치↑92 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CHRD: 브레인 60점 (팩트 61 / 심리 58 / VCI +3) | 팩트 최강 graham_value(92) / 최약 quant_volatility(33) | V5: Graham가치↑92 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
@@ -127101,7 +127101,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -127677,7 +127677,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -128044,13 +128044,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 56,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -128128,7 +128128,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CI: 브레인 56점 (팩트 60 / 심리 47 / VCI +13) | 팩트 최강 graham_value(77) / 최약 canslim_growth(45) | V5: Graham가치↑77 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CI: 브레인 56점 (팩트 60 / 심리 47 / VCI +13) | 팩트 최강 graham_value(77) / 최약 canslim_growth(45) | V5: Graham가치↑77 | VCI: 팩트 우위 — 시장이 아직 미반영 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -128218,7 +128218,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -128800,7 +128800,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -129167,13 +129167,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 61,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -129251,7 +129251,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CMC: 브레인 59점 (팩트 60 / 심리 56 / VCI +4) | 팩트 최강 graham_value(87) / 최약 quant_volatility(33) | V5: Graham가치↑87 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CMC: 브레인 59점 (팩트 60 / 심리 56 / VCI +4) | 팩트 최강 graham_value(87) / 최약 quant_volatility(33) | V5: Graham가치↑87 | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -129341,7 +129341,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
@@ -129928,7 +129928,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-11-24T22:15:46+09:00"
+      "updated_at": "2026-11-24T23:15:48+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_up",
@@ -130296,13 +130296,13 @@
           "market_mood": 30,
           "consensus_opinion": 50.0,
           "crypto_macro": 38,
-          "market_fear_greed": 16.0,
+          "market_fear_greed": 15.0,
           "social_sentiment": 57,
           "fx_sentiment": 50.0,
-          "commodity_sentiment": 47.24,
+          "commodity_sentiment": 47.15,
           "global_index_decoupling": 50.0,
           "geopolitical_score": 50.0,
-          "macro_headlines": 48.0,
+          "macro_headlines": 50.0,
           "market_horizon_link": 25
         },
         "retail_cap_applied": false,
@@ -130390,7 +130390,7 @@
         "executor": "vams.execute_buy (profile.max_per_stock 기반)",
         "scope": "참고 상한 — 헌법 position_sizing.max_position_pct[grade] · 집행 크기 아님"
       },
-      "reasoning": "CME: 브레인 53점 (팩트 53 / 심리 53 / VCI +0) | 팩트 최강 quant_volatility(59) / 최약 quant_quality(46) | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.01 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
+      "reasoning": "CME: 브레인 53점 (팩트 53 / 심리 53 / VCI +0) | 팩트 최강 quant_volatility(59) / 최약 quant_quality(46) | US 미수집: 애널리스트컨센서스, 내부자거래, 옵션플로우, SEC재무 | 매크로 부정: [패닉 1단계] VIX 29.49 / 무드 30점 / S&P -3.7% — 하락 초기, 신규 진입 축소 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -130480,7 +130480,7 @@
       "rationale": "미국 직접투자 — ISA 불가(국내상장만), 일반계좌 양도세 22%(250만공제)"
     },
     "_carried": {
-      "as_of": "2026-11-24T22:10:22+09:00",
+      "as_of": "2026-11-24T23:10:15+09:00",
       "reason": "opposite_market_scope",
       "frozen_fields": [
         "verity_brain",
