@@ -1,25 +1,26 @@
 {
  "_meta": {
-  "generated_at": "2026-11-23T23:40:39+09:00",
+  "generated_at": "2026-11-25T00:07:49+09:00",
   "lookback_days": 45,
   "sessions_scanned": 29,
   "sessions_missed": [
+   "2026-11-24(HTTPError)",
    "2026-11-11(HTTPError)",
    "2026-10-12(HTTPError)"
   ],
   "counts": {
-   "filings": 743,
-   "companies": 215,
+   "filings": 708,
+   "companies": 213,
    "by_stage": {
-    "신청": 91,
-    "정정(심사중)": 94,
+    "신청": 92,
+    "정정(심사중)": 92,
     "가격확정": 10,
-    "거래소등록": 20
+    "거래소등록": 19
    },
-   "spac_likely": 20,
-   "has_ticker_now": 162,
+   "spac_likely": 19,
+   "has_ticker_now": 159,
    "priced_secondary_excluded": 10,
-   "foreign_issuer": 55,
+   "foreign_issuer": 54,
    "priced_parse_ok": 3
   },
   "source": "SEC EDGAR daily-index form.YYYYMMDD.idx (무료·인증 0)",
@@ -134,10 +135,9 @@
     "424B4": 1,
     "8-A12B": 1,
     "CERT": 1,
-    "F-1/A": 2,
-    "F-1": 1
+    "F-1/A": 2
    },
-   "first_filed": "20261009",
+   "first_filed": "20261106",
    "last_filed": "20261116",
    "lineage": true,
    "stage": 4,
@@ -309,10 +309,9 @@
     "424B4": 1,
     "8-A12B": 1,
     "CERT": 1,
-    "S-1/A": 2,
-    "S-1": 1
+    "S-1/A": 2
    },
-   "first_filed": "20261009",
+   "first_filed": "20261022",
    "last_filed": "20261030",
    "lineage": true,
    "stage": 4,
@@ -384,10 +383,9 @@
     "CERT": 1,
     "S-1MEF": 1,
     "8-A12B": 1,
-    "S-1/A": 1,
-    "S-1": 1
+    "S-1/A": 1
    },
-   "first_filed": "20261009",
+   "first_filed": "20261026",
    "last_filed": "20261030",
    "lineage": true,
    "stage": 4,
@@ -438,34 +436,6 @@
     "ticker": "BIAI",
     "region": "WHEELER, TX",
     "state_of_inc": "TX"
-   }
-  },
-  {
-   "cik": "2092592",
-   "name": "Evernorth Holdings Inc.",
-   "forms": {
-    "S-1": 2,
-    "8-A12B": 1,
-    "CERT": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261030",
-   "lineage": true,
-   "stage": 4,
-   "stage_ko": "거래소등록",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2092592&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "6221",
-    "sic_desc": "Commodity Contracts Brokers & Dealers",
-    "is_blank_check": false,
-    "ticker": "XRPN",
-    "region": "SAN FRANCISCO, CA",
-    "state_of_inc": "NV"
    }
   },
   {
@@ -571,10 +541,9 @@
    "forms": {
     "CERT": 1,
     "8-A12B": 1,
-    "F-1/A": 1,
-    "F-1": 1
+    "F-1/A": 1
    },
-   "first_filed": "20261009",
+   "first_filed": "20261023",
    "last_filed": "20261027",
    "lineage": true,
    "stage": 4,
@@ -640,15 +609,14 @@
     "424B4": 1,
     "CERT": 1,
     "S-1MEF": 1,
-    "8-A12B": 1,
-    "S-1/A": 1
+    "8-A12B": 1
    },
-   "first_filed": "20261009",
+   "first_filed": "20261013",
    "last_filed": "20261016",
    "lineage": true,
    "stage": 4,
    "stage_ko": "거래소등록",
-   "amend_count": 1,
+   "amend_count": 0,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -671,6 +639,34 @@
     "source_url": "https://www.sec.gov/Archives/edgar/data/2143850/000110465926116636/tm2619715-10_424b4.htm",
     "note": "424B4 본문 자체 파싱(🧮) — 인수인 초과배정 미반영. 확정치는 원문 확인."
    }
+  },
+  {
+   "cik": "1859836",
+   "name": "Yesway, Inc.",
+   "forms": {
+    "424B4": 1,
+    "S-1": 1
+   },
+   "first_filed": "20261118",
+   "last_filed": "20261123",
+   "lineage": true,
+   "stage": 3,
+   "stage_ko": "가격확정",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1859836&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "5411",
+    "sic_desc": "Retail-Grocery Stores",
+    "is_blank_check": false,
+    "ticker": "YSWY",
+    "region": "BEVERLY, MA",
+    "state_of_inc": "DE"
+   },
+   "pre_existing_reporter": true
   },
   {
    "cik": "2023796",
@@ -753,34 +749,6 @@
     "ticker": "MDLN",
     "region": "NORTHFIELD, IL",
     "state_of_inc": "DE"
-   },
-   "pre_existing_reporter": true
-  },
-  {
-   "cik": "1402328",
-   "name": "Sunshine Biopharma Inc.",
-   "forms": {
-    "S-1": 1,
-    "424B4": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261118",
-   "lineage": true,
-   "stage": 3,
-   "stage_ko": "가격확정",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1402328&type=S-1&dateb=&owner=include&count=20",
-   "profile": {
-    "available": true,
-    "sic": "2834",
-    "sic_desc": "Pharmaceutical Preparations",
-    "is_blank_check": false,
-    "ticker": "SBFM",
-    "region": "FORT LAUDERDALE, FL",
-    "state_of_inc": "CO"
    },
    "pre_existing_reporter": true
   },
@@ -954,6 +922,33 @@
    "pre_existing_reporter": true
   },
   {
+   "cik": "2160422",
+   "name": "Kartoon Studios Acquisition Corp",
+   "forms": {
+    "S-1/A": 1,
+    "S-1": 1
+   },
+   "first_filed": "20261105",
+   "last_filed": "20261123",
+   "lineage": true,
+   "stage": 2,
+   "stage_ko": "정정(심사중)",
+   "amend_count": 1,
+   "is_foreign_issuer": false,
+   "is_spac_likely": true,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2160422&type=S-1&dateb=&owner=include&count=20",
+   "profile": {
+    "available": true,
+    "sic": "6770",
+    "sic_desc": "Blank Checks",
+    "is_blank_check": true,
+    "ticker": "KACQ",
+    "region": "BEVERLY HILLS, CA",
+    "state_of_inc": "E9"
+   }
+  },
+  {
    "cik": "1888014",
    "name": "AKANDA CORP.",
    "forms": {
@@ -983,10 +978,9 @@
    "cik": "1019034",
    "name": "BIO KEY INTERNATIONAL INC",
    "forms": {
-    "S-1/A": 2,
-    "S-1": 1
+    "S-1/A": 2
    },
-   "first_filed": "20261009",
+   "first_filed": "20261030",
    "last_filed": "20261120",
    "lineage": true,
    "stage": 2,
@@ -1115,14 +1109,14 @@
    "cik": "1670747",
    "name": "BirchBioMed Inc.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20261009",
+   "first_filed": "20261119",
    "last_filed": "20261119",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
@@ -1562,14 +1556,14 @@
    "cik": "2071166",
    "name": "LORENZO DEVELOPMENTS INC.",
    "forms": {
-    "F-1/A": 3
+    "F-1/A": 2
    },
-   "first_filed": "20261009",
+   "first_filed": "20261106",
    "last_filed": "20261112",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 3,
+   "amend_count": 2,
    "is_foreign_issuer": true,
    "is_spac_likely": false,
    "has_ticker_now": false,
@@ -1744,14 +1738,14 @@
    "cik": "2030763",
    "name": "DataMeds AI, Inc.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20261009",
+   "first_filed": "20261110",
    "last_filed": "20261110",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -1898,14 +1892,14 @@
    "cik": "1779977",
    "name": "SeeQC, Inc.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20261009",
+   "first_filed": "20261106",
    "last_filed": "20261106",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -1915,10 +1909,9 @@
    "cik": "1698506",
    "name": "Simwon America Corp.",
    "forms": {
-    "S-1/A": 2,
-    "S-1": 1
+    "S-1/A": 2
    },
-   "first_filed": "20261009",
+   "first_filed": "20261028",
    "last_filed": "20261106",
    "lineage": true,
    "stage": 2,
@@ -2465,14 +2458,14 @@
    "cik": "2142855",
    "name": "PBT Land & Minerals, Inc.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20261009",
+   "first_filed": "20261021",
    "last_filed": "20261021",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": false,
@@ -2669,14 +2662,14 @@
    "cik": "1602409",
    "name": "FingerMotion, Inc.",
    "forms": {
-    "S-1/A": 2
+    "S-1/A": 1
    },
-   "first_filed": "20261009",
+   "first_filed": "20261014",
    "last_filed": "20261014",
    "lineage": true,
    "stage": 2,
    "stage_ko": "정정(심사중)",
-   "amend_count": 2,
+   "amend_count": 1,
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
@@ -2768,57 +2761,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=95572&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2120528",
-   "name": "Kainan Holding Group Ltd",
-   "forms": {
-    "F-1/A": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261009",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": true,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2120528&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2141983",
-   "name": "Allarity Acquisition Corp.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261009",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2141983&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2131124",
-   "name": "Elevation Acquisition Group Inc.",
-   "forms": {
-    "S-1/A": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261009",
-   "lineage": true,
-   "stage": 2,
-   "stage_ko": "정정(심사중)",
-   "amend_count": 1,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2131124&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "777917",
    "name": "PRUCO LIFE INSURANCE CO",
    "forms": {
@@ -2835,6 +2777,74 @@
    "is_spac_likely": false,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=777917&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2053365",
+   "name": "Biointra, Corp",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261123",
+   "last_filed": "20261123",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2053365&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2107904",
+   "name": "LIBERTYSTREAM INFRASTRUCTURE PARTNERS INC.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261123",
+   "last_filed": "20261123",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2107904&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2159455",
+   "name": "PGGC Technology Holding Group Inc.",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261123",
+   "last_filed": "20261123",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": false,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2159455&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "1589150",
+   "name": "Regen BioPharma Inc",
+   "forms": {
+    "S-1": 1
+   },
+   "first_filed": "20261123",
+   "last_filed": "20261123",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1589150&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "1998560",
@@ -3075,8 +3085,8 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1873454&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "1859836",
-   "name": "Yesway, Inc.",
+   "cik": "1402328",
+   "name": "Sunshine Biopharma Inc.",
    "forms": {
     "S-1": 1
    },
@@ -3089,7 +3099,7 @@
    "is_foreign_issuer": false,
    "is_spac_likely": false,
    "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1859836&type=S-1&dateb=&owner=include&count=20"
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1402328&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2152975",
@@ -3534,23 +3544,6 @@
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2161470&type=S-1&dateb=&owner=include&count=20"
   },
   {
-   "cik": "2160422",
-   "name": "Kartoon Studios Acquisition Corp",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261105",
-   "last_filed": "20261105",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": true,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2160422&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
    "cik": "2128984",
    "name": "Churchill Capital Corp XIV",
    "forms": {
@@ -3668,6 +3661,23 @@
    "is_spac_likely": false,
    "has_ticker_now": true,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=887151&type=S-1&dateb=&owner=include&count=20"
+  },
+  {
+   "cik": "2092592",
+   "name": "Evernorth Holdings Inc.",
+   "forms": {
+    "S-1": 2
+   },
+   "first_filed": "20261023",
+   "last_filed": "20261030",
+   "lineage": true,
+   "stage": 1,
+   "stage_ko": "신청",
+   "amend_count": 0,
+   "is_foreign_issuer": false,
+   "is_spac_likely": false,
+   "has_ticker_now": true,
+   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2092592&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "2109869",
@@ -4314,57 +4324,6 @@
    "is_spac_likely": true,
    "has_ticker_now": false,
    "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2156779&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "109657",
-   "name": "GT Biopharma, Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261009",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=109657&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "2148546",
-   "name": "Patriot Mobile Inc.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261009",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": false,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=2148546&type=S-1&dateb=&owner=include&count=20"
-  },
-  {
-   "cik": "1840102",
-   "name": "SPECIFICITY, INC.",
-   "forms": {
-    "S-1": 1
-   },
-   "first_filed": "20261009",
-   "last_filed": "20261009",
-   "lineage": true,
-   "stage": 1,
-   "stage_ko": "신청",
-   "amend_count": 0,
-   "is_foreign_issuer": false,
-   "is_spac_likely": false,
-   "has_ticker_now": true,
-   "edgar_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1840102&type=S-1&dateb=&owner=include&count=20"
   },
   {
    "cik": "910739",
