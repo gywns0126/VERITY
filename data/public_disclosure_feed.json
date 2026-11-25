@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated_at": "2026-11-25T17:03:05.370110+09:00",
+    "generated_at": "2026-11-25T16:40:00.587118+09:00",
     "source_collection": {
       "schema_version": 1,
       "endpoint": "list.json",
-      "status": "success",
-      "attempted_at": "2026-11-25T17:02:43+09:00",
-      "completed_at": "2026-11-25T17:03:04+09:00",
-      "successful_checked_at": "2026-11-25T17:03:04+09:00",
+      "status": "partial",
+      "attempted_at": "2026-11-25T16:35:34+09:00",
+      "completed_at": "2026-11-25T16:36:02+09:00",
+      "successful_checked_at": null,
       "window": {
         "bgn": "2026-11-18",
         "end": "2026-11-25"
@@ -32,9 +32,9 @@
       },
       "max_pages_per_group": 20,
       "groups_expected": 8,
-      "groups_completed": 8,
-      "pages_attempted": 25,
-      "pages_succeeded": 25,
+      "groups_completed": 7,
+      "pages_attempted": 22,
+      "pages_succeeded": 21,
       "raw_body_checked": false,
       "whole_market_coverage": false,
       "groups": [
@@ -95,11 +95,11 @@
         {
           "corp_cls": "K",
           "pblntf_ty": "D",
-          "status": "success",
-          "pages_attempted": 5,
-          "pages_succeeded": 5,
-          "total_pages": 5,
-          "failure": null
+          "status": "failed",
+          "pages_attempted": 2,
+          "pages_succeeded": 1,
+          "total_pages": 4,
+          "failure": "invalid_pagination_or_rows"
         },
         {
           "corp_cls": "K",
@@ -114,8 +114,8 @@
     },
     "source": "DART OpenAPI (전자공시)",
     "window_days": 14,
-    "count": 799,
-    "disclosure_count": 2162,
+    "count": 791,
+    "disclosure_count": 2128,
     "note": "공시 사실·일정만 — 점수·등급·추천 아님 (RULE 7). 제목은 DART 원문 그대로, 링크는 원문 viewer."
   },
   "items": [
@@ -871,15 +871,6 @@
           "why_it_matters": ""
         },
         {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "금석호",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000662",
-          "why_it_matters": ""
-        },
-        {
           "title": "임원ㆍ주요주주특정증권등거래계획보고서",
           "label": "지분공시",
           "date": "2026-11-24",
@@ -1289,38 +1280,6 @@
       ]
     },
     {
-      "ticker": "089030",
-      "name": "테크윙",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "주요사항보고서(자기주식취득신탁계약체결결정)",
-          "label": "주요사항보고",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "테크윙",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000543",
-          "why_it_matters": "회사가 시장에서 자기 주식을 사들인다. 매입한 만큼 시중 유통 주식 수가 줄어든다. (사실 · 취득 예정 수량·기간은 원문 확인)"
-        }
-      ]
-    },
-    {
-      "ticker": "158430",
-      "name": "아톤",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "주요사항보고서(자기주식처분결정)",
-          "label": "주요사항보고",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "아톤",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000651",
-          "why_it_matters": "회사가 보유하던 자기 주식을 시장·제3자에 판다. 처분한 만큼 유통 주식 수가 늘어난다. (사실 · 처분 수량·상대방은 원문 확인)"
-        }
-      ]
-    },
-    {
       "ticker": "139670",
       "name": "키네마스터",
       "latest": "2026-11-25",
@@ -1333,6 +1292,22 @@
           "filer": "키네마스터",
           "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000620",
           "why_it_matters": ""
+        }
+      ]
+    },
+    {
+      "ticker": "089030",
+      "name": "테크윙",
+      "latest": "2026-11-25",
+      "disclosures": [
+        {
+          "title": "주요사항보고서(자기주식취득신탁계약체결결정)",
+          "label": "주요사항보고",
+          "date": "2026-11-25",
+          "is_correction": false,
+          "filer": "테크윙",
+          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000543",
+          "why_it_matters": "회사가 시장에서 자기 주식을 사들인다. 매입한 만큼 시중 유통 주식 수가 줄어든다. (사실 · 취득 예정 수량·기간은 원문 확인)"
         }
       ]
     },
@@ -5577,67 +5552,6 @@
       ]
     },
     {
-      "ticker": "440110",
-      "name": "파두",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "조재근",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000707",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "박종현",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000692",
-          "why_it_matters": ""
-        },
-        {
-          "title": "주식등의대량보유상황보고서(약식)",
-          "label": "지분공시",
-          "date": "2026-11-24",
-          "is_correction": false,
-          "filer": "J.P.MORGANSECURITIESPLC",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261124000533",
-          "why_it_matters": ""
-        },
-        {
-          "title": "[기재정정]단일판매ㆍ공급계약체결              ",
-          "label": "거래소공시",
-          "date": "2026-11-20",
-          "is_correction": true,
-          "filer": "파두",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261120900839",
-          "why_it_matters": "앞서 낸 공시의 내용을 고쳐 다시 낸다. 정정 사유·범위는 원문에서 무엇이 바뀌었는지 확인해야 한다. (사실 · 정정 항목은 원문 확인)"
-        },
-        {
-          "title": "주식등의대량보유상황보고서(약식)",
-          "label": "지분공시",
-          "date": "2026-11-19",
-          "is_correction": false,
-          "filer": "J.P.MORGANSECURITIESPLC",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261119000315",
-          "why_it_matters": ""
-        },
-        {
-          "title": "주식등의대량보유상황보고서(약식)",
-          "label": "지분공시",
-          "date": "2026-11-11",
-          "is_correction": false,
-          "filer": "J.P.MORGANSECURITIESPLC",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261111000123",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
       "ticker": "001500",
       "name": "현대차증권",
       "latest": "2026-11-25",
@@ -5767,15 +5681,6 @@
           "why_it_matters": ""
         },
         {
-          "title": "투자설명서(일괄신고)",
-          "label": "발행공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "DB증권",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000660",
-          "why_it_matters": ""
-        },
-        {
           "title": "일괄신고추가서류(기타파생결합사채)",
           "label": "발행공시",
           "date": "2026-11-20",
@@ -5791,6 +5696,15 @@
           "is_correction": false,
           "filer": "DB증권",
           "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261120000154",
+          "why_it_matters": ""
+        },
+        {
+          "title": "투자설명서(일괄신고)",
+          "label": "발행공시",
+          "date": "2026-11-20",
+          "is_correction": false,
+          "filer": "DB증권",
+          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261120000190",
           "why_it_matters": ""
         }
       ]
@@ -6006,40 +5920,6 @@
       ]
     },
     {
-      "ticker": "032960",
-      "name": "동일기연",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "아침해",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000709",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-16",
-          "is_correction": false,
-          "filer": "아침해",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116002014",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-11",
-          "is_correction": false,
-          "filer": "아침해",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261111000365",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
       "ticker": "091970",
       "name": "LSK아이로봇",
       "latest": "2026-11-25",
@@ -6078,49 +5958,6 @@
           "is_correction": false,
           "filer": "신해용",
           "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261111000273",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
-      "ticker": "180400",
-      "name": "DXVX",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "임종윤",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000663",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-18",
-          "is_correction": false,
-          "filer": "임종윤",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261118000273",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-11",
-          "is_correction": false,
-          "filer": "임종윤",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261111000408",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-11",
-          "is_correction": false,
-          "filer": "김영종",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261111000389",
           "why_it_matters": ""
         }
       ]
@@ -6639,40 +6476,6 @@
       ]
     },
     {
-      "ticker": "050120",
-      "name": "ES큐브",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "임원ㆍ주요주주특정증권등거래계획보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "비케이자산관리대부",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000647",
-          "why_it_matters": ""
-        },
-        {
-          "title": "주식등의대량보유상황보고서(일반)",
-          "label": "지분공시",
-          "date": "2026-11-12",
-          "is_correction": false,
-          "filer": "지에프금융산업제1호",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261112000501",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-12",
-          "is_correction": false,
-          "filer": "와이엔케이인베스트먼트",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261112000457",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
       "ticker": "003540",
       "name": "대신증권",
       "latest": "2026-11-25",
@@ -6725,15 +6528,6 @@
         {
           "title": "투자설명서(일괄신고)",
           "label": "발행공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "대신증권",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000679",
-          "why_it_matters": ""
-        },
-        {
-          "title": "투자설명서(일괄신고)",
-          "label": "발행공시",
           "date": "2026-11-24",
           "is_correction": false,
           "filer": "대신증권",
@@ -6747,6 +6541,15 @@
           "is_correction": false,
           "filer": "대신증권",
           "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261124000441",
+          "why_it_matters": ""
+        },
+        {
+          "title": "증권발행실적보고서",
+          "label": "발행공시",
+          "date": "2026-11-24",
+          "is_correction": false,
+          "filer": "대신증권",
+          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261124000428",
           "why_it_matters": ""
         }
       ]
@@ -6878,76 +6681,6 @@
           "is_correction": false,
           "filer": "다인투자조합",
           "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116000399",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
-      "ticker": "237750",
-      "name": "피앤씨테크",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "임원ㆍ주요주주특정증권등거래계획보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "조광식",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000710",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-16",
-          "is_correction": false,
-          "filer": "광명전기",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116000577",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-16",
-          "is_correction": false,
-          "filer": "윤남선",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116000576",
-          "why_it_matters": ""
-        },
-        {
-          "title": "주식등의대량보유상황보고서(일반)",
-          "label": "지분공시",
-          "date": "2026-11-16",
-          "is_correction": false,
-          "filer": "광명전기",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116000570",
-          "why_it_matters": ""
-        },
-        {
-          "title": "주식등의대량보유상황보고서(일반)",
-          "label": "지분공시",
-          "date": "2026-11-16",
-          "is_correction": false,
-          "filer": "조광식",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116000504",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-16",
-          "is_correction": false,
-          "filer": "조민기",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116000607",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-16",
-          "is_correction": false,
-          "filer": "조광식",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116000597",
           "why_it_matters": ""
         }
       ]
@@ -7163,31 +6896,6 @@
           "is_correction": false,
           "filer": "이녹스",
           "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116001159",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
-      "ticker": "100790",
-      "name": "미래에셋벤처투자",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "미래에셋증권",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000691",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-16",
-          "is_correction": false,
-          "filer": "미래에셋증권",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116001955",
           "why_it_matters": ""
         }
       ]
@@ -7670,31 +7378,6 @@
           "is_correction": false,
           "filer": "박헌직",
           "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261123000353",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
-      "ticker": "004920",
-      "name": "씨아이테크",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "임원ㆍ주요주주특정증권등거래계획보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "케이엠기술",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000696",
-          "why_it_matters": ""
-        },
-        {
-          "title": "주식등의대량보유상황보고서(약식)",
-          "label": "지분공시",
-          "date": "2026-11-19",
-          "is_correction": false,
-          "filer": "상상인플러스저축은행",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261119000372",
           "why_it_matters": ""
         }
       ]
@@ -8230,6 +7913,22 @@
       ]
     },
     {
+      "ticker": "008730",
+      "name": "율촌화학",
+      "latest": "2026-11-25",
+      "disclosures": [
+        {
+          "title": "주식등의대량보유상황보고서(일반)",
+          "label": "지분공시",
+          "date": "2026-11-25",
+          "is_correction": false,
+          "filer": "신동윤",
+          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000638",
+          "why_it_matters": ""
+        }
+      ]
+    },
+    {
       "ticker": "023150",
       "name": "MH에탄올",
       "latest": "2026-11-25",
@@ -8274,138 +7973,6 @@
           "filer": "동양주택개발",
           "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000582",
           "why_it_matters": ""
-        },
-        {
-          "title": "[기재정정]주식등의대량보유상황보고서(약식)",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": true,
-          "filer": "동양주택개발",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000699",
-          "why_it_matters": "앞서 낸 공시의 내용을 고쳐 다시 낸다. 정정 사유·범위는 원문에서 무엇이 바뀌었는지 확인해야 한다. (사실 · 정정 항목은 원문 확인)"
-        },
-        {
-          "title": "[기재정정]주식등의대량보유상황보고서(약식)",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": true,
-          "filer": "동양주택개발",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000685",
-          "why_it_matters": "앞서 낸 공시의 내용을 고쳐 다시 낸다. 정정 사유·범위는 원문에서 무엇이 바뀌었는지 확인해야 한다. (사실 · 정정 항목은 원문 확인)"
-        }
-      ]
-    },
-    {
-      "ticker": "008730",
-      "name": "율촌화학",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "주식등의대량보유상황보고서(일반)",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "신동윤",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000638",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
-      "ticker": "187790",
-      "name": "나노",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "정영민",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000708",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
-      "ticker": "439270",
-      "name": "크리에이츠",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "석재호",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000695",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "최익현",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000690",
-          "why_it_matters": ""
-        },
-        {
-          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "이영재",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000683",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
-      "ticker": "038540",
-      "name": "상상인",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "주식등의대량보유상황보고서(일반)",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "유준원",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000684",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
-      "ticker": "307750",
-      "name": "국전",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "주식등의대량보유상황보고서(일반)",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "홍종호",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000678",
-          "why_it_matters": ""
-        }
-      ]
-    },
-    {
-      "ticker": "035600",
-      "name": "KG이니시스",
-      "latest": "2026-11-25",
-      "disclosures": [
-        {
-          "title": "주식등의대량보유상황보고서(일반)",
-          "label": "지분공시",
-          "date": "2026-11-25",
-          "is_correction": false,
-          "filer": "KG케미칼",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000667",
-          "why_it_matters": ""
         }
       ]
     },
@@ -8421,6 +7988,22 @@
           "is_correction": false,
           "filer": "휴림로봇",
           "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000633",
+          "why_it_matters": ""
+        }
+      ]
+    },
+    {
+      "ticker": "440110",
+      "name": "파두",
+      "latest": "2026-11-24",
+      "disclosures": [
+        {
+          "title": "주식등의대량보유상황보고서(일반)",
+          "label": "지분공시",
+          "date": "2026-11-25",
+          "is_correction": false,
+          "filer": "최동호",
+          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000590",
           "why_it_matters": ""
         }
       ]
@@ -17013,6 +16596,22 @@
       ]
     },
     {
+      "ticker": "100790",
+      "name": "미래에셋벤처투자",
+      "latest": "2026-11-16",
+      "disclosures": [
+        {
+          "title": "임원ㆍ주요주주특정증권등소유상황보고서",
+          "label": "지분공시",
+          "date": "2026-11-16",
+          "is_correction": false,
+          "filer": "미래에셋증권",
+          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261116001955",
+          "why_it_matters": ""
+        }
+      ]
+    },
+    {
       "ticker": "095910",
       "name": "에스에너지",
       "latest": "2026-11-13",
@@ -19360,33 +18959,6 @@
           "is_correction": true,
           "filer": "SK이노베이션",
           "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000599",
-          "why_it_matters": "앞서 낸 공시의 내용을 고쳐 다시 낸다. 정정 사유·범위는 원문에서 무엇이 바뀌었는지 확인해야 한다. (사실 · 정정 항목은 원문 확인)"
-        },
-        {
-          "title": "[첨부정정]증권신고서(합병)",
-          "label": "발행공시",
-          "date": "2026-11-25",
-          "is_correction": true,
-          "filer": "SK이노베이션",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000711",
-          "why_it_matters": "앞서 낸 공시의 내용을 고쳐 다시 낸다. 정정 사유·범위는 원문에서 무엇이 바뀌었는지 확인해야 한다. (사실 · 정정 항목은 원문 확인)"
-        },
-        {
-          "title": "[첨부정정]증권신고서(합병)",
-          "label": "발행공시",
-          "date": "2026-11-25",
-          "is_correction": true,
-          "filer": "SK이노베이션",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000702",
-          "why_it_matters": "앞서 낸 공시의 내용을 고쳐 다시 낸다. 정정 사유·범위는 원문에서 무엇이 바뀌었는지 확인해야 한다. (사실 · 정정 항목은 원문 확인)"
-        },
-        {
-          "title": "[기재정정]증권신고서(합병)",
-          "label": "발행공시",
-          "date": "2026-11-25",
-          "is_correction": true,
-          "filer": "SK이노베이션",
-          "source_url": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261125000677",
           "why_it_matters": "앞서 낸 공시의 내용을 고쳐 다시 낸다. 정정 사유·범위는 원문에서 무엇이 바뀌었는지 확인해야 한다. (사실 · 정정 항목은 원문 확인)"
         },
         {
