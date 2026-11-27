@@ -58,6 +58,7 @@ from .portfolio_prepared_business import (
     ARTIFACT_MAX_BYTES as _PREPARED_ARTIFACT_MAX_BYTES,
 )
 from .portfolio_business_incremental import BusinessRowMemo
+from . import portfolio_listed_ownership as listed_ownership
 
 
 MAX_SYMBOLS = 30  # Analysis window, not a limit on a member's stored holdings.
@@ -151,6 +152,8 @@ class _ProjectedPublicIndexCache:
             "filing_excerpts": index_filing_excerpts(public_documents.get(_AUTOMATIC_EVIDENCE_FILE), list(by_id.values())),
             "annual_customer_tables": annual_customer_tables,
             "sec_relationships": sec_relationships,
+            "listed_ownership": listed_ownership.index_listed_ownership(
+                public_documents.get(listed_ownership.FILENAME), by_id),
         }
 
     def _business(self, documents, by_id, prepared_business_index=None, publisher_receipt=None):
@@ -952,7 +955,8 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
             # lane reports absence/rejection separately in coverage.ai_review.
             "missing_source_files": [name for name in PUBLIC_SOURCE_FILES
                                      if name not in ("member_map_ai_candidates.json", "calendar_public.json", "stock_flow_5d.json",
-                                                     "us_smart_money_13f.json", "us_investor_portfolios.json", "etf_flow.json")
+                                                     "us_smart_money_13f.json", "us_investor_portfolios.json", "etf_flow.json",
+                                                     listed_ownership.FILENAME)
                                      and name not in public_documents],
             "calendar_reuse": deepcopy(projected["coverage"].get("calendar_reuse", {"missing": True})),
             "flow_reuse": deepcopy(projected["coverage"].get("flow_reuse", {"missing": True})),
@@ -1038,6 +1042,9 @@ def analyze_portfolio(positions, public_documents, *, public_bundle_revision=Non
             result["coverage"]["change_reuse"] = {"status": "rejected"}
     else:
         result["coverage"]["change_reuse"] = {"status": "unavailable"}
+    if projected["listed_ownership"] is not None:
+        result["listed_ownership"] = listed_ownership.select_listed_ownership(
+            projected["listed_ownership"], [r["id"] for r in requested], MAX_AUTOMATIC_EVIDENCE_RELATIONSHIPS)
     result["revision"] = _revision(result)
     return result
 

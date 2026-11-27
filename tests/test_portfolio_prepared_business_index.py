@@ -304,7 +304,8 @@ def test_saved_16_public_artifacts_preserve_response_bytes(engine):
 
     source_dir = Path(root)
     names = [name for name in PUBLIC_SOURCE_FILES if (source_dir / name).is_file()]
-    assert len(names) == len(PUBLIC_SOURCE_FILES) == 16
+    # Historical frozen bundles predate the optional listed-ownership feed.
+    assert set(PUBLIC_SOURCE_FILES) - set(names) <= {"member_map_listed_ownership.json"}
     documents = {name: json.loads((source_dir / name).read_text(encoding="utf-8"))
                  for name in names}
     source_bytes = _bytes(documents)

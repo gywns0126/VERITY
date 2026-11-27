@@ -51,6 +51,7 @@ PUBLIC_SOURCE_FILES = (
     "us_smart_money_13f.json",
     "us_investor_portfolios.json",
     "etf_flow.json",
+    "member_map_listed_ownership.json",
 )
 
 OPTIONAL_PUBLIC_SOURCE_FILES = (
@@ -65,6 +66,7 @@ OPTIONAL_PUBLIC_SOURCE_FILES = (
     "us_smart_money_13f.json",
     "us_investor_portfolios.json",
     "etf_flow.json",
+    "member_map_listed_ownership.json",
 )
 
 PUBLIC_SOURCE_MAX_BYTES = {
@@ -84,6 +86,7 @@ PUBLIC_SOURCE_MAX_BYTES = {
     "us_smart_money_13f.json": 8 * 1024 * 1024,
     "us_investor_portfolios.json": 8 * 1024 * 1024,
     "etf_flow.json": 8 * 1024 * 1024,
+    "member_map_listed_ownership.json": 1024 * 1024,
 }
 
 PUBLIC_COMPANY_FIELDS = ("id", "ticker", "market", "name", "sector", "facts", "documents")

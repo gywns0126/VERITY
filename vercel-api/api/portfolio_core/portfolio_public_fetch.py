@@ -40,7 +40,7 @@ PUBLIC_SOURCE_URLS = MappingProxyType({
 CACHE_TTL_SECONDS = 60
 FETCH_TIMEOUT_SECONDS = 15
 AI_SOURCE_TIMEOUT_SECONDS = 3
-_OPTIONAL_AI_SOURCE = "member_map_ai_candidates.json"
+_FAST_OPTIONAL_SOURCES = {"member_map_ai_candidates.json", "member_map_listed_ownership.json"}
 
 _CACHE_LOCK = threading.Lock()
 _CACHE_RESULT = None
@@ -125,7 +125,7 @@ def _unique_object(pairs):
 def _download_source(filename):
     """Download one exact allowlisted source; failures are handled by the caller."""
     # Optional enrichment must not incur the full core-source retry delay.
-    attempts = 1 if filename == _OPTIONAL_AI_SOURCE else 2
+    attempts = 1 if filename in _FAST_OPTIONAL_SOURCES else 2
     for attempt in range(attempts):
         try:
             return _download_source_once(filename)
@@ -142,7 +142,7 @@ def _download_source_once(filename):
     """One bounded attempt. Retry never changes URL, headers or validation."""
     url = PUBLIC_SOURCE_URLS[filename]
     limit = PUBLIC_SOURCE_MAX_BYTES[filename]
-    timeout = AI_SOURCE_TIMEOUT_SECONDS if filename == _OPTIONAL_AI_SOURCE else FETCH_TIMEOUT_SECONDS
+    timeout = AI_SOURCE_TIMEOUT_SECONDS if filename in _FAST_OPTIONAL_SOURCES else FETCH_TIMEOUT_SECONDS
     previous = _VALIDATED_SOURCES.get(filename)
     etag = previous[1] if previous is not None and previous[0] == url else None
     document, received_etag, unchanged = _read_public_document(

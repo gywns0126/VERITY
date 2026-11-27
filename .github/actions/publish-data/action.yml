@@ -43,6 +43,7 @@ runs:
         python3 "${{ github.action_path }}/verify_constitution_weights.py" /tmp/_const_check.json
 
     - name: Stage public data (always from main HEAD)
+      id: stage_public_data
       shell: bash
       run: |
         rm -rf _public_dist
@@ -50,6 +51,8 @@ runs:
         # force_orphan race 가드 — working copy 가 다른 builder 산출물에 대해 outdated 일 수
         # 있음. main HEAD fetch 후 main 의 data/ 에서 직접 추출 → 항상 최신 publish.
         git fetch origin main --depth=1 --quiet
+        public_commit=$(git rev-parse --verify 'origin/main^{commit}')
+        echo "commit=$public_commit" >> "$GITHUB_OUTPUT"
         # 2026-05-24 private repo migration — 추가 파일들. 기존엔 Framer 가 VERITY 본 repo public
         # 으로 직접 페치. private 전환 후 죽기 때문에 publish-data 에 합쳐 Blob + VERITY-data publish.
         # 🚫 2026-07-23 분리 Stage 3 후속: admin_todos/brain_kb_usage/history/system_health_snapshot =
@@ -147,7 +150,7 @@ runs:
                  logo_map.json \
                  ai_synthesis.json \
                  event_study.json; do
-          if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
+          if git show "$public_commit:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
             echo "  + data/$f"
           else
             rm -f "_public_dist/$f"
@@ -484,6 +487,7 @@ runs:
       shell: bash
       env:
         BLOB_READ_WRITE_TOKEN: ${{ inputs.blob_token }}
+        PUBLIC_COMMIT: ${{ steps.stage_public_data.outputs.commit }}
       run: |
         # The receipt is intentionally absent from the earlier Git snapshot.
         # Only Blob may issue it, after the six source PUTs and artifact PUT.
@@ -501,6 +505,22 @@ runs:
           echo "::warning::@vercel/blob install fail — skip"
           exit 0
         }
+        # Git publication (including its recovery path) has finished. Stage only
+        # the verified projection for this Blob scan; keep raw inputs outside it.
+        public_dist="$GITHUB_WORKSPACE/_public_dist"
+        ownership_file="$public_dist/member_map_listed_ownership.json"
+        trap 'rm -f "$ownership_file"' EXIT
+        if ! (
+          scratch=$(mktemp -d "$RUNNER_TEMP/listed-ownership.XXXXXX") || exit 1
+          trap 'rm -rf "$scratch"' EXIT
+          GIT_NO_LAZY_FETCH=1 git -C "$GITHUB_WORKSPACE" show "$PUBLIC_COMMIT:data/member_map_company_structure_sources.json" > "$scratch/source.json" &&
+            node "$GITHUB_WORKSPACE/scripts/member-map/build-listed-ownership.cjs" \
+              "$scratch/source.json" "$public_dist/universe_search.json" "$scratch/candidate.json" &&
+            mv "$scratch/candidate.json" "$ownership_file"
+        ); then
+          rm -f "$ownership_file"
+          echo "::warning::Listed ownership unavailable; continuing Blob publication without a new candidate"
+        fi
         node blob_upload.js "${{ github.workspace }}/_public_dist"
 
     - name: Publish optional company snapshot candidates after core dual-write
