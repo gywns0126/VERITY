@@ -326,8 +326,9 @@ def test_production_cold_and_warm_copy_counts_keep_return_isolation(monkeypatch,
     lines = [line for line in capsys.readouterr().err.splitlines()
              if line.startswith("member_map_public_fetch ")]
     assert len(lines) == 2
-    assert "cache=miss status=complete available=16" in lines[0]
-    assert "cache=hit status=complete available=16" in lines[1]
+    expected = len(fetch.PUBLIC_SOURCE_FILES)
+    assert f"cache=miss status=complete available={expected} " in lines[0]
+    assert f"cache=hit status=complete available={expected} " in lines[1]
     assert all("revalidated=0" in line for line in lines)
     assert all("lock_wait_ms=" in line and "copy_ms=" in line and "elapsed_ms=" in line
                for line in lines)
