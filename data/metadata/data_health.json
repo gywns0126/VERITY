@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-11-28T15:13:00.809815+09:00",
+  "generated_at": "2026-11-28T16:12:57.031924+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "red",
@@ -14,7 +14,7 @@
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-11-28T15:13:00.738517+09:00",
+   "generated_at": "2026-11-28T16:12:56.961643+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -22,19 +22,19 @@
   "coverage": {
    "generated_at": "2026-11-28T13:11:40.960688+09:00",
    "max_age_h": 96,
-   "age_h": 2.022,
+   "age_h": 3.021,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-11-28T15:12:50.778641+09:00",
+   "generated_at": "2026-11-28T16:12:49.027787+09:00",
    "max_age_h": 3,
-   "age_h": 0.003,
+   "age_h": 0.002,
    "status": "fresh"
   },
   "annual_backfill": {
    "generated_at": "2026-11-27T20:32:47.093208+00:00",
    "max_age_h": 48,
-   "age_h": 9.67,
+   "age_h": 10.669,
    "status": "fresh"
   }
  },
@@ -43,11 +43,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-11-28T15:13:00.738517+09:00",
+  "generated_at": "2026-11-28T16:12:56.961643+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 70483,
+  "max_cdn_age_s": 72890,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -57,7 +57,7 @@
      "PBR": 95.6
     },
     "total": 2565,
-    "cdn_age_s": 5077,
+    "cdn_age_s": 8981,
     "error": null
    },
    {
@@ -68,7 +68,7 @@
      "PBR": 76.7
     },
     "total": 5271,
-    "cdn_age_s": 70483,
+    "cdn_age_s": 72890,
     "error": null
    },
    {
@@ -79,7 +79,7 @@
      "PBR": 74.5
     },
     "total": 4001,
-    "cdn_age_s": 0,
+    "cdn_age_s": 46786,
     "error": null
    },
    {
@@ -108,7 +108,7 @@
   "last_run_at": "2026-11-28T13:11:41.103252+09:00"
  },
  "freshness": {
-  "generated_at": "2026-11-28T15:12:50.778641+09:00",
+  "generated_at": "2026-11-28T16:12:49.027787+09:00",
   "summary": {
    "fresh": 27,
    "stale": 3,
@@ -200,7 +200,7 @@
    {
     "id": "macro_snapshot",
     "label": "매크로 스냅샷",
-    "age_min": 9.9
+    "age_min": 10.2
    }
   ],
   "stale_other": [
@@ -211,13 +211,13 @@
    {
     "id": "ipo_watch",
     "last_ts": "2026-11-16T12:06:02.066408+09:00",
-    "age_eff_min": 17466.8,
+    "age_eff_min": 17526.8,
     "max_age_min": 12960
    },
    {
     "id": "us_disclosure_feed",
     "last_ts": "2026-11-27T00:06:40.521932+09:00",
-    "age_eff_min": 2346.2,
+    "age_eff_min": 2406.1,
     "max_age_min": 2160
    }
   ]
