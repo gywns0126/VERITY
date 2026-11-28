@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-11-29T02:32:50+09:00",
+  "collected_at": "2026-11-29T03:02:45+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
@@ -16,7 +16,7 @@
       "active": true,
       "drivers": {
         "fng": 10.0,
-        "search_trend_pct": -16.9
+        "search_trend_pct": -14.5
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -27,8 +27,8 @@
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.806,
-        "long_short_ratio": 3.13
+        "put_call_oi": 0.807,
+        "long_short_ratio": 3.09
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
@@ -50,7 +50,7 @@
       "read": "neutral",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": -0.51
+        "btc_change_pct_7d": -1.0
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -60,8 +60,8 @@
       "read": "누적 중",
       "active": false,
       "drivers": {
-        "ssr": 4.92,
-        "stablecoin_supply_usd": 243268753534.66962
+        "ssr": 4.91,
+        "stablecoin_supply_usd": 243280304228.67798
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -80,7 +80,7 @@
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 59463.0,
+  "btc_price_at_call": 59340.0,
   "trail": [
     {
       "date": "2026-09-01",
@@ -709,7 +709,7 @@
       "date": "2026-11-29",
       "call": "neutral",
       "net_score": -1,
-      "btc_price": 59463.0,
+      "btc_price": 59340.0,
       "active_dims": 4
     }
   ],
@@ -719,14 +719,14 @@
         "horizon_days": 7,
         "n": 67,
         "hit_rate": 0.7164,
-        "mean_realized_return": -0.007444,
+        "mean_realized_return": -0.007505,
         "label": "예비 결과"
       },
       {
         "horizon_days": 30,
         "n": 48,
         "hit_rate": 0.6042,
-        "mean_realized_return": 0.056858,
+        "mean_realized_return": 0.056758,
         "label": "예비 결과"
       }
     ],
