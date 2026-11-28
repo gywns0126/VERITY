@@ -9,8 +9,8 @@
 
 light import 만 — yfinance / pandas / pykrx 의도적으로 import 안 함 (각 1~5초 startup).
 사용:
-- KIS get_current_price (KR 종목)
-- yahoo finance raw HTTP (US 종목 + 지수)
+- KIS 정규장 분봉 / Yahoo chart metadata (KR 종목)
+- yfinance (US 종목 + 지수)
 """
 from __future__ import annotations
 
@@ -20,6 +20,8 @@ import sys
 import time
 from datetime import datetime, timezone, timedelta
 from typing import Any
+from http.client import HTTPException
+from urllib.request import Request, urlopen
 
 KST = timezone(timedelta(hours=9))
 
@@ -27,6 +29,8 @@ KST = timezone(timedelta(hours=9))
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
+
+from api.utils.kr_pulse_quote import aware_time, expected_session, valid_kr_quote
 
 _DATA = os.path.join(_ROOT, "data")
 _PORTFOLIO = os.path.join(_DATA, "portfolio.json")
@@ -93,13 +97,54 @@ def fetch_yahoo_quotes(symbols: list[str]) -> dict:
     return out
 
 
-def fetch_kis_prices(kr_tickers: list[str]) -> dict:
-    """KIS API 로 KR 종목 가격. broker import 는 호출 시점에 lazy.
-
-    반환: {ticker(6자리): price_int}
-    """
-    if not kr_tickers:
+def _yahoo_kr_quote(symbol: str) -> dict:
+    """Use Yahoo's regular price and trade time from one chart response."""
+    code, market = symbol.split(".")
+    exchange = {"KS": "KSC", "KQ": "KOE"}[market]
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.{market}?range=1d&interval=1d"
+    try:
+        with urlopen(Request(url, headers={"User-Agent": "Mozilla/5.0"}), timeout=4) as response:
+            chart = json.load(response)["chart"]
+        if chart.get("error") or len(chart["result"]) != 1:
+            return {}
+        meta = chart["result"][0]["meta"]
+        if (meta.get("symbol") != symbol or meta.get("exchangeName") != exchange
+                or meta.get("currency") != "KRW" or meta.get("exchangeTimezoneName") != "Asia/Seoul"):
+            return {}
+        observed = datetime.fromtimestamp(meta["regularMarketTime"], tz=KST)
+        return {"source": "yahoo", "symbol": symbol, "observed_at": observed.isoformat(),
+                "price": meta["regularMarketPrice"]}
+    except (OSError, HTTPException, KeyError, ValueError, TypeError, OverflowError, AttributeError):
         return {}
+
+
+def _latest_kis_quote(rows: list[dict], symbol: str) -> dict:
+    # KIS output2 carries business date, exchange time, price and volume in each bar.
+    # Bars without a trade must not advance a frozen price's observation time.
+    latest = {}
+    for row in rows:
+        try:
+            timestamp = row["stck_bsop_date"] + row["stck_cntg_hour"]
+            if len(timestamp) != 14 or int(row["cntg_vol"]) <= 0:
+                continue
+            observed = datetime.strptime(timestamp, "%Y%m%d%H%M%S").replace(tzinfo=KST)
+            price = int(row["stck_prpr"])
+            if price > 0 and (not latest or observed.isoformat() > latest["observed_at"]):
+                latest = {"source": "kis", "symbol": symbol, "observed_at": observed.isoformat(),
+                          "price": price}
+        except (KeyError, ValueError, TypeError):
+            continue
+    return latest
+
+
+def fetch_kis_prices(symbols: dict[str, str]) -> dict:
+    """Read one timestamped KRX minute-chart response per listed ticker."""
+    now = datetime.now(KST)
+    session = expected_session(now) if symbols else None
+    if session is None:
+        return {}
+    opening, closing = session
+    end_time = (now if opening <= now <= closing else closing).strftime("%H%M%S")
     try:
         from api.trading.kis_broker import KISBroker
     except Exception as e:
@@ -112,41 +157,50 @@ def fetch_kis_prices(kr_tickers: list[str]) -> dict:
         if not getattr(broker, "is_configured", False):
             print("[pulse] KIS 미설정 — KR 가격 skip (env KIS_APP_KEY/KIS_APP_SECRET 확인)")
             return {}
-        try:
-            tok = broker.authenticate(force_refresh=False)
-            print(f"[pulse] KIS token OK ({len(tok) if tok else 0}자)")
-        except RuntimeError as e:
-            # cache 없음 = 발급 source 가 아직 안 돈 상태. KR 가격 skip, yfinance fallback 으로 위임
-            print(f"[pulse] KIS cache 없음 — KR 가격 skip (yfinance fallback 사용): {e}")
-            return {}
-        except Exception as e:
-            print(f"[pulse] KIS authenticate 실패: {e}")
-            return {}
-    except Exception as e:
-        print(f"[pulse] KIS broker init 실패: {e}")
+        broker.authenticate(force_refresh=False)
+    except Exception as exc:
+        print(f"[pulse] KIS 캐시 인증 실패 ({type(exc).__name__}) — 공개 시세 대체 조회")
         return {}
 
     out: dict = {}
     fail_count = 0
-    first_fail = None
-    for raw in kr_tickers:
-        t = str(raw).zfill(6)
+    for ticker, symbol in symbols.items():
         try:
-            snap = broker.get_current_price(t)
-            p = int(snap.get("stck_prpr", 0) or 0)
-            if p > 0:
-                out[t] = float(p)
+            rows = broker.get_minute_chart(ticker, time_from=end_time, include_prev="Y")
+            quote = _latest_kis_quote(rows, symbol)
+            if quote:
+                out[ticker] = quote
             else:
                 fail_count += 1
-        except Exception as e:
+        except Exception:
             fail_count += 1
-            if first_fail is None:
-                first_fail = str(e)[:200]
-    if fail_count and not out:
-        print(f"[pulse] KIS 전체 실패 ({fail_count}건) — first error: {first_fail}")
-    elif fail_count:
-        print(f"[pulse] KIS 부분 실패 {fail_count}/{len(kr_tickers)} — first error: {first_fail}")
+    if fail_count:
+        print(f"[pulse] KIS 분봉 누락 {fail_count}/{len(symbols)}")
     return out
+
+
+def collect_kr_quotes(tickers: set[str], listed: dict) -> dict:
+    """Keep verified KIS records; only request Yahoo for the missing listed names."""
+    if not tickers or expected_session(datetime.now(KST)) is None:
+        return {}
+    symbols = {}
+    for ticker in sorted(tickers):
+        listing = listed.get(ticker)
+        market = listing.get("market") if isinstance(listing, dict) else None
+        if (len(ticker) == 6 and ticker.isascii() and ticker.isalnum()
+                and ticker[0].isdigit() and ticker == ticker.upper() and market in ("KS", "KQ")):
+            symbols[ticker] = f"{ticker}.{market}"
+    kis = fetch_kis_prices(symbols)
+    accepted = {}
+    for ticker, symbol in symbols.items():
+        quote = kis.get(ticker, {})
+        if valid_kr_quote(ticker, quote.get("price"), quote, listed, datetime.now(KST)):
+            accepted[ticker] = quote
+            continue
+        quote = _yahoo_kr_quote(symbol)
+        if valid_kr_quote(ticker, quote.get("price"), quote, listed, datetime.now(KST)):
+            accepted[ticker] = quote
+    return accepted
 
 
 def main() -> int:
@@ -190,24 +244,24 @@ def main() -> int:
     t_y = time.perf_counter() - t_y0
     print(f"[pulse] yahoo {len(yahoo)}/{len(yahoo_batch)} ({t_y:.1f}s)")
 
-    # 3) KR 종목 KIS fetch
-    t_k0 = time.perf_counter()
-    kis_prices = fetch_kis_prices(sorted(kr_tickers))
-    t_k = time.perf_counter() - t_k0
-    print(f"[pulse] KIS {len(kis_prices)}/{len(kr_tickers)} ({t_k:.1f}s)")
-
-    # 3.5) KIS 전체 실패 시 yfinance .KS fallback (15분 지연, 정책 위반 회피)
-    if not kis_prices and kr_tickers:
-        kr_yf = [f"{t}.KS" for t in sorted(kr_tickers)]
-        t_f0 = time.perf_counter()
-        yf_fallback = fetch_yahoo_quotes(kr_yf)
-        t_f = time.perf_counter() - t_f0
-        for sym, q in yf_fallback.items():
-            ticker_only = sym.replace(".KS", "")
-            price = q.get("price")
-            if price:
-                kis_prices[ticker_only] = float(price)
-        print(f"[pulse] KIS fallback (yfinance .KS) {len(kis_prices)}/{len(kr_tickers)} ({t_f:.1f}s, 15min 지연)")
+    listed = _load_json(os.path.join(_DATA, "kr_listed.json"), {})
+    kr_quotes = collect_kr_quotes(kr_tickers, listed if isinstance(listed, dict) else {})
+    as_of = datetime.now(KST)
+    kr_quotes = {
+        ticker: quote for ticker, quote in kr_quotes.items()
+        if valid_kr_quote(ticker, quote.get("price"), quote, listed, as_of)
+    }
+    # A newly fetched response can predate the last verified trade for this ticker.
+    previous = _load_json(_OUT, {}) if kr_quotes else {}
+    older_quotes = previous.get("kr_quotes") if isinstance(previous, dict) else None
+    older_prices = previous.get("prices") if isinstance(previous, dict) else None
+    if isinstance(older_quotes, dict) and isinstance(older_prices, dict):
+        for ticker, quote in kr_quotes.items():
+            old = older_quotes.get(ticker)
+            if valid_kr_quote(ticker, older_prices.get(ticker), old, listed, as_of):
+                if aware_time(old["observed_at"]) >= aware_time(quote["observed_at"]):
+                    kr_quotes[ticker] = old
+    print(f"[pulse] KR 검증 {len(kr_quotes)}/{len(kr_tickers)}")
 
     # 4) 결과 조립
     indices = {}
@@ -220,21 +274,21 @@ def main() -> int:
                 "symbol": sym,
             }
 
-    prices: dict = {}
-    prices.update(kis_prices)
+    prices = {ticker: quote["price"] for ticker, quote in kr_quotes.items()}
     for sym in us_symbols:
         q = yahoo.get(sym)
         if q and q.get("price") is not None:
             prices[sym] = q["price"]
 
     result = {
-        "updated_at": _now_iso(),
+        "updated_at": as_of.isoformat(timespec="seconds"),
         "elapsed_sec": round(time.perf_counter() - t0, 2),
         "indices": indices,
         "prices": prices,
+        "kr_quotes": kr_quotes,
         "counts": {
             "indices": len(indices),
-            "kr": len(kis_prices),
+            "kr": len(kr_quotes),
             "us": sum(1 for s in us_symbols if s in prices),
             "kr_requested": len(kr_tickers),
             "us_requested": len(us_symbols),
@@ -246,7 +300,7 @@ def main() -> int:
     #   갱신되어 신선도 보드가 "0분 경과" 로 통과시킨다 = 없는 것보다 나쁘다.
     #   한쪽 시장만 휴장인 경우는 정상이므로 **전량 0** 일 때만 실패로 본다.
     #   실패 시 파일을 건드리지 않는다 — 빈 새 파일보다 옛 값이 낫다.
-    obtained = len(indices) + len(kis_prices) + result["counts"]["us"]
+    obtained = len(indices) + len(kr_quotes) + result["counts"]["us"]
     requested = len(_INDEX_SYMBOLS) + len(kr_tickers) + len(us_symbols)
     if requested and not obtained:
         print(
@@ -259,7 +313,7 @@ def main() -> int:
     os.makedirs(_DATA, exist_ok=True)
     with open(_OUT, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
-    print(f"[pulse] 완료 {result['elapsed_sec']}s — 지수 {len(indices)} KR {len(kis_prices)} US {result['counts']['us']}")
+    print(f"[pulse] 완료 {result['elapsed_sec']}s — 지수 {len(indices)} KR {len(kr_quotes)} US {result['counts']['us']}")
     return 0
 
 

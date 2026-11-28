@@ -29,6 +29,7 @@ from __future__ import annotations
 import importlib.util
 import ast
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -140,9 +141,16 @@ def test_merge_pulse_refreshes_recommendation_current_price(tmp_path):
         "recommendations": [{"ticker": "005930", "currency": "KRW",
                              "price": 247500.0, "current_price": 247500.0}],
     }), encoding="utf-8")
-    pulse.write_text(json.dumps({"prices": {"005930": 271000.0}}), encoding="utf-8")
+    now = datetime.fromisoformat("2026-11-27T11:06:00+09:00")
+    pulse.write_text(json.dumps({
+        "updated_at": now.isoformat(), "prices": {"005930": 271000.0},
+        "kr_quotes": {"005930": {
+            "symbol": "005930.KS", "price": 271000.0, "source": "kis",
+            "observed_at": "2026-11-27T11:05:00+09:00",
+        }},
+    }), encoding="utf-8")
 
-    assert mod.main(str(pf), str(pulse)) == 0
+    assert mod.main(str(pf), str(pulse), as_of=now) == 0
     out = json.loads(pf.read_text(encoding="utf-8"))
     rec = out["recommendations"][0]
     assert rec["price"] == 271000.0

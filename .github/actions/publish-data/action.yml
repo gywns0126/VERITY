@@ -211,6 +211,12 @@ runs:
             _public_dist/portfolio.json _public_dist/price_pulse.json
         fi
 
+        # price_pulse.json is also served directly. Filter only the staged copy,
+        # after merge has compared the incoming pulse with the original price bar.
+        if [ -s "_public_dist/price_pulse.json" ]; then
+          python3 "${{ github.action_path }}/sanitize_pulse_quotes.py" _public_dist/price_pulse.json
+        fi
+
         # ── bonds inline merge (2026-06-03) ──
         # bonds 를 별도 파일(data/bonds.json, 단일 writer)로 분리 → race 회피.
         # publish 시점에 portfolio.bonds 를 bonds.json 으로 갱신 → 컴포넌트가 보는 채권 항상 fresh.
