@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-11-28T13:33:02+09:00",
+  "collected_at": "2026-11-28T14:03:06+09:00",
   "schema_version": "v0",
   "spec": "crypto_regime_synthesis_v0 (사전등록 2026-06-24, PM 승인: 역발상+채점 지금)",
   "composite": {
     "call": "neutral",
-    "net_score": -1,
+    "net_score": 0,
     "active_dims": 4,
     "rule": "net≥+2 risk_on / ≤−2 risk_off / else neutral (투명 tally, 가중치 없음)"
   },
@@ -16,7 +16,7 @@
       "active": true,
       "drivers": {
         "fng": 10.0,
-        "search_trend_pct": -13.8
+        "search_trend_pct": -14.5
       },
       "rule": "FNG≤25 역발상 on / ≥75 off · 검색 급등 caution"
     },
@@ -27,8 +27,8 @@
       "active": true,
       "drivers": {
         "funding_signal": "neutral",
-        "put_call_oi": 0.809,
-        "long_short_ratio": 2.98
+        "put_call_oi": 0.81,
+        "long_short_ratio": 2.96
       },
       "rule": "펀딩 과열 off · 풋콜≥1.2 역발상 on · 롱숏≥2 쏠림 off"
     },
@@ -38,19 +38,19 @@
       "read": "off",
       "active": true,
       "drivers": {
-        "btc_net_inflow_usd": -453119620.9600002,
-        "eth_net_inflow_usd": -68510462.4,
-        "combined_net_inflow_usd": -521630083.36000025
+        "btc_net_inflow_usd": -389031583.7700002,
+        "eth_net_inflow_usd": -69271003.275,
+        "combined_net_inflow_usd": -458302587.0450002
       },
       "rule": "ETF(BTC+ETH) 일일 순유입 on / 순유출 off"
     },
     {
       "name": "추세",
-      "vote": 0,
-      "read": "neutral",
+      "vote": 1,
+      "read": "on",
       "active": true,
       "drivers": {
-        "btc_change_pct_7d": 2.42
+        "btc_change_pct_7d": 5.83
       },
       "rule": "BTC 7d ≥+3% on / ≤−3% off (v0 proxy, 200d SMA=TIDE 브릿지 후)"
     },
@@ -61,7 +61,7 @@
       "active": false,
       "drivers": {
         "ssr": 4.96,
-        "stablecoin_supply_usd": 243154596347.43585
+        "stablecoin_supply_usd": 243154427044.5888
       },
       "rule": "스테이블 공급 추세 = 이력 누적 후 활성 · SSR 정보용"
     },
@@ -80,7 +80,7 @@
       "rule": "DeFiLlama 매출 추세=이력 누적 · 활성주소/NVT=TIDE 브릿지 후"
     }
   ],
-  "btc_price_at_call": 59972.0,
+  "btc_price_at_call": 59906.0,
   "trail": [
     {
       "date": "2026-08-31",
@@ -708,8 +708,8 @@
     {
       "date": "2026-11-28",
       "call": "neutral",
-      "net_score": -1,
-      "btc_price": 59972.0,
+      "net_score": 0,
+      "btc_price": 59906.0,
       "active_dims": 4
     }
   ],
@@ -719,14 +719,14 @@
         "horizon_days": 7,
         "n": 66,
         "hit_rate": 0.7121,
-        "mean_realized_return": -0.007023,
+        "mean_realized_return": -0.007056,
         "label": "예비 결과"
       },
       {
         "horizon_days": 30,
         "n": 47,
         "hit_rate": 0.5957,
-        "mean_realized_return": 0.063398,
+        "mean_realized_return": 0.063362,
         "label": "예비 결과"
       }
     ],
