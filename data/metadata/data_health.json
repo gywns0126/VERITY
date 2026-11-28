@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "generated_at": "2026-11-28T23:13:12.252081+09:00",
+  "generated_at": "2026-11-29T00:13:08.437446+09:00",
   "source": "data_health_builder — 데이터 무결 신호 집계(판정·수정 0)"
  },
  "status": "red",
@@ -10,11 +10,11 @@
   "연간 재무 미해결 수집 오류 38칸",
   "연간 재무 원천 기간 공란 1칸",
   "신선도 감시 대상 누락·미측정",
-  "비P0 stale 2건"
+  "비P0 stale 1건"
  ],
  "evidence": {
   "publish_verify": {
-   "generated_at": "2026-11-28T23:13:12.173934+09:00",
+   "generated_at": "2026-11-29T00:13:08.353646+09:00",
    "max_age_h": 3,
    "age_h": 0.0,
    "status": "fresh"
@@ -22,11 +22,11 @@
   "coverage": {
    "generated_at": "2026-11-28T16:55:37.730086+09:00",
    "max_age_h": 96,
-   "age_h": 6.293,
+   "age_h": 7.292,
    "status": "fresh"
   },
   "freshness": {
-   "generated_at": "2026-11-28T23:13:03.333124+09:00",
+   "generated_at": "2026-11-29T00:13:01.347974+09:00",
    "max_age_h": 3,
    "age_h": 0.002,
    "status": "fresh"
@@ -34,7 +34,7 @@
   "annual_backfill": {
    "generated_at": "2026-11-27T20:32:47.093208+00:00",
    "max_age_h": 48,
-   "age_h": 17.674,
+   "age_h": 18.673,
    "status": "fresh"
   }
  },
@@ -43,11 +43,11 @@
   "recent": []
  },
  "publish_verify": {
-  "generated_at": "2026-11-28T23:13:12.173934+09:00",
+  "generated_at": "2026-11-29T00:13:08.353646+09:00",
   "ok": true,
   "failed": 0,
   "checked": 4,
-  "max_cdn_age_s": 98105,
+  "max_cdn_age_s": 102894,
   "files": [
    {
     "file": "stock_report_public.json",
@@ -57,7 +57,7 @@
      "PBR": 95.6
     },
     "total": 2565,
-    "cdn_age_s": 20680,
+    "cdn_age_s": 24598,
     "error": null
    },
    {
@@ -68,7 +68,7 @@
      "PBR": 76.7
     },
     "total": 5271,
-    "cdn_age_s": 98105,
+    "cdn_age_s": 102894,
     "error": null
    },
    {
@@ -79,7 +79,7 @@
      "PBR": 74.5
     },
     "total": 4001,
-    "cdn_age_s": 72001,
+    "cdn_age_s": 32408,
     "error": null
    },
    {
@@ -108,10 +108,10 @@
   "last_run_at": "2026-11-28T16:55:37.864443+09:00"
  },
  "freshness": {
-  "generated_at": "2026-11-28T23:13:03.333124+09:00",
+  "generated_at": "2026-11-29T00:13:01.347974+09:00",
   "summary": {
-   "fresh": 27,
-   "stale": 3,
+   "fresh": 28,
+   "stale": 2,
    "closed": 33,
    "discontinued": 3,
    "unmeasured": 1,
@@ -131,7 +131,7 @@
    },
    "p2": {
     "total": 37,
-    "fresh": 18,
+    "fresh": 19,
     "closed": 15,
     "active": 21,
     "unmeasured": 1
@@ -200,25 +200,18 @@
    {
     "id": "macro_snapshot",
     "label": "매크로 스냅샷",
-    "age_min": 10.4
+    "age_min": 10.3
    }
   ],
   "stale_other": [
-   "ipo_watch",
-   "us_disclosure_feed"
+   "ipo_watch"
   ],
   "stale_other_details": [
    {
     "id": "ipo_watch",
     "last_ts": "2026-11-16T12:06:02.066408+09:00",
-    "age_eff_min": 17947.0,
+    "age_eff_min": 18007.0,
     "max_age_min": 12960
-   },
-   {
-    "id": "us_disclosure_feed",
-    "last_ts": "2026-11-27T00:06:40.521932+09:00",
-    "age_eff_min": 2826.4,
-    "max_age_min": 2160
    }
   ]
  },
